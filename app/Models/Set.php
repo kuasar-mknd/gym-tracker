@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Set extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'workout_line_id',
         'weight',
@@ -15,7 +18,7 @@ class Set extends Model
         'is_warmup',
     ];
 
-    public function workoutLine()
+    public function workoutLine(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(WorkoutLine::class);
     }

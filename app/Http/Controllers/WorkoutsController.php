@@ -9,26 +9,34 @@ use Inertia\Inertia;
 
 class WorkoutsController extends Controller
 {
-    public function index()
+    public function index(): \Inertia\Response
     {
         return Inertia::render('Workouts/Index', [
             'workouts' => Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
                 ->where('user_id', auth()->id())
                 ->latest()
                 ->get(),
-            'exercises' => Exercise::all(),
         ]);
     }
 
-    public function store(Request $request)
+    public function show(Workout $workout): \Inertia\Response
     {
-        // Pour le moment on veut juste voir si ça marche
+        abort_if($workout->user_id !== auth()->id(), 403);
+
+        return Inertia::render('Workouts/Show', [
+            'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets']),
+            'exercises' => Exercise::orderBy('name')->get(),
+        ]);
+    }
+
+    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    {
         $workout = Workout::create([
             'user_id' => auth()->id(),
             'started_at' => now(),
             'name' => 'Séance du '.now()->format('d/m/Y'),
         ]);
 
-        return back();
+        return redirect()->route('workouts.show', $workout);
     }
 }

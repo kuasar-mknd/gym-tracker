@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 
 const props = defineProps({
@@ -56,11 +56,15 @@ const createWorkout = () => {
                             <div
                                 v-for="workout in workouts"
                                 :key="workout.id"
-                                class="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+                                class="hover:border-pacamara-accent group rounded-lg border border-gray-200 p-4 transition-all dark:border-gray-700"
                             >
                                 <div class="flex items-start justify-between">
                                     <div>
-                                        <div class="text-lg font-bold">{{ workout.name || 'Séance sans nom' }}</div>
+                                        <div
+                                            class="group-hover:text-pacamara-accent text-lg font-bold transition-colors"
+                                        >
+                                            {{ workout.name || 'Séance sans nom' }}
+                                        </div>
                                         <div class="text-sm text-gray-500">
                                             Le
                                             {{
@@ -72,10 +76,18 @@ const createWorkout = () => {
                                             }}
                                         </div>
                                     </div>
-                                    <div
-                                        class="rounded bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                                    >
-                                        {{ workout.workout_lines.length }} exercices
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="rounded bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                        >
+                                            {{ workout.workout_lines.length }} exercices
+                                        </div>
+                                        <Link
+                                            :href="route('workouts.show', workout.id)"
+                                            class="text-pacamara-accent text-sm font-bold hover:underline"
+                                        >
+                                            Ouvrir →
+                                        </Link>
                                     </div>
                                 </div>
 
