@@ -7,6 +7,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import RestTimer from '@/Components/Workout/RestTimer.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
@@ -26,6 +27,26 @@ const props = defineProps({
         ],
     },
 })
+
+const showTimer = ref(false)
+const timerDuration = ref(90)
+const toggleSetCompletion = (set, exerciseRestTime) => {
+    const newState = !set.is_completed
+    router.patch(
+        route('sets.update', set.id),
+        { is_completed: newState },
+        {
+            preserveScroll: true,
+            only: ['workout'],
+            onSuccess: () => {
+                if (newState) {
+                    timerDuration.value = exerciseRestTime || props.auth.user.default_rest_time || 90
+                    showTimer.value = true
+                }
+            },
+        },
+    )
+}
 
 const savingTemplate = ref(false)
 const saveAsTemplate = () => {
@@ -302,11 +323,32 @@ const hasNoResults = computed(() => {
                     <div
                         v-for="(set, index) in line.sets"
                         :key="set.id"
-                        class="flex items-center gap-3 rounded-xl bg-white/5 p-3"
+                        class="flex items-center gap-3 rounded-xl bg-white/5 p-3 transition-opacity"
+                        :class="{ 'opacity-50': set.is_completed }"
                     >
+                        <!-- Complete Button -->
+                        <button
+                            @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
+                            class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors"
+                            :class="
+                                set.is_completed
+                                    ? 'bg-accent-success text-white'
+                                    : 'bg-white/10 text-white/20 hover:bg-white/20'
+                            "
+                        >
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M5 13l4 4L19 7"
+                                />
+                            </svg>
+                        </button>
+
                         <!-- Set Number -->
                         <div
-                            class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent-primary/20 text-sm font-bold text-accent-primary"
+                            class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/5 text-sm font-bold text-white/40"
                         >
                             {{ index + 1 }}
                         </div>
@@ -317,7 +359,8 @@ const hasNoResults = computed(() => {
                                 type="number"
                                 :value="set.weight"
                                 @change="(e) => updateSet(set, 'weight', e.target.value)"
-                                class="w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none focus:ring-2 focus:ring-accent-primary"
+                                class="w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
+                                :disabled="set.is_completed"
                                 inputmode="decimal"
                             />
                             <span class="text-sm text-white/50">kg</span>
@@ -329,7 +372,8 @@ const hasNoResults = computed(() => {
                                 type="number"
                                 :value="set.reps"
                                 @change="(e) => updateSet(set, 'reps', e.target.value)"
-                                class="w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none focus:ring-2 focus:ring-accent-primary"
+                                class="w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
+                                :disabled="set.is_completed"
                                 inputmode="numeric"
                             />
                             <span class="text-sm text-white/50">reps</span>
@@ -622,5 +666,14 @@ const hasNoResults = computed(() => {
                 </div>
             </div>
         </Teleport>
+
+        <!-- Rest Timer -->
+        <RestTimer
+            v-if="showTimer"
+            :duration="timerDuration"
+            auto-start
+            @finished="showTimer = false"
+            @close="showTimer = false"
+        />
     </AuthenticatedLayout>
 </template>

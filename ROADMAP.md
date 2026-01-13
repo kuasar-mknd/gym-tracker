@@ -32,20 +32,20 @@
 
 ### 1.2 Workout Templates (Modèles de séances)
 
-- [ ] Créer table `workout_templates` et `workout_template_lines`
-- [ ] Page de gestion des templates
-- [ ] Créer une séance à partir d'un template
-- [ ] Sauvegarder une séance existante comme template
-- [ ] Templates prédéfinis (Push/Pull/Legs, Upper/Lower, Full Body)
+- [x] Créer tables `workout_templates`, `workout_template_lines`, `workout_template_sets`
+- [x] Interface de gestion des modèles (Index, Create)
+- [x] Lancer une séance à partir d'un modèle
+- [x] Sauvegarder une séance existante comme modèle
+- [x] Prise en compte de l'ordre des exercices et des séries
+- [x] Tests unitaires et de feature pour les modèles
 
 ### 1.3 Rest Timer (Chronomètre de repos)
 
-- [ ] Composant Vue `RestTimer.vue` avec compte à rebours
-- [ ] Démarrage automatique après validation d'une série
-- [ ] Sons/vibrations à la fin du repos
-- [ ] Temps de repos configurable par exercice
-- [ ] Temps de repos suggéré selon le type d'exercice
-- [ ] Historique du temps de repos moyen
+- [ ] Lancement automatique du chrono après validation d'un set
+- [ ] Réglage du temps de repos par défaut (Global & par exercice)
+- [ ] Notification sonore/vibration à la fin du chrono
+- [ ] Contrôles manuels (Start/Stop/Reset/+30s)
+- [ ] Affichage flottant ou persistant pendant le repos
 
 ### 1.4 Volume & Statistiques avancées
 

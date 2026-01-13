@@ -9,7 +9,7 @@ class Exercise extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'type', 'category'];
+    protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
 
     public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

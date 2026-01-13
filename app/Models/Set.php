@@ -16,7 +16,16 @@ class Set extends Model
         'duration_seconds',
         'distance_km',
         'is_warmup',
+        'is_completed',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_warmup' => 'boolean',
+            'is_completed' => 'boolean',
+        ];
+    }
 
     public function workoutLine(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

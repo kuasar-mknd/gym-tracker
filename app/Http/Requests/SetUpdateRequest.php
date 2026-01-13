@@ -27,6 +27,7 @@ class SetUpdateRequest extends FormRequest
             'duration_seconds' => ['nullable', 'integer', 'min:0'],
             'distance_km' => ['nullable', 'numeric', 'min:0'],
             'is_warmup' => ['nullable', 'boolean'],
+            'is_completed' => ['nullable', 'boolean'],
         ];
     }
 }
