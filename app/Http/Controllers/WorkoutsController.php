@@ -50,7 +50,7 @@ class WorkoutsController extends Controller
         abort_if($workout->user_id !== auth()->id(), 403);
 
         return Inertia::render('Workouts/Show', [
-            'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets']),
+            'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),
             'exercises' => Exercise::orderBy('name')->get(),
             'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
             'types' => [

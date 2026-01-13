@@ -300,6 +300,13 @@ const hasNoResults = computed(() => {
                             <span class="text-sm text-white/50">reps</span>
                         </div>
 
+                        <!-- PR Badge -->
+                        <div v-if="set.personal_record" class="flex-shrink-0" title="Record personnel !">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-warning/20">
+                                <span class="text-xl">🏆</span>
+                            </div>
+                        </div>
+
                         <!-- Delete Set -->
                         <button
                             @click="removeSet(set.id)"

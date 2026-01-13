@@ -22,6 +22,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    recentPRs: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 const form = useForm({})
@@ -159,6 +163,45 @@ const greeting = computed(() => {
                             </div>
                         </GlassCard>
                     </Link>
+                </div>
+            </div>
+
+            <!-- Recent Personal Records -->
+            <div v-if="recentPRs.length > 0" class="animate-slide-up" style="animation-delay: 0.35s">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="font-semibold text-white">Records personnels</h2>
+                </div>
+
+                <div class="space-y-3">
+                    <GlassCard v-for="pr in recentPRs" :key="pr.id" padding="p-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-warning/20">
+                                    <span class="text-xl">🏆</span>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-white">{{ pr.exercise.name }}</div>
+                                    <div class="text-xs text-white/50">
+                                        {{
+                                            pr.type === 'max_weight'
+                                                ? 'Poids Maximum'
+                                                : pr.type === 'max_1rm'
+                                                  ? '1RM Estimé'
+                                                  : 'Volume'
+                                        }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-accent-warning">
+                                    {{ pr.value }}{{ pr.type === 'max_volume_set' ? '' : 'kg' }}
+                                </div>
+                                <div class="text-[10px] text-white/40">
+                                    {{ new Date(pr.achieved_at).toLocaleDateString('fr-FR') }}
+                                </div>
+                            </div>
+                        </div>
+                    </GlassCard>
                 </div>
             </div>
 

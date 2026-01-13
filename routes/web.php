@@ -34,11 +34,18 @@ Route::get('/dashboard', function () {
         ->limit(5)
         ->get();
 
+    $recentPRs = $user->personalRecords()
+        ->with('exercise')
+        ->latest('achieved_at')
+        ->take(5)
+        ->get();
+
     return Inertia::render('Dashboard', [
         'workoutsCount' => $workoutsCount,
         'thisWeekCount' => $thisWeekCount,
         'latestWeight' => $latestMeasurement?->weight,
         'recentWorkouts' => $recentWorkouts,
+        'recentPRs' => $recentPRs,
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 

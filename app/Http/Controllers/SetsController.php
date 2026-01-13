@@ -7,11 +7,14 @@ use App\Models\WorkoutLine;
 
 class SetsController extends Controller
 {
+    public function __construct(protected \App\Services\PersonalRecordService $prService) {}
+
     public function store(\App\Http\Requests\SetStoreRequest $request, WorkoutLine $workoutLine): \Illuminate\Http\RedirectResponse
     {
         abort_if($workoutLine->workout->user_id !== auth()->id(), 403);
 
-        $workoutLine->sets()->create($request->validated());
+        $set = $workoutLine->sets()->create($request->validated());
+        $this->prService->syncSetPRs($set);
 
         return back();
     }
@@ -21,6 +24,7 @@ class SetsController extends Controller
         abort_if($set->workoutLine->workout->user_id !== auth()->id(), 403);
 
         $set->update($request->validated());
+        $this->prService->syncSetPRs($set);
 
         return back();
     }

@@ -22,4 +22,9 @@ class Set extends Model
     {
         return $this->belongsTo(WorkoutLine::class);
     }
+
+    public function personalRecord(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PersonalRecord::class);
+    }
 }
