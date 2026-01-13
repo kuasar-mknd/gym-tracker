@@ -3,8 +3,17 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "dev": "vite",
         "build": "vite build",
-        "dev": "vite"
+        "format": "prettier --write \"resources/**/*.{js,vue,css}\" && ./vendor/bin/pint",
+        "lint": "npm run lint:js && npm run lint:php",
+        "lint:js": "prettier --check \"resources/**/*.{js,vue,css}\"",
+        "lint:php": "./vendor/bin/phpstan analyze --memory-limit=2G",
+        "prepare": "husky"
+    },
+    "lint-staged": {
+        "resources/**/*.{js,vue,css}": "prettier --write",
+        "**/*.php": "./vendor/bin/pint"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",
@@ -14,8 +23,12 @@
         "autoprefixer": "^10.4.12",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "husky": "^9.1.7",
         "laravel-vite-plugin": "^2.0.0",
+        "lint-staged": "^16.2.7",
         "postcss": "^8.4.31",
+        "prettier": "^3.7.4",
+        "prettier-plugin-tailwindcss": "^0.7.2",
         "tailwindcss": "^3.2.1",
         "vite": "^7.0.7",
         "vue": "^3.4.0"

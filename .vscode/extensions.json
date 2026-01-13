@@ -1,0 +1,18 @@
+{
+    "recommendations": [
+        "amiralizadeh9480.laravel-extra-path-helpers",
+        "austenc.laravel-blade-spacer",
+        "bmewburn.vscode-intelephense-client",
+        "bradlc.vscode-tailwindcss",
+        "cj-xu.vue-style-extension",
+        "codingyu.laravel-goto-view",
+        "donjayamanne.githistory",
+        "esbenp.prettier-vscode",
+        "onecentlin.laravel-blade",
+        "onecentlin.laravel5-snippets",
+        "shufo.vscode-blade-formatter",
+        "stefanduberg.phpstan",
+        "vue.volar",
+        "xdebug.php-debug"
+    ]
+}

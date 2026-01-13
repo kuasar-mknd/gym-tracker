@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('workout_lines', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('workout_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('exercise_id')->constrained();
+            $table->integer('order')->default(0); // Pour trier les exos dans la séance
             $table->timestamps();
         });
     }

@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('exercises', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            // Type permet de savoir quels champs afficher (Poids vs Distance)
+            $table->enum('type', ['strength', 'cardio', 'timed'])->default('strength');
+            $table->string('category')->nullable(); // ex: Jambes, Dos
             $table->timestamps();
         });
     }

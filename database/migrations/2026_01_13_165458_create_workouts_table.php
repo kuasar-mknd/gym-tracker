@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('workouts', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('name')->nullable(); // Nom optionnel de la séance
+            $table->dateTime('started_at');
+            $table->dateTime('ended_at')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

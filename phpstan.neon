@@ -1,0 +1,20 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - database/
+        - routes/
+        - tests/
+
+    # Level 9 is the highest level
+    level: 5
+
+    ignoreErrors:
+        # Prevent "Undefined variable: $this" in Pest tests
+        - '#Variable \$this might not be defined.#'
+
+    excludePaths:
+        - ./*/*/FileToBeExcluded.php
+

@@ -1,0 +1,17 @@
+{
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[php]": {
+        "editor.defaultFormatter": "shufo.vscode-blade-formatter"
+    },
+    "php.validate.executablePath": "/usr/bin/php",
+    "tailwindCSS.experimental.classRegex": [
+        ["\\bclass(?:Name)?\\s*:\\s*['\"`]([^'\"`]*?)['\"`]", "['\"`]([^'\"`]*?)['\"`]"]
+    ],
+    "files.associations": {
+        "*.blade.php": "blade"
+    },
+    "emmet.includeLanguages": {
+        "blade": "html"
+    }
+}

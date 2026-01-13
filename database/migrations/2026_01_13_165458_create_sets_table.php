@@ -13,6 +13,17 @@ return new class extends Migration
     {
         Schema::create('sets', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('workout_line_id')->constrained('workout_lines')->cascadeOnDelete();
+
+            // Données Muscu
+            $table->decimal('weight', 8, 2)->nullable();
+            $table->integer('reps')->nullable();
+
+            // Données Cardio / Temps
+            $table->integer('duration_seconds')->nullable();
+            $table->decimal('distance_km', 8, 3)->nullable();
+
+            $table->boolean('is_warmup')->default(false);
             $table->timestamps();
         });
     }
