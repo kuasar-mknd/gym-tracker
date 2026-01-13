@@ -197,13 +197,14 @@ const hasNoResults = computed(() => {
 
     <AuthenticatedLayout :page-title="workout.name || 'Séance en cours'" show-back back-route="workouts.index">
         <template #header-actions>
-            <GlassButton size="sm" @click="showAddExercise = true">
+            <GlassButton size="sm" @click="showAddExercise = true" aria-label="Ajouter un exercice">
                 <svg
                     class="h-4 w-4"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    aria-hidden="true"
                 >
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -220,6 +221,7 @@ const hasNoResults = computed(() => {
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
+                        aria-hidden="true"
                     >
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -240,6 +242,7 @@ const hasNoResults = computed(() => {
                     <button
                         @click="removeLine(line.id)"
                         class="rounded-lg p-2 text-white/40 transition hover:bg-white/10 hover:text-red-400"
+                        aria-label="Supprimer l'exercice"
                     >
                         <svg
                             class="h-5 w-5"
@@ -247,6 +250,7 @@ const hasNoResults = computed(() => {
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
+                            aria-hidden="true"
                         >
                             <path
                                 stroke-linecap="round"
@@ -300,6 +304,7 @@ const hasNoResults = computed(() => {
                         <button
                             @click="removeSet(set.id)"
                             class="rounded-lg p-2 text-white/30 transition hover:text-red-400"
+                            aria-label="Supprimer la série"
                         >
                             <svg
                                 class="h-4 w-4"
@@ -307,6 +312,7 @@ const hasNoResults = computed(() => {
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
+                                aria-hidden="true"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -330,6 +336,7 @@ const hasNoResults = computed(() => {
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
+                        aria-hidden="true"
                     >
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -351,13 +358,14 @@ const hasNoResults = computed(() => {
         </div>
 
         <!-- FAB -->
-        <button @click="showAddExercise = true" class="glass-fab sm:hidden">
+        <button @click="showAddExercise = true" class="glass-fab sm:hidden" aria-label="Ajouter un exercice">
             <svg
                 class="h-6 w-6 text-white"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-hidden="true"
             >
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -378,6 +386,7 @@ const hasNoResults = computed(() => {
                             <button
                                 @click="closeModal"
                                 class="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white"
+                                aria-label="Fermer"
                             >
                                 <svg
                                     class="h-5 w-5"
@@ -385,6 +394,7 @@ const hasNoResults = computed(() => {
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
+                                    aria-hidden="true"
                                 >
                                     <path
                                         stroke-linecap="round"
