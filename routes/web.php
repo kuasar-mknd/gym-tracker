@@ -33,6 +33,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/workout-lines/{workoutLine}/sets', [\App\Http\Controllers\SetsController::class, 'store'])->name('sets.store');
     Route::patch('/sets/{set}', [\App\Http\Controllers\SetsController::class, 'update'])->name('sets.update');
     Route::delete('/sets/{set}', [\App\Http\Controllers\SetsController::class, 'destroy'])->name('sets.destroy');
+
+    Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)
+        ->only(['index', 'store', 'destroy']);
 });
 
 require __DIR__.'/auth.php';
