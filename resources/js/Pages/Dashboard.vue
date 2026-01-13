@@ -80,7 +80,7 @@ const greeting = computed(() => {
             </div>
 
             <!-- Quick Actions -->
-            <div class="animate-slide-up" style="animation-delay: 0.2s">
+            <div class="grid animate-slide-up grid-cols-2 gap-3" style="animation-delay: 0.2s">
                 <GlassButton
                     variant="primary"
                     size="lg"
@@ -97,8 +97,27 @@ const greeting = computed(() => {
                     >
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
-                    Commencer une séance
+                    Libre
                 </GlassButton>
+                <Link :href="route('templates.index')" class="block w-full">
+                    <GlassButton size="lg" class="w-full">
+                        <svg
+                            class="mr-2 h-5 w-5 text-accent-primary"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                            />
+                        </svg>
+                        Modèle
+                    </GlassButton>
+                </Link>
             </div>
 
             <!-- Recent Workouts -->

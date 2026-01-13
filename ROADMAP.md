@@ -22,13 +22,13 @@
 
 ### 1.1 Personal Records (PR) Automatiques
 
-- [ ] Créer table `personal_records` (user_id, exercise_id, type, value, achieved_at)
-- [ ] Service `PersonalRecordService` pour détecter automatiquement les PRs
-- [ ] Types de PR : max weight, max reps, max volume, max 1RM estimé
-- [ ] Notifications toast quand un PR est battu
-- [ ] Affichage des PRs sur la page exercice
-- [ ] Badge/icône PR sur les sets qui sont des records
-- [ ] Historique des PRs par exercice
+- [x] Créer table `personal_records` (user_id, exercise_id, type, value, achieved_at)
+- [x] Service `PersonalRecordService` pour détecter automatiquement les PRs
+- [x] Types de PR : max weight, max reps, max volume, max 1RM estimé
+- [x] Notifications toast quand un PR est battu
+- [x] Affichage des PRs sur la page exercice
+- [x] Badge/icône PR sur les sets qui sont des records
+- [x] Historique des PRs par exercice
 
 ### 1.2 Workout Templates (Modèles de séances)
 

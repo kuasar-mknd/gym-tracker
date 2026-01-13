@@ -52,19 +52,34 @@ const formatDate = (dateStr) => {
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-white">Mes Séances</h2>
-                <GlassButton variant="primary" :loading="form.processing" @click="createWorkout">
-                    <svg
-                        class="mr-2 h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                    >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Nouvelle Séance
-                </GlassButton>
+                <div class="flex gap-2">
+                    <Link :href="route('templates.index')">
+                        <GlassButton>
+                            <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                                />
+                            </svg>
+                            Modèles
+                        </GlassButton>
+                    </Link>
+                    <GlassButton variant="primary" :loading="form.processing" @click="createWorkout">
+                        <svg
+                            class="mr-2 h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            aria-hidden="true"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Nouvelle Séance
+                    </GlassButton>
+                </div>
             </div>
         </template>
 

@@ -58,6 +58,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/workouts', [\App\Http\Controllers\WorkoutsController::class, 'store'])->name('workouts.store');
     Route::get('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'show'])->name('workouts.show');
 
+    Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class);
+    Route::post('/templates/{template}/execute', [\App\Http\Controllers\WorkoutTemplatesController::class, 'execute'])->name('templates.execute');
+    Route::post('/workouts/{workout}/save-as-template', [\App\Http\Controllers\WorkoutTemplatesController::class, 'saveFromWorkout'])->name('templates.save-from-workout');
+
     Route::post('/workouts/{workout}/lines', [\App\Http\Controllers\WorkoutLinesController::class, 'store'])->name('workout-lines.store');
     Route::delete('/workout-lines/{workoutLine}', [\App\Http\Controllers\WorkoutLinesController::class, 'destroy'])->name('workout-lines.destroy');
 
