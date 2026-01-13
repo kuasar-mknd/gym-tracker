@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
+import Stats from '@/Components/Stats.vue'
 
 const props = defineProps({
     workouts: Array,
@@ -28,6 +29,11 @@ const createWorkout = () => {
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
+                <!-- Analytics Section -->
+                <div v-if="workouts.length > 0">
+                    <Stats :workouts="workouts" />
+                </div>
+
                 <!-- Exercises Section -->
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
                     <div class="p-6 text-gray-900 dark:text-gray-100">
