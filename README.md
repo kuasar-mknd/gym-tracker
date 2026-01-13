@@ -3,7 +3,7 @@
 Une application de suivi de musculation simple et efficace.
 
 ## Stack Technique
-- **Laravel 11**
+- **Laravel 12**
 - **Vue 3** (via Inertia.js)
 - **Tailwind CSS**
 - **Vite**
