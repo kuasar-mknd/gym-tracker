@@ -1,0 +1,284 @@
+# 🏋️ Gym Tracker - Product Roadmap
+
+> Roadmap complète des fonctionnalités à implémenter pour transformer Gym Tracker en une application fitness de niveau professionnel.
+
+---
+
+## 📊 État actuel (v1.0)
+
+- [x] Authentification utilisateur (Laravel Breeze)
+- [x] Login social (Socialite)
+- [x] Gestion des séances (Workouts)
+- [x] Ajout d'exercices avec séries/répétitions
+- [x] Suivi des mensurations corporelles
+- [x] CRUD complet des exercices
+- [x] Dashboard avec graphiques (Chart.js)
+- [x] UI mobile-first Glass Design
+- [x] CI/CD avec GitHub Actions
+
+---
+
+## 🚀 Phase 1 : Core Fitness Features (Priorité Haute)
+
+### 1.1 Personal Records (PR) Automatiques
+
+- [ ] Créer table `personal_records` (user_id, exercise_id, type, value, achieved_at)
+- [ ] Service `PersonalRecordService` pour détecter automatiquement les PRs
+- [ ] Types de PR : max weight, max reps, max volume, max 1RM estimé
+- [ ] Notifications toast quand un PR est battu
+- [ ] Affichage des PRs sur la page exercice
+- [ ] Badge/icône PR sur les sets qui sont des records
+- [ ] Historique des PRs par exercice
+
+### 1.2 Workout Templates (Modèles de séances)
+
+- [ ] Créer table `workout_templates` et `workout_template_lines`
+- [ ] Page de gestion des templates
+- [ ] Créer une séance à partir d'un template
+- [ ] Sauvegarder une séance existante comme template
+- [ ] Templates prédéfinis (Push/Pull/Legs, Upper/Lower, Full Body)
+
+### 1.3 Rest Timer (Chronomètre de repos)
+
+- [ ] Composant Vue `RestTimer.vue` avec compte à rebours
+- [ ] Démarrage automatique après validation d'une série
+- [ ] Sons/vibrations à la fin du repos
+- [ ] Temps de repos configurable par exercice
+- [ ] Temps de repos suggéré selon le type d'exercice
+- [ ] Historique du temps de repos moyen
+
+### 1.4 Volume & Statistiques avancées
+
+- [ ] Calcul du volume total par séance (poids × reps × séries)
+- [ ] Calcul du 1RM estimé (formule Epley/Brzycki)
+- [ ] Graphique d'évolution du volume par groupe musculaire
+- [ ] Comparaison semaine vs semaine précédente
+- [ ] Tonnage total soulevé (lifetime stats)
+
+---
+
+## ⚡ Phase 2 : Expérience Utilisateur (Priorité Moyenne-Haute)
+
+### 2.1 Progressive Web App (PWA)
+
+- [ ] Installer `silviolleite/laravelpwa` ou config manuelle
+- [ ] Manifest.json avec icônes et couleurs
+- [ ] Service Worker pour cache offline
+- [ ] Possibilité d'installer l'app sur mobile
+- [ ] Sync des données quand connexion retrouvée
+
+### 2.2 Notifications & Rappels
+
+- [ ] Configurer Laravel Queue avec database/Redis driver
+- [ ] Table `notification_preferences` par utilisateur
+- [ ] Rappels d'entraînement programmables
+- [ ] Notifications de félicitations (PR, streak, milestone)
+- [ ] Notifications push (Web Push API)
+- [ ] Email digest hebdomadaire (optionnel)
+
+### 2.3 Photos de progression
+
+- [ ] Installer `spatie/laravel-medialibrary`
+- [ ] Upload de photos avec date
+- [ ] Comparaison avant/après côte à côte
+- [ ] Galerie chronologique
+- [ ] Photos privées par défaut
+
+### 2.4 Export & Rapports
+
+- [ ] Installer `barryvdh/laravel-dompdf`
+- [ ] Export PDF résumé de séance
+- [ ] Export PDF rapport mensuel
+- [ ] Installer `maatwebsite/excel`
+- [ ] Export CSV/Excel des données
+- [ ] Import de données depuis autres apps
+
+---
+
+## 🎯 Phase 3 : Gamification & Motivation
+
+### 3.1 Système d'objectifs (Goals)
+
+- [ ] Créer table `goals` (type, target, current, deadline)
+- [ ] Types : poids soulevé, fréquence, volume, mensuration
+- [ ] Progression visuelle vers l'objectif
+- [ ] Célébration quand objectif atteint
+
+### 3.2 Achievements & Badges
+
+- [ ] Créer tables `achievements` et `user_achievements`
+- [ ] Badges automatiques :
+    - [ ] "First Workout" - Première séance
+    - [ ] "Week Warrior" - 5 séances en une semaine
+    - [ ] "Streak Master" - 30 jours consécutifs
+    - [ ] "Heavy Lifter" - Premier PR à 100kg
+    - [ ] "Volume King" - 10 tonnes soulevées
+- [ ] Page avec tous les badges débloqués/verrouillés
+
+### 3.3 Streaks & Consistance
+
+- [ ] Calcul du streak actuel (jours consécutifs)
+- [ ] Streak le plus long
+- [ ] Calendrier type GitHub contributions (jours actifs)
+- [ ] Rappel si le streak risque d'être cassé
+
+---
+
+## 🌐 Phase 4 : Social & Communauté (Optionnel)
+
+### 4.1 Profil public
+
+- [ ] Option profil public/privé
+- [ ] Page profil avec stats résumées
+- [ ] URL personnalisée (/u/username)
+
+### 4.2 Partage de séances
+
+- [ ] Bouton "Partager" sur une séance
+- [ ] Lien public pour voir une séance
+- [ ] Copier un workout d'un autre utilisateur
+
+### 4.3 Leaderboards
+
+- [ ] Classement par exercice (optionnel opt-in)
+- [ ] Classement volume hebdomadaire
+- [ ] Catégories par poids de corps
+
+### 4.4 Friends & Following
+
+- [ ] Système de follow
+- [ ] Feed d'activité des amis
+- [ ] Challenges entre amis
+
+---
+
+## 🔧 Phase 5 : Infrastructure & Performance
+
+### 5.1 API REST complète
+
+- [ ] Installer `spatie/laravel-query-builder`
+- [ ] API Resources pour tous les modèles
+- [ ] Documentation Swagger/OpenAPI
+- [ ] Versioning API (v1)
+- [ ] Rate limiting par endpoint
+
+### 5.2 Performance & Caching
+
+- [ ] Configurer Redis
+- [ ] Cache des stats dashboard (5-15 min TTL)
+- [ ] Cache des personal records
+- [ ] Eager loading optimisé
+- [ ] Installer Laravel Telescope (dev only)
+
+### 5.3 Background Jobs
+
+- [ ] Configurer Laravel Horizon
+- [ ] Jobs pour calcul de stats lourdes
+- [ ] Jobs pour envoi de notifications
+- [ ] Jobs pour génération de rapports
+
+### 5.4 Scheduled Tasks
+
+- [ ] Rappels d'entraînement quotidiens
+- [ ] Calcul des streaks à minuit
+- [ ] Nettoyage des séances vides anciennes
+- [ ] Email digest hebdomadaire (dimanche soir)
+
+---
+
+## 📱 Phase 6 : Intégrations externes
+
+### 6.1 Wearables & Apps
+
+- [ ] Import depuis Apple Health (via CSV/API)
+- [ ] Import depuis Google Fit
+- [ ] Sync avec montres Garmin/Fitbit
+
+### 6.2 Nutrition (extension future)
+
+- [ ] Tracker de calories basique
+- [ ] Objectifs macros
+- [ ] Intégration MyFitnessPal API
+
+---
+
+## 🛠 Améliorations techniques continues
+
+### Code Quality
+
+- [ ] Augmenter couverture de tests à 80%+
+- [ ] Ajouter tests E2E avec Laravel Dusk
+- [ ] Documenter l'API avec Scribe
+- [ ] Ajouter PHPStan level 8
+
+### Sécurité
+
+- [ ] Audit de sécurité
+- [ ] 2FA (Two-Factor Authentication)
+- [ ] Rate limiting sur login
+- [ ] GDPR : export/suppression des données
+
+### DevOps
+
+- [ ] Docker compose pour dev local
+- [ ] Staging environment
+- [ ] Monitoring avec Sentry/Bugsnag
+- [ ] Backups automatiques
+
+---
+
+## 📦 Packages à installer
+
+```bash
+# Phase 1
+# (aucun package externe nécessaire)
+
+# Phase 2
+composer require silviolleite/laravelpwa
+composer require spatie/laravel-medialibrary
+composer require barryvdh/laravel-dompdf
+composer require maatwebsite/excel
+
+# Phase 3
+# (aucun package externe nécessaire)
+
+# Phase 4
+# (aucun package externe nécessaire)
+
+# Phase 5
+composer require spatie/laravel-query-builder
+composer require laravel/horizon
+composer require laravel/telescope --dev
+
+# DevOps
+composer require spatie/laravel-backup
+composer require sentry/sentry-laravel
+```
+
+---
+
+## 🗓 Timeline suggérée
+
+| Phase   | Durée estimée | Priorité    |
+| ------- | ------------- | ----------- |
+| Phase 1 | 2-3 semaines  | 🔴 Critique |
+| Phase 2 | 2-3 semaines  | 🟠 Haute    |
+| Phase 3 | 1-2 semaines  | 🟡 Moyenne  |
+| Phase 4 | 2-3 semaines  | 🟢 Basse    |
+| Phase 5 | 1-2 semaines  | 🟠 Continue |
+| Phase 6 | Variable      | 🟢 Future   |
+
+---
+
+## 🎯 MVP+ (Prochaine release)
+
+Pour la prochaine version majeure, focus sur :
+
+1. ✨ **Personal Records automatiques**
+2. ⏱️ **Rest Timer**
+3. 📊 **Volume calculator**
+4. 📱 **PWA installable**
+
+---
+
+_Dernière mise à jour : 2026-01-13_
