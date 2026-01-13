@@ -22,9 +22,13 @@ jobs:
               run: npm install --legacy-peer-deps
 
             - name: Build Assets
-              run: |
-                  ls -R resources/js
-                  npm run build
+              run: npm run build
+
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: build-assets
+                  path: public/build
 
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
@@ -71,10 +75,7 @@ jobs:
               env:
                   DB_CONNECTION: sqlite
                   DB_DATABASE: ':memory:'
-              run: |
-                  php artisan test --no-ansi --stop-on-failure > test_output.txt 2>&1 || true
-                  cat test_output.txt
-                  exit $(grep -q "FAIL" test_output.txt && echo 1 || echo 0)
+              run: php artisan test
 
     lint:
         runs-on: ubuntu-latest
