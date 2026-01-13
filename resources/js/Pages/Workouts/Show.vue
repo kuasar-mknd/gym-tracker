@@ -1,3 +1,13 @@
+<!--
+  Workouts/Show.vue
+
+  This component displays the details of a specific workout.
+  It allows the user to:
+  - View exercises and sets in the workout.
+  - Add new exercises to the workout.
+  - Add, update, and remove sets for each exercise.
+  - Remove exercises (workout lines) from the workout.
+-->
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
@@ -6,18 +16,31 @@ import SecondaryButton from '@/Components/SecondaryButton.vue'
 import TextInput from '@/Components/TextInput.vue'
 import { ref } from 'vue'
 
+/**
+ * Component Props
+ *
+ * @property {Object} workout - The workout object containing details, lines, and sets.
+ * @property {Array} exercises - List of all available exercises for the "Add Exercise" modal.
+ */
 const props = defineProps({
     workout: Object,
     exercises: Array,
 })
 
+// State for toggling the "Add Exercise" modal
 const showAddExercise = ref(false)
+// State for the exercise search query
 const searchQuery = ref('')
 
 const addExerciseForm = useForm({
     exercise_id: '',
 })
 
+/**
+ * Adds an exercise to the current workout.
+ *
+ * @param {Number} exerciseId - The ID of the exercise to add.
+ */
 const addExercise = (exerciseId) => {
     addExerciseForm.exercise_id = exerciseId
     addExerciseForm.post(route('workout-lines.store', props.workout.id), {
@@ -27,12 +50,23 @@ const addExercise = (exerciseId) => {
     })
 }
 
+/**
+ * Removes a workout line (exercise) from the workout.
+ *
+ * @param {Number} lineId - The ID of the workout line to remove.
+ */
 const removeLine = (lineId) => {
     if (confirm('Supprimer cet exercice de la séance ?')) {
         router.delete(route('workout-lines.destroy', lineId))
     }
 }
 
+/**
+ * Adds a new set to a workout line.
+ * Pre-fills the weight and reps with values from the last set if available.
+ *
+ * @param {Number} lineId - The ID of the workout line.
+ */
 const addSet = (lineId) => {
     const lastSet = props.workout.workout_lines.find((l) => l.id === lineId).sets.at(-1)
 
@@ -42,6 +76,13 @@ const addSet = (lineId) => {
     })
 }
 
+/**
+ * Updates a specific field of a set.
+ *
+ * @param {Object} set - The set object to update.
+ * @param {String} field - The field name (e.g., 'weight', 'reps').
+ * @param {String|Number} value - The new value.
+ */
 const updateSet = (set, field, value) => {
     router.patch(
         route('sets.update', set.id),
@@ -55,10 +96,20 @@ const updateSet = (set, field, value) => {
     )
 }
 
+/**
+ * Removes a set from a workout line.
+ *
+ * @param {Number} setId - The ID of the set to remove.
+ */
 const removeSet = (setId) => {
     router.delete(route('sets.destroy', setId))
 }
 
+/**
+ * Filters the list of exercises based on the search query.
+ *
+ * @returns {Array} The filtered list of exercises.
+ */
 const filteredExercises = () => {
     if (!searchQuery.value) return props.exercises
     return props.exercises.filter((e) => e.name.toLowerCase().includes(searchQuery.value.toLowerCase()))

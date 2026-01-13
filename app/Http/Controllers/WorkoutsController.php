@@ -7,8 +7,23 @@ use App\Models\Workout;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+/**
+ * Controller for managing Workouts.
+ *
+ * This controller handles the CRUD operations for workouts, including
+ * listing user's workouts, displaying a specific workout, and creating a new one.
+ * It integrates with Inertia.js for the frontend.
+ */
 class WorkoutsController extends Controller
 {
+    /**
+     * Display a listing of the user's workouts.
+     *
+     * Retrieves all workouts for the authenticated user, eager loading
+     * related workout lines, exercises, and sets.
+     *
+     * @return \Inertia\Response The Inertia response rendering the Workouts/Index page.
+     */
     public function index(): \Inertia\Response
     {
         return Inertia::render('Workouts/Index', [
@@ -19,6 +34,17 @@ class WorkoutsController extends Controller
         ]);
     }
 
+    /**
+     * Display the specified workout.
+     *
+     * Shows the details of a specific workout, including its exercises and sets.
+     * Ensures that the authenticated user owns the workout.
+     *
+     * @param  \App\Models\Workout  $workout The workout to display.
+     * @return \Inertia\Response The Inertia response rendering the Workouts/Show page.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized to view the workout (403).
+     */
     public function show(Workout $workout): \Inertia\Response
     {
         abort_if($workout->user_id !== auth()->id(), 403);
@@ -29,6 +55,15 @@ class WorkoutsController extends Controller
         ]);
     }
 
+    /**
+     * Store a newly created workout in storage.
+     *
+     * Creates a new workout for the authenticated user with the current date
+     * as the start date and a default name. Redirects to the show page of the new workout.
+     *
+     * @param  \Illuminate\Http\Request  $request The HTTP request (currently unused for input but part of the signature).
+     * @return \Illuminate\Http\RedirectResponse A redirect to the newly created workout.
+     */
     public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
         $workout = Workout::create([
