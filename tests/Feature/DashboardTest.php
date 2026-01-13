@@ -1,8 +1,8 @@
 <?php
 
+use App\Models\BodyMeasurement;
 use App\Models\User;
 use App\Models\Workout;
-use App\Models\BodyMeasurement;
 
 test('dashboard displays correct workout stats', function () {
     $user = User::factory()->create();

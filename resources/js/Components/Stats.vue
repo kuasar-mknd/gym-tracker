@@ -1,14 +1,6 @@
 <script setup>
-import { computed } from 'vue';
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  BarElement,
-  CategoryScale,
-  LinearScale
-} from 'chart.js'
+import { computed } from 'vue'
+import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
@@ -16,29 +8,29 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 const props = defineProps({
     workouts: {
         type: Array,
-        required: true
-    }
-});
+        required: true,
+    },
+})
 
 const chartData = computed(() => {
     // Process workouts to get count per month
-    const months = {};
-    const today = new Date();
+    const months = {}
+    const today = new Date()
 
     // Initialize last 6 months
     for (let i = 5; i >= 0; i--) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const key = d.toLocaleString('default', { month: 'short', year: 'numeric' });
-        months[key] = 0;
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+        const key = d.toLocaleString('default', { month: 'short', year: 'numeric' })
+        months[key] = 0
     }
 
-    props.workouts.forEach(workout => {
-        const date = new Date(workout.started_at);
-        const key = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+    props.workouts.forEach((workout) => {
+        const date = new Date(workout.started_at)
+        const key = date.toLocaleString('default', { month: 'short', year: 'numeric' })
         if (months.hasOwnProperty(key)) {
-            months[key]++;
+            months[key]++
         }
-    });
+    })
 
     return {
         labels: Object.keys(months),
@@ -50,17 +42,17 @@ const chartData = computed(() => {
                 borderColor: 'rgba(54, 162, 235, 1)',
                 borderWidth: 1,
                 borderRadius: 4,
-            }
-        ]
+            },
+        ],
     }
-});
+})
 
 const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
         legend: {
-            display: false
+            display: false,
         },
         title: {
             display: true,
@@ -68,35 +60,35 @@ const chartOptions = {
             color: '#4B5563', // gray-600
             font: {
                 size: 16,
-                weight: 'bold'
-            }
-        }
+                weight: 'bold',
+            },
+        },
     },
     scales: {
         y: {
             beginAtZero: true,
             grid: {
-                color: 'rgba(0, 0, 0, 0.05)'
+                color: 'rgba(0, 0, 0, 0.05)',
             },
             ticks: {
-                stepSize: 1
-            }
+                stepSize: 1,
+            },
         },
         x: {
             grid: {
-                display: false
-            }
-        }
-    }
-};
+                display: false,
+            },
+        },
+    },
+}
 </script>
 
 <template>
-    <div class="stats-container p-6 relative overflow-hidden">
-         <div class="absolute inset-0 bg-white/40 backdrop-blur-md rounded-xl border border-white/50 shadow-lg"></div>
-         <div class="relative z-10 h-64">
-             <Bar :data="chartData" :options="chartOptions" />
-         </div>
+    <div class="stats-container relative overflow-hidden p-6">
+        <div class="absolute inset-0 rounded-xl border border-white/50 bg-white/40 shadow-lg backdrop-blur-md"></div>
+        <div class="relative z-10 h-64">
+            <Bar :data="chartData" :options="chartOptions" />
+        </div>
     </div>
 </template>
 
