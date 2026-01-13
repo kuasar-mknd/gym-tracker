@@ -12,10 +12,10 @@ class WorkoutLinesController extends Controller
 
         $order = $workout->workoutLines()->count();
 
-        $workout->workoutLines()->create([
-            'exercise_id' => $request->exercise_id,
-            'order' => $order,
-        ]);
+        $workout->workoutLines()->create(array_merge(
+            $request->validated(),
+            ['order' => $order]
+        ));
 
         return back();
     }
