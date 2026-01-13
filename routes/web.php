@@ -16,17 +16,29 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     $user = auth()->user();
-    $workouts = $user->workouts()->with('workoutLines.exercise', 'workoutLines.sets')->latest()->get();
-    $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
+
+    // Optimize: fetch counts directly from DB instead of loading all workouts
+    $workoutsCount = $user->workouts()->count();
 
     $startOfWeek = now()->startOfWeek();
-    $thisWeekCount = $workouts->filter(fn ($w) => $w->started_at >= $startOfWeek)->count();
+    $thisWeekCount = $user->workouts()
+        ->where('started_at', '>=', $startOfWeek)
+        ->count();
+
+    $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
+
+    // Optimize: only fetch the 5 most recent workouts with eager loading
+    $recentWorkouts = $user->workouts()
+        ->with('workoutLines.exercise', 'workoutLines.sets')
+        ->latest()
+        ->limit(5)
+        ->get();
 
     return Inertia::render('Dashboard', [
-        'workoutsCount' => $workouts->count(),
+        'workoutsCount' => $workoutsCount,
         'thisWeekCount' => $thisWeekCount,
         'latestWeight' => $latestMeasurement?->weight,
-        'recentWorkouts' => $workouts->take(5)->values(),
+        'recentWorkouts' => $recentWorkouts,
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
