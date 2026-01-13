@@ -1,0 +1,183 @@
+# Dependabot configuration - Ultra Pro Edition
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+    # ========================================
+    # PHP / Composer Dependencies
+    # ========================================
+    - package-ecosystem: 'composer'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+          day: 'monday'
+          time: '09:00'
+          timezone: 'America/Montreal'
+      open-pull-requests-limit: 10
+      reviewers:
+          - 'kuasar-mknd'
+      labels:
+          - 'dependencies'
+          - 'php'
+          - 'composer'
+      commit-message:
+          prefix: 'chore(deps)'
+          include: 'scope'
+      groups:
+          # Laravel Framework Core
+          laravel-core:
+              patterns:
+                  - 'laravel/framework'
+                  - 'laravel/sanctum'
+                  - 'laravel/tinker'
+              update-types:
+                  - 'minor'
+                  - 'patch'
+          # Laravel Dev Tools
+          laravel-dev:
+              patterns:
+                  - 'laravel/breeze'
+                  - 'laravel/pint'
+                  - 'laravel/sail'
+                  - 'laravel/pail'
+                  - 'laravel/boost'
+              update-types:
+                  - 'minor'
+                  - 'patch'
+          # Inertia.js
+          inertia:
+              patterns:
+                  - 'inertiajs/*'
+          # Testing
+          testing:
+              patterns:
+                  - 'phpunit/phpunit'
+                  - 'pestphp/*'
+                  - 'mockery/mockery'
+                  - 'fakerphp/faker'
+              update-types:
+                  - 'minor'
+                  - 'patch'
+          # Static Analysis
+          static-analysis:
+              patterns:
+                  - 'larastan/larastan'
+                  - 'nunomaduro/collision'
+      ignore:
+          # Ignore major version updates for critical packages (review manually)
+          - dependency-name: 'laravel/framework'
+            update-types: ['version-update:semver-major']
+          - dependency-name: 'php'
+            update-types: ['version-update:semver-major']
+
+    # ========================================
+    # JavaScript / npm Dependencies
+    # ========================================
+    - package-ecosystem: 'npm'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+          day: 'monday'
+          time: '09:00'
+          timezone: 'America/Montreal'
+      open-pull-requests-limit: 10
+      reviewers:
+          - 'kuasar-mknd'
+      labels:
+          - 'dependencies'
+          - 'javascript'
+          - 'npm'
+      commit-message:
+          prefix: 'chore(deps)'
+          include: 'scope'
+      groups:
+          # Vue.js Ecosystem
+          vue:
+              patterns:
+                  - 'vue'
+                  - '@vue/*'
+                  - '@vitejs/plugin-vue'
+              update-types:
+                  - 'minor'
+                  - 'patch'
+          # Inertia.js Frontend
+          inertia-frontend:
+              patterns:
+                  - '@inertiajs/*'
+          # Build Tools
+          build-tools:
+              patterns:
+                  - 'vite'
+                  - 'laravel-vite-plugin'
+                  - 'tailwindcss'
+                  - 'postcss'
+                  - 'autoprefixer'
+              update-types:
+                  - 'minor'
+                  - 'patch'
+          # TypeScript/Linting
+          linting:
+              patterns:
+                  - 'prettier'
+                  - 'prettier-plugin-*'
+                  - 'eslint'
+                  - 'eslint-*'
+                  - '@types/*'
+          # Chart.js
+          charts:
+              patterns:
+                  - 'chart.js'
+                  - 'vue-chartjs'
+      ignore:
+          # Ignore major version updates for critical frontend packages
+          - dependency-name: 'vue'
+            update-types: ['version-update:semver-major']
+          - dependency-name: 'tailwindcss'
+            update-types: ['version-update:semver-major']
+          - dependency-name: 'vite'
+            update-types: ['version-update:semver-major']
+
+    # ========================================
+    # GitHub Actions
+    # ========================================
+    - package-ecosystem: 'github-actions'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+          day: 'monday'
+          time: '09:00'
+          timezone: 'America/Montreal'
+      open-pull-requests-limit: 5
+      reviewers:
+          - 'kuasar-mknd'
+      labels:
+          - 'dependencies'
+          - 'github-actions'
+          - 'ci'
+      commit-message:
+          prefix: 'chore(ci)'
+          include: 'scope'
+      groups:
+          # All GitHub Actions
+          github-actions:
+              patterns:
+                  - '*'
+
+    # ========================================
+    # Docker (if applicable)
+    # ========================================
+    - package-ecosystem: 'docker'
+      directory: '/'
+      schedule:
+          interval: 'monthly'
+          time: '09:00'
+          timezone: 'America/Montreal'
+      open-pull-requests-limit: 3
+      reviewers:
+          - 'kuasar-mknd'
+      labels:
+          - 'dependencies'
+          - 'docker'
+      commit-message:
+          prefix: 'chore(docker)'
+          include: 'scope'
