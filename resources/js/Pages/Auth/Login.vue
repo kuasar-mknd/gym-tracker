@@ -85,6 +85,37 @@ const submit = () => {
             >
                 Se connecter
             </GlassButton>
+
+            <!-- Social Login -->
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-glass-border"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="bg-[#1E1E1E] px-2 text-white/50">Ou continuer avec</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <a
+                    :href="route('social.redirect', 'google')"
+                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                >
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="h-5 w-5" alt="Google" />
+                </a>
+                <a
+                    :href="route('social.redirect', 'github')"
+                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                >
+                    <img src="https://www.svgrepo.com/show/512317/github-142.svg" class="h-5 w-5 invert" alt="GitHub" />
+                </a>
+                <a
+                    :href="route('social.redirect', 'apple')"
+                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                >
+                    <img src="https://www.svgrepo.com/show/511330/apple-173.svg" class="h-5 w-5 invert" alt="Apple" />
+                </a>
+            </div>
         </form>
 
         <template #footer>
