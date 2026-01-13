@@ -29,13 +29,20 @@ const formatDate = (dateStr) => {
 
     <AuthenticatedLayout page-title="Mes Séances">
         <template #header-actions>
-            <GlassButton variant="primary" size="sm" :loading="form.processing" @click="createWorkout">
+            <GlassButton
+                variant="primary"
+                size="sm"
+                :loading="form.processing"
+                @click="createWorkout"
+                aria-label="Nouvelle séance"
+            >
                 <svg
                     class="h-4 w-4"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    aria-hidden="true"
                 >
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -52,6 +59,7 @@ const formatDate = (dateStr) => {
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
+                        aria-hidden="true"
                     >
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -178,13 +186,19 @@ const formatDate = (dateStr) => {
         </div>
 
         <!-- FAB for mobile -->
-        <button @click="createWorkout" class="glass-fab sm:hidden" :disabled="form.processing">
+        <button
+            @click="createWorkout"
+            class="glass-fab sm:hidden"
+            :disabled="form.processing"
+            aria-label="Nouvelle séance"
+        >
             <svg
                 class="h-6 w-6 text-white"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
+                aria-hidden="true"
             >
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
