@@ -11,13 +11,7 @@ class SetsController extends Controller
     {
         abort_if($workoutLine->workout->user_id !== auth()->id(), 403);
 
-        $workoutLine->sets()->create([
-            'weight' => $request->weight,
-            'reps' => $request->reps,
-            'duration_seconds' => $request->duration_seconds,
-            'distance_km' => $request->distance_km,
-            'is_warmup' => $request->is_warmup ?? false,
-        ]);
+        $workoutLine->sets()->create($request->validated());
 
         return back();
     }

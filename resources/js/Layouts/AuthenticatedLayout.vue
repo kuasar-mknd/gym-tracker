@@ -30,6 +30,9 @@ const showingNavigationDropdown = ref(false)
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
+                                <NavLink :href="route('body-measurements.index')" :active="route().current('body-measurements.*')">
+                                    Body Tracker
+                                </NavLink>
                             </div>
                         </div>
 
@@ -115,6 +118,9 @@ const showingNavigationDropdown = ref(false)
                     <div class="space-y-1 pb-3 pt-2">
                         <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('body-measurements.index')" :active="route().current('body-measurements.*')">
+                            Body Tracker
                         </ResponsiveNavLink>
                     </div>
 
