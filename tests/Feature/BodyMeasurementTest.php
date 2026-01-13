@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\BodyMeasurement;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -34,7 +34,7 @@ class BodyMeasurementTest extends TestCase
         $this->assertDatabaseHas('body_measurements', [
             'user_id' => $user->id,
             'weight' => 80.5,
-            'measured_at' => '2023-01-01',
+            'measured_at' => '2023-01-01 00:00:00',
         ]);
     }
 
