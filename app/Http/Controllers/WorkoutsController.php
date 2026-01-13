@@ -40,7 +40,7 @@ class WorkoutsController extends Controller
      * Shows the details of a specific workout, including its exercises and sets.
      * Ensures that the authenticated user owns the workout.
      *
-     * @param  \App\Models\Workout  $workout The workout to display.
+     * @param  \App\Models\Workout  $workout  The workout to display.
      * @return \Inertia\Response The Inertia response rendering the Workouts/Show page.
      *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized to view the workout (403).
@@ -61,7 +61,7 @@ class WorkoutsController extends Controller
      * Creates a new workout for the authenticated user with the current date
      * as the start date and a default name. Redirects to the show page of the new workout.
      *
-     * @param  \Illuminate\Http\Request  $request The HTTP request (currently unused for input but part of the signature).
+     * @param  \Illuminate\Http\Request  $request  The HTTP request (currently unused for input but part of the signature).
      * @return \Illuminate\Http\RedirectResponse A redirect to the newly created workout.
      */
     public function store(Request $request): \Illuminate\Http\RedirectResponse
