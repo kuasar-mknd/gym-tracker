@@ -45,4 +45,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function bodyMeasurements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BodyMeasurement::class);
+    }
 }
