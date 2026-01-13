@@ -1,34 +1,30 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Line } from 'vue-chartjs'
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler,
 } from 'chart.js'
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
 const props = defineProps({
     measurements: Array,
 })
+
+const showAddForm = ref(false)
 
 const form = useForm({
     weight: '',
@@ -38,31 +34,54 @@ const form = useForm({
 
 const submit = () => {
     form.post(route('body-measurements.store'), {
-        onSuccess: () => form.reset('weight', 'notes'),
+        onSuccess: () => {
+            form.reset('weight', 'notes')
+            showAddForm.value = false
+        },
     })
 }
 
 const deleteMeasurement = (id) => {
-    if (confirm('Are you sure you want to delete this entry?')) {
+    if (confirm('Supprimer cette entrée ?')) {
         useForm({}).delete(route('body-measurements.destroy', id))
     }
 }
 
+const latestWeight = computed(() => {
+    if (props.measurements.length === 0) return null
+    return props.measurements[props.measurements.length - 1].weight
+})
+
+const previousWeight = computed(() => {
+    if (props.measurements.length < 2) return null
+    return props.measurements[props.measurements.length - 2].weight
+})
+
+const weightDiff = computed(() => {
+    if (!latestWeight.value || !previousWeight.value) return null
+    return (latestWeight.value - previousWeight.value).toFixed(1)
+})
+
 const chartData = computed(() => {
-    // Sort just in case, though controller does it too
     const sorted = [...props.measurements].sort((a, b) => new Date(a.measured_at) - new Date(b.measured_at))
     return {
-        labels: sorted.map(m => new Date(m.measured_at + 'T00:00:00').toLocaleDateString()),
+        labels: sorted.map((m) =>
+            new Date(m.measured_at + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+        ),
         datasets: [
             {
-                label: 'Body Weight',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                borderColor: '#ffffff',
-                data: sorted.map(m => m.weight),
+                label: 'Poids',
+                backgroundColor: 'rgba(129, 140, 248, 0.1)',
+                borderColor: '#818cf8',
+                pointBackgroundColor: '#818cf8',
+                pointBorderColor: '#818cf8',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                data: sorted.map((m) => m.weight),
                 tension: 0.4,
                 fill: true,
-            }
-        ]
+            },
+        ],
     }
 })
 
@@ -70,126 +89,217 @@ const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-        legend: {
-            labels: {
-                color: '#ffffff'
-            }
-        }
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: 'rgba(26, 26, 46, 0.95)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: 'rgba(255, 255, 255, 0.15)',
+            borderWidth: 1,
+            cornerRadius: 12,
+            padding: 12,
+        },
     },
     scales: {
         x: {
-            ticks: { color: '#e5e7eb' },
-            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+            ticks: { color: 'rgba(255, 255, 255, 0.5)', font: { size: 11 } },
+            grid: { display: false },
+            border: { display: false },
         },
         y: {
-            ticks: { color: '#e5e7eb' },
-            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-        }
-    }
+            ticks: { color: 'rgba(255, 255, 255, 0.5)', font: { size: 11 } },
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            border: { display: false },
+        },
+    },
 }
 </script>
 
 <template>
-    <Head title="Body Weight Tracker" />
+    <Head title="Suivi Corps" />
 
-    <AuthenticatedLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Body Weight Tracker</h2>
+    <AuthenticatedLayout page-title="Suivi Corps">
+        <template #header-actions>
+            <GlassButton size="sm" @click="showAddForm = !showAddForm">
+                <svg
+                    class="h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+            </GlassButton>
         </template>
 
-        <div class="py-12 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-6">
+        <template #header>
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-white">Suivi Corps</h2>
+                <GlassButton @click="showAddForm = !showAddForm">
+                    <svg
+                        class="mr-2 h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Ajouter
+                </GlassButton>
+            </div>
+        </template>
 
-                <!-- Chart Section -->
-                <div class="overflow-hidden rounded-2xl bg-white/10 p-6 backdrop-blur-lg shadow-xl border border-white/20">
-                    <h3 class="text-lg font-medium text-white mb-4">Progress Chart</h3>
-                    <div class="h-96 w-full">
-                        <Line :data="chartData" :options="chartOptions" v-if="measurements.length > 0" />
-                        <div v-else class="flex h-full items-center justify-center text-white/50">
-                            No data available yet. Start logging your weight below!
+        <div class="space-y-6">
+            <!-- Quick Stats -->
+            <div class="grid animate-slide-up grid-cols-2 gap-3">
+                <GlassCard padding="p-4">
+                    <div class="text-center">
+                        <div class="text-gradient text-3xl font-bold">
+                            {{ latestWeight ? `${latestWeight}` : '—' }}
                         </div>
+                        <div class="mt-1 text-sm text-white/60">kg actuel</div>
+                    </div>
+                </GlassCard>
+                <GlassCard padding="p-4">
+                    <div class="text-center">
+                        <div
+                            :class="[
+                                'text-3xl font-bold',
+                                weightDiff > 0
+                                    ? 'text-accent-warning'
+                                    : weightDiff < 0
+                                      ? 'text-accent-success'
+                                      : 'text-white/60',
+                            ]"
+                        >
+                            {{ weightDiff ? `${weightDiff > 0 ? '+' : ''}${weightDiff}` : '—' }}
+                        </div>
+                        <div class="mt-1 text-sm text-white/60">kg évolution</div>
+                    </div>
+                </GlassCard>
+            </div>
+
+            <!-- Add Form (collapsible) -->
+            <GlassCard v-if="showAddForm" class="animate-slide-up">
+                <h3 class="mb-4 font-semibold text-white">Nouvelle entrée</h3>
+                <form @submit.prevent="submit" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <GlassInput
+                            v-model="form.weight"
+                            type="number"
+                            step="0.1"
+                            label="Poids (kg)"
+                            placeholder="75.5"
+                            :error="form.errors.weight"
+                            inputmode="decimal"
+                            required
+                        />
+                        <GlassInput
+                            v-model="form.measured_at"
+                            type="date"
+                            label="Date"
+                            :error="form.errors.measured_at"
+                            required
+                        />
+                    </div>
+                    <GlassInput
+                        v-model="form.notes"
+                        label="Notes (optionnel)"
+                        placeholder="Matin, à jeun..."
+                        :error="form.errors.notes"
+                    />
+                    <GlassButton type="submit" variant="primary" class="w-full" :loading="form.processing">
+                        Enregistrer
+                    </GlassButton>
+                </form>
+            </GlassCard>
+
+            <!-- Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
+                <h3 class="mb-4 font-semibold text-white">Évolution</h3>
+                <div class="h-64">
+                    <Line v-if="measurements.length > 0" :data="chartData" :options="chartOptions" />
+                    <div v-else class="flex h-full items-center justify-center text-white/40">
+                        Aucune donnée disponible
                     </div>
                 </div>
+            </GlassCard>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Add Measurement Form -->
-                    <div class="rounded-2xl bg-white/10 p-6 backdrop-blur-lg shadow-xl border border-white/20">
-                        <h3 class="text-lg font-medium text-white mb-4">Log Weight</h3>
-                        <form @submit.prevent="submit" class="space-y-4">
+            <!-- History -->
+            <div class="animate-slide-up" style="animation-delay: 0.2s">
+                <h3 class="mb-3 font-semibold text-white">Historique</h3>
+
+                <div v-if="measurements.length === 0">
+                    <GlassCard>
+                        <div class="py-8 text-center">
+                            <div class="mb-2 text-4xl">⚖️</div>
+                            <p class="text-white/60">Aucune mesure pour l'instant</p>
+                        </div>
+                    </GlassCard>
+                </div>
+
+                <div v-else class="space-y-2">
+                    <GlassCard
+                        v-for="measurement in [...measurements].reverse()"
+                        :key="measurement.id"
+                        padding="p-4"
+                        class="group"
+                    >
+                        <div class="flex items-center justify-between">
                             <div>
-                                <label for="weight" class="block text-sm font-medium text-white/80">Weight</label>
-                                <input
-                                    id="weight"
-                                    v-model="form.weight"
-                                    type="number"
-                                    step="0.01"
-                                    class="mt-1 block w-full rounded-xl border-none bg-white/20 py-2 px-3 text-white placeholder-white/50 shadow-inner focus:ring-2 focus:ring-white/50"
-                                    placeholder="e.g. 75.5"
-                                    required
-                                />
-                                <div v-if="form.errors.weight" class="mt-1 text-sm text-red-300">{{ form.errors.weight }}</div>
-                            </div>
-
-                            <div>
-                                <label for="measured_at" class="block text-sm font-medium text-white/80">Date</label>
-                                <input
-                                    id="measured_at"
-                                    v-model="form.measured_at"
-                                    type="date"
-                                    class="mt-1 block w-full rounded-xl border-none bg-white/20 py-2 px-3 text-white shadow-inner focus:ring-2 focus:ring-white/50"
-                                    required
-                                />
-                                <div v-if="form.errors.measured_at" class="mt-1 text-sm text-red-300">{{ form.errors.measured_at }}</div>
-                            </div>
-
-                            <div>
-                                <label for="notes" class="block text-sm font-medium text-white/80">Notes (Optional)</label>
-                                <textarea
-                                    id="notes"
-                                    v-model="form.notes"
-                                    class="mt-1 block w-full rounded-xl border-none bg-white/20 py-2 px-3 text-white placeholder-white/50 shadow-inner focus:ring-2 focus:ring-white/50"
-                                    placeholder="Morning weigh-in..."
-                                ></textarea>
-                                <div v-if="form.errors.notes" class="mt-1 text-sm text-red-300">{{ form.errors.notes }}</div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                :disabled="form.processing"
-                                class="w-full rounded-xl bg-white/20 py-2 px-4 font-bold text-white shadow-lg backdrop-blur-md transition hover:bg-white/30 disabled:opacity-50"
-                            >
-                                Save Entry
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- History List -->
-                    <div class="rounded-2xl bg-white/10 p-6 backdrop-blur-lg shadow-xl border border-white/20 max-h-[500px] overflow-y-auto">
-                        <h3 class="text-lg font-medium text-white mb-4">History</h3>
-                        <ul class="space-y-3">
-                            <li v-for="measurement in measurements.slice().reverse()" :key="measurement.id" class="flex items-center justify-between rounded-xl bg-white/5 p-3 hover:bg-white/10 transition group">
-                                <div>
-                                    <div class="text-xl font-bold text-white">{{ measurement.weight }}</div>
-                                    <div class="text-xs text-white/60">{{ new Date(measurement.measured_at + 'T00:00:00').toLocaleDateString() }}</div>
-                                    <div v-if="measurement.notes" class="text-xs text-white/50 mt-1 italic">{{ measurement.notes }}</div>
+                                <div class="text-xl font-bold text-white">{{ measurement.weight }} kg</div>
+                                <div class="text-sm text-white/50">
+                                    {{
+                                        new Date(measurement.measured_at + 'T00:00:00').toLocaleDateString('fr-FR', {
+                                            weekday: 'short',
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric',
+                                        })
+                                    }}
                                 </div>
-                                <button
-                                    @click="deleteMeasurement(measurement.id)"
-                                    class="rounded-full p-2 text-white/40 opacity-0 group-hover:opacity-100 hover:bg-white/10 hover:text-red-300 transition"
-                                    title="Delete"
+                                <div v-if="measurement.notes" class="mt-1 text-xs italic text-white/40">
+                                    {{ measurement.notes }}
+                                </div>
+                            </div>
+                            <button
+                                @click="deleteMeasurement(measurement.id)"
+                                class="rounded-lg p-2 text-white/30 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 000-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                            </li>
-                            <li v-if="measurements.length === 0" class="text-center text-white/50 py-4">
-                                No history yet.
-                            </li>
-                        </ul>
-                    </div>
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                    </GlassCard>
                 </div>
             </div>
         </div>
+
+        <!-- FAB -->
+        <button @click="showAddForm = !showAddForm" class="glass-fab sm:hidden">
+            <svg
+                class="h-6 w-6 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+        </button>
     </AuthenticatedLayout>
 </template>

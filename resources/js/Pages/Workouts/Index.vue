@@ -1,8 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
-import PrimaryButton from '@/Components/PrimaryButton.vue'
-import Stats from '@/Components/Stats.vue'
 
 const props = defineProps({
     workouts: Array,
@@ -14,100 +14,180 @@ const form = useForm({})
 const createWorkout = () => {
     form.post(route('workouts.store'))
 }
+
+const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('fr-FR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+    })
+}
 </script>
 
 <template>
-    <Head title="Séances" />
+    <Head title="Mes Séances" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout page-title="Mes Séances">
+        <template #header-actions>
+            <GlassButton variant="primary" size="sm" :loading="form.processing" @click="createWorkout">
+                <svg
+                    class="h-4 w-4"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+            </GlassButton>
+        </template>
+
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Mes Séances</h2>
-                <PrimaryButton @click="createWorkout">Nouvelle Séance</PrimaryButton>
+                <h2 class="text-xl font-semibold text-white">Mes Séances</h2>
+                <GlassButton variant="primary" :loading="form.processing" @click="createWorkout">
+                    <svg
+                        class="mr-2 h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Nouvelle Séance
+                </GlassButton>
             </div>
         </template>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                <!-- Analytics Section -->
-                <div v-if="workouts.length > 0">
-                    <Stats :workouts="workouts" />
-                </div>
-
-                <!-- Exercises Section -->
-                <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                    <div class="p-6 text-gray-900 dark:text-gray-100">
-                        <h3 class="mb-4 text-lg font-medium">Exercices Disponibles</h3>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div
-                                v-for="exercise in exercises"
-                                :key="exercise.id"
-                                class="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-900"
-                            >
-                                <div class="font-bold">{{ exercise.name }}</div>
-                                <div class="text-sm text-gray-500">{{ exercise.category }} ({{ exercise.type }})</div>
-                            </div>
-                        </div>
+        <div class="space-y-6">
+            <!-- Stats Row -->
+            <div v-if="workouts.length > 0" class="grid animate-slide-up grid-cols-2 gap-3 sm:grid-cols-4">
+                <GlassCard padding="p-4">
+                    <div class="text-center">
+                        <div class="text-gradient text-2xl font-bold">{{ workouts.length }}</div>
+                        <div class="mt-1 text-xs text-white/60">Total séances</div>
                     </div>
-                </div>
-
-                <!-- Last Workouts -->
-                <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                    <div class="p-6 text-gray-900 dark:text-gray-100">
-                        <h3 class="mb-4 text-lg font-medium">Dernières Séances</h3>
-                        <div v-if="workouts.length === 0" class="py-8 text-center text-gray-500">
-                            Aucune séance enregistrée. Cliquez sur "Nouvelle Séance" pour commencer.
+                </GlassCard>
+                <GlassCard padding="p-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-accent-success">
+                            {{ workouts.reduce((acc, w) => acc + w.workout_lines.length, 0) }}
                         </div>
-                        <div v-else class="space-y-4">
-                            <div
-                                v-for="workout in workouts"
-                                :key="workout.id"
-                                class="hover:border-pacamara-accent group rounded-lg border border-gray-200 p-4 transition-all dark:border-gray-700"
-                            >
-                                <div class="flex items-start justify-between">
-                                    <div>
-                                        <div
-                                            class="group-hover:text-pacamara-accent text-lg font-bold transition-colors"
-                                        >
-                                            {{ workout.name || 'Séance sans nom' }}
-                                        </div>
-                                        <div class="text-sm text-gray-500">
-                                            Le
-                                            {{
-                                                new Date(workout.started_at).toLocaleDateString('fr-FR', {
-                                                    weekday: 'long',
-                                                    day: 'numeric',
-                                                    month: 'long',
-                                                })
-                                            }}
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <div
-                                            class="rounded bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                                        >
-                                            {{ workout.workout_lines.length }} exercices
-                                        </div>
-                                        <Link
-                                            :href="route('workouts.show', workout.id)"
-                                            class="text-pacamara-accent text-sm font-bold hover:underline"
-                                        >
-                                            Ouvrir →
-                                        </Link>
-                                    </div>
-                                </div>
+                        <div class="mt-1 text-xs text-white/60">Exercices</div>
+                    </div>
+                </GlassCard>
+            </div>
 
-                                <div v-if="workout.workout_lines.length > 0" class="mt-4 space-y-2">
-                                    <div v-for="line in workout.workout_lines" :key="line.id" class="text-sm">
-                                        <span class="font-semibold">{{ line.exercise.name }}</span
-                                        >: {{ line.sets.length }} séries
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Available Exercises -->
+            <div class="animate-slide-up" style="animation-delay: 0.1s">
+                <h3 class="mb-3 font-semibold text-white">Exercices disponibles</h3>
+                <div class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
+                    <div
+                        v-for="exercise in exercises"
+                        :key="exercise.id"
+                        class="flex-shrink-0 rounded-xl bg-glass px-3 py-2 text-sm"
+                    >
+                        <div class="font-medium text-white">{{ exercise.name }}</div>
+                        <div class="text-xs text-white/50">{{ exercise.category }}</div>
                     </div>
                 </div>
             </div>
+
+            <!-- Workouts List -->
+            <div class="animate-slide-up" style="animation-delay: 0.2s">
+                <h3 class="mb-3 font-semibold text-white">Historique</h3>
+
+                <div v-if="workouts.length === 0">
+                    <GlassCard>
+                        <div class="py-12 text-center">
+                            <div class="mb-3 text-5xl">💪</div>
+                            <h3 class="text-lg font-semibold text-white">Aucune séance</h3>
+                            <p class="mt-1 text-white/60">Clique sur le bouton + pour commencer</p>
+                            <GlassButton
+                                variant="primary"
+                                class="mt-4"
+                                :loading="form.processing"
+                                @click="createWorkout"
+                            >
+                                Commencer maintenant
+                            </GlassButton>
+                        </div>
+                    </GlassCard>
+                </div>
+
+                <div v-else class="space-y-3">
+                    <Link
+                        v-for="workout in workouts"
+                        :key="workout.id"
+                        :href="route('workouts.show', workout.id)"
+                        class="block"
+                    >
+                        <GlassCard class="transition hover:bg-glass-strong active:scale-[0.99]">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-semibold text-white">
+                                            {{ workout.name || 'Séance' }}
+                                        </h4>
+                                        <span class="glass-badge glass-badge-primary text-xs">
+                                            {{ workout.workout_lines.length }} exo
+                                        </span>
+                                    </div>
+                                    <div class="mt-1 text-sm text-white/50">
+                                        {{ formatDate(workout.started_at) }}
+                                    </div>
+
+                                    <!-- Exercise preview -->
+                                    <div v-if="workout.workout_lines.length > 0" class="mt-3 flex flex-wrap gap-2">
+                                        <span
+                                            v-for="line in workout.workout_lines.slice(0, 3)"
+                                            :key="line.id"
+                                            class="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/70"
+                                        >
+                                            {{ line.exercise.name }}
+                                            <span class="text-white/40">• {{ line.sets.length }} séries</span>
+                                        </span>
+                                        <span
+                                            v-if="workout.workout_lines.length > 3"
+                                            class="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/40"
+                                        >
+                                            +{{ workout.workout_lines.length - 3 }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <svg
+                                    class="h-5 w-5 flex-shrink-0 text-white/30"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M9 5l7 7-7 7"
+                                    />
+                                </svg>
+                            </div>
+                        </GlassCard>
+                    </Link>
+                </div>
+            </div>
         </div>
+
+        <!-- FAB for mobile -->
+        <button @click="createWorkout" class="glass-fab sm:hidden" :disabled="form.processing">
+            <svg
+                class="h-6 w-6 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+        </button>
     </AuthenticatedLayout>
 </template>

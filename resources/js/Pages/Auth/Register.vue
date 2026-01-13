@@ -1,9 +1,7 @@
 <script setup>
+import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
-import InputError from '@/Components/InputError.vue'
-import InputLabel from '@/Components/InputLabel.vue'
-import PrimaryButton from '@/Components/PrimaryButton.vue'
-import TextInput from '@/Components/TextInput.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 
 const form = useForm({
@@ -22,82 +20,71 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Register" />
+        <Head title="Inscription" />
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="name" value="Name" />
+        <div class="mb-6 text-center">
+            <h2 class="text-2xl font-bold text-white">Bienvenue ! 💪</h2>
+            <p class="mt-1 text-white/60">Crée ton compte pour commencer</p>
+        </div>
 
-                <TextInput
-                    id="name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    v-model="form.name"
-                    required
-                    autofocus
-                    autocomplete="name"
-                />
+        <form @submit.prevent="submit" class="space-y-4">
+            <GlassInput
+                v-model="form.name"
+                type="text"
+                label="Nom"
+                placeholder="Ton prénom"
+                :error="form.errors.name"
+                autocomplete="name"
+                required
+                autofocus
+            />
 
-                <InputError class="mt-2" :message="form.errors.name" />
-            </div>
+            <GlassInput
+                v-model="form.email"
+                type="email"
+                label="Email"
+                placeholder="ton@email.com"
+                :error="form.errors.email"
+                autocomplete="username"
+                required
+            />
 
-            <div class="mt-4">
-                <InputLabel for="email" value="Email" />
+            <GlassInput
+                v-model="form.password"
+                type="password"
+                label="Mot de passe"
+                placeholder="••••••••"
+                :error="form.errors.password"
+                autocomplete="new-password"
+                required
+            />
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autocomplete="username"
-                />
+            <GlassInput
+                v-model="form.password_confirmation"
+                type="password"
+                label="Confirmer le mot de passe"
+                placeholder="••••••••"
+                :error="form.errors.password_confirmation"
+                autocomplete="new-password"
+                required
+            />
 
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel for="password_confirmation" value="Confirm Password" />
-
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password_confirmation" />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    :href="route('login')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                    Already registered?
-                </Link>
-
-                <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Register
-                </PrimaryButton>
-            </div>
+            <GlassButton
+                type="submit"
+                variant="primary"
+                class="w-full"
+                :loading="form.processing"
+                :disabled="form.processing"
+            >
+                Créer mon compte
+            </GlassButton>
         </form>
+
+        <template #footer>
+            <p>
+                Déjà inscrit ?
+                <Link :href="route('login')" class="text-accent-primary hover:underline"> Se connecter </Link>
+            </p>
+        </template>
     </GuestLayout>
 </template>

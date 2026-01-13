@@ -15,7 +15,19 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    $user = auth()->user();
+    $workouts = $user->workouts()->with('workoutLines.exercise', 'workoutLines.sets')->latest()->get();
+    $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
+
+    $startOfWeek = now()->startOfWeek();
+    $thisWeekCount = $workouts->filter(fn ($w) => $w->started_at >= $startOfWeek)->count();
+
+    return Inertia::render('Dashboard', [
+        'workoutsCount' => $workouts->count(),
+        'thisWeekCount' => $thisWeekCount,
+        'latestWeight' => $latestMeasurement?->weight,
+        'recentWorkouts' => $workouts->take(5)->values(),
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -28,11 +40,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'show'])->name('workouts.show');
 
     Route::post('/workouts/{workout}/lines', [\App\Http\Controllers\WorkoutLinesController::class, 'store'])->name('workout-lines.store');
-    Route::delete('/workout-lines/{line}', [\App\Http\Controllers\WorkoutLinesController::class, 'destroy'])->name('workout-lines.destroy');
+    Route::delete('/workout-lines/{workoutLine}', [\App\Http\Controllers\WorkoutLinesController::class, 'destroy'])->name('workout-lines.destroy');
 
     Route::post('/workout-lines/{workoutLine}/sets', [\App\Http\Controllers\SetsController::class, 'store'])->name('sets.store');
     Route::patch('/sets/{set}', [\App\Http\Controllers\SetsController::class, 'update'])->name('sets.update');
     Route::delete('/sets/{set}', [\App\Http\Controllers\SetsController::class, 'destroy'])->name('sets.destroy');
+
+    Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
 
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)
         ->only(['index', 'store', 'destroy']);

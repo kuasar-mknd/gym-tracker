@@ -52,6 +52,12 @@ class WorkoutsController extends Controller
         return Inertia::render('Workouts/Show', [
             'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets']),
             'exercises' => Exercise::orderBy('name')->get(),
+            'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
+            'types' => [
+                ['value' => 'strength', 'label' => 'Force'],
+                ['value' => 'cardio', 'label' => 'Cardio'],
+                ['value' => 'timed', 'label' => 'Temps'],
+            ],
         ]);
     }
 

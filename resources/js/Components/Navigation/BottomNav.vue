@@ -1,0 +1,46 @@
+<script setup>
+import { Link } from '@inertiajs/vue3'
+
+const props = defineProps({
+    items: {
+        type: Array,
+        default: () => [
+            { name: 'Accueil', route: 'dashboard', icon: 'home' },
+            { name: 'Séances', route: 'workouts.index', icon: 'dumbbell' },
+            { name: 'Corps', route: 'body-measurements.index', icon: 'chart' },
+            { name: 'Profil', route: 'profile.edit', icon: 'user' },
+        ],
+    },
+})
+
+const icons = {
+    home: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />`,
+    dumbbell: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10M8 4v16M12 7v10M16 4v16M20 7v10" />`,
+    chart: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />`,
+    user: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />`,
+}
+</script>
+
+<template>
+    <nav class="glass-nav">
+        <div class="flex items-center justify-around px-2">
+            <Link
+                v-for="item in items"
+                :key="item.route"
+                :href="route(item.route)"
+                class="glass-nav-item relative flex-1 py-2"
+                :class="{ active: route().current(item.route.split('.')[0] + '.*') || route().current(item.route) }"
+            >
+                <svg
+                    class="h-6 w-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    v-html="icons[item.icon]"
+                />
+                <span class="mt-1 text-xs">{{ item.name }}</span>
+            </Link>
+        </div>
+    </nav>
+</template>

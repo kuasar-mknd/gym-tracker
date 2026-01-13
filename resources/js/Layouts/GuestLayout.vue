@@ -4,15 +4,24 @@ import { Link } from '@inertiajs/vue3'
 </script>
 
 <template>
-    <div class="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0">
-        <div>
+    <div class="flex min-h-[100dvh] min-h-screen flex-col items-center justify-center px-6 py-12">
+        <!-- Logo -->
+        <div class="mb-8 animate-fade-in">
             <Link href="/">
-                <ApplicationLogo class="h-20 w-20 fill-current text-gray-500" />
+                <span class="text-gradient text-3xl font-bold">GymTracker</span>
             </Link>
         </div>
 
-        <div class="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg">
-            <slot />
+        <!-- Glass Card -->
+        <div class="w-full max-w-md animate-slide-up">
+            <div class="glass-card-strong p-8">
+                <slot />
+            </div>
+        </div>
+
+        <!-- Footer links -->
+        <div class="mt-8 animate-fade-in text-center text-sm text-white/50">
+            <slot name="footer" />
         </div>
     </div>
 </template>

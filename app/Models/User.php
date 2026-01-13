@@ -46,6 +46,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function workouts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Workout::class);
+    }
+
     public function bodyMeasurements(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(BodyMeasurement::class);

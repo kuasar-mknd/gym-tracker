@@ -1,13 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import GlassButton from '@/Components/UI/GlassButton.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
-import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
 const props = defineProps({
-    status: {
-        type: String,
-    },
+    status: String,
 })
 
 const form = useForm({})
@@ -21,31 +19,28 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
 
 <template>
     <GuestLayout>
-        <Head title="Email Verification" />
+        <Head title="Vérifier l'email" />
 
-        <div class="mb-4 text-sm text-gray-600">
-            Thanks for signing up! Before getting started, could you verify your email address by clicking on the link
-            we just emailed to you? If you didn't receive the email, we will gladly send you another.
+        <div class="mb-6 text-center">
+            <div class="mb-4 text-5xl">📧</div>
+            <h2 class="text-2xl font-bold text-white">Vérifie ton email</h2>
+            <p class="mt-2 text-sm text-white/60">
+                Merci de ton inscription ! Clique sur le lien dans l'email que nous t'avons envoyé.
+            </p>
         </div>
 
-        <div class="mb-4 text-sm font-medium text-green-600" v-if="verificationLinkSent">
-            A new verification link has been sent to the email address you provided during registration.
+        <div v-if="verificationLinkSent" class="mb-4 rounded-xl bg-accent-success/20 p-3 text-sm text-accent-success">
+            Un nouveau lien de vérification a été envoyé à ton adresse email.
         </div>
 
-        <form @submit.prevent="submit">
-            <div class="mt-4 flex items-center justify-between">
-                <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Resend Verification Email
-                </PrimaryButton>
+        <form @submit.prevent="submit" class="space-y-4">
+            <GlassButton type="submit" variant="primary" class="w-full" :loading="form.processing">
+                Renvoyer l'email
+            </GlassButton>
 
-                <Link
-                    :href="route('logout')"
-                    method="post"
-                    as="button"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >Log Out</Link
-                >
-            </div>
+            <Link :href="route('logout')" method="post" as="button" class="glass-button w-full justify-center">
+                Se déconnecter
+            </Link>
         </form>
     </GuestLayout>
 </template>

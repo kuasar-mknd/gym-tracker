@@ -1,180 +1,193 @@
 <?php
 
+namespace Tests\Feature;
+
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
-use function Pest\Laravel\actingAs;
-use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertDatabaseMissing;
+class SetsTest extends TestCase
+{
+    use RefreshDatabase;
 
-it('allows authenticated user to add a set to their workout line', function () {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $exercise = Exercise::factory()->create();
-    $workoutLine = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
+    public function test_allows_authenticated_user_to_add_a_set_to_their_workout_line(): void
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
 
-    actingAs($user)
-        ->post(route('sets.store', $workoutLine), [
+        $this->actingAs($user)
+            ->post(route('sets.store', $workoutLine), [
+                'weight' => 50.5,
+                'reps' => 10,
+                'is_warmup' => true,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('sets', [
+            'workout_line_id' => $workoutLine->id,
             'weight' => 50.5,
             'reps' => 10,
             'is_warmup' => true,
-        ])
-        ->assertRedirect();
+        ]);
+    }
 
-    assertDatabaseHas('sets', [
-        'workout_line_id' => $workoutLine->id,
-        'weight' => 50.5,
-        'reps' => 10,
-        'is_warmup' => true,
-    ]);
-});
+    public function test_validates_input_when_adding_a_set(): void
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
 
-it('validates input when adding a set', function () {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $exercise = Exercise::factory()->create();
-    $workoutLine = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
+        $this->actingAs($user)
+            ->post(route('sets.store', $workoutLine), [
+                'weight' => 'not-a-number',
+                'reps' => -5,
+            ])
+            ->assertSessionHasErrors(['weight', 'reps']);
+    }
 
-    actingAs($user)
-        ->post(route('sets.store', $workoutLine), [
-            'weight' => 'not-a-number',
-            'reps' => -5,
-        ])
-        ->assertSessionHasErrors(['weight', 'reps']);
-});
+    public function test_prevents_user_from_adding_a_set_to_another_users_workout_line(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
 
-it('prevents user from adding a set to another user\'s workout line', function () {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
-    $exercise = Exercise::factory()->create();
-    $workoutLine = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
+        $this->actingAs($user)
+            ->post(route('sets.store', $workoutLine), [
+                'weight' => 50,
+                'reps' => 10,
+            ])
+            ->assertForbidden();
+    }
 
-    actingAs($user)
-        ->post(route('sets.store', $workoutLine), [
+    public function test_allows_authenticated_user_to_update_their_set(): void
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
             'weight' => 50,
             'reps' => 10,
-        ])
-        ->assertForbidden();
-});
+        ]);
 
-it('allows authenticated user to update their set', function () {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $exercise = Exercise::factory()->create();
-    $workoutLine = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
-    $set = Set::factory()->create([
-        'workout_line_id' => $workoutLine->id,
-        'weight' => 50,
-        'reps' => 10,
-    ]);
+        $this->actingAs($user)
+            ->patch(route('sets.update', $set), [
+                'weight' => 60,
+                'reps' => 8,
+                'is_warmup' => false,
+            ])
+            ->assertRedirect();
 
-    actingAs($user)
-        ->patch(route('sets.update', $set), [
+        $this->assertDatabaseHas('sets', [
+            'id' => $set->id,
             'weight' => 60,
             'reps' => 8,
-            'is_warmup' => false,
-        ])
-        ->assertRedirect();
+        ]);
+    }
 
-    assertDatabaseHas('sets', [
-        'id' => $set->id,
-        'weight' => 60,
-        'reps' => 8,
-    ]);
-});
+    public function test_validates_input_when_updating_a_set(): void
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+        ]);
 
-it('validates input when updating a set', function () {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $exercise = Exercise::factory()->create();
-    $workoutLine = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
-    $set = Set::factory()->create([
-        'workout_line_id' => $workoutLine->id,
-    ]);
+        $this->actingAs($user)
+            ->patch(route('sets.update', $set), [
+                'weight' => 'invalid',
+                'reps' => -1,
+            ])
+            ->assertSessionHasErrors(['weight', 'reps']);
+    }
 
-    actingAs($user)
-        ->patch(route('sets.update', $set), [
-            'weight' => 'invalid',
-            'reps' => -1,
-        ])
-        ->assertSessionHasErrors(['weight', 'reps']);
-});
+    public function test_prevents_user_from_updating_another_users_set(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+        ]);
 
-it('prevents user from updating another user\'s set', function () {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
-    $exercise = Exercise::factory()->create();
-    $workoutLine = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
-    $set = Set::factory()->create([
-        'workout_line_id' => $workoutLine->id,
-    ]);
+        $this->actingAs($user)
+            ->patch(route('sets.update', $set), [
+                'weight' => 60,
+                'reps' => 8,
+            ])
+            ->assertForbidden();
+    }
 
-    actingAs($user)
-        ->patch(route('sets.update', $set), [
-            'weight' => 60,
-            'reps' => 8,
-        ])
-        ->assertForbidden();
-});
+    public function test_allows_authenticated_user_to_delete_their_set(): void
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+        ]);
 
-it('allows authenticated user to delete their set', function () {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $exercise = Exercise::factory()->create();
-    $workoutLine = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
-    $set = Set::factory()->create([
-        'workout_line_id' => $workoutLine->id,
-    ]);
+        $this->actingAs($user)
+            ->delete(route('sets.destroy', $set))
+            ->assertRedirect();
 
-    actingAs($user)
-        ->delete(route('sets.destroy', $set))
-        ->assertRedirect();
+        $this->assertDatabaseMissing('sets', [
+            'id' => $set->id,
+        ]);
+    }
 
-    assertDatabaseMissing('sets', [
-        'id' => $set->id,
-    ]);
-});
+    public function test_prevents_user_from_deleting_another_users_set(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+        ]);
 
-it('prevents user from deleting another user\'s set', function () {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
-    $exercise = Exercise::factory()->create();
-    $workoutLine = WorkoutLine::factory()->create([
-        'workout_id' => $workout->id,
-        'exercise_id' => $exercise->id,
-    ]);
-    $set = Set::factory()->create([
-        'workout_line_id' => $workoutLine->id,
-    ]);
-
-    actingAs($user)
-        ->delete(route('sets.destroy', $set))
-        ->assertForbidden();
-});
+        $this->actingAs($user)
+            ->delete(route('sets.destroy', $set))
+            ->assertForbidden();
+    }
+}
