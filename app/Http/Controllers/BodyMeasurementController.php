@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\BodyMeasurement;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class BodyMeasurementController extends Controller
 {
