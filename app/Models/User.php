@@ -83,6 +83,13 @@ class User extends Authenticatable
         return $this->hasMany(Goal::class);
     }
 
+    public function achievements(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Achievement::class, 'user_achievements')
+            ->withPivot('achieved_at')
+            ->withTimestamps();
+    }
+
     public function isNotificationEnabled(string $type): bool
     {
         return (bool) $this->notificationPreferences()

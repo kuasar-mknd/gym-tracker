@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
+use App\Services\AchievementService;
 use App\Services\GoalService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Vite;
@@ -41,5 +42,9 @@ class AppServiceProvider extends ServiceProvider
 
         BodyMeasurement::saved(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
         BodyMeasurement::deleted(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
+
+        // Achievement Tracking Hooks
+        Workout::saved(fn (Workout $workout) => app(AchievementService::class)->syncAchievements($workout->user));
+        Set::saved(fn (Set $set) => app(AchievementService::class)->syncAchievements($set->workoutLine->workout->user));
     }
 }

@@ -4,6 +4,7 @@ import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import PageHeader from '@/Components/Navigation/PageHeader.vue'
 import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
+import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import { Link } from '@inertiajs/vue3'
 
 defineProps({
@@ -103,6 +104,17 @@ const showingNavigationDropdown = ref(false)
                                 ]"
                             >
                                 Objectifs
+                            </Link>
+                            <Link
+                                :href="route('achievements.index')"
+                                :class="[
+                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
+                                    route().current('achievements.*')
+                                        ? 'border-b-2 border-accent-primary text-accent-primary'
+                                        : 'text-white/70 hover:text-white',
+                                ]"
+                            >
+                                Trophées
                             </Link>
                         </div>
                     </div>
@@ -227,5 +239,7 @@ const showingNavigationDropdown = ref(false)
 
         <!-- Bottom Navigation (mobile only) -->
         <BottomNav class="sm:hidden" />
+
+        <CelebrationModal />
     </div>
 </template>

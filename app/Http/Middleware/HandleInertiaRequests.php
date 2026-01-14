@@ -38,6 +38,10 @@ class HandleInertiaRequests extends Middleware
                     'email' => $request->user()->email,
                     'avatar' => $request->user()->avatar,
                     'unread_notifications_count' => $request->user()->unreadNotifications()->count(),
+                    'latest_achievement' => $request->user()->unreadNotifications()
+                        ->where('type', 'App\Notifications\AchievementUnlocked')
+                        ->latest()
+                        ->first(),
                 ] : null,
             ],
             'vapidPublicKey' => config('webpush.vapid.public_key'),

@@ -107,14 +107,14 @@
 
 ### 3.2 Achievements & Badges
 
-- [ ] Créer tables `achievements` et `user_achievements`
-- [ ] Badges automatiques :
-    - [ ] "First Workout" - Première séance
-    - [ ] "Week Warrior" - 5 séances en une semaine
-    - [ ] "Streak Master" - 30 jours consécutifs
-    - [ ] "Heavy Lifter" - Premier PR à 100kg
-    - [ ] "Volume King" - 10 tonnes soulevées
-- [ ] Page avec tous les badges débloqués/verrouillés
+- [x] Créer tables `achievements` et `user_achievements`
+- [x] Badges automatiques :
+    - [x] "First Workout" - Première séance
+    - [x] "Week Warrior" - 3 séances (originalement 5, ajusté)
+    - [x] "Streak Master" - 3 jours consécutifs (original 30)
+    - [x] "Heavy Lifter" - Premier PR à 100kg
+    - [x] "Volume King" - 5 tonnes soulevées
+- [x] Page avec tous les badges débloqués/verrouillés
 
 ### 3.3 Streaks & Consistance
 
