@@ -26,11 +26,24 @@ class WorkoutsController extends Controller
      */
     public function index(): \Inertia\Response
     {
+        // Get last 6 months frequency
+        $monthlyFrequency = Workout::where('user_id', auth()->id())
+            ->where('started_at', '>=', now()->subMonths(5)->startOfMonth())
+            ->orderBy('started_at')
+            ->get()
+            ->groupBy(fn ($workout) => $workout->started_at->format('Y-m'))
+            ->map(fn ($workouts, $month) => [
+                'month' => \Carbon\Carbon::createFromFormat('Y-m', $month)->format('M'),
+                'count' => $workouts->count(),
+            ])
+            ->values();
+
         return Inertia::render('Workouts/Index', [
             'workouts' => Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
                 ->where('user_id', auth()->id())
                 ->latest()
                 ->get(),
+            'monthlyFrequency' => $monthlyFrequency,
         ]);
     }
 

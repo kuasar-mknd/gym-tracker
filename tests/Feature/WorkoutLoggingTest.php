@@ -2,15 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
+use App\Models\Workout;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class WorkoutLoggingTest extends TestCase
 {
-    use \Illuminate\Foundation\Testing\RefreshDatabase;
+    use RefreshDatabase;
 
     public function test_user_can_create_workout(): void
     {
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post(route('workouts.store'));
 
@@ -22,8 +25,8 @@ class WorkoutLoggingTest extends TestCase
 
     public function test_user_can_add_exercise_to_workout(): void
     {
-        $user = \App\Models\User::factory()->create();
-        $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id]);
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
         $exercise = \App\Models\Exercise::factory()->create();
 
         $response = $this->actingAs($user)->post(route('workout-lines.store', $workout), [
@@ -39,8 +42,8 @@ class WorkoutLoggingTest extends TestCase
 
     public function test_user_can_add_set_to_workout_line(): void
     {
-        $user = \App\Models\User::factory()->create();
-        $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id]);
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
         $exercise = \App\Models\Exercise::factory()->create();
         $line = \App\Models\WorkoutLine::factory()->create([
             'workout_id' => $workout->id,
@@ -58,5 +61,29 @@ class WorkoutLoggingTest extends TestCase
             'weight' => 50,
             'reps' => 10,
         ]);
+    }
+
+    public function test_workouts_index_displays_workout_frequency_data(): void
+    {
+        $user = User::factory()->create();
+
+        // Create workouts in different months
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now(),
+        ]);
+
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subMonth(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('workouts.index'));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Workouts/Index')
+            ->has('monthlyFrequency')
+        );
     }
 }
