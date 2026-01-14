@@ -162,16 +162,14 @@
 - [x] Documentation Swagger/OpenAPI (Structure en place)
 - [x] Versioning API (v1)
 - [x] Rate limiting par endpoint
-- [x] **Infrastructure API REST** (Phase 5.1) : Documentation Swagger, Ressources API optimisées.
-- [x] **Performance & Caching** (Phase 5.2) : Redis, MySQL via Sail, Caching Dashboard & Stats, Telescope.
 
 ### 5.2 Performance & Caching
 
-- [ ] Configurer Redis
-- [ ] Cache des stats dashboard (5-15 min TTL)
-- [ ] Cache des personal records
-- [ ] Eager loading optimisé
-- [ ] Installer Laravel Telescope (dev only)
+- [x] Configurer Redis
+- [x] Cache des stats dashboard (5-15 min TTL)
+- [x] Cache des personal records
+- [x] Eager loading optimisé
+- [x] Installer Laravel Telescope (dev only)
 
 ### 5.3 Background Jobs
 
