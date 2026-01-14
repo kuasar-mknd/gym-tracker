@@ -51,18 +51,21 @@ EXPOSE 80
 ENV APP_DEBUG=true
 ENV LOG_LEVEL=debug
 
+# Install mysql client for health checks
+RUN apt-get update && apt-get install -y default-mysql-client && rm -rf /var/lib/apt/lists/*
+
 # Startup script that waits for DB and starts Octane
 CMD sh -c '\
-  echo "Waiting for database..." && \
-  MAX_TRIES=30 && \
+  echo "Waiting for database at $DB_HOST:$DB_PORT..." && \
+  MAX_TRIES=45 && \
   TRIES=0 && \
-  until php -r "\$h=getenv(\"DB_HOST\");\$p=getenv(\"DB_PORT\");\$d=getenv(\"DB_DATABASE\");\$u=getenv(\"DB_USERNAME\");\$w=getenv(\"DB_PASSWORD\");try{new PDO(\"mysql:host=\$h;port=\$p;dbname=\$d\",\$u,\$w);echo\"OK\";exit(0);}catch(Exception \$e){exit(1);}" 2>/dev/null; do \
+  until mysqladmin ping -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" --silent 2>/dev/null; do \
     TRIES=$((TRIES+1)) && \
     if [ $TRIES -ge $MAX_TRIES ]; then \
-      echo "Database connection failed after $MAX_TRIES attempts" && \
+      echo "Database connection failed after $MAX_TRIES attempts (90 seconds)" && \
       exit 1; \
     fi && \
-    echo "Attempt $TRIES/$MAX_TRIES - waiting for MySQL..." && \
+    echo "Attempt $TRIES/$MAX_TRIES - waiting for MySQL at $DB_HOST:$DB_PORT..." && \
     sleep 2; \
   done && \
   echo "Database ready!" && \
@@ -71,5 +74,3 @@ CMD sh -c '\
   php artisan migrate --force || true && \
   echo "Starting Octane..." && \
   php artisan octane:frankenphp --host=0.0.0.0 --port=80 --workers=1'
-
-
