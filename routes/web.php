@@ -40,12 +40,21 @@ Route::get('/dashboard', function () {
         ->take(5)
         ->get();
 
+    $activeGoals = $user->goals()
+        ->with('exercise')
+        ->whereNull('completed_at')
+        ->latest()
+        ->take(3)
+        ->get()
+        ->append(['progress', 'unit']);
+
     return Inertia::render('Dashboard', [
         'workoutsCount' => $workoutsCount,
         'thisWeekCount' => $thisWeekCount,
         'latestWeight' => $latestMeasurement?->weight,
         'recentWorkouts' => $recentWorkouts,
         'recentPRs' => $recentPRs,
+        'activeGoals' => $activeGoals,
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -61,6 +70,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/push-subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'update'])->name('push-subscriptions.update');
     Route::post('/push-subscriptions/delete', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
+
+    Route::resource('goals', \App\Http\Controllers\GoalController::class);
 
     Route::get('/workouts', [\App\Http\Controllers\WorkoutsController::class, 'index'])->name('workouts.index');
     Route::post('/workouts', [\App\Http\Controllers\WorkoutsController::class, 'store'])->name('workouts.store');

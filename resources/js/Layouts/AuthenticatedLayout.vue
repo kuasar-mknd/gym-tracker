@@ -93,6 +93,17 @@ const showingNavigationDropdown = ref(false)
                             >
                                 Journal
                             </Link>
+                            <Link
+                                :href="route('goals.index')"
+                                :class="[
+                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
+                                    route().current('goals.*')
+                                        ? 'border-b-2 border-accent-primary text-accent-primary'
+                                        : 'text-white/70 hover:text-white',
+                                ]"
+                            >
+                                Objectifs
+                            </Link>
                         </div>
                     </div>
 

@@ -100,10 +100,10 @@
 
 ### 3.1 Système d'objectifs (Goals)
 
-- [ ] Créer table `goals` (type, target, current, deadline)
-- [ ] Types : poids soulevé, fréquence, volume, mensuration
-- [ ] Progression visuelle vers l'objectif
-- [ ] Célébration quand objectif atteint
+- [x] Créer table `goals` (type, target, current, deadline)
+- [x] Types : poids soulevé, fréquence, volume, mensuration
+- [x] Progression visuelle vers l'objectif
+- [x] Célébration quand objectif atteint
 
 ### 3.2 Achievements & Badges
 

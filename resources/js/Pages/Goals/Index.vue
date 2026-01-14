@@ -1,0 +1,229 @@
+<script setup>
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { Head, useForm } from '@inertiajs/vue3'
+import GoalCard from '@/Components/Goals/GoalCard.vue'
+import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
+import { ref, watch } from 'vue'
+
+const props = defineProps({
+    goals: Array,
+    exercises: Array,
+    measurementTypes: Array,
+})
+
+const showCreateForm = ref(false)
+
+const form = useForm({
+    title: '',
+    type: 'weight',
+    target_value: '',
+    exercise_id: '',
+    measurement_type: '',
+    deadline: '',
+    start_value: '',
+})
+
+const submit = () => {
+    form.post(route('goals.store'), {
+        onSuccess: () => {
+            showCreateForm.value = false
+            form.reset()
+        },
+    })
+}
+
+// Auto-fill title based on selection
+watch(
+    () => [form.type, form.exercise_id, form.measurement_type],
+    () => {
+        if (form.type === 'weight' && form.exercise_id) {
+            const ex = props.exercises.find((e) => e.id == form.exercise_id)
+            if (ex) form.title = `Soulever ${form.target_value || '?'} kg au ${ex.name}`
+        } else if (form.type === 'measurement' && form.measurement_type) {
+            const mt = props.measurementTypes.find((m) => m.value === form.measurement_type)
+            if (mt)
+                form.title = `Atteindre ${form.target_value || '?'} ${form.measurement_type === 'body_fat' ? '%' : 'cm'} de ${mt.label}`
+        } else if (form.type === 'frequency') {
+            form.title = `Atteindre ${form.target_value || '?'} séances au total`
+        }
+    },
+)
+
+const activeGoals = computed(() => props.goals.filter((g) => !g.completed_at))
+const completedGoals = computed(() => props.goals.filter((g) => g.completed_at))
+
+import { computed } from 'vue'
+</script>
+
+<template>
+    <Head title="Mes Objectifs" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight text-white">Mes Objectifs 🎯</h2>
+                    <p class="text-sm text-white/50">Fixe tes cibles et dépasse tes limites.</p>
+                </div>
+                <GlassButton @click="showCreateForm = !showCreateForm">
+                    {{ showCreateForm ? 'Annuler' : 'Nouvel Objectif' }}
+                </GlassButton>
+            </div>
+        </template>
+
+        <div class="py-12">
+            <div class="mx-auto max-w-7xl space-y-8 sm:px-6 lg:px-8">
+                <!-- Create Form -->
+                <Transition
+                    enter-active-class="transition duration-300 ease-out"
+                    enter-from-class="transform scale-95 opacity-0 -translate-y-4"
+                    enter-to-class="transform scale-100 opacity-100 translate-y-0"
+                    leave-active-class="transition duration-200 ease-in"
+                    leave-from-class="transform scale-100 opacity-100 translate-y-0"
+                    leave-to-class="transform scale-95 opacity-0 -translate-y-4"
+                >
+                    <div v-if="showCreateForm">
+                        <GlassCard class="p-6">
+                            <h3 class="mb-6 text-lg font-bold text-white">Nouvel Objectif</h3>
+                            <form @submit.prevent="submit" class="space-y-6">
+                                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label
+                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-white/60"
+                                                >Type d'objectif</label
+                                            >
+                                            <select
+                                                v-model="form.type"
+                                                class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
+                                            >
+                                                <option value="weight" class="bg-[#1a1c2e]">Force (Poids max)</option>
+                                                <option value="frequency" class="bg-[#1a1c2e]">
+                                                    Fréquence (Séances)
+                                                </option>
+                                                <option value="volume" class="bg-[#1a1c2e]">
+                                                    Volume (Max par séance)
+                                                </option>
+                                                <option value="measurement" class="bg-[#1a1c2e]">Mensuration</option>
+                                            </select>
+                                        </div>
+
+                                        <div v-if="form.type === 'weight' || form.type === 'volume'">
+                                            <label
+                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-white/60"
+                                                >Exercice</label
+                                            >
+                                            <select
+                                                v-model="form.exercise_id"
+                                                class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
+                                            >
+                                                <option value="" disabled class="bg-[#1a1c2e]">
+                                                    Sélectionner un exercice
+                                                </option>
+                                                <option
+                                                    v-for="ex in exercises"
+                                                    :key="ex.id"
+                                                    :value="ex.id"
+                                                    class="bg-[#1a1c2e]"
+                                                >
+                                                    {{ ex.name }}
+                                                </option>
+                                            </select>
+                                        </div>
+
+                                        <div v-if="form.type === 'measurement'">
+                                            <label
+                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-white/60"
+                                                >Mensuration</label
+                                            >
+                                            <select
+                                                v-model="form.measurement_type"
+                                                class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
+                                            >
+                                                <option value="" disabled class="bg-[#1a1c2e]">
+                                                    Sélectionner une mesure
+                                                </option>
+                                                <option
+                                                    v-for="type in measurementTypes"
+                                                    :key="type.value"
+                                                    :value="type.value"
+                                                    class="bg-[#1a1c2e]"
+                                                >
+                                                    {{ type.label }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <GlassInput
+                                            label="Valeur Cible"
+                                            v-model="form.target_value"
+                                            type="number"
+                                            step="0.1"
+                                            required
+                                        />
+                                        <GlassInput
+                                            label="Valeur de Départ (Optionnel)"
+                                            v-model="form.start_value"
+                                            type="number"
+                                            step="0.1"
+                                            placeholder="0"
+                                        />
+                                        <GlassInput
+                                            label="Titre du défi"
+                                            v-model="form.title"
+                                            placeholder="Ex: Bench Press 100kg"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end gap-3 border-t border-white/5 pt-4">
+                                    <GlassButton type="button" @click="showCreateForm = false" variant="secondary"
+                                        >Annuler</GlassButton
+                                    >
+                                    <GlassButton type="submit" :loading="form.processing">Créer l'objectif</GlassButton>
+                                </div>
+                            </form>
+                        </GlassCard>
+                    </div>
+                </Transition>
+
+                <!-- Active Goals -->
+                <div class="space-y-4">
+                    <h3 class="flex items-center gap-2 text-lg font-bold text-white">
+                        En cours ⚡
+                        <span class="text-xs font-normal text-white/40">({{ activeGoals.length }})</span>
+                    </h3>
+
+                    <div
+                        v-if="activeGoals.length === 0 && !showCreateForm"
+                        class="rounded-3xl border border-dashed border-white/5 bg-white/5 p-6 py-12 text-center"
+                    >
+                        <p class="italic text-white/40">
+                            Aucun objectif actif pour le moment. C'est le moment d'en fixer un !
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        <GoalCard v-for="goal in activeGoals" :key="goal.id" :goal="goal" />
+                    </div>
+                </div>
+
+                <!-- Completed Goals -->
+                <div v-if="completedGoals.length > 0" class="space-y-4 opacity-70">
+                    <h3 class="flex items-center gap-2 text-lg font-bold text-white">
+                        Accomplis 🏆
+                        <span class="text-xs font-normal text-white/40">({{ completedGoals.length }})</span>
+                    </h3>
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        <GoalCard v-for="goal in completedGoals" :key="goal.id" :goal="goal" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </AuthenticatedLayout>
+</template>

@@ -26,6 +26,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    activeGoals: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 const form = useForm({})
@@ -179,6 +183,35 @@ const greeting = computed(() => {
                                         />
                                     </svg>
                                 </div>
+                            </div>
+                        </GlassCard>
+                    </Link>
+                </div>
+            </div>
+
+            <!-- Goals Summary -->
+            <div v-if="activeGoals.length > 0" class="animate-slide-up" style="animation-delay: 0.32s">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="font-semibold text-white">Objectifs en cours 🎯</h2>
+                    <Link :href="route('goals.index')" class="text-xs text-accent-primary"> Mes objectifs → </Link>
+                </div>
+
+                <div class="space-y-3">
+                    <Link v-for="goal in activeGoals" :key="goal.id" :href="route('goals.index')" class="block">
+                        <GlassCard padding="p-3" class="transition hover:bg-glass-strong">
+                            <div class="mb-2 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="line-clamp-1 text-sm font-semibold text-white">{{ goal.title }}</span>
+                                </div>
+                                <span class="text-xs font-bold text-accent-primary"
+                                    >{{ Math.round(goal.progress) }}%</span
+                                >
+                            </div>
+                            <div class="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                                <div
+                                    class="h-full bg-accent-primary transition-all duration-1000"
+                                    :style="{ width: goal.progress + '%' }"
+                                ></div>
                             </div>
                         </GlassCard>
                     </Link>
