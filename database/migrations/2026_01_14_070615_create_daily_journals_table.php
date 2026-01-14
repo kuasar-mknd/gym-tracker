@@ -19,6 +19,10 @@ return new class extends Migration
             $table->integer('mood_score')->nullable(); // 1-5
             $table->integer('sleep_quality')->nullable(); // 1-5
             $table->integer('stress_level')->nullable(); // 1-10
+            $table->integer('energy_level')->nullable(); // 1-10
+            $table->integer('motivation_level')->nullable(); // 1-10
+            $table->integer('nutrition_score')->nullable(); // 1-5
+            $table->integer('training_intensity')->nullable(); // 1-10
             $table->timestamps();
 
             $table->unique(['user_id', 'date']);

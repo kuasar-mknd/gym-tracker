@@ -65,4 +65,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(PersonalRecord::class);
     }
+
+    public function dailyJournals(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DailyJournal::class);
+    }
 }

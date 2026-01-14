@@ -19,6 +19,10 @@ const form = useForm({
     mood_score: null,
     sleep_quality: null,
     stress_level: null,
+    energy_level: null,
+    motivation_level: null,
+    nutrition_score: null,
+    training_intensity: null,
 })
 
 const moods = [
@@ -42,6 +46,10 @@ const editJournal = (journal) => {
     form.mood_score = journal.mood_score
     form.sleep_quality = journal.sleep_quality
     form.stress_level = journal.stress_level
+    form.energy_level = journal.energy_level
+    form.motivation_level = journal.motivation_level
+    form.nutrition_score = journal.nutrition_score
+    form.training_intensity = journal.training_intensity
     editingJournal.value = journal
     showAddForm.value = true
 }
@@ -126,19 +134,13 @@ const formatDate = (dateStr) => {
             <GlassCard v-if="showAddForm" class="animate-slide-up">
                 <div class="mb-4 flex items-center justify-between">
                     <h3 class="font-semibold text-white">
-                        {{ editingJournal ? 'Modifier l\'entrée' : 'Nouvelle entrée' }}
+                        {{ editingJournal ? "Modifier l'entrée" : 'Nouvelle entrée' }}
                     </h3>
                     <button @click="showAddForm = false" class="text-white/50 hover:text-white">✕</button>
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-4">
-                    <GlassInput
-                        v-model="form.date"
-                        type="date"
-                        label="Date"
-                        :error="form.errors.date"
-                        required
-                    />
+                    <GlassInput v-model="form.date" type="date" label="Date" :error="form.errors.date" required />
 
                     <div>
                         <label class="mb-1 block text-sm font-medium text-white/70">Humeur</label>
@@ -151,8 +153,8 @@ const formatDate = (dateStr) => {
                                 :class="[
                                     'flex-1 rounded-lg border border-white/10 p-2 text-center text-sm transition',
                                     form.mood_score === mood.value
-                                        ? 'bg-accent-primary text-white border-transparent'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                        ? 'border-transparent bg-accent-primary text-white'
+                                        : 'bg-white/5 text-white/60 hover:bg-white/10',
                                 ]"
                             >
                                 <div class="text-xl">{{ mood.label.split(' ')[0] }}</div>
@@ -181,6 +183,48 @@ const formatDate = (dateStr) => {
                             label="Stress (1-10)"
                             placeholder="Niveau"
                             :error="form.errors.stress_level"
+                        />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <GlassInput
+                            v-model="form.energy_level"
+                            type="number"
+                            min="1"
+                            max="10"
+                            label="Énergie (1-10)"
+                            placeholder="Niveau"
+                            :error="form.errors.energy_level"
+                        />
+                        <GlassInput
+                            v-model="form.motivation_level"
+                            type="number"
+                            min="1"
+                            max="10"
+                            label="Motivation (1-10)"
+                            placeholder="Niveau"
+                            :error="form.errors.motivation_level"
+                        />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <GlassInput
+                            v-model="form.nutrition_score"
+                            type="number"
+                            min="1"
+                            max="5"
+                            label="Diète (1-5)"
+                            placeholder="Qualité"
+                            :error="form.errors.nutrition_score"
+                        />
+                        <GlassInput
+                            v-model="form.training_intensity"
+                            type="number"
+                            min="1"
+                            max="10"
+                            label="Intensité (1-10)"
+                            placeholder="Effort"
+                            :error="form.errors.training_intensity"
                         />
                     </div>
 
@@ -218,7 +262,11 @@ const formatDate = (dateStr) => {
 
             <div v-else class="space-y-8">
                 <div v-for="(group, month) in journalsByMonth" :key="month">
-                    <h3 class="mb-4 text-lg font-medium capitalize text-white/80 sticky top-0 bg-dark-bg/80 backdrop-blur-sm p-2 z-10 rounded-lg">{{ month }}</h3>
+                    <h3
+                        class="bg-dark-bg/80 sticky top-0 z-10 mb-4 rounded-lg p-2 text-lg font-medium capitalize text-white/80 backdrop-blur-sm"
+                    >
+                        {{ month }}
+                    </h3>
                     <div class="space-y-4">
                         <GlassCard
                             v-for="journal in group"
@@ -228,10 +276,16 @@ const formatDate = (dateStr) => {
                         >
                             <div class="flex flex-col sm:flex-row">
                                 <!-- Date Column -->
-                                <div class="flex w-full shrink-0 flex-row items-center justify-between bg-white/5 p-4 sm:w-24 sm:flex-col sm:justify-center sm:border-r sm:border-white/10">
+                                <div
+                                    class="flex w-full shrink-0 flex-row items-center justify-between bg-white/5 p-4 sm:w-24 sm:flex-col sm:justify-center sm:border-r sm:border-white/10"
+                                >
                                     <div class="text-center">
                                         <div class="text-xs uppercase text-white/50">
-                                            {{ new Date(journal.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short' }) }}
+                                            {{
+                                                new Date(journal.date + 'T00:00:00').toLocaleDateString('fr-FR', {
+                                                    weekday: 'short',
+                                                })
+                                            }}
                                         </div>
                                         <div class="text-2xl font-bold text-white">
                                             {{ new Date(journal.date + 'T00:00:00').getDate() }}
@@ -240,7 +294,7 @@ const formatDate = (dateStr) => {
 
                                     <!-- Mobile Mood Display -->
                                     <div v-if="journal.mood_score" class="text-2xl sm:hidden">
-                                        {{ moods.find(m => m.value === journal.mood_score)?.label.split(' ')[0] }}
+                                        {{ moods.find((m) => m.value === journal.mood_score)?.label.split(' ')[0] }}
                                     </div>
                                 </div>
 
@@ -248,28 +302,92 @@ const formatDate = (dateStr) => {
                                 <div class="flex-1 p-4">
                                     <div class="mb-2 flex items-start justify-between">
                                         <div class="flex items-center gap-3">
-                                            <div v-if="journal.mood_score" class="hidden text-2xl sm:block" title="Humeur">
-                                                {{ moods.find(m => m.value === journal.mood_score)?.label.split(' ')[0] }}
+                                            <div
+                                                v-if="journal.mood_score"
+                                                class="hidden text-2xl sm:block"
+                                                title="Humeur"
+                                            >
+                                                {{
+                                                    moods
+                                                        .find((m) => m.value === journal.mood_score)
+                                                        ?.label.split(' ')[0]
+                                                }}
                                             </div>
-                                            <div class="flex gap-2">
-                                                <span v-if="journal.sleep_quality" class="inline-flex items-center rounded-md bg-indigo-400/10 px-2 py-1 text-xs font-medium text-indigo-400 ring-1 ring-inset ring-indigo-400/30">
-                                                    💤 Sommeil: {{ journal.sleep_quality }}/5
+                                            <div class="flex flex-wrap gap-2">
+                                                <span
+                                                    v-if="journal.sleep_quality"
+                                                    class="inline-flex items-center rounded-md bg-indigo-400/10 px-2 py-1 text-[10px] font-medium text-indigo-400 ring-1 ring-inset ring-indigo-400/30"
+                                                >
+                                                    💤 {{ journal.sleep_quality }}/5
                                                 </span>
-                                                <span v-if="journal.stress_level" class="inline-flex items-center rounded-md bg-orange-400/10 px-2 py-1 text-xs font-medium text-orange-400 ring-1 ring-inset ring-orange-400/30">
+                                                <span
+                                                    v-if="journal.stress_level"
+                                                    class="inline-flex items-center rounded-md bg-orange-400/10 px-2 py-1 text-[10px] font-medium text-orange-400 ring-1 ring-inset ring-orange-400/30"
+                                                >
                                                     ⚡ Stress: {{ journal.stress_level }}/10
+                                                </span>
+                                                <span
+                                                    v-if="journal.energy_level"
+                                                    class="inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-1 text-[10px] font-medium text-yellow-400 ring-1 ring-inset ring-yellow-400/30"
+                                                >
+                                                    🔋 Énergie: {{ journal.energy_level }}/10
+                                                </span>
+                                                <span
+                                                    v-if="journal.motivation_level"
+                                                    class="inline-flex items-center rounded-md bg-pink-400/10 px-2 py-1 text-[10px] font-medium text-pink-400 ring-1 ring-inset ring-pink-400/30"
+                                                >
+                                                    🔥 Motivation: {{ journal.motivation_level }}/10
+                                                </span>
+                                                <span
+                                                    v-if="journal.nutrition_score"
+                                                    class="inline-flex items-center rounded-md bg-emerald-400/10 px-2 py-1 text-[10px] font-medium text-emerald-400 ring-1 ring-inset ring-emerald-400/30"
+                                                >
+                                                    🥗 Diète: {{ journal.nutrition_score }}/5
+                                                </span>
+                                                <span
+                                                    v-if="journal.training_intensity"
+                                                    class="inline-flex items-center rounded-md bg-red-400/10 px-2 py-1 text-[10px] font-medium text-red-100 ring-1 ring-inset ring-red-400/30"
+                                                >
+                                                    🏋️ Intensité: {{ journal.training_intensity }}/10
                                                 </span>
                                             </div>
                                         </div>
 
                                         <div class="flex gap-1 opacity-0 transition group-hover:opacity-100">
-                                            <button @click="editJournal(journal)" class="rounded p-1 text-white/50 hover:bg-white/10 hover:text-white">
-                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            <button
+                                                @click="editJournal(journal)"
+                                                class="rounded p-1 text-white/50 hover:bg-white/10 hover:text-white"
+                                            >
+                                                <svg
+                                                    class="h-4 w-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                    />
                                                 </svg>
                                             </button>
-                                            <button @click="deleteJournal(journal.id)" class="rounded p-1 text-white/50 hover:bg-white/10 hover:text-red-400">
-                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            <button
+                                                @click="deleteJournal(journal.id)"
+                                                class="rounded p-1 text-white/50 hover:bg-white/10 hover:text-red-400"
+                                            >
+                                                <svg
+                                                    class="h-4 w-4"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                    />
                                                 </svg>
                                             </button>
                                         </div>

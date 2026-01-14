@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DailyJournalStoreRequest;
 use App\Models\DailyJournal;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -27,19 +27,15 @@ class DailyJournalController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(DailyJournalStoreRequest $request)
     {
-        $validated = $request->validate([
-            'date' => ['required', 'date'],
-            'content' => ['nullable', 'string', 'max:5000'],
-            'mood_score' => ['nullable', 'integer', 'min:1', 'max:5'],
-            'sleep_quality' => ['nullable', 'integer', 'min:1', 'max:5'],
-            'stress_level' => ['nullable', 'integer', 'min:1', 'max:10'],
-        ]);
+        $validated = $request->validated();
 
         // Use updateOrCreate to handle editing existing entry for the day
-        $request->user()->dailyJournals()->updateOrCreate(
-            ['date' => $validated['date']],
+        $date = \Carbon\Carbon::parse($validated['date'])->format('Y-m-d');
+
+        DailyJournal::updateOrCreate(
+            ['user_id' => $request->user()->id, 'date' => $date],
             $validated
         );
 

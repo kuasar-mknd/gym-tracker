@@ -11,18 +11,27 @@ class DailyJournal extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'date',
         'content',
         'mood_score',
         'sleep_quality',
         'stress_level',
+        'energy_level',
+        'motivation_level',
+        'nutrition_score',
+        'training_intensity',
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => 'date:Y-m-d',
         'mood_score' => 'integer',
         'sleep_quality' => 'integer',
         'stress_level' => 'integer',
+        'energy_level' => 'integer',
+        'motivation_level' => 'integer',
+        'nutrition_score' => 'integer',
+        'training_intensity' => 'integer',
     ];
 
     public function user(): BelongsTo

@@ -82,6 +82,17 @@ const showingNavigationDropdown = ref(false)
                             >
                                 Stats
                             </Link>
+                            <Link
+                                :href="route('daily-journals.index')"
+                                :class="[
+                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
+                                    route().current('daily-journals.*')
+                                        ? 'border-b-2 border-accent-primary text-accent-primary'
+                                        : 'text-white/70 hover:text-white',
+                                ]"
+                            >
+                                Journal
+                            </Link>
                         </div>
                     </div>
 
