@@ -48,6 +48,8 @@ class WorkoutController extends Controller
         $workout->user_id = Auth::id();
         $workout->save();
 
+        \App\Jobs\RecalculateUserStats::dispatch($request->user());
+
         return new WorkoutResource($workout);
     }
 
@@ -81,6 +83,8 @@ class WorkoutController extends Controller
 
         $workout->update($validated);
 
+        \App\Jobs\RecalculateUserStats::dispatch($workout->user);
+
         return new WorkoutResource($workout);
     }
 
@@ -93,7 +97,10 @@ class WorkoutController extends Controller
             abort(403);
         }
 
+        $user = $workout->user;
         $workout->delete();
+
+        \App\Jobs\RecalculateUserStats::dispatch($user);
 
         return response()->noContent();
     }

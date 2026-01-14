@@ -12,6 +12,7 @@
         "inertiajs/inertia-laravel": "^2.0",
         "laravel-notification-channels/webpush": "^10.4",
         "laravel/framework": "^12.0",
+        "laravel/horizon": "^5.42",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.10.1",

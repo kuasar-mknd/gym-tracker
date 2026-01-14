@@ -5,8 +5,6 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-use App\Services\AchievementService;
-use App\Services\GoalService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -34,18 +32,18 @@ class AppServiceProvider extends ServiceProvider
         );
 
         // Goal Tracking Hooks
-        Workout::saved(fn (Workout $workout) => app(GoalService::class)->syncGoals($workout->user));
-        Workout::deleted(fn (Workout $workout) => app(GoalService::class)->syncGoals($workout->user));
+        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        Workout::deleted(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
 
-        Set::saved(fn (Set $set) => app(GoalService::class)->syncGoals($set->workoutLine->workout->user));
-        Set::deleted(fn (Set $set) => app(GoalService::class)->syncGoals($set->workoutLine->workout->user));
+        Set::saved(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
+        Set::deleted(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
 
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
+        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
 
         // Achievement Tracking Hooks
-        Workout::saved(fn (Workout $workout) => app(AchievementService::class)->syncAchievements($workout->user));
-        Set::saved(fn (Set $set) => app(AchievementService::class)->syncAchievements($set->workoutLine->workout->user));
+        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
+        Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
         // Streak Tracking Hooks
         Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user));

@@ -171,7 +171,7 @@
 - [x] Eager loading optimisé
 - [x] Installer Laravel Telescope (dev only)
 
-### 5.3 Background Jobs
+- [x] **Background Jobs** (Phase 5.3) : Laravel Horizon, Jobs asynchrones pour Stats/Goals/Achievements.
 
 - [ ] Configurer Laravel Horizon
 - [ ] Jobs pour calcul de stats lourdes
