@@ -41,4 +41,8 @@ RUN php artisan storage:link
 # Permissions
 RUN chmod -R 777 storage bootstrap/cache
 
-ENTRYPOINT ["php", "artisan", "octane:frankenphp"]
+# Expose port
+EXPOSE 80
+
+# Use artisan serve (more reliable than Octane for initial deployment)
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=80"]
