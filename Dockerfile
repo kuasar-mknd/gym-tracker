@@ -51,5 +51,13 @@ EXPOSE 80
 ENV APP_DEBUG=true
 ENV LOG_LEVEL=debug
 
-# Test that Laravel can bootstrap, then start Octane
-CMD php artisan config:cache && php artisan route:cache && php artisan octane:frankenphp --host=0.0.0.0 --port=80
+# Startup script that waits for DB and starts Octane
+CMD sh -c '\
+  echo "Waiting for database..." && \
+  until php artisan db:seed --help > /dev/null 2>&1; do sleep 2; done && \
+  echo "Database ready!" && \
+  php artisan config:cache && \
+  php artisan route:cache && \
+  php artisan migrate --force || true && \
+  echo "Starting Octane..." && \
+  php artisan octane:frankenphp --host=0.0.0.0 --port=80 --workers=1'
