@@ -225,7 +225,30 @@ const greeting = computed(() => {
             </div>
 
             <!-- Quick Links -->
-            <div class="grid animate-slide-up grid-cols-2 gap-3" style="animation-delay: 0.4s">
+            <div class="grid animate-slide-up grid-cols-2 gap-3 sm:grid-cols-3" style="animation-delay: 0.4s">
+                <Link :href="route('stats.index')">
+                    <GlassCard class="transition hover:bg-glass-strong">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-primary/20">
+                                <svg
+                                    class="h-5 w-5 text-accent-primary"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                    />
+                                </svg>
+                            </div>
+                            <div class="text-sm font-medium text-white">Analyses</div>
+                        </div>
+                    </GlassCard>
+                </Link>
                 <Link :href="route('body-measurements.index')">
                     <GlassCard class="transition hover:bg-glass-strong">
                         <div class="flex items-center gap-3">
@@ -241,7 +264,7 @@ const greeting = computed(() => {
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
                                         stroke-width="2"
-                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                        d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0l-3-9m3 1c1 0 1 1 1 1m0 0l3 9a5.002 5.002 0 006.001 0l-3-9m-3 1c-1 0-1-1-1-1m-4-1V5a2 2 0 012-2h2a2 2 0 012 2v3m-6 0h6"
                                     />
                                 </svg>
                             </div>
@@ -249,12 +272,12 @@ const greeting = computed(() => {
                         </div>
                     </GlassCard>
                 </Link>
-                <Link :href="route('profile.edit')">
+                <Link :href="route('profile.edit')" class="col-span-2 sm:col-span-1">
                     <GlassCard class="transition hover:bg-glass-strong">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-primary/20">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
                                 <svg
-                                    class="h-5 w-5 text-accent-primary"
+                                    class="h-5 w-5 text-white/70"
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
                                     viewBox="0 0 24 24"

@@ -71,6 +71,17 @@ const showingNavigationDropdown = ref(false)
                             >
                                 Corps
                             </Link>
+                            <Link
+                                :href="route('stats.index')"
+                                :class="[
+                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
+                                    route().current('stats.*')
+                                        ? 'border-b-2 border-accent-primary text-accent-primary'
+                                        : 'text-white/70 hover:text-white',
+                                ]"
+                            >
+                                Stats
+                            </Link>
                         </div>
                     </div>
 

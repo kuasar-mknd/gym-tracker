@@ -41,19 +41,20 @@
 
 ### 1.3 Rest Timer (Chronomètre de repos)
 
-- [ ] Lancement automatique du chrono après validation d'un set
-- [ ] Réglage du temps de repos par défaut (Global & par exercice)
-- [ ] Notification sonore/vibration à la fin du chrono
-- [ ] Contrôles manuels (Start/Stop/Reset/+30s)
-- [ ] Affichage flottant ou persistant pendant le repos
+- [x] Lancement automatique du chrono après validation d'un set
+- [x] Réglage du temps de repos par défaut (Global & par exercice)
+- [x] Notification sonore/vibration à la fin du chrono
+- [x] Contrôles manuels (Start/Stop/Reset/+30s)
+- [x] Affichage flottant ou persistant pendant le repos
 
 ### 1.4 Volume & Statistiques avancées
 
-- [ ] Calcul du volume total par séance (poids × reps × séries)
-- [ ] Calcul du 1RM estimé (formule Epley/Brzycki)
-- [ ] Graphique d'évolution du volume par groupe musculaire
-- [ ] Comparaison semaine vs semaine précédente
-- [ ] Tonnage total soulevé (lifetime stats)
+- [x] Calcul du volume total par séance (poids × reps × séries)
+- [x] Visualisation du volume par groupe musculaire (Pie chart)
+- [x] Graphique d'évolution du 1RM estimé par exercice
+- [x] Total tonnage soulevé par mois
+- [x] Comparaison des performances semaine après semaine
+- [x] Intégration de `chart.js` pour les visualisations
 
 ---
 
