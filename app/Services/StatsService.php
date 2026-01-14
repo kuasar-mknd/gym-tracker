@@ -18,27 +18,29 @@ class StatsService
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days) {
-                return Workout::query()
-                    ->where('user_id', $user->id)
-                    ->where('started_at', '>=', now()->subDays($days))
-                    ->with(['workoutLines.sets'])
-                    ->get()
-                    ->map(function ($workout) {
-                        $volume = $workout->workoutLines->sum(function ($line) {
-                            return $line->sets->sum(function ($set) {
-                                return $set->weight * $set->reps;
-                            });
-                        });
+                $results = DB::table('workouts')
+                    ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                    ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                    ->where('workouts.user_id', $user->id)
+                    ->where('workouts.started_at', '>=', now()->subDays($days))
+                    ->select(
+                        'workouts.id',
+                        'workouts.started_at',
+                        'workouts.name',
+                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+                    )
+                    ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
+                    ->orderBy('workouts.started_at')
+                    ->get();
 
-                        return [
-                            'date' => $workout->started_at->format('d/m'),
-                            'full_date' => $workout->started_at->format('Y-m-d'),
-                            'name' => $workout->name,
-                            'volume' => $volume,
-                        ];
-                    })
-                    ->values()
-                    ->toArray();
+                return $results->map(function ($row) {
+                    return [
+                        'date' => Carbon::parse($row->started_at)->format('d/m'),
+                        'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'),
+                        'name' => $row->name,
+                        'volume' => (float) $row->volume,
+                    ];
+                })->values()->toArray();
             }
         );
     }
