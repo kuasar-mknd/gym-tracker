@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Plate;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,7 +17,7 @@ class PlateControllerTest extends TestCase
         $plate = Plate::create([
             'user_id' => $user->id,
             'weight' => 20,
-            'quantity' => 2
+            'quantity' => 2,
         ]);
 
         $response = $this->actingAs($user)->get(route('plates.index'));
@@ -52,7 +52,7 @@ class PlateControllerTest extends TestCase
         $plate = Plate::create([
             'user_id' => $user->id,
             'weight' => 20,
-            'quantity' => 2
+            'quantity' => 2,
         ]);
 
         $response = $this->actingAs($user)->put(route('plates.update', $plate), [
@@ -73,7 +73,7 @@ class PlateControllerTest extends TestCase
         $plate = Plate::create([
             'user_id' => $user->id,
             'weight' => 20,
-            'quantity' => 2
+            'quantity' => 2,
         ]);
 
         $response = $this->actingAs($user)->delete(route('plates.destroy', $plate));
@@ -91,7 +91,7 @@ class PlateControllerTest extends TestCase
         $plate = Plate::create([
             'user_id' => $user1->id,
             'weight' => 20,
-            'quantity' => 2
+            'quantity' => 2,
         ]);
 
         $response = $this->actingAs($user2)->delete(route('plates.destroy', $plate));
