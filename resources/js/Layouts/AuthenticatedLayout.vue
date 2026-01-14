@@ -96,7 +96,34 @@ const showingNavigationDropdown = ref(false)
                         </div>
                     </div>
 
-                    <div class="hidden sm:ms-6 sm:flex sm:items-center">
+                    <div class="hidden gap-4 sm:ms-6 sm:flex sm:items-center">
+                        <!-- Notification Bell (Desktop) -->
+                        <Link
+                            :href="route('notifications.index')"
+                            class="relative rounded-xl border border-glass-border bg-glass p-2 text-white/80 transition hover:bg-glass-strong hover:text-white"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                                />
+                            </svg>
+                            <span
+                                v-if="$page.props.auth.user.unread_notifications_count > 0"
+                                class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent-primary text-[10px] font-bold text-white shadow-lg"
+                            >
+                                {{ $page.props.auth.user.unread_notifications_count }}
+                            </span>
+                        </Link>
+
                         <!-- Settings Dropdown -->
                         <div class="relative ms-3">
                             <Dropdown align="right" width="48">
@@ -139,7 +166,34 @@ const showingNavigationDropdown = ref(false)
         <!-- Mobile Header (shown on mobile only) -->
         <PageHeader v-if="pageTitle" :title="pageTitle" :show-back="showBack" :back-route="backRoute" class="sm:hidden">
             <template #actions>
-                <slot name="header-actions" />
+                <div class="flex items-center gap-2">
+                    <Link
+                        :href="route('notifications.index')"
+                        class="relative flex h-10 w-10 items-center justify-center rounded-xl bg-glass text-white/80"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                            />
+                        </svg>
+                        <span
+                            v-if="$page.props.auth.user.unread_notifications_count > 0"
+                            class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-[#0f172a] bg-accent-primary text-[10px] font-bold text-white shadow-lg"
+                        >
+                            {{ $page.props.auth.user.unread_notifications_count }}
+                        </span>
+                    </Link>
+                    <slot name="header-actions" />
+                </div>
             </template>
         </PageHeader>
 

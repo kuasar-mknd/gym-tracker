@@ -70,4 +70,17 @@ class User extends Authenticatable
     {
         return $this->hasMany(DailyJournal::class);
     }
+
+    public function notificationPreferences(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    public function isNotificationEnabled(string $type): bool
+    {
+        return (bool) $this->notificationPreferences()
+            ->where('type', $type)
+            ->where('is_enabled', true)
+            ->exists();
+    }
 }

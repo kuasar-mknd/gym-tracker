@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Notifications;
+
+use App\Models\PersonalRecord;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Notification;
+
+class PersonalRecordAchieved extends Notification implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * Create a new notification instance.
+     */
+    public function __construct(public PersonalRecord $personalRecord) {}
+
+    /**
+     * Get the notification's delivery channels.
+     *
+     * @return array<int, string>
+     */
+    public function via(object $notifiable): array
+    {
+        return ['database'];
+    }
+
+    /**
+     * Get the array representation of the notification.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(object $notifiable): array
+    {
+        $typeLabel = match ($this->personalRecord->type) {
+            'max_weight' => 'Poids Maximum',
+            'max_1rm' => '1RM Estimé',
+            'max_volume_set' => 'Volume par Série',
+            default => 'Record Personnel',
+        };
+
+        return [
+            'type' => 'personal_record',
+            'title' => 'Nouveau Record ! 🏆',
+            'message' => "Félicitations ! Tu as battu ton record de {$typeLabel} sur l'exercice {$this->personalRecord->exercise->name} avec {$this->personalRecord->value}kg.",
+            'exercise_id' => $this->personalRecord->exercise_id,
+            'achieved_at' => $this->personalRecord->achieved_at,
+        ];
+    }
+}

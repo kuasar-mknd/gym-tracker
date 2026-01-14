@@ -4,11 +4,13 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import DeleteUserForm from './Partials/DeleteUserForm.vue'
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue'
+import UpdateNotificationPreferencesForm from './Partials/UpdateNotificationPreferencesForm.vue'
 import { Head } from '@inertiajs/vue3'
 
 defineProps({
     mustVerifyEmail: Boolean,
     status: String,
+    notificationPreferences: Object,
 })
 </script>
 
@@ -29,6 +31,11 @@ defineProps({
             <!-- Password -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
                 <UpdatePasswordForm />
+            </GlassCard>
+
+            <!-- Notification Preferences -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.15s">
+                <UpdateNotificationPreferencesForm :preferences="notificationPreferences" />
             </GlassCard>
 
             <!-- Delete Account -->

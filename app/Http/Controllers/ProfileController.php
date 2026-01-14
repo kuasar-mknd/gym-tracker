@@ -21,6 +21,7 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'notificationPreferences' => $request->user()->notificationPreferences()->get()->pluck('is_enabled', 'type'),
         ]);
     }
 
@@ -38,6 +39,26 @@ class ProfileController extends Controller
         $request->user()->save();
 
         return Redirect::route('profile.edit');
+    }
+
+    /**
+     * Update the user's notification preferences.
+     */
+    public function updatePreferences(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'preferences' => ['required', 'array'],
+            'preferences.*' => ['boolean'],
+        ]);
+
+        foreach ($validated['preferences'] as $type => $isEnabled) {
+            $request->user()->notificationPreferences()->updateOrCreate(
+                ['type' => $type],
+                ['is_enabled' => $isEnabled]
+            );
+        }
+
+        return Redirect::route('profile.edit')->with('status', 'notification-preferences-updated');
     }
 
     /**

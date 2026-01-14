@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
+use App\Notifications\PersonalRecordAchieved;
 
 class PersonalRecordService
 {
@@ -81,7 +82,7 @@ class PersonalRecordService
 
     protected function savePR(User $user, int $exerciseId, string $type, float $value, ?float $secondary, int $workoutId, int $setId): void
     {
-        PersonalRecord::updateOrCreate(
+        $pr = PersonalRecord::updateOrCreate(
             [
                 'user_id' => $user->id,
                 'exercise_id' => $exerciseId,
@@ -95,6 +96,11 @@ class PersonalRecordService
                 'achieved_at' => now(),
             ]
         );
+
+        // Notify user if enabled
+        if ($user->isNotificationEnabled('personal_record')) {
+            $user->notify(new PersonalRecordAchieved($pr));
+        }
     }
 
     /**

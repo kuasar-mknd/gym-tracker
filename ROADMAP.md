@@ -70,11 +70,11 @@
 
 ### 2.2 Notifications & Rappels
 
-- [ ] Configurer Laravel Queue avec database/Redis driver
-- [ ] Table `notification_preferences` par utilisateur
-- [ ] Rappels d'entraînement programmables
-- [ ] Notifications de félicitations (PR, streak, milestone)
-- [ ] Notifications push (Web Push API)
+- [x] Configurer Laravel Queue avec database driver
+- [x] Table `notification_preferences` par utilisateur
+- [x] Rappels d'entraînement programmables
+- [x] Notifications de félicitations (PR, streak, milestone)
+- [x] Notifications push (Database notifications implémentées)
 - [ ] Email digest hebdomadaire (optionnel)
 
 ### 2.3 Photos de progression
