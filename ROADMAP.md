@@ -62,11 +62,11 @@
 
 ### 2.1 Progressive Web App (PWA)
 
-- [ ] Installer `silviolleite/laravelpwa` ou config manuelle
-- [ ] Manifest.json avec icônes et couleurs
-- [ ] Service Worker pour cache offline
-- [ ] Possibilité d'installer l'app sur mobile
-- [ ] Sync des données quand connexion retrouvée
+- [x] Installer `silviolleite/laravelpwa` ou config manuelle (Vite PWA)
+- [x] Manifest.json avec icônes et couleurs
+- [x] Service Worker pour cache offline
+- [x] Possibilité d'installer l'app sur mobile
+- [x] Sync des données quand connexion retrouvée
 
 ### 2.2 Notifications & Rappels
 
