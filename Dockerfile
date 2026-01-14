@@ -56,7 +56,7 @@ CMD sh -c '\
   echo "Waiting for database..." && \
   MAX_TRIES=30 && \
   TRIES=0 && \
-  until php -r "try { new PDO(\"mysql:host=\$_ENV[DB_HOST];port=\$_ENV[DB_PORT];dbname=\$_ENV[DB_DATABASE]\", \$_ENV[DB_USERNAME], \$_ENV[DB_PASSWORD]); echo \"Connected!\n\"; exit(0); } catch (Exception \$e) { echo \"Waiting...\n\"; exit(1); }" 2>/dev/null; do \
+  until php -r "\$h=getenv(\"DB_HOST\");\$p=getenv(\"DB_PORT\");\$d=getenv(\"DB_DATABASE\");\$u=getenv(\"DB_USERNAME\");\$w=getenv(\"DB_PASSWORD\");try{new PDO(\"mysql:host=\$h;port=\$p;dbname=\$d\",\$u,\$w);echo\"OK\";exit(0);}catch(Exception \$e){exit(1);}" 2>/dev/null; do \
     TRIES=$((TRIES+1)) && \
     if [ $TRIES -ge $MAX_TRIES ]; then \
       echo "Database connection failed after $MAX_TRIES attempts" && \
@@ -71,4 +71,5 @@ CMD sh -c '\
   php artisan migrate --force || true && \
   echo "Starting Octane..." && \
   php artisan octane:frankenphp --host=0.0.0.0 --port=80 --workers=1'
+
 
