@@ -43,6 +43,8 @@ class WorkoutTemplatesController extends Controller
     {
         abort_if($template->user_id !== auth()->id(), 403);
 
+        $template->load(['workoutTemplateLines.workoutTemplateSets']);
+
         $workout = Workout::create([
             'user_id' => auth()->id(),
             'name' => $template->name,
@@ -70,6 +72,8 @@ class WorkoutTemplatesController extends Controller
     public function saveFromWorkout(Workout $workout): \Illuminate\Http\RedirectResponse
     {
         abort_if($workout->user_id !== auth()->id(), 403);
+
+        $workout->load(['workoutLines.sets']);
 
         $template = WorkoutTemplate::create([
             'user_id' => auth()->id(),
