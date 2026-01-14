@@ -19,9 +19,14 @@ services:
             REDIS_PASSWORD: ${REDIS_PASSWORD}
             REDIS_PORT: 6379
             OCTANE_SERVER: frankenphp
+            SESSION_DRIVER: redis
+            CACHE_STORE: redis
+            QUEUE_CONNECTION: redis
         depends_on:
-            - db
-            - redis
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_started
         networks:
             - gym-network
 
@@ -35,6 +40,12 @@ services:
             MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
         volumes:
             - db_data:/var/lib/mysql
+        healthcheck:
+            test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+            interval: 10s
+            timeout: 5s
+            retries: 10
+            start_period: 30s
         networks:
             - gym-network
 
@@ -47,23 +58,28 @@ services:
         networks:
             - gym-network
 
-    # Horizon / Worker
     worker:
         image: ghcr.io/kuasar-mknd/gym-tracker:latest
         restart: always
         command: php artisan horizon
         environment:
+            APP_KEY: ${APP_KEY}
             APP_ENV: production
             DB_CONNECTION: mysql
             DB_HOST: db
+            DB_PORT: 3306
             DB_DATABASE: ${DB_DATABASE}
             DB_USERNAME: ${DB_USERNAME}
             DB_PASSWORD: ${DB_PASSWORD}
             REDIS_HOST: redis
             REDIS_PASSWORD: ${REDIS_PASSWORD}
+            REDIS_PORT: 6379
+            QUEUE_CONNECTION: redis
         depends_on:
-            - db
-            - redis
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_started
         networks:
             - gym-network
 
