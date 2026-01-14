@@ -77,6 +77,9 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)
         ->only(['index', 'store', 'destroy']);
+
+    Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)
+        ->only(['index', 'store', 'destroy']);
 });
 
 // Social Login

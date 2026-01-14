@@ -113,22 +113,10 @@ const showingNavigationDropdown = ref(false)
                                 </template>
 
                                 <template #content>
-                                    <div class="overflow-hidden rounded-xl border border-glass-border bg-dark-700">
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                            class="text-white/80 hover:bg-glass"
-                                        >
-                                            Profil
-                                        </DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                            class="text-white/80 hover:bg-glass"
-                                        >
-                                            Déconnexion
-                                        </DropdownLink>
-                                    </div>
+                                    <DropdownLink :href="route('profile.edit')"> Profil </DropdownLink>
+                                    <DropdownLink :href="route('logout')" method="post" as="button">
+                                        Déconnexion
+                                    </DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
