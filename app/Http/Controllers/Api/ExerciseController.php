@@ -2,19 +2,32 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
 use Illuminate\Http\Request;
+use OpenApi\Attributes as OA;
 
 class ExerciseController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+    #[OA\Get(
+        path: '/exercises',
+        summary: 'Get list of exercises',
+        tags: ['Exercises']
+    )]
+    #[OA\Response(response: 200, description: 'Successful operation')]
+    #[OA\Response(response: 401, description: 'Unauthenticated')]
     public function index()
     {
-        return ExerciseResource::collection(Exercise::all());
+        $exercises = \Spatie\QueryBuilder\QueryBuilder::for(Exercise::class)
+            ->allowedFilters(['name', 'type', 'category'])
+            ->allowedSorts(['name', 'created_at'])
+            ->defaultSort('name')
+            ->paginate();
+
+        return ExerciseResource::collection($exercises);
     }
 
     /**

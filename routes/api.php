@@ -5,11 +5,15 @@ use App\Http\Controllers\Api\WorkoutController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->as('api.')->group(function () {
+Route::prefix('v1')->middleware('auth:sanctum')->as('api.v1.')->group(function () {
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        return new \App\Http\Resources\UserResource($request->user());
     });
 
     Route::apiResource('exercises', ExerciseController::class);
     Route::apiResource('workouts', WorkoutController::class);
+
+    Route::get('/status', function () {
+        return response()->json(['status' => 'ok']);
+    });
 });

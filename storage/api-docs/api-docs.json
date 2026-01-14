@@ -1,0 +1,80 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Gym Tracker API",
+        "description": "API documentation for Gym Tracker application",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/api/v1",
+            "description": "API V1 Server"
+        }
+    ],
+    "paths": {
+        "/exercises": {
+            "get": {
+                "tags": [
+                    "Exercises"
+                ],
+                "summary": "Get list of exercises",
+                "description": "Display a listing of the resource.",
+                "operationId": "600c5637bf3a0ab6ecc915f8bf92cc2d",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/api/v1/status": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Status check",
+                "operationId": "248735a489e60f2b4d5ea97c803e838a",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/workouts": {
+            "get": {
+                "tags": [
+                    "Workouts"
+                ],
+                "summary": "Get list of workouts",
+                "description": "Display a listing of the resource.",
+                "operationId": "4280fece98b0aa18dedc34607b9bbd3b",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Exercises",
+            "description": "Exercises"
+        },
+        {
+            "name": "System",
+            "description": "System"
+        },
+        {
+            "name": "Workouts",
+            "description": "Workouts"
+        }
+    ]
+}

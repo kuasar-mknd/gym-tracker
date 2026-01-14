@@ -155,13 +155,13 @@
 
 ## 🔧 Phase 5 : Infrastructure & Performance
 
-### 5.1 API REST complète
+### 5.1 API REST complète - [x] Completed
 
-- [ ] Installer `spatie/laravel-query-builder`
-- [ ] API Resources pour tous les modèles
-- [ ] Documentation Swagger/OpenAPI
-- [ ] Versioning API (v1)
-- [ ] Rate limiting par endpoint
+- [x] Installer `spatie/laravel-query-builder`
+- [x] API Resources pour tous les modèles
+- [x] Documentation Swagger/OpenAPI (Structure en place)
+- [x] Versioning API (v1)
+- [x] Rate limiting par endpoint
 
 ### 5.2 Performance & Caching
 

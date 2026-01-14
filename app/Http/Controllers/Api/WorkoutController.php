@@ -2,22 +2,32 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Http\Resources\WorkoutResource;
 use App\Models\Workout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use OpenApi\Attributes as OA;
 
 class WorkoutController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+    #[OA\Get(
+        path: '/workouts',
+        summary: 'Get list of workouts',
+        tags: ['Workouts']
+    )]
+    #[OA\Response(response: 200, description: 'Successful operation')]
+    #[OA\Response(response: 401, description: 'Unauthenticated')]
     public function index()
     {
-        $workouts = Workout::where('user_id', Auth::id())
-            ->orderBy('started_at', 'desc')
-            ->paginate(15);
+        $workouts = \Spatie\QueryBuilder\QueryBuilder::for(Workout::class)
+            ->allowedIncludes(['workoutLines', 'workoutLines.exercise', 'workoutLines.sets'])
+            ->allowedSorts(['started_at', 'ended_at', 'created_at'])
+            ->defaultSort('-started_at')
+            ->where('user_id', Auth::id())
+            ->paginate();
 
         return WorkoutResource::collection($workouts);
     }
