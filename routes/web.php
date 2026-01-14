@@ -14,49 +14,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    $user = auth()->user();
-
-    // Optimize: fetch counts directly from DB instead of loading all workouts
-    $workoutsCount = $user->workouts()->count();
-
-    $startOfWeek = now()->startOfWeek();
-    $thisWeekCount = $user->workouts()
-        ->where('started_at', '>=', $startOfWeek)
-        ->count();
-
-    $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
-
-    // Optimize: only fetch the 5 most recent workouts with eager loading
-    $recentWorkouts = $user->workouts()
-        ->with('workoutLines.exercise', 'workoutLines.sets')
-        ->latest()
-        ->limit(5)
-        ->get();
-
-    $recentPRs = $user->personalRecords()
-        ->with('exercise')
-        ->latest('achieved_at')
-        ->take(5)
-        ->get();
-
-    $activeGoals = $user->goals()
-        ->with('exercise')
-        ->whereNull('completed_at')
-        ->latest()
-        ->take(3)
-        ->get()
-        ->append(['progress', 'unit']);
-
-    return Inertia::render('Dashboard', [
-        'workoutsCount' => $workoutsCount,
-        'thisWeekCount' => $thisWeekCount,
-        'latestWeight' => $latestMeasurement?->weight,
-        'recentWorkouts' => $recentWorkouts,
-        'recentPRs' => $recentPRs,
-        'activeGoals' => $activeGoals,
-    ]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

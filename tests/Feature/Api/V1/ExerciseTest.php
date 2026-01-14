@@ -55,4 +55,58 @@ class ExerciseTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonFragment(['name' => 'Running']);
     }
+
+    public function test_exercises_api_is_protected(): void
+    {
+        $response = $this->getJson('/api/v1/exercises');
+        $response->assertUnauthorized();
+
+        $response = $this->postJson('/api/v1/exercises', ['name' => 'Test']);
+        $response->assertUnauthorized();
+    }
+
+    public function test_can_create_exercise(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/exercises', [
+            'name' => 'New Exercise',
+            'type' => 'strength',
+            'category' => 'Test',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.name', 'New Exercise');
+
+        $this->assertDatabaseHas('exercises', ['name' => 'New Exercise']);
+    }
+
+    public function test_can_update_exercise(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/exercises/{$exercise->id}", [
+            'name' => 'Updated Name',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.name', 'Updated Name');
+
+        $this->assertDatabaseHas('exercises', [
+            'id' => $exercise->id,
+            'name' => 'Updated Name',
+        ]);
+    }
+
+    public function test_can_delete_exercise(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create();
+
+        $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/exercises/{$exercise->id}");
+
+        $response->assertNoContent();
+        $this->assertDatabaseMissing('exercises', ['id' => $exercise->id]);
+    }
 }

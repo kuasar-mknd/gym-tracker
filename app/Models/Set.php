@@ -24,6 +24,9 @@ class Set extends Model
         return [
             'is_warmup' => 'boolean',
             'is_completed' => 'boolean',
+            'weight' => 'float',
+            'distance_km' => 'float',
+            'duration_seconds' => 'integer',
         ];
     }
 

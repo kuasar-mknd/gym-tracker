@@ -14,27 +14,33 @@ class StatsService
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
-        return Workout::query()
-            ->where('user_id', $user->id)
-            ->where('started_at', '>=', now()->subDays($days))
-            ->with(['workoutLines.sets'])
-            ->get()
-            ->map(function ($workout) {
-                $volume = $workout->workoutLines->sum(function ($line) {
-                    return $line->sets->sum(function ($set) {
-                        return $set->weight * $set->reps;
-                    });
-                });
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.volume_trend.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $days) {
+                return Workout::query()
+                    ->where('user_id', $user->id)
+                    ->where('started_at', '>=', now()->subDays($days))
+                    ->with(['workoutLines.sets'])
+                    ->get()
+                    ->map(function ($workout) {
+                        $volume = $workout->workoutLines->sum(function ($line) {
+                            return $line->sets->sum(function ($set) {
+                                return $set->weight * $set->reps;
+                            });
+                        });
 
-                return [
-                    'date' => $workout->started_at->format('d/m'),
-                    'full_date' => $workout->started_at->format('Y-m-d'),
-                    'name' => $workout->name,
-                    'volume' => $volume,
-                ];
-            })
-            ->values()
-            ->toArray();
+                        return [
+                            'date' => $workout->started_at->format('d/m'),
+                            'full_date' => $workout->started_at->format('Y-m-d'),
+                            'name' => $workout->name,
+                            'volume' => $volume,
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+            }
+        );
     }
 
     /**
@@ -42,17 +48,23 @@ class StatsService
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
-        $results = DB::table('sets')
-            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
-            ->where('workouts.user_id', $user->id)
-            ->where('workouts.started_at', '>=', now()->subDays($days))
-            ->select('exercises.category', DB::raw('SUM(sets.weight * sets.reps) as volume'))
-            ->groupBy('exercises.category')
-            ->get();
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.muscle_dist.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $days) {
+                $results = DB::table('sets')
+                    ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+                    ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+                    ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
+                    ->where('workouts.user_id', $user->id)
+                    ->where('workouts.started_at', '>=', now()->subDays($days))
+                    ->select('exercises.category', DB::raw('SUM(sets.weight * sets.reps) as volume'))
+                    ->groupBy('exercises.category')
+                    ->get();
 
-        return $results->toArray();
+                return $results->toArray();
+            }
+        );
     }
 
     /**
@@ -60,27 +72,33 @@ class StatsService
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
-        $sets = DB::table('sets')
-            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->where('workouts.user_id', $user->id)
-            ->where('workout_lines.exercise_id', $exerciseId)
-            ->where('workouts.started_at', '>=', now()->subDays($days))
-            ->select(
-                'workouts.started_at',
-                DB::raw('MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
-            )
-            ->groupBy('workouts.started_at')
-            ->orderBy('workouts.started_at')
-            ->get();
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $exerciseId, $days) {
+                $sets = DB::table('sets')
+                    ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+                    ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+                    ->where('workouts.user_id', $user->id)
+                    ->where('workout_lines.exercise_id', $exerciseId)
+                    ->where('workouts.started_at', '>=', now()->subDays($days))
+                    ->select(
+                        'workouts.started_at',
+                        DB::raw('MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
+                    )
+                    ->groupBy('workouts.started_at')
+                    ->orderBy('workouts.started_at')
+                    ->get();
 
-        return $sets->map(function ($set) {
-            return [
-                'date' => Carbon::parse($set->started_at)->format('d/m'),
-                'full_date' => Carbon::parse($set->started_at)->format('Y-m-d'),
-                'one_rep_max' => (float) round($set->epley_1rm, 2),
-            ];
-        })->toArray();
+                return $sets->map(function ($set) {
+                    return [
+                        'date' => Carbon::parse($set->started_at)->format('d/m'),
+                        'full_date' => Carbon::parse($set->started_at)->format('Y-m-d'),
+                        'one_rep_max' => (float) round($set->epley_1rm, 2),
+                    ];
+                })->toArray();
+            }
+        );
     }
 
     /**
