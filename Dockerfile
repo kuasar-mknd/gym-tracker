@@ -41,8 +41,15 @@ RUN php artisan storage:link
 # Permissions
 RUN chmod -R 777 storage bootstrap/cache
 
+# Create log directory
+RUN mkdir -p storage/logs && touch storage/logs/laravel.log
+
 # Expose port
 EXPOSE 80
 
-# Use Octane with FrankenPHP (CMD allows override by docker-compose command:)
-CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80"]
+# Set environment for debugging
+ENV APP_DEBUG=true
+ENV LOG_LEVEL=debug
+
+# Test that Laravel can bootstrap, then start Octane
+CMD php artisan config:cache && php artisan route:cache && php artisan octane:frankenphp --host=0.0.0.0 --port=80
