@@ -22,6 +22,7 @@ services:
             SESSION_DRIVER: redis
             CACHE_STORE: redis
             QUEUE_CONNECTION: redis
+            DB_SSL_VERIFY: 'false'
         links:
             - db
             - redis
@@ -38,7 +39,7 @@ services:
             MYSQL_PASSWORD: ${DB_PASSWORD}
             MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
         volumes:
-            - /volume1/docker/gym-tracker/mysql:/var/lib/mysql
+            - db_data:/var/lib/mysql
         command: --default-authentication-plugin=mysql_native_password
 
     redis:
@@ -46,7 +47,7 @@ services:
         restart: always
         command: redis-server --requirepass ${REDIS_PASSWORD}
         volumes:
-            - /volume1/docker/gym-tracker/redis:/data
+            - redis_data:/data
 
     worker:
         image: ghcr.io/kuasar-mknd/gym-tracker:latest
@@ -65,9 +66,14 @@ services:
             REDIS_PASSWORD: ${REDIS_PASSWORD}
             REDIS_PORT: 6379
             QUEUE_CONNECTION: redis
+            DB_SSL_VERIFY: 'false'
         links:
             - db
             - redis
         depends_on:
             - db
             - redis
+
+volumes:
+    db_data:
+    redis_data:
