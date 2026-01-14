@@ -59,7 +59,7 @@ CMD sh -c '\
   echo "Waiting for database at $DB_HOST:$DB_PORT..." && \
   MAX_TRIES=45 && \
   TRIES=0 && \
-  until mysqladmin ping -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" --silent 2>/dev/null; do \
+  until mysqladmin ping -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" --ssl-mode=DISABLED --silent 2>/dev/null; do \
     TRIES=$((TRIES+1)) && \
     if [ $TRIES -ge $MAX_TRIES ]; then \
       echo "Database connection failed after $MAX_TRIES attempts (90 seconds)" && \
@@ -74,3 +74,4 @@ CMD sh -c '\
   php artisan migrate --force || true && \
   echo "Starting Octane..." && \
   php artisan octane:frankenphp --host=0.0.0.0 --port=80 --workers=1'
+
