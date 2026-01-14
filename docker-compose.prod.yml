@@ -3,89 +3,74 @@ services:
         image: ghcr.io/kuasar-mknd/gym-tracker:latest
         restart: always
         ports:
-            - '8000:80'
+            - 8888:80
         environment:
-            APP_KEY: ${APP_KEY}
+            APP_KEY: base64:obdMrKq+1Px1qLiAP3KMDFCwpINE/2qgr7eTvNRQVrQ=
             APP_URL: https://fit.kuasar.xyz
             APP_ENV: production
             APP_DEBUG: false
             DB_CONNECTION: mysql
             DB_HOST: db
             DB_PORT: 3306
-            DB_DATABASE: ${DB_DATABASE}
-            DB_USERNAME: ${DB_USERNAME}
-            DB_PASSWORD: ${DB_PASSWORD}
+            DB_DATABASE: gym_tracker
+            DB_USERNAME: gym_user
+            DB_PASSWORD: Gym2026SecurePass!
             REDIS_HOST: redis
-            REDIS_PASSWORD: ${REDIS_PASSWORD}
+            REDIS_PASSWORD: Redis2026SecurePass!
             REDIS_PORT: 6379
             OCTANE_SERVER: frankenphp
             SESSION_DRIVER: redis
             CACHE_STORE: redis
             QUEUE_CONNECTION: redis
+        links:
+            - db
+            - redis
         depends_on:
-            db:
-                condition: service_healthy
-            redis:
-                condition: service_started
-        networks:
-            - gym-network
+            - db
+            - redis
 
     db:
         image: mysql:8.0
         restart: always
         environment:
-            MYSQL_DATABASE: ${DB_DATABASE}
-            MYSQL_USER: ${DB_USERNAME}
-            MYSQL_PASSWORD: ${DB_PASSWORD}
-            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+            MYSQL_DATABASE: gym_tracker
+            MYSQL_USER: gym_user
+            MYSQL_PASSWORD: Gym2026SecurePass!
+            MYSQL_ROOT_PASSWORD: GymRoot2026SecurePass!
         volumes:
             - db_data:/var/lib/mysql
-        healthcheck:
-            test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
-            interval: 10s
-            timeout: 5s
-            retries: 10
-            start_period: 30s
-        networks:
-            - gym-network
+        command: --default-authentication-plugin=mysql_native_password
 
     redis:
         image: redis:alpine
         restart: always
-        command: redis-server --requirepass ${REDIS_PASSWORD}
+        command: redis-server --requirepass Redis2026SecurePass!
         volumes:
             - redis_data:/data
-        networks:
-            - gym-network
 
     worker:
         image: ghcr.io/kuasar-mknd/gym-tracker:latest
         restart: always
         command: php artisan horizon
         environment:
-            APP_KEY: ${APP_KEY}
+            APP_KEY: base64:obdMrKq+1Px1qLiAP3KMDFCwpINE/2qgr7eTvNRQVrQ=
             APP_ENV: production
             DB_CONNECTION: mysql
             DB_HOST: db
             DB_PORT: 3306
-            DB_DATABASE: ${DB_DATABASE}
-            DB_USERNAME: ${DB_USERNAME}
-            DB_PASSWORD: ${DB_PASSWORD}
+            DB_DATABASE: gym_tracker
+            DB_USERNAME: gym_user
+            DB_PASSWORD: Gym2026SecurePass!
             REDIS_HOST: redis
-            REDIS_PASSWORD: ${REDIS_PASSWORD}
+            REDIS_PASSWORD: Redis2026SecurePass!
             REDIS_PORT: 6379
             QUEUE_CONNECTION: redis
+        links:
+            - db
+            - redis
         depends_on:
-            db:
-                condition: service_healthy
-            redis:
-                condition: service_started
-        networks:
-            - gym-network
-
-networks:
-    gym-network:
-        driver: bridge
+            - db
+            - redis
 
 volumes:
     db_data:
