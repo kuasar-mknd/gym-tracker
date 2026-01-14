@@ -44,5 +44,5 @@ RUN chmod -R 777 storage bootstrap/cache
 # Expose port
 EXPOSE 80
 
-# Use artisan serve (more reliable than Octane for initial deployment)
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=80"]
+# Use Octane with FrankenPHP (CMD allows override by docker-compose command:)
+CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80"]
