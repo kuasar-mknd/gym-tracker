@@ -57,12 +57,12 @@ RUN apt-get update && apt-get install -y default-mysql-client && rm -rf /var/lib
 # Startup script that waits for DB and starts Octane
 CMD sh -c '\
   echo "Waiting for database at $DB_HOST:$DB_PORT..." && \
-  MAX_TRIES=45 && \
+  MAX_TRIES=60 && \
   TRIES=0 && \
-  until mysqladmin ping -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USERNAME" -p"$DB_PASSWORD" --ssl-mode=DISABLED --silent 2>/dev/null; do \
+  until php -r "try { new PDO(\"mysql:host=\" . getenv(\"DB_HOST\") . \";port=\" . getenv(\"DB_PORT\"), getenv(\"DB_USERNAME\"), getenv(\"DB_PASSWORD\"), [PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false]); exit(0); } catch (Exception \$e) { exit(1); }" 2>/dev/null; do \
     TRIES=$((TRIES+1)) && \
     if [ $TRIES -ge $MAX_TRIES ]; then \
-      echo "Database connection failed after $MAX_TRIES attempts (90 seconds)" && \
+      echo "Database connection failed after $MAX_TRIES attempts (120 seconds)" && \
       exit 1; \
     fi && \
     echo "Attempt $TRIES/$MAX_TRIES - waiting for MySQL at $DB_HOST:$DB_PORT..." && \
@@ -71,7 +71,8 @@ CMD sh -c '\
   echo "Database ready!" && \
   php artisan config:cache && \
   php artisan route:cache && \
-  php artisan migrate --force || true && \
+  php artisan migrate --force && \
   echo "Starting Octane..." && \
   php artisan octane:frankenphp --host=0.0.0.0 --port=80 --workers=1'
+
 
