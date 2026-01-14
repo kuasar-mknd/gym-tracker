@@ -54,10 +54,21 @@ ENV LOG_LEVEL=debug
 # Startup script that waits for DB and starts Octane
 CMD sh -c '\
   echo "Waiting for database..." && \
-  until php artisan db:seed --help > /dev/null 2>&1; do sleep 2; done && \
+  MAX_TRIES=30 && \
+  TRIES=0 && \
+  until php -r "try { new PDO(\"mysql:host=\$_ENV[DB_HOST];port=\$_ENV[DB_PORT];dbname=\$_ENV[DB_DATABASE]\", \$_ENV[DB_USERNAME], \$_ENV[DB_PASSWORD]); echo \"Connected!\n\"; exit(0); } catch (Exception \$e) { echo \"Waiting...\n\"; exit(1); }" 2>/dev/null; do \
+    TRIES=$((TRIES+1)) && \
+    if [ $TRIES -ge $MAX_TRIES ]; then \
+      echo "Database connection failed after $MAX_TRIES attempts" && \
+      exit 1; \
+    fi && \
+    echo "Attempt $TRIES/$MAX_TRIES - waiting for MySQL..." && \
+    sleep 2; \
+  done && \
   echo "Database ready!" && \
   php artisan config:cache && \
   php artisan route:cache && \
   php artisan migrate --force || true && \
   echo "Starting Octane..." && \
   php artisan octane:frankenphp --host=0.0.0.0 --port=80 --workers=1'
+
