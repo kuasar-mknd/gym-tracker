@@ -108,6 +108,34 @@ class NotificationTest extends TestCase
         Notification::assertNotSentTo($user, TrainingReminder::class);
     }
 
+    public function test_training_reminder_command_respects_custom_days_threshold(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+
+        // Set custom reminder to 7 days
+        $user->notificationPreferences()->create([
+            'type' => 'training_reminder',
+            'is_enabled' => true,
+            'value' => 7,
+        ]);
+
+        // Last workout was 5 days ago (should NOT trigger)
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(5),
+        ]);
+
+        Artisan::call('app:remind-training');
+        Notification::assertNotSentTo($user, TrainingReminder::class);
+
+        // Move last workout to 8 days ago (should trigger)
+        $user->workouts()->update(['started_at' => now()->subDays(8)]);
+
+        Artisan::call('app:remind-training');
+        Notification::assertSentTo($user, TrainingReminder::class);
+    }
+
     public function test_user_can_update_notification_preferences(): void
     {
         $user = User::factory()->create();
@@ -117,6 +145,9 @@ class NotificationTest extends TestCase
             'preferences' => [
                 'personal_record' => false,
                 'training_reminder' => true,
+            ],
+            'values' => [
+                'training_reminder' => 5,
             ],
         ]);
 
@@ -130,6 +161,7 @@ class NotificationTest extends TestCase
             'user_id' => $user->id,
             'type' => 'training_reminder',
             'is_enabled' => true,
+            'value' => 5,
         ]);
     }
 }

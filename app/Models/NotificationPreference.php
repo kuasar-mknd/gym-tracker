@@ -14,10 +14,12 @@ class NotificationPreference extends Model
         'user_id',
         'type',
         'is_enabled',
+        'value',
     ];
 
     protected $casts = [
         'is_enabled' => 'boolean',
+        'value' => 'integer',
     ];
 
     public function user(): BelongsTo

@@ -21,7 +21,7 @@ class TrainingReminderCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Send training reminders to users who have not trained in several days.';
+    protected $description = 'Send training reminders to users based on their custom inactivity threshold.';
 
     /**
      * Execute the console command.
@@ -30,32 +30,22 @@ class TrainingReminderCommand extends Command
     {
         $this->info('Starting training reminders check...');
 
-        $threeDaysAgo = Carbon::now()->subDays(3);
-
-        // Find users who:
-        // 1. Have notification enabled
-        // 2. Last workout was more than 3 days ago OR they have NO workouts
-        $usersToNotify = User::whereHas('notificationPreferences', function ($query) {
-            $query->where('type', 'training_reminder')->where('is_enabled', true);
-        })
-            ->where(function ($query) use ($threeDaysAgo) {
-                $query->whereDoesntHave('workouts')
-                    ->orWhereHas('workouts', function ($subQuery) use ($threeDaysAgo) {
-                        $subQuery->where('start_time', '<', $threeDaysAgo);
-                    }, '<=', 0); // This logic is slightly complex, let's simplify
-            })->get();
-
-        // Simplified query logic:
-        // Users where (last workout date < 3 days ago) AND (preference == true)
-
         $count = 0;
-        User::all()->each(function (User $user) use (&$count, $threeDaysAgo) {
-            if ($user->isNotificationEnabled('training_reminder')) {
+        User::all()->each(function (User $user) use (&$count) {
+            $preference = $user->notificationPreferences()
+                ->where('type', 'training_reminder')
+                ->first();
+
+            if ($preference && $preference->is_enabled) {
+                // Use user-defined value or fallback to 3 days
+                $days = $preference->value ?? 3;
+                $threshold = Carbon::now()->subDays($days);
+
                 $lastWorkout = $user->workouts()->latest('started_at')->first();
 
-                if (! $lastWorkout || $lastWorkout->started_at->lt($threeDaysAgo)) {
-                    // Check if we already sent a reminder recently to avoid spamming?
-                    // For now, let's just send it.
+                if (! $lastWorkout || $lastWorkout->started_at->lt($threshold)) {
+                    // Only notify if we haven't notified them recently to avoid daily spam?
+                    // For now, simplicity: if they are beyond threshold, notify.
                     $user->notify(new TrainingReminder);
                     $count++;
                 }

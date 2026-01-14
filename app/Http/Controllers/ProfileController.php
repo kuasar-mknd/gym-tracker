@@ -21,7 +21,9 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
-            'notificationPreferences' => $request->user()->notificationPreferences()->get()->pluck('is_enabled', 'type'),
+            'notificationPreferences' => $request->user()->notificationPreferences()->get()->mapWithKeys(function ($pref) {
+                return [$pref->type => ['is_enabled' => $pref->is_enabled, 'value' => $pref->value]];
+            }),
         ]);
     }
 
@@ -49,12 +51,17 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'preferences' => ['required', 'array'],
             'preferences.*' => ['boolean'],
+            'values' => ['nullable', 'array'],
+            'values.*' => ['nullable', 'integer', 'min:1', 'max:30'],
         ]);
 
         foreach ($validated['preferences'] as $type => $isEnabled) {
             $request->user()->notificationPreferences()->updateOrCreate(
                 ['type' => $type],
-                ['is_enabled' => $isEnabled]
+                [
+                    'is_enabled' => $isEnabled,
+                    'value' => $validated['values'][$type] ?? null,
+                ]
             );
         }
 

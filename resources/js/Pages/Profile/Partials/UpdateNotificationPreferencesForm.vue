@@ -1,5 +1,6 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassInput from '@/Components/UI/GlassInput.vue'
 import { useForm, usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -11,8 +12,11 @@ const props = defineProps({
 
 const form = useForm({
     preferences: {
-        personal_record: props.preferences.personal_record ?? true,
-        training_reminder: props.preferences.training_reminder ?? true,
+        personal_record: props.preferences.personal_record?.is_enabled ?? true,
+        training_reminder: props.preferences.training_reminder?.is_enabled ?? true,
+    },
+    values: {
+        training_reminder: props.preferences.training_reminder?.value ?? 3,
     },
 })
 
@@ -50,17 +54,39 @@ const updatePreferences = () => {
                 </div>
 
                 <!-- Training Reminder Toggle -->
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h4 class="text-sm font-medium text-white">Rappels d'Entraînement</h4>
-                        <p class="text-xs text-white/50">Rappels automatiques après quelques jours d'inactivité.</p>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-sm font-medium text-white">Rappels d'Entraînement</h4>
+                            <p class="text-xs text-white/50">Rappels automatiques après quelques jours d'inactivité.</p>
+                        </div>
+                        <label class="relative inline-flex cursor-pointer items-center">
+                            <input type="checkbox" v-model="form.preferences.training_reminder" class="peer sr-only" />
+                            <div
+                                class="peer h-6 w-11 rounded-full bg-white/10 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-accent-primary peer-checked:after:translate-x-full"
+                            ></div>
+                        </label>
                     </div>
-                    <label class="relative inline-flex cursor-pointer items-center">
-                        <input type="checkbox" v-model="form.preferences.training_reminder" class="peer sr-only" />
-                        <div
-                            class="peer h-6 w-11 rounded-full bg-white/10 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-accent-primary peer-checked:after:translate-x-full"
-                        ></div>
-                    </label>
+
+                    <Transition
+                        enter-active-class="transition duration-200 ease-out"
+                        enter-from-class="translate-y-1 opacity-0"
+                        enter-to-class="translate-y-0 opacity-100"
+                        leave-active-class="transition duration-150 ease-in"
+                        leave-from-class="translate-y-0 opacity-100"
+                        leave-to-class="translate-y-1 opacity-0"
+                    >
+                        <div v-if="form.preferences.training_reminder" class="ml-2 border-l-2 border-white/10 pl-4">
+                            <GlassInput
+                                v-model="form.values.training_reminder"
+                                type="number"
+                                min="1"
+                                max="30"
+                                label="Nombre de jours d'inactivité"
+                                :error="form.errors['values.training_reminder']"
+                            />
+                        </div>
+                    </Transition>
                 </div>
             </div>
 
