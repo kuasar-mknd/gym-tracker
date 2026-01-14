@@ -32,11 +32,14 @@ ENV SERVER_NAME=:80
 ENV APP_ENV=production
 ENV APP_DEBUG=false
 
+# Copy composer from builder to allow dump-autoload
+COPY --from=composer-builder /usr/bin/composer /usr/bin/composer
+
+# Copy application files FIRST (excludes vendor/ & public/build via .dockerignore)
+COPY . .
+
 # Copy PHP dependencies
 COPY --from=composer-builder /app/vendor ./vendor
-
-# Copy application files
-COPY . .
 
 # Copy built frontend assets
 COPY --from=frontend-builder /app/public/build ./public/build
@@ -49,6 +52,7 @@ RUN mkdir -p storage/logs && touch storage/logs/laravel.log
 
 # Install mysql client for health checks
 RUN apt-get update && apt-get install -y default-mysql-client && rm -rf /var/lib/apt/lists/*
+
 
 EXPOSE 80
 
