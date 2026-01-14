@@ -173,9 +173,9 @@
 
 - [x] **Background Jobs** (Phase 5.3) : Laravel Horizon, Jobs asynchrones pour Stats/Goals/Achievements.
 
-- [ ] Configurer Laravel Horizon
-- [ ] Jobs pour calcul de stats lourdes
-- [ ] Jobs pour envoi de notifications
+- [x] Configurer Laravel Horizon
+- [x] Jobs pour calcul de stats lourdes
+- [x] Jobs pour envoi de notifications
 - [ ] Jobs pour génération de rapports
 
 ### 5.4 Scheduled Tasks
