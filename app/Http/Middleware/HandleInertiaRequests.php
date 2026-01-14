@@ -32,7 +32,18 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user()?->loadCount(['unreadNotifications']),
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'avatar' => $request->user()->avatar,
+                    'unread_notifications_count' => $request->user()->unreadNotifications()->count(),
+                ] : null,
+            ],
+            'vapidPublicKey' => config('webpush.vapid.public_key'),
+            'ziggy' => fn () => [
+                (new Ziggy)->toArray(),
+                'location' => $request->url(),
             ],
         ];
     }

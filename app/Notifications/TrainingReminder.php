@@ -5,6 +5,8 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class TrainingReminder extends Notification implements ShouldQueue
 {
@@ -22,7 +24,22 @@ class TrainingReminder extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        if ($notifiable->isPushEnabled('training_reminder')) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        return $channels;
+    }
+
+    public function toWebPush($notifiable, $notification)
+    {
+        return (new WebPushMessage)
+            ->title("C'est l'heure de bouger ! 🏋️‍♂️")
+            ->icon('/logo.svg')
+            ->body($this->toArray($notifiable)['message'])
+            ->action("M'entraîner maintenant", url('/workouts/active'));
     }
 
     /**

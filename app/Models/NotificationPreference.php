@@ -14,11 +14,13 @@ class NotificationPreference extends Model
         'user_id',
         'type',
         'is_enabled',
+        'is_push_enabled',
         'value',
     ];
 
     protected $casts = [
         'is_enabled' => 'boolean',
+        'is_push_enabled' => 'boolean',
         'value' => 'integer',
     ];
 

@@ -22,7 +22,11 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
             'notificationPreferences' => $request->user()->notificationPreferences()->get()->mapWithKeys(function ($pref) {
-                return [$pref->type => ['is_enabled' => $pref->is_enabled, 'value' => $pref->value]];
+                return [$pref->type => [
+                    'is_enabled' => $pref->is_enabled,
+                    'is_push_enabled' => $pref->is_push_enabled,
+                    'value' => $pref->value,
+                ]];
             }),
         ]);
     }
@@ -51,6 +55,8 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'preferences' => ['required', 'array'],
             'preferences.*' => ['boolean'],
+            'push_preferences' => ['required', 'array'],
+            'push_preferences.*' => ['boolean'],
             'values' => ['nullable', 'array'],
             'values.*' => ['nullable', 'integer', 'min:1', 'max:30'],
         ]);
@@ -60,6 +66,7 @@ class ProfileController extends Controller
                 ['type' => $type],
                 [
                     'is_enabled' => $isEnabled,
+                    'is_push_enabled' => $validated['push_preferences'][$type] ?? false,
                     'value' => $validated['values'][$type] ?? null,
                 ]
             );

@@ -74,7 +74,7 @@
 - [x] Table `notification_preferences` par utilisateur
 - [x] Rappels d'entraînement programmables
 - [x] Notifications de félicitations (PR, streak, milestone)
-- [x] Notifications push (Database notifications implémentées)
+- [x] Notifications push (Web Push API implémenté)
 - [ ] Email digest hebdomadaire (optionnel)
 
 ### 2.3 Photos de progression

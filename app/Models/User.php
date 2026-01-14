@@ -6,11 +6,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, HasPushSubscriptions, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -81,6 +83,14 @@ class User extends Authenticatable
         return (bool) $this->notificationPreferences()
             ->where('type', $type)
             ->where('is_enabled', true)
+            ->exists();
+    }
+
+    public function isPushEnabled(string $type): bool
+    {
+        return (bool) $this->notificationPreferences()
+            ->where('type', $type)
+            ->where('is_push_enabled', true)
             ->exists();
     }
 }

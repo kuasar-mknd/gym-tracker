@@ -146,6 +146,10 @@ class NotificationTest extends TestCase
                 'personal_record' => false,
                 'training_reminder' => true,
             ],
+            'push_preferences' => [
+                'personal_record' => true,
+                'training_reminder' => false,
+            ],
             'values' => [
                 'training_reminder' => 5,
             ],
