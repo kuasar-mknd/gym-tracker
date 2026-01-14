@@ -1,0 +1,1099 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Registered constructor expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/CreateUserAction.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:notificationPreferences\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Console/Commands/TrainingReminderCommand.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:notify\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Console/Commands/TrainingReminderCommand.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Console/Commands/TrainingReminderCommand.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:achievements\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/AchievementController.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\Auth\\LoginRequest\:\:session\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/AuthenticatedSessionController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:session\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Auth/AuthenticatedSessionController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:session\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/ConfirmablePasswordController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/ConfirmablePasswordController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/Auth/EmailVerificationNotificationController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/EmailVerificationPromptController.php
+
+		-
+			message: '#^Access to undefined constant Illuminate\\Support\\Facades\\Password\:\:PASSWORD_RESET\.$#'
+			identifier: classConstant.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/NewPasswordController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:only\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/NewPasswordController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:route\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/NewPasswordController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/PasswordController.php
+
+		-
+			message: '#^Access to undefined constant Illuminate\\Support\\Facades\\Password\:\:RESET_LINK_SENT\.$#'
+			identifier: classConstant.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/PasswordResetLinkController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:only\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/PasswordResetLinkController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:all\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+
+		-
+			message: '#^Parameter \#1 \$user of static method Illuminate\\Support\\Facades\\Auth\:\:login\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+
+		-
+			message: '#^Parameter \#1 \$user of static method Illuminate\\Support\\Facades\\Auth\:\:login\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 2
+			path: app/Http/Controllers/Auth/SocialAuthController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Foundation\\Auth\\EmailVerificationRequest\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Http/Controllers/Auth/VerifyEmailController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:bodyMeasurements\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/BodyMeasurementController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/BodyMeasurementController.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\DailyJournalStoreRequest\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/DailyJournalController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:dailyJournals\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/DailyJournalController.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\ExerciseStoreRequest\:\:header\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/ExerciseController.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\ExerciseStoreRequest\:\:wantsJson\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/ExerciseController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Exercise\:\:workoutLines\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/ExerciseController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:goals\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/GoalController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Http/Controllers/NotificationController.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\ProfileUpdateRequest\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: app/Http/Controllers/ProfileController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:session\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/ProfileController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: app/Http/Controllers/ProfileController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/PushSubscriptionController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\WorkoutLine\:\:sets\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/SetsController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Workout\:\:workoutLines\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/WorkoutLinesController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Workout\:\:workoutLines\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Controllers/WorkoutTemplatesController.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\WorkoutTemplate\:\:workoutTemplateLines\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Http/Controllers/WorkoutTemplatesController.php
+
+		-
+			message: '#^Relation ''workoutTemplateLines'' is not found in App\\Models\\WorkoutTemplate model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/WorkoutTemplatesController.php
+
+		-
+			message: '#^Relation ''workoutLines'' is not found in App\\Models\\Workout model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/WorkoutsController.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:url\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 9
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\Auth\\LoginRequest\:\:boolean\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/Auth/LoginRequest.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\Auth\\LoginRequest\:\:ip\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/Auth/LoginRequest.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\Auth\\LoginRequest\:\:only\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/Auth/LoginRequest.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\Auth\\LoginRequest\:\:string\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/Auth/LoginRequest.php
+
+		-
+			message: '#^Call to an undefined method App\\Http\\Requests\\ProfileUpdateRequest\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Requests/ProfileUpdateRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ExerciseResource\:\:\$category\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ExerciseResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ExerciseResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ExerciseResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ExerciseResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ExerciseResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ExerciseResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ExerciseResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ExerciseResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ExerciseResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ExerciseResource\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ExerciseResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SetResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SetResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SetResource\:\:\$is_completed\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SetResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SetResource\:\:\$order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SetResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SetResource\:\:\$reps\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SetResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SetResource\:\:\$rpe\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SetResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SetResource\:\:\$weight\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SetResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$avatar\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$current_streak\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$last_workout_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$longest_streak\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserResource\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutLineResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutLineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutLineResource\:\:\$notes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutLineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutLineResource\:\:\$order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutLineResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutResource\:\:\$ended_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutResource\:\:\$notes\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutResource\:\:\$started_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WorkoutResource\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WorkoutResource.php
+
+		-
+			message: '#^PHPDoc tag @use has invalid type Database\\Factories\\GoalFactory\.$#'
+			identifier: class.notFound
+			count: 1
+			path: app/Models/Goal.php
+
+		-
+			message: '#^Type Database\\Factories\\GoalFactory in generic type Illuminate\\Database\\Eloquent\\Factories\\HasFactory\<Database\\Factories\\GoalFactory\> in PHPDoc tag @use is not subtype of template type TFactory of Illuminate\\Database\\Eloquent\\Factories\\Factory of trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory\.$#'
+			identifier: generics.notSubtype
+			count: 1
+			path: app/Models/Goal.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:achievements\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/AchievementService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:notify\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/AchievementService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: app/Services/AchievementService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:bodyMeasurements\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:goals\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:isNotificationEnabled\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:notify\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Relation ''workoutLines'' is not found in App\\Models\\Workout model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Services/StatsService.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Schema\:\:connection\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: database/migrations/2026_01_14_170337_create_push_subscriptions_table.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:user\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: routes/api.php
+
+		-
+			message: '#^Undefined variable\: \$this$#'
+			identifier: variable.undefined
+			count: 1
+			path: routes/console.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:bodyMeasurements\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: routes/web.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:goals\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: routes/web.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:personalRecords\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: routes/web.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: routes/web.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:achievements\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/AchievementTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 7
+			path: tests/Feature/AchievementTest.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Notification\:\:fake\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 4
+			path: tests/Feature/AchievementTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertCreated\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Api/ExerciseSecurityTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertNoContent\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Api/ExerciseSecurityTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertOk\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Api/ExerciseSecurityTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertUnauthorized\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: tests/Feature/Api/ExerciseSecurityTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 4
+			path: tests/Feature/Api/ExerciseSecurityTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/Api/V1/ExerciseTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/Api/V1/ExerciseTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Workout\:\:workoutLines\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Api/V1/WorkoutTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Api/V1/WorkoutTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Api/V1/WorkoutTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertCreated\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Api/WorkoutTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertForbidden\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/Api/WorkoutTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertNoContent\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Api/WorkoutTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertOk\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/Api/WorkoutTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertUnauthorized\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Api/WorkoutTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 8
+			path: tests/Feature/Api/WorkoutTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Auth/AuthenticationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/AuthenticationTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Auth/AuthenticationTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:hasVerifiedEmail\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Auth/EmailVerificationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/EmailVerificationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/EmailVerificationTest.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Event\:\:fake\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 1
+			path: tests/Feature/Auth/EmailVerificationTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/Auth/EmailVerificationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/PasswordConfirmationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/PasswordConfirmationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasNoErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/PasswordConfirmationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/PasswordConfirmationTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/Auth/PasswordConfirmationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasNoErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/PasswordResetTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Auth/PasswordResetTest.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Notification\:\:fake\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 3
+			path: tests/Feature/Auth/PasswordResetTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/PasswordUpdateTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasNoErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/PasswordUpdateTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Auth/PasswordUpdateTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/RegistrationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Auth/RegistrationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertForbidden\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/BodyMeasurementTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertOk\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/BodyMeasurementTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/BodyMeasurementTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 4
+			path: tests/Feature/BodyMeasurementTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/DailyJournalTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/DailyJournalTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 4
+			path: tests/Feature/DailyJournalTest.php
+
+		-
+			message: '#^Call to an undefined method PHPUnit\\Framework\\TestCase\:\:actingAs\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/DashboardTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/ExampleTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertOk\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/ExerciseTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: tests/Feature/ExerciseTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 4
+			path: tests/Feature/ExerciseTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 8
+			path: tests/Feature/ExerciseTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:bodyMeasurements\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/GoalTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/GoalTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/GoalTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/GoalTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:notificationPreferences\(\)\.$#'
+			identifier: method.notFound
+			count: 5
+			path: tests/Feature/NotificationTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/NotificationTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/NotificationTest.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Notification\:\:fake\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 5
+			path: tests/Feature/NotificationTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/NotificationTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/PersonalRecordTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertOk\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/ProfileTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/ProfileTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasNoErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/ProfileTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 5
+			path: tests/Feature/ProfileTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertForbidden\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/SetsTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/SetsTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertSessionHasErrors\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/SetsTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 8
+			path: tests/Feature/SetsTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertNotFound\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/StatsTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertOk\(\)\.$#'
+			identifier: method.notFound
+			count: 6
+			path: tests/Feature/StatsTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/StatsTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of function Pest\\Laravel\\actingAs expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 7
+			path: tests/Feature/StatsTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\User\:\:workouts\(\)\.$#'
+			identifier: method.notFound
+			count: 10
+			path: tests/Feature/StreakTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertOk\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/WorkoutLoggingTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/WorkoutLoggingTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 4
+			path: tests/Feature/WorkoutLoggingTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\Workout\:\:workoutLines\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/WorkoutTemplateTest.php
+
+		-
+			message: '#^Call to an undefined method App\\Models\\WorkoutTemplate\:\:workoutTemplateLines\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/WorkoutTemplateTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertRedirect\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/WorkoutTemplateTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:assertStatus\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/WorkoutTemplateTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method Illuminate\\Foundation\\Testing\\TestCase\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable, App\\Models\\User given\.$#'
+			identifier: argument.type
+			count: 4
+			path: tests/Feature/WorkoutTemplateTest.php
+
+		-
+			message: '#^Undefined variable\: \$this$#'
+			identifier: variable.undefined
+			count: 1
+			path: tests/Pest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Unit/ExampleTest.php
