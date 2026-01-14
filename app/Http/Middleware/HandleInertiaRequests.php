@@ -42,6 +42,8 @@ class HandleInertiaRequests extends Middleware
                         ->where('type', 'App\Notifications\AchievementUnlocked')
                         ->latest()
                         ->first(),
+                    'current_streak' => $request->user()->current_streak,
+                    'longest_streak' => $request->user()->longest_streak,
                 ] : null,
             ],
             'vapidPublicKey' => config('webpush.vapid.public_key'),

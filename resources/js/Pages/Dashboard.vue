@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import StreakCounter from '@/Components/Dashboard/StreakCounter.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { computed } from 'vue'
 
@@ -60,7 +61,8 @@ const greeting = computed(() => {
             </div>
 
             <!-- Quick Stats -->
-            <div class="grid animate-slide-up grid-cols-3 gap-3" style="animation-delay: 0.1s">
+            <div class="grid animate-slide-up grid-cols-2 gap-3 sm:grid-cols-4" style="animation-delay: 0.1s">
+                <StreakCounter :count="$page.props.auth.user.current_streak" />
                 <GlassCard padding="p-4">
                     <div class="text-center">
                         <div class="text-gradient text-2xl font-bold">{{ workoutsCount }}</div>

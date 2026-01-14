@@ -46,5 +46,8 @@ class AppServiceProvider extends ServiceProvider
         // Achievement Tracking Hooks
         Workout::saved(fn (Workout $workout) => app(AchievementService::class)->syncAchievements($workout->user));
         Set::saved(fn (Set $set) => app(AchievementService::class)->syncAchievements($set->workoutLine->workout->user));
+
+        // Streak Tracking Hooks
+        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user));
     }
 }

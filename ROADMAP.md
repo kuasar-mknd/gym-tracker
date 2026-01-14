@@ -116,11 +116,11 @@
     - [x] "Volume King" - 5 tonnes soulevées
 - [x] Page avec tous les badges débloqués/verrouillés
 
-### 3.3 Streaks & Consistance
+### 3.3 Streaks & Consistance - [x] Completed
 
-- [ ] Calcul du streak actuel (jours consécutifs)
-- [ ] Streak le plus long
-- [ ] Calendrier type GitHub contributions (jours actifs)
+- [x] Calcul du streak actuel (jours consécutifs)
+- [x] Streak le plus long
+- [ ] Calendrier type GitHub contributions (jours actifs) - Reporté
 - [ ] Rappel si le streak risque d'être cassé
 
 ---

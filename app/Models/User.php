@@ -27,6 +27,9 @@ class User extends Authenticatable
         'provider_id',
         'avatar',
         'default_rest_time',
+        'current_streak',
+        'longest_streak',
+        'last_workout_at',
     ];
 
     /**
@@ -50,6 +53,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'default_rest_time' => 'integer',
+            'current_streak' => 'integer',
+            'longest_streak' => 'integer',
+            'last_workout_at' => 'datetime',
         ];
     }
 
