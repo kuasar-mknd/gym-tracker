@@ -2,11 +2,13 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import WorkoutsPerMonthChart from '@/Components/Stats/WorkoutsPerMonthChart.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
     workouts: Array,
     exercises: Array,
+    monthlyFrequency: Array,
 })
 
 const form = useForm({})
@@ -85,20 +87,31 @@ const formatDate = (dateStr) => {
 
         <div class="space-y-6">
             <!-- Stats Row -->
-            <div v-if="workouts.length > 0" class="grid animate-slide-up grid-cols-2 gap-3 sm:grid-cols-4">
-                <GlassCard padding="p-4">
-                    <div class="text-center">
-                        <div class="text-gradient text-2xl font-bold">{{ workouts.length }}</div>
-                        <div class="mt-1 text-xs text-white/60">Total séances</div>
-                    </div>
-                </GlassCard>
-                <GlassCard padding="p-4">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-accent-success">
-                            {{ workouts.reduce((acc, w) => acc + w.workout_lines.length, 0) }}
+            <div v-if="workouts.length > 0" class="space-y-6 animate-slide-up">
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <GlassCard padding="p-4">
+                        <div class="text-center">
+                            <div class="text-gradient text-2xl font-bold">{{ workouts.length }}</div>
+                            <div class="mt-1 text-xs text-white/60">Total séances</div>
                         </div>
-                        <div class="mt-1 text-xs text-white/60">Exercices</div>
+                    </GlassCard>
+                    <GlassCard padding="p-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-accent-success">
+                                {{ workouts.reduce((acc, w) => acc + w.workout_lines.length, 0) }}
+                            </div>
+                            <div class="mt-1 text-xs text-white/60">Exercices</div>
+                        </div>
+                    </GlassCard>
+                </div>
+
+                <!-- Frequency Chart -->
+                <GlassCard v-if="monthlyFrequency && monthlyFrequency.length > 0">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-white">Fréquence d'entraînement</h3>
+                        <p class="text-xs text-white/50">Séances par mois (6 derniers mois)</p>
                     </div>
+                    <WorkoutsPerMonthChart :data="monthlyFrequency" />
                 </GlassCard>
             </div>
 
