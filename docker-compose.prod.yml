@@ -1,3 +1,16 @@
+# Gym Tracker Production Docker Compose
+#
+# INSTRUCTIONS:
+# 1. Copy this file to your Portainer stack
+# 2. Replace ALL placeholder values below with your actual secrets
+# 3. Never commit real secrets to git
+#
+# Placeholders to replace:
+# - YOUR_APP_KEY_HERE (generate with: php artisan key:generate --show)
+# - YOUR_DB_PASSWORD_HERE
+# - YOUR_DB_ROOT_PASSWORD_HERE
+# - YOUR_REDIS_PASSWORD_HERE
+
 services:
     app:
         image: ghcr.io/kuasar-mknd/gym-tracker:latest
@@ -5,7 +18,7 @@ services:
         ports:
             - 8888:80
         environment:
-            APP_KEY: base64:obdMrKq+1Px1qLiAP3KMDFCwpINE/2qgr7eTvNRQVrQ=
+            APP_KEY: YOUR_APP_KEY_HERE
             APP_URL: https://fit.kuasar.xyz
             APP_ENV: production
             APP_DEBUG: false
@@ -14,9 +27,9 @@ services:
             DB_PORT: 3306
             DB_DATABASE: gym_tracker
             DB_USERNAME: gym_user
-            DB_PASSWORD: Gym2026SecurePass!
+            DB_PASSWORD: YOUR_DB_PASSWORD_HERE
             REDIS_HOST: redis
-            REDIS_PASSWORD: Redis2026SecurePass!
+            REDIS_PASSWORD: YOUR_REDIS_PASSWORD_HERE
             REDIS_PORT: 6379
             OCTANE_SERVER: frankenphp
             SESSION_DRIVER: redis
@@ -35,8 +48,8 @@ services:
         environment:
             MYSQL_DATABASE: gym_tracker
             MYSQL_USER: gym_user
-            MYSQL_PASSWORD: Gym2026SecurePass!
-            MYSQL_ROOT_PASSWORD: GymRoot2026SecurePass!
+            MYSQL_PASSWORD: YOUR_DB_PASSWORD_HERE
+            MYSQL_ROOT_PASSWORD: YOUR_DB_ROOT_PASSWORD_HERE
         volumes:
             - db_data:/var/lib/mysql
         command: --default-authentication-plugin=mysql_native_password
@@ -44,7 +57,7 @@ services:
     redis:
         image: redis:alpine
         restart: always
-        command: redis-server --requirepass Redis2026SecurePass!
+        command: redis-server --requirepass YOUR_REDIS_PASSWORD_HERE
         volumes:
             - redis_data:/data
 
@@ -53,16 +66,16 @@ services:
         restart: always
         command: php artisan horizon
         environment:
-            APP_KEY: base64:obdMrKq+1Px1qLiAP3KMDFCwpINE/2qgr7eTvNRQVrQ=
+            APP_KEY: YOUR_APP_KEY_HERE
             APP_ENV: production
             DB_CONNECTION: mysql
             DB_HOST: db
             DB_PORT: 3306
             DB_DATABASE: gym_tracker
             DB_USERNAME: gym_user
-            DB_PASSWORD: Gym2026SecurePass!
+            DB_PASSWORD: YOUR_DB_PASSWORD_HERE
             REDIS_HOST: redis
-            REDIS_PASSWORD: Redis2026SecurePass!
+            REDIS_PASSWORD: YOUR_REDIS_PASSWORD_HERE
             REDIS_PORT: 6379
             QUEUE_CONNECTION: redis
         links:
