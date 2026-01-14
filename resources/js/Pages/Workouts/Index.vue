@@ -87,7 +87,7 @@ const formatDate = (dateStr) => {
 
         <div class="space-y-6">
             <!-- Stats Row -->
-            <div v-if="workouts.length > 0" class="space-y-6 animate-slide-up">
+            <div v-if="workouts.length > 0" class="animate-slide-up space-y-6">
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <GlassCard padding="p-4">
                         <div class="text-center">
