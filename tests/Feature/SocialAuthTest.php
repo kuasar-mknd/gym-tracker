@@ -31,6 +31,7 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getName')->andReturn('New User');
         $socialiteUser->shouldReceive('getNickname')->andReturn('newuser');
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
+        $socialiteUser->user = ['email_verified' => true];
 
         $provider = \Mockery::mock('Laravel\Socialite\Contracts\Provider');
         $provider->shouldReceive('user')->andReturn($socialiteUser);
@@ -63,6 +64,7 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getName')->andReturn('Existing User');
         $socialiteUser->shouldReceive('getNickname')->andReturn('existing');
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
+        $socialiteUser->user = ['verified_email' => true];
 
         $provider = \Mockery::mock('Laravel\Socialite\Contracts\Provider');
         $provider->shouldReceive('user')->andReturn($socialiteUser);
@@ -89,6 +91,7 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getName')->andReturn('Match User');
         $socialiteUser->shouldReceive('getNickname')->andReturn('match');
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
+        $socialiteUser->user = ['verified' => true];
 
         $provider = \Mockery::mock('Laravel\Socialite\Contracts\Provider');
         $provider->shouldReceive('user')->andReturn($socialiteUser);

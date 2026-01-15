@@ -24,7 +24,7 @@ defineProps({
                 <Link
                     v-if="showBack && backRoute"
                     :href="route(backRoute)"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/20"
+                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/20 active:scale-95"
                 >
                     <svg
                         class="h-5 w-5"

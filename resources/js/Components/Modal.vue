@@ -86,7 +86,7 @@ const maxWidthClass = computed(() => {
                 leave-to-class="opacity-0"
             >
                 <div v-show="show" class="fixed inset-0 transform transition-all" @click="close">
-                    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" />
+                    <div class="glass-overlay" />
                 </div>
             </Transition>
 
