@@ -95,6 +95,35 @@ class WorkoutTest extends TestCase
             ->assertJsonPath('data.id', $workout->id);
     }
 
+    public function test_show_endpoint_includes_relations_by_default(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create(['name' => 'Bench Press']);
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
+        $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id, 'order' => 1]);
+        $line->sets()->create(['weight' => 100, 'reps' => 5, 'order' => 1]);
+
+        $response = $this->actingAs($user, 'sanctum')->getJson("/api/v1/workouts/{$workout->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.id', $workout->id)
+            ->assertJsonStructure([
+                'data' => [
+                    'id',
+                    'lines' => [
+                        '*' => [
+                            'id',
+                            'exercise' => ['id', 'name'],
+                            'sets' => [
+                                '*' => ['id', 'weight', 'reps'],
+                            ],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertJsonFragment(['name' => 'Bench Press']);
+    }
+
     public function test_user_can_update_own_workout(): void
     {
         $user = User::factory()->create();
