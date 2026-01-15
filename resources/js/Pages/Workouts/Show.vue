@@ -612,6 +612,7 @@ const hasNoResults = computed(() => {
                                         @click="addExercise(exercise.id)"
                                         :disabled="addExerciseForm.processing"
                                         class="flex w-full items-center justify-between rounded-xl p-4 text-left transition hover:bg-white/10 disabled:opacity-50"
+                                        :aria-label="`Ajouter ${exercise.name}`"
                                     >
                                         <div>
                                             <div class="font-semibold text-white">{{ exercise.name }}</div>

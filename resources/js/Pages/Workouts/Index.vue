@@ -68,7 +68,12 @@ const formatDate = (dateStr) => {
                             Modèles
                         </GlassButton>
                     </Link>
-                    <GlassButton variant="primary" :loading="form.processing" @click="createWorkout">
+                    <GlassButton
+                        variant="primary"
+                        :loading="form.processing"
+                        @click="createWorkout"
+                        aria-label="Nouvelle séance"
+                    >
                         <svg
                             class="mr-2 h-4 w-4"
                             xmlns="http://www.w3.org/2000/svg"

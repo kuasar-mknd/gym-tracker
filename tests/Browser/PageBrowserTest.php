@@ -28,7 +28,7 @@ beforeEach(function () {
 test('welcome page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/')
-            ->assertSee('GymTracker')
+            ->waitForText('GymTracker')
             ->assertVisible('a[href*="login"]')
             ->assertVisible('a[href*="register"]');
     });
@@ -37,7 +37,7 @@ test('welcome page displays correctly', function () {
 test('login page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/login')
-            ->assertSee('Bon retour !')
+            ->waitForText('Bon retour !')
             ->assertVisible('input[type="email"]')
             ->assertVisible('input[type="password"]')
             ->assertVisible('button[type="submit"]');
@@ -47,7 +47,7 @@ test('login page displays correctly', function () {
 test('register page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/register')
-            ->assertSee('Bienvenue !')
+            ->waitForText('Bienvenue !')
             ->assertVisible('input[autocomplete="name"]')
             ->assertVisible('input[type="email"]')
             ->assertVisible('input[type="password"]');
@@ -103,7 +103,7 @@ test('dashboard page renders correctly', function () {
             // Check page is not blank - key UI elements visible
             ->assertPresent('.glass-card')
             // Greeting varies by time, so check static elements
-            ->assertSee('Séances')
+            ->waitForText('Séances')
             // Check no JavaScript errors
             ->assertNoConsoleExceptions();
     });
@@ -117,7 +117,7 @@ test('workouts page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/workouts')
             ->assertPathIs('/workouts')
-            ->assertSee('Mes Séances')
+            ->waitForText('Mes Séances')
             ->assertPresent('.glass-card')
             ->assertNoConsoleExceptions();
     });
@@ -130,7 +130,7 @@ test('stats page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/stats')
             ->assertPathIs('/stats')
-            ->assertSee('Statistiques')
+            ->waitForText('Statistiques')
             ->assertPresent('.glass-card')
             ->assertNoConsoleExceptions();
     });
@@ -143,7 +143,7 @@ test('goals page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/goals')
             ->assertPathIs('/goals')
-            ->assertSee('Objectifs')
+            ->waitForText('Objectifs')
             ->assertNoConsoleExceptions();
     });
 });
@@ -155,7 +155,7 @@ test('exercises page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/exercises')
             ->assertPathIs('/exercises')
-            ->assertSee('Exercices')
+            ->waitForText('Exercices')
             ->assertNoConsoleExceptions();
     });
 });
@@ -167,7 +167,7 @@ test('templates page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/templates')
             ->assertPathIs('/templates')
-            ->assertSee('Modèles')
+            ->waitForText('Modèles')
             ->assertNoConsoleExceptions();
     });
 });
@@ -179,7 +179,7 @@ test('body measurements page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/body-measurements')
             ->assertPathIs('/body-measurements')
-            ->assertSee('Mesures')
+            ->waitForText('Mesures')
             ->assertNoConsoleExceptions();
     });
 });
@@ -191,7 +191,7 @@ test('journal page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/daily-journals')
             ->assertPathIs('/daily-journals')
-            ->assertSee('Journal')
+            ->waitForText('Journal')
             ->assertNoConsoleExceptions();
     });
 });
@@ -203,7 +203,7 @@ test('notifications page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/notifications')
             ->assertPathIs('/notifications')
-            ->assertSee('Notifications')
+            ->waitForText('Notifications')
             ->assertNoConsoleExceptions();
     });
 });
@@ -215,7 +215,7 @@ test('achievements page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/achievements')
             ->assertPathIs('/achievements')
-            ->assertSee('Trophées')
+            ->waitForText('Trophées')
             ->assertNoConsoleExceptions();
     });
 });
@@ -227,7 +227,7 @@ test('profile page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/profile')
             ->assertPathIs('/profile')
-            ->assertSee('Profil')
+            ->waitForText('Profil')
             ->assertNoConsoleExceptions();
     });
 });
@@ -239,7 +239,7 @@ test('tools page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/tools')
             ->assertPathIs('/tools')
-            ->assertSee('Calculateurs')
+            ->waitForText('Calculateurs')
             ->assertNoConsoleExceptions();
     });
 });
@@ -251,7 +251,7 @@ test('plates calculator page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/plates')
             ->assertPathIs('/plates')
-            ->assertSee('Calculateur')
+            ->waitForText('Calculateur')
             ->assertNoConsoleExceptions();
     });
 });
@@ -269,7 +269,8 @@ test('user can perform full workout logging flow', function () {
         $browser->loginAs($user)
             ->visit('/workouts')
             // 1. Start new workout
-            ->waitFor('button[aria-label="Nouvelle séance"]')
+            ->waitForText('Mes Séances') // Ensure page loaded
+            ->waitFor('button[aria-label="Nouvelle séance"]', 10)
             ->click('button[aria-label="Nouvelle séance"]')
             ->waitForLocation('/workouts/*') // Wildcard check for ID
 
@@ -279,7 +280,7 @@ test('user can perform full workout logging flow', function () {
             ->waitFor('.glass-modal')
             ->type('input[placeholder="Rechercher..."]', 'Bench')
             ->waitForText('Bench Press')
-            ->click('button:has(.text-accent-primary)') // Click the + button or the row
+            ->click('button[aria-label="Ajouter Bench Press"]')
             ->waitUntilMissing('.glass-modal')
 
             // 3. Verify Exercise Added

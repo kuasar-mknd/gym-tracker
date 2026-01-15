@@ -139,6 +139,20 @@ jobs:
                   sleep 10
                   php artisan dusk
 
+            - name: Upload Test Screenshots
+              if: failure()
+              uses: actions/upload-artifact@v6
+              with:
+                  name: dusk-screenshots
+                  path: tests/Browser/screenshots
+
+            - name: Upload Test Logs
+              if: failure()
+              uses: actions/upload-artifact@v6
+              with:
+                  name: dusk-logs
+                  path: tests/Browser/logs
+
     lint:
         runs-on: ubuntu-latest
         steps:
