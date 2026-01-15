@@ -9,10 +9,15 @@ class Exercise extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
+    protected $fillable = ['name', 'type', 'category', 'default_rest_time', 'user_id'];
 
     public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(WorkoutLine::class);
+    }
+
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

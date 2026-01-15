@@ -62,6 +62,8 @@ class WorkoutController extends Controller
             abort(403);
         }
 
+        $workout->load(['workoutLines.exercise', 'workoutLines.sets']);
+
         return new WorkoutResource($workout);
     }
 
