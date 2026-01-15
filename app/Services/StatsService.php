@@ -43,7 +43,8 @@ class StatsService
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
-        return \Illuminate\Support\Facades\Cache::tags(["stats:{$user->id}"])->remember(
+        // Note: Cache tags removed - file driver doesn't support tagging
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days) {
@@ -96,7 +97,7 @@ class StatsService
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
-        return \Illuminate\Support\Facades\Cache::tags(["stats:{$user->id}"])->remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days) {
@@ -133,7 +134,7 @@ class StatsService
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
-        return \Illuminate\Support\Facades\Cache::tags(["stats:{$user->id}"])->remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $exerciseId, $days) {
