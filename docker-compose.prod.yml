@@ -6,7 +6,7 @@ services:
             - 8888:80
         environment:
             APP_KEY: ${APP_KEY}
-            APP_URL: https://fit.kuasar.xyz
+            APP_URL: https://fit.edulex.ch
             APP_ENV: production
             APP_DEBUG: false
             DB_CONNECTION: mysql
@@ -23,10 +23,10 @@ services:
             CACHE_STORE: redis
             QUEUE_CONNECTION: redis
             DB_SSL_VERIFY: 'false'
-            FRANKENPHP_DEBUG: 1
-        links:
-            - db
-            - redis
+            FRANKENPHP_WAIT_FOR_WORKER: '60s'
+        networks:
+            - frontend
+            - backend
         depends_on:
             - db
             - redis
@@ -42,6 +42,8 @@ services:
         volumes:
             - db_data:/var/lib/mysql
         command: --default-authentication-plugin=mysql_native_password
+        networks:
+            - backend
 
     redis:
         image: redis:alpine
@@ -49,6 +51,8 @@ services:
         command: redis-server --requirepass ${REDIS_PASSWORD}
         volumes:
             - redis_data:/data
+        networks:
+            - backend
 
     worker:
         image: ghcr.io/kuasar-mknd/gym-tracker:latest
@@ -70,12 +74,16 @@ services:
             CACHE_STORE: redis
             QUEUE_CONNECTION: redis
             DB_SSL_VERIFY: 'false'
-        links:
-            - db
-            - redis
+        networks:
+            - backend
         depends_on:
             - db
             - redis
+
+networks:
+    frontend:
+    backend:
+        internal: true
 
 volumes:
     db_data:
