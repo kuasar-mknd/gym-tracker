@@ -14,7 +14,9 @@ class ExerciseTest extends TestCase
     public function test_can_list_exercises(): void
     {
         $user = User::factory()->create();
-        Exercise::factory()->count(5)->create();
+        // Create 3 system exercises and 2 user exercises
+        Exercise::factory()->count(3)->create(['user_id' => null]);
+        Exercise::factory()->count(2)->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user, 'sanctum')
             ->getJson('/api/v1/exercises');
@@ -30,14 +32,15 @@ class ExerciseTest extends TestCase
                     ],
                 ],
                 'meta', // Pagination
-            ]);
+            ])
+            ->assertJsonCount(5, 'data');
     }
 
     public function test_can_filter_exercises(): void
     {
         $user = User::factory()->create();
-        Exercise::factory()->create(['name' => 'Bench Press', 'type' => 'strength']);
-        Exercise::factory()->create(['name' => 'Running', 'type' => 'cardio']);
+        Exercise::factory()->create(['name' => 'Bench Press', 'type' => 'strength', 'user_id' => null]);
+        Exercise::factory()->create(['name' => 'Running', 'type' => 'cardio', 'user_id' => null]);
 
         // Filter by type
         $response = $this->actingAs($user, 'sanctum')
@@ -78,13 +81,16 @@ class ExerciseTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('data.name', 'New Exercise');
 
-        $this->assertDatabaseHas('exercises', ['name' => 'New Exercise']);
+        $this->assertDatabaseHas('exercises', [
+            'name' => 'New Exercise',
+            'user_id' => $user->id,
+        ]);
     }
 
-    public function test_can_update_exercise(): void
+    public function test_can_update_own_exercise(): void
     {
         $user = User::factory()->create();
-        $exercise = Exercise::factory()->create();
+        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/exercises/{$exercise->id}", [
             'name' => 'Updated Name',
@@ -99,14 +105,37 @@ class ExerciseTest extends TestCase
         ]);
     }
 
-    public function test_can_delete_exercise(): void
+    public function test_cannot_update_system_exercise(): void
     {
         $user = User::factory()->create();
-        $exercise = Exercise::factory()->create();
+        $exercise = Exercise::factory()->create(['user_id' => null]);
+
+        $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/exercises/{$exercise->id}", [
+            'name' => 'Updated Name',
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_can_delete_own_exercise(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/exercises/{$exercise->id}");
 
         $response->assertNoContent();
         $this->assertDatabaseMissing('exercises', ['id' => $exercise->id]);
+    }
+
+    public function test_cannot_delete_system_exercise(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create(['user_id' => null]);
+
+        $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/exercises/{$exercise->id}");
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('exercises', ['id' => $exercise->id]);
     }
 }
