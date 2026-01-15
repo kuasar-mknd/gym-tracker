@@ -33,7 +33,7 @@ class SecurityHeaders
                 "style-src 'self' https://fonts.bunny.net".(app()->isLocal() ? " 'unsafe-inline'" : " 'nonce-{$nonce}'"),
                 "img-src 'self' data: https:",
                 "font-src 'self' https://fonts.bunny.net",
-                "connect-src 'self' ws://localhost:* wss://localhost:* http://localhost:*",
+                "connect-src 'self'".(app()->isLocal() ? ' ws://localhost:* wss://localhost:* http://localhost:*' : ''),
             ]);
         } else {
             // Fallback for non-web requests (API, console, etc.)
