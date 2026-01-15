@@ -54,10 +54,9 @@ RUN php artisan storage:link
 RUN chmod -R 777 storage bootstrap/cache
 RUN mkdir -p storage/logs && touch storage/logs/laravel.log
 
-# Install mysql client for health checks
-RUN apt-get update && apt-get install -y default-mysql-client && rm -rf /var/lib/apt/lists/*
-
+# Expose production port
 EXPOSE 80
+
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=1"]
