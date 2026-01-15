@@ -92,7 +92,9 @@ const submit = () => {
                     <div class="w-full border-t border-glass-border"></div>
                 </div>
                 <div class="relative flex justify-center text-sm">
-                    <span class="bg-[#1E1E1E] px-2 text-white/50">Ou continuer avec</span>
+                    <span class="rounded bg-black/40 px-3 py-0.5 text-white/50 backdrop-blur-sm"
+                        >Ou continuer avec</span
+                    >
                 </div>
             </div>
 

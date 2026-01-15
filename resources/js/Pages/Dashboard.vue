@@ -54,7 +54,7 @@ const greeting = computed(() => {
         <div class="space-y-6">
             <!-- Welcome Section -->
             <div class="animate-slide-up">
-                <h1 class="text-2xl font-bold text-white">
+                <h1 class="text-2xl font-bold tracking-tight text-white">
                     {{ greeting }}, {{ $page.props.auth.user.name.split(' ')[0] }} 👋
                 </h1>
                 <p class="mt-1 text-white/60">Prêt pour ton entraînement ?</p>
@@ -211,7 +211,7 @@ const greeting = computed(() => {
                             </div>
                             <div class="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
                                 <div
-                                    class="h-full bg-accent-primary transition-all duration-1000"
+                                    class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 shadow-lg shadow-accent-primary/30 transition-all duration-1000"
                                     :style="{ width: goal.progress + '%' }"
                                 ></div>
                             </div>
@@ -333,9 +333,9 @@ const greeting = computed(() => {
                 <Link :href="route('profile.edit')" class="col-span-2 sm:col-span-1">
                     <GlassCard class="transition hover:bg-glass-strong">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20">
                                 <svg
-                                    class="h-5 w-5 text-white/70"
+                                    class="h-5 w-5 text-purple-400"
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
                                     viewBox="0 0 24 24"

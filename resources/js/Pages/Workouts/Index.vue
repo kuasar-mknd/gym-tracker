@@ -122,7 +122,7 @@ const formatDate = (dateStr) => {
                     <div
                         v-for="exercise in exercises"
                         :key="exercise.id"
-                        class="flex-shrink-0 rounded-xl bg-glass px-3 py-2 text-sm"
+                        class="flex-shrink-0 rounded-xl border border-white/10 bg-glass px-3 py-2 text-sm shadow-sm"
                     >
                         <div class="font-medium text-white">{{ exercise.name }}</div>
                         <div class="text-xs text-white/50">{{ exercise.category }}</div>
@@ -179,7 +179,7 @@ const formatDate = (dateStr) => {
                                         <span
                                             v-for="line in workout.workout_lines.slice(0, 3)"
                                             :key="line.id"
-                                            class="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/70"
+                                            class="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/70"
                                         >
                                             {{ line.exercise.name }}
                                             <span class="text-white/40">• {{ line.sets.length }} séries</span>
