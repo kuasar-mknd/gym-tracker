@@ -34,9 +34,8 @@ const getCategoryLabel = (category) => {
     <Head title="Succès & Badges" />
 
     <AuthenticatedLayout page-title="Succès & Badges">
-        <div class="space-y-6 pb-24">
-            <!-- Header & Summary -->
-            <div class="flex animate-slide-up items-end justify-between">
+        <template #header>
+            <div class="flex items-end justify-between">
                 <div>
                     <h1 class="flex items-center gap-2 text-2xl font-bold text-white">Trophées 🏆</h1>
                     <p class="mt-1 text-white/60">Tes exploits et récompenses.</p>
@@ -48,7 +47,9 @@ const getCategoryLabel = (category) => {
                     <div class="text-xs uppercase tracking-wider text-white/40">Débloqués</div>
                 </div>
             </div>
+        </template>
 
+        <div class="space-y-6 pb-24">
             <!-- Categories -->
             <div class="scrollbar-none flex animate-slide-up gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
                 <button

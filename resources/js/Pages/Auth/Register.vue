@@ -47,6 +47,7 @@ const submit = () => {
                 placeholder="ton@email.com"
                 :error="form.errors.email"
                 autocomplete="username"
+                name="email"
                 required
             />
 

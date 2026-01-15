@@ -126,6 +126,10 @@ const typeLabel = (type) => {
             </GlassButton>
         </template>
 
+        <template #header>
+            <h2 class="text-xl font-semibold text-white">Exercices</h2>
+        </template>
+
         <div class="space-y-6">
             <!-- Stats -->
             <div class="grid animate-slide-up grid-cols-3 gap-3">

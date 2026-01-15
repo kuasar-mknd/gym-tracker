@@ -42,33 +42,28 @@ const deleteTemplate = (templateId) => {
             </Link>
         </template>
 
-        <div class="space-y-6">
-            <div class="animate-slide-up">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-semibold text-white">Mes Modèles</h2>
-                    <Link :href="route('templates.create')">
-                        <GlassButton variant="primary">
-                            <svg
-                                class="mr-2 h-4 w-4"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 4v16m8-8H4"
-                                />
-                            </svg>
-                            Nouveau Modèle
-                        </GlassButton>
-                    </Link>
-                </div>
+        <template #header>
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-white">Mes Modèles</h2>
+                <Link :href="route('templates.create')">
+                    <GlassButton variant="primary">
+                        <svg
+                            class="mr-2 h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Nouveau Modèle
+                    </GlassButton>
+                </Link>
             </div>
+        </template>
 
-            <div v-if="templates.length === 0" class="animate-slide-up" style="animation-delay: 0.1s">
+        <div class="space-y-6">
+            <div v-if="templates.length === 0" class="animate-slide-up">
                 <GlassCard>
                     <div class="py-12 text-center">
                         <div class="mb-3 text-5xl">📋</div>

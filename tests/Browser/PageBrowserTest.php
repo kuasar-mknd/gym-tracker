@@ -28,7 +28,7 @@ beforeEach(function () {
 test('welcome page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/')
-            ->assertSee('GymTracker')
+            ->waitForText('GymTracker')
             ->assertVisible('a[href*="login"]')
             ->assertVisible('a[href*="register"]');
     });
@@ -37,7 +37,7 @@ test('welcome page displays correctly', function () {
 test('login page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/login')
-            ->assertSee('Bon retour !')
+            ->waitForText('Bon retour !')
             ->assertVisible('input[type="email"]')
             ->assertVisible('input[type="password"]')
             ->assertVisible('button[type="submit"]');
@@ -47,7 +47,7 @@ test('login page displays correctly', function () {
 test('register page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/register')
-            ->assertSee('Bienvenue !')
+            ->waitForText('Bienvenue !')
             ->assertVisible('input[autocomplete="name"]')
             ->assertVisible('input[type="email"]')
             ->assertVisible('input[type="password"]');
@@ -76,13 +76,14 @@ test('user can login and see dashboard', function () {
 
 test('user can register', function () {
     $this->browse(function (Browser $browser) {
-        $browser->visit('/register')
-            ->type('input[autocomplete="name"]', 'Test User')
-            ->type('input[type="email"]', 'test-dusk-'.time().'@example.com')
-            ->type('input[type="password"]', 'SecurePass123!')
+        $browser->logout()
+            ->visit('/register')
+            ->type('input[name="name"]', 'Test User')
+            ->type('input[name="email"]', 'test-dusk-'.time().'@example.com')
+            ->type('input[name="password"]', 'SecurePass123!')
             ->type('input[name="password_confirmation"]', 'SecurePass123!')
             ->press('Créer mon compte')
-            ->waitForLocation('/dashboard')
+            ->waitForText('Test User') // User name appears on dashboard
             ->assertPathIs('/dashboard');
     });
 });
@@ -103,7 +104,7 @@ test('dashboard page renders correctly', function () {
             // Check page is not blank - key UI elements visible
             ->assertPresent('.glass-card')
             // Greeting varies by time, so check static elements
-            ->assertSee('Séances')
+            ->waitForText('Séances')
             // Check no JavaScript errors
             ->assertNoConsoleExceptions();
     });
@@ -117,7 +118,7 @@ test('workouts page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/workouts')
             ->assertPathIs('/workouts')
-            ->assertSee('Mes Séances')
+            ->waitForText('Mes Séances')
             ->assertPresent('.glass-card')
             ->assertNoConsoleExceptions();
     });
@@ -130,7 +131,7 @@ test('stats page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/stats')
             ->assertPathIs('/stats')
-            ->assertSee('Statistiques')
+            ->waitForText('Statistiques')
             ->assertPresent('.glass-card')
             ->assertNoConsoleExceptions();
     });
@@ -143,7 +144,7 @@ test('goals page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/goals')
             ->assertPathIs('/goals')
-            ->assertSee('Objectifs')
+            ->waitForText('Objectifs')
             ->assertNoConsoleExceptions();
     });
 });
@@ -155,7 +156,7 @@ test('exercises page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/exercises')
             ->assertPathIs('/exercises')
-            ->assertSee('Exercices')
+            ->waitForText('Exercices')
             ->assertNoConsoleExceptions();
     });
 });
@@ -167,7 +168,7 @@ test('templates page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/templates')
             ->assertPathIs('/templates')
-            ->assertSee('Modèles')
+            ->waitForText('Modèles')
             ->assertNoConsoleExceptions();
     });
 });
@@ -179,7 +180,7 @@ test('body measurements page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/body-measurements')
             ->assertPathIs('/body-measurements')
-            ->assertSee('Mesures')
+            ->waitForText('Mesures')
             ->assertNoConsoleExceptions();
     });
 });
@@ -191,7 +192,7 @@ test('journal page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/daily-journals')
             ->assertPathIs('/daily-journals')
-            ->assertSee('Journal')
+            ->waitForText('Journal')
             ->assertNoConsoleExceptions();
     });
 });
@@ -203,7 +204,7 @@ test('notifications page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/notifications')
             ->assertPathIs('/notifications')
-            ->assertSee('Notifications')
+            ->waitForText('Notifications')
             ->assertNoConsoleExceptions();
     });
 });
@@ -215,7 +216,7 @@ test('achievements page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/achievements')
             ->assertPathIs('/achievements')
-            ->assertSee('Trophées')
+            ->waitForText('Trophées')
             ->assertNoConsoleExceptions();
     });
 });
@@ -227,7 +228,7 @@ test('profile page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/profile')
             ->assertPathIs('/profile')
-            ->assertSee('Profil')
+            ->waitForText('Profil')
             ->assertNoConsoleExceptions();
     });
 });
@@ -239,7 +240,7 @@ test('tools page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/tools')
             ->assertPathIs('/tools')
-            ->assertSee('Calculateurs')
+            ->waitForText('Calculateurs')
             ->assertNoConsoleExceptions();
     });
 });
@@ -251,7 +252,7 @@ test('plates calculator page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/plates')
             ->assertPathIs('/plates')
-            ->assertSee('Calculateur')
+            ->waitForText('Calculateur')
             ->assertNoConsoleExceptions();
     });
 });
@@ -261,19 +262,52 @@ test('plates calculator page renders correctly', function () {
  * CRITICAL USER FLOWS
  * ================================
  */
-test('user can create a new workout', function () {
+test('user can perform full workout logging flow', function () {
     $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['name' => 'Bench Press', 'category' => 'Pectoraux']);
 
     $this->browse(function (Browser $browser) use ($user) {
         $browser->loginAs($user)
             ->visit('/workouts')
-            ->waitFor('button, a')
-            // Look for a create workout button/link
-            ->click('@start-workout, button:contains("Nouvelle"), a:contains("Nouvelle")', false)
-            ->pause(1000)
-            // Should redirect to workout show page or stay on workouts
-            ->assertPathBeginsWith('/workouts')
-            ->assertNoConsoleExceptions();
+            // 1. Start new workout
+            ->waitForText('Mes Séances') // Ensure page loaded
+            ->waitForText('Nouvelle Séance', 10)
+            ->press('Nouvelle Séance')
+            ->waitForText('Séance') // Indicator we are on the workout show page
+
+            // 2. Add Exercise
+            ->waitForText('Séance')
+            ->waitForText('Ajouter un exercice')
+            ->press('Ajouter un exercice')
+            ->waitFor('.glass-modal')
+            ->type('input[placeholder="Rechercher..."]', 'Bench')
+            ->waitForText('Bench Press')
+            ->click('button[aria-label="Ajouter Bench Press"]')
+            ->waitUntilMissing('.glass-modal')
+
+            // 3. Verify Exercise Added
+            ->waitForText('Bench Press')
+
+            // 4. Log a Set
+            ->press('Ajouter une série')
+            ->waitFor('input[aria-label*="Poids"]')
+            ->type('input[aria-label*="Poids"]', '80')
+            ->type('input[aria-label*="Répétitions"]', '12')
+
+            // 5. Complete Set
+            ->click('button[aria-label="Marquer comme complété"]')
+
+            // 6. Verify Completion (Green background class or checkmark)
+            ->waitFor('.bg-accent-success')
+
+            ->refresh()
+            ->waitForText('Bench Press')
+            ->waitUsing(10, 100, function () use ($browser) {
+                return $browser->inputValue('input[aria-label*="Poids"]') === '80'
+                    && $browser->inputValue('input[aria-label*="Répétitions"]') === '12';
+            })
+            ->assertInputValue('input[aria-label*="Poids"]', '80')
+            ->assertInputValue('input[aria-label*="Répétitions"]', '12');
     });
 });
 

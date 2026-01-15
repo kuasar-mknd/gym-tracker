@@ -8,7 +8,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
-import { Head, useForm, router } from '@inertiajs/vue3'
+import { Head, useForm, router, usePage } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
 const props = defineProps({
@@ -40,7 +40,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
             only: ['workout'],
             onSuccess: () => {
                 if (newState) {
-                    timerDuration.value = exerciseRestTime || props.auth.user.default_rest_time || 90
+                    timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
                     showTimer.value = true
                 }
             },
@@ -363,6 +363,7 @@ const hasNoResults = computed(() => {
                                 class="h-11 w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none transition-all focus:bg-white/20 focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
                                 :disabled="set.is_completed"
                                 inputmode="decimal"
+                                :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
                             />
                             <span class="text-sm text-white/50">kg</span>
                         </div>
@@ -376,6 +377,7 @@ const hasNoResults = computed(() => {
                                 class="h-11 w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none transition-all focus:bg-white/20 focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
                                 :disabled="set.is_completed"
                                 inputmode="numeric"
+                                :aria-label="`${line.exercise.name} : Répétitions série ${index + 1}`"
                             />
                             <span class="text-sm text-white/50">reps</span>
                         </div>
@@ -610,6 +612,7 @@ const hasNoResults = computed(() => {
                                         @click="addExercise(exercise.id)"
                                         :disabled="addExerciseForm.processing"
                                         class="flex w-full items-center justify-between rounded-xl p-4 text-left transition hover:bg-white/10 disabled:opacity-50"
+                                        :aria-label="`Ajouter ${exercise.name}`"
                                     >
                                         <div>
                                             <div class="font-semibold text-white">{{ exercise.name }}</div>
