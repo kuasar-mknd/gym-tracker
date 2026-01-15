@@ -57,6 +57,7 @@ class AchievementService
         $totalVolume = $user->workouts()
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             ->sum(DB::raw('sets.weight * sets.reps'));
 
         return $totalVolume >= $threshold;

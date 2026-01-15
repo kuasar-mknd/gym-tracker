@@ -34,8 +34,16 @@ class SocialAuthController extends Controller
         // If not present, we should be cautious about auto-linking.
         $isVerified = $socialUser->user['email_verified'] ?? $socialUser->user['verified_email'] ?? $socialUser->user['verified'] ?? false;
 
-        if (! $isVerified && ! app()->environment('local')) {
-            return redirect()->route('login')->with('status', 'Votre email n\'est pas vérifié par '.ucfirst($provider));
+        if (! $isVerified) {
+            if (app()->environment('local')) {
+                // SECURITY: Log when email verification is bypassed in local environment
+                \Illuminate\Support\Facades\Log::warning('Social auth email verification bypassed in local environment', [
+                    'provider' => $provider,
+                    'email' => $socialUser->getEmail(),
+                ]);
+            } else {
+                return redirect()->route('login')->with('status', 'Votre email n\'est pas vérifié par '.ucfirst($provider));
+            }
         }
 
         // Check if user already exists with this email
