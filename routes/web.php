@@ -64,6 +64,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
     Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['index']);
     Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['index']);
+
+    Route::get('/tools', [\App\Http\Controllers\ToolsController::class, 'index'])->name('tools.index');
+    Route::get('/tools/1rm', [\App\Http\Controllers\ToolsController::class, 'oneRepMax'])->name('tools.1rm');
 });
 
 // Social Login
