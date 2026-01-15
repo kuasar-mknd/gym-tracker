@@ -27,7 +27,7 @@ class StatsService
      * the total volume (weight * reps) for each.
      *
      * @param  User  $user  The user to retrieve stats for.
-     * @param  int   $days  Number of days to look back (default: 30).
+     * @param  int  $days  Number of days to look back (default: 30).
      * @return array<int, array{
      *     date: string,
      *     full_date: string,
@@ -81,7 +81,7 @@ class StatsService
      * Uses a direct database query for performance optimization.
      *
      * @param  User  $user  The user to retrieve stats for.
-     * @param  int   $days  Number of days to look back (default: 30).
+     * @param  int  $days  Number of days to look back (default: 30).
      * @return array<int, object{
      *     category: string,
      *     volume: string|float
@@ -121,9 +121,9 @@ class StatsService
      * Formula: Weight * (1 + Reps / 30)
      * Takes the maximum estimated 1RM achieved in a single set for that day.
      *
-     * @param  User  $user        The user to retrieve stats for.
-     * @param  int   $exerciseId  The ID of the exercise to analyze.
-     * @param  int   $days        Number of days to look back (default: 90).
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $exerciseId  The ID of the exercise to analyze.
+     * @param  int  $days  Number of days to look back (default: 90).
      * @return array<int, array{
      *     date: string,
      *     full_date: string,
