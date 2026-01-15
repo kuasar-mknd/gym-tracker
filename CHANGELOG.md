@@ -5,19 +5,22 @@ All notable changes to GymTracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.3] - 2026-01-15
+## [Unreleased]
 
 ### Added
 
-- **E2E Testing:** Comprehensive Laravel Dusk browser tests (`PageBrowserTest.php`) covering 20+ user flows.
-- **Factories:** Added `GoalFactory`, `PlateFactory`, and `AchievementFactory`.
+- UI Design System "Liquid Glass" polish (translucent cards, gradient glows)
+- Professional GitHub documentation (README, CONTRIBUTING, etc.)
+
+### Changed
+
+- Progress bars now use gradient glow effect
+- Modal overlay uses proper glass-overlay class
+- Login divider uses translucent backdrop
 
 ### Fixed
 
-- **Production Blank Page:** Fixed CSP headers preventing script execution in some environments.
-- **Routing:** Updated all Ziggy route calls to v2 format (object syntax) to prevent JS crashes.
-- **Cache:** Fixed `BadMethodCallException` by removing `tags()` from `StatsService` for file driver compatibility.
-- **Auth Forms:** Added missing `name` attributes to Register components.
+- Hardcoded color in login divider replaced with design tokens
 
 ---
 
