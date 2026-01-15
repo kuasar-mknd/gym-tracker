@@ -14,6 +14,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->as('api.v1.')->group(function (
     Route::apiResource('exercises', ExerciseController::class);
     Route::apiResource('workouts', WorkoutController::class);
     Route::apiResource('sets', SetController::class);
+    Route::apiResource('personal-records', \App\Http\Controllers\Api\PersonalRecordController::class);
 
     Route::get('/status', function () {
         return response()->json(['status' => 'ok']);

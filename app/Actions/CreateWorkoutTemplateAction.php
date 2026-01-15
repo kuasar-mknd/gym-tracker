@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 class CreateWorkoutTemplateAction
 {
     /**
-     * Create a new workout template.
+     * Create a new workout template with exercises and sets.
      */
     public function execute(User $user, array $data): WorkoutTemplate
     {

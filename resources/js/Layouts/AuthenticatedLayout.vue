@@ -116,6 +116,17 @@ const showingNavigationDropdown = ref(false)
                             >
                                 Trophées
                             </Link>
+                            <Link
+                                :href="route('plates.index')"
+                                :class="[
+                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
+                                    route().current('plates.*')
+                                        ? 'border-b-2 border-accent-primary text-accent-primary'
+                                        : 'text-white/70 hover:text-white',
+                                ]"
+                            >
+                                Calculateurs
+                            </Link>
                         </div>
                     </div>
 
