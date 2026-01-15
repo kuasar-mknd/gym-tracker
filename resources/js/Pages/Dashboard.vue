@@ -6,27 +6,62 @@ import StreakCounter from '@/Components/Dashboard/StreakCounter.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { computed } from 'vue'
 
+/**
+ * Dashboard Page
+ *
+ * The main landing page for authenticated users.
+ * Displays a summary of the user's fitness activity, including:
+ * - Current streak
+ * - Total workouts count
+ * - Weekly workouts count
+ * - Latest weight
+ * - Recent workouts
+ * - Active goals
+ * - Recent personal records
+ */
 const props = defineProps({
+    /**
+     * Total number of workouts performed by the user.
+     */
     workoutsCount: {
         type: Number,
         default: 0,
     },
+    /**
+     * Number of workouts performed in the current week.
+     */
     thisWeekCount: {
         type: Number,
         default: 0,
     },
+    /**
+     * The user's most recently recorded body weight (in kg).
+     * Can be null if no measurements exist.
+     */
     latestWeight: {
         type: Number,
         default: null,
     },
+    /**
+     * List of the 5 most recent workouts.
+     * Each workout object includes nested 'workout_lines', 'exercises', and 'sets'.
+     */
     recentWorkouts: {
         type: Array,
         default: () => [],
     },
+    /**
+     * List of the 5 most recent Personal Records (PRs).
+     * Each PR object includes the 'exercise' relation.
+     */
     recentPRs: {
         type: Array,
         default: () => [],
     },
+    /**
+     * List of active (incomplete) goals, limited to 3.
+     * Each goal includes 'exercise', 'progress' (calculated), and 'unit'.
+     */
     activeGoals: {
         type: Array,
         default: () => [],
