@@ -43,7 +43,7 @@ const submit = () => {
 
 const deleteMeasurement = (id) => {
     if (confirm('Supprimer cette entrée ?')) {
-        useForm({}).delete(route('body-measurements.destroy', id))
+        useForm({}).delete(route('body-measurements.destroy', { body_measurement: id }))
     }
 }
 

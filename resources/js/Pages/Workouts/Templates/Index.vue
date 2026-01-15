@@ -12,12 +12,12 @@ const props = defineProps({
 })
 
 const executeTemplate = (templateId) => {
-    router.post(route('templates.execute', templateId))
+    router.post(route('templates.execute', { template: templateId }))
 }
 
 const deleteTemplate = (templateId) => {
     if (confirm('Es-tu sûr de vouloir supprimer ce modèle ?')) {
-        router.delete(route('templates.destroy', templateId))
+        router.delete(route('templates.destroy', { template: templateId }))
     }
 }
 </script>

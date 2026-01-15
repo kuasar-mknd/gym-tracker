@@ -66,7 +66,7 @@ const submit = () => {
 
 const deleteJournal = (id) => {
     if (confirm('Supprimer cette entrée ?')) {
-        useForm({}).delete(route('daily-journals.destroy', id))
+        useForm({}).delete(route('daily-journals.destroy', { daily_journal: id }))
     }
 }
 

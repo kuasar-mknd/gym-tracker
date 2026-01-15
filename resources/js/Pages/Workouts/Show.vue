@@ -33,7 +33,7 @@ const timerDuration = ref(90)
 const toggleSetCompletion = (set, exerciseRestTime) => {
     const newState = !set.is_completed
     router.patch(
-        route('sets.update', set.id),
+        route('sets.update', { set: set.id }),
         { is_completed: newState },
         {
             preserveScroll: true,
@@ -52,7 +52,7 @@ const savingTemplate = ref(false)
 const saveAsTemplate = () => {
     savingTemplate.value = true
     router.post(
-        route('templates.save-from-workout', props.workout.id),
+        route('templates.save-from-workout', { workout: props.workout.id }),
         {},
         {
             onFinish: () => (savingTemplate.value = false),
@@ -82,7 +82,7 @@ const createExerciseForm = useForm({
 
 const addExercise = (exerciseId) => {
     addExerciseForm.exercise_id = exerciseId
-    addExerciseForm.post(route('workout-lines.store', props.workout.id), {
+    addExerciseForm.post(route('workout-lines.store', { workout: props.workout.id }), {
         onSuccess: () => {
             showAddExercise.value = false
             searchQuery.value = ''
@@ -131,7 +131,7 @@ const createAndAddExercise = async () => {
 
             // Add the new exercise to the workout using Inertia router
             router.post(
-                route('workout-lines.store', props.workout.id),
+                route('workout-lines.store', { workout: props.workout.id }),
                 { exercise_id: exercise.id },
                 {
                     preserveScroll: true,
@@ -185,7 +185,7 @@ const closeModal = () => {
 const removeLine = (lineId) => {
     confirmMessage.value = 'Supprimer cet exercice de la séance ?'
     confirmAction.value = () => {
-        router.delete(route('workout-lines.destroy', lineId))
+        router.delete(route('workout-lines.destroy', { workoutLine: lineId }))
         showConfirmModal.value = false
     }
     showConfirmModal.value = true
@@ -200,18 +200,18 @@ const addSet = (lineId) => {
     const line = props.workout.workout_lines.find((l) => l.id === lineId)
     const lastSet = line.sets.at(-1)
 
-    router.post(route('sets.store', lineId), {
+    router.post(route('sets.store', { workoutLine: lineId }), {
         weight: lastSet ? lastSet.weight : 0,
         reps: lastSet ? lastSet.reps : 10,
     })
 }
 
 const updateSet = (set, field, value) => {
-    router.patch(route('sets.update', set.id), { [field]: value }, { preserveScroll: true, only: ['workout'] })
+    router.patch(route('sets.update', { set: set.id }), { [field]: value }, { preserveScroll: true, only: ['workout'] })
 }
 
 const removeSet = (setId) => {
-    router.delete(route('sets.destroy', setId), { preserveScroll: true })
+    router.delete(route('sets.destroy', { set: setId }), { preserveScroll: true })
 }
 
 const filteredExercises = computed(() => {

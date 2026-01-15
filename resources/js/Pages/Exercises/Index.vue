@@ -49,7 +49,7 @@ const cancelEdit = () => {
 }
 
 const updateExercise = (exercise) => {
-    editForm.put(route('exercises.update', exercise.id), {
+    editForm.put(route('exercises.update', { exercise: exercise.id }), {
         onSuccess: () => {
             editingExercise.value = null
         },
@@ -58,7 +58,7 @@ const updateExercise = (exercise) => {
 
 const deleteExercise = (id) => {
     if (confirm('Supprimer cet exercice ?')) {
-        router.delete(route('exercises.destroy', id))
+        router.delete(route('exercises.destroy', { exercise: id }))
     }
 }
 

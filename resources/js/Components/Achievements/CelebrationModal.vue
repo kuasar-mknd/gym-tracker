@@ -36,7 +36,7 @@ const close = () => {
     show.value = false
     if (notificationId.value) {
         router.post(
-            route('notifications.mark-as-read', notificationId.value),
+            route('notifications.mark-as-read', { id: notificationId.value }),
             {},
             {
                 preserveScroll: true,

@@ -24,7 +24,7 @@ const fetchExerciseProgress = async (exerciseId) => {
     if (!exerciseId) return
     loadingExercise.value = true
     try {
-        const response = await axios.get(route('stats.exercise', exerciseId))
+        const response = await axios.get(route('stats.exercise', { exercise: exerciseId }))
         exerciseProgressData.value = response.data.progress
     } catch (error) {
         console.error('Error fetching exercise progress:', error)

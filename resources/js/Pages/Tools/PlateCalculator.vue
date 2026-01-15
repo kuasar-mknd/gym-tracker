@@ -203,7 +203,7 @@ const savePlate = () => {
 
 const deletePlate = (plate) => {
     if (confirm('Are you sure you want to remove this plate?')) {
-        router.delete(route('plates.destroy', plate))
+        router.delete(route('plates.destroy', { plate: plate }))
     }
 }
 
