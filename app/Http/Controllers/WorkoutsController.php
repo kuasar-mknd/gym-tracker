@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Exercise;
 use App\Models\Workout;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 /**
@@ -16,6 +18,8 @@ use Inertia\Inertia;
  */
 class WorkoutsController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the user's workouts.
      *
@@ -26,6 +30,8 @@ class WorkoutsController extends Controller
      */
     public function index(): \Inertia\Response
     {
+        $this->authorize('viewAny', Workout::class);
+
         // Get last 6 months frequency
         $monthlyFrequency = Workout::select('started_at')
             ->where('user_id', auth()->id())
@@ -39,11 +45,12 @@ class WorkoutsController extends Controller
             ])
             ->values();
 
+        // NITRO FIX: Paginate workouts instead of loading all
         return Inertia::render('Workouts/Index', [
             'workouts' => Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
                 ->where('user_id', auth()->id())
                 ->latest('started_at')
-                ->get(),
+                ->paginate(20),
             'monthlyFrequency' => $monthlyFrequency,
         ]);
     }
@@ -61,11 +68,16 @@ class WorkoutsController extends Controller
      */
     public function show(Workout $workout): \Inertia\Response
     {
-        abort_if($workout->user_id !== auth()->id(), 403);
+        $this->authorize('view', $workout);
+
+        // NITRO FIX: Cache exercises list for 1 hour
+        $exercises = Cache::remember('exercises_list', 3600, function () {
+            return Exercise::orderBy('name')->get();
+        });
 
         return Inertia::render('Workouts/Show', [
             'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),
-            'exercises' => Exercise::orderBy('name')->get(),
+            'exercises' => $exercises,
             'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
             'types' => [
                 ['value' => 'strength', 'label' => 'Force'],
@@ -86,11 +98,14 @@ class WorkoutsController extends Controller
      */
     public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $workout = Workout::create([
-            'user_id' => auth()->id(),
+        $this->authorize('create', Workout::class);
+
+        $workout = new Workout([
             'started_at' => now(),
             'name' => 'Séance du '.now()->format('d/m/Y'),
         ]);
+        $workout->user_id = auth()->id();
+        $workout->save();
 
         return redirect()->route('workouts.show', $workout);
     }

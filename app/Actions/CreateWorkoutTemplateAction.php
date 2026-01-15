@@ -14,11 +14,12 @@ class CreateWorkoutTemplateAction
     public function execute(User $user, array $data): WorkoutTemplate
     {
         return DB::transaction(function () use ($user, $data) {
-            $template = WorkoutTemplate::create([
-                'user_id' => $user->id,
+            $template = new WorkoutTemplate([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
             ]);
+            $template->user_id = $user->id;
+            $template->save();
 
             if (isset($data['exercises'])) {
                 foreach ($data['exercises'] as $index => $ex) {

@@ -3,14 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Plate;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PlateController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index()
     {
+        $this->authorize('viewAny', Plate::class);
+
         $plates = Auth::user()->plates()
             ->orderBy('weight', 'desc')
             ->get();
@@ -27,16 +32,16 @@ class PlateController extends Controller
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $request->user()->plates()->create($validated);
+        $plate = new Plate($validated);
+        $plate->user_id = $request->user()->id;
+        $plate->save();
 
         return redirect()->back();
     }
 
     public function update(Request $request, Plate $plate)
     {
-        if ($plate->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('update', $plate);
 
         $validated = $request->validate([
             'weight' => ['required', 'numeric', 'min:0.1', 'max:100'],
@@ -50,9 +55,7 @@ class PlateController extends Controller
 
     public function destroy(Plate $plate)
     {
-        if ($plate->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('delete', $plate);
 
         $plate->delete();
 

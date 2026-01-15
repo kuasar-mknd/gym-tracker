@@ -12,7 +12,6 @@ class Goal extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'title',
         'type',
         'target_value',
@@ -24,13 +23,16 @@ class Goal extends Model
         'completed_at',
     ];
 
-    protected $casts = [
-        'target_value' => 'double',
-        'current_value' => 'double',
-        'start_value' => 'double',
-        'deadline' => 'date',
-        'completed_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'target_value' => 'double',
+            'current_value' => 'double',
+            'start_value' => 'double',
+            'deadline' => 'date',
+            'completed_at' => 'datetime',
+        ];
+    }
 
     public function user(): BelongsTo
     {

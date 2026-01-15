@@ -6,10 +6,13 @@ use App\Http\Requests\GoalStoreRequest;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Services\GoalService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
 class GoalController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(protected GoalService $goalService) {}
 
     public function index(): \Inertia\Response
@@ -33,19 +36,18 @@ class GoalController extends Controller
 
     public function store(GoalStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $data = $request->validated();
-        $data['user_id'] = auth()->id();
+        $this->authorize('create', Goal::class);
 
-        // If start_value is not provided, try to find a current value
+        $data = $request->validated();
         if (! isset($data['start_value'])) {
-            // We'll let GoalService handle the first sync which will populate current_value
-            // but it's good to have a start_value for progress calculation.
             $data['start_value'] = 0;
         }
 
-        $goal = Goal::create($data);
+        $goal = new Goal;
+        $goal->fill($data);
+        $goal->user_id = auth()->id();
+        $goal->save();
 
-        // Initial sync to get current progress
         $this->goalService->updateGoalProgress($goal);
 
         return redirect()->route('goals.index')->with('success', 'Objectif créé avec succès.');
@@ -53,7 +55,7 @@ class GoalController extends Controller
 
     public function update(GoalStoreRequest $request, Goal $goal): \Illuminate\Http\RedirectResponse
     {
-        abort_if($goal->user_id !== auth()->id(), 403);
+        $this->authorize('update', $goal);
 
         $goal->update($request->validated());
         $this->goalService->updateGoalProgress($goal);
@@ -63,7 +65,7 @@ class GoalController extends Controller
 
     public function destroy(Goal $goal): \Illuminate\Http\RedirectResponse
     {
-        abort_if($goal->user_id !== auth()->id(), 403);
+        $this->authorize('delete', $goal);
 
         $goal->delete();
 

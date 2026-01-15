@@ -10,10 +10,16 @@ class WorkoutLine extends Model
     use HasFactory;
 
     protected $fillable = [
-        'workout_id',
         'exercise_id',
         'order',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'order' => 'integer',
+        ];
+    }
 
     public function workout(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

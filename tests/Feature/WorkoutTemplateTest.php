@@ -42,12 +42,11 @@ class WorkoutTemplateTest extends TestCase
         $this->actingAs($user);
 
         $exercise = \App\Models\Exercise::factory()->create();
-        $template = \App\Models\WorkoutTemplate::create([
-            'user_id' => $user->id,
+        $template = $user->workoutTemplates()->create([
             'name' => 'Squat Day',
         ]);
         $line = $template->workoutTemplateLines()->create(['exercise_id' => $exercise->id]);
-        $line->workoutTemplateSets()->create(['reps' => 5, 'weight' => 100]);
+        $line->workoutTemplateSets()->create(['reps' => 5, 'weight' => 100, 'order' => 0]);
 
         $response = $this->post(route('templates.execute', $template));
 
@@ -63,8 +62,7 @@ class WorkoutTemplateTest extends TestCase
         $this->actingAs($user);
 
         $exercise = \App\Models\Exercise::factory()->create();
-        $workout = \App\Models\Workout::create([
-            'user_id' => $user->id,
+        $workout = $user->workouts()->create([
             'name' => 'My Real Workout',
             'started_at' => now(),
         ]);
@@ -84,8 +82,7 @@ class WorkoutTemplateTest extends TestCase
         $user1 = \App\Models\User::factory()->create();
         $user2 = \App\Models\User::factory()->create();
 
-        $template = \App\Models\WorkoutTemplate::create([
-            'user_id' => $user1->id,
+        $template = $user1->workoutTemplates()->create([
             'name' => 'User 1 Template',
         ]);
 

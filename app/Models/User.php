@@ -109,6 +109,11 @@ class User extends Authenticatable
             ->exists();
     }
 
+    public function workoutTemplates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(WorkoutTemplate::class);
+    }
+
     public function isPushEnabled(string $type): bool
     {
         return (bool) $this->notificationPreferences()

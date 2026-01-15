@@ -117,10 +117,10 @@ const showingNavigationDropdown = ref(false)
                                 Trophées
                             </Link>
                             <Link
-                                :href="route('plates.index')"
+                                :href="route('tools.index')"
                                 :class="[
                                     'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
-                                    route().current('plates.*')
+                                    route().current('tools.*') || route().current('plates.*')
                                         ? 'border-b-2 border-accent-primary text-accent-primary'
                                         : 'text-white/70 hover:text-white',
                                 ]"
@@ -203,7 +203,7 @@ const showingNavigationDropdown = ref(false)
                 <div class="flex items-center gap-2">
                     <Link
                         :href="route('notifications.index')"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl bg-glass text-white/80"
+                        class="relative flex h-11 w-11 items-center justify-center rounded-xl bg-glass text-white/80 transition active:scale-95"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"

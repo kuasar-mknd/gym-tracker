@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Plate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,8 +13,7 @@ class PlateControllerTest extends TestCase
     public function test_can_list_plates(): void
     {
         $user = User::factory()->create();
-        $plate = Plate::create([
-            'user_id' => $user->id,
+        $plate = $user->plates()->create([
             'weight' => 20,
             'quantity' => 2,
         ]);
@@ -49,8 +47,7 @@ class PlateControllerTest extends TestCase
     public function test_can_update_plate(): void
     {
         $user = User::factory()->create();
-        $plate = Plate::create([
-            'user_id' => $user->id,
+        $plate = $user->plates()->create([
             'weight' => 20,
             'quantity' => 2,
         ]);
@@ -70,8 +67,7 @@ class PlateControllerTest extends TestCase
     public function test_can_delete_plate(): void
     {
         $user = User::factory()->create();
-        $plate = Plate::create([
-            'user_id' => $user->id,
+        $plate = $user->plates()->create([
             'weight' => 20,
             'quantity' => 2,
         ]);
@@ -88,8 +84,7 @@ class PlateControllerTest extends TestCase
     {
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();
-        $plate = Plate::create([
-            'user_id' => $user1->id,
+        $plate = $user1->plates()->create([
             'weight' => 20,
             'quantity' => 2,
         ]);

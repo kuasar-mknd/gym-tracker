@@ -5,17 +5,22 @@ namespace App\Http\Controllers\Api;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
 use App\Models\WorkoutLine;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class SetController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Set::class);
+
         $sets = QueryBuilder::for(Set::class)
             ->allowedFilters(['workout_line_id'])
             ->whereHas('workoutLine.workout', function ($query) {
@@ -47,7 +52,7 @@ class SetController extends Controller
             abort(403, 'You do not own this workout line.');
         }
 
-        $set = Set::create($validated);
+        $set = $workoutLine->sets()->create($validated);
 
         return new SetResource($set);
     }
@@ -57,9 +62,7 @@ class SetController extends Controller
      */
     public function show(Set $set)
     {
-        if ($set->workoutLine->workout->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('view', $set);
 
         return new SetResource($set);
     }
@@ -69,9 +72,7 @@ class SetController extends Controller
      */
     public function update(Request $request, Set $set)
     {
-        if ($set->workoutLine->workout->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('update', $set);
 
         $validated = $request->validate([
             'weight' => 'nullable|numeric|min:0',
@@ -92,9 +93,7 @@ class SetController extends Controller
      */
     public function destroy(Set $set)
     {
-        if ($set->workoutLine->workout->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('delete', $set);
 
         $set->delete();
 

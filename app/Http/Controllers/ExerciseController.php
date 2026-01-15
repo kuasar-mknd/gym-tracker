@@ -5,13 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class ExerciseController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index()
     {
+        $this->authorize('viewAny', Exercise::class);
+
         $exercises = Exercise::where(function ($query) {
             $query->whereNull('user_id')
                 ->orWhere('user_id', Auth::id());
@@ -38,8 +44,12 @@ class ExerciseController extends Controller
         }
 
         $data = $request->validated();
-        $data['user_id'] = Auth::id();
-        $exercise = Exercise::create($data);
+        $exercise = new Exercise($data);
+        $exercise->user_id = Auth::id();
+        $exercise->save();
+
+        // NITRO FIX: Invalidate exercises cache
+        Cache::forget('exercises_list');
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
         if ($request->wantsJson() || $request->header('X-Quick-Create')) {
@@ -51,20 +61,19 @@ class ExerciseController extends Controller
 
     public function update(ExerciseUpdateRequest $request, Exercise $exercise)
     {
-        if ($exercise->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('update', $exercise);
 
         $exercise->update($request->validated());
+
+        // NITRO FIX: Invalidate exercises cache
+        Cache::forget('exercises_list');
 
         return redirect()->back();
     }
 
     public function destroy(Exercise $exercise)
     {
-        if ($exercise->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('delete', $exercise);
 
         if ($exercise->workoutLines()->exists()) {
             return redirect()->back()->withErrors([
@@ -73,6 +82,9 @@ class ExerciseController extends Controller
         }
 
         $exercise->delete();
+
+        // NITRO FIX: Invalidate exercises cache
+        Cache::forget('exercises_list');
 
         return redirect()->back();
     }
