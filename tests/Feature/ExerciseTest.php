@@ -37,6 +37,7 @@ class ExerciseTest extends TestCase
             'name' => 'Développé couché',
             'type' => 'strength',
             'category' => 'Pectoraux',
+            'user_id' => $user->id,
         ]);
     }
 
@@ -65,25 +66,13 @@ class ExerciseTest extends TestCase
         $response->assertSessionHasErrors('type');
     }
 
-    public function test_cannot_create_duplicate_exercise(): void
-    {
-        $user = User::factory()->create();
-        Exercise::factory()->create(['name' => 'Squat']);
-
-        $response = $this->actingAs($user)->post('/exercises', [
-            'name' => 'Squat',
-            'type' => 'strength',
-        ]);
-
-        $response->assertSessionHasErrors('name');
-    }
-
-    public function test_can_update_exercise(): void
+    public function test_can_update_own_exercise(): void
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create([
             'name' => 'Old Name',
             'type' => 'strength',
+            'user_id' => $user->id,
         ]);
 
         $response = $this->actingAs($user)->put("/exercises/{$exercise->id}", [
@@ -101,10 +90,33 @@ class ExerciseTest extends TestCase
         ]);
     }
 
-    public function test_can_delete_unused_exercise(): void
+    public function test_cannot_update_system_exercise(): void
     {
         $user = User::factory()->create();
-        $exercise = Exercise::factory()->create();
+        $exercise = Exercise::factory()->create([
+            'name' => 'System Exercise',
+            'type' => 'strength',
+            'user_id' => null, // System exercise
+        ]);
+
+        $response = $this->actingAs($user)->put("/exercises/{$exercise->id}", [
+            'name' => 'Hacked Name',
+            'type' => 'strength',
+        ]);
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('exercises', [
+            'id' => $exercise->id,
+            'name' => 'System Exercise',
+        ]);
+    }
+
+    public function test_can_delete_own_unused_exercise(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create([
+            'user_id' => $user->id,
+        ]);
 
         $response = $this->actingAs($user)->delete("/exercises/{$exercise->id}");
 
@@ -114,10 +126,27 @@ class ExerciseTest extends TestCase
         ]);
     }
 
+    public function test_cannot_delete_system_exercise(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create([
+            'user_id' => null,
+        ]);
+
+        $response = $this->actingAs($user)->delete("/exercises/{$exercise->id}");
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('exercises', [
+            'id' => $exercise->id,
+        ]);
+    }
+
     public function test_cannot_delete_exercise_in_use(): void
     {
         $user = User::factory()->create();
-        $exercise = Exercise::factory()->create();
+        $exercise = Exercise::factory()->create([
+            'user_id' => $user->id,
+        ]);
         $workout = Workout::factory()->create(['user_id' => $user->id]);
         WorkoutLine::factory()->create([
             'workout_id' => $workout->id,

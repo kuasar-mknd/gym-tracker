@@ -79,6 +79,11 @@ class User extends Authenticatable
         return $this->hasMany(DailyJournal::class);
     }
 
+    public function plates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Plate::class);
+    }
+
     public function notificationPreferences(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(NotificationPreference::class);
