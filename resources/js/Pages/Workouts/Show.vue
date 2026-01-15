@@ -363,6 +363,7 @@ const hasNoResults = computed(() => {
                                 class="h-11 w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none transition-all focus:bg-white/20 focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
                                 :disabled="set.is_completed"
                                 inputmode="decimal"
+                                :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
                             />
                             <span class="text-sm text-white/50">kg</span>
                         </div>
@@ -376,6 +377,7 @@ const hasNoResults = computed(() => {
                                 class="h-11 w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none transition-all focus:bg-white/20 focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
                                 :disabled="set.is_completed"
                                 inputmode="numeric"
+                                :aria-label="`${line.exercise.name} : Répétitions série ${index + 1}`"
                             />
                             <span class="text-sm text-white/50">reps</span>
                         </div>
