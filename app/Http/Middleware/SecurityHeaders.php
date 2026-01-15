@@ -26,13 +26,14 @@ class SecurityHeaders
         $nonce = $request->attributes->get('csp-nonce');
 
         if ($nonce) {
-            // HARDENED CSP: Uses nonce instead of unsafe-inline/unsafe-eval
+            // CSP with nonce for inline scripts, but allowing external font stylesheets
             $csp = implode('; ', [
                 "default-src 'self'",
                 "script-src 'self' 'nonce-{$nonce}'",
-                "style-src 'self' https://fonts.bunny.net".(app()->isLocal() ? " 'unsafe-inline'" : " 'nonce-{$nonce}'"),
+                // External font stylesheets (fonts.bunny.net) require 'unsafe-inline' as they can't have nonces
+                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
                 "img-src 'self' data: https:",
-                "font-src 'self' https://fonts.bunny.net",
+                "font-src 'self' https://fonts.bunny.net data:",
                 "connect-src 'self'".(app()->isLocal() ? ' ws://localhost:* wss://localhost:* http://localhost:*' : ''),
             ]);
         } else {
