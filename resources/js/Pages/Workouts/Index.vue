@@ -6,7 +6,7 @@ import WorkoutsPerMonthChart from '@/Components/Stats/WorkoutsPerMonthChart.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
-    workouts: Array,
+    workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     exercises: Array,
     monthlyFrequency: Array,
 })
@@ -91,14 +91,14 @@ const formatDate = (dateStr) => {
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <GlassCard padding="p-4">
                         <div class="text-center">
-                            <div class="text-gradient text-2xl font-bold">{{ workouts.length }}</div>
+                            <div class="text-gradient text-2xl font-bold">{{ workouts.data?.length || 0 }}</div>
                             <div class="mt-1 text-xs text-white/60">Total séances</div>
                         </div>
                     </GlassCard>
                     <GlassCard padding="p-4">
                         <div class="text-center">
                             <div class="text-2xl font-bold text-accent-success">
-                                {{ workouts.reduce((acc, w) => acc + w.workout_lines.length, 0) }}
+                                {{ workouts.data?.reduce((acc, w) => acc + w.workout_lines.length, 0) || 0 }}
                             </div>
                             <div class="mt-1 text-xs text-white/60">Exercices</div>
                         </div>
@@ -134,7 +134,7 @@ const formatDate = (dateStr) => {
             <div class="animate-slide-up" style="animation-delay: 0.2s">
                 <h3 class="mb-3 font-semibold text-white">Historique</h3>
 
-                <div v-if="workouts.length === 0">
+                <div v-if="!workouts.data || workouts.data.length === 0">
                     <GlassCard>
                         <div class="py-12 text-center">
                             <div class="mb-3 text-5xl">💪</div>
@@ -154,7 +154,7 @@ const formatDate = (dateStr) => {
 
                 <div v-else class="space-y-3">
                     <Link
-                        v-for="workout in workouts"
+                        v-for="workout in workouts.data"
                         :key="workout.id"
                         :href="route('workouts.show', { workout: workout.id })"
                         class="block"
