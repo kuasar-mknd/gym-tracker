@@ -21,7 +21,10 @@ class StatsController extends Controller
             'volumeTrend' => $this->statsService->getVolumeTrend($user),
             'muscleDistribution' => $this->statsService->getMuscleDistribution($user),
             'monthlyComparison' => $this->statsService->getMonthlyVolumeComparison($user),
-            'exercises' => Exercise::orderBy('name')->get(),
+            'exercises' => Exercise::where(function ($query) {
+                $query->whereNull('user_id')
+                    ->orWhere('user_id', auth()->id());
+            })->orderBy('name')->get(),
         ]);
     }
 
