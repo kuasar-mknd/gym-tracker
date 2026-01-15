@@ -113,8 +113,8 @@ const formatDate = (dateStr) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-white">Journal Quotidien</h2>
-                <GlassButton @click="openAddForm">
+                <h2 class="text-xl font-semibold text-white">Journal</h2>
+                <GlassButton @click="openAddForm" aria-label="Nouvelle séance">
                     <svg
                         class="mr-2 h-4 w-4"
                         xmlns="http://www.w3.org/2000/svg"

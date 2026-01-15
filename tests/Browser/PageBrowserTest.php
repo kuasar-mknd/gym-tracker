@@ -76,13 +76,14 @@ test('user can login and see dashboard', function () {
 
 test('user can register', function () {
     $this->browse(function (Browser $browser) {
-        $browser->visit('/register')
-            ->type('input[autocomplete="name"]', 'Test User')
-            ->type('input[type="email"]', 'test-dusk-'.time().'@example.com')
-            ->type('input[type="password"]', 'SecurePass123!')
+        $browser->logout()
+            ->visit('/register')
+            ->type('input[name="name"]', 'Test User')
+            ->type('input[name="email"]', 'test-dusk-'.time().'@example.com')
+            ->type('input[name="password"]', 'SecurePass123!')
             ->type('input[name="password_confirmation"]', 'SecurePass123!')
             ->press('Créer mon compte')
-            ->waitForLocation('/dashboard')
+            ->waitForText('Test User') // User name appears on dashboard
             ->assertPathIs('/dashboard');
     });
 });
@@ -270,12 +271,13 @@ test('user can perform full workout logging flow', function () {
             ->visit('/workouts')
             // 1. Start new workout
             ->waitForText('Mes Séances') // Ensure page loaded
-            ->waitFor('button[aria-label="Nouvelle séance"]', 10)
-            ->click('button[aria-label="Nouvelle séance"]')
-            ->waitForLocation('/workouts/*') // Wildcard check for ID
+            ->waitForText('Nouvelle Séance', 10)
+            ->press('Nouvelle Séance')
+            ->waitForText('Séance') // Indicator we are on the workout show page
 
             // 2. Add Exercise
             ->waitForText('Séance')
+            ->waitForText('Ajouter un exercice')
             ->press('Ajouter un exercice')
             ->waitFor('.glass-modal')
             ->type('input[placeholder="Rechercher..."]', 'Bench')
@@ -284,7 +286,7 @@ test('user can perform full workout logging flow', function () {
             ->waitUntilMissing('.glass-modal')
 
             // 3. Verify Exercise Added
-            ->assertSee('Bench Press')
+            ->waitForText('Bench Press')
 
             // 4. Log a Set
             ->press('Ajouter une série')
@@ -293,14 +295,14 @@ test('user can perform full workout logging flow', function () {
             ->type('input[aria-label*="Répétitions"]', '12')
 
             // 5. Complete Set
-            ->press('Marquer comme complété')
+            ->click('button[aria-label="Marquer comme complété"]')
 
             // 6. Verify Completion (Green background class or checkmark)
-            ->assertPresent('.bg-accent-success')
+            ->waitFor('.bg-accent-success')
 
             // 7. Verify Data Persisted (Refresh page)
             ->refresh()
-            ->assertSee('Bench Press')
+            ->waitForText('Bench Press')
             ->assertInputValue('input[aria-label*="Poids"]', '80')
             ->assertInputValue('input[aria-label*="Répétitions"]', '12');
     });

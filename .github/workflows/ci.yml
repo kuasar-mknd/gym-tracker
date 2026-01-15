@@ -73,6 +73,7 @@ jobs:
 
     browser-tests:
         runs-on: ubuntu-latest
+        needs: frontend-build
         services:
             mysql:
                 image: mysql:8.4
@@ -86,16 +87,11 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v6
 
-            - name: Setup Node
-              uses: actions/setup-node@v6
+            - name: Download Build Artifacts
+              uses: actions/download-artifact@v7
               with:
-                  node-version: 20
-
-            - name: Install Node Dependencies
-              run: npm install --legacy-peer-deps
-
-            - name: Build Assets
-              run: npm run build
+                  name: build-assets
+                  path: public/build
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -133,10 +129,12 @@ jobs:
                   SESSION_DRIVER: cookie
                   QUEUE_CONNECTION: sync
                   MAIL_MAILER: array
+                  APP_DEBUG: false
+                  LOG_LEVEL: debug
               run: |
                   php artisan migrate:fresh --seed
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
-                  sleep 10
+                  sleep 15
                   php artisan dusk
 
             - name: Upload Test Screenshots

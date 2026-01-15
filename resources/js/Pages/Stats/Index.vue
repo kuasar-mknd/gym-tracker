@@ -44,6 +44,10 @@ watch(selectedExercise, (newVal) => {
     <Head title="Statistiques" />
 
     <AuthenticatedLayout page-title="Statistiques">
+        <template #header>
+            <h2 class="text-xl font-semibold text-white">Statistiques</h2>
+        </template>
+
         <div class="space-y-6">
             <!-- Volume Trend -->
             <GlassCard>

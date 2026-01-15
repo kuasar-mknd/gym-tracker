@@ -8,7 +8,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
-import { Head, useForm, router } from '@inertiajs/vue3'
+import { Head, useForm, router, usePage } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
 const props = defineProps({
@@ -40,7 +40,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
             only: ['workout'],
             onSuccess: () => {
                 if (newState) {
-                    timerDuration.value = exerciseRestTime || props.auth.user.default_rest_time || 90
+                    timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
                     showTimer.value = true
                 }
             },
