@@ -56,6 +56,7 @@ class StatsService
                         'workouts.id',
                         'workouts.started_at',
                         'workouts.name',
+                        // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
                         DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
                     )
                     ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
@@ -183,6 +184,7 @@ class StatsService
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
             ->where('workouts.started_at', '>=', $currentMonthStart)
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             ->sum(DB::raw('sets.weight * sets.reps'));
 
         $previousVolume = DB::table('sets')
@@ -190,6 +192,7 @@ class StatsService
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
             ->whereBetween('workouts.started_at', [$previousMonthStart, $previousMonthEnd])
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             ->sum(DB::raw('sets.weight * sets.reps'));
 
         $diff = $currentVolume - $previousVolume;

@@ -203,7 +203,7 @@ const showingNavigationDropdown = ref(false)
                 <div class="flex items-center gap-2">
                     <Link
                         :href="route('notifications.index')"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl bg-glass text-white/80"
+                        class="relative flex h-11 w-11 items-center justify-center rounded-xl bg-glass text-white/80 transition active:scale-95"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
