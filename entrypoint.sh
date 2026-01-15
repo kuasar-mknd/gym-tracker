@@ -29,7 +29,9 @@ php artisan route:cache
 # Run migrations ONLY for the app service (when command contains octane)
 if echo "$@" | grep -q "octane:frankenphp"; then
     echo "Running migrations..."
-    php artisan migrate --force
+    # We use || true here to prevent a failed migration from crashing the container startup 
+    # and causing a restart loop (e.g. if a table already exists).
+    php artisan migrate --force || echo "Warning: Migration failed, but starting app anyway. Please check database state."
 fi
 
 echo "Starting: $@"
