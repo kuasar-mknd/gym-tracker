@@ -23,6 +23,7 @@ services:
             CACHE_STORE: redis
             QUEUE_CONNECTION: redis
             DB_SSL_VERIFY: 'false'
+            FRANKENPHP_DEBUG: 1
         links:
             - db
             - redis
@@ -65,6 +66,8 @@ services:
             REDIS_HOST: redis
             REDIS_PASSWORD: ${REDIS_PASSWORD}
             REDIS_PORT: 6379
+            SESSION_DRIVER: redis
+            CACHE_STORE: redis
             QUEUE_CONNECTION: redis
             DB_SSL_VERIFY: 'false'
         links:
