@@ -7,10 +7,39 @@ use App\Models\Workout;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Service for calculating and retrieving user workout statistics.
+ *
+ * This service handles heavy aggregations and calculations for:
+ * - Volume trends over time
+ * - Muscle distribution analysis
+ * - Estimated 1RM (One Rep Max) progression
+ * - Period-over-period comparisons
+ *
+ * It utilizes caching (via Redis/Cache facade) to optimize performance for expensive database queries.
+ */
 class StatsService
 {
     /**
      * Get volume trend (total weight lifted) per workout over time.
+     *
+     * Retrieves a list of workouts within the specified period and calculates
+     * the total volume (weight * reps) for each.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  Number of days to look back (default: 30).
+     * @return array<int, array{
+     *     date: string,
+     *     full_date: string,
+     *     name: string,
+     *     volume: float
+     * }> List of workout volume data points.
+     *
+     * @example
+     * [
+     *   ['date' => '01/05', 'full_date' => '2023-05-01', 'name' => 'Leg Day', 'volume' => 12500],
+     *   ...
+     * ]
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
@@ -47,6 +76,22 @@ class StatsService
 
     /**
      * Get muscle group distribution based on volume (weight * reps).
+     *
+     * Aggregates the total volume lifted per exercise category (muscle group).
+     * Uses a direct database query for performance optimization.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  Number of days to look back (default: 30).
+     * @return array<int, object{
+     *     category: string,
+     *     volume: string|float
+     * }> Array of objects containing category names and aggregated volume.
+     *
+     * @example
+     * [
+     *   (object) ['category' => 'Pectoraux', 'volume' => 5000],
+     *   (object) ['category' => 'Dos', 'volume' => 4500],
+     * ]
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
@@ -71,6 +116,19 @@ class StatsService
 
     /**
      * Get Estimated 1RM evolution for a specific exercise using Epley formula.
+     *
+     * Calculates the estimated One Rep Max for each workout session where the exercise was performed.
+     * Formula: Weight * (1 + Reps / 30)
+     * Takes the maximum estimated 1RM achieved in a single set for that day.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $exerciseId  The ID of the exercise to analyze.
+     * @param  int  $days  Number of days to look back (default: 90).
+     * @return array<int, array{
+     *     date: string,
+     *     full_date: string,
+     *     one_rep_max: float
+     * }> Timeline of 1RM progress.
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
@@ -105,6 +163,17 @@ class StatsService
 
     /**
      * Get volume comparison between current month and previous month.
+     *
+     * Calculates the total volume lifted in the current month versus the previous month
+     * and returns the percentage difference.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @return array{
+     *     current_month_volume: float,
+     *     previous_month_volume: float,
+     *     difference: float,
+     *     percentage: float
+     * } Comparison data including volume totals and percentage change.
      */
     public function getMonthlyVolumeComparison(User $user): array
     {
