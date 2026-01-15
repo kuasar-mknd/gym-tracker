@@ -101,19 +101,34 @@ const submit = () => {
                     :href="route('social.redirect', 'google')"
                     class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
                 >
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="h-5 w-5" alt="Google" />
+                    <img
+                        src="https://www.svgrepo.com/show/475656/google-color.svg"
+                        loading="lazy"
+                        class="h-5 w-5"
+                        alt="Google"
+                    />
                 </a>
                 <a
                     :href="route('social.redirect', 'github')"
                     class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
                 >
-                    <img src="https://www.svgrepo.com/show/512317/github-142.svg" class="h-5 w-5 invert" alt="GitHub" />
+                    <img
+                        src="https://www.svgrepo.com/show/512317/github-142.svg"
+                        loading="lazy"
+                        class="h-5 w-5 invert"
+                        alt="GitHub"
+                    />
                 </a>
                 <a
                     :href="route('social.redirect', 'apple')"
                     class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
                 >
-                    <img src="https://www.svgrepo.com/show/511330/apple-173.svg" class="h-5 w-5 invert" alt="Apple" />
+                    <img
+                        src="https://www.svgrepo.com/show/511330/apple-173.svg"
+                        loading="lazy"
+                        class="h-5 w-5 invert"
+                        alt="Apple"
+                    />
                 </a>
             </div>
         </form>
