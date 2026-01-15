@@ -33,7 +33,7 @@ const formatDate = (dateStr) => {
         <template #header-actions>
             <GlassButton
                 variant="primary"
-                size="sm"
+                class="flex !h-11 !min-h-[44px] !w-11 items-center justify-center !p-0"
                 :loading="form.processing"
                 @click="createWorkout"
                 aria-label="Nouvelle séance"

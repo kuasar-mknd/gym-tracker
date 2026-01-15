@@ -66,13 +66,13 @@ const greeting = computed(() => {
                 <GlassCard padding="p-4">
                     <div class="text-center">
                         <div class="text-gradient text-2xl font-bold">{{ workoutsCount }}</div>
-                        <div class="mt-1 text-xs text-white/60">Séances</div>
+                        <div class="mt-1 text-sm text-white/60">Séances</div>
                     </div>
                 </GlassCard>
                 <GlassCard padding="p-4">
                     <div class="text-center">
                         <div class="text-2xl font-bold text-accent-success">{{ thisWeekCount }}</div>
-                        <div class="mt-1 text-xs text-white/60">Cette semaine</div>
+                        <div class="mt-1 text-sm text-white/60">Cette semaine</div>
                     </div>
                 </GlassCard>
                 <GlassCard padding="p-4">
@@ -80,7 +80,7 @@ const greeting = computed(() => {
                         <div class="text-2xl font-bold text-accent-info">
                             {{ latestWeight ? `${latestWeight}` : '—' }}
                         </div>
-                        <div class="mt-1 text-xs text-white/60">kg</div>
+                        <div class="mt-1 text-sm text-white/60">kg</div>
                     </div>
                 </GlassCard>
             </div>
