@@ -63,7 +63,6 @@ services:
                 - redis-cli
                 - ping
             retries: 3
-            retries: 3
             timeout: 5s
     selenium:
         image: 'selenium/standalone-chromium'
