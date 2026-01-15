@@ -300,9 +300,12 @@ test('user can perform full workout logging flow', function () {
             // 6. Verify Completion (Green background class or checkmark)
             ->waitFor('.bg-accent-success')
 
-            // 7. Verify Data Persisted (Refresh page)
             ->refresh()
             ->waitForText('Bench Press')
+            ->waitUsing(10, 100, function () use ($browser) {
+                return $browser->inputValue('input[aria-label*="Poids"]') === '80'
+                    && $browser->inputValue('input[aria-label*="Répétitions"]') === '12';
+            })
             ->assertInputValue('input[aria-label*="Poids"]', '80')
             ->assertInputValue('input[aria-label*="Répétitions"]', '12');
     });
