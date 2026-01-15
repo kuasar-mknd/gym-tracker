@@ -35,6 +35,7 @@ const submit = () => {
                 placeholder="Ton prénom"
                 :error="form.errors.name"
                 autocomplete="name"
+                name="name"
                 required
                 autofocus
             />
@@ -56,6 +57,7 @@ const submit = () => {
                 placeholder="••••••••"
                 :error="form.errors.password"
                 autocomplete="new-password"
+                name="password"
                 required
             />
 
@@ -66,6 +68,7 @@ const submit = () => {
                 placeholder="••••••••"
                 :error="form.errors.password_confirmation"
                 autocomplete="new-password"
+                name="password_confirmation"
                 required
             />
 
