@@ -11,11 +11,15 @@ class SetResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'workout_line_id' => $this->workout_line_id,
             'weight' => $this->weight,
             'reps' => $this->reps,
-            'order' => $this->order,
+            'duration_seconds' => $this->duration_seconds,
+            'distance_km' => $this->distance_km,
+            'is_warmup' => (bool) $this->is_warmup,
             'is_completed' => (bool) $this->is_completed,
-            'rpe' => $this->rpe,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }
