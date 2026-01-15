@@ -28,7 +28,7 @@ class DashboardController extends Controller
 
             $recentWorkouts = $user->workouts()
                 ->with('workoutLines.exercise', 'workoutLines.sets')
-                ->latest()
+                ->latest('started_at')
                 ->limit(5)
                 ->get();
 
