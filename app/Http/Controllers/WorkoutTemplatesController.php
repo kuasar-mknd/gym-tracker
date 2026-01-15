@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CreateWorkoutTemplateAction;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Http\Request;
@@ -26,7 +27,7 @@ class WorkoutTemplatesController extends Controller
         ]);
     }
 
-    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    public function store(Request $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -34,31 +35,7 @@ class WorkoutTemplatesController extends Controller
             'exercises' => 'nullable|array',
         ]);
 
-        $template = WorkoutTemplate::create([
-            'user_id' => auth()->id(),
-            'name' => $validated['name'],
-            'description' => $validated['description'],
-        ]);
-
-        if (isset($validated['exercises'])) {
-            foreach ($validated['exercises'] as $index => $ex) {
-                $line = $template->workoutTemplateLines()->create([
-                    'exercise_id' => $ex['id'],
-                    'order' => $index,
-                ]);
-
-                if (isset($ex['sets'])) {
-                    foreach ($ex['sets'] as $setIndex => $set) {
-                        $line->workoutTemplateSets()->create([
-                            'reps' => $set['reps'] ?? null,
-                            'weight' => $set['weight'] ?? null,
-                            'is_warmup' => $set['is_warmup'] ?? false,
-                            'order' => $setIndex,
-                        ]);
-                    }
-                }
-            }
-        }
+        $createWorkoutTemplateAction->execute($request->user(), $validated);
 
         return redirect()->route('templates.index');
     }
