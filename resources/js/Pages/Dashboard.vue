@@ -182,7 +182,7 @@ const greeting = computed(() => {
                     <Link
                         v-for="workout in recentWorkouts.slice(0, 3)"
                         :key="workout.id"
-                        :href="route('workouts.show', workout.id)"
+                        :href="route('workouts.show', { workout: workout.id })"
                         class="block"
                     >
                         <GlassCard class="transition hover:bg-glass-strong">

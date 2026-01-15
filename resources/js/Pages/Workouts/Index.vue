@@ -156,7 +156,7 @@ const formatDate = (dateStr) => {
                     <Link
                         v-for="workout in workouts"
                         :key="workout.id"
-                        :href="route('workouts.show', workout.id)"
+                        :href="route('workouts.show', { workout: workout.id })"
                         class="block"
                     >
                         <GlassCard class="transition hover:bg-glass-strong active:scale-[0.99]">
