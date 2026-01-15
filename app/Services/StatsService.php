@@ -105,7 +105,7 @@ class StatsService
                     ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
                     ->where('workouts.user_id', $user->id)
                     ->where('workouts.started_at', '>=', now()->subDays($days))
-                    ->select('exercises.category', DB::raw('SUM(sets.weight * sets.reps) as volume'))
+                    ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
                     ->groupBy('exercises.category')
                     ->get();
 
@@ -142,10 +142,7 @@ class StatsService
                     ->where('workouts.user_id', $user->id)
                     ->where('workout_lines.exercise_id', $exerciseId)
                     ->where('workouts.started_at', '>=', now()->subDays($days))
-                    ->select(
-                        'workouts.started_at',
-                        DB::raw('MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
-                    )
+                    ->selectRaw('workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
                     ->groupBy('workouts.started_at')
                     ->orderBy('workouts.started_at')
                     ->get();

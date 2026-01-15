@@ -10,7 +10,6 @@ class WorkoutLine extends Model
     use HasFactory;
 
     protected $fillable = [
-        'workout_id',
         'exercise_id',
         'order',
     ];

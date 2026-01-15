@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Workout;
+use App\Models\WorkoutLine;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class WorkoutLinesController extends Controller
 {
+    use AuthorizesRequests;
+
     public function store(\App\Http\Requests\WorkoutLineStoreRequest $request, Workout $workout): \Illuminate\Http\RedirectResponse
     {
-        abort_if($workout->user_id !== auth()->id(), 403);
+        $this->authorize('create', [WorkoutLine::class, $workout]);
 
         $order = $workout->workoutLines()->count();
 
@@ -22,7 +26,7 @@ class WorkoutLinesController extends Controller
 
     public function destroy(\App\Models\WorkoutLine $workoutLine): \Illuminate\Http\RedirectResponse
     {
-        abort_if($workoutLine->workout->user_id !== auth()->id(), 403);
+        $this->authorize('delete', $workoutLine);
 
         $workoutLine->delete();
 
