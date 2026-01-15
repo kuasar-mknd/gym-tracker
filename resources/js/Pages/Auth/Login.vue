@@ -62,7 +62,7 @@ const submit = () => {
                     <input
                         type="checkbox"
                         v-model="form.remember"
-                        class="h-4 w-4 rounded border-glass-border bg-glass text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-0"
+                        class="h-5 w-5 rounded border-glass-border bg-glass text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-0"
                     />
                     <span class="ml-2 text-sm text-white/70">Se souvenir</span>
                 </label>
@@ -92,14 +92,17 @@ const submit = () => {
                     <div class="w-full border-t border-glass-border"></div>
                 </div>
                 <div class="relative flex justify-center text-sm">
-                    <span class="bg-[#1E1E1E] px-2 text-white/50">Ou continuer avec</span>
+                    <span class="rounded bg-black/40 px-3 py-0.5 text-white/50 backdrop-blur-sm"
+                        >Ou continuer avec</span
+                    >
                 </div>
             </div>
 
             <div class="grid grid-cols-3 gap-3">
                 <a
+                    v-if="$page.props.social_login_enabled?.google ?? true"
                     :href="route('social.redirect', 'google')"
-                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                    class="bg-glass-surface flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border transition hover:bg-white/10"
                 >
                     <img
                         src="https://www.svgrepo.com/show/475656/google-color.svg"
@@ -109,8 +112,9 @@ const submit = () => {
                     />
                 </a>
                 <a
+                    v-if="$page.props.social_login_enabled?.github ?? true"
                     :href="route('social.redirect', 'github')"
-                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                    class="bg-glass-surface flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border transition hover:bg-white/10"
                 >
                     <img
                         src="https://www.svgrepo.com/show/512317/github-142.svg"
@@ -120,8 +124,9 @@ const submit = () => {
                     />
                 </a>
                 <a
+                    v-if="$page.props.social_login_enabled?.apple ?? true"
                     :href="route('social.redirect', 'apple')"
-                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                    class="bg-glass-surface flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border transition hover:bg-white/10"
                 >
                     <img
                         src="https://www.svgrepo.com/show/511330/apple-173.svg"

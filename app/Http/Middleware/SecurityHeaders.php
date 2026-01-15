@@ -30,10 +30,10 @@ class SecurityHeaders
             $csp = implode('; ', [
                 "default-src 'self'",
                 "script-src 'self' 'nonce-{$nonce}'",
-                "style-src 'self' 'nonce-{$nonce}' https://fonts.bunny.net",
+                "style-src 'self' https://fonts.bunny.net".(app()->isLocal() ? " 'unsafe-inline'" : " 'nonce-{$nonce}'"),
                 "img-src 'self' data: https:",
                 "font-src 'self' https://fonts.bunny.net",
-                "connect-src 'self' ws://localhost:* wss://localhost:*",
+                "connect-src 'self' ws://localhost:* wss://localhost:* http://localhost:*",
             ]);
         } else {
             // Fallback for non-web requests (API, console, etc.)
