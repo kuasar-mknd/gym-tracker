@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 
 class ExerciseController extends Controller
@@ -25,6 +26,10 @@ class ExerciseController extends Controller
             ->allowedFilters(['name', 'type', 'category'])
             ->allowedSorts(['name', 'created_at'])
             ->defaultSort('name')
+            ->where(function ($query) {
+                $query->whereNull('user_id')
+                    ->orWhere('user_id', Auth::id());
+            })
             ->paginate();
 
         return ExerciseResource::collection($exercises);
@@ -35,13 +40,19 @@ class ExerciseController extends Controller
      */
     public function store(Request $request)
     {
+        if (! Auth::check()) {
+            abort(401);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:strength,cardio,timed',
             'category' => 'nullable|string|max:255',
         ]);
 
-        $exercise = Exercise::create($validated);
+        $exercise = new Exercise($validated);
+        $exercise->user_id = Auth::id();
+        $exercise->save();
 
         return new ExerciseResource($exercise);
     }
@@ -51,6 +62,10 @@ class ExerciseController extends Controller
      */
     public function show(Exercise $exercise)
     {
+        if ($exercise->user_id !== null && $exercise->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         return new ExerciseResource($exercise);
     }
 
@@ -59,6 +74,10 @@ class ExerciseController extends Controller
      */
     public function update(Request $request, Exercise $exercise)
     {
+        if ($exercise->user_id !== Auth::id()) {
+            abort(403, 'You can only update your own exercises.');
+        }
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'type' => 'sometimes|required|in:strength,cardio,timed',
@@ -75,6 +94,10 @@ class ExerciseController extends Controller
      */
     public function destroy(Exercise $exercise)
     {
+        if ($exercise->user_id !== Auth::id()) {
+            abort(403, 'You can only delete your own exercises.');
+        }
+
         $exercise->delete();
 
         return response()->noContent();
