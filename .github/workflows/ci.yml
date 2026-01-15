@@ -80,7 +80,7 @@ jobs:
                     MYSQL_ALLOW_EMPTY_PASSWORD: yes
                     MYSQL_DATABASE: gym_tracker_dusk
                 ports:
-                    - 3306:3306
+                    - 3307:3306
                 options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
         steps:
             - name: Checkout code
@@ -121,10 +121,11 @@ jobs:
 
             - name: Run Dusk Tests
               env:
+                  APP_ENV: testing
                   APP_URL: 'http://127.0.0.1:8000'
                   DB_CONNECTION: mysql
                   DB_HOST: 127.0.0.1
-                  DB_PORT: 3306
+                  DB_PORT: 3307
                   DB_DATABASE: gym_tracker_dusk
                   DB_USERNAME: root
                   BROADCAST_CONNECTION: log
