@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class ExerciseController extends Controller
 {
     public function index()
     {
-        $exercises = Exercise::orderBy('category')
+        $exercises = Exercise::where(function ($query) {
+            $query->whereNull('user_id')
+                ->orWhere('user_id', Auth::id());
+        })
+            ->orderBy('category')
             ->orderBy('name')
             ->get();
 
@@ -28,7 +33,13 @@ class ExerciseController extends Controller
 
     public function store(ExerciseStoreRequest $request)
     {
-        $exercise = Exercise::create($request->validated());
+        if (! Auth::check()) {
+            abort(401);
+        }
+
+        $data = $request->validated();
+        $data['user_id'] = Auth::id();
+        $exercise = Exercise::create($data);
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
         if ($request->wantsJson() || $request->header('X-Quick-Create')) {
@@ -40,6 +51,10 @@ class ExerciseController extends Controller
 
     public function update(ExerciseUpdateRequest $request, Exercise $exercise)
     {
+        if ($exercise->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         $exercise->update($request->validated());
 
         return redirect()->back();
@@ -47,6 +62,10 @@ class ExerciseController extends Controller
 
     public function destroy(Exercise $exercise)
     {
+        if ($exercise->user_id !== Auth::id()) {
+            abort(403);
+        }
+
         if ($exercise->workoutLines()->exists()) {
             return redirect()->back()->withErrors([
                 'exercise' => 'Cet exercice est utilisé dans une séance et ne peut pas être supprimé.',
