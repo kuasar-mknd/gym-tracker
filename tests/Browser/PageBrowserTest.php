@@ -261,19 +261,47 @@ test('plates calculator page renders correctly', function () {
  * CRITICAL USER FLOWS
  * ================================
  */
-test('user can create a new workout', function () {
+test('user can perform full workout logging flow', function () {
     $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['name' => 'Bench Press', 'category' => 'Pectoraux']);
 
     $this->browse(function (Browser $browser) use ($user) {
         $browser->loginAs($user)
             ->visit('/workouts')
-            ->waitFor('button, a')
-            // Look for a create workout button/link
-            ->click('@start-workout, button:contains("Nouvelle"), a:contains("Nouvelle")', false)
-            ->pause(1000)
-            // Should redirect to workout show page or stay on workouts
-            ->assertPathBeginsWith('/workouts')
-            ->assertNoConsoleExceptions();
+            // 1. Start new workout
+            ->waitFor('button[aria-label="Nouvelle séance"]')
+            ->click('button[aria-label="Nouvelle séance"]')
+            ->waitForLocation('/workouts/*') // Wildcard check for ID
+
+            // 2. Add Exercise
+            ->waitForText('Séance')
+            ->press('Ajouter un exercice')
+            ->waitFor('.glass-modal')
+            ->type('input[placeholder="Rechercher..."]', 'Bench')
+            ->waitForText('Bench Press')
+            ->click('button:has(.text-accent-primary)') // Click the + button or the row
+            ->waitUntilMissing('.glass-modal')
+
+            // 3. Verify Exercise Added
+            ->assertSee('Bench Press')
+
+            // 4. Log a Set
+            ->press('Ajouter une série')
+            ->waitFor('input[aria-label*="Poids"]')
+            ->type('input[aria-label*="Poids"]', '80')
+            ->type('input[aria-label*="Répétitions"]', '12')
+
+            // 5. Complete Set
+            ->press('Marquer comme complété')
+
+            // 6. Verify Completion (Green background class or checkmark)
+            ->assertPresent('.bg-accent-success')
+
+            // 7. Verify Data Persisted (Refresh page)
+            ->refresh()
+            ->assertSee('Bench Press')
+            ->assertInputValue('input[aria-label*="Poids"]', '80')
+            ->assertInputValue('input[aria-label*="Répétitions"]', '12');
     });
 });
 

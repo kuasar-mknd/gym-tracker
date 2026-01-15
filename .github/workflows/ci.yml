@@ -71,6 +71,73 @@ jobs:
                   DB_DATABASE: ':memory:'
               run: php artisan test
 
+    browser-tests:
+        runs-on: ubuntu-latest
+        services:
+            mysql:
+                image: mysql:8.4
+                env:
+                    MYSQL_ALLOW_EMPTY_PASSWORD: yes
+                    MYSQL_DATABASE: gym_tracker_dusk
+                ports:
+                    - 3306:3306
+                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Setup Node
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 20
+
+            - name: Install Node Dependencies
+              run: npm install --legacy-peer-deps
+
+            - name: Build Assets
+              run: npm run build
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.4'
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
+                  coverage: none
+
+            - name: Install PHP Dependencies
+              run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+            - name: Prepare Application
+              run: |
+                  cp .env.example .env
+                  php artisan key:generate
+                  chmod -R 777 storage bootstrap/cache
+
+            - name: Install Chrome Driver
+              run: php artisan dusk:chrome-driver --detect
+
+            - name: Start Chrome Driver
+              run: ./vendor/laravel/dusk/bin/chromedriver-linux &
+
+            - name: Run Dusk Tests
+              env:
+                  APP_URL: 'http://127.0.0.1:8000'
+                  DB_CONNECTION: mysql
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 3306
+                  DB_DATABASE: gym_tracker_dusk
+                  DB_USERNAME: root
+                  BROADCAST_CONNECTION: log
+                  CACHE_STORE: array
+                  SESSION_DRIVER: file
+                  QUEUE_CONNECTION: sync
+                  MAIL_MAILER: array
+              run: |
+                  php artisan migrate:fresh --seed
+                  php artisan serve --no-reload &
+                  sleep 5
+                  php artisan dusk
+
     lint:
         runs-on: ubuntu-latest
         steps:
