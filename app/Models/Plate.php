@@ -11,7 +11,6 @@ class Plate extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'weight',
         'quantity',
     ];

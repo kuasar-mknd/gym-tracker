@@ -10,17 +10,19 @@ class Workout extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'name',
         'started_at',
         'ended_at',
         'notes',
     ];
 
-    protected $casts = [
-        'started_at' => 'datetime',
-        'ended_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'started_at' => 'datetime',
+            'ended_at' => 'datetime',
+        ];
+    }
 
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

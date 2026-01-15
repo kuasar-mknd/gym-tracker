@@ -3,19 +3,26 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\PersonalRecordStoreRequest;
+use App\Http\Requests\PersonalRecordUpdateRequest;
 use App\Http\Resources\PersonalRecordResource;
 use App\Models\PersonalRecord;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Auth;
 
 class PersonalRecordController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', PersonalRecord::class);
+
         $query = PersonalRecord::query()->where('user_id', Auth::id());
 
         if ($request->has('exercise_id')) {
@@ -30,22 +37,14 @@ class PersonalRecordController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): PersonalRecordResource
+    public function store(PersonalRecordStoreRequest $request): PersonalRecordResource
     {
-        $validated = $request->validate([
-            'exercise_id' => 'required|exists:exercises,id',
-            'type' => 'required|string',
-            'value' => 'required|numeric',
-            'secondary_value' => 'nullable|numeric',
-            'workout_id' => 'nullable|exists:workouts,id',
-            'set_id' => 'nullable|exists:sets,id',
-            'achieved_at' => 'required|date',
-        ]);
+        $validated = $request->validated();
 
-        $personalRecord = PersonalRecord::create([
-            ...$validated,
-            'user_id' => Auth::id(),
-        ]);
+        $personalRecord = new PersonalRecord;
+        $personalRecord->fill($validated);
+        $personalRecord->user_id = Auth::id();
+        $personalRecord->save();
 
         return new PersonalRecordResource($personalRecord);
     }
@@ -55,9 +54,7 @@ class PersonalRecordController extends Controller
      */
     public function show(PersonalRecord $personalRecord): PersonalRecordResource
     {
-        if ($personalRecord->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('view', $personalRecord);
 
         return new PersonalRecordResource($personalRecord->load('exercise'));
     }
@@ -65,21 +62,9 @@ class PersonalRecordController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, PersonalRecord $personalRecord): PersonalRecordResource
+    public function update(PersonalRecordUpdateRequest $request, PersonalRecord $personalRecord): PersonalRecordResource
     {
-        if ($personalRecord->user_id !== Auth::id()) {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'exercise_id' => 'sometimes|exists:exercises,id',
-            'type' => 'sometimes|string',
-            'value' => 'sometimes|numeric',
-            'secondary_value' => 'nullable|numeric',
-            'workout_id' => 'nullable|exists:workouts,id',
-            'set_id' => 'nullable|exists:sets,id',
-            'achieved_at' => 'sometimes|date',
-        ]);
+        $validated = $request->validated();
 
         $personalRecord->update($validated);
 
@@ -91,9 +76,7 @@ class PersonalRecordController extends Controller
      */
     public function destroy(PersonalRecord $personalRecord): \Illuminate\Http\Response
     {
-        if ($personalRecord->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('delete', $personalRecord);
 
         $personalRecord->delete();
 

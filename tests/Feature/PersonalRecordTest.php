@@ -87,8 +87,7 @@ class PersonalRecordTest extends TestCase
         ]);
 
         // Create initial PR
-        \App\Models\PersonalRecord::create([
-            'user_id' => $user->id,
+        $user->personalRecords()->create([
             'exercise_id' => $exercise->id,
             'type' => 'max_weight',
             'value' => 100,

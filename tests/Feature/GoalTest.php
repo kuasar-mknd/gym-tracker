@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Exercise;
-use App\Models\Goal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -38,8 +37,7 @@ class GoalTest extends TestCase
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create();
 
-        $goal = Goal::create([
-            'user_id' => $user->id,
+        $goal = $user->goals()->create([
             'title' => 'Bench 100kg',
             'type' => 'weight',
             'target_value' => 100,
@@ -64,8 +62,7 @@ class GoalTest extends TestCase
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create();
 
-        $goal = Goal::create([
-            'user_id' => $user->id,
+        $goal = $user->goals()->create([
             'title' => 'Bench 100kg',
             'type' => 'weight',
             'target_value' => 100,
@@ -89,8 +86,7 @@ class GoalTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $goal = Goal::create([
-            'user_id' => $user->id,
+        $goal = $user->goals()->create([
             'title' => 'Weight Loss',
             'type' => 'measurement',
             'measurement_type' => 'weight',

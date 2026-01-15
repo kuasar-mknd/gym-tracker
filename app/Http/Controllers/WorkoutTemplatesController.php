@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Actions\CreateWorkoutTemplateAction;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class WorkoutTemplatesController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index(): \Inertia\Response
     {
+        $this->authorize('viewAny', WorkoutTemplate::class);
+
         return Inertia::render('Workouts/Templates/Index', [
             'templates' => WorkoutTemplate::with(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets'])
                 ->where('user_id', auth()->id())
@@ -22,6 +27,8 @@ class WorkoutTemplatesController extends Controller
 
     public function create(): \Inertia\Response
     {
+        $this->authorize('create', WorkoutTemplate::class);
+
         return Inertia::render('Workouts/Templates/Create', [
             'exercises' => \App\Models\Exercise::orderBy('name')->get(),
         ]);
@@ -42,13 +49,14 @@ class WorkoutTemplatesController extends Controller
 
     public function execute(WorkoutTemplate $template): \Illuminate\Http\RedirectResponse
     {
-        abort_if($template->user_id !== auth()->id(), 403);
+        $this->authorize('view', $template);
 
-        $workout = Workout::create([
-            'user_id' => auth()->id(),
+        $workout = new Workout([
             'name' => $template->name,
             'started_at' => now(),
         ]);
+        $workout->user_id = auth()->id();
+        $workout->save();
 
         foreach ($template->workoutTemplateLines as $templateLine) {
             $workoutLine = $workout->workoutLines()->create([
@@ -70,13 +78,14 @@ class WorkoutTemplatesController extends Controller
 
     public function saveFromWorkout(Workout $workout): \Illuminate\Http\RedirectResponse
     {
-        abort_if($workout->user_id !== auth()->id(), 403);
+        $this->authorize('view', $workout);
 
-        $template = WorkoutTemplate::create([
-            'user_id' => auth()->id(),
+        $template = new WorkoutTemplate([
             'name' => $workout->name.' (Modèle)',
             'description' => 'Créé à partir de la séance du '.$workout->created_at->format('d/m/Y'),
         ]);
+        $template->user_id = auth()->id();
+        $template->save();
 
         foreach ($workout->workoutLines as $line) {
             $templateLine = $template->workoutTemplateLines()->create([
@@ -99,7 +108,7 @@ class WorkoutTemplatesController extends Controller
 
     public function destroy(WorkoutTemplate $template): \Illuminate\Http\RedirectResponse
     {
-        abort_if($template->user_id !== auth()->id(), 403);
+        $this->authorize('delete', $template);
 
         $template->delete();
 

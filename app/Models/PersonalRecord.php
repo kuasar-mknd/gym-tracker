@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class PersonalRecord extends Model
 {
     protected $fillable = [
-        'user_id',
         'exercise_id',
         'type',
         'value',

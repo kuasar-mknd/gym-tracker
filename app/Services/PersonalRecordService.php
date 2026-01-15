@@ -82,20 +82,27 @@ class PersonalRecordService
 
     protected function savePR(User $user, int $exerciseId, string $type, float $value, ?float $secondary, int $workoutId, int $setId): void
     {
-        $pr = PersonalRecord::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'exercise_id' => $exerciseId,
-                'type' => $type,
-            ],
-            [
-                'value' => $value,
-                'secondary_value' => $secondary,
-                'workout_id' => $workoutId,
-                'set_id' => $setId,
-                'achieved_at' => now(),
-            ]
-        );
+        $pr = PersonalRecord::where('user_id', $user->id)
+            ->where('exercise_id', $exerciseId)
+            ->where('type', $type)
+            ->first();
+
+        if (! $pr) {
+            $pr = new PersonalRecord;
+            $pr->user_id = $user->id;
+            $pr->exercise_id = $exerciseId;
+            $pr->type = $type;
+        }
+
+        $pr->fill([
+            'value' => $value,
+            'secondary_value' => $secondary,
+            'workout_id' => $workoutId,
+            'set_id' => $setId,
+            'achieved_at' => now(),
+        ]);
+
+        $pr->save();
 
         // Notify user if enabled
         if ($user->isNotificationEnabled('personal_record')) {

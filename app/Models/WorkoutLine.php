@@ -15,6 +15,13 @@ class WorkoutLine extends Model
         'order',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'order' => 'integer',
+        ];
+    }
+
     public function workout(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Workout::class);

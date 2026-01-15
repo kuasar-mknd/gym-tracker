@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\WorkoutStoreRequest;
+use App\Http\Requests\WorkoutUpdateRequest;
 use App\Http\Resources\WorkoutResource;
 use App\Models\Workout;
-use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 
 class WorkoutController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
@@ -22,6 +26,8 @@ class WorkoutController extends Controller
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     public function index()
     {
+        $this->authorize('viewAny', Workout::class);
+
         $workouts = \Spatie\QueryBuilder\QueryBuilder::for(Workout::class)
             ->allowedIncludes(['workoutLines', 'workoutLines.exercise', 'workoutLines.sets'])
             ->allowedSorts(['started_at', 'ended_at', 'created_at'])
@@ -35,14 +41,9 @@ class WorkoutController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(WorkoutStoreRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'started_at' => 'nullable|date',
-            'ended_at' => 'nullable|date|after_or_equal:started_at',
-            'notes' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $workout = new Workout($validated);
         $workout->user_id = Auth::id();
@@ -58,9 +59,7 @@ class WorkoutController extends Controller
      */
     public function show(Workout $workout)
     {
-        if ($workout->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('view', $workout);
 
         $workout->load(['workoutLines.exercise', 'workoutLines.sets']);
 
@@ -70,18 +69,9 @@ class WorkoutController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Workout $workout)
+    public function update(WorkoutUpdateRequest $request, Workout $workout)
     {
-        if ($workout->user_id !== Auth::id()) {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'started_at' => 'nullable|date',
-            'ended_at' => 'nullable|date|after_or_equal:started_at',
-            'notes' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $workout->update($validated);
 
@@ -95,9 +85,7 @@ class WorkoutController extends Controller
      */
     public function destroy(Workout $workout)
     {
-        if ($workout->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('delete', $workout);
 
         $user = $workout->user;
         $workout->delete();

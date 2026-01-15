@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\DailyJournal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -51,8 +50,7 @@ class DailyJournalTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $journal = DailyJournal::factory()->create([
-            'user_id' => $user->id,
+        $journal = $user->dailyJournals()->create([
             'date' => now()->format('Y-m-d'),
             'content' => 'Old content',
         ]);
@@ -76,8 +74,7 @@ class DailyJournalTest extends TestCase
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();
 
-        $journal = DailyJournal::create([
-            'user_id' => $user2->id,
+        $journal = $user2->dailyJournals()->create([
             'date' => now()->format('Y-m-d'),
             'content' => 'Someone else journal',
         ]);

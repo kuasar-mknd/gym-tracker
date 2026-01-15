@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class ExerciseController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index()
     {
+        $this->authorize('viewAny', Exercise::class);
+
         $exercises = Exercise::where(function ($query) {
             $query->whereNull('user_id')
                 ->orWhere('user_id', Auth::id());
@@ -38,8 +43,9 @@ class ExerciseController extends Controller
         }
 
         $data = $request->validated();
-        $data['user_id'] = Auth::id();
-        $exercise = Exercise::create($data);
+        $exercise = new Exercise($data);
+        $exercise->user_id = Auth::id();
+        $exercise->save();
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
         if ($request->wantsJson() || $request->header('X-Quick-Create')) {
@@ -51,9 +57,7 @@ class ExerciseController extends Controller
 
     public function update(ExerciseUpdateRequest $request, Exercise $exercise)
     {
-        if ($exercise->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('update', $exercise);
 
         $exercise->update($request->validated());
 
@@ -62,9 +66,7 @@ class ExerciseController extends Controller
 
     public function destroy(Exercise $exercise)
     {
-        if ($exercise->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('delete', $exercise);
 
         if ($exercise->workoutLines()->exists()) {
             return redirect()->back()->withErrors([

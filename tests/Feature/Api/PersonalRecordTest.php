@@ -3,7 +3,6 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Exercise;
-use App\Models\PersonalRecord;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,8 +15,7 @@ class PersonalRecordTest extends TestCase
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create();
-        PersonalRecord::create([
-            'user_id' => $user->id,
+        $user->personalRecords()->create([
             'exercise_id' => $exercise->id,
             'type' => '1RM',
             'value' => 100,
@@ -57,8 +55,7 @@ class PersonalRecordTest extends TestCase
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create();
-        $pr = PersonalRecord::create([
-            'user_id' => $user->id,
+        $pr = $user->personalRecords()->create([
             'exercise_id' => $exercise->id,
             'type' => '1RM',
             'value' => 100,
@@ -75,8 +72,7 @@ class PersonalRecordTest extends TestCase
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create();
-        $pr = PersonalRecord::create([
-            'user_id' => $user->id,
+        $pr = $user->personalRecords()->create([
             'exercise_id' => $exercise->id,
             'type' => '1RM',
             'value' => 100,
@@ -95,8 +91,7 @@ class PersonalRecordTest extends TestCase
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create();
-        $pr = PersonalRecord::create([
-            'user_id' => $user->id,
+        $pr = $user->personalRecords()->create([
             'exercise_id' => $exercise->id,
             'type' => '1RM',
             'value' => 100,
@@ -114,8 +109,7 @@ class PersonalRecordTest extends TestCase
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();
         $exercise = Exercise::factory()->create();
-        $pr = PersonalRecord::create([
-            'user_id' => $user1->id,
+        $pr = $user1->personalRecords()->create([
             'exercise_id' => $exercise->id,
             'type' => '1RM',
             'value' => 100,

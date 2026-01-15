@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 
 class ExerciseController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
@@ -22,6 +25,8 @@ class ExerciseController extends Controller
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     public function index()
     {
+        $this->authorize('viewAny', Exercise::class);
+
         $exercises = \Spatie\QueryBuilder\QueryBuilder::for(Exercise::class)
             ->allowedFilters(['name', 'type', 'category'])
             ->allowedSorts(['name', 'created_at'])
@@ -62,9 +67,7 @@ class ExerciseController extends Controller
      */
     public function show(Exercise $exercise)
     {
-        if ($exercise->user_id !== null && $exercise->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $this->authorize('view', $exercise);
 
         return new ExerciseResource($exercise);
     }
@@ -74,9 +77,7 @@ class ExerciseController extends Controller
      */
     public function update(Request $request, Exercise $exercise)
     {
-        if ($exercise->user_id !== Auth::id()) {
-            abort(403, 'You can only update your own exercises.');
-        }
+        $this->authorize('update', $exercise);
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
@@ -94,9 +95,7 @@ class ExerciseController extends Controller
      */
     public function destroy(Exercise $exercise)
     {
-        if ($exercise->user_id !== Auth::id()) {
-            abort(403, 'You can only delete your own exercises.');
-        }
+        $this->authorize('delete', $exercise);
 
         $exercise->delete();
 
