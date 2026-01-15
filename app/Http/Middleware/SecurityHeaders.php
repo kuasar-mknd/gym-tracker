@@ -21,7 +21,26 @@ class SecurityHeaders
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'no-referrer-when-downgrade');
-        $response->headers->set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self';");
+
+        // Build CSP with nonce if available, otherwise fall back to unsafe-inline
+        $nonce = $request->attributes->get('csp-nonce');
+
+        if ($nonce) {
+            // HARDENED CSP: Uses nonce instead of unsafe-inline/unsafe-eval
+            $csp = implode('; ', [
+                "default-src 'self'",
+                "script-src 'self' 'nonce-{$nonce}'",
+                "style-src 'self' https://fonts.bunny.net".(app()->isLocal() ? " 'unsafe-inline'" : " 'nonce-{$nonce}'"),
+                "img-src 'self' data: https:",
+                "font-src 'self' https://fonts.bunny.net",
+                "connect-src 'self' ws://localhost:* wss://localhost:* http://localhost:*",
+            ]);
+        } else {
+            // Fallback for non-web requests (API, console, etc.)
+            $csp = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self';";
+        }
+
+        $response->headers->set('Content-Security-Policy', $csp);
 
         return $response;
     }

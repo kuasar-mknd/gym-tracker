@@ -329,14 +329,15 @@ const hasNoResults = computed(() => {
                         <!-- Complete Button -->
                         <button
                             @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
-                            class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors"
+                            class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
                             :class="
                                 set.is_completed
                                     ? 'bg-accent-success text-white'
-                                    : 'bg-white/10 text-white/20 hover:bg-white/20'
+                                    : 'bg-white/10 text-white/20 active:bg-white/20'
                             "
+                            aria-label="Marquer comme complété"
                         >
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
@@ -348,7 +349,7 @@ const hasNoResults = computed(() => {
 
                         <!-- Set Number -->
                         <div
-                            class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/5 text-sm font-bold text-white/40"
+                            class="flex h-11 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/5 text-sm font-bold text-white/40"
                         >
                             {{ index + 1 }}
                         </div>
@@ -359,7 +360,7 @@ const hasNoResults = computed(() => {
                                 type="number"
                                 :value="set.weight"
                                 @change="(e) => updateSet(set, 'weight', e.target.value)"
-                                class="w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
+                                class="h-11 w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none transition-all focus:bg-white/20 focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
                                 :disabled="set.is_completed"
                                 inputmode="decimal"
                             />
@@ -372,7 +373,7 @@ const hasNoResults = computed(() => {
                                 type="number"
                                 :value="set.reps"
                                 @change="(e) => updateSet(set, 'reps', e.target.value)"
-                                class="w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
+                                class="h-11 w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none transition-all focus:bg-white/20 focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
                                 :disabled="set.is_completed"
                                 inputmode="numeric"
                             />
@@ -381,7 +382,7 @@ const hasNoResults = computed(() => {
 
                         <!-- PR Badge -->
                         <div v-if="set.personal_record" class="flex-shrink-0" title="Record personnel !">
-                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-warning/20">
+                            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-warning/20">
                                 <span class="text-xl">🏆</span>
                             </div>
                         </div>
@@ -389,11 +390,11 @@ const hasNoResults = computed(() => {
                         <!-- Delete Set -->
                         <button
                             @click="removeSet(set.id)"
-                            class="rounded-lg p-2 text-white/30 transition hover:text-red-400"
+                            class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-white/30 transition-all active:bg-red-500/20 active:text-red-400"
                             aria-label="Supprimer la série"
                         >
                             <svg
-                                class="h-4 w-4"
+                                class="h-5 w-5"
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
                                 viewBox="0 0 24 24"
@@ -414,10 +415,10 @@ const hasNoResults = computed(() => {
                 <!-- Add Set Button -->
                 <button
                     @click="addSet(line.id)"
-                    class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                    class="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-sm font-medium text-white/70 transition-all active:scale-[0.98] active:bg-white/10 active:text-white"
                 >
                     <svg
-                        class="h-4 w-4"
+                        class="h-5 w-5"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
