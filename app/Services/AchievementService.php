@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Achievement;
 use App\Models\User;
-use App\Models\Workout;
 use Illuminate\Support\Facades\DB;
 
 class AchievementService
@@ -16,9 +15,12 @@ class AchievementService
     {
         $achievements = Achievement::all();
 
+        // NITRO FIX: Pre-load unlocked IDs to avoid N+1 query in loop
+        $unlockedIds = $user->achievements()->pluck('achievement_id')->toArray();
+
         foreach ($achievements as $achievement) {
-            // Skip if already unlocked
-            if ($user->achievements()->where('achievement_id', $achievement->id)->exists()) {
+            // Skip if already unlocked - memory check, no query
+            if (in_array($achievement->id, $unlockedIds)) {
                 continue;
             }
 
@@ -65,8 +67,9 @@ class AchievementService
 
     protected function checkStreak(User $user, float $threshold): bool
     {
-        // Fetch all workout dates, formatted as Y-m-d
+        // NITRO FIX: Only fetch dates within a reasonable window for streak checking
         $workoutDates = $user->workouts()
+            ->where('started_at', '>=', now()->subDays((int) $threshold + 30))
             ->latest('started_at')
             ->pluck('started_at')
             ->map(fn ($date) => $date->format('Y-m-d'))

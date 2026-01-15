@@ -34,7 +34,7 @@ const sizeClasses = {
         :type="type"
         :disabled="disabled || loading"
         :class="[
-            'glass-button font-semibold',
+            'glass-button font-semibold transition-all active:scale-95',
             sizeClasses[size],
             {
                 'glass-button-primary': variant === 'primary',

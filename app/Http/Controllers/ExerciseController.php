@@ -7,6 +7,7 @@ use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class ExerciseController extends Controller
@@ -47,6 +48,9 @@ class ExerciseController extends Controller
         $exercise->user_id = Auth::id();
         $exercise->save();
 
+        // NITRO FIX: Invalidate exercises cache
+        Cache::forget('exercises_list');
+
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
         if ($request->wantsJson() || $request->header('X-Quick-Create')) {
             return response()->json(['exercise' => $exercise], 201);
@@ -60,6 +64,9 @@ class ExerciseController extends Controller
         $this->authorize('update', $exercise);
 
         $exercise->update($request->validated());
+
+        // NITRO FIX: Invalidate exercises cache
+        Cache::forget('exercises_list');
 
         return redirect()->back();
     }
@@ -75,6 +82,9 @@ class ExerciseController extends Controller
         }
 
         $exercise->delete();
+
+        // NITRO FIX: Invalidate exercises cache
+        Cache::forget('exercises_list');
 
         return redirect()->back();
     }
