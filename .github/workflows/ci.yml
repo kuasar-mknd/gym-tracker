@@ -135,8 +135,8 @@ jobs:
                   MAIL_MAILER: array
               run: |
                   php artisan migrate:fresh --seed
-                  php artisan serve --no-reload &
-                  sleep 5
+                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
+                  sleep 10
                   php artisan dusk
 
     lint:
