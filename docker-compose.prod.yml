@@ -25,7 +25,7 @@ services:
             DB_SSL_VERIFY: 'false'
             FRANKENPHP_DEBUG: 1
             # Increase timeout for workers to reach ready state on slow hardware
-            FRANKENPHP_WAIT_FOR_WORKER: '60s'
+            FRANKENPHP_WAIT_FOR_WORKER: '300s'
         links:
             - db
             - redis
