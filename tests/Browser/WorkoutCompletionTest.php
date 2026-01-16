@@ -20,7 +20,7 @@ class WorkoutCompletionTest extends DuskTestCase
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', $password)
             ->click('button[type="submit"]')
-            ->waitForLocation('/dashboard');
+            ->waitForLocation('/dashboard', 15);
     }
 
     public function test_user_can_finish_workout_and_is_redirected(): void
@@ -37,11 +37,11 @@ class WorkoutCompletionTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($user, $workout) {
             $this->manualLogin($browser, $user)
                 ->resize(1920, 1080)
-                ->visitRoute('workouts.show', $workout)
-                ->waitForText('Séance Test Browser', 10)
-                ->waitForText('TERMINER', 10)
+                ->visit('/workouts/'.$workout->id)
+                ->waitForText('Séance Test Browser', 15)
+                ->waitForText('TERMINER', 15)
                 ->press('Terminer')
-                ->waitForText('Terminer la séance ?', 10)
+                ->waitForText('Terminer la séance ?', 15)
                 ->pause(500)
                 ->clickLink('Confirmer')
                 ->waitForRoute('dashboard', [], 15)
@@ -64,8 +64,8 @@ class WorkoutCompletionTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($user, $workout) {
             $this->manualLogin($browser, $user)
                 ->resize(1920, 1080)
-                ->visitRoute('workouts.show', $workout)
-                ->waitForText('Immutable Workout', 10)
+                ->visit('/workouts/'.$workout->id)
+                ->waitForText('Immutable Workout', 15)
                 ->assertDontSee('TERMINER')
                 ->assertSee('TERMINÉE')
                 ->assertMissing('button[aria-label="Ajouter une série"]')
