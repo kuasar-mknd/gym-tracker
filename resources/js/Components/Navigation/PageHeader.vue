@@ -23,7 +23,7 @@ defineProps({
             <div class="flex items-center gap-3">
                 <Link
                     v-if="showBack && backRoute"
-                    :href="backRoute.includes('.') ? route(backRoute) : backRoute"
+                    :href="backRoute.startsWith('http') || backRoute.startsWith('/') ? backRoute : route(backRoute)"
                     class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
                 >
                     <span class="material-symbols-outlined">arrow_back</span>
