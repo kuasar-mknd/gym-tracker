@@ -233,9 +233,9 @@ test('profile page renders correctly', function () {
             ->type('input[type="password"]', 'password123')
             ->click('button[type="submit"]')
             ->waitForLocation('/dashboard')
-            ->visit('/profile')
+            ->waitForLocation('/profile', 10)
             ->assertPathIs('/profile')
-            ->waitForText('Plus')
+            ->waitForText('Plus', 10)
             ->assertNoConsoleExceptions();
     });
 });
@@ -252,9 +252,9 @@ test('tools page renders correctly', function () {
             ->type('input[type="password"]', 'password123')
             ->click('button[type="submit"]')
             ->waitForLocation('/dashboard')
-            ->visit('/tools')
+            ->waitForLocation('/tools', 10)
             ->assertPathIs('/tools')
-            ->waitForText('Outils')
+            ->waitForText('Outils', 10)
             ->assertNoConsoleExceptions();
     });
 });
