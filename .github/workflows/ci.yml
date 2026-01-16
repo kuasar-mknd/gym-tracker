@@ -75,7 +75,6 @@ jobs:
     browser-tests:
         runs-on: ubuntu-latest
         needs: frontend-build
-        continue-on-error: true # Allow deploy while fixing Dusk text assertions for new UI
         services:
             mysql:
                 image: mysql:8.4
@@ -175,7 +174,7 @@ jobs:
     deploy:
         name: Build & Push Image
         runs-on: ubuntu-latest
-        needs: [laravel-tests, lint]
+        needs: [laravel-tests, browser-tests, lint]
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         permissions:
             contents: read

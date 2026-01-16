@@ -118,7 +118,7 @@ test('workouts page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/workouts')
             ->assertPathIs('/workouts')
-            ->waitForText('Mes Séances')
+            ->waitForText('Séances')
             ->assertPresent('.glass-card')
             ->assertNoConsoleExceptions();
     });
@@ -131,7 +131,7 @@ test('stats page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/stats')
             ->assertPathIs('/stats')
-            ->waitForText('Statistiques')
+            ->waitForText('Évolution')
             ->assertPresent('.glass-card')
             ->assertNoConsoleExceptions();
     });
@@ -144,7 +144,7 @@ test('goals page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/goals')
             ->assertPathIs('/goals')
-            ->waitForText('Objectifs')
+            ->waitForText('Objectif')
             ->assertNoConsoleExceptions();
     });
 });
@@ -156,7 +156,7 @@ test('exercises page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/exercises')
             ->assertPathIs('/exercises')
-            ->waitForText('Exercices')
+            ->waitForText('Bibliothèque')
             ->assertNoConsoleExceptions();
     });
 });
@@ -168,7 +168,7 @@ test('templates page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/templates')
             ->assertPathIs('/templates')
-            ->waitForText('Modèles')
+            ->waitForText('Modèle')
             ->assertNoConsoleExceptions();
     });
 });
@@ -216,7 +216,7 @@ test('achievements page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/achievements')
             ->assertPathIs('/achievements')
-            ->waitForText('Trophées')
+            ->waitForText('Succès')
             ->assertNoConsoleExceptions();
     });
 });
@@ -228,7 +228,7 @@ test('profile page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/profile')
             ->assertPathIs('/profile')
-            ->waitForText('Profil')
+            ->waitForText('Mon Profil')
             ->assertNoConsoleExceptions();
     });
 });
@@ -270,9 +270,9 @@ test('user can perform full workout logging flow', function () {
         $browser->loginAs($user)
             ->visit('/workouts')
             // 1. Start new workout
-            ->waitForText('Mes Séances') // Ensure page loaded
-            ->waitForText('Nouvelle Séance', 10)
-            ->press('Nouvelle Séance')
+            ->waitForText('Séances') // Ensure page loaded
+            ->waitFor('button[aria-label="Nouvelle séance"], a[href*="workouts/create"], .glass-fab', 10)
+            ->click('button[aria-label="Nouvelle séance"], a[href*="workouts/create"], .glass-fab')
             ->waitForText('Séance') // Indicator we are on the workout show page
 
             // 2. Add Exercise
