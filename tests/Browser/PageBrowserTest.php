@@ -68,7 +68,7 @@ test('user can login and see dashboard', function () {
         $browser->visit('/login')
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', 'password123')
-            ->press('Se connecter')
+            ->click('button[type="submit"]')
             ->waitForLocation('/dashboard')
             ->assertPathIs('/dashboard');
     });
@@ -82,7 +82,7 @@ test('user can register', function () {
             ->type('input[name="email"]', 'test-dusk-'.time().'@example.com')
             ->type('input[name="password"]', 'SecurePass123!')
             ->type('input[name="password_confirmation"]', 'SecurePass123!')
-            ->press('Créer mon compte')
+            ->click('button[type="submit"]')
             ->waitForText('Test User') // User name appears on dashboard
             ->assertPathIs('/dashboard');
     });
@@ -104,7 +104,7 @@ test('dashboard page renders correctly', function () {
             // Check page is not blank - key UI elements visible
             ->assertPresent('.glass-panel-light')
             // Greeting varies by time, so check static elements
-            ->waitForText('Séances')
+            ->waitForText('Démarrer')
             // Check no JavaScript errors
             ->assertNoConsoleExceptions();
     });
@@ -271,8 +271,8 @@ test('user can perform full workout logging flow', function () {
             ->visit('/workouts')
             // 1. Start new workout
             ->waitForText('Séances') // Ensure page loaded
-            ->waitForText('Commencer maintenant')
-            ->press('Commencer maintenant')
+            ->waitForText('Commencer')
+            ->click('.glass-panel-light button')
             ->waitForText('Séance') // Indicator we are on the workout show page
 
             // 2. Add Exercise
