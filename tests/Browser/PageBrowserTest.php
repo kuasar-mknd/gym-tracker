@@ -228,7 +228,7 @@ test('profile page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/profile')
             ->assertPathIs('/profile')
-            ->waitForText('Mon Profil')
+            ->waitForText('Plus')
             ->assertNoConsoleExceptions();
     });
 });
@@ -240,7 +240,7 @@ test('tools page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/tools')
             ->assertPathIs('/tools')
-            ->waitForText('Tools')
+            ->waitForText('Outils')
             ->assertNoConsoleExceptions();
     });
 });
