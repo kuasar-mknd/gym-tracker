@@ -272,8 +272,10 @@ test('user can perform full workout logging flow', function () {
             // 1. Start new workout
             ->waitForText('Séances') // Ensure page loaded
             ->waitForText('Aucune séance')
-            ->click('button[aria-label="Nouvelle séance"]')
-            ->waitForLocation('/workouts/*', 10)
+            ->waitFor('[data-testid="empty-state-start-workout"]')
+            ->script("document.querySelector('[data-testid=\"empty-state-start-workout\"]').click();");
+
+        $browser->waitForLocation('/workouts/*', 10)
             ->waitForText('Ajouter un exercice', 10) // Unique to Show page
 
             // 2. Add Exercise
