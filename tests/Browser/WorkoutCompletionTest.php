@@ -44,6 +44,7 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->waitFor('main', 15)
                 ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
+                ->dump()
                 ->waitForText('SÉANCE TEST BROWSER', 15)
                 ->waitForText('TERMINER', 15)
                 ->press('Terminer')
