@@ -75,7 +75,7 @@ const getCategoryLabel = (category) => {
                         class="flex h-full flex-col items-center text-center transition-all duration-300"
                         :class="[
                             achievement.is_unlocked
-                                ? 'border-accent-primary/20 bg-glass-strong'
+                                ? 'bg-glass-strong border-accent-primary/20'
                                 : 'opacity-60 grayscale',
                         ]"
                     >

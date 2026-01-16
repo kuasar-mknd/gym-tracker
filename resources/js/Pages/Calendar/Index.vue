@@ -17,8 +17,18 @@ const currentMonth = ref(props.month)
 const selectedDate = ref(null)
 
 const monthNames = [
-    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
 ]
 
 const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -46,10 +56,10 @@ const calendarGrid = computed(() => {
             day: i,
             dateStr: dateStr,
             isToday: isToday(dateStr),
-            hasWorkout: props.workouts.some(w => w.date === dateStr),
-            hasJournal: props.journals.some(j => j.date === dateStr),
-            workouts: props.workouts.filter(w => w.date === dateStr),
-            journal: props.journals.find(j => j.date === dateStr)
+            hasWorkout: props.workouts.some((w) => w.date === dateStr),
+            hasJournal: props.journals.some((j) => j.date === dateStr),
+            workouts: props.workouts.filter((w) => w.date === dateStr),
+            journal: props.journals.find((j) => j.date === dateStr),
         })
     }
 
@@ -58,7 +68,10 @@ const calendarGrid = computed(() => {
 
 const isToday = (dateStr) => {
     const today = new Date()
-    return dateStr === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    return (
+        dateStr ===
+        `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    )
 }
 
 const changeMonth = (delta) => {
@@ -80,7 +93,7 @@ const changeMonth = (delta) => {
             currentMonth.value = newMonth
             currentYear.value = newYear
             selectedDate.value = null // Reset selection on month change
-        }
+        },
     })
 }
 
@@ -99,7 +112,7 @@ const formatDateFull = (dateStr) => {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
-        year: 'numeric'
+        year: 'numeric',
     })
 }
 </script>
@@ -109,7 +122,11 @@ const formatDateFull = (dateStr) => {
 
     <AuthenticatedLayout page-title="Calendrier">
         <template #header-actions>
-            <GlassButton @click="changeMonth(0)" class="!px-3" v-if="currentMonth !== new Date().getMonth() + 1 || currentYear !== new Date().getFullYear()">
+            <GlassButton
+                @click="changeMonth(0)"
+                class="!px-3"
+                v-if="currentMonth !== new Date().getMonth() + 1 || currentYear !== new Date().getFullYear()"
+            >
                 Aujourd'hui
             </GlassButton>
         </template>
@@ -134,7 +151,11 @@ const formatDateFull = (dateStr) => {
             <GlassCard class="overflow-hidden" padding="p-0">
                 <!-- Weekday Headers -->
                 <div class="grid grid-cols-7 border-b border-white/10 bg-white/5 py-2">
-                    <div v-for="day in weekDays" :key="day" class="text-center text-[10px] font-bold uppercase tracking-wider text-white/60">
+                    <div
+                        v-for="day in weekDays"
+                        :key="day"
+                        class="text-center text-[10px] font-bold uppercase tracking-wider text-white/60"
+                    >
                         {{ day }}
                     </div>
                 </div>
@@ -149,7 +170,7 @@ const formatDateFull = (dateStr) => {
                             'relative flex aspect-square cursor-pointer flex-col items-center justify-center border-b border-r border-white/5 transition-all hover:bg-white/10',
                             day.day ? '' : 'pointer-events-none',
                             selectedDate?.dateStr === day.dateStr ? 'bg-white/15 shadow-inner' : '',
-                            (index + 1) % 7 === 0 ? 'border-r-0' : '' // Remove right border for last column
+                            (index + 1) % 7 === 0 ? 'border-r-0' : '', // Remove right border for last column
                         ]"
                     >
                         <div v-if="day.day">
@@ -157,7 +178,7 @@ const formatDateFull = (dateStr) => {
                             <span
                                 :class="[
                                     'flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold',
-                                    day.isToday ? 'bg-electric-orange text-white' : 'text-white/80'
+                                    day.isToday ? 'bg-electric-orange text-white' : 'text-white/80',
                                 ]"
                             >
                                 {{ day.day }}
@@ -165,8 +186,14 @@ const formatDateFull = (dateStr) => {
 
                             <!-- Indicators -->
                             <div class="mt-1 flex gap-1">
-                                <span v-if="day.hasWorkout" class="h-1.5 w-1.5 rounded-full bg-vivid-violet shadow-[0_0_4px_rgba(136,0,255,0.8)]"></span>
-                                <span v-if="day.hasJournal" class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]"></span>
+                                <span
+                                    v-if="day.hasWorkout"
+                                    class="h-1.5 w-1.5 rounded-full bg-vivid-violet shadow-[0_0_4px_rgba(136,0,255,0.8)]"
+                                ></span>
+                                <span
+                                    v-if="day.hasJournal"
+                                    class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]"
+                                ></span>
                             </div>
                         </div>
                     </div>
@@ -195,14 +222,18 @@ const formatDateFull = (dateStr) => {
                         <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]" padding="p-4">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
-                                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-vivid-violet/20 text-vivid-violet">
+                                    <div
+                                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-vivid-violet/20 text-vivid-violet"
+                                    >
                                         <span class="material-symbols-outlined">fitness_center</span>
                                     </div>
                                     <div>
                                         <div class="font-bold text-white">{{ workout.name }}</div>
                                         <div class="text-xs text-white/50">
                                             {{ workout.exercises_count }} exercices
-                                            <span v-if="workout.preview_exercises.length" class="text-white/30">• {{ workout.preview_exercises.join(', ') }}</span>
+                                            <span v-if="workout.preview_exercises.length" class="text-white/30"
+                                                >• {{ workout.preview_exercises.join(', ') }}</span
+                                            >
                                         </div>
                                     </div>
                                 </div>
@@ -217,36 +248,42 @@ const formatDateFull = (dateStr) => {
                     <h4 class="text-xs font-black uppercase tracking-widest text-text-muted">Journal</h4>
                     <GlassCard padding="p-4">
                         <div class="flex items-start gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
+                            <div
+                                class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400"
+                            >
                                 <span class="material-symbols-outlined">menu_book</span>
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
                                     <span class="font-bold text-white">Entrée Journal</span>
-                                    <span v-if="selectedDayDetails.journal.mood_score" class="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-white/80">
+                                    <span
+                                        v-if="selectedDayDetails.journal.mood_score"
+                                        class="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-white/80"
+                                    >
                                         Humeur: {{ selectedDayDetails.journal.mood_score }}/10
                                     </span>
                                 </div>
                                 <div v-if="selectedDayDetails.journal.has_note" class="mt-1 text-sm text-white/60">
                                     Notes ajoutées...
                                 </div>
-                                <div v-else class="mt-1 text-sm italic text-white/40">
-                                    Aucune note écrite.
-                                </div>
+                                <div v-else class="mt-1 text-sm italic text-white/40">Aucune note écrite.</div>
                             </div>
                         </div>
                     </GlassCard>
                 </div>
 
                 <!-- Empty State -->
-                <div v-if="!selectedDayDetails.workouts.length && !selectedDayDetails.journal" class="py-8 text-center text-white/40">
+                <div
+                    v-if="!selectedDayDetails.workouts.length && !selectedDayDetails.journal"
+                    class="py-8 text-center text-white/40"
+                >
                     <span class="material-symbols-outlined mb-2 text-4xl opacity-50">event_busy</span>
                     <p>Aucune activité ce jour-là.</p>
                 </div>
             </div>
 
             <div v-else class="py-12 text-center text-white/30">
-                <span class="material-symbols-outlined mb-2 text-4xl animate-pulse">touch_app</span>
+                <span class="material-symbols-outlined mb-2 animate-pulse text-4xl">touch_app</span>
                 <p>Sélectionne une date pour voir les détails</p>
             </div>
         </div>

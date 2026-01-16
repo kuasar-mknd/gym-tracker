@@ -60,7 +60,7 @@ const formatDate = (date) => {
                 v-if="notifications.data.length === 0"
                 class="flex flex-col items-center justify-center py-12 text-center"
             >
-                <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-glass text-white/20">
+                <div class="bg-glass mb-4 flex h-16 w-16 items-center justify-center rounded-full text-white/20">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         class="h-8 w-8"
