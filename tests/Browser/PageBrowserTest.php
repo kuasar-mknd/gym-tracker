@@ -104,7 +104,7 @@ test('dashboard page renders correctly', function () {
             // Check page is not blank - key UI elements visible
             ->assertPresent('.glass-panel-light')
             // Greeting varies by time, so check static elements
-            ->waitForText('Démarrer')
+            ->waitForText('DÉMARRER')
             // Check no JavaScript errors
             ->assertNoConsoleExceptions();
     });
@@ -271,7 +271,8 @@ test('user can perform full workout logging flow', function () {
             ->visit('/workouts')
             // 1. Start new workout
             ->waitForText('Séances') // Ensure page loaded
-            ->waitForText('Commencer')
+            ->waitForText('Aucune séance')
+            ->waitForText('Commencer maintenant')
             ->click('.glass-panel-light button')
             ->waitForText('Séance') // Indicator we are on the workout show page
 
