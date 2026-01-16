@@ -44,7 +44,7 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->waitFor('main', 15)
                 ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
-                ->waitForText('Séance Test Browser', 15)
+                ->waitForText('SÉANCE TEST BROWSER', 15)
                 ->waitForText('TERMINER', 15)
                 ->press('Terminer')
                 ->waitForText('Terminer la séance ?', 15)
@@ -73,9 +73,9 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('main', 15)
                 ->assertNoConsoleExceptions()
-                ->waitForText('Immutable Workout', 15)
+                ->waitForText('IMMUTABLE WORKOUT', 15)
                 ->assertDontSee('TERMINER')
-                ->assertSee('TERMINÉE')
+                ->assertSee('Terminée')
                 ->assertMissing('button[aria-label="Ajouter une série"]')
                 ->assertMissing('button[aria-label="Ajouter un exercice"]');
         });
