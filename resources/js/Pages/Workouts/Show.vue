@@ -269,7 +269,9 @@ const hasNoResults = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-white">{{ workout.name || 'Séance' }}</h2>
+                <h2 class="font-display text-xl font-black uppercase italic tracking-tight text-text-main">
+                    {{ workout.name || 'Séance' }}
+                </h2>
                 <GlassButton @click="showAddExercise = true">
                     <svg
                         class="mr-2 h-4 w-4"
@@ -292,12 +294,16 @@ const hasNoResults = computed(() => {
                 <!-- Exercise Header -->
                 <div class="mb-4 flex items-center justify-between">
                     <div>
-                        <h3 class="text-lg font-bold text-white">{{ line.exercise.name }}</h3>
-                        <p class="text-sm text-white/50">{{ line.exercise.category }}</p>
+                        <h3 class="font-display text-xl font-black uppercase italic tracking-tight text-text-main">
+                            {{ line.exercise.name }}
+                        </h3>
+                        <p class="text-xs font-bold uppercase tracking-wider text-text-muted">
+                            {{ line.exercise.category }}
+                        </p>
                     </div>
                     <button
                         @click="removeLine(line.id)"
-                        class="rounded-lg p-2 text-white/40 transition hover:bg-white/10 hover:text-red-400"
+                        class="rounded-xl p-2 text-text-muted transition hover:bg-red-50 hover:text-red-500"
                         aria-label="Supprimer l'exercice"
                     >
                         <svg
@@ -323,8 +329,8 @@ const hasNoResults = computed(() => {
                     <div
                         v-for="(set, index) in line.sets"
                         :key="set.id"
-                        class="flex items-center gap-3 rounded-xl bg-white/5 p-3 transition-opacity"
-                        :class="{ 'opacity-50': set.is_completed }"
+                        class="flex items-center gap-3 rounded-2xl border border-white bg-white/80 p-4 shadow-sm transition-all"
+                        :class="{ 'bg-slate-50 opacity-50': set.is_completed }"
                     >
                         <!-- Complete Button -->
                         <button
@@ -332,8 +338,8 @@ const hasNoResults = computed(() => {
                             class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
                             :class="
                                 set.is_completed
-                                    ? 'bg-accent-success text-white'
-                                    : 'bg-white/10 text-white/20 active:bg-white/20'
+                                    ? 'bg-neon-green text-text-main shadow-neon'
+                                    : 'bg-slate-100 text-slate-300 hover:bg-neon-green/20 hover:text-neon-green'
                             "
                             aria-label="Marquer comme complété"
                         >
@@ -349,7 +355,7 @@ const hasNoResults = computed(() => {
 
                         <!-- Set Number -->
                         <div
-                            class="flex h-11 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/5 text-sm font-bold text-white/40"
+                            class="flex h-11 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-text-muted"
                         >
                             {{ index + 1 }}
                         </div>
@@ -360,12 +366,12 @@ const hasNoResults = computed(() => {
                                 type="number"
                                 :value="set.weight"
                                 @change="(e) => updateSet(set, 'weight', e.target.value)"
-                                class="h-11 w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none transition-all focus:bg-white/20 focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
+                                class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                 :disabled="set.is_completed"
                                 inputmode="decimal"
                                 :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
                             />
-                            <span class="text-sm text-white/50">kg</span>
+                            <span class="text-xs font-bold uppercase text-text-muted">kg</span>
                         </div>
 
                         <!-- Reps Input -->
@@ -374,12 +380,12 @@ const hasNoResults = computed(() => {
                                 type="number"
                                 :value="set.reps"
                                 @change="(e) => updateSet(set, 'reps', e.target.value)"
-                                class="h-11 w-16 rounded-lg bg-white/10 px-2 py-2 text-center text-white outline-none transition-all focus:bg-white/20 focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
+                                class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                 :disabled="set.is_completed"
                                 inputmode="numeric"
                                 :aria-label="`${line.exercise.name} : Répétitions série ${index + 1}`"
                             />
-                            <span class="text-sm text-white/50">reps</span>
+                            <span class="text-xs font-bold uppercase text-text-muted">reps</span>
                         </div>
 
                         <!-- PR Badge -->
@@ -392,7 +398,7 @@ const hasNoResults = computed(() => {
                         <!-- Delete Set -->
                         <button
                             @click="removeSet(set.id)"
-                            class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-white/30 transition-all active:bg-red-500/20 active:text-red-400"
+                            class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-slate-300 transition-all hover:bg-red-50 hover:text-red-500"
                             aria-label="Supprimer la série"
                         >
                             <svg
@@ -417,7 +423,7 @@ const hasNoResults = computed(() => {
                 <!-- Add Set Button -->
                 <button
                     @click="addSet(line.id)"
-                    class="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-white/5 py-3 text-sm font-medium text-white/70 transition-all active:scale-[0.98] active:bg-white/10 active:text-white"
+                    class="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-neon-green/30 bg-neon-green/10 py-3 text-sm font-bold uppercase tracking-wider text-neon-green transition-all hover:border-transparent hover:bg-neon-green hover:text-text-main active:scale-[0.98]"
                 >
                     <svg
                         class="h-5 w-5"
@@ -437,8 +443,8 @@ const hasNoResults = computed(() => {
             <GlassCard v-if="workout.workout_lines.length === 0" class="animate-slide-up">
                 <div class="py-12 text-center">
                     <div class="mb-3 text-5xl">🎯</div>
-                    <h3 class="text-lg font-semibold text-white">Séance vide</h3>
-                    <p class="mt-1 text-white/60">Ajoute ton premier exercice</p>
+                    <h3 class="text-lg font-bold text-text-main">Séance vide</h3>
+                    <p class="mt-1 text-text-muted">Ajoute ton premier exercice</p>
                     <GlassButton variant="primary" class="mt-4" @click="showAddExercise = true">
                         Ajouter un exercice
                     </GlassButton>
@@ -468,13 +474,13 @@ const hasNoResults = computed(() => {
                 >
                     <div class="glass-modal animate-slide-up overflow-hidden">
                         <!-- Modal Header -->
-                        <div class="flex items-center justify-between border-b border-glass-border p-4">
-                            <h3 class="text-lg font-bold text-white">
+                        <div class="flex items-center justify-between border-b border-slate-200 p-4">
+                            <h3 class="font-display text-lg font-black uppercase italic text-text-main">
                                 {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
                             </h3>
                             <button
                                 @click="closeModal"
-                                class="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white"
+                                class="rounded-xl p-2 text-text-muted hover:bg-slate-100 hover:text-text-main"
                                 aria-label="Fermer"
                             >
                                 <svg
@@ -507,7 +513,10 @@ const hasNoResults = computed(() => {
                                 />
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="mb-1.5 block text-sm font-medium text-white/70">Type</label>
+                                        <label
+                                            class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted"
+                                            >Type</label
+                                        >
                                         <select v-model="createExerciseForm.type" class="glass-input w-full text-sm">
                                             <option v-for="t in types" :key="t.value" :value="t.value">
                                                 {{ t.label }}
@@ -515,7 +524,10 @@ const hasNoResults = computed(() => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="mb-1.5 block text-sm font-medium text-white/70">Catégorie</label>
+                                        <label
+                                            class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted"
+                                            >Catégorie</label
+                                        >
                                         <select
                                             v-model="createExerciseForm.category"
                                             class="glass-input w-full text-sm"

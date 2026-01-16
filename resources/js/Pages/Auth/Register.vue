@@ -23,11 +23,13 @@ const submit = () => {
         <Head title="Inscription" />
 
         <div class="mb-6 text-center">
-            <h2 class="text-2xl font-bold text-white">Bienvenue ! 💪</h2>
-            <p class="mt-1 text-white/60">Crée ton compte pour commencer</p>
+            <h2 class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main">
+                Bienvenue ! 💪
+            </h2>
+            <p class="mt-2 text-text-muted">Crée ton compte pour commencer</p>
         </div>
 
-        <form @submit.prevent="submit" class="space-y-4">
+        <form @submit.prevent="submit" class="space-y-5">
             <GlassInput
                 v-model="form.name"
                 type="text"
@@ -86,44 +88,46 @@ const submit = () => {
             <!-- Social Login -->
             <div class="relative my-6">
                 <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-glass-border"></div>
+                    <div class="w-full border-t border-slate-200"></div>
                 </div>
                 <div class="relative flex justify-center text-sm">
-                    <span class="bg-[#1E1E1E] px-2 text-white/50">Ou s'inscrire avec</span>
+                    <span class="rounded-full bg-white px-4 py-1 font-medium text-text-muted">
+                        Ou s'inscrire avec
+                    </span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-3">
+            <div class="flex justify-center gap-4">
                 <a
                     :href="route('social.redirect', 'google')"
-                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/475656/google-color.svg"
                         loading="lazy"
-                        class="h-5 w-5"
+                        class="h-6 w-6"
                         alt="Google"
                     />
                 </a>
                 <a
                     :href="route('social.redirect', 'github')"
-                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/512317/github-142.svg"
                         loading="lazy"
-                        class="h-5 w-5 invert"
+                        class="h-6 w-6 invert"
                         alt="GitHub"
                     />
                 </a>
                 <a
                     :href="route('social.redirect', 'apple')"
-                    class="bg-glass-surface flex items-center justify-center rounded-xl border border-glass-border p-2 transition hover:bg-white/10"
+                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-700 bg-black shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/511330/apple-173.svg"
                         loading="lazy"
-                        class="h-5 w-5 invert"
+                        class="h-6 w-6 invert"
                         alt="Apple"
                     />
                 </a>
@@ -131,9 +135,13 @@ const submit = () => {
         </form>
 
         <template #footer>
-            <p>
+            <p class="text-text-muted">
                 Déjà inscrit ?
-                <Link :href="route('login')" class="text-accent-primary hover:underline"> Se connecter </Link>
+                <Link
+                    :href="route('login')"
+                    class="font-bold text-electric-orange transition-colors hover:text-vivid-violet"
+                    >Se connecter</Link
+                >
             </p>
         </template>
     </GuestLayout>
