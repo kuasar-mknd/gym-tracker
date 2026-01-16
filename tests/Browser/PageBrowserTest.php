@@ -216,7 +216,7 @@ test('achievements page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/achievements')
             ->assertPathIs('/achievements')
-            ->waitForText('Succès')
+            ->waitForText('Trophées')
             ->assertNoConsoleExceptions();
     });
 });
@@ -240,7 +240,7 @@ test('tools page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/tools')
             ->assertPathIs('/tools')
-            ->waitForText('Calculateurs')
+            ->waitForText('Tools')
             ->assertNoConsoleExceptions();
     });
 });
@@ -252,7 +252,7 @@ test('plates calculator page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/plates')
             ->assertPathIs('/plates')
-            ->waitForText('Calculateur')
+            ->waitForText('CALCULATEUR')
             ->assertNoConsoleExceptions();
     });
 });
@@ -271,8 +271,8 @@ test('user can perform full workout logging flow', function () {
             ->visit('/workouts')
             // 1. Start new workout
             ->waitForText('Séances') // Ensure page loaded
-            ->waitFor('button[aria-label="Nouvelle séance"], a[href*="workouts/create"], .glass-fab', 10)
-            ->click('button[aria-label="Nouvelle séance"], a[href*="workouts/create"], .glass-fab')
+            ->waitForText('Nouvelle Séance')
+            ->press('Nouvelle Séance')
             ->waitForText('Séance') // Indicator we are on the workout show page
 
             // 2. Add Exercise
