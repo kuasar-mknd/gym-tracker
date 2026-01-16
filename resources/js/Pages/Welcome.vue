@@ -13,7 +13,13 @@ defineProps({
 <template>
     <Head title="Bienvenue" />
 
-    <div class="relative flex min-h-screen flex-col items-center justify-center px-6 py-12">
+    <div
+        class="relative flex min-h-screen flex-col items-center justify-center px-6 py-12"
+        :style="{
+            paddingTop: 'calc(3rem + var(--safe-area-top))',
+            paddingBottom: 'calc(3rem + var(--safe-area-bottom))',
+        }"
+    >
         <!-- Liquid Background -->
         <LiquidBackground variant="default" />
 
