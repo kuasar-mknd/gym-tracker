@@ -15,7 +15,8 @@ class WorkoutCompletionTest extends DuskTestCase
      */
     private function manualLogin(Browser $browser, User $user, string $password = 'password123'): Browser
     {
-        return $browser->visit('/login')
+        return $browser->logout()
+            ->visit('/login')
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', $password)
             ->click('button[type="submit"]')

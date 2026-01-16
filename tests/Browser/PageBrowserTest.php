@@ -227,7 +227,8 @@ test('profile page renders correctly', function () {
     ]);
 
     $this->browse(function (Browser $browser) use ($user) {
-        $browser->visit('/login')
+        $browser->logout()
+            ->visit('/login')
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', 'password123')
             ->click('button[type="submit"]')
@@ -245,7 +246,8 @@ test('tools page renders correctly', function () {
     ]);
 
     $this->browse(function (Browser $browser) use ($user) {
-        $browser->visit('/login')
+        $browser->logout()
+            ->visit('/login')
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', 'password123')
             ->click('button[type="submit"]')
@@ -301,19 +303,19 @@ test('user can perform full workout logging flow', function () {
             ->click('button[aria-label="Ajouter Bench Press"]')
             ->waitUntilMissing('.glass-modal')
 
-        // 3. Verify Exercise Added
+            // 3. Verify Exercise Added
             ->waitForText('Bench Press')
 
-        // 4. Log a Set
+            // 4. Log a Set
             ->press('Ajouter une série')
             ->waitFor('input[aria-label*="Poids"]')
             ->type('input[aria-label*="Poids"]', '80')
             ->type('input[aria-label*="Répétitions"]', '12')
 
-        // 5. Complete Set
+            // 5. Complete Set
             ->click('button[aria-label="Marquer comme complété"]')
 
-        // 6. Verify Completion (Green background class or checkmark)
+            // 6. Verify Completion (Green background class or checkmark)
             ->waitFor('.bg-accent-success')
             ->refresh()
             ->waitForText('Bench Press')
