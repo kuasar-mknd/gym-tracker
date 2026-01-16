@@ -12,9 +12,24 @@ class WorkoutCompletionTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
+    /**
+     * Helper method to manually login a user via the login form.
+     * This is more reliable than loginAs() in CI environments.
+     */
+    private function manualLogin(Browser $browser, User $user, string $password = 'password123'): Browser
+    {
+        return $browser->visit('/login')
+            ->type('input[type="email"]', $user->email)
+            ->type('input[type="password"]', $password)
+            ->click('button[type="submit"]')
+            ->waitForLocation('/dashboard');
+    }
+
     public function test_user_can_finish_workout_and_is_redirected(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'password' => bcrypt('password123'),
+        ]);
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
             'name' => 'Séance Test Browser',
@@ -22,9 +37,7 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout) {
-            $browser->loginAs($user)
-                ->visit('/dashboard')
-                ->waitForRoute('dashboard', [], 10)
+            $this->manualLogin($browser, $user)
                 ->resize(1920, 1080)
                 ->visitRoute('workouts.show', $workout)
                 ->waitForText('Séance Test Browser', 10)
@@ -40,7 +53,9 @@ class WorkoutCompletionTest extends DuskTestCase
 
     public function test_finished_workout_is_immutable_in_ui(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'password' => bcrypt('password123'),
+        ]);
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
             'name' => 'Immutable Workout',
@@ -49,9 +64,7 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout) {
-            $browser->loginAs($user)
-                ->visit('/dashboard')
-                ->waitForRoute('dashboard', [], 10)
+            $this->manualLogin($browser, $user)
                 ->resize(1920, 1080)
                 ->visitRoute('workouts.show', $workout)
                 ->waitForText('Immutable Workout', 10)

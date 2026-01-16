@@ -222,10 +222,16 @@ test('achievements page renders correctly', function () {
 });
 
 test('profile page renders correctly', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'password' => bcrypt('password123'),
+    ]);
 
     $this->browse(function (Browser $browser) use ($user) {
-        $browser->loginAs($user)
+        $browser->visit('/login')
+            ->type('input[type="email"]', $user->email)
+            ->type('input[type="password"]', 'password123')
+            ->click('button[type="submit"]')
+            ->waitForLocation('/dashboard')
             ->visit('/profile')
             ->assertPathIs('/profile')
             ->waitForText('Plus')
@@ -234,12 +240,16 @@ test('profile page renders correctly', function () {
 });
 
 test('tools page renders correctly', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'password' => bcrypt('password123'),
+    ]);
 
     $this->browse(function (Browser $browser) use ($user) {
-        $browser->loginAs($user)
-            ->visit('/dashboard')
-            ->waitForRoute('dashboard', [], 5)
+        $browser->visit('/login')
+            ->type('input[type="email"]', $user->email)
+            ->type('input[type="password"]', 'password123')
+            ->click('button[type="submit"]')
+            ->waitForLocation('/dashboard')
             ->visit('/tools')
             ->assertPathIs('/tools')
             ->waitForText('Outils')
