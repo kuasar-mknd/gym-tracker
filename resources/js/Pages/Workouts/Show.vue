@@ -1,6 +1,14 @@
 <!--
   Workouts/Show.vue - Active Workout Page
-  Mobile-first design with glass cards for exercise logging
+  Mobile-first design with glass cards for exercise logging.
+
+  This component handles the active workout session. It allows users to:
+  - View and manage exercises (WorkoutLines) and their sets.
+  - Add new exercises (from existing list or create new ones).
+  - Log weight and reps for each set.
+  - Mark sets as complete, triggering a rest timer.
+  - Save the workout structure as a template.
+  - Delete exercises and sets.
 -->
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
@@ -11,6 +19,13 @@ import RestTimer from '@/Components/Workout/RestTimer.vue'
 import { Head, useForm, router, usePage } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
+/**
+ * Component Props
+ * @property {Object} workout - The current workout object including relations (workout_lines, sets, exercises).
+ * @property {Array} exercises - List of all available exercises for selection.
+ * @property {Array} categories - List of exercise categories (e.g., 'Pectoraux', 'Dos').
+ * @property {Array} types - List of exercise types (e.g., 'strength', 'cardio').
+ */
 const props = defineProps({
     workout: Object,
     exercises: Array,
@@ -28,8 +43,20 @@ const props = defineProps({
     },
 })
 
+// --- State Management ---
+
+/** Controls the visibility of the Rest Timer modal. */
 const showTimer = ref(false)
+
+/** Duration for the rest timer in seconds. */
 const timerDuration = ref(90)
+
+/**
+ * Marks a set as completed/incomplete and triggers the rest timer if completed.
+ *
+ * @param {Object} set - The set object to update.
+ * @param {Number|null} exerciseRestTime - The default rest time for the exercise.
+ */
 const toggleSetCompletion = (set, exerciseRestTime) => {
     const newState = !set.is_completed
     router.patch(
@@ -48,7 +75,12 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
     )
 }
 
+/** Controls the loading state when saving as template. */
 const savingTemplate = ref(false)
+
+/**
+ * Saves the current workout structure (exercises and sets) as a reusable template.
+ */
 const saveAsTemplate = () => {
     savingTemplate.value = true
     router.post(
@@ -60,26 +92,44 @@ const saveAsTemplate = () => {
     )
 }
 
+/** Controls visibility of the "Add Exercise" modal. */
 const showAddExercise = ref(false)
+
+/** Search query for filtering exercises. */
 const searchQuery = ref('')
+
+/** Controls visibility of the "Create New Exercise" form within the modal. */
 const showCreateForm = ref(false)
+
+/** Local copy of exercises to allow immediate updates when creating new ones. */
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
 
-// Confirmation modal state
+/** Controls visibility of the deletion confirmation modal. */
 const showConfirmModal = ref(false)
+
+/** Callback function to execute upon confirmation. */
 const confirmAction = ref(null)
+
+/** Message displayed in the confirmation modal. */
 const confirmMessage = ref('')
 
+/** Form for adding an existing exercise to the workout. */
 const addExerciseForm = useForm({
     exercise_id: '',
 })
 
+/** Form for creating a new custom exercise. */
 const createExerciseForm = useForm({
     name: '',
     type: 'strength',
     category: '',
 })
 
+/**
+ * Adds an existing exercise to the workout.
+ *
+ * @param {Number} exerciseId - The ID of the exercise to add.
+ */
 const addExercise = (exerciseId) => {
     addExerciseForm.exercise_id = exerciseId
     addExerciseForm.post(route('workout-lines.store', { workout: props.workout.id }), {
@@ -90,6 +140,14 @@ const addExercise = (exerciseId) => {
     })
 }
 
+/**
+ * Creates a new exercise via API and immediately adds it to the current workout.
+ *
+ * This handles a complex flow:
+ * 1. POST to /exercises to create the global exercise record.
+ * 2. Updates local exercise list.
+ * 3. POST to /workout-lines to add it to the workout.
+ */
 const createAndAddExercise = async () => {
     createExerciseForm.processing = true
     createExerciseForm.clearErrors()
@@ -166,22 +224,31 @@ const createAndAddExercise = async () => {
     }
 }
 
+/** Pre-fills the create form with the current search query. */
 const quickCreate = () => {
     createExerciseForm.name = searchQuery.value
     showCreateForm.value = true
 }
 
+/** Cancels creation and resets the form. */
 const cancelCreate = () => {
     showCreateForm.value = false
     createExerciseForm.reset()
 }
 
+/** Closes the add/create exercise modal and resets state. */
 const closeModal = () => {
     showAddExercise.value = false
     showCreateForm.value = false
     searchQuery.value = ''
 }
 
+/**
+ * Removes an exercise (WorkoutLine) from the workout.
+ * Requires user confirmation via modal.
+ *
+ * @param {Number} lineId - The ID of the WorkoutLine to remove.
+ */
 const removeLine = (lineId) => {
     confirmMessage.value = 'Supprimer cet exercice de la séance ?'
     confirmAction.value = () => {
@@ -191,11 +258,18 @@ const removeLine = (lineId) => {
     showConfirmModal.value = true
 }
 
+/** Closes the confirmation modal. */
 const cancelConfirm = () => {
     showConfirmModal.value = false
     confirmAction.value = null
 }
 
+/**
+ * Adds a new set to a specific exercise line.
+ * Copies weight and reps from the previous set if available.
+ *
+ * @param {Number} lineId - The ID of the WorkoutLine.
+ */
 const addSet = (lineId) => {
     const line = props.workout.workout_lines.find((l) => l.id === lineId)
     const lastSet = line.sets.at(-1)
@@ -206,20 +280,38 @@ const addSet = (lineId) => {
     })
 }
 
+/**
+ * Updates a specific field (weight or reps) of a set.
+ *
+ * @param {Object} set - The set to update.
+ * @param {String} field - The field name ('weight' or 'reps').
+ * @param {Number} value - The new value.
+ */
 const updateSet = (set, field, value) => {
     router.patch(route('sets.update', { set: set.id }), { [field]: value }, { preserveScroll: true, only: ['workout'] })
 }
 
+/**
+ * Deletes a set from the workout.
+ *
+ * @param {Number} setId - The ID of the set to delete.
+ */
 const removeSet = (setId) => {
     router.delete(route('sets.destroy', { set: setId }), { preserveScroll: true })
 }
 
+/**
+ * Computed property to filter exercises based on search query.
+ */
 const filteredExercises = computed(() => {
     const exercises = localExercises.value.filter((e) => e && e.id)
     if (!searchQuery.value) return exercises
     return exercises.filter((e) => e.name?.toLowerCase().includes(searchQuery.value.toLowerCase()))
 })
 
+/**
+ * Computed property checking if search yields no results.
+ */
 const hasNoResults = computed(() => {
     return searchQuery.value && filteredExercises.value.length === 0
 })
