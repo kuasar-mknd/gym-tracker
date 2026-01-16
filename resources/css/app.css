@@ -304,7 +304,7 @@
     /* ===== FLOATING BOTTOM NAV ===== */
     .glass-nav {
         position: fixed;
-        bottom: calc(1.5rem + var(--safe-area-bottom));
+        bottom: calc(0.75rem + var(--safe-area-bottom));
         left: 1rem;
         right: 1rem;
         background: rgba(255, 255, 255, 0.9);
@@ -389,7 +389,7 @@
     /* ===== FAB (Floating Action Button) ===== */
     .glass-fab {
         position: fixed;
-        bottom: 2rem;
+        bottom: calc(6rem + var(--safe-area-bottom));
         right: 1.5rem;
         width: 4rem;
         height: 4rem;
