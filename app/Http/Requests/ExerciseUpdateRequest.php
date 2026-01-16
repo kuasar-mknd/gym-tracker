@@ -12,7 +12,7 @@ class ExerciseUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('update', $this->route('exercise')) ?? false;
     }
 
     /**
@@ -23,8 +23,8 @@ class ExerciseUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('exercises')->ignore($this->exercise)],
-            'type' => ['required', Rule::in(['strength', 'cardio', 'timed'])],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'type' => ['sometimes', 'required', Rule::in(['strength', 'cardio', 'timed'])],
             'category' => ['nullable', 'string', 'max:255'],
         ];
     }

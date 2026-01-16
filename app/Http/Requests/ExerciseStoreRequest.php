@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Exercise;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,7 +13,7 @@ class ExerciseStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('create', Exercise::class) ?? false;
     }
 
     /**
@@ -23,7 +24,7 @@ class ExerciseStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', 'unique:exercises,name'],
+            'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['strength', 'cardio', 'timed'])],
             'category' => ['nullable', 'string', 'max:255'],
         ];
