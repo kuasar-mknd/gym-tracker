@@ -1,88 +1,207 @@
 <?php
 
-namespace Tests\Feature;
-
+use App\Models\DailyJournal;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class DailyJournalTest extends TestCase
-{
-    use RefreshDatabase;
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\delete;
+use function Pest\Laravel\get;
+use function Pest\Laravel\post;
 
-    public function test_user_can_view_journal_index(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+uses(RefreshDatabase::class);
 
-        $response = $this->get(route('daily-journals.index'));
+test('authenticated user can view daily journal index', function () {
+    $user = User::factory()->create();
 
-        $response->assertStatus(200);
-    }
+    actingAs($user)
+        ->get(route('daily-journals.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Journal/Index')
+            ->has('journals')
+        );
+});
 
-    public function test_user_can_create_journal_entry(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+test('authenticated user can create a daily journal entry', function () {
+    $user = User::factory()->create();
 
-        $response = $this->post(route('daily-journals.store'), [
+    actingAs($user)
+        ->post(route('daily-journals.store'), [
             'date' => now()->format('Y-m-d'),
-            'content' => 'Test journal content',
+            'content' => 'Today was a great day!',
             'mood_score' => 5,
             'sleep_quality' => 4,
             'stress_level' => 2,
             'energy_level' => 8,
             'motivation_level' => 9,
-            'nutrition_score' => 4,
+            'nutrition_score' => 5,
             'training_intensity' => 7,
-        ]);
+        ])
+        ->assertRedirect();
 
-        $response->assertRedirect();
-        $this->assertDatabaseHas('daily_journals', [
-            'user_id' => $user->id,
-            'content' => 'Test journal content',
-            'energy_level' => 8,
-        ]);
-    }
+    assertDatabaseHas('daily_journals', [
+        'user_id' => $user->id,
+        'date' => now()->format('Y-m-d'),
+        'content' => 'Today was a great day!',
+        'mood_score' => 5,
+    ]);
+});
 
-    public function test_user_can_update_existing_entry(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+test('authenticated user can update an existing journal entry for the same date', function () {
+    $user = User::factory()->create();
+    $date = now()->format('Y-m-d');
 
-        $journal = $user->dailyJournals()->create([
+    // Create initial entry
+    DailyJournal::factory()->create([
+        'user_id' => $user->id,
+        'date' => $date,
+        'content' => 'Initial content',
+        'mood_score' => 3,
+    ]);
+
+    // Send post request with same date but new data
+    actingAs($user)
+        ->post(route('daily-journals.store'), [
+            'date' => $date,
+            'content' => 'Updated content',
+            'mood_score' => 5,
+        ])
+        ->assertRedirect();
+
+    // Should update existing record, not create new one
+    expect(DailyJournal::where('user_id', $user->id)->count())->toBe(1);
+
+    assertDatabaseHas('daily_journals', [
+        'user_id' => $user->id,
+        'date' => $date,
+        'content' => 'Updated content',
+        'mood_score' => 5,
+    ]);
+});
+
+test('authenticated user can delete their own journal entry', function () {
+    $user = User::factory()->create();
+    $journal = DailyJournal::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user)
+        ->delete(route('daily-journals.destroy', $journal))
+        ->assertRedirect();
+
+    assertDatabaseMissing('daily_journals', ['id' => $journal->id]);
+});
+
+// Validation Tests
+test('validation: date is required', function () {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->post(route('daily-journals.store'), [
+            'content' => 'Content without date',
+        ])
+        ->assertSessionHasErrors('date');
+});
+
+test('validation: content max length', function () {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->post(route('daily-journals.store'), [
             'date' => now()->format('Y-m-d'),
-            'content' => 'Old content',
-        ]);
+            'content' => str_repeat('a', 5001), // Max is 5000
+        ])
+        ->assertSessionHasErrors('content');
+});
 
-        $response = $this->post(route('daily-journals.store'), [
-            'date' => now()->format('Y-m-d'),
-            'content' => 'New content',
-            'mood_score' => 3,
-        ]);
+test('validation: mood score range 1-5', function () {
+    $user = User::factory()->create();
+    $date = now()->format('Y-m-d');
 
-        $response->assertRedirect();
-        $this->assertDatabaseHas('daily_journals', [
-            'id' => $journal->id,
-            'content' => 'New content',
-            'mood_score' => 3,
-        ]);
-    }
+    // Too low
+    actingAs($user)
+        ->post(route('daily-journals.store'), ['date' => $date, 'mood_score' => 0])
+        ->assertSessionHasErrors('mood_score');
 
-    public function test_user_cannot_delete_others_journal(): void
-    {
-        $user1 = User::factory()->create();
-        $user2 = User::factory()->create();
+    // Too high
+    actingAs($user)
+        ->post(route('daily-journals.store'), ['date' => $date, 'mood_score' => 6])
+        ->assertSessionHasErrors('mood_score');
+});
 
-        $journal = $user2->dailyJournals()->create([
-            'date' => now()->format('Y-m-d'),
-            'content' => 'Someone else journal',
-        ]);
+test('validation: sleep quality range 1-5', function () {
+    $user = User::factory()->create();
+    $date = now()->format('Y-m-d');
 
-        $this->actingAs($user1);
-        $response = $this->delete(route('daily-journals.destroy', $journal->id));
+    actingAs($user)
+        ->post(route('daily-journals.store'), ['date' => $date, 'sleep_quality' => 6])
+        ->assertSessionHasErrors('sleep_quality');
+});
 
-        $response->assertStatus(403);
-        $this->assertDatabaseHas('daily_journals', ['id' => $journal->id]);
-    }
-}
+test('validation: stress level range 1-10', function () {
+    $user = User::factory()->create();
+    $date = now()->format('Y-m-d');
+
+    actingAs($user)
+        ->post(route('daily-journals.store'), ['date' => $date, 'stress_level' => 11])
+        ->assertSessionHasErrors('stress_level');
+});
+
+test('validation: energy level range 1-10', function () {
+    $user = User::factory()->create();
+    $date = now()->format('Y-m-d');
+
+    actingAs($user)
+        ->post(route('daily-journals.store'), ['date' => $date, 'energy_level' => 11])
+        ->assertSessionHasErrors('energy_level');
+});
+
+test('validation: motivation level range 1-10', function () {
+    $user = User::factory()->create();
+    $date = now()->format('Y-m-d');
+
+    actingAs($user)
+        ->post(route('daily-journals.store'), ['date' => $date, 'motivation_level' => 11])
+        ->assertSessionHasErrors('motivation_level');
+});
+
+test('validation: nutrition score range 1-5', function () {
+    $user = User::factory()->create();
+    $date = now()->format('Y-m-d');
+
+    actingAs($user)
+        ->post(route('daily-journals.store'), ['date' => $date, 'nutrition_score' => 6])
+        ->assertSessionHasErrors('nutrition_score');
+});
+
+test('validation: training intensity range 1-10', function () {
+    $user = User::factory()->create();
+    $date = now()->format('Y-m-d');
+
+    actingAs($user)
+        ->post(route('daily-journals.store'), ['date' => $date, 'training_intensity' => 11])
+        ->assertSessionHasErrors('training_intensity');
+});
+
+// Authorization Tests
+test('unauthenticated user cannot access journal pages', function () {
+    get(route('daily-journals.index'))->assertRedirect(route('login'));
+
+    post(route('daily-journals.store'), [
+        'date' => now()->format('Y-m-d'),
+        'content' => 'Test',
+    ])->assertRedirect(route('login'));
+});
+
+test('user cannot delete another users journal entry', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $otherJournal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
+
+    actingAs($user)
+        ->delete(route('daily-journals.destroy', $otherJournal))
+        ->assertForbidden();
+
+    assertDatabaseHas('daily_journals', ['id' => $otherJournal->id]);
+});
