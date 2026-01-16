@@ -102,7 +102,7 @@ test('dashboard page renders correctly', function () {
             ->visit('/dashboard')
             ->assertPathIs('/dashboard')
             // Check page is not blank - key UI elements visible
-            ->assertPresent('.glass-card')
+            ->assertPresent('.glass-panel-light')
             // Greeting varies by time, so check static elements
             ->waitForText('Séances')
             // Check no JavaScript errors
@@ -119,7 +119,7 @@ test('workouts page renders correctly', function () {
             ->visit('/workouts')
             ->assertPathIs('/workouts')
             ->waitForText('Séances')
-            ->assertPresent('.glass-card')
+            ->assertPresent('.glass-panel-light')
             ->assertNoConsoleExceptions();
     });
 });
@@ -131,8 +131,8 @@ test('stats page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/stats')
             ->assertPathIs('/stats')
-            ->waitForText('Évolution')
-            ->assertPresent('.glass-card')
+            ->waitForText('ÉVOLUTION')
+            ->assertPresent('.glass-panel-light')
             ->assertNoConsoleExceptions();
     });
 });
@@ -156,7 +156,7 @@ test('exercises page renders correctly', function () {
         $browser->loginAs($user)
             ->visit('/exercises')
             ->assertPathIs('/exercises')
-            ->waitForText('Bibliothèque')
+            ->waitForText('BIBLIOTHÈQUE')
             ->assertNoConsoleExceptions();
     });
 });
@@ -271,8 +271,8 @@ test('user can perform full workout logging flow', function () {
             ->visit('/workouts')
             // 1. Start new workout
             ->waitForText('Séances') // Ensure page loaded
-            ->waitForText('Nouvelle Séance')
-            ->press('Nouvelle Séance')
+            ->waitForText('Commencer maintenant')
+            ->press('Commencer maintenant')
             ->waitForText('Séance') // Indicator we are on the workout show page
 
             // 2. Add Exercise
