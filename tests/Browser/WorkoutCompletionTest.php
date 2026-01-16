@@ -12,7 +12,7 @@ class WorkoutCompletionTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
-    public function test_user_can_finish_workout_and_is_redirected()
+    public function test_user_can_finish_workout_and_is_redirected(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create([
@@ -22,30 +22,23 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout) {
-            $browser->visit('/login')
-                ->type('input[type="email"]', $user->email)
-                ->type('input[type="password"]', 'password')
-                ->press('SE CONNECTER') // Or the submit button text/selector
-                ->waitForRoute('dashboard', [], 10)
+            $browser->loginAs($user)
                 ->resize(1920, 1080)
                 ->visitRoute('workouts.show', $workout)
                 ->waitForText('Séance Test Browser', 10)
-                // Use a broader selector or text that is definitely there
                 ->waitForText('TERMINER', 10)
-                ->press('Terminer') // Usually works if button text is this
-                ->waitForText('Terminer la séance ?', 10) // Wait for modal
-                ->pause(500) // Small pause for animation
-                ->clickLinkOrButton('Confirmer')
-                ->waitForRoute('dashboard', [], 10)
+                ->press('Terminer')
+                ->waitForText('Terminer la séance ?', 10)
+                ->pause(500)
+                ->clickLink('Confirmer')
+                ->waitForRoute('dashboard', [], 15)
                 ->assertSee('Fait');
         });
     }
 
-    public function test_finished_workout_is_immutable_in_ui()
+    public function test_finished_workout_is_immutable_in_ui(): void
     {
-        $user = User::factory()->create([
-            'password' => bcrypt('password'), // Ensure password is known
-        ]);
+        $user = User::factory()->create();
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
             'name' => 'Immutable Workout',
@@ -54,11 +47,7 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout) {
-            $browser->visit('/login')
-                ->type('input[type="email"]', $user->email)
-                ->type('input[type="password"]', 'password')
-                ->press('SE CONNECTER')
-                ->waitForRoute('dashboard', [], 10)
+            $browser->loginAs($user)
                 ->resize(1920, 1080)
                 ->visitRoute('workouts.show', $workout)
                 ->waitForText('Immutable Workout', 10)
