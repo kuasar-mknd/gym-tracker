@@ -20,6 +20,8 @@ class WorkoutCompletionTest extends DuskTestCase
     {
         return $browser->logout()
             ->visit('/login')
+            ->resize(1920, 1080)
+            ->waitFor('input[type="email"]', 15)
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', $password)
             ->click('button[type="submit"]')
@@ -43,17 +45,15 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('main', 15)
                 ->assertPathIs('/workouts/'.$workout->id)
-                ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
-                ->waitFor('h1', 15)
-                ->assertSeeIn('h1', 'BROWSER')
-                ->waitForText('TERMINER', 15)
-                ->press('Terminer')
-                ->waitForText('Terminer la séance ?', 15)
+                ->waitForText('SÉANCE TEST BROWSER', 15)
+                ->waitFor('#finish-workout-desktop', 15)
+                ->click('#finish-workout-desktop')
+                ->waitForText('TERMINER LA SÉANCE ?', 15)
                 ->pause(500)
-                ->clickLink('Confirmer')
+                ->click('#confirm-finish-button')
                 ->waitForRoute('dashboard', [], 15)
-                ->assertSee('Fait');
+                ->assertSee('FAIT');
         });
     }
 
@@ -75,10 +75,10 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('main', 15)
                 ->assertNoConsoleExceptions()
-                ->waitFor('h1', 15)
-                ->assertSeeIn('h1', 'IMMUTABLE')
-                ->assertDontSee('TERMINER')
-                ->assertSee('Terminée')
+                ->waitForText('IMMUTABLE WORKOUT', 15)
+                ->assertMissing('#finish-workout-desktop')
+                ->assertVisible('#workout-status-badge-desktop')
+                ->assertSee('TERMINÉE')
                 ->assertMissing('button[aria-label="Ajouter une série"]')
                 ->assertMissing('button[aria-label="Ajouter un exercice"]');
         });

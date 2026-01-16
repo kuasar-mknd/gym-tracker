@@ -281,10 +281,23 @@ const hasNoResults = computed(() => {
 
     <AuthenticatedLayout :page-title="workout.name || 'Séance en cours'" show-back back-route="workouts.index">
         <template #header>
-            <PageHeader :title="workout.name || 'Séance'" :show-back="true" back-route="workouts.index">
-                <template #actions>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <Link
+                        :href="route('workouts.index')"
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
+                    >
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </Link>
+                    <h1 class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main">
+                        {{ workout.name || 'Séance' }}
+                    </h1>
+                </div>
+
+                <div class="flex items-center gap-2">
                     <button
                         v-if="!workout.ended_at"
+                        id="finish-workout-desktop"
                         @click="finishWorkout"
                         class="flex items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
                     >
@@ -293,26 +306,32 @@ const hasNoResults = computed(() => {
                     </button>
                     <span
                         v-else
+                        id="workout-status-badge-desktop"
                         class="glass-badge glass-badge-success flex items-center gap-1 rounded-full px-4 py-2 text-xs"
                     >
                         <span class="material-symbols-outlined text-sm">check_circle</span>
                         Terminée
                     </span>
-                </template>
-            </PageHeader>
+                </div>
+            </div>
         </template>
 
         <!-- Only keep template save button if needed somewhere else or secondary -->
         <template #header-actions>
             <button
                 v-if="!workout.ended_at"
+                id="finish-workout-mobile"
                 @click="finishWorkout"
                 class="flex items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
             >
                 <span class="material-symbols-outlined text-sm">stop_circle</span>
                 Terminer
             </button>
-            <span v-else class="glass-badge glass-badge-success flex items-center gap-1 rounded-full px-4 py-2 text-xs">
+            <span
+                v-else
+                id="workout-status-badge-mobile"
+                class="glass-badge glass-badge-success flex items-center gap-1 rounded-full px-4 py-2 text-xs"
+            >
                 <span class="material-symbols-outlined text-sm">check_circle</span>
                 Terminée
             </span>
@@ -815,7 +834,9 @@ const hasNoResults = computed(() => {
 
                 <div class="grid grid-cols-2 gap-3">
                     <GlassButton variant="ghost" @click="showFinishModal = false"> Annuler </GlassButton>
-                    <GlassButton variant="primary" @click="confirmFinishWorkout"> Confirmer </GlassButton>
+                    <GlassButton variant="primary" id="confirm-finish-button" @click="confirmFinishWorkout">
+                        Confirmer
+                    </GlassButton>
                 </div>
             </div>
         </Modal>

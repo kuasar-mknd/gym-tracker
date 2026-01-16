@@ -1,7 +1,15 @@
 <template>
     <AuthenticatedLayout page-title="Outils" show-back back-route="profile.index">
         <template #header>
-            <PageHeader title="Outils" :show-back="true" :back-route="route('profile.index')" />
+            <div class="flex items-center gap-4">
+                <Link
+                    :href="route('profile.index')"
+                    class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
+                >
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </Link>
+                <h2 class="text-xl font-semibold text-text-main">Outils</h2>
+            </div>
         </template>
 
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
