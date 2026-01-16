@@ -1,7 +1,7 @@
 <template>
-    <AuthenticatedLayout>
+    <AuthenticatedLayout page-title="Outils" show-back back-route="profile.index">
         <template #header>
-            <PageHeader title="Tools" />
+            <PageHeader title="Outils" :show-back="true" :back-route="route('profile.index')" />
         </template>
 
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -27,8 +27,8 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-white">Plate Calculator</h3>
-                        <p class="text-sm text-white/60">
+                        <h3 class="text-xl font-bold text-text-main">Plate Calculator</h3>
+                        <p class="text-sm text-text-muted">
                             Calculate which plates to load on the bar for a specific weight.
                         </p>
                     </div>
@@ -57,8 +57,8 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-white">1RM Calculator</h3>
-                        <p class="text-sm text-white/60">
+                        <h3 class="text-xl font-bold text-text-main">1RM Calculator</h3>
+                        <p class="text-sm text-text-muted">
                             Estimate your One Rep Max based on your lifted weight and reps.
                         </p>
                     </div>

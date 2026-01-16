@@ -27,29 +27,37 @@ const chartData = computed(() => {
         labels: props.data.map((item) => item.date),
         datasets: [
             {
-                label: 'Estimé 1RM (kg)',
-                data: props.data.map((item) => item.one_rep_max),
+                label: 'Poids (kg)',
+                data: props.data.map((item) => item.weight),
                 fill: true,
                 tension: 0.4,
-                borderColor: '#FF0080',
+                borderColor: (context) => {
+                    const chart = context.chart
+                    const { ctx, chartArea } = chart
+                    if (!chartArea) return null
+                    const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
+                    gradient.addColorStop(0, '#00E5FF') // Cyan
+                    gradient.addColorStop(1, '#00A3FF') // Cyan-Blue
+                    return gradient
+                },
                 backgroundColor: (context) => {
                     const chart = context.chart
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, 'rgba(255, 0, 128, 0.2)')
-                    gradient.addColorStop(1, 'rgba(255, 0, 128, 0)')
+                    gradient.addColorStop(0, 'rgba(0, 229, 255, 0.2)')
+                    gradient.addColorStop(1, 'rgba(0, 229, 255, 0)')
                     return gradient
                 },
                 borderWidth: 3,
-                pointRadius: 3,
-                pointBackgroundColor: '#fff',
-                pointBorderColor: '#FF0080',
+                pointRadius: 2,
+                pointBackgroundColor: '#00E5FF',
+                pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointHoverRadius: 6,
-                pointHoverBackgroundColor: '#FF0080',
-                pointHoverBorderColor: '#fff',
-                pointHoverBorderWidth: 2,
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#00E5FF',
+                pointHoverBorderWidth: 3,
             },
         ],
     }
@@ -68,27 +76,26 @@ const chartOptions = {
             bodyColor: '#1e293b',
             padding: 12,
             cornerRadius: 12,
+            displayColors: false,
             borderWidth: 1,
-            borderColor: 'rgba(255, 0, 128, 0.1)',
+            borderColor: 'rgba(0, 229, 255, 0.1)',
+            callbacks: {
+                label: (context) => `${context.parsed.y} kg`,
+            },
         },
     },
     scales: {
         x: {
-            grid: {
-                display: false,
-            },
-            ticks: {
-                color: '#64748B',
-                font: { size: 10, weight: 'bold' },
-            },
+            display: false,
         },
         y: {
-            grid: {
-                color: 'rgba(0, 0, 0, 0.03)',
-            },
+            display: true,
             ticks: {
                 color: '#64748B',
                 font: { size: 10, weight: 'bold' },
+            },
+            grid: {
+                display: false,
             },
         },
     },
@@ -96,7 +103,13 @@ const chartOptions = {
 </script>
 
 <template>
-    <div class="h-48 w-full">
+    <div class="h-40 w-full">
         <Line :data="chartData" :options="chartOptions" />
     </div>
 </template>
+
+<style scoped>
+canvas {
+    filter: drop-shadow(0 4px 6px rgba(0, 229, 255, 0.2));
+}
+</style>

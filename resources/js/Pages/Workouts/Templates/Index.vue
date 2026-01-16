@@ -44,7 +44,7 @@ const deleteTemplate = (templateId) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-white">Mes Modèles</h2>
+                <h2 class="text-xl font-semibold text-text-main">Mes Modèles</h2>
                 <Link :href="route('templates.create')">
                     <GlassButton variant="primary">
                         <svg
@@ -67,8 +67,8 @@ const deleteTemplate = (templateId) => {
                 <GlassCard>
                     <div class="py-12 text-center">
                         <div class="mb-3 text-5xl">📋</div>
-                        <h3 class="text-lg font-semibold text-white">Aucun modèle</h3>
-                        <p class="mt-1 text-white/60">Crée tes routines pour gagner du temps</p>
+                        <h3 class="text-lg font-semibold text-text-main">Aucun modèle</h3>
+                        <p class="mt-1 text-text-muted">Crée tes routines pour gagner du temps</p>
                         <Link :href="route('templates.create')" class="mt-4 inline-block">
                             <GlassButton variant="primary">Créer mon premier modèle</GlassButton>
                         </Link>
@@ -81,15 +81,15 @@ const deleteTemplate = (templateId) => {
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="text-lg font-bold text-white">{{ template.name }}</h3>
-                                <p v-if="template.description" class="mt-1 text-sm text-white/60">
+                                <h3 class="text-lg font-bold text-text-main">{{ template.name }}</h3>
+                                <p v-if="template.description" class="mt-1 text-sm text-text-muted">
                                     {{ template.description }}
                                 </p>
                             </div>
                             <div class="flex gap-2">
                                 <button
                                     @click="deleteTemplate(template.id)"
-                                    class="rounded-lg p-2 text-white/40 transition hover:bg-red-500/20 hover:text-red-400"
+                                    class="rounded-lg p-2 text-text-muted transition hover:bg-red-50 hover:text-red-500"
                                     title="Supprimer"
                                 >
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -108,10 +108,10 @@ const deleteTemplate = (templateId) => {
                             <div
                                 v-for="line in template.workout_template_lines"
                                 :key="line.id"
-                                class="flex items-center gap-2 rounded-lg bg-white/5 px-2 py-1 text-xs text-white/70"
+                                class="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1 text-xs text-text-muted"
                             >
-                                <span class="font-medium">{{ line.exercise.name }}</span>
-                                <span class="text-white/30">• {{ line.workout_template_sets.length }} séries</span>
+                                <span class="font-medium text-text-main">{{ line.exercise.name }}</span>
+                                <span class="text-text-muted/50">• {{ line.workout_template_sets.length }} séries</span>
                             </div>
                         </div>
                     </div>
