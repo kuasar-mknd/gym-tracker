@@ -89,8 +89,8 @@ class WorkoutsController extends Controller
         $this->authorize('view', $workout);
 
         // NITRO FIX: Cache exercises list for 1 hour
-        $exercises = Cache::remember('exercises_list', 3600, function () {
-            return Exercise::orderBy('name')->get();
+        $exercises = Cache::remember('exercises_list_'.auth()->id(), 3600, function () {
+            return Exercise::forUser(auth()->id())->orderBy('name')->get();
         });
 
         return Inertia::render('Workouts/Show', [

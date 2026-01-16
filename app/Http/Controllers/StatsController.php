@@ -19,8 +19,8 @@ class StatsController extends Controller
         $user = auth()->user();
 
         // NITRO FIX: Cache exercises list for 1 hour
-        $exercises = Cache::remember('exercises_list', 3600, function () {
-            return Exercise::orderBy('name')->get();
+        $exercises = Cache::remember('exercises_list_'.$user->id, 3600, function () use ($user) {
+            return Exercise::forUser($user->id)->orderBy('name')->get();
         });
 
         return Inertia::render('Stats/Index', [
