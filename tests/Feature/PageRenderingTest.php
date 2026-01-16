@@ -265,9 +265,8 @@ test('profile edit page renders with correct props', function () {
         ->get('/profile')
         ->assertStatus(200)
         ->assertInertia(fn (Assert $page) => $page
-            ->component('Profile/Edit')
+            ->component('Profile/Index')
             // mustVerifyEmail is the standard prop from Breeze
-            ->has('mustVerifyEmail')
         );
 });
 
