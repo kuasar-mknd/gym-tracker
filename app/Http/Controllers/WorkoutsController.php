@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -28,49 +29,13 @@ class WorkoutsController extends Controller
      *
      * @return \Inertia\Response The Inertia response rendering the Workouts/Index page.
      */
-    public function index(): \Inertia\Response
+    public function index(Request $request, FetchWorkoutsIndexAction $fetchWorkouts): \Inertia\Response
     {
         $this->authorize('viewAny', Workout::class);
 
-        // Get last 6 months frequency
-        $monthlyFrequency = Workout::select('started_at')
-            ->where('user_id', auth()->id())
-            ->where('started_at', '>=', now()->subMonths(5)->startOfMonth())
-            ->orderBy('started_at')
-            ->get()
-            ->groupBy(fn ($workout) => $workout->started_at->format('Y-m'))
-            ->map(fn ($workouts, $month) => [
-                'month' => \Carbon\Carbon::createFromFormat('Y-m', $month)->format('M'),
-                'count' => $workouts->count(),
-            ])
-            ->values();
+        $data = $fetchWorkouts->execute($request->user());
 
-        // Get duration history for the last 20 workouts
-        $durationHistory = Workout::select('name', 'started_at', 'ended_at')
-            ->where('user_id', auth()->id())
-            ->whereNotNull('ended_at')
-            ->latest('started_at')
-            ->take(20)
-            ->get()
-            ->map(function ($workout) {
-                return [
-                    'date' => $workout->started_at->format('d/m'),
-                    'duration' => $workout->ended_at->diffInMinutes($workout->started_at),
-                    'name' => $workout->name,
-                ];
-            })
-            ->reverse()
-            ->values();
-
-        // NITRO FIX: Paginate workouts instead of loading all
-        return Inertia::render('Workouts/Index', [
-            'workouts' => Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
-                ->where('user_id', auth()->id())
-                ->latest('started_at')
-                ->paginate(20),
-            'monthlyFrequency' => $monthlyFrequency,
-            'durationHistory' => $durationHistory,
-        ]);
+        return Inertia::render('Workouts/Index', $data);
     }
 
     /**
