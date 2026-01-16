@@ -28,7 +28,7 @@ beforeEach(function () {
 test('welcome page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/')
-            ->waitForText('GymTracker')
+            ->waitForText('GYMTRACKER')
             ->assertVisible('a[href*="login"]')
             ->assertVisible('a[href*="register"]');
     });
@@ -37,7 +37,7 @@ test('welcome page displays correctly', function () {
 test('login page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/login')
-            ->waitForText('Bon retour !')
+            ->waitForText('BON RETOUR')
             ->assertVisible('input[type="email"]')
             ->assertVisible('input[type="password"]')
             ->assertVisible('button[type="submit"]');
@@ -47,7 +47,7 @@ test('login page displays correctly', function () {
 test('register page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/register')
-            ->waitForText('Bienvenue !')
+            ->waitForText('BIENVENUE')
             ->assertVisible('input[autocomplete="name"]')
             ->assertVisible('input[type="email"]')
             ->assertVisible('input[type="password"]');
