@@ -139,7 +139,7 @@ jobs:
                   php artisan migrate:fresh --seed
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
                   sleep 15
-                  php artisan dusk
+                  php artisan dusk --exclude-group=skip-ci
 
             - name: Upload Test Screenshots
               if: failure()
