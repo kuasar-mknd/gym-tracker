@@ -45,6 +45,23 @@ class WorkoutsController extends Controller
             ])
             ->values();
 
+        // Get duration history for the last 20 workouts
+        $durationHistory = Workout::select('name', 'started_at', 'ended_at')
+            ->where('user_id', auth()->id())
+            ->whereNotNull('ended_at')
+            ->latest('started_at')
+            ->take(20)
+            ->get()
+            ->map(function ($workout) {
+                return [
+                    'date' => $workout->started_at->format('d/m'),
+                    'duration' => $workout->ended_at->diffInMinutes($workout->started_at),
+                    'name' => $workout->name,
+                ];
+            })
+            ->reverse()
+            ->values();
+
         // NITRO FIX: Paginate workouts instead of loading all
         return Inertia::render('Workouts/Index', [
             'workouts' => Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
@@ -52,6 +69,7 @@ class WorkoutsController extends Controller
                 ->latest('started_at')
                 ->paginate(20),
             'monthlyFrequency' => $monthlyFrequency,
+            'durationHistory' => $durationHistory,
         ]);
     }
 

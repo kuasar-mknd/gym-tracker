@@ -3,12 +3,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import WorkoutsPerMonthChart from '@/Components/Stats/WorkoutsPerMonthChart.vue'
+import WorkoutDurationChart from '@/Components/Stats/WorkoutDurationChart.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     exercises: Array,
     monthlyFrequency: Array,
+    durationHistory: Array,
 })
 
 const form = useForm({})
@@ -110,14 +112,26 @@ const formatDate = (dateStr) => {
                     </GlassCard>
                 </div>
 
-                <!-- Frequency Chart -->
-                <GlassCard v-if="monthlyFrequency && monthlyFrequency.length > 0">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-bold text-white">Fréquence d'entraînement</h3>
-                        <p class="text-xs text-white/50">Séances par mois (6 derniers mois)</p>
-                    </div>
-                    <WorkoutsPerMonthChart :data="monthlyFrequency" />
-                </GlassCard>
+                <!-- Charts Grid -->
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <!-- Frequency Chart -->
+                    <GlassCard v-if="monthlyFrequency && monthlyFrequency.length > 0">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white">Fréquence</h3>
+                            <p class="text-xs text-white/50">Séances par mois</p>
+                        </div>
+                        <WorkoutsPerMonthChart :data="monthlyFrequency" />
+                    </GlassCard>
+
+                    <!-- Duration Chart -->
+                    <GlassCard v-if="durationHistory && durationHistory.length > 0">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-white">Durée</h3>
+                            <p class="text-xs text-white/50">Temps d'entraînement (min)</p>
+                        </div>
+                        <WorkoutDurationChart :data="durationHistory" />
+                    </GlassCard>
+                </div>
             </div>
 
             <!-- Available Exercises -->
