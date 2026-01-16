@@ -275,33 +275,38 @@ test('user can perform full workout logging flow', function () {
             ->waitFor('[data-testid="empty-state-start-workout"]')
             ->script("document.querySelector('[data-testid=\"empty-state-start-workout\"]').click();");
 
-        $browser->waitForLocation('/workouts/*', 10)
-            ->waitForText('Ajouter un exercice', 10) // Unique to Show page
+        try {
+            $browser->waitForLocation('/workouts/*', 10)
+                ->waitForText('Ajouter un exercice', 10); // Unique to Show page
+        } catch (\Exception $e) {
+            $logs = $browser->driver->manage()->getLog('browser');
+            dump($logs);
+            throw $e;
+        }
 
-            // 2. Add Exercise
+        // 2. Add Exercise
 
-            ->press('Ajouter un exercice')
+        $browser->press('Ajouter un exercice')
             ->waitFor('.glass-modal')
             ->type('input[placeholder="Rechercher..."]', 'Bench')
             ->waitForText('Bench Press')
             ->click('button[aria-label="Ajouter Bench Press"]')
             ->waitUntilMissing('.glass-modal')
 
-            // 3. Verify Exercise Added
+        // 3. Verify Exercise Added
             ->waitForText('Bench Press')
 
-            // 4. Log a Set
+        // 4. Log a Set
             ->press('Ajouter une série')
             ->waitFor('input[aria-label*="Poids"]')
             ->type('input[aria-label*="Poids"]', '80')
             ->type('input[aria-label*="Répétitions"]', '12')
 
-            // 5. Complete Set
+        // 5. Complete Set
             ->click('button[aria-label="Marquer comme complété"]')
 
-            // 6. Verify Completion (Green background class or checkmark)
+        // 6. Verify Completion (Green background class or checkmark)
             ->waitFor('.bg-accent-success')
-
             ->refresh()
             ->waitForText('Bench Press')
             ->waitUsing(10, 100, function () use ($browser) {
