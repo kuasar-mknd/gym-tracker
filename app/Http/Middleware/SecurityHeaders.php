@@ -21,7 +21,40 @@ class SecurityHeaders
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'no-referrer-when-downgrade');
-        $response->headers->set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self';");
+
+        // Build CSP with nonce if available, otherwise fall back to unsafe-inline
+        $nonce = $request->attributes->get('csp-nonce');
+
+        if (app()->environment('local', 'testing')) {
+            $csp = implode('; ', [
+                "default-src 'self' http://localhost:5173 ws://localhost:5173",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173",
+                "style-src 'self' 'unsafe-inline' http://localhost:5173 https://fonts.googleapis.com https://fonts.bunny.net",
+                "img-src 'self' data: https: blob: http://localhost:5173",
+                "font-src 'self' https://fonts.gstatic.com https://fonts.bunny.net data: http://localhost:5173",
+                "connect-src 'self' http://localhost:5173 ws://localhost:5173 https:",
+                "frame-src 'self' https:",
+                "object-src 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+            ]);
+        } elseif ($nonce) {
+            // CSP with nonce for inline scripts, but allowing external font stylesheets
+            $csp = implode('; ', [
+                "default-src 'self'",
+                "script-src 'self' 'nonce-{$nonce}'",
+                // External font stylesheets (fonts.bunny.net) require 'unsafe-inline' as they can't have nonces
+                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
+                "img-src 'self' data: https:",
+                "font-src 'self' https://fonts.bunny.net https://fonts.gstatic.com data:",
+                "connect-src 'self'".(app()->isLocal() ? ' ws://localhost:* wss://localhost:* http://localhost:*' : ''),
+            ]);
+        } else {
+            // Fallback for non-web requests (API, console, etc.)
+            $csp = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self';";
+        }
+
+        $response->headers->set('Content-Security-Policy', $csp);
 
         return $response;
     }

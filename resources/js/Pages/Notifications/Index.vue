@@ -10,7 +10,7 @@ const props = defineProps({
 
 const markAsRead = (id) => {
     router.post(
-        route('notifications.mark-as-read', id),
+        route('notifications.mark-as-read', { id: id }),
         {},
         {
             preserveScroll: true,

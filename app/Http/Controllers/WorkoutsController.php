@@ -6,6 +6,7 @@ use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 /**
@@ -61,11 +62,12 @@ class WorkoutsController extends Controller
             ->reverse()
             ->values();
 
+        // NITRO FIX: Paginate workouts instead of loading all
         return Inertia::render('Workouts/Index', [
             'workouts' => Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
                 ->where('user_id', auth()->id())
                 ->latest('started_at')
-                ->get(),
+                ->paginate(20),
             'monthlyFrequency' => $monthlyFrequency,
             'durationHistory' => $durationHistory,
         ]);
@@ -86,9 +88,14 @@ class WorkoutsController extends Controller
     {
         $this->authorize('view', $workout);
 
+        // NITRO FIX: Cache exercises list for 1 hour
+        $exercises = Cache::remember('exercises_list', 3600, function () {
+            return Exercise::orderBy('name')->get();
+        });
+
         return Inertia::render('Workouts/Show', [
             'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),
-            'exercises' => Exercise::orderBy('name')->get(),
+            'exercises' => $exercises,
             'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
             'types' => [
                 ['value' => 'strength', 'label' => 'Force'],

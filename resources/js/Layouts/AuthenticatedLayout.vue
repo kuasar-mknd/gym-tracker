@@ -1,10 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
-import PageHeader from '@/Components/Navigation/PageHeader.vue'
+import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
+import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
-import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import { Link } from '@inertiajs/vue3'
 
 defineProps({
@@ -20,32 +20,44 @@ defineProps({
         type: String,
         default: '',
     },
+    liquidVariant: {
+        type: String,
+        default: 'default',
+    },
 })
 
 const showingNavigationDropdown = ref(false)
 </script>
 
 <template>
-    <div class="min-h-[100dvh] min-h-screen pb-nav">
-        <!-- Desktop Navigation (hidden on mobile) -->
-        <nav class="hidden border-b border-glass-border bg-dark-700/80 backdrop-blur-glass sm:block">
+    <div class="relative min-h-[100dvh] min-h-screen">
+        <!-- Liquid Glass Background -->
+        <LiquidBackground :variant="liquidVariant" />
+
+        <!-- Desktop Navigation -->
+        <nav class="sticky top-0 z-40 hidden border-b border-white/40 bg-pearl-white/80 backdrop-blur-xl sm:block">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
                     <div class="flex">
                         <!-- Logo -->
                         <div class="flex shrink-0 items-center">
-                            <Link :href="route('dashboard')" class="text-gradient text-xl font-bold"> GymTracker </Link>
+                            <Link
+                                :href="route('dashboard')"
+                                class="text-gradient font-display text-2xl font-black uppercase italic tracking-tight"
+                            >
+                                GymTracker
+                            </Link>
                         </div>
 
-                        <!-- Navigation Links -->
-                        <div class="hidden space-x-6 sm:ms-10 sm:flex">
+                        <!-- Desktop Navigation Links -->
+                        <div class="hidden space-x-1 sm:ms-8 sm:flex">
                             <Link
                                 :href="route('dashboard')"
                                 :class="[
-                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
+                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold uppercase tracking-wide transition-all',
                                     route().current('dashboard')
-                                        ? 'border-b-2 border-accent-primary text-accent-primary'
-                                        : 'text-white/70 hover:text-white',
+                                        ? 'bg-electric-orange/10 text-electric-orange'
+                                        : 'text-text-muted hover:bg-white/50 hover:text-text-main',
                                 ]"
                             >
                                 Accueil
@@ -53,140 +65,96 @@ const showingNavigationDropdown = ref(false)
                             <Link
                                 :href="route('workouts.index')"
                                 :class="[
-                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
+                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold uppercase tracking-wide transition-all',
                                     route().current('workouts.*')
-                                        ? 'border-b-2 border-accent-primary text-accent-primary'
-                                        : 'text-white/70 hover:text-white',
+                                        ? 'bg-electric-orange/10 text-electric-orange'
+                                        : 'text-text-muted hover:bg-white/50 hover:text-text-main',
                                 ]"
                             >
                                 Séances
                             </Link>
                             <Link
-                                :href="route('body-measurements.index')"
-                                :class="[
-                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
-                                    route().current('body-measurements.*')
-                                        ? 'border-b-2 border-accent-primary text-accent-primary'
-                                        : 'text-white/70 hover:text-white',
-                                ]"
-                            >
-                                Corps
-                            </Link>
-                            <Link
                                 :href="route('stats.index')"
                                 :class="[
-                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
+                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold uppercase tracking-wide transition-all',
                                     route().current('stats.*')
-                                        ? 'border-b-2 border-accent-primary text-accent-primary'
-                                        : 'text-white/70 hover:text-white',
+                                        ? 'bg-electric-orange/10 text-electric-orange'
+                                        : 'text-text-muted hover:bg-white/50 hover:text-text-main',
                                 ]"
                             >
                                 Stats
                             </Link>
                             <Link
-                                :href="route('daily-journals.index')"
+                                :href="route('exercises.index')"
                                 :class="[
-                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
-                                    route().current('daily-journals.*')
-                                        ? 'border-b-2 border-accent-primary text-accent-primary'
-                                        : 'text-white/70 hover:text-white',
+                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold uppercase tracking-wide transition-all',
+                                    route().current('exercises.*')
+                                        ? 'bg-electric-orange/10 text-electric-orange'
+                                        : 'text-text-muted hover:bg-white/50 hover:text-text-main',
                                 ]"
                             >
-                                Journal
+                                Exercices
                             </Link>
                             <Link
-                                :href="route('goals.index')"
+                                :href="route('tools.index')"
                                 :class="[
-                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
-                                    route().current('goals.*')
-                                        ? 'border-b-2 border-accent-primary text-accent-primary'
-                                        : 'text-white/70 hover:text-white',
+                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold uppercase tracking-wide transition-all',
+                                    route().current('tools.*') || route().current('plates.*')
+                                        ? 'bg-electric-orange/10 text-electric-orange'
+                                        : 'text-text-muted hover:bg-white/50 hover:text-text-main',
                                 ]"
                             >
-                                Objectifs
-                            </Link>
-                            <Link
-                                :href="route('achievements.index')"
-                                :class="[
-                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
-                                    route().current('achievements.*')
-                                        ? 'border-b-2 border-accent-primary text-accent-primary'
-                                        : 'text-white/70 hover:text-white',
-                                ]"
-                            >
-                                Trophées
-                            </Link>
-                            <Link
-                                :href="route('plates.index')"
-                                :class="[
-                                    'inline-flex items-center px-1 pt-1 text-sm font-medium transition',
-                                    route().current('plates.*')
-                                        ? 'border-b-2 border-accent-primary text-accent-primary'
-                                        : 'text-white/70 hover:text-white',
-                                ]"
-                            >
-                                Calculateurs
+                                Outils
                             </Link>
                         </div>
                     </div>
 
-                    <div class="hidden gap-4 sm:ms-6 sm:flex sm:items-center">
-                        <!-- Notification Bell (Desktop) -->
+                    <div class="hidden gap-3 sm:ms-6 sm:flex sm:items-center">
+                        <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="relative rounded-xl border border-glass-border bg-glass p-2 text-white/80 transition hover:bg-glass-strong hover:text-white"
+                            class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 text-text-muted transition-all hover:bg-white hover:text-electric-orange hover:shadow-md"
                         >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                                />
-                            </svg>
+                            <span class="material-symbols-outlined text-[22px]">notifications</span>
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
-                                class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent-primary text-[10px] font-bold text-white shadow-lg"
+                                class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-electric-orange text-[10px] font-black text-white shadow-glow-orange"
                             >
                                 {{ $page.props.auth.user.unread_notifications_count }}
                             </span>
                         </Link>
 
-                        <!-- Settings Dropdown -->
-                        <div class="relative ms-3">
+                        <!-- User Dropdown -->
+                        <div class="relative">
                             <Dropdown align="right" width="48">
                                 <template #trigger>
-                                    <span class="inline-flex rounded-md">
-                                        <button
-                                            type="button"
-                                            class="inline-flex items-center rounded-xl border border-glass-border bg-glass px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-glass-strong hover:text-white"
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-2 rounded-xl border border-white bg-white/60 px-4 py-2 text-sm font-bold text-text-main transition-all hover:bg-white hover:shadow-md"
+                                    >
+                                        <div
+                                            class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-main text-xs font-black text-white"
                                         >
-                                            {{ $page.props.auth.user.name }}
-                                            <svg
-                                                class="-me-0.5 ms-2 h-4 w-4"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 20 20"
-                                                fill="currentColor"
-                                            >
-                                                <path
-                                                    fill-rule="evenodd"
-                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                    clip-rule="evenodd"
-                                                />
-                                            </svg>
-                                        </button>
-                                    </span>
+                                            {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
+                                        </div>
+                                        {{ $page.props.auth.user.name }}
+                                        <span class="material-symbols-outlined text-lg text-text-muted"
+                                            >expand_more</span
+                                        >
+                                    </button>
                                 </template>
 
                                 <template #content>
-                                    <DropdownLink :href="route('profile.edit')"> Profil </DropdownLink>
+                                    <DropdownLink :href="route('profile.edit')">
+                                        <span class="material-symbols-outlined mr-2 text-lg">person</span>
+                                        Profil
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('achievements.index')">
+                                        <span class="material-symbols-outlined mr-2 text-lg">emoji_events</span>
+                                        Trophées
+                                    </DropdownLink>
                                     <DropdownLink :href="route('logout')" method="post" as="button">
+                                        <span class="material-symbols-outlined mr-2 text-lg">logout</span>
                                         Déconnexion
                                     </DropdownLink>
                                 </template>
@@ -197,44 +165,48 @@ const showingNavigationDropdown = ref(false)
             </div>
         </nav>
 
-        <!-- Mobile Header (shown on mobile only) -->
-        <PageHeader v-if="pageTitle" :title="pageTitle" :show-back="showBack" :back-route="backRoute" class="sm:hidden">
-            <template #actions>
-                <div class="flex items-center gap-2">
-                    <Link
-                        :href="route('notifications.index')"
-                        class="relative flex h-10 w-10 items-center justify-center rounded-xl bg-glass text-white/80"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                            />
-                        </svg>
-                        <span
-                            v-if="$page.props.auth.user.unread_notifications_count > 0"
-                            class="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-[#0f172a] bg-accent-primary text-[10px] font-bold text-white shadow-lg"
-                        >
-                            {{ $page.props.auth.user.unread_notifications_count }}
-                        </span>
-                    </Link>
-                    <slot name="header-actions" />
-                </div>
-            </template>
-        </PageHeader>
+        <!-- Mobile Header -->
+        <header
+            v-if="pageTitle || showBack"
+            class="sticky top-0 z-30 flex items-center justify-between border-b border-white/40 bg-pearl-white/80 px-5 py-4 backdrop-blur-xl sm:hidden"
+        >
+            <div class="flex items-center gap-4">
+                <Link
+                    v-if="showBack"
+                    :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
+                    class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
+                >
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </Link>
+                <h1
+                    v-if="pageTitle"
+                    class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main"
+                >
+                    {{ pageTitle }}
+                </h1>
+            </div>
 
-        <!-- Page Heading (desktop) -->
+            <div class="flex items-center gap-2">
+                <Link
+                    :href="route('notifications.index')"
+                    class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 text-text-muted transition-all active:scale-95"
+                >
+                    <span class="material-symbols-outlined text-[22px]">notifications</span>
+                    <span
+                        v-if="$page.props.auth.user.unread_notifications_count > 0"
+                        class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-electric-orange text-[10px] font-black text-white"
+                    >
+                        {{ $page.props.auth.user.unread_notifications_count }}
+                    </span>
+                </Link>
+                <slot name="header-actions" />
+            </div>
+        </header>
+
+        <!-- Desktop Page Heading Slot -->
         <header
             v-if="$slots.header"
-            class="hidden border-b border-glass-border bg-dark-800/50 backdrop-blur-glass sm:block"
+            class="hidden border-b border-white/40 bg-pearl-white/50 backdrop-blur-glass sm:block"
         >
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <slot name="header" />
@@ -242,7 +214,7 @@ const showingNavigationDropdown = ref(false)
         </header>
 
         <!-- Page Content -->
-        <main class="px-4 py-6 sm:px-6 lg:px-8">
+        <main class="relative z-10 px-5 py-6 pb-36 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-7xl">
                 <slot />
             </div>
@@ -251,6 +223,7 @@ const showingNavigationDropdown = ref(false)
         <!-- Bottom Navigation (mobile only) -->
         <BottomNav class="sm:hidden" />
 
+        <!-- Achievement Celebration Modal -->
         <CelebrationModal />
     </div>
 </template>

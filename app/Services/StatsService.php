@@ -43,7 +43,8 @@ class StatsService
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
-        return \Illuminate\Support\Facades\Cache::tags(["stats:{$user->id}"])->remember(
+        // Note: Cache tags removed - file driver doesn't support tagging
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days) {
@@ -56,6 +57,7 @@ class StatsService
                         'workouts.id',
                         'workouts.started_at',
                         'workouts.name',
+                        // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
                         DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
                     )
                     ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
@@ -95,7 +97,7 @@ class StatsService
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
-        return \Illuminate\Support\Facades\Cache::tags(["stats:{$user->id}"])->remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days) {
@@ -105,7 +107,7 @@ class StatsService
                     ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
                     ->where('workouts.user_id', $user->id)
                     ->where('workouts.started_at', '>=', now()->subDays($days))
-                    ->select('exercises.category', DB::raw('SUM(sets.weight * sets.reps) as volume'))
+                    ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
                     ->groupBy('exercises.category')
                     ->get();
 
@@ -132,7 +134,7 @@ class StatsService
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
-        return \Illuminate\Support\Facades\Cache::tags(["stats:{$user->id}"])->remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $exerciseId, $days) {
@@ -142,10 +144,7 @@ class StatsService
                     ->where('workouts.user_id', $user->id)
                     ->where('workout_lines.exercise_id', $exerciseId)
                     ->where('workouts.started_at', '>=', now()->subDays($days))
-                    ->select(
-                        'workouts.started_at',
-                        DB::raw('MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
-                    )
+                    ->selectRaw('workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
                     ->groupBy('workouts.started_at')
                     ->orderBy('workouts.started_at')
                     ->get();
@@ -186,6 +185,7 @@ class StatsService
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
             ->where('workouts.started_at', '>=', $currentMonthStart)
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             ->sum(DB::raw('sets.weight * sets.reps'));
 
         $previousVolume = DB::table('sets')
@@ -193,6 +193,7 @@ class StatsService
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
             ->whereBetween('workouts.started_at', [$previousMonthStart, $previousMonthEnd])
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             ->sum(DB::raw('sets.weight * sets.reps'));
 
         $diff = $currentVolume - $previousVolume;

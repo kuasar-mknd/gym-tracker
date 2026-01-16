@@ -7,7 +7,7 @@ import WorkoutDurationChart from '@/Components/Stats/WorkoutDurationChart.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
-    workouts: Array,
+    workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     exercises: Array,
     monthlyFrequency: Array,
     durationHistory: Array,
@@ -35,7 +35,7 @@ const formatDate = (dateStr) => {
         <template #header-actions>
             <GlassButton
                 variant="primary"
-                size="sm"
+                class="flex !h-11 !min-h-[44px] !w-11 items-center justify-center !p-0"
                 :loading="form.processing"
                 @click="createWorkout"
                 aria-label="Nouvelle séance"
@@ -70,7 +70,12 @@ const formatDate = (dateStr) => {
                             Modèles
                         </GlassButton>
                     </Link>
-                    <GlassButton variant="primary" :loading="form.processing" @click="createWorkout">
+                    <GlassButton
+                        variant="primary"
+                        :loading="form.processing"
+                        @click="createWorkout"
+                        aria-label="Nouvelle séance"
+                    >
                         <svg
                             class="mr-2 h-4 w-4"
                             xmlns="http://www.w3.org/2000/svg"
@@ -93,14 +98,14 @@ const formatDate = (dateStr) => {
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <GlassCard padding="p-4">
                         <div class="text-center">
-                            <div class="text-gradient text-2xl font-bold">{{ workouts.length }}</div>
+                            <div class="text-gradient text-2xl font-bold">{{ workouts.data?.length || 0 }}</div>
                             <div class="mt-1 text-xs text-white/60">Total séances</div>
                         </div>
                     </GlassCard>
                     <GlassCard padding="p-4">
                         <div class="text-center">
                             <div class="text-2xl font-bold text-accent-success">
-                                {{ workouts.reduce((acc, w) => acc + w.workout_lines.length, 0) }}
+                                {{ workouts.data?.reduce((acc, w) => acc + w.workout_lines.length, 0) || 0 }}
                             </div>
                             <div class="mt-1 text-xs text-white/60">Exercices</div>
                         </div>
@@ -136,7 +141,7 @@ const formatDate = (dateStr) => {
                     <div
                         v-for="exercise in exercises"
                         :key="exercise.id"
-                        class="flex-shrink-0 rounded-xl bg-glass px-3 py-2 text-sm"
+                        class="bg-glass flex-shrink-0 rounded-xl border border-white/10 px-3 py-2 text-sm shadow-sm"
                     >
                         <div class="font-medium text-white">{{ exercise.name }}</div>
                         <div class="text-xs text-white/50">{{ exercise.category }}</div>
@@ -148,7 +153,7 @@ const formatDate = (dateStr) => {
             <div class="animate-slide-up" style="animation-delay: 0.2s">
                 <h3 class="mb-3 font-semibold text-white">Historique</h3>
 
-                <div v-if="workouts.length === 0">
+                <div v-if="!workouts.data || workouts.data.length === 0">
                     <GlassCard>
                         <div class="py-12 text-center">
                             <div class="mb-3 text-5xl">💪</div>
@@ -159,6 +164,7 @@ const formatDate = (dateStr) => {
                                 class="mt-4"
                                 :loading="form.processing"
                                 @click="createWorkout"
+                                data-testid="empty-state-start-workout"
                             >
                                 Commencer maintenant
                             </GlassButton>
@@ -168,12 +174,12 @@ const formatDate = (dateStr) => {
 
                 <div v-else class="space-y-3">
                     <Link
-                        v-for="workout in workouts"
+                        v-for="workout in workouts.data"
                         :key="workout.id"
-                        :href="route('workouts.show', workout.id)"
+                        :href="route('workouts.show', { workout: workout.id })"
                         class="block"
                     >
-                        <GlassCard class="transition hover:bg-glass-strong active:scale-[0.99]">
+                        <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2">
@@ -193,7 +199,7 @@ const formatDate = (dateStr) => {
                                         <span
                                             v-for="line in workout.workout_lines.slice(0, 3)"
                                             :key="line.id"
-                                            class="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/70"
+                                            class="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/70"
                                         >
                                             {{ line.exercise.name }}
                                             <span class="text-white/40">• {{ line.sets.length }} séries</span>

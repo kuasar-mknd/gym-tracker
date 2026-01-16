@@ -43,7 +43,7 @@ const submit = () => {
 
 const deleteMeasurement = (id) => {
     if (confirm('Supprimer cette entrée ?')) {
-        useForm({}).delete(route('body-measurements.destroy', id))
+        useForm({}).delete(route('body-measurements.destroy', { body_measurement: id }))
     }
 }
 
@@ -116,9 +116,9 @@ const chartOptions = {
 </script>
 
 <template>
-    <Head title="Suivi Corps" />
+    <Head title="Mesures" />
 
-    <AuthenticatedLayout page-title="Suivi Corps">
+    <AuthenticatedLayout page-title="Mesures">
         <template #header-actions>
             <GlassButton size="sm" @click="showAddForm = !showAddForm">
                 <svg
@@ -135,7 +135,7 @@ const chartOptions = {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-white">Suivi Corps</h2>
+                <h2 class="text-xl font-semibold text-white">Mesures</h2>
                 <GlassButton @click="showAddForm = !showAddForm">
                     <svg
                         class="mr-2 h-4 w-4"

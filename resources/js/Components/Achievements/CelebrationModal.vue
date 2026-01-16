@@ -9,6 +9,7 @@ const notificationId = ref(null)
 const page = usePage()
 
 const checkAchievement = () => {
+    if (page.props.is_testing) return
     const latest = page.props.auth.user?.latest_achievement
     if (latest && latest.data) {
         // Avoid showing same achievement twice in same session if not cleared
@@ -36,7 +37,7 @@ const close = () => {
     show.value = false
     if (notificationId.value) {
         router.post(
-            route('notifications.mark-as-read', notificationId.value),
+            route('notifications.mark-as-read', { id: notificationId.value }),
             {},
             {
                 preserveScroll: true,
