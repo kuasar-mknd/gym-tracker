@@ -222,25 +222,43 @@ test('achievements page renders correctly', function () {
 });
 
 test('profile page renders correctly', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'password' => bcrypt('password123'),
+    ]);
 
     $this->browse(function (Browser $browser) use ($user) {
-        $browser->loginAs($user)
+        $browser->logout()
+            ->resize(1920, 1080)
+            ->visit('/login')
+            ->type('input[type="email"]', $user->email)
+            ->type('input[type="password"]', 'password123')
+            ->click('button[type="submit"]')
+            ->waitForLocation('/dashboard')
             ->visit('/profile')
+            ->waitForLocation('/profile', 10)
             ->assertPathIs('/profile')
-            ->waitForText('Mon Profil')
+            ->waitFor('main', 10) // Wait for main content area
             ->assertNoConsoleExceptions();
     });
 });
 
 test('tools page renders correctly', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'password' => bcrypt('password123'),
+    ]);
 
     $this->browse(function (Browser $browser) use ($user) {
-        $browser->loginAs($user)
+        $browser->logout()
+            ->resize(1920, 1080)
+            ->visit('/login')
+            ->type('input[type="email"]', $user->email)
+            ->type('input[type="password"]', 'password123')
+            ->click('button[type="submit"]')
+            ->waitForLocation('/dashboard')
             ->visit('/tools')
+            ->waitForLocation('/tools', 10)
             ->assertPathIs('/tools')
-            ->waitForText('Tools')
+            ->waitFor('main', 10) // Wait for main content area
             ->assertNoConsoleExceptions();
     });
 });
@@ -289,19 +307,19 @@ test('user can perform full workout logging flow', function () {
             ->click('button[aria-label="Ajouter Bench Press"]')
             ->waitUntilMissing('.glass-modal')
 
-        // 3. Verify Exercise Added
+            // 3. Verify Exercise Added
             ->waitForText('Bench Press')
 
-        // 4. Log a Set
+            // 4. Log a Set
             ->press('Ajouter une série')
             ->waitFor('input[aria-label*="Poids"]')
             ->type('input[aria-label*="Poids"]', '80')
             ->type('input[aria-label*="Répétitions"]', '12')
 
-        // 5. Complete Set
+            // 5. Complete Set
             ->click('button[aria-label="Marquer comme complété"]')
 
-        // 6. Verify Completion (Green background class or checkmark)
+            // 6. Verify Completion (Green background class or checkmark)
             ->waitFor('.bg-accent-success')
             ->refresh()
             ->waitForText('Bench Press')

@@ -168,7 +168,7 @@ const showingNavigationDropdown = ref(false)
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="sticky top-0 z-30 flex items-center justify-between border-b border-white/40 bg-pearl-white/80 px-5 py-4 backdrop-blur-xl sm:hidden"
+            class="sticky top-0 z-30 flex items-center justify-between border-b border-white/40 bg-pearl-white/80 px-5 py-4 pt-safe backdrop-blur-xl sm:hidden"
         >
             <div class="flex items-center gap-4">
                 <Link

@@ -64,8 +64,8 @@ import { computed } from 'vue'
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-2xl font-bold tracking-tight text-white">Mes Objectifs 🎯</h2>
-                    <p class="text-sm text-white/50">Fixe tes cibles et dépasse tes limites.</p>
+                    <h2 class="text-2xl font-bold tracking-tight text-text-main">Mes Objectifs 🎯</h2>
+                    <p class="text-sm text-text-muted">Fixe tes cibles et dépasse tes limites.</p>
                 </div>
                 <GlassButton @click="showCreateForm = !showCreateForm">
                     {{ showCreateForm ? 'Annuler' : 'Nouvel Objectif' }}
@@ -86,47 +86,43 @@ import { computed } from 'vue'
                 >
                     <div v-if="showCreateForm">
                         <GlassCard class="p-6">
-                            <h3 class="mb-6 text-lg font-bold text-white">Nouvel Objectif</h3>
+                            <h3 class="mb-6 text-lg font-bold text-text-main">Nouvel Objectif</h3>
                             <form @submit.prevent="submit" class="space-y-6">
                                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                                     <div class="space-y-4">
                                         <div>
                                             <label
-                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-white/60"
+                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-text-muted"
                                                 >Type d'objectif</label
                                             >
                                             <select
                                                 v-model="form.type"
-                                                class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
+                                                class="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-text-main outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
                                             >
-                                                <option value="weight" class="bg-[#1a1c2e]">Force (Poids max)</option>
-                                                <option value="frequency" class="bg-[#1a1c2e]">
-                                                    Fréquence (Séances)
-                                                </option>
-                                                <option value="volume" class="bg-[#1a1c2e]">
-                                                    Volume (Max par séance)
-                                                </option>
-                                                <option value="measurement" class="bg-[#1a1c2e]">Mensuration</option>
+                                                <option value="weight" class="bg-white">Force (Poids max)</option>
+                                                <option value="frequency" class="bg-white">Fréquence (Séances)</option>
+                                                <option value="volume" class="bg-white">Volume (Max par séance)</option>
+                                                <option value="measurement" class="bg-white">Mensuration</option>
                                             </select>
                                         </div>
 
                                         <div v-if="form.type === 'weight' || form.type === 'volume'">
                                             <label
-                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-white/60"
+                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-text-muted"
                                                 >Exercice</label
                                             >
                                             <select
                                                 v-model="form.exercise_id"
-                                                class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
+                                                class="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-text-main outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
                                             >
-                                                <option value="" disabled class="bg-[#1a1c2e]">
+                                                <option value="" disabled class="bg-white">
                                                     Sélectionner un exercice
                                                 </option>
                                                 <option
                                                     v-for="ex in exercises"
                                                     :key="ex.id"
                                                     :value="ex.id"
-                                                    class="bg-[#1a1c2e]"
+                                                    class="bg-white"
                                                 >
                                                     {{ ex.name }}
                                                 </option>
@@ -135,21 +131,21 @@ import { computed } from 'vue'
 
                                         <div v-if="form.type === 'measurement'">
                                             <label
-                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-white/60"
+                                                class="mb-1.5 block text-sm font-medium uppercase tracking-wider text-text-muted"
                                                 >Mensuration</label
                                             >
                                             <select
                                                 v-model="form.measurement_type"
-                                                class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
+                                                class="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 text-text-main outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-accent-primary"
                                             >
-                                                <option value="" disabled class="bg-[#1a1c2e]">
+                                                <option value="" disabled class="bg-white">
                                                     Sélectionner une mesure
                                                 </option>
                                                 <option
                                                     v-for="type in measurementTypes"
                                                     :key="type.value"
                                                     :value="type.value"
-                                                    class="bg-[#1a1c2e]"
+                                                    class="bg-white"
                                                 >
                                                     {{ type.label }}
                                                 </option>
@@ -194,16 +190,16 @@ import { computed } from 'vue'
 
                 <!-- Active Goals -->
                 <div class="space-y-4">
-                    <h3 class="flex items-center gap-2 text-lg font-bold text-white">
+                    <h3 class="flex items-center gap-2 text-lg font-bold text-text-main">
                         En cours ⚡
-                        <span class="text-xs font-normal text-white/40">({{ activeGoals.length }})</span>
+                        <span class="text-xs font-normal text-text-muted">({{ activeGoals.length }})</span>
                     </h3>
 
                     <div
                         v-if="activeGoals.length === 0 && !showCreateForm"
-                        class="rounded-3xl border border-dashed border-white/5 bg-white/5 p-6 py-12 text-center"
+                        class="rounded-3xl border border-dashed border-slate-200 bg-white/30 p-6 py-12 text-center"
                     >
-                        <p class="italic text-white/40">
+                        <p class="italic text-text-muted">
                             Aucun objectif actif pour le moment. C'est le moment d'en fixer un !
                         </p>
                     </div>
@@ -215,9 +211,9 @@ import { computed } from 'vue'
 
                 <!-- Completed Goals -->
                 <div v-if="completedGoals.length > 0" class="space-y-4 opacity-70">
-                    <h3 class="flex items-center gap-2 text-lg font-bold text-white">
+                    <h3 class="flex items-center gap-2 text-lg font-bold text-text-main">
                         Accomplis 🏆
-                        <span class="text-xs font-normal text-white/40">({{ completedGoals.length }})</span>
+                        <span class="text-xs font-normal text-text-muted">({{ completedGoals.length }})</span>
                     </h3>
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                         <GoalCard v-for="goal in completedGoals" :key="goal.id" :goal="goal" />

@@ -20,6 +20,8 @@ class WorkoutsController extends Controller
 {
     use AuthorizesRequests;
 
+    public function __construct(protected \App\Services\StatsService $statsService) {}
+
     /**
      * Display a listing of the user's workouts.
      *
@@ -125,6 +127,40 @@ class WorkoutsController extends Controller
         $workout->user_id = auth()->id();
         $workout->save();
 
+        $this->statsService->clearUserStatsCache(auth()->user());
+
         return redirect()->route('workouts.show', $workout);
+    }
+
+    /**
+     * Update the specified workout in storage.
+     */
+    public function update(Request $request, Workout $workout): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorize('update', $workout);
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:1000',
+            'is_finished' => 'nullable|boolean',
+        ]);
+
+        if (isset($validated['name'])) {
+            $workout->name = $validated['name'];
+        }
+
+        if (isset($validated['notes'])) {
+            $workout->notes = $validated['notes'];
+        }
+
+        if (! empty($validated['is_finished']) && $validated['is_finished']) {
+            $workout->ended_at = now();
+        }
+
+        $workout->save();
+
+        $this->statsService->clearUserStatsCache(auth()->user());
+
+        return back();
     }
 }

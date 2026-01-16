@@ -1,5 +1,5 @@
 {
-    "servers": {
+    "mcpServers": {
         "laravel-boost": {
             "command": "vendor/bin/sail",
             "args": [
@@ -15,12 +15,6 @@
             "env": {
                 "SITE_PATH": "/Users/samueldulex/git/gym-tracker"
             }
-        },
-        "grepai": {
-            "command": "./grepai",
-            "args": [
-                "mcp-serve"
-            ]
         }
     }
 }

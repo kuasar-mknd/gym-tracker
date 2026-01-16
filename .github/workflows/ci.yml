@@ -130,12 +130,34 @@ jobs:
                   DB_USERNAME: root
                   BROADCAST_CONNECTION: log
                   CACHE_STORE: array
-                  SESSION_DRIVER: cookie
+                  SESSION_DRIVER: database
                   QUEUE_CONNECTION: sync
                   MAIL_MAILER: array
                   APP_DEBUG: false
                   LOG_LEVEL: debug
               run: |
+                  # Write environment variables to .env so artisan serve subprocess uses them
+                  cat >> .env << 'EOF'
+                  APP_ENV=testing
+                  APP_URL=http://127.0.0.1:8000
+                  DB_CONNECTION=mysql
+                  DB_HOST=127.0.0.1
+                  DB_PORT=3307
+                  DB_DATABASE=gym_tracker_dusk
+                  DB_USERNAME=root
+                  DB_PASSWORD=
+                  SESSION_DRIVER=database
+                  SESSION_DOMAIN=
+                  SESSION_SECURE_COOKIE=false
+                  SESSION_SAME_SITE=lax
+                  SESSION_PATH=/
+                  BROADCAST_CONNECTION=log
+                  CACHE_STORE=array
+                  QUEUE_CONNECTION=sync
+                  MAIL_MAILER=array
+                  APP_DEBUG=false
+                  LOG_LEVEL=debug
+                  EOF
                   php artisan migrate:fresh --seed
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
                   sleep 15

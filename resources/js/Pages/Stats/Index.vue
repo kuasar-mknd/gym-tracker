@@ -1,24 +1,29 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import { ref, watch, computed } from 'vue'
 import axios from 'axios'
 import MuscleDistributionChart from '@/Components/Stats/MuscleDistributionChart.vue'
 import VolumeTrendChart from '@/Components/Stats/VolumeTrendChart.vue'
 import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
+import WeightHistoryChart from '@/Components/Stats/WeightHistoryChart.vue'
+import BodyFatChart from '@/Components/Stats/BodyFatChart.vue'
 
 const props = defineProps({
     volumeTrend: Array,
     muscleDistribution: Array,
     monthlyComparison: Object,
+    weightHistory: Array,
+    bodyFatHistory: Array,
     exercises: Array,
     latestWeight: Number,
     weightChange: Number,
     bodyFat: Number,
+    selectedPeriod: String,
 })
 
-const selectedPeriod = ref('30j')
+const currentPeriod = ref(props.selectedPeriod || '30j')
 const selectedExercise = ref(null)
 const exerciseProgressData = ref([])
 const loadingExercise = ref(false)
@@ -33,6 +38,15 @@ const periods = [
 const totalVolume = computed(() => {
     return props.volumeTrend?.reduce((acc, curr) => acc + curr.volume, 0) || 0
 })
+
+const handlePeriodChange = (period) => {
+    currentPeriod.value = period
+    router.visit(route('stats.index'), {
+        data: { period },
+        preserveScroll: true,
+        preserveState: true,
+    })
+}
 
 const fetchExerciseProgress = async (exerciseId) => {
     if (!exerciseId) return
@@ -71,14 +85,14 @@ watch(selectedExercise, (newVal) => {
                 </div>
 
                 <!-- Period Selector -->
-                <div class="flex rounded-xl border border-white bg-white/50 p-1 shadow-sm">
+                <div class="flex rounded-xl border border-glass-border bg-white/50 p-1 shadow-sm backdrop-blur-sm">
                     <button
                         v-for="period in periods"
                         :key="period.value"
-                        @click="selectedPeriod = period.value"
+                        @click="handlePeriodChange(period.value)"
                         :class="[
                             'rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all',
-                            selectedPeriod === period.value
+                            currentPeriod === period.value
                                 ? 'bg-cyan-pure text-text-main shadow-sm'
                                 : 'text-text-muted hover:text-text-main',
                         ]"
@@ -92,7 +106,7 @@ watch(selectedExercise, (newVal) => {
             <GlassCard class="relative animate-slide-up overflow-hidden" style="animation-delay: 0.05s">
                 <div class="mb-4 flex items-start justify-between">
                     <div>
-                        <h3 class="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-pure">
+                        <h3 class="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-sky-600">
                             Poids Corporel
                         </h3>
                         <p class="font-display text-5xl font-black tracking-tighter text-text-main">
@@ -114,38 +128,17 @@ watch(selectedExercise, (newVal) => {
                     </div>
                 </div>
 
-                <!-- Weight Chart Placeholder -->
+                <!-- Real Weight Chart -->
                 <div class="relative -mx-2 h-40 w-full">
-                    <svg
-                        class="h-full w-full overflow-visible"
-                        fill="none"
-                        preserveAspectRatio="none"
-                        viewBox="0 0 375 150"
-                    >
-                        <defs>
-                            <linearGradient id="weight-gradient" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.2"></stop>
-                                <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"></stop>
-                            </linearGradient>
-                        </defs>
-                        <path
-                            d="M0 80 Q 50 75, 100 85 T 200 70 T 300 90 T 375 60 V 150 H 0 Z"
-                            fill="url(#weight-gradient)"
-                        ></path>
-                        <path
-                            d="M0 80 Q 50 75, 100 85 T 200 70 T 300 90 T 375 60"
-                            fill="none"
-                            stroke="#00E5FF"
-                            stroke-linecap="round"
-                            stroke-width="3"
-                        ></path>
-                        <circle cx="375" cy="60" fill="#fff" r="6" stroke="#00E5FF" stroke-width="3"></circle>
-                    </svg>
+                    <WeightHistoryChart v-if="props.weightHistory?.length > 0" :data="props.weightHistory" />
+                    <div v-else class="flex h-full items-center justify-center text-center">
+                        <p class="text-sm italic text-text-muted/50">Pas encore de données de poids</p>
+                    </div>
                 </div>
 
                 <Link
                     :href="route('body-measurements.index')"
-                    class="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-pure transition-all hover:gap-3"
+                    class="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-600 transition-all hover:gap-3"
                 >
                     Voir tout l'historique
                     <span class="material-symbols-outlined text-base">arrow_forward</span>
@@ -158,7 +151,7 @@ watch(selectedExercise, (newVal) => {
                 <GlassCard padding="p-5">
                     <div class="flex items-start justify-between">
                         <div>
-                            <h4 class="mb-1 text-[10px] font-black uppercase tracking-[0.15em] text-magenta-pure">
+                            <h4 class="mb-1 text-[10px] font-black uppercase tracking-[0.15em] text-pink-600">
                                 Masse Grasse
                             </h4>
                             <p class="font-display text-3xl font-black text-text-main">
@@ -167,7 +160,15 @@ watch(selectedExercise, (newVal) => {
                             </p>
                         </div>
                         <div class="flex size-12 items-center justify-center rounded-xl bg-magenta-pure/10">
-                            <span class="material-symbols-outlined text-2xl text-magenta-pure">water_drop</span>
+                            <span class="material-symbols-outlined text-2xl text-pink-600">water_drop</span>
+                        </div>
+                    </div>
+
+                    <!-- Real Body Fat Chart -->
+                    <div class="mt-4 h-32 w-full">
+                        <BodyFatChart v-if="props.bodyFatHistory?.length > 0" :data="props.bodyFatHistory" />
+                        <div v-else class="flex h-full items-center justify-center">
+                            <p class="text-[10px] italic text-text-muted/30">Pas de données historiques</p>
                         </div>
                     </div>
                 </GlassCard>
@@ -176,7 +177,7 @@ watch(selectedExercise, (newVal) => {
                 <GlassCard padding="p-5">
                     <div class="flex items-start justify-between">
                         <div>
-                            <h4 class="mb-1 text-[10px] font-black uppercase tracking-[0.15em] text-vivid-violet">
+                            <h4 class="mb-1 text-[10px] font-black uppercase tracking-[0.15em] text-violet-600">
                                 Volume Mois
                             </h4>
                             <p class="font-display text-3xl font-black text-text-main">
@@ -211,11 +212,11 @@ watch(selectedExercise, (newVal) => {
                         </h3>
                         <p class="text-xs font-semibold text-text-muted">
                             {{
-                                selectedPeriod === '7j'
+                                currentPeriod === '7j'
                                     ? '7'
-                                    : selectedPeriod === '30j'
+                                    : currentPeriod === '30j'
                                       ? '30'
-                                      : selectedPeriod === '90j'
+                                      : currentPeriod === '90j'
                                         ? '90'
                                         : '365'
                             }}
