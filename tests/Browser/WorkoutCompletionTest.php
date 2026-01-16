@@ -23,6 +23,8 @@ class WorkoutCompletionTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $workout) {
             $browser->loginAs($user)
+                ->visit('/dashboard')
+                ->waitForRoute('dashboard', [], 10)
                 ->resize(1920, 1080)
                 ->visitRoute('workouts.show', $workout)
                 ->waitForText('Séance Test Browser', 10)
@@ -48,6 +50,8 @@ class WorkoutCompletionTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $workout) {
             $browser->loginAs($user)
+                ->visit('/dashboard')
+                ->waitForRoute('dashboard', [], 10)
                 ->resize(1920, 1080)
                 ->visitRoute('workouts.show', $workout)
                 ->waitForText('Immutable Workout', 10)

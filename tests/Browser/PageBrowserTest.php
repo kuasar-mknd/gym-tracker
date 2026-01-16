@@ -238,6 +238,8 @@ test('tools page renders correctly', function () {
 
     $this->browse(function (Browser $browser) use ($user) {
         $browser->loginAs($user)
+            ->visit('/dashboard')
+            ->waitForRoute('dashboard', [], 5)
             ->visit('/tools')
             ->assertPathIs('/tools')
             ->waitForText('Outils')
