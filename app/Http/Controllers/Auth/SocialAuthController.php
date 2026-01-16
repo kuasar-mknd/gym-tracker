@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\ResolveSocialUserAction;
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
@@ -21,7 +20,7 @@ class SocialAuthController extends Controller
     /**
      * Obtain the user information from the provider.
      */
-    public function callback($provider)
+    public function callback(ResolveSocialUserAction $resolver, string $provider)
     {
         try {
             $socialUser = Socialite::driver($provider)->user();
@@ -46,34 +45,9 @@ class SocialAuthController extends Controller
             }
         }
 
-        // Check if user already exists with this email
-        $existingUser = User::where('email', $socialUser->getEmail())->first();
+        $user = $resolver->execute($provider, $socialUser);
 
-        if ($existingUser) {
-            // Update provider info if not set (linking account)
-            if (! $existingUser->provider_id) {
-                $existingUser->update([
-                    'provider' => $provider,
-                    'provider_id' => $socialUser->getId(),
-                    'avatar' => $socialUser->getAvatar(),
-                ]);
-            }
-
-            Auth::login($existingUser);
-        } else {
-            // Create new user
-            $newUser = User::create([
-                'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
-                'email' => $socialUser->getEmail(),
-                'password' => bcrypt(Str::random(16)), // Random password since auth is handled by provider
-                'provider' => $provider,
-                'provider_id' => $socialUser->getId(),
-                'avatar' => $socialUser->getAvatar(),
-                'email_verified_at' => now(), // Assume email is verified by provider
-            ]);
-
-            Auth::login($newUser);
-        }
+        Auth::login($user);
 
         return redirect()->intended(route('dashboard'));
     }
