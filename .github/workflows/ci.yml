@@ -149,6 +149,8 @@ jobs:
                   SESSION_DRIVER=database
                   SESSION_DOMAIN=
                   SESSION_SECURE_COOKIE=false
+                  SESSION_SAME_SITE=lax
+                  SESSION_PATH=/
                   BROADCAST_CONNECTION=log
                   CACHE_STORE=array
                   QUEUE_CONNECTION=sync

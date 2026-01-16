@@ -228,6 +228,7 @@ test('profile page renders correctly', function () {
 
     $this->browse(function (Browser $browser) use ($user) {
         $browser->logout()
+            ->resize(1920, 1080)
             ->visit('/login')
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', 'password123')
@@ -247,6 +248,7 @@ test('tools page renders correctly', function () {
 
     $this->browse(function (Browser $browser) use ($user) {
         $browser->logout()
+            ->resize(1920, 1080)
             ->visit('/login')
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', 'password123')
