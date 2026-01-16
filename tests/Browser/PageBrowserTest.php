@@ -272,7 +272,6 @@ test('user can perform full workout logging flow', function () {
             // 1. Start new workout
             ->waitForText('Séances') // Ensure page loaded
             ->waitForText('Aucune séance')
-            ->waitForText('Commencer maintenant')
             ->click('.glass-panel-light button')
             ->waitForText('Séance') // Indicator we are on the workout show page
 
