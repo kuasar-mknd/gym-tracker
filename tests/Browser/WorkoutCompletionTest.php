@@ -4,14 +4,11 @@ namespace Tests\Browser;
 
 use App\Models\User;
 use App\Models\Workout;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 class WorkoutCompletionTest extends DuskTestCase
 {
-    use DatabaseMigrations;
-
     /**
      * Helper method to manually login a user via the login form.
      * This is more reliable than loginAs() in CI environments.
