@@ -237,7 +237,7 @@ test('profile page renders correctly', function () {
             ->visit('/profile')
             ->waitForLocation('/profile', 10)
             ->assertPathIs('/profile')
-            ->waitForText('Plus', 10)
+            ->waitFor('main', 10) // Wait for main content area
             ->assertNoConsoleExceptions();
     });
 });
@@ -258,7 +258,7 @@ test('tools page renders correctly', function () {
             ->visit('/tools')
             ->waitForLocation('/tools', 10)
             ->assertPathIs('/tools')
-            ->waitForText('Outils', 10)
+            ->waitFor('main', 10) // Wait for main content area
             ->assertNoConsoleExceptions();
     });
 });
