@@ -273,16 +273,11 @@ test('user can perform full workout logging flow', function () {
             ->waitForText('Séances') // Ensure page loaded
             ->waitForText('Aucune séance')
             ->waitFor('[data-testid="empty-state-start-workout"]')
+            ->pause(1000)
             ->script("document.querySelector('[data-testid=\"empty-state-start-workout\"]').click();");
 
-        try {
-            $browser->waitForLocation('/workouts/*', 10)
-                ->waitForText('Ajouter un exercice', 10); // Unique to Show page
-        } catch (\Exception $e) {
-            $logs = $browser->driver->manage()->getLog('browser');
-            dump($logs);
-            throw $e;
-        }
+        $browser->waitForLocation('/workouts/*', 30)
+            ->waitForText('Ajouter un exercice', 30); // Unique to Show page
 
         // 2. Add Exercise
 

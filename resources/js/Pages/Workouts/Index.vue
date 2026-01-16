@@ -14,7 +14,6 @@ const props = defineProps({
 const form = useForm({})
 
 const createWorkout = () => {
-    console.error('createWorkout called')
     form.post(route('workouts.store'))
 }
 
