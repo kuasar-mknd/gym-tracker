@@ -147,6 +147,8 @@ jobs:
                   DB_USERNAME=root
                   DB_PASSWORD=
                   SESSION_DRIVER=database
+                  SESSION_DOMAIN=
+                  SESSION_SECURE_COOKIE=false
                   BROADCAST_CONNECTION=log
                   CACHE_STORE=array
                   QUEUE_CONNECTION=sync
