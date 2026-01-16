@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\ExerciseStoreRequest;
+use App\Http\Requests\ExerciseUpdateRequest;
 use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -43,17 +45,9 @@ class ExerciseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(ExerciseStoreRequest $request)
     {
-        if (! Auth::check()) {
-            abort(401);
-        }
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:strength,cardio,timed',
-            'category' => 'nullable|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         $exercise = new Exercise($validated);
         $exercise->user_id = Auth::id();
@@ -75,15 +69,9 @@ class ExerciseController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Exercise $exercise)
+    public function update(ExerciseUpdateRequest $request, Exercise $exercise)
     {
-        $this->authorize('update', $exercise);
-
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'type' => 'sometimes|required|in:strength,cardio,timed',
-            'category' => 'nullable|string|max:255',
-        ]);
+        $validated = $request->validated();
 
         $exercise->update($validated);
 
