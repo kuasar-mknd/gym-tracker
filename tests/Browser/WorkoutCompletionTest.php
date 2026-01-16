@@ -4,11 +4,14 @@ namespace Tests\Browser;
 
 use App\Models\User;
 use App\Models\Workout;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 class WorkoutCompletionTest extends DuskTestCase
 {
+    use DatabaseTruncation;
+
     /**
      * Helper method to manually login a user via the login form.
      * This is more reliable than loginAs() in CI environments.
@@ -39,6 +42,7 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('main', 15)
+                ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
                 ->waitForText('Séance Test Browser', 15)
                 ->waitForText('TERMINER', 15)
