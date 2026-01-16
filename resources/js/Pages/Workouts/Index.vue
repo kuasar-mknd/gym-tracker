@@ -127,7 +127,7 @@ const formatDate = (dateStr) => {
                     <div
                         v-for="exercise in exercises"
                         :key="exercise.id"
-                        class="flex-shrink-0 rounded-xl border border-white/10 bg-glass px-3 py-2 text-sm shadow-sm"
+                        class="bg-glass flex-shrink-0 rounded-xl border border-white/10 px-3 py-2 text-sm shadow-sm"
                     >
                         <div class="font-medium text-white">{{ exercise.name }}</div>
                         <div class="text-xs text-white/50">{{ exercise.category }}</div>
@@ -150,6 +150,7 @@ const formatDate = (dateStr) => {
                                 class="mt-4"
                                 :loading="form.processing"
                                 @click="createWorkout"
+                                data-testid="empty-state-start-workout"
                             >
                                 Commencer maintenant
                             </GlassButton>
@@ -164,7 +165,7 @@ const formatDate = (dateStr) => {
                         :href="route('workouts.show', { workout: workout.id })"
                         class="block"
                     >
-                        <GlassCard class="transition hover:bg-glass-strong active:scale-[0.99]">
+                        <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2">

@@ -272,12 +272,11 @@ test('user can perform full workout logging flow', function () {
             // 1. Start new workout
             ->waitForText('Séances') // Ensure page loaded
             ->waitForText('Aucune séance')
-            ->click('.glass-panel-light button')
-            ->waitForText('Séance') // Indicator we are on the workout show page
+            ->click('[data-testid="empty-state-start-workout"]')
+            ->waitForText('Ajouter un exercice') // Unique to Show page
 
             // 2. Add Exercise
-            ->waitForText('Séance')
-            ->waitForText('Ajouter un exercice')
+
             ->press('Ajouter un exercice')
             ->waitFor('.glass-modal')
             ->type('input[placeholder="Rechercher..."]', 'Bench')
