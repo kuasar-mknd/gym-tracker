@@ -55,6 +55,12 @@ const formatDate = (dateStr) => {
             <div class="flex items-center justify-between">
                 <h2 class="text-xl font-semibold text-white">Mes Séances</h2>
                 <div class="flex gap-2">
+                    <Link :href="route('calendar.index')">
+                        <GlassButton>
+                            <span class="material-symbols-outlined mr-2 text-[18px]">calendar_month</span>
+                            Calendrier
+                        </GlassButton>
+                    </Link>
                     <Link :href="route('templates.index')">
                         <GlassButton>
                             <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
