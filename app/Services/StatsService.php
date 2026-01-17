@@ -315,6 +315,7 @@ class StatsService
     }
 
     /**
+    /**
      * Get body fat history for the last X days.
      *
      * @return array<int, array{date: string, body_fat: float}>
@@ -340,6 +341,107 @@ class StatsService
                 })->toArray();
             }
         );
+    }
+
+    /**
+     * Get volume trend for the current week (Monday to Sunday).
+     *
+     * Returns an array of objects for each day of the current week,
+     * with volume summed up. Fills missing days with 0.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @return array<int, array{
+     *     date: string,
+     *     day_label: string,
+     *     volume: float
+     * }>
+     */
+    public function getWeeklyVolumeTrend(User $user): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.weekly_volume.{$user->id}",
+            now()->addMinutes(10),
+            function () use ($user) {
+                $startOfWeek = now()->startOfWeek();
+                $endOfWeek = now()->endOfWeek();
+
+                // Get raw data from DB
+                $workouts = DB::table('workouts')
+                    ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                    ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                    ->where('workouts.user_id', $user->id)
+                    ->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])
+                    ->select(
+                        DB::raw('DATE(workouts.started_at) as date'),
+                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+                    )
+                    ->groupBy(DB::raw('DATE(workouts.started_at)'))
+                    ->get()
+                    ->keyBy('date');
+
+                // Fill Mon-Sun
+                $trend = [];
+                $current = $startOfWeek->copy();
+                $labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+                for ($i = 0; $i < 7; $i++) {
+                    $dateStr = $current->format('Y-m-d');
+                    $volume = isset($workouts[$dateStr]) ? (float) $workouts[$dateStr]->volume : 0.0;
+
+                    $trend[] = [
+                        'date' => $dateStr,
+                        'day_label' => $labels[$i],
+                        'volume' => $volume,
+                    ];
+
+                    $current->addDay();
+                }
+
+                return $trend;
+            }
+        );
+    }
+
+    /**
+     * Get volume comparison between current week and previous week.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @return array{
+     *     current_week_volume: float,
+     *     previous_week_volume: float,
+     *     difference: float,
+     *     percentage: float
+     * }
+     */
+    public function getWeeklyVolumeComparison(User $user): array
+    {
+        $currentStart = now()->startOfWeek();
+        $previousStart = now()->subWeek()->startOfWeek();
+        $previousEnd = now()->subWeek()->endOfWeek();
+
+        $currentVolume = DB::table('sets')
+            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+            ->where('workouts.user_id', $user->id)
+            ->where('workouts.started_at', '>=', $currentStart)
+            ->sum(DB::raw('sets.weight * sets.reps'));
+
+        $previousVolume = DB::table('sets')
+            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+            ->where('workouts.user_id', $user->id)
+            ->whereBetween('workouts.started_at', [$previousStart, $previousEnd])
+            ->sum(DB::raw('sets.weight * sets.reps'));
+
+        $diff = $currentVolume - $previousVolume;
+        $percentage = $previousVolume > 0 ? ($diff / $previousVolume) * 100 : ($currentVolume > 0 ? 100 : 0);
+
+        return [
+            'current_week_volume' => (float) $currentVolume,
+            'previous_week_volume' => (float) $previousVolume,
+            'difference' => (float) $diff,
+            'percentage' => (float) round($percentage, 1),
+        ];
     }
 
     /**

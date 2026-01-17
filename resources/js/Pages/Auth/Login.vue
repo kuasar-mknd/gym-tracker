@@ -65,7 +65,7 @@ const submit = () => {
 
             <div class="flex items-center justify-between">
                 <label class="flex cursor-pointer items-center">
-                    <Checkbox :checked="form.remember" @update:checked="val => form.remember = val" />
+                    <Checkbox :checked="form.remember" @update:checked="(val) => (form.remember = val)" />
                     <span class="ml-2 text-sm font-medium text-text-muted">Se souvenir</span>
                 </label>
 

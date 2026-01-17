@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import DashboardVolumeChart from '@/Components/Stats/DashboardVolumeChart.vue'
+import WeeklyVolumeChart from '@/Components/Stats/WeeklyVolumeChart.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 
 /**
@@ -18,6 +18,7 @@ const props = defineProps({
     activeGoals: { type: Array, default: () => [] },
     weeklyVolume: { type: Number, default: 0 },
     volumeChange: { type: Number, default: 0 },
+    weeklyVolumeTrend: { type: Array, default: () => [] },
     volumeTrend: { type: Array, default: () => [] },
 })
 
@@ -168,23 +169,15 @@ const colorForWorkout = (index) => {
                     </div>
                 </div>
 
-                <!-- Real Chart from Component -->
-                <DashboardVolumeChart :data="props.volumeTrend" />
-
-                <!-- Day labels -->
-                <div class="mt-2 flex justify-between border-t border-slate-200 px-2 pt-3">
-                    <span
-                        v-for="(day, index) in props.volumeTrend"
-                        :key="index"
-                        :class="[
-                            'text-[10px] font-bold uppercase tracking-widest',
-                            day.date === new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
-                                ? 'font-black text-electric-orange'
-                                : 'text-slate-400',
-                        ]"
-                    >
-                        {{ day.day_name }}
-                    </span>
+                <!-- Weekly Volume Chart -->
+                <div class="relative -mx-2 mt-2 h-48 w-auto">
+                    <WeeklyVolumeChart
+                        v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0"
+                        :data="weeklyVolumeTrend"
+                    />
+                    <div v-else class="flex h-full items-center justify-center text-text-muted">
+                        <p class="text-sm">Pas de données cette semaine</p>
+                    </div>
                 </div>
             </section>
 

@@ -3,14 +3,14 @@
 namespace App\Actions\Dashboard;
 
 use App\Models\User;
+use App\Services\StatsService;
 use Illuminate\Support\Facades\Cache;
 
 class FetchDashboardDataAction
 {
-    /**
-     * Fetch dashboard data for the given user.
-     */
-    public function __construct(protected \App\Services\StatsService $statsService) {}
+    public function __construct(
+        protected StatsService $statsService
+    ) {}
 
     /**
      * Fetch dashboard data for the given user.
@@ -20,6 +20,9 @@ class FetchDashboardDataAction
         // Cache dashboard data for 10 minutes
         return Cache::remember("dashboard_data_{$user->id}", 600, function () use ($user) {
             $workoutsCount = $user->workouts()->count();
+
+            $weeklyStats = $this->statsService->getWeeklyVolumeComparison($user);
+            $weeklyTrend = $this->statsService->getWeeklyVolumeTrend($user);
 
             $startOfWeek = now()->startOfWeek();
             $thisWeekCount = $user->workouts()
@@ -58,8 +61,10 @@ class FetchDashboardDataAction
                 'recentWorkouts' => $recentWorkouts,
                 'recentPRs' => $recentPRs,
                 'activeGoals' => $activeGoals,
+                'weeklyVolume' => $weeklyStats['current_week_volume'],
+                'volumeChange' => $weeklyStats['percentage'],
+                'weeklyVolumeTrend' => $weeklyTrend,
                 'volumeTrend' => $volumeTrend,
-                'weeklyVolume' => $weeklyVolume,
             ];
         });
     }
