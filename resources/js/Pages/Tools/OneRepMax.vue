@@ -71,17 +71,23 @@
                 <GlassCard class="h-full">
                     <div class="p-6">
                         <h2 class="mb-4 text-xl font-bold text-text-main">Training Percentages</h2>
-                        <div class="overflow-hidden rounded-xl border border-slate-200">
+                        <div
+                            class="overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md"
+                        >
                             <table class="w-full text-left text-sm text-text-muted">
-                                <thead class="bg-slate-50 text-xs uppercase text-text-main">
+                                <thead class="border-b border-white/20 bg-white/10 text-xs uppercase text-text-main">
                                     <tr>
                                         <th class="px-6 py-3 font-medium">Percentage</th>
                                         <th class="px-6 py-3 font-medium">Weight</th>
                                         <th class="px-6 py-3 font-medium">Est. Reps</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 bg-white/30">
-                                    <tr v-for="p in percentages" :key="p.percent" class="hover:bg-slate-50">
+                                <tbody class="divide-y divide-white/10 bg-transparent">
+                                    <tr
+                                        v-for="p in percentages"
+                                        :key="p.percent"
+                                        class="transition-colors duration-200 hover:bg-white/20"
+                                    >
                                         <td class="px-6 py-4 font-medium text-text-main">{{ p.percent }}%</td>
                                         <td class="px-6 py-4 text-text-main">{{ formatWeight(p.value) }}</td>
                                         <td class="px-6 py-4">{{ p.reps }}</td>
@@ -94,7 +100,7 @@
             </div>
             <div
                 v-else
-                class="flex items-center justify-center rounded-xl border border-dashed border-slate-200 p-12 text-text-muted"
+                class="flex items-center justify-center rounded-3xl border border-dashed border-white/20 bg-white/10 p-12 text-text-muted backdrop-blur-sm"
             >
                 Enter weight and reps to see results
             </div>
