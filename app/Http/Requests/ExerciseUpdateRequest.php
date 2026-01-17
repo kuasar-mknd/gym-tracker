@@ -23,7 +23,20 @@ class ExerciseUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('exercises')->ignore($this->exercise)],
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('exercises')
+                    ->ignore($this->exercise)
+                    ->where(function ($query) {
+                        return $query->where(function ($q) {
+                            $q->whereNull('user_id')
+                              ->orWhere('user_id', $this->user()?->id);
+                        });
+                    })
+            ],
             'type' => ['sometimes', 'required', Rule::in(['strength', 'cardio', 'timed'])],
             'category' => ['nullable', 'string', 'max:255'],
         ];
