@@ -92,4 +92,66 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(100, $comparison['difference']);
         $this->assertEquals(25.0, $comparison['percentage']);
     }
+
+    public function test_can_calculate_weekly_volume_trend(): void
+    {
+        $user = User::factory()->create();
+
+        // Create a workout for today (current week)
+        $workout = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->startOfWeek(),
+        ]);
+        $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+        Set::factory()->create([
+            'workout_line_id' => $line->id,
+            'weight' => 100,
+            'reps' => 10,
+        ]); // 1000
+
+        $trend = $this->statsService->getWeeklyVolumeTrend($user);
+
+        $this->assertCount(7, $trend); // Should always return 7 days (Mon-Sun)
+
+        $targetDateStr = now()->startOfWeek()->format('Y-m-d');
+        $found = false;
+
+        foreach ($trend as $day) {
+            if ($day['date'] === $targetDateStr) {
+                $this->assertEquals(1000, $day['volume']);
+                $found = true;
+            } else {
+                $this->assertEquals(0, $day['volume']);
+            }
+        }
+        $this->assertTrue($found);
+    }
+
+    public function test_can_calculate_weekly_volume_comparison(): void
+    {
+        $user = User::factory()->create();
+
+        // Current week workout
+        $workoutCurrent = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->startOfWeek(),
+        ]);
+        $lineCurrent = WorkoutLine::factory()->create(['workout_id' => $workoutCurrent->id]);
+        Set::factory()->create(['workout_line_id' => $lineCurrent->id, 'weight' => 50, 'reps' => 10]); // 500
+
+        // Previous week workout
+        $workoutPrev = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subWeek()->startOfWeek(),
+        ]);
+        $linePrev = WorkoutLine::factory()->create(['workout_id' => $workoutPrev->id]);
+        Set::factory()->create(['workout_line_id' => $linePrev->id, 'weight' => 40, 'reps' => 10]); // 400
+
+        $comparison = $this->statsService->getWeeklyVolumeComparison($user);
+
+        $this->assertEquals(500, $comparison['current_week_volume']);
+        $this->assertEquals(400, $comparison['previous_week_volume']);
+        $this->assertEquals(100, $comparison['difference']);
+        $this->assertEquals(25.0, $comparison['percentage']);
+    }
 }

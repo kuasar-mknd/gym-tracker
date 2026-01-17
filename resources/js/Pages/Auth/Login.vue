@@ -1,4 +1,5 @@
 <script setup>
+import Checkbox from '@/Components/Checkbox.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
@@ -64,11 +65,7 @@ const submit = () => {
 
             <div class="flex items-center justify-between">
                 <label class="flex cursor-pointer items-center">
-                    <input
-                        type="checkbox"
-                        v-model="form.remember"
-                        class="h-5 w-5 rounded-lg border-slate-300 bg-white text-electric-orange focus:ring-2 focus:ring-electric-orange/30 focus:ring-offset-0"
-                    />
+                    <Checkbox :checked="form.remember" @update:checked="(val) => (form.remember = val)" />
                     <span class="ml-2 text-sm font-medium text-text-muted">Se souvenir</span>
                 </label>
 

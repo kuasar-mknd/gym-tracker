@@ -23,8 +23,8 @@ const submit = () => {
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-semibold text-white">Informations du profil</h2>
-            <p class="mt-1 text-sm text-white/60">Modifie tes informations de compte et ton adresse email.</p>
+            <h2 class="text-lg font-semibold text-text-main">Informations du profil</h2>
+            <p class="mt-1 text-sm text-text-muted">Modifie tes informations de compte et ton adresse email.</p>
         </header>
 
         <form @submit.prevent="submit" class="mt-6 space-y-4">

@@ -23,10 +23,14 @@ class PersonalRecordController extends Controller
     {
         $this->authorize('viewAny', PersonalRecord::class);
 
+        $validated = $request->validate([
+            'exercise_id' => 'nullable|integer|exists:exercises,id',
+        ]);
+
         $query = PersonalRecord::query()->where('user_id', Auth::id());
 
-        if ($request->has('exercise_id')) {
-            $query->where('exercise_id', $request->input('exercise_id'));
+        if (isset($validated['exercise_id'])) {
+            $query->where('exercise_id', $validated['exercise_id']);
         }
 
         $query->with('exercise');
