@@ -7,9 +7,9 @@ const page = usePage()
 const navItems = [
     { name: 'Accueil', icon: 'grid_view', route: 'dashboard' },
     { name: 'Stats', icon: 'bar_chart_4_bars', route: 'stats.index' },
-    { name: 'Add', icon: 'add', isFab: true, action: 'createWorkout' },
+    { name: 'Add', icon: 'play_arrow', isFab: true, action: 'createWorkout' },
     { name: 'Séances', icon: 'calendar_month', route: 'workouts.index' },
-    { name: 'Profil', icon: 'settings', route: 'profile.edit' },
+    { name: 'Plus', icon: 'menu', route: 'profile.index' },
 ]
 
 const createWorkout = () => {
@@ -29,9 +29,9 @@ const isActiveRoute = (itemRoute) => {
     <nav class="glass-nav" aria-label="Navigation principale">
         <template v-for="item in navItems" :key="item.name">
             <!-- Center FAB -->
-            <div v-if="item.isFab" class="relative -top-8">
+            <div v-if="item.isFab" class="relative">
                 <button @click="createWorkout" class="glass-nav-fab" :aria-label="item.name">
-                    <span class="material-symbols-outlined text-4xl font-bold">{{ item.icon }}</span>
+                    <span class="material-symbols-outlined text-4xl font-black">{{ item.icon }}</span>
                 </button>
             </div>
 

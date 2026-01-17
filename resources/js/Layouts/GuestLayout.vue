@@ -4,7 +4,13 @@ import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 </script>
 
 <template>
-    <div class="relative flex min-h-[100dvh] min-h-screen flex-col items-center justify-center px-6 py-12">
+    <div
+        class="relative flex min-h-[100dvh] min-h-screen flex-col items-center justify-center px-6 py-12"
+        :style="{
+            paddingTop: 'calc(3rem + var(--safe-area-top))',
+            paddingBottom: 'calc(3rem + var(--safe-area-bottom))',
+        }"
+    >
         <!-- Liquid Background -->
         <LiquidBackground variant="default" />
 

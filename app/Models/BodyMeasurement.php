@@ -12,6 +12,7 @@ class BodyMeasurement extends Model
 
     protected $fillable = [
         'weight',
+        'body_fat',
         'measured_at',
         'notes',
     ];
@@ -21,6 +22,7 @@ class BodyMeasurement extends Model
         return [
             'measured_at' => 'date',
             'weight' => 'decimal:2',
+            'body_fat' => 'decimal:2',
         ];
     }
 

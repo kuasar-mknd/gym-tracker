@@ -5,8 +5,10 @@
     ],
     "editors": [
         "claude_code",
+        "gemini",
         "vscode"
     ],
     "guidelines": [],
-    "herd_mcp": true
+    "herd_mcp": true,
+    "sail": true
 }

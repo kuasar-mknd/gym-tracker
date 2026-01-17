@@ -23,20 +23,14 @@ defineProps({
             <div class="flex items-center gap-3">
                 <Link
                     v-if="showBack && backRoute"
-                    :href="route(backRoute)"
-                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/20 active:scale-95"
+                    :href="backRoute.startsWith('http') || backRoute.startsWith('/') ? backRoute : route(backRoute)"
+                    class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
                 >
-                    <svg
-                        class="h-5 w-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
+                    <span class="material-symbols-outlined">arrow_back</span>
                 </Link>
-                <h1 class="text-lg font-bold text-white">{{ title }}</h1>
+                <h1 class="font-display text-xl font-black uppercase italic tracking-tight text-text-main">
+                    {{ title }}
+                </h1>
             </div>
             <div class="flex items-center gap-2">
                 <slot name="actions" />

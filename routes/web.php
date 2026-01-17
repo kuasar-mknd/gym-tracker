@@ -19,11 +19,13 @@ Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/achievements', [\App\Http\Controllers\AchievementController::class, 'index'])->name('achievements.index');
     Route::get('/workouts', [\App\Http\Controllers\WorkoutsController::class, 'index'])->name('workouts.index');
     Route::get('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'show'])->name('workouts.show');
+    Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/stats', [\App\Http\Controllers\StatsController::class, 'index'])->name('stats.index');
     Route::get('/stats/exercise/{exercise}', [\App\Http\Controllers\StatsController::class, 'exercise'])->name('stats.exercise');
     Route::middleware('throttle:60,1')->group(function () {
@@ -40,6 +42,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('goals', \App\Http\Controllers\GoalController::class)->except(['index', 'show']);
 
         Route::post('/workouts', [\App\Http\Controllers\WorkoutsController::class, 'store'])->name('workouts.store');
+        Route::patch('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'update'])->name('workouts.update');
 
         Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->except(['index', 'show']);
         Route::post('/templates/{template}/execute', [\App\Http\Controllers\WorkoutTemplatesController::class, 'execute'])->name('templates.execute');

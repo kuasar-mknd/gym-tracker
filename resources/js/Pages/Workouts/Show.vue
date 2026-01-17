@@ -16,6 +16,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
+import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
@@ -88,6 +89,24 @@ const saveAsTemplate = () => {
         {},
         {
             onFinish: () => (savingTemplate.value = false),
+        },
+    )
+}
+
+const showFinishModal = ref(false)
+const finishWorkout = () => {
+    showFinishModal.value = true
+}
+
+const confirmFinishWorkout = () => {
+    router.patch(
+        route('workouts.update', { workout: props.workout.id }),
+        { is_finished: true },
+        {
+            onSuccess: () => {
+                showFinishModal.value = false
+                router.visit(route('dashboard'))
+            },
         },
     )
 }
@@ -264,6 +283,12 @@ const cancelConfirm = () => {
     confirmAction.value = null
 }
 
+const formatDuration = (seconds, type) => {
+    if (!seconds && seconds !== 0) return ''
+    if (type === 'cardio') return (seconds / 60).toString() // Minutes for cardio
+    return seconds.toString() // Seconds for timed
+}
+
 /**
  * Adds a new set to a specific exercise line.
  * Copies weight and reps from the previous set if available.
@@ -273,11 +298,27 @@ const cancelConfirm = () => {
 const addSet = (lineId) => {
     const line = props.workout.workout_lines.find((l) => l.id === lineId)
     const lastSet = line.sets.at(-1)
+    const type = line.exercise.type
 
-    router.post(route('sets.store', { workoutLine: lineId }), {
+    const data = {
         weight: lastSet ? lastSet.weight : 0,
         reps: lastSet ? lastSet.reps : 10,
-    })
+        distance_km: lastSet ? lastSet.distance_km : 0,
+        duration_seconds: lastSet ? lastSet.duration_seconds : type === 'cardio' ? 600 : 30, // 10 min or 30 sec
+    }
+
+    if (type === 'cardio') {
+        data.weight = 0
+        data.reps = 0
+    } else if (type === 'timed') {
+        data.reps = 0
+    } else {
+        // strength
+        data.distance_km = 0
+        data.duration_seconds = 0
+    }
+
+    router.post(route('sets.store', { workoutLine: lineId }), data)
 }
 
 /**
@@ -289,6 +330,16 @@ const addSet = (lineId) => {
  */
 const updateSet = (set, field, value) => {
     router.patch(route('sets.update', { set: set.id }), { [field]: value }, { preserveScroll: true, only: ['workout'] })
+}
+
+const updateDuration = (set, value, type) => {
+    let seconds = 0
+    if (type === 'cardio') {
+        seconds = Math.round(parseFloat(value) * 60) // Minutes to seconds
+    } else {
+        seconds = Math.round(parseFloat(value)) // Seconds
+    }
+    updateSet(set, 'duration_seconds', seconds)
 }
 
 /**
@@ -321,63 +372,61 @@ const hasNoResults = computed(() => {
     <Head :title="workout.name || 'Séance'" />
 
     <AuthenticatedLayout :page-title="workout.name || 'Séance en cours'" show-back back-route="workouts.index">
-        <template #header-actions>
-            <div class="flex gap-2">
-                <GlassButton
-                    size="sm"
-                    @click="saveAsTemplate"
-                    :loading="savingTemplate"
-                    title="Enregistrer comme modèle"
-                >
-                    <svg
-                        class="h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+        <template #header>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <Link
+                        :href="route('workouts.index')"
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                        />
-                    </svg>
-                </GlassButton>
-                <GlassButton size="sm" @click="showAddExercise = true" aria-label="Ajouter un exercice">
-                    <svg
-                        class="h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        aria-hidden="true"
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </Link>
+                    <h1 class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main">
+                        {{ workout.name || 'Séance' }}
+                    </h1>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        v-if="!workout.ended_at"
+                        id="finish-workout-desktop"
+                        @click="finishWorkout"
+                        class="flex items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
                     >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                </GlassButton>
+                        <span class="material-symbols-outlined text-sm">stop_circle</span>
+                        Terminer
+                    </button>
+                    <span
+                        v-else
+                        id="workout-status-badge-desktop"
+                        class="glass-badge glass-badge-success flex items-center gap-1 rounded-full px-4 py-2 text-xs"
+                    >
+                        <span class="material-symbols-outlined text-sm">check_circle</span>
+                        Terminée
+                    </span>
+                </div>
             </div>
         </template>
 
-        <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="font-display text-xl font-black uppercase italic tracking-tight text-text-main">
-                    {{ workout.name || 'Séance' }}
-                </h2>
-                <GlassButton @click="showAddExercise = true">
-                    <svg
-                        class="mr-2 h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        aria-hidden="true"
-                    >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Ajouter un exercice
-                </GlassButton>
-            </div>
+        <!-- Only keep template save button if needed somewhere else or secondary -->
+        <template #header-actions>
+            <button
+                v-if="!workout.ended_at"
+                id="finish-workout-mobile"
+                @click="finishWorkout"
+                class="flex items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
+            >
+                <span class="material-symbols-outlined text-sm">stop_circle</span>
+                Terminer
+            </button>
+            <span
+                v-else
+                id="workout-status-badge-mobile"
+                class="glass-badge glass-badge-success flex items-center gap-1 rounded-full px-4 py-2 text-xs"
+            >
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                Terminée
+            </span>
         </template>
 
         <div class="space-y-4">
@@ -394,6 +443,7 @@ const hasNoResults = computed(() => {
                         </p>
                     </div>
                     <button
+                        v-if="!workout.ended_at"
                         @click="removeLine(line.id)"
                         class="rounded-xl p-2 text-text-muted transition hover:bg-red-50 hover:text-red-500"
                         aria-label="Supprimer l'exercice"
@@ -428,11 +478,13 @@ const hasNoResults = computed(() => {
                         <button
                             @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
                             class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
-                            :class="
+                            :class="[
                                 set.is_completed
                                     ? 'bg-neon-green text-text-main shadow-neon'
-                                    : 'bg-slate-100 text-slate-300 hover:bg-neon-green/20 hover:text-neon-green'
-                            "
+                                    : 'bg-slate-100 text-slate-300 hover:bg-neon-green/20 hover:text-neon-green',
+                                { 'cursor-not-allowed opacity-50': workout.ended_at },
+                            ]"
+                            :disabled="!!workout.ended_at"
                             aria-label="Marquer comme complété"
                         >
                             <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -452,33 +504,93 @@ const hasNoResults = computed(() => {
                             {{ index + 1 }}
                         </div>
 
-                        <!-- Weight Input -->
-                        <div class="flex flex-1 items-center gap-2">
-                            <input
-                                type="number"
-                                :value="set.weight"
-                                @change="(e) => updateSet(set, 'weight', e.target.value)"
-                                class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
-                                :disabled="set.is_completed"
-                                inputmode="decimal"
-                                :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
-                            />
-                            <span class="text-xs font-bold uppercase text-text-muted">kg</span>
-                        </div>
+                        <!-- INPUTS BASED ON EXERCISE TYPE -->
 
-                        <!-- Reps Input -->
-                        <div class="flex flex-1 items-center gap-2">
-                            <input
-                                type="number"
-                                :value="set.reps"
-                                @change="(e) => updateSet(set, 'reps', e.target.value)"
-                                class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
-                                :disabled="set.is_completed"
-                                inputmode="numeric"
-                                :aria-label="`${line.exercise.name} : Répétitions série ${index + 1}`"
-                            />
-                            <span class="text-xs font-bold uppercase text-text-muted">reps</span>
-                        </div>
+                        <!-- CARDIO: Distance (km) & Duration (min) -->
+                        <template v-if="line.exercise.type === 'cardio'">
+                            <div class="flex flex-1 items-center gap-2">
+                                <input
+                                    type="number"
+                                    :value="set.distance_km"
+                                    @change="(e) => updateSet(set, 'distance_km', e.target.value)"
+                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    :disabled="set.is_completed || !!workout.ended_at"
+                                    inputmode="decimal"
+                                    step="0.01"
+                                    :aria-label="`${line.exercise.name} : Distance série ${index + 1}`"
+                                />
+                                <span class="text-xs font-bold uppercase text-text-muted">km</span>
+                            </div>
+                            <div class="flex flex-1 items-center gap-2">
+                                <input
+                                    type="number"
+                                    :value="formatDuration(set.duration_seconds, 'cardio')"
+                                    @change="(e) => updateDuration(set, e.target.value, 'cardio')"
+                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    :disabled="set.is_completed || !!workout.ended_at"
+                                    inputmode="decimal"
+                                    :aria-label="`${line.exercise.name} : Durée série ${index + 1}`"
+                                />
+                                <span class="text-xs font-bold uppercase text-text-muted">min</span>
+                            </div>
+                        </template>
+
+                        <!-- TIMED: Weight (kg) & Duration (sec) -->
+                        <template v-else-if="line.exercise.type === 'timed'">
+                            <div class="flex flex-1 items-center gap-2">
+                                <input
+                                    type="number"
+                                    :value="set.weight"
+                                    @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    :disabled="set.is_completed || !!workout.ended_at"
+                                    inputmode="decimal"
+                                    placeholder="-"
+                                    :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
+                                />
+                                <span class="text-xs font-bold uppercase text-text-muted">kg</span>
+                            </div>
+                            <div class="flex flex-1 items-center gap-2">
+                                <input
+                                    type="number"
+                                    :value="formatDuration(set.duration_seconds, 'timed')"
+                                    @change="(e) => updateDuration(set, e.target.value, 'timed')"
+                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    :disabled="set.is_completed || !!workout.ended_at"
+                                    inputmode="numeric"
+                                    :aria-label="`${line.exercise.name} : Durée série ${index + 1}`"
+                                />
+                                <span class="text-xs font-bold uppercase text-text-muted">sec</span>
+                            </div>
+                        </template>
+
+                        <!-- STRENGTH: Weight (kg) & Reps -->
+                        <template v-else>
+                            <div class="flex flex-1 items-center gap-2">
+                                <input
+                                    type="number"
+                                    :value="set.weight"
+                                    @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    :disabled="set.is_completed || !!workout.ended_at"
+                                    inputmode="decimal"
+                                    :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
+                                />
+                                <span class="text-xs font-bold uppercase text-text-muted">kg</span>
+                            </div>
+                            <div class="flex flex-1 items-center gap-2">
+                                <input
+                                    type="number"
+                                    :value="set.reps"
+                                    @change="(e) => updateSet(set, 'reps', e.target.value)"
+                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    :disabled="set.is_completed || !!workout.ended_at"
+                                    inputmode="numeric"
+                                    :aria-label="`${line.exercise.name} : Répétitions série ${index + 1}`"
+                                />
+                                <span class="text-xs font-bold uppercase text-text-muted">reps</span>
+                            </div>
+                        </template>
 
                         <!-- PR Badge -->
                         <div v-if="set.personal_record" class="flex-shrink-0" title="Record personnel !">
@@ -489,6 +601,7 @@ const hasNoResults = computed(() => {
 
                         <!-- Delete Set -->
                         <button
+                            v-if="!workout.ended_at"
                             @click="removeSet(set.id)"
                             class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-slate-300 transition-all hover:bg-red-50 hover:text-red-500"
                             aria-label="Supprimer la série"
@@ -514,8 +627,9 @@ const hasNoResults = computed(() => {
 
                 <!-- Add Set Button -->
                 <button
+                    v-if="!workout.ended_at"
                     @click="addSet(line.id)"
-                    class="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-neon-green/30 bg-neon-green/10 py-3 text-sm font-bold uppercase tracking-wider text-neon-green transition-all hover:border-transparent hover:bg-neon-green hover:text-text-main active:scale-[0.98]"
+                    class="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 py-3 text-sm font-bold uppercase tracking-wider text-text-muted transition-all hover:border-neon-green hover:bg-neon-green/5 hover:text-text-main active:scale-[0.98]"
                 >
                     <svg
                         class="h-5 w-5"
@@ -537,7 +651,12 @@ const hasNoResults = computed(() => {
                     <div class="mb-3 text-5xl">🎯</div>
                     <h3 class="text-lg font-bold text-text-main">Séance vide</h3>
                     <p class="mt-1 text-text-muted">Ajoute ton premier exercice</p>
-                    <GlassButton variant="primary" class="mt-4" @click="showAddExercise = true">
+                    <GlassButton
+                        v-if="!workout.ended_at"
+                        variant="primary"
+                        class="mt-4"
+                        @click="showAddExercise = true"
+                    >
                         Ajouter un exercice
                     </GlassButton>
                 </div>
@@ -545,7 +664,12 @@ const hasNoResults = computed(() => {
         </div>
 
         <!-- FAB -->
-        <button @click="showAddExercise = true" class="glass-fab sm:hidden" aria-label="Ajouter un exercice">
+        <button
+            v-if="!workout.ended_at"
+            @click="showAddExercise = true"
+            class="glass-fab sm:hidden"
+            aria-label="Ajouter un exercice"
+        >
             <svg
                 class="h-6 w-6 text-white"
                 xmlns="http://www.w3.org/2000/svg"
@@ -658,7 +782,7 @@ const hasNoResults = computed(() => {
                             <div class="max-h-[50vh] overflow-y-auto p-4 pt-0">
                                 <!-- No Results - Quick Create -->
                                 <div v-if="hasNoResults" class="py-6 text-center">
-                                    <p class="mb-3 text-white/60">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
+                                    <p class="mb-3 text-text-muted">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
                                     <GlassButton variant="primary" @click="quickCreate">
                                         <svg
                                             class="mr-2 h-4 w-4"
@@ -683,13 +807,13 @@ const hasNoResults = computed(() => {
                                     <!-- Create New Button -->
                                     <button
                                         @click="showCreateForm = true"
-                                        class="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-white/20 p-4 text-left transition hover:border-white/40 hover:bg-white/5"
+                                        class="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 p-4 text-left transition hover:border-electric-orange/30 hover:bg-electric-orange/5"
                                     >
                                         <div
-                                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary/20"
+                                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-electric-orange/10"
                                         >
                                             <svg
-                                                class="h-5 w-5 text-accent-primary"
+                                                class="h-5 w-5 text-electric-orange"
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
                                                 viewBox="0 0 24 24"
@@ -704,8 +828,8 @@ const hasNoResults = computed(() => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <div class="font-semibold text-white">Créer un nouvel exercice</div>
-                                            <div class="text-sm text-white/50">Si tu ne trouves pas ton exercice</div>
+                                            <div class="font-semibold text-text-main">Créer un nouvel exercice</div>
+                                            <div class="text-sm text-text-muted">Si tu ne trouves pas ton exercice</div>
                                         </div>
                                     </button>
 
@@ -715,15 +839,15 @@ const hasNoResults = computed(() => {
                                         :key="exercise.id"
                                         @click="addExercise(exercise.id)"
                                         :disabled="addExerciseForm.processing"
-                                        class="flex w-full items-center justify-between rounded-xl p-4 text-left transition hover:bg-white/10 disabled:opacity-50"
+                                        class="group flex w-full items-center justify-between rounded-xl p-4 text-left transition hover:bg-slate-50 disabled:opacity-50"
                                         :aria-label="`Ajouter ${exercise.name}`"
                                     >
                                         <div>
-                                            <div class="font-semibold text-white">{{ exercise.name }}</div>
-                                            <div class="text-sm text-white/50">{{ exercise.category }}</div>
+                                            <div class="font-semibold text-text-main">{{ exercise.name }}</div>
+                                            <div class="text-sm text-text-muted">{{ exercise.category }}</div>
                                         </div>
                                         <span
-                                            class="text-2xl text-accent-primary opacity-0 transition group-hover:opacity-100"
+                                            class="text-2xl text-electric-orange opacity-0 transition group-hover:opacity-100"
                                             >+</span
                                         >
                                     </button>
@@ -761,8 +885,8 @@ const hasNoResults = computed(() => {
                                     />
                                 </svg>
                             </div>
-                            <h3 class="mb-2 text-lg font-bold text-white">Confirmer la suppression</h3>
-                            <p class="mb-6 text-white/60">{{ confirmMessage }}</p>
+                            <h3 class="mb-2 text-lg font-bold text-text-main">Confirmer la suppression</h3>
+                            <p class="mb-6 text-text-muted">{{ confirmMessage }}</p>
                             <div class="flex gap-3">
                                 <GlassButton class="flex-1" @click="cancelConfirm"> Annuler </GlassButton>
                                 <GlassButton variant="danger" class="flex-1" @click="confirmAction">
@@ -783,5 +907,30 @@ const hasNoResults = computed(() => {
             @finished="showTimer = false"
             @close="showTimer = false"
         />
+
+        <!-- Confirmation Modal -->
+        <Modal :show="showFinishModal" @close="showFinishModal = false" maxWidth="sm">
+            <div class="p-6">
+                <div class="mb-5 flex items-center justify-center">
+                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-electric-orange/20">
+                        <span class="material-symbols-outlined text-4xl text-electric-orange">check_circle</span>
+                    </div>
+                </div>
+
+                <h2 class="mb-2 text-center font-display text-xl font-black uppercase italic text-text-main">
+                    Terminer la séance ?
+                </h2>
+                <p class="mb-6 text-center text-sm text-text-muted">
+                    Vous ne pourrez plus modifier cette séance. La durée sera enregistrée.
+                </p>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <GlassButton variant="ghost" @click="showFinishModal = false"> Annuler </GlassButton>
+                    <GlassButton variant="primary" id="confirm-finish-button" @click="confirmFinishWorkout">
+                        Confirmer
+                    </GlassButton>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>
