@@ -34,8 +34,10 @@ const updatePassword = () => {
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-semibold text-white">Mot de passe</h2>
-            <p class="mt-1 text-sm text-white/60">Utilise un mot de passe long et unique pour sécuriser ton compte.</p>
+            <h2 class="text-lg font-semibold text-text-main">Mot de passe</h2>
+            <p class="mt-1 text-sm text-text-muted">
+                Utilise un mot de passe long et unique pour sécuriser ton compte.
+            </p>
         </header>
 
         <form @submit.prevent="updatePassword" class="mt-6 space-y-4">

@@ -51,6 +51,9 @@ class FetchDashboardDataAction
                 ->get()
                 ->append(['progress', 'unit']);
 
+            $volumeTrend = $this->statsService->getDailyVolumeTrend($user, 7);
+            $weeklyVolume = array_sum(array_column($volumeTrend, 'volume'));
+
             return [
                 'workoutsCount' => $workoutsCount,
                 'thisWeekCount' => $thisWeekCount,
@@ -61,6 +64,7 @@ class FetchDashboardDataAction
                 'weeklyVolume' => $weeklyStats['current_week_volume'],
                 'volumeChange' => $weeklyStats['percentage'],
                 'weeklyVolumeTrend' => $weeklyTrend,
+                'volumeTrend' => $volumeTrend,
             ];
         });
     }

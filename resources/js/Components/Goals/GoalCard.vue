@@ -46,7 +46,7 @@ const statusColor = computed(() => {
     if (isCompleted.value) return 'text-green-400'
     if (progress.value > 75) return 'text-blue-400'
     if (progress.value > 25) return 'text-accent-primary'
-    return 'text-white/60'
+    return 'text-text-muted'
 })
 
 const progressBarColor = computed(() => {
@@ -60,19 +60,19 @@ const progressBarColor = computed(() => {
         <!-- Completion Badge -->
         <div
             v-if="isCompleted"
-            class="absolute -right-2 -top-2 z-10 rotate-12 bg-green-500 px-3 py-1.5 text-[10px] font-bold text-white shadow-lg"
+            class="absolute -right-2 -top-2 z-10 rotate-12 bg-green-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-lg"
         >
             COMPLÉTÉ
         </div>
 
         <div class="mb-4 flex items-start justify-between">
             <div class="flex items-center gap-3">
-                <div class="rounded-xl border border-white/10 bg-white/5 p-2 text-2xl">
+                <div class="rounded-xl border border-slate-100 bg-slate-50 p-2 text-2xl">
                     {{ typeIcon }}
                 </div>
                 <div>
-                    <h4 class="line-clamp-1 font-bold text-white">{{ goal.title }}</h4>
-                    <span class="text-xs font-medium uppercase tracking-wider text-white/40">{{ typeLabel }}</span>
+                    <h4 class="line-clamp-1 font-bold text-text-main">{{ goal.title }}</h4>
+                    <span class="text-xs font-medium uppercase tracking-wider text-text-muted">{{ typeLabel }}</span>
                 </div>
             </div>
 
@@ -84,11 +84,11 @@ const progressBarColor = computed(() => {
         <div class="space-y-4">
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
-                <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/30">
+                <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-text-muted/50">
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
-                <div class="h-2 w-full overflow-hidden rounded-full border border-white/5 bg-white/5">
+                <div class="h-2 w-full overflow-hidden rounded-full border border-slate-100 bg-slate-100">
                     <div
                         class="relative h-full transition-all duration-1000 ease-out"
                         :class="progressBarColor"
@@ -101,21 +101,21 @@ const progressBarColor = computed(() => {
 
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-4">
-                <div class="rounded-lg border border-white/5 bg-white/5 p-2">
-                    <p class="text-[10px] font-bold uppercase tracking-tight text-white/30">Actuel</p>
-                    <p class="text-sm font-semibold text-white">
-                        {{ goal.current_value }} <span class="text-[10px] text-white/40">{{ goal.unit }}</span>
+                <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+                    <p class="text-[10px] font-bold uppercase tracking-tight text-text-muted/50">Actuel</p>
+                    <p class="text-sm font-semibold text-text-main">
+                        {{ goal.current_value }} <span class="text-[10px] text-text-muted">{{ goal.unit }}</span>
                     </p>
                 </div>
-                <div class="rounded-lg border border-white/5 bg-white/5 p-2">
-                    <p class="text-[10px] font-bold uppercase tracking-tight text-white/30">Cible</p>
-                    <p class="text-sm font-semibold text-white">
-                        {{ goal.target_value }} <span class="text-[10px] text-white/40">{{ goal.unit }}</span>
+                <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+                    <p class="text-[10px] font-bold uppercase tracking-tight text-text-muted/50">Cible</p>
+                    <p class="text-sm font-semibold text-text-main">
+                        {{ goal.target_value }} <span class="text-[10px] text-text-muted">{{ goal.unit }}</span>
                     </p>
                 </div>
             </div>
 
-            <div v-if="goal.deadline" class="flex items-center gap-1.5 pt-2 text-[10px] italic text-white/40">
+            <div v-if="goal.deadline" class="flex items-center gap-1.5 pt-2 text-[10px] italic text-text-muted">
                 <span>⏱️ Échéance : {{ new Date(goal.deadline).toLocaleDateString() }}</span>
             </div>
         </div>

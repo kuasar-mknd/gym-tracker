@@ -19,6 +19,7 @@ const props = defineProps({
     weeklyVolume: { type: Number, default: 0 },
     volumeChange: { type: Number, default: 0 },
     weeklyVolumeTrend: { type: Array, default: () => [] },
+    volumeTrend: { type: Array, default: () => [] },
 })
 
 const form = useForm({})
@@ -240,17 +241,20 @@ const colorForWorkout = (index) => {
                                     •
                                     {{
                                         workout.duration_minutes ||
-                                        Math.round(
-                                            (new Date(workout.finished_at) - new Date(workout.started_at)) / 60000,
-                                        ) ||
-                                        '?'
+                                        (workout.ended_at
+                                            ? Math.round(
+                                                  (new Date(workout.ended_at) - new Date(workout.started_at)) / 60000,
+                                              )
+                                            : null) ||
+                                        '--'
                                     }}
                                     min
                                 </p>
                             </div>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="glass-badge glass-badge-success">Fait</span>
+                            <span v-if="workout.ended_at" class="glass-badge glass-badge-success">Fait</span>
+                            <span v-else class="glass-badge glass-badge-warning animate-pulse">En cours</span>
                             <span class="mt-1 font-mono text-xs text-text-muted">
                                 {{
                                     new Date(workout.started_at).toLocaleTimeString('fr-FR', {
