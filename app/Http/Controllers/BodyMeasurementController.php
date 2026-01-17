@@ -12,6 +12,8 @@ class BodyMeasurementController extends Controller
 {
     use AuthorizesRequests;
 
+    public function __construct(protected \App\Services\StatsService $statsService) {}
+
     public function index()
     {
         $this->authorize('viewAny', BodyMeasurement::class);
@@ -20,8 +22,11 @@ class BodyMeasurementController extends Controller
             ->orderBy('measured_at', 'asc')
             ->get();
 
+        $weightHistory = $this->statsService->getWeightHistory(Auth::user(), 365);
+
         return Inertia::render('Measurements/Index', [
             'measurements' => $measurements,
+            'weightHistory' => $weightHistory,
         ]);
     }
 
@@ -31,11 +36,14 @@ class BodyMeasurementController extends Controller
 
         $validated = $request->validate([
             'weight' => ['required', 'numeric', 'min:1', 'max:500'],
+            'body_fat' => ['nullable', 'numeric', 'min:1', 'max:100'],
             'measured_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $request->user()->bodyMeasurements()->create($validated);
+
+        $this->statsService->clearUserStatsCache($request->user());
 
         return redirect()->back();
     }
@@ -44,7 +52,10 @@ class BodyMeasurementController extends Controller
     {
         $this->authorize('delete', $bodyMeasurement);
 
+        $user = Auth::user();
         $bodyMeasurement->delete();
+
+        $this->statsService->clearUserStatsCache($user);
 
         return redirect()->back();
     }

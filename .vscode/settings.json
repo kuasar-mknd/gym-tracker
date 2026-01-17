@@ -2,7 +2,7 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "[php]": {
-        "editor.defaultFormatter": "shufo.vscode-blade-formatter"
+        "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
     },
     "php.validate.executablePath": "/usr/bin/php",
     "tailwindCSS.experimental.classRegex": [
@@ -13,5 +13,8 @@
     },
     "emmet.includeLanguages": {
         "blade": "html"
+    },
+    "[blade]": {
+        "editor.defaultFormatter": "shufo.vscode-blade-formatter"
     }
 }

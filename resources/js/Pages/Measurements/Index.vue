@@ -5,29 +5,18 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
-import { Line } from 'vue-chartjs'
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler,
-} from 'chart.js'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+import WeightHistoryChart from '@/Components/Stats/WeightHistoryChart.vue'
 
 const props = defineProps({
     measurements: Array,
+    weightHistory: Array,
 })
 
 const showAddForm = ref(false)
 
 const form = useForm({
     weight: '',
+    body_fat: '',
     measured_at: new Date().toISOString().substr(0, 10),
     notes: '',
 })
@@ -35,7 +24,7 @@ const form = useForm({
 const submit = () => {
     form.post(route('body-measurements.store'), {
         onSuccess: () => {
-            form.reset('weight', 'notes')
+            form.reset('weight', 'body_fat', 'notes')
             showAddForm.value = false
         },
     })
@@ -60,6 +49,20 @@ const previousWeight = computed(() => {
 const weightDiff = computed(() => {
     if (!latestWeight.value || !previousWeight.value) return null
     return (latestWeight.value - previousWeight.value).toFixed(1)
+})
+
+const latestBodyFat = computed(() => {
+    if (props.measurements.length === 0) return null
+    const latest = [...props.measurements].reverse().find((m) => m.body_fat !== null)
+    return latest ? latest.body_fat : null
+})
+
+const bodyFatDiff = computed(() => {
+    const measurementsWithFat = props.measurements.filter((m) => m.body_fat !== null)
+    if (measurementsWithFat.length < 2) return null
+    const latest = measurementsWithFat[measurementsWithFat.length - 1].body_fat
+    const previous = measurementsWithFat[measurementsWithFat.length - 2].body_fat
+    return (latest - previous).toFixed(1)
 })
 
 const chartData = computed(() => {
@@ -91,10 +94,10 @@ const chartOptions = {
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(26, 26, 46, 0.95)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            borderColor: 'rgba(255, 255, 255, 0.15)',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            titleColor: '#0F172A',
+            bodyColor: '#0F172A',
+            borderColor: 'rgba(0, 0, 0, 0.1)',
             borderWidth: 1,
             cornerRadius: 12,
             padding: 12,
@@ -102,13 +105,13 @@ const chartOptions = {
     },
     scales: {
         x: {
-            ticks: { color: 'rgba(255, 255, 255, 0.5)', font: { size: 11 } },
+            ticks: { color: '#64748B', font: { size: 10, weight: 'bold' } },
             grid: { display: false },
             border: { display: false },
         },
         y: {
-            ticks: { color: 'rgba(255, 255, 255, 0.5)', font: { size: 11 } },
-            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#64748B', font: { size: 10, weight: 'bold' } },
+            grid: { color: 'rgba(0, 0, 0, 0.05)' },
             border: { display: false },
         },
     },
@@ -135,7 +138,7 @@ const chartOptions = {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-white">Mesures</h2>
+                <h2 class="text-xl font-semibold text-text-main">Mesures</h2>
                 <GlassButton @click="showAddForm = !showAddForm">
                     <svg
                         class="mr-2 h-4 w-4"
@@ -153,13 +156,13 @@ const chartOptions = {
 
         <div class="space-y-6">
             <!-- Quick Stats -->
-            <div class="grid animate-slide-up grid-cols-2 gap-3">
+            <div class="grid animate-slide-up grid-cols-1 gap-3 sm:grid-cols-3">
                 <GlassCard padding="p-4">
                     <div class="text-center">
                         <div class="text-gradient text-3xl font-bold">
                             {{ latestWeight ? `${latestWeight}` : '—' }}
                         </div>
-                        <div class="mt-1 text-sm text-white/60">kg actuel</div>
+                        <div class="mt-1 text-sm font-semibold text-text-muted">kg actuel</div>
                     </div>
                 </GlassCard>
                 <GlassCard padding="p-4">
@@ -171,21 +174,29 @@ const chartOptions = {
                                     ? 'text-accent-warning'
                                     : weightDiff < 0
                                       ? 'text-accent-success'
-                                      : 'text-white/60',
+                                      : 'text-text-muted',
                             ]"
                         >
                             {{ weightDiff ? `${weightDiff > 0 ? '+' : ''}${weightDiff}` : '—' }}
                         </div>
-                        <div class="mt-1 text-sm text-white/60">kg évolution</div>
+                        <div class="mt-1 text-sm font-semibold text-text-muted">kg évolution</div>
+                    </div>
+                </GlassCard>
+                <GlassCard padding="p-4">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-pink-600">
+                            {{ latestBodyFat ? `${latestBodyFat}%` : '—' }}
+                        </div>
+                        <div class="mt-1 text-sm font-semibold text-text-muted">Masse Grasse</div>
                     </div>
                 </GlassCard>
             </div>
 
             <!-- Add Form (collapsible) -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="mb-4 font-semibold text-white">Nouvelle entrée</h3>
+                <h3 class="mb-4 font-semibold text-text-main">Nouvelle entrée</h3>
                 <form @submit.prevent="submit" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-3 gap-4">
                         <GlassInput
                             v-model="form.weight"
                             type="number"
@@ -195,6 +206,15 @@ const chartOptions = {
                             :error="form.errors.weight"
                             inputmode="decimal"
                             required
+                        />
+                        <GlassInput
+                            v-model="form.body_fat"
+                            type="number"
+                            step="0.1"
+                            label="Gras (%)"
+                            placeholder="15.0"
+                            :error="form.errors.body_fat"
+                            inputmode="decimal"
                         />
                         <GlassInput
                             v-model="form.measured_at"
@@ -218,10 +238,10 @@ const chartOptions = {
 
             <!-- Chart -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="mb-4 font-semibold text-white">Évolution</h3>
+                <h3 class="mb-4 font-display text-xs font-black uppercase tracking-[0.2em] text-sky-600">Évolution</h3>
                 <div class="h-64">
-                    <Line v-if="measurements.length > 0" :data="chartData" :options="chartOptions" />
-                    <div v-else class="flex h-full items-center justify-center text-white/40">
+                    <WeightHistoryChart v-if="weightHistory && weightHistory.length > 0" :data="weightHistory" />
+                    <div v-else class="flex h-full items-center justify-center font-medium text-text-muted/50">
                         Aucune donnée disponible
                     </div>
                 </div>
@@ -229,13 +249,13 @@ const chartOptions = {
 
             <!-- History -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="mb-3 font-semibold text-white">Historique</h3>
+                <h3 class="mb-3 font-display text-xs font-black uppercase tracking-[0.2em] text-sky-600">Historique</h3>
 
                 <div v-if="measurements.length === 0">
                     <GlassCard>
                         <div class="py-8 text-center">
                             <div class="mb-2 text-4xl">⚖️</div>
-                            <p class="text-white/60">Aucune mesure pour l'instant</p>
+                            <p class="text-text-muted">Aucune mesure pour l'instant</p>
                         </div>
                     </GlassCard>
                 </div>
@@ -249,8 +269,15 @@ const chartOptions = {
                     >
                         <div class="flex items-center justify-between">
                             <div>
-                                <div class="text-xl font-bold text-white">{{ measurement.weight }} kg</div>
-                                <div class="text-sm text-white/50">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl font-bold text-text-main">{{ measurement.weight }} kg</span>
+                                    <span
+                                        v-if="measurement.body_fat"
+                                        class="rounded-full bg-pink-50 px-2 py-0.5 text-xs font-bold text-pink-600"
+                                        >{{ measurement.body_fat }}% BF</span
+                                    >
+                                </div>
+                                <div class="text-sm font-medium text-text-muted">
                                     {{
                                         new Date(measurement.measured_at + 'T00:00:00').toLocaleDateString('fr-FR', {
                                             weekday: 'short',
@@ -260,13 +287,13 @@ const chartOptions = {
                                         })
                                     }}
                                 </div>
-                                <div v-if="measurement.notes" class="mt-1 text-xs italic text-white/40">
+                                <div v-if="measurement.notes" class="mt-1 text-xs italic text-text-muted/70">
                                     {{ measurement.notes }}
                                 </div>
                             </div>
                             <button
                                 @click="deleteMeasurement(measurement.id)"
-                                class="rounded-lg p-2 text-white/30 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                                class="rounded-lg p-2 text-text-muted/30 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
                             >
                                 <svg
                                     class="h-5 w-5"

@@ -2,18 +2,18 @@
 import { Line } from 'vue-chartjs'
 import {
     Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
     Title,
     Tooltip,
     Legend,
-    LineElement,
-    PointElement,
-    CategoryScale,
-    LinearScale,
     Filler,
 } from 'chart.js'
 import { computed } from 'vue'
 
-ChartJS.register(Title, Tooltip, Legend, LineElement, PointElement, CategoryScale, LinearScale, Filler)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
 const props = defineProps({
     data: {
@@ -27,16 +27,29 @@ const chartData = computed(() => {
         labels: props.data.map((item) => item.date),
         datasets: [
             {
-                label: '1RM Estimé (kg)',
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderWidth: 3,
-                tension: 0.4,
-                fill: true,
-                pointBackgroundColor: '#10b981',
-                pointBorderColor: '#fff',
-                pointHoverRadius: 6,
+                label: 'Estimé 1RM (kg)',
                 data: props.data.map((item) => item.one_rep_max),
+                fill: true,
+                tension: 0.4,
+                borderColor: '#FF0080',
+                backgroundColor: (context) => {
+                    const chart = context.chart
+                    const { ctx, chartArea } = chart
+                    if (!chartArea) return null
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+                    gradient.addColorStop(0, 'rgba(255, 0, 128, 0.2)')
+                    gradient.addColorStop(1, 'rgba(255, 0, 128, 0)')
+                    return gradient
+                },
+                borderWidth: 3,
+                pointRadius: 3,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#FF0080',
+                pointBorderWidth: 2,
+                pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#FF0080',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2,
             },
         ],
     }
@@ -45,41 +58,45 @@ const chartData = computed(() => {
 const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    scales: {
-        y: {
-            grid: {
-                color: 'rgba(255, 255, 255, 0.05)',
-            },
-            ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
-                font: { size: 10 },
-            },
-        },
-        x: {
-            grid: {
-                display: false,
-            },
-            ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
-                font: { size: 10 },
-            },
-        },
-    },
     plugins: {
         legend: {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: '#1e293b',
+            bodyColor: '#1e293b',
             padding: 12,
-            cornerRadius: 8,
+            cornerRadius: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 0, 128, 0.1)',
+        },
+    },
+    scales: {
+        x: {
+            grid: {
+                display: false,
+            },
+            ticks: {
+                color: '#64748B',
+                font: { size: 10, weight: 'bold' },
+            },
+        },
+        y: {
+            grid: {
+                color: 'rgba(0, 0, 0, 0.03)',
+            },
+            ticks: {
+                color: '#64748B',
+                font: { size: 10, weight: 'bold' },
+            },
         },
     },
 }
 </script>
 
 <template>
-    <div class="h-48 w-full sm:h-64">
+    <div class="h-48 w-full">
         <Line :data="chartData" :options="chartOptions" />
     </div>
 </template>
