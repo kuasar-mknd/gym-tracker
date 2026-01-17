@@ -39,15 +39,9 @@ class WorkoutTemplatesController extends Controller
         ]);
     }
 
-    public function store(Request $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
+    public function store(\App\Http\Requests\StoreWorkoutTemplateRequest $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'exercises' => 'nullable|array',
-        ]);
-
-        $createWorkoutTemplateAction->execute($request->user(), $validated);
+        $createWorkoutTemplateAction->execute($request->user(), $request->validated());
 
         return redirect()->route('templates.index');
     }

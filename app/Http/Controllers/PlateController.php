@@ -25,12 +25,9 @@ class PlateController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(\App\Http\Requests\StorePlateRequest $request)
     {
-        $validated = $request->validate([
-            'weight' => ['required', 'numeric', 'min:0.1', 'max:100'],
-            'quantity' => ['required', 'integer', 'min:1', 'max:100'],
-        ]);
+        $validated = $request->validated();
 
         $plate = new Plate($validated);
         $plate->user_id = $request->user()->id;
@@ -39,16 +36,11 @@ class PlateController extends Controller
         return redirect()->back();
     }
 
-    public function update(Request $request, Plate $plate)
+    public function update(\App\Http\Requests\UpdatePlateRequest $request, Plate $plate)
     {
         $this->authorize('update', $plate);
 
-        $validated = $request->validate([
-            'weight' => ['required', 'numeric', 'min:0.1', 'max:100'],
-            'quantity' => ['required', 'integer', 'min:1', 'max:100'],
-        ]);
-
-        $plate->update($validated);
+        $plate->update($request->validated());
 
         return redirect()->back();
     }
