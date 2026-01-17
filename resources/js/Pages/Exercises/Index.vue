@@ -14,6 +14,8 @@ const props = defineProps({
 
 const showAddForm = ref(false)
 const editingExercise = ref(null)
+const searchQuery = ref('')
+const activeCategory = ref('all')
 
 const form = useForm({
     name: '',
@@ -62,9 +64,19 @@ const deleteExercise = (id) => {
     }
 }
 
+// Filter exercises by search and category
+const filteredExercises = computed(() => {
+    return props.exercises.filter((exercise) => {
+        const matchesSearch =
+            !searchQuery.value || exercise.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+        const matchesCategory = activeCategory.value === 'all' || exercise.category === activeCategory.value
+        return matchesSearch && matchesCategory
+    })
+})
+
 const groupedExercises = computed(() => {
     const groups = {}
-    props.exercises.forEach((exercise) => {
+    filteredExercises.value.forEach((exercise) => {
         const cat = exercise.category || 'Autres'
         if (!groups[cat]) {
             groups[cat] = []
@@ -74,17 +86,21 @@ const groupedExercises = computed(() => {
     return groups
 })
 
-const typeIcon = (type) => {
-    switch (type) {
-        case 'strength':
-            return '💪'
-        case 'cardio':
-            return '🏃'
-        case 'timed':
-            return '⏱️'
-        default:
-            return '🏋️'
-    }
+const categoryColors = {
+    Pectoraux: 'bg-electric-orange',
+    Dos: 'bg-vivid-violet',
+    Épaules: 'bg-hot-pink',
+    Bras: 'bg-cyan-pure text-text-main',
+    Jambes: 'bg-neon-green text-text-main',
+    Core: 'bg-magenta-pure',
+    Cardio: 'bg-lime-pure text-text-main',
+    Autres: 'bg-slate-500',
+}
+
+const typeIcons = {
+    strength: 'fitness_center',
+    cardio: 'directions_run',
+    timed: 'timer',
 }
 
 const typeLabel = (type) => {
@@ -94,68 +110,80 @@ const typeLabel = (type) => {
 </script>
 
 <template>
-    <Head title="Exercices" />
+    <Head title="Bibliothèque" />
 
-    <AuthenticatedLayout page-title="Mes Exercices">
-        <template #header-actions>
-            <GlassButton size="sm" @click="showAddForm = !showAddForm">
-                <svg
-                    class="h-4 w-4"
-                    :class="{ 'mr-2': !showAddForm }"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path
-                        v-if="!showAddForm"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4v16m8-8H4"
-                    />
-                    <path
-                        v-else
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"
-                    />
-                </svg>
-                <span v-if="!showAddForm">Ajouter</span>
-            </GlassButton>
-        </template>
-
+    <AuthenticatedLayout liquid-variant="subtle">
         <div class="space-y-6">
-            <!-- Stats -->
-            <div class="grid animate-slide-up grid-cols-3 gap-3">
-                <GlassCard padding="p-4">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-white">{{ exercises.length }}</div>
-                        <div class="mt-1 text-xs text-white/60">Total</div>
-                    </div>
-                </GlassCard>
-                <GlassCard padding="p-4">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-white">
-                            {{ exercises.filter((e) => e.type === 'strength').length }}
-                        </div>
-                        <div class="mt-1 text-xs text-white/60">Force</div>
-                    </div>
-                </GlassCard>
-                <GlassCard padding="p-4">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-white">
-                            {{ exercises.filter((e) => e.type === 'cardio').length }}
-                        </div>
-                        <div class="mt-1 text-xs text-white/60">Cardio</div>
-                    </div>
-                </GlassCard>
+            <!-- Header -->
+            <header class="animate-fade-in">
+                <h1
+                    class="font-display text-5xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+                >
+                    La<br />
+                    <span class="text-gradient">Bibliothèque</span>
+                </h1>
+                <p class="mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">
+                    {{ exercises.length }} exercices disponibles
+                </p>
+            </header>
+
+            <!-- Search Bar -->
+            <div
+                class="glass-panel-light flex animate-slide-up items-center gap-3 rounded-2xl p-3"
+                style="animation-delay: 0.05s"
+            >
+                <span class="material-symbols-outlined text-[24px] text-text-muted">search</span>
+                <input
+                    v-model="searchQuery"
+                    type="search"
+                    placeholder="Recherche exercices..."
+                    class="flex-1 border-none bg-transparent text-lg text-text-main placeholder:text-text-muted/50 focus:outline-none focus:ring-0"
+                />
+                <div
+                    class="hidden items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-text-muted/40 sm:flex"
+                >
+                    <span class="material-symbols-outlined text-sm">keyboard</span>
+                    ⌘K
+                </div>
             </div>
 
-            <!-- Add Form -->
-            <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="mb-4 font-semibold text-white">Nouvel exercice</h3>
+            <!-- Category Pills -->
+            <div class="hide-scrollbar flex animate-slide-up gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
+                <button
+                    @click="activeCategory = 'all'"
+                    :class="[
+                        'category-pill flex-shrink-0 transition-all',
+                        activeCategory === 'all'
+                            ? 'bg-text-main text-white shadow-lg'
+                            : 'border border-slate-200 bg-white text-text-main',
+                    ]"
+                >
+                    <span class="material-symbols-outlined text-lg">apps</span>
+                    Tous
+                </button>
+                <button
+                    v-for="cat in categories"
+                    :key="cat"
+                    @click="activeCategory = cat"
+                    :class="[
+                        'category-pill flex-shrink-0 transition-all',
+                        activeCategory === cat
+                            ? `${categoryColors[cat] || 'bg-slate-500'} text-white`
+                            : 'border border-slate-200 bg-white text-text-main',
+                    ]"
+                >
+                    {{ cat }}
+                </button>
+            </div>
+
+            <!-- Add Button FAB -->
+            <button @click="showAddForm = !showAddForm" class="glass-fab" :class="{ 'rotate-45': showAddForm }">
+                <span class="material-symbols-outlined text-3xl">add</span>
+            </button>
+
+            <!-- Add Form Modal -->
+            <GlassCard v-if="showAddForm" class="animate-scale-in" variant="solid">
+                <h3 class="mb-5 font-display text-xl font-black uppercase text-text-main">Nouvel exercice</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <GlassInput
                         v-model="form.name"
@@ -165,18 +193,18 @@ const typeLabel = (type) => {
                     />
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="mb-1.5 block text-sm font-medium text-white/70">Type</label>
+                            <label class="font-display-label mb-2 block text-text-muted">Type</label>
                             <select v-model="form.type" class="glass-input w-full">
                                 <option v-for="t in types" :key="t.value" :value="t.value">
                                     {{ t.label }}
                                 </option>
                             </select>
-                            <p v-if="form.errors.type" class="mt-1.5 text-sm text-red-400">
+                            <p v-if="form.errors.type" class="mt-2 text-sm font-medium text-red-600">
                                 {{ form.errors.type }}
                             </p>
                         </div>
                         <div>
-                            <label class="mb-1.5 block text-sm font-medium text-white/70">Catégorie</label>
+                            <label class="font-display-label mb-2 block text-text-muted">Catégorie</label>
                             <select v-model="form.category" class="glass-input w-full">
                                 <option value="">— Aucune —</option>
                                 <option v-for="cat in categories" :key="cat" :value="cat">
@@ -192,79 +220,104 @@ const typeLabel = (type) => {
             </GlassCard>
 
             <!-- Error display -->
-            <GlassCard v-if="$page.props.errors?.exercise" class="border-red-500/50 bg-red-500/10">
-                <p class="text-center text-red-400">{{ $page.props.errors.exercise }}</p>
+            <GlassCard v-if="$page.props.errors?.exercise" class="border-red-500 bg-red-50">
+                <p class="text-center font-bold text-red-600">{{ $page.props.errors.exercise }}</p>
             </GlassCard>
 
-            <!-- Exercises List by Category -->
-            <div v-if="exercises.length === 0" class="animate-slide-up">
-                <GlassCard>
-                    <div class="py-8 text-center">
-                        <div class="mb-2 text-4xl">🏋️</div>
-                        <p class="text-white/60">Aucun exercice pour l'instant</p>
-                        <GlassButton variant="primary" class="mt-4" size="sm" @click="showAddForm = true">
-                            Créer le premier exercice
-                        </GlassButton>
-                    </div>
+            <!-- Empty State -->
+            <div v-if="filteredExercises.length === 0 && !searchQuery" class="animate-slide-up">
+                <GlassCard class="py-12 text-center">
+                    <div class="mb-4 text-6xl">🏋️</div>
+                    <p class="text-lg font-bold text-text-main">Aucun exercice pour l'instant</p>
+                    <p class="mt-1 text-text-muted">Commence par créer ton premier exercice</p>
+                    <GlassButton variant="primary" class="mt-6" @click="showAddForm = true">
+                        <span class="material-symbols-outlined mr-2">add</span>
+                        Créer le premier exercice
+                    </GlassButton>
                 </GlassCard>
             </div>
 
-            <div v-else class="space-y-6">
-                <div
-                    v-for="(exercisesInCat, category) in groupedExercises"
-                    :key="category"
-                    class="animate-slide-up"
-                    style="animation-delay: 0.1s"
-                >
-                    <h3 class="mb-3 font-semibold text-white">{{ category }}</h3>
-                    <div class="space-y-2">
-                        <GlassCard v-for="exercise in exercisesInCat" :key="exercise.id" padding="p-4" class="group">
+            <!-- No Search Results -->
+            <div v-else-if="filteredExercises.length === 0" class="animate-slide-up">
+                <GlassCard class="py-8 text-center">
+                    <span class="material-symbols-outlined mb-3 text-6xl text-text-muted/30">search_off</span>
+                    <p class="font-bold text-text-main">Aucun résultat pour "{{ searchQuery }}"</p>
+                </GlassCard>
+            </div>
+
+            <!-- Exercises List by Category -->
+            <div v-else class="animate-slide-up space-y-8" style="animation-delay: 0.15s">
+                <div v-for="(exercisesInCat, category) in groupedExercises" :key="category">
+                    <div class="mb-4 flex items-center gap-3">
+                        <div :class="['size-3 rounded-full', categoryColors[category] || 'bg-slate-400']"></div>
+                        <h3 class="text-xs font-black uppercase tracking-[0.2em] text-text-muted">{{ category }}</h3>
+                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-text-muted/50">
+                            {{ exercisesInCat.length }}
+                        </span>
+                    </div>
+
+                    <div class="space-y-3">
+                        <GlassCard
+                            v-for="exercise in exercisesInCat"
+                            :key="exercise.id"
+                            variant="iridescent"
+                            padding="p-4"
+                            class="group"
+                        >
                             <!-- View Mode -->
                             <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-2xl">{{ typeIcon(exercise.type) }}</span>
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        :class="[
+                                            'flex size-14 items-center justify-center rounded-2xl',
+                                            exercise.type === 'strength'
+                                                ? 'bg-electric-orange/10 text-electric-orange'
+                                                : exercise.type === 'cardio'
+                                                  ? 'bg-neon-green/30 text-text-main'
+                                                  : 'bg-cyan-pure/10 text-cyan-pure',
+                                        ]"
+                                    >
+                                        <span class="material-symbols-outlined text-3xl">
+                                            {{ typeIcons[exercise.type] || 'fitness_center' }}
+                                        </span>
+                                    </div>
                                     <div>
-                                        <div class="font-semibold text-white">{{ exercise.name }}</div>
-                                        <div class="text-xs text-white/50">{{ typeLabel(exercise.type) }}</div>
+                                        <div
+                                            class="font-display text-lg font-bold uppercase italic leading-tight text-text-main"
+                                        >
+                                            {{ exercise.name }}
+                                        </div>
+                                        <div
+                                            class="mt-1 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                                        >
+                                            {{ typeLabel(exercise.type) }}
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
+                                <div
+                                    class="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100"
+                                >
                                     <button
                                         @click="startEdit(exercise)"
-                                        class="rounded-lg p-2 text-white/30 transition hover:text-white"
+                                        class="flex size-10 items-center justify-center rounded-xl text-text-muted transition-all hover:bg-electric-orange/10 hover:text-electric-orange"
                                     >
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                            />
-                                        </svg>
+                                        <span class="material-symbols-outlined">edit</span>
                                     </button>
                                     <button
                                         @click="deleteExercise(exercise.id)"
-                                        class="rounded-lg p-2 text-white/30 transition hover:text-red-400"
+                                        class="flex size-10 items-center justify-center rounded-xl text-text-muted transition-all hover:bg-red-50 hover:text-red-500"
                                     >
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                            />
-                                        </svg>
+                                        <span class="material-symbols-outlined">delete</span>
                                     </button>
                                 </div>
                             </div>
 
                             <!-- Edit Mode -->
-                            <form v-else @submit.prevent="updateExercise(exercise)" class="space-y-3">
+                            <form v-else @submit.prevent="updateExercise(exercise)" class="space-y-4">
                                 <GlassInput
                                     v-model="editForm.name"
                                     placeholder="Nom de l'exercice"
                                     :error="editForm.errors.name"
-                                    size="sm"
                                 />
                                 <div class="grid grid-cols-2 gap-3">
                                     <select v-model="editForm.type" class="glass-input text-sm">

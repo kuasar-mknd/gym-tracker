@@ -27,15 +27,20 @@ const submit = () => {
         <Head title="Connexion" />
 
         <div class="mb-6 text-center">
-            <h2 class="text-2xl font-bold text-white">Bon retour ! 👋</h2>
-            <p class="mt-1 text-white/60">Connecte-toi pour continuer</p>
+            <h2 class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main">
+                Bon retour ! 👋
+            </h2>
+            <p class="mt-2 text-text-muted">Connecte-toi pour continuer</p>
         </div>
 
-        <div v-if="status" class="mb-4 rounded-xl bg-accent-success/20 p-3 text-sm text-accent-success">
+        <div
+            v-if="status"
+            class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700"
+        >
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit" class="space-y-4">
+        <form @submit.prevent="submit" class="space-y-5">
             <GlassInput
                 v-model="form.email"
                 type="email"
@@ -62,15 +67,15 @@ const submit = () => {
                     <input
                         type="checkbox"
                         v-model="form.remember"
-                        class="h-5 w-5 rounded border-glass-border bg-glass text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-0"
+                        class="h-5 w-5 rounded-lg border-slate-300 bg-white text-electric-orange focus:ring-2 focus:ring-electric-orange/30 focus:ring-offset-0"
                     />
-                    <span class="ml-2 text-sm text-white/70">Se souvenir</span>
+                    <span class="ml-2 text-sm font-medium text-text-muted">Se souvenir</span>
                 </label>
 
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="text-sm text-accent-primary hover:underline"
+                    class="text-sm font-semibold text-electric-orange transition-colors hover:text-vivid-violet"
                 >
                     Mot de passe oublié ?
                 </Link>
@@ -89,49 +94,47 @@ const submit = () => {
             <!-- Social Login -->
             <div class="relative my-6">
                 <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-glass-border"></div>
+                    <div class="w-full border-t border-slate-200"></div>
                 </div>
                 <div class="relative flex justify-center text-sm">
-                    <span class="rounded bg-black/40 px-3 py-0.5 text-white/50 backdrop-blur-sm"
-                        >Ou continuer avec</span
-                    >
+                    <span class="rounded-full bg-white px-4 py-1 font-medium text-text-muted"> Ou continuer avec </span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-3">
+            <div class="flex justify-center gap-4">
                 <a
                     v-if="$page.props.social_login_enabled?.google ?? true"
                     :href="route('social.redirect', 'google')"
-                    class="bg-glass-surface flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border transition hover:bg-white/10"
+                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/475656/google-color.svg"
                         loading="lazy"
-                        class="h-5 w-5"
+                        class="h-6 w-6"
                         alt="Google"
                     />
                 </a>
                 <a
                     v-if="$page.props.social_login_enabled?.github ?? true"
                     :href="route('social.redirect', 'github')"
-                    class="bg-glass-surface flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border transition hover:bg-white/10"
+                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/512317/github-142.svg"
                         loading="lazy"
-                        class="h-5 w-5 invert"
+                        class="h-6 w-6 invert"
                         alt="GitHub"
                     />
                 </a>
                 <a
                     v-if="$page.props.social_login_enabled?.apple ?? true"
                     :href="route('social.redirect', 'apple')"
-                    class="bg-glass-surface flex h-11 w-11 items-center justify-center rounded-xl border border-glass-border transition hover:bg-white/10"
+                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-700 bg-black shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/511330/apple-173.svg"
                         loading="lazy"
-                        class="h-5 w-5 invert"
+                        class="h-6 w-6 invert"
                         alt="Apple"
                     />
                 </a>
@@ -139,9 +142,13 @@ const submit = () => {
         </form>
 
         <template #footer>
-            <p>
+            <p class="text-text-muted">
                 Pas encore de compte ?
-                <Link :href="route('register')" class="text-accent-primary hover:underline"> Créer un compte </Link>
+                <Link
+                    :href="route('register')"
+                    class="font-bold text-electric-orange transition-colors hover:text-vivid-violet"
+                    >Créer un compte</Link
+                >
             </p>
         </template>
     </GuestLayout>

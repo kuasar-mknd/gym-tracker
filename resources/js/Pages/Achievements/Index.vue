@@ -34,21 +34,22 @@ const getCategoryLabel = (category) => {
     <Head title="Succès & Badges" />
 
     <AuthenticatedLayout page-title="Succès & Badges">
-        <div class="space-y-6 pb-24">
-            <!-- Header & Summary -->
-            <div class="flex animate-slide-up items-end justify-between">
+        <template #header>
+            <div class="flex items-end justify-between">
                 <div>
-                    <h1 class="flex items-center gap-2 text-2xl font-bold text-white">Trophées 🏆</h1>
-                    <p class="mt-1 text-white/60">Tes exploits et récompenses.</p>
+                    <h1 class="flex items-center gap-2 text-2xl font-bold text-text-main">Trophées 🏆</h1>
+                    <p class="mt-1 text-text-muted">Tes exploits et récompenses.</p>
                 </div>
                 <div class="text-right">
                     <div class="text-2xl font-bold text-accent-primary">
                         {{ summary.unlocked }} / {{ summary.total }}
                     </div>
-                    <div class="text-xs uppercase tracking-wider text-white/40">Débloqués</div>
+                    <div class="text-xs uppercase tracking-wider text-text-muted/50">Débloqués</div>
                 </div>
             </div>
+        </template>
 
+        <div class="space-y-6 pb-24">
             <!-- Categories -->
             <div class="scrollbar-none flex animate-slide-up gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
                 <button
@@ -59,7 +60,7 @@ const getCategoryLabel = (category) => {
                     :class="
                         currentCategory === cat.value
                             ? 'bg-accent-primary text-white shadow-lg shadow-accent-primary/20'
-                            : 'bg-white/5 text-white/60 hover:bg-white/10'
+                            : 'border border-slate-200 bg-white/50 text-text-muted hover:bg-white/80'
                     "
                 >
                     {{ cat.label }}
@@ -74,7 +75,7 @@ const getCategoryLabel = (category) => {
                         class="flex h-full flex-col items-center text-center transition-all duration-300"
                         :class="[
                             achievement.is_unlocked
-                                ? 'border-accent-primary/20 bg-glass-strong'
+                                ? 'bg-glass-strong border-accent-primary/20'
                                 : 'opacity-60 grayscale',
                         ]"
                     >
@@ -87,12 +88,12 @@ const getCategoryLabel = (category) => {
                         </div>
 
                         <!-- Name -->
-                        <h3 class="mb-1 line-clamp-1 text-sm font-bold text-white">
+                        <h3 class="mb-1 line-clamp-1 text-sm font-bold text-text-main">
                             {{ achievement.name }}
                         </h3>
 
                         <!-- Description -->
-                        <p class="line-clamp-2 text-[10px] text-white/40">
+                        <p class="line-clamp-2 text-[10px] text-text-muted">
                             {{ achievement.description }}
                         </p>
 
@@ -126,7 +127,7 @@ const getCategoryLabel = (category) => {
             </div>
 
             <!-- Empty State -->
-            <div v-if="filteredAchievements.length === 0" class="py-12 text-center text-white/40">
+            <div v-if="filteredAchievements.length === 0" class="py-12 text-center text-text-muted">
                 Aucun badge dans cette catégorie.
             </div>
         </div>

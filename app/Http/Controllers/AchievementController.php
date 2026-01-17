@@ -14,10 +14,10 @@ class AchievementController extends Controller
     {
         $user = auth()->user();
 
-        $achievements = Achievement::all()->map(function ($achievement) use ($user) {
-            $userAchievement = $user->achievements()
-                ->where('achievement_id', $achievement->id)
-                ->first();
+        $userAchievements = $user->achievements()->get()->keyBy('id');
+
+        $achievements = Achievement::all()->map(function ($achievement) use ($userAchievements) {
+            $userAchievement = $userAchievements->get($achievement->id);
 
             return [
                 'id' => $achievement->id,

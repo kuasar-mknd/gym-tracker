@@ -6,6 +6,7 @@ use Facebook\WebDriver\Chrome\ChromeOptions;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Illuminate\Support\Collection;
+use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
 use PHPUnit\Framework\Attributes\BeforeClass;
 
@@ -22,6 +23,26 @@ abstract class DuskTestCase extends BaseTestCase
         }
     }
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Browser::macro('assertNoConsoleExceptions', function () {
+            /** @var Browser $this */
+            $logs = $this->driver->manage()->getLog('browser');
+            $failures = collect($logs)->filter(function ($log) {
+                return $log['level'] === 'SEVERE';
+            });
+
+            \PHPUnit\Framework\Assert::assertTrue(
+                $failures->isEmpty(),
+                "Console exceptions found:\n".$failures->implode('message', "\n")
+            );
+
+            return $this;
+        });
+    }
+
     /**
      * Create the RemoteWebDriver instance.
      */
@@ -35,6 +56,10 @@ abstract class DuskTestCase extends BaseTestCase
             return $items->merge([
                 '--disable-gpu',
                 '--headless=new',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--ignore-certificate-errors',
+                '--window-size=1920,1080',
             ]);
         })->all());
 

@@ -9,6 +9,7 @@ const notificationId = ref(null)
 const page = usePage()
 
 const checkAchievement = () => {
+    if (page.props.is_testing) return
     const latest = page.props.auth.user?.latest_achievement
     if (latest && latest.data) {
         // Avoid showing same achievement twice in same session if not cleared
@@ -58,7 +59,7 @@ const close = () => {
 
         <!-- Modal -->
         <div
-            class="animate-bounce-in relative w-full max-w-sm overflow-hidden rounded-3xl bg-glass-strong p-1 shadow-2xl ring-1 ring-white/10"
+            class="animate-bounce-in bg-glass-strong relative w-full max-w-sm overflow-hidden rounded-3xl p-1 shadow-2xl ring-1 ring-white/10"
         >
             <!-- Glow Effect -->
             <div

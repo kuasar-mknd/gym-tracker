@@ -1,90 +1,55 @@
 <script setup>
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage, router } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
-const props = defineProps({
-    items: {
-        type: Array,
-        default: () => [
-            { name: 'Accueil', route: 'dashboard', icon: 'home' },
-            { name: 'Séances', route: 'workouts.index', icon: 'dumbbell' },
-            { name: 'Objectifs', route: 'goals.index', icon: 'target' },
-            { name: 'Trophées', route: 'achievements.index', icon: 'trophy' },
-            { name: 'Corps', route: 'body-measurements.index', icon: 'scale' },
-            { name: 'Profil', route: 'profile.edit', icon: 'user' },
-        ],
-    },
-})
+const page = usePage()
+
+const navItems = [
+    { name: 'Accueil', icon: 'grid_view', route: 'dashboard' },
+    { name: 'Stats', icon: 'bar_chart_4_bars', route: 'stats.index' },
+    { name: 'Add', icon: 'play_arrow', isFab: true, action: 'createWorkout' },
+    { name: 'Séances', icon: 'calendar_month', route: 'workouts.index' },
+    { name: 'Plus', icon: 'menu', route: 'profile.index' },
+]
+
+const createWorkout = () => {
+    router.post(route('workouts.store'))
+}
+
+const isActiveRoute = (itemRoute) => {
+    const currentRoute = route().current()
+    if (!currentRoute) return false
+
+    const routePrefix = itemRoute.split('.')[0]
+    return currentRoute === itemRoute || currentRoute.startsWith(routePrefix + '.')
+}
 </script>
 
 <template>
-    <nav class="glass-nav">
-        <div class="flex items-center justify-around px-2">
+    <nav class="glass-nav" aria-label="Navigation principale">
+        <template v-for="item in navItems" :key="item.name">
+            <!-- Center FAB -->
+            <div v-if="item.isFab" class="relative">
+                <button @click="createWorkout" class="glass-nav-fab" :aria-label="item.name">
+                    <span class="material-symbols-outlined text-4xl font-black">{{ item.icon }}</span>
+                </button>
+            </div>
+
+            <!-- Regular nav item -->
             <Link
-                v-for="item in items"
-                :key="item.route"
+                v-else
                 :href="route(item.route)"
-                class="glass-nav-item relative flex-1 py-2"
-                :class="{ active: route().current(item.route.split('.')[0] + '.*') || route().current(item.route) }"
+                :class="['glass-nav-item group', { active: isActiveRoute(item.route) }]"
+                :aria-label="item.name"
+                :aria-current="isActiveRoute(item.route) ? 'page' : undefined"
             >
-                <svg
-                    class="h-6 w-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+                <span
+                    class="material-symbols-outlined text-[28px] transition-all group-hover:drop-shadow-[0_0_8px_rgba(255,85,0,0.5)]"
+                    :style="{ fontVariationSettings: isActiveRoute(item.route) ? `'FILL' 1` : `'FILL' 0` }"
                 >
-                    <path
-                        v-if="item.icon === 'home'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                    />
-                    <path
-                        v-else-if="item.icon === 'dumbbell'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 7v10M8 4v16M12 7v10M16 4v16M20 7v10"
-                    />
-                    <path
-                        v-else-if="item.icon === 'target'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 22a10 10 0 100-20 10 10 0 000 20zm0-2a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12zm0-4a2 2 0 110-4 2 2 0 010 4z"
-                    />
-                    <path
-                        v-else-if="item.icon === 'trophy'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                    />
-                    <path
-                        v-else-if="item.icon === 'chart'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                    <path
-                        v-else-if="item.icon === 'scale'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0l-3-9m3 1c1 0 1 1 1 1m0 0l3 9a5.002 5.002 0 006.001 0l-3-9m-3 1c-1 0-1-1-1-1m-4-1V5a2 2 0 012-2h2a2 2 0 012 2v3m-6 0h6"
-                    />
-                    <path
-                        v-else-if="item.icon === 'user'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                </svg>
-                <span class="mt-1 text-xs">{{ item.name }}</span>
+                    {{ item.icon }}
+                </span>
             </Link>
-        </div>
+        </template>
     </nav>
 </template>

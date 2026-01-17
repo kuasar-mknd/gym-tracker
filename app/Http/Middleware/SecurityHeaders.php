@@ -44,9 +44,9 @@ class SecurityHeaders
                 "default-src 'self'",
                 "script-src 'self' 'nonce-{$nonce}'",
                 // External font stylesheets (fonts.bunny.net) require 'unsafe-inline' as they can't have nonces
-                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
                 "img-src 'self' data: https:",
-                "font-src 'self' https://fonts.bunny.net data:",
+                "font-src 'self' https://fonts.bunny.net https://fonts.gstatic.com data:",
                 "connect-src 'self'".(app()->isLocal() ? ' ws://localhost:* wss://localhost:* http://localhost:*' : ''),
             ]);
         } else {
