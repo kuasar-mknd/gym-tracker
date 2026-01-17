@@ -1,7 +1,7 @@
 <template>
     <Head title="Calculateur de Plaques" />
 
-    <AuthenticatedLayout page-title="Calculateur">
+    <AuthenticatedLayout page-title="Plaques" show-back back-route="profile.index">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
@@ -72,8 +72,13 @@
                                 <div
                                     v-for="(plate, index) in calculatedPlates"
                                     :key="`left-${index}`"
-                                    class="flex items-center justify-center rounded-md border-2 border-white/30 text-xs font-black text-white shadow-lg"
-                                    :class="getPlateColor(plate.weight)"
+                                    class="flex items-center justify-center rounded-md border-2 border-white/30 text-xs font-black shadow-lg"
+                                    :class="[
+                                        getPlateColor(plate.weight),
+                                        parseFloat(plate.weight) === 15 || parseFloat(plate.weight) < 5
+                                            ? 'text-text-main'
+                                            : 'text-white',
+                                    ]"
                                     :style="{
                                         height: `${getPlateSize(plate.weight)}px`,
                                         width: '24px',
@@ -88,8 +93,13 @@
                                 <div
                                     v-for="(plate, index) in calculatedPlates"
                                     :key="`right-${index}`"
-                                    class="flex items-center justify-center rounded-md border-2 border-white/30 text-xs font-black text-white shadow-lg"
-                                    :class="getPlateColor(plate.weight)"
+                                    class="flex items-center justify-center rounded-md border-2 border-white/30 text-xs font-black shadow-lg"
+                                    :class="[
+                                        getPlateColor(plate.weight),
+                                        parseFloat(plate.weight) === 15 || parseFloat(plate.weight) < 5
+                                            ? 'text-text-main'
+                                            : 'text-white',
+                                    ]"
                                     :style="{
                                         height: `${getPlateSize(plate.weight)}px`,
                                         width: '24px',

@@ -10,6 +10,11 @@ class FetchDashboardDataAction
     /**
      * Fetch dashboard data for the given user.
      */
+    public function __construct(protected \App\Services\StatsService $statsService) {}
+
+    /**
+     * Fetch dashboard data for the given user.
+     */
     public function execute(User $user): array
     {
         // Cache dashboard data for 10 minutes
@@ -43,6 +48,9 @@ class FetchDashboardDataAction
                 ->get()
                 ->append(['progress', 'unit']);
 
+            $volumeTrend = $this->statsService->getDailyVolumeTrend($user, 7);
+            $weeklyVolume = array_sum(array_column($volumeTrend, 'volume'));
+
             return [
                 'workoutsCount' => $workoutsCount,
                 'thisWeekCount' => $thisWeekCount,
@@ -50,6 +58,8 @@ class FetchDashboardDataAction
                 'recentWorkouts' => $recentWorkouts,
                 'recentPRs' => $recentPRs,
                 'activeGoals' => $activeGoals,
+                'volumeTrend' => $volumeTrend,
+                'weeklyVolume' => $weeklyVolume,
             ];
         });
     }

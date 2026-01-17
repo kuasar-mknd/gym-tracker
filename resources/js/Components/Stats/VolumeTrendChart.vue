@@ -18,9 +18,18 @@ const chartData = computed(() => {
         datasets: [
             {
                 label: 'Volume (kg)',
-                backgroundColor: '#3b82f6',
-                borderRadius: 4,
                 data: props.data.map((item) => item.volume),
+                backgroundColor: (context) => {
+                    const chart = context.chart
+                    const { ctx, chartArea } = chart
+                    if (!chartArea) return null
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+                    gradient.addColorStop(0, '#FF5500')
+                    gradient.addColorStop(1, '#FF0080')
+                    return gradient
+                },
+                borderRadius: 6,
+                hoverBackgroundColor: '#8800FF',
             },
         ],
     }
@@ -33,11 +42,11 @@ const chartOptions = {
         y: {
             beginAtZero: true,
             grid: {
-                color: 'rgba(255, 255, 255, 0.05)',
+                color: 'rgba(0, 0, 0, 0.03)',
             },
             ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
-                font: { size: 10 },
+                color: '#64748B',
+                font: { size: 10, weight: 'bold' },
             },
         },
         x: {
@@ -45,8 +54,8 @@ const chartOptions = {
                 display: false,
             },
             ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
-                font: { size: 10 },
+                color: '#64748B',
+                font: { size: 10, weight: 'bold' },
             },
         },
     },
@@ -55,16 +64,20 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: '#1e293b',
+            bodyColor: '#1e293b',
             padding: 12,
-            cornerRadius: 8,
+            cornerRadius: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(0, 0, 0, 0.05)',
         },
     },
 }
 </script>
 
 <template>
-    <div class="h-48 w-full sm:h-64">
+    <div class="h-48 w-full">
         <Bar :data="chartData" :options="chartOptions" />
     </div>
 </template>
