@@ -3,12 +3,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import WorkoutsPerMonthChart from '@/Components/Stats/WorkoutsPerMonthChart.vue'
+import WorkoutDurationChart from '@/Components/Stats/WorkoutDurationChart.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     exercises: Array,
     monthlyFrequency: Array,
+    durationHistory: Array,
 })
 
 const form = useForm({})
@@ -53,7 +55,7 @@ const formatDate = (dateStr) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-white">Mes Séances</h2>
+                <h2 class="text-xl font-semibold text-text-main">Mes Séances</h2>
                 <div class="flex gap-2">
                     <Link :href="route('templates.index')">
                         <GlassButton>
@@ -97,7 +99,7 @@ const formatDate = (dateStr) => {
                     <GlassCard padding="p-4">
                         <div class="text-center">
                             <div class="text-gradient text-2xl font-bold">{{ workouts.data?.length || 0 }}</div>
-                            <div class="mt-1 text-xs text-white/60">Total séances</div>
+                            <div class="mt-1 text-xs text-text-muted">Total séances</div>
                         </div>
                     </GlassCard>
                     <GlassCard padding="p-4">
@@ -105,51 +107,64 @@ const formatDate = (dateStr) => {
                             <div class="text-2xl font-bold text-accent-success">
                                 {{ workouts.data?.reduce((acc, w) => acc + w.workout_lines.length, 0) || 0 }}
                             </div>
-                            <div class="mt-1 text-xs text-white/60">Exercices</div>
+                            <div class="mt-1 text-xs text-text-muted">Exercices</div>
                         </div>
                     </GlassCard>
                 </div>
 
-                <!-- Frequency Chart -->
-                <GlassCard v-if="monthlyFrequency && monthlyFrequency.length > 0">
-                    <div class="mb-4">
-                        <h3 class="text-lg font-bold text-white">Fréquence d'entraînement</h3>
-                        <p class="text-xs text-white/50">Séances par mois (6 derniers mois)</p>
-                    </div>
-                    <WorkoutsPerMonthChart :data="monthlyFrequency" />
-                </GlassCard>
+                <!-- Charts Grid -->
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <!-- Frequency Chart -->
+                    <GlassCard v-if="monthlyFrequency && monthlyFrequency.length > 0">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-text-main">Fréquence</h3>
+                            <p class="text-xs text-text-muted">Séances par mois</p>
+                        </div>
+                        <WorkoutsPerMonthChart :data="monthlyFrequency" />
+                    </GlassCard>
+
+                    <!-- Duration Chart -->
+                    <GlassCard v-if="durationHistory && durationHistory.length > 0">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-text-main">Durée</h3>
+                            <p class="text-xs text-text-muted">Temps d'entraînement (min)</p>
+                        </div>
+                        <WorkoutDurationChart :data="durationHistory" />
+                    </GlassCard>
+                </div>
             </div>
 
             <!-- Available Exercises -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="mb-3 font-semibold text-white">Exercices disponibles</h3>
+                <h3 class="mb-3 font-semibold text-text-main">Exercices disponibles</h3>
                 <div class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
                     <div
                         v-for="exercise in exercises"
                         :key="exercise.id"
-                        class="flex-shrink-0 rounded-xl border border-white/10 bg-glass px-3 py-2 text-sm shadow-sm"
+                        class="flex-shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm"
                     >
-                        <div class="font-medium text-white">{{ exercise.name }}</div>
-                        <div class="text-xs text-white/50">{{ exercise.category }}</div>
+                        <div class="font-medium text-text-main">{{ exercise.name }}</div>
+                        <div class="text-xs text-text-muted">{{ exercise.category }}</div>
                     </div>
                 </div>
             </div>
 
             <!-- Workouts List -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="mb-3 font-semibold text-white">Historique</h3>
+                <h3 class="mb-3 font-semibold text-text-main">Historique</h3>
 
                 <div v-if="!workouts.data || workouts.data.length === 0">
                     <GlassCard>
                         <div class="py-12 text-center">
                             <div class="mb-3 text-5xl">💪</div>
-                            <h3 class="text-lg font-semibold text-white">Aucune séance</h3>
-                            <p class="mt-1 text-white/60">Clique sur le bouton + pour commencer</p>
+                            <h3 class="text-lg font-semibold text-text-main">Aucune séance</h3>
+                            <p class="mt-1 text-text-muted">Clique sur le bouton + pour commencer</p>
                             <GlassButton
                                 variant="primary"
                                 class="mt-4"
                                 :loading="form.processing"
                                 @click="createWorkout"
+                                data-testid="empty-state-start-workout"
                             >
                                 Commencer maintenant
                             </GlassButton>
@@ -164,18 +179,18 @@ const formatDate = (dateStr) => {
                         :href="route('workouts.show', { workout: workout.id })"
                         class="block"
                     >
-                        <GlassCard class="transition hover:bg-glass-strong active:scale-[0.99]">
+                        <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2">
-                                        <h4 class="font-semibold text-white">
+                                        <h4 class="font-semibold text-text-main">
                                             {{ workout.name || 'Séance' }}
                                         </h4>
                                         <span class="glass-badge glass-badge-primary text-xs">
                                             {{ workout.workout_lines.length }} exo
                                         </span>
                                     </div>
-                                    <div class="mt-1 text-sm text-white/50">
+                                    <div class="mt-1 text-sm text-text-muted">
                                         {{ formatDate(workout.started_at) }}
                                     </div>
 
@@ -184,21 +199,21 @@ const formatDate = (dateStr) => {
                                         <span
                                             v-for="line in workout.workout_lines.slice(0, 3)"
                                             :key="line.id"
-                                            class="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/70"
+                                            class="rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs text-text-muted"
                                         >
                                             {{ line.exercise.name }}
-                                            <span class="text-white/40">• {{ line.sets.length }} séries</span>
+                                            <span class="text-text-muted/50">• {{ line.sets.length }} séries</span>
                                         </span>
                                         <span
                                             v-if="workout.workout_lines.length > 3"
-                                            class="rounded-lg bg-white/5 px-2 py-1 text-xs text-white/40"
+                                            class="rounded-lg bg-white/50 px-2 py-1 text-xs text-text-muted/50"
                                         >
                                             +{{ workout.workout_lines.length - 3 }}
                                         </span>
                                     </div>
                                 </div>
                                 <svg
-                                    class="h-5 w-5 flex-shrink-0 text-white/30"
+                                    class="h-5 w-5 flex-shrink-0 text-text-muted/30"
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
                                     viewBox="0 0 24 24"
@@ -217,24 +232,5 @@ const formatDate = (dateStr) => {
                 </div>
             </div>
         </div>
-
-        <!-- FAB for mobile -->
-        <button
-            @click="createWorkout"
-            class="glass-fab sm:hidden"
-            :disabled="form.processing"
-            aria-label="Nouvelle séance"
-        >
-            <svg
-                class="h-6 w-6 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-        </button>
     </AuthenticatedLayout>
 </template>
