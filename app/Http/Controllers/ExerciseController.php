@@ -18,10 +18,7 @@ class ExerciseController extends Controller
     {
         $this->authorize('viewAny', Exercise::class);
 
-        $exercises = Exercise::where(function ($query) {
-            $query->whereNull('user_id')
-                ->orWhere('user_id', Auth::id());
-        })
+        $exercises = Exercise::forUser(Auth::id())
             ->orderBy('category')
             ->orderBy('name')
             ->get();

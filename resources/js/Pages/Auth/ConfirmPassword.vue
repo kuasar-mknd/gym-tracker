@@ -20,8 +20,8 @@ const submit = () => {
         <Head title="Confirmer le mot de passe" />
 
         <div class="mb-6 text-center">
-            <h2 class="text-2xl font-bold text-white">Confirmation requise</h2>
-            <p class="mt-2 text-sm text-white/60">
+            <h2 class="text-2xl font-bold text-text-main">Confirmation requise</h2>
+            <p class="mt-2 text-sm text-text-muted">
                 Cette zone est sécurisée. Confirme ton mot de passe pour continuer.
             </p>
         </div>

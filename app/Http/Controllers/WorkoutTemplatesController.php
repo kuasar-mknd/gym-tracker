@@ -32,7 +32,7 @@ class WorkoutTemplatesController extends Controller
 
         return Inertia::render('Workouts/Templates/Create', [
             'exercises' => Cache::remember('exercises_list_'.auth()->id(), 3600, function () {
-                return \App\Models\Exercise::where(fn ($query) => $query->whereNull('user_id')->orWhere('user_id', auth()->id()))
+                return \App\Models\Exercise::forUser(auth()->id())
                     ->orderBy('name')
                     ->get();
             }),

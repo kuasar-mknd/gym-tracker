@@ -36,7 +36,7 @@ class WorkoutPolicy
      */
     public function update(User $user, Workout $workout): bool
     {
-        return $user->id === $workout->user_id;
+        return $user->id === $workout->user_id && is_null($workout->ended_at);
     }
 
     /**
@@ -44,6 +44,7 @@ class WorkoutPolicy
      */
     public function delete(User $user, Workout $workout): bool
     {
+        // Allow deleting finished workouts (?) - Probably yes, cleaning up history
         return $user->id === $workout->user_id;
     }
 }
