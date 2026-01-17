@@ -7,7 +7,6 @@ use App\Http\Requests\ExerciseUpdateRequest;
 use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 
