@@ -12,7 +12,7 @@ class ExerciseStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('create', \App\Models\Exercise::class) ?? false;
     }
 
     /**
