@@ -20,8 +20,14 @@ class StatsController extends Controller
         $days = $this->parsePeriod($request->query('period', '30j'));
 
         // NITRO FIX: Cache exercises list for 1 hour
-        $exercises = Cache::remember('exercises_list', 3600, function () {
-            return Exercise::orderBy('name')->get();
+        // Security: Filter exercises by user to prevent information disclosure
+        $userId = auth()->id();
+        $exercises = Cache::remember("exercises_list_{$userId}", 3600, function () use ($userId) {
+            return Exercise::query()
+                ->whereNull('user_id')
+                ->orWhere('user_id', $userId)
+                ->orderBy('name')
+                ->get();
         });
 
         // Body metrics and weight history
