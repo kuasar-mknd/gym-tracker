@@ -21,6 +21,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('body-measurements', BodyMeasurementController::class);
     Route::apiResource('goals', GoalController::class);
     Route::apiResource('workout-templates', WorkoutTemplateController::class);
+    Route::apiResource('daily-journals', \App\Http\Controllers\Api\DailyJournalController::class);
 
     Route::get('/status', function () {
         return response()->json(['status' => 'ok']);
