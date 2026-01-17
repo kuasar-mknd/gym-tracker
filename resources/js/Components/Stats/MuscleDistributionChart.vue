@@ -1,9 +1,9 @@
 <script setup>
 import { Doughnut } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale } from 'chart.js'
+import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { computed } from 'vue'
 
-ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale)
+ChartJS.register(Title, Tooltip, Legend, ArcElement)
 
 const props = defineProps({
     data: {
@@ -17,10 +17,18 @@ const chartData = computed(() => {
         labels: props.data.map((item) => item.category),
         datasets: [
             {
-                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#8AC926'],
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                borderWidth: 2,
                 data: props.data.map((item) => item.volume),
+                backgroundColor: [
+                    '#FF5500', // Orange
+                    '#FF0080', // Pink
+                    '#8800FF', // Violet
+                    '#00E5FF', // Cyan
+                    '#00FF88', // Green
+                    '#FFD600', // Yellow
+                ],
+                borderWidth: 0,
+                hoverOffset: 15,
+                borderRadius: 4,
             },
         ],
     }
@@ -29,33 +37,34 @@ const chartData = computed(() => {
 const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    cutout: '70%',
     plugins: {
         legend: {
-            position: 'bottom',
+            position: 'right',
             labels: {
-                color: 'rgba(255, 255, 255, 0.7)',
-                padding: 12,
-                boxWidth: 10,
-                font: {
-                    family: "'Inter', sans-serif",
-                    size: 10,
-                },
+                color: '#64748b',
+                font: { size: 10, weight: 'bold' },
+                padding: 15,
+                usePointStyle: true,
+                pointStyle: 'circle',
             },
         },
         tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            titleFont: { size: 14, weight: 'bold' },
-            bodyFont: { size: 12 },
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: '#1e293b',
+            bodyColor: '#1e293b',
             padding: 12,
-            cornerRadius: 8,
-            displayColors: true,
+            cornerRadius: 12,
+            boxPadding: 8,
+            borderWidth: 1,
+            borderColor: 'rgba(0, 0, 0, 0.05)',
         },
     },
 }
 </script>
 
 <template>
-    <div class="h-48 w-full sm:h-64">
+    <div class="h-52 w-full">
         <Doughnut :data="chartData" :options="chartOptions" />
     </div>
 </template>

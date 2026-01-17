@@ -65,23 +65,23 @@ const submit = () => {
             <GlassCard class="animate-slide-up">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-white/60">Nom du modèle</label>
+                        <label class="block text-sm font-medium text-text-muted">Nom du modèle</label>
                         <input
                             v-model="form.name"
                             type="text"
                             required
-                            class="mt-1 w-full rounded-xl border-none bg-white/5 text-white focus:ring-2 focus:ring-accent-primary"
+                            class="mt-1 w-full rounded-xl border border-slate-200 bg-white/50 text-text-main focus:ring-2 focus:ring-accent-primary"
                             placeholder="ex: Full Body Lundi"
                         />
                         <div v-if="form.errors.name" class="mt-1 text-xs text-red-400">{{ form.errors.name }}</div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-white/60">Description (optionnel)</label>
+                        <label class="block text-sm font-medium text-text-muted">Description (optionnel)</label>
                         <textarea
                             v-model="form.description"
                             rows="2"
-                            class="mt-1 w-full rounded-xl border-none bg-white/5 text-white focus:ring-2 focus:ring-accent-primary"
+                            class="mt-1 w-full rounded-xl border border-slate-200 bg-white/50 text-text-main focus:ring-2 focus:ring-accent-primary"
                             placeholder="Détails de la séance..."
                         ></textarea>
                     </div>
@@ -89,7 +89,7 @@ const submit = () => {
             </GlassCard>
 
             <div class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="mb-3 font-semibold text-white">Exercices</h3>
+                <h3 class="mb-3 font-semibold text-text-main">Exercices</h3>
 
                 <div class="space-y-4">
                     <div v-for="(exercise, exIndex) in form.exercises" :key="exIndex">
@@ -97,7 +97,7 @@ const submit = () => {
                             <button
                                 @click="removeExercise(exIndex)"
                                 type="button"
-                                class="absolute right-4 top-4 text-white/30 hover:text-red-400"
+                                class="absolute right-4 top-4 text-text-muted/30 hover:text-red-400"
                             >
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path
@@ -110,7 +110,7 @@ const submit = () => {
                             </button>
 
                             <div class="mb-4">
-                                <h4 class="text-lg font-bold text-white">{{ exercise.name }}</h4>
+                                <h4 class="text-lg font-bold text-text-main">{{ exercise.name }}</h4>
                             </div>
 
                             <div class="space-y-2">
@@ -120,21 +120,21 @@ const submit = () => {
                                     class="flex items-center gap-2"
                                 >
                                     <div
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-white/60"
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-text-muted"
                                     >
                                         {{ setIndex + 1 }}
                                     </div>
                                     <input
                                         v-model="set.reps"
                                         type="number"
-                                        class="w-20 rounded-lg border-none bg-white/5 text-center text-sm text-white"
+                                        class="w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm text-text-main placeholder:text-text-muted/40"
                                         placeholder="reps"
                                     />
                                     <input
                                         v-model="set.weight"
                                         type="number"
                                         step="0.5"
-                                        class="w-20 rounded-lg border-none bg-white/5 text-center text-sm text-white"
+                                        class="w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm text-text-main placeholder:text-text-muted/40"
                                         placeholder="kg"
                                     />
                                     <button
@@ -144,7 +144,7 @@ const submit = () => {
                                         :class="
                                             set.is_warmup
                                                 ? 'bg-orange-500/20 text-orange-400'
-                                                : 'bg-white/5 text-white/30'
+                                                : 'bg-slate-100 text-text-muted/50'
                                         "
                                     >
                                         W
@@ -152,7 +152,7 @@ const submit = () => {
                                     <button
                                         @click="removeSet(exIndex, setIndex)"
                                         type="button"
-                                        class="ml-auto p-1 text-white/20 hover:text-red-400"
+                                        class="ml-auto p-1 text-text-muted/20 hover:text-red-400"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path
@@ -182,12 +182,12 @@ const submit = () => {
 
                         <div
                             v-if="showExerciseList"
-                            class="absolute bottom-full left-0 right-0 z-50 mb-2 max-h-60 overflow-y-auto rounded-2xl border border-white/10 bg-[#1A1A1A] p-2 shadow-2xl"
+                            class="absolute bottom-full left-0 right-0 z-50 mb-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl"
                         >
                             <input
                                 v-model="searchQuery"
                                 type="text"
-                                class="sticky top-0 mb-2 w-full rounded-xl border-none bg-white/5 text-sm text-white"
+                                class="sticky top-0 mb-2 w-full rounded-xl border border-slate-200 bg-slate-50 text-sm text-text-main"
                                 placeholder="Rechercher..."
                             />
                             <div class="space-y-1">
@@ -196,10 +196,10 @@ const submit = () => {
                                     :key="ex.id"
                                     type="button"
                                     @click="addExercise(ex)"
-                                    class="w-full rounded-xl p-3 text-left transition hover:bg-white/5"
+                                    class="w-full rounded-xl p-3 text-left transition hover:bg-slate-50"
                                 >
-                                    <div class="text-sm font-medium text-white">{{ ex.name }}</div>
-                                    <div class="text-[10px] text-white/40">{{ ex.category }}</div>
+                                    <div class="text-sm font-medium text-text-main">{{ ex.name }}</div>
+                                    <div class="text-[10px] text-text-muted">{{ ex.category }}</div>
                                 </button>
                             </div>
                         </div>
