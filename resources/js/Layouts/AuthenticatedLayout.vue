@@ -74,6 +74,17 @@ const showingNavigationDropdown = ref(false)
                                 Séances
                             </Link>
                             <Link
+                                :href="route('calendar.index')"
+                                :class="[
+                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold uppercase tracking-wide transition-all',
+                                    route().current('calendar.*')
+                                        ? 'bg-electric-orange/10 text-electric-orange'
+                                        : 'text-text-muted hover:bg-white/50 hover:text-text-main',
+                                ]"
+                            >
+                                Calendrier
+                            </Link>
+                            <Link
                                 :href="route('stats.index')"
                                 :class="[
                                     'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold uppercase tracking-wide transition-all',
