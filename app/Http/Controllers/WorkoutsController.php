@@ -6,6 +6,7 @@ use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 /**
@@ -18,6 +19,8 @@ use Inertia\Inertia;
 class WorkoutsController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(protected \App\Services\StatsService $statsService) {}
 
     /**
      * Display a listing of the user's workouts.
@@ -44,12 +47,31 @@ class WorkoutsController extends Controller
             ])
             ->values();
 
+        // Get duration history for the last 20 workouts
+        $durationHistory = Workout::select('name', 'started_at', 'ended_at')
+            ->where('user_id', auth()->id())
+            ->whereNotNull('ended_at')
+            ->latest('started_at')
+            ->take(20)
+            ->get()
+            ->map(function ($workout) {
+                return [
+                    'date' => $workout->started_at->format('d/m'),
+                    'duration' => $workout->ended_at->diffInMinutes($workout->started_at),
+                    'name' => $workout->name,
+                ];
+            })
+            ->reverse()
+            ->values();
+
+        // NITRO FIX: Paginate workouts instead of loading all
         return Inertia::render('Workouts/Index', [
             'workouts' => Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
                 ->where('user_id', auth()->id())
                 ->latest('started_at')
-                ->get(),
+                ->paginate(20),
             'monthlyFrequency' => $monthlyFrequency,
+            'durationHistory' => $durationHistory,
         ]);
     }
 
@@ -68,12 +90,20 @@ class WorkoutsController extends Controller
     {
         $this->authorize('view', $workout);
 
+        // NITRO FIX: Cache exercises list for 1 hour
+        // Security: Filter exercises by user to prevent information disclosure
+        $userId = auth()->id();
+        $exercises = Cache::remember("exercises_list_{$userId}", 3600, function () use ($userId) {
+            return Exercise::query()
+                ->whereNull('user_id')
+                ->orWhere('user_id', $userId)
+                ->orderBy('name')
+                ->get();
+        });
+
         return Inertia::render('Workouts/Show', [
             'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),
-            'exercises' => Exercise::where(function ($query) {
-                $query->whereNull('user_id')
-                    ->orWhere('user_id', auth()->id());
-            })->orderBy('name')->get(),
+            'exercises' => $exercises,
             'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
             'types' => [
                 ['value' => 'strength', 'label' => 'Force'],
@@ -103,6 +133,40 @@ class WorkoutsController extends Controller
         $workout->user_id = auth()->id();
         $workout->save();
 
+        $this->statsService->clearUserStatsCache(auth()->user());
+
         return redirect()->route('workouts.show', $workout);
+    }
+
+    /**
+     * Update the specified workout in storage.
+     */
+    public function update(Request $request, Workout $workout): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorize('update', $workout);
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:1000',
+            'is_finished' => 'nullable|boolean',
+        ]);
+
+        if (isset($validated['name'])) {
+            $workout->name = $validated['name'];
+        }
+
+        if (isset($validated['notes'])) {
+            $workout->notes = $validated['notes'];
+        }
+
+        if (! empty($validated['is_finished']) && $validated['is_finished']) {
+            $workout->ended_at = now();
+        }
+
+        $workout->save();
+
+        $this->statsService->clearUserStatsCache(auth()->user());
+
+        return back();
     }
 }

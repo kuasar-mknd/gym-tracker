@@ -52,9 +52,7 @@ class SetController extends Controller
             abort(403, 'You do not own this workout line.');
         }
 
-        $set = new Set;
-        $set->fill($validated);
-        $set->save();
+        $set = $workoutLine->sets()->create($validated);
 
         return new SetResource($set);
     }

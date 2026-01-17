@@ -32,7 +32,7 @@ class SetPolicy
             return true;
         }
 
-        return $user->id === $workoutLine->workout->user_id;
+        return $user->id === $workoutLine->workout->user_id && is_null($workoutLine->workout->ended_at);
     }
 
     /**
@@ -40,7 +40,7 @@ class SetPolicy
      */
     public function update(User $user, Set $set): bool
     {
-        return $user->id === $set->workoutLine->workout->user_id;
+        return $user->id === $set->workoutLine->workout->user_id && is_null($set->workoutLine->workout->ended_at);
     }
 
     /**
@@ -48,6 +48,6 @@ class SetPolicy
      */
     public function delete(User $user, Set $set): bool
     {
-        return $user->id === $set->workoutLine->workout->user_id;
+        return $user->id === $set->workoutLine->workout->user_id && is_null($set->workoutLine->workout->ended_at);
     }
 }

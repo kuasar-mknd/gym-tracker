@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\ResolveSocialUserAction;
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
@@ -21,7 +20,7 @@ class SocialAuthController extends Controller
     /**
      * Obtain the user information from the provider.
      */
-    public function callback($provider)
+    public function callback(ResolveSocialUserAction $resolver, string $provider)
     {
         try {
             $socialUser = Socialite::driver($provider)->user();
@@ -29,34 +28,26 @@ class SocialAuthController extends Controller
             return redirect()->route('login')->with('status', 'Erreur lors de la connexion avec '.ucfirst($provider));
         }
 
-        // Check if user already exists with this email
-        $existingUser = User::where('email', $socialUser->getEmail())->first();
+        // Security check: Ensure email is verified by the provider
+        // Note: Not all providers set this, but Socialite attempts to capture it.
+        // If not present, we should be cautious about auto-linking.
+        $isVerified = $socialUser->user['email_verified'] ?? $socialUser->user['verified_email'] ?? $socialUser->user['verified'] ?? false;
 
-        if ($existingUser) {
-            // Update provider info if not set (linking account)
-            if (! $existingUser->provider_id) {
-                $existingUser->update([
+        if (! $isVerified) {
+            if (app()->environment('local')) {
+                // SECURITY: Log when email verification is bypassed in local environment
+                \Illuminate\Support\Facades\Log::warning('Social auth email verification bypassed in local environment', [
                     'provider' => $provider,
-                    'provider_id' => $socialUser->getId(),
-                    'avatar' => $socialUser->getAvatar(),
+                    'email' => $socialUser->getEmail(),
                 ]);
+            } else {
+                return redirect()->route('login')->with('status', 'Votre email n\'est pas vérifié par '.ucfirst($provider));
             }
-
-            Auth::login($existingUser);
-        } else {
-            // Create new user
-            $newUser = User::create([
-                'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
-                'email' => $socialUser->getEmail(),
-                'password' => bcrypt(Str::random(16)), // Random password since auth is handled by provider
-                'provider' => $provider,
-                'provider_id' => $socialUser->getId(),
-                'avatar' => $socialUser->getAvatar(),
-                'email_verified_at' => now(), // Assume email is verified by provider
-            ]);
-
-            Auth::login($newUser);
         }
+
+        $user = $resolver->execute($provider, $socialUser);
+
+        Auth::login($user);
 
         return redirect()->intended(route('dashboard'));
     }

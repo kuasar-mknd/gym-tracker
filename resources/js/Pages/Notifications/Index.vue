@@ -10,7 +10,7 @@ const props = defineProps({
 
 const markAsRead = (id) => {
     router.post(
-        route('notifications.mark-as-read', id),
+        route('notifications.mark-as-read', { id: id }),
         {},
         {
             preserveScroll: true,
@@ -44,7 +44,7 @@ const formatDate = (date) => {
     <AuthenticatedLayout page-title="Notifications">
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-white">Notifications</h2>
+                <h2 class="text-xl font-semibold text-text-main">Notifications</h2>
                 <GlassButton
                     v-if="notifications.data.some((n) => !n.read_at)"
                     @click="markAllAsRead"
@@ -60,7 +60,9 @@ const formatDate = (date) => {
                 v-if="notifications.data.length === 0"
                 class="flex flex-col items-center justify-center py-12 text-center"
             >
-                <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-glass text-white/20">
+                <div
+                    class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-text-muted/20"
+                >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         class="h-8 w-8"
@@ -76,8 +78,8 @@ const formatDate = (date) => {
                         />
                     </svg>
                 </div>
-                <h3 class="text-lg font-medium text-white">Aucune notification</h3>
-                <p class="mt-1 text-white/50">Tu es à jour !</p>
+                <h3 class="text-lg font-medium text-text-main">Aucune notification</h3>
+                <p class="mt-1 text-text-muted">Tu es à jour !</p>
             </div>
 
             <div v-else class="space-y-3">
@@ -128,9 +130,9 @@ const formatDate = (date) => {
                                 </svg>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-white">{{ notification.data.title }}</h4>
-                                <p class="text-sm text-white/70">{{ notification.data.message }}</p>
-                                <span class="mt-2 block text-[10px] uppercase tracking-wider text-white/30">
+                                <h4 class="font-semibold text-text-main">{{ notification.data.title }}</h4>
+                                <p class="text-sm text-text-muted">{{ notification.data.message }}</p>
+                                <span class="mt-2 block text-[10px] uppercase tracking-wider text-text-muted/30">
                                     {{ formatDate(notification.created_at) }}
                                 </span>
                             </div>
@@ -139,7 +141,7 @@ const formatDate = (date) => {
                         <button
                             v-if="!notification.read_at"
                             @click="markAsRead(notification.id)"
-                            class="rounded-lg p-1 text-white/20 hover:bg-white/5 hover:text-white"
+                            class="rounded-lg p-1 text-text-muted/20 hover:bg-slate-100/50 hover:text-text-main"
                             title="Marquer comme lu"
                         >
                             <svg

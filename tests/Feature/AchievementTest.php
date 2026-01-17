@@ -91,10 +91,10 @@ class AchievementTest extends TestCase
         Notification::fake();
         $user = User::factory()->create();
 
-        // Create workouts on 3 consecutive days with explicit dates
-        $user->workouts()->create(['started_at' => \Illuminate\Support\Carbon::parse('2023-01-01 12:00:00')]);
-        $user->workouts()->create(['started_at' => \Illuminate\Support\Carbon::parse('2023-01-02 12:00:00')]);
-        $user->workouts()->create(['started_at' => \Illuminate\Support\Carbon::parse('2023-01-03 12:00:00')]);
+        // Create workouts on 3 consecutive days (use recent dates within the optimized window)
+        $user->workouts()->create(['started_at' => now()->subDays(2)]);
+        $user->workouts()->create(['started_at' => now()->subDays(1)]);
+        $user->workouts()->create(['started_at' => now()]);
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,

@@ -46,6 +46,7 @@ class HandleInertiaRequests extends Middleware
                     'longest_streak' => $request->user()->longest_streak,
                 ] : null,
             ],
+            'is_testing' => app()->environment('testing'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             'ziggy' => fn () => [
                 (new \Tighten\Ziggy\Ziggy)->toArray(),
