@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hors ligne - GymTracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9;
+            padding: 1rem;
+        }
+        .container {
+            text-align: center;
+            max-width: 400px;
+        }
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+        }
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        p {
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .retry-btn {
+            display: inline-block;
+            padding: 0.875rem 2rem;
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 0.875rem;
+            border: none;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 10px 25px -5px rgba(255, 107, 53, 0.4);
+        }
+        .retry-btn:hover {
+            transform: scale(1.05);
+        }
+        .retry-btn:active {
+            transform: scale(0.95);
+        }
+        .status {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #64748b;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📡</div>
+        <h1>Hors ligne</h1>
+        <p>Impossible de charger cette page. Vérifie ta connexion Internet et réessaie.</p>
+        <button class="retry-btn" onclick="window.location.reload()">Réessayer</button>
+        <div class="status">
+            <span class="status-dot"></span>
+            En attente de connexion...
+        </div>
+    </div>
+    <script>
+        // Auto-reload when back online
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+    </script>
+</body>
+</html>

@@ -1,6 +1,6 @@
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
-import { registerRoute, NavigationRoute } from 'workbox-routing'
-import { StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies'
+import { precacheAndRoute, cleanupOutdatedCaches, matchPrecache } from 'workbox-precaching'
+import { registerRoute, NavigationRoute, setDefaultHandler } from 'workbox-routing'
+import { StaleWhileRevalidate, CacheFirst, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
@@ -9,6 +9,23 @@ cleanupOutdatedCaches()
 
 // Precache assets (from Vite build)
 precacheAndRoute(self.__WB_MANIFEST)
+
+// Offline fallback page URL
+const OFFLINE_URL = '/offline.html'
+
+// Cache the offline page during install
+self.addEventListener('install', async (event) => {
+    event.waitUntil(
+        caches.open('offline-fallback').then((cache) => {
+            return cache.add(OFFLINE_URL)
+        }),
+    )
+    self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(clients.claim())
+})
 
 // Cache images
 registerRoute(
@@ -38,11 +55,20 @@ registerRoute(
     }),
 )
 
-// Cache Inertia JSON responses
+// Cache CSS and JS with StaleWhileRevalidate
+registerRoute(
+    ({ request }) => request.destination === 'style' || request.destination === 'script',
+    new StaleWhileRevalidate({
+        cacheName: 'static-resources',
+    }),
+)
+
+// Cache Inertia JSON responses with NetworkFirst (try network, fallback to cache)
 registerRoute(
     ({ request }) => request.headers.get('X-Inertia') === 'true',
-    new StaleWhileRevalidate({
+    new NetworkFirst({
         cacheName: 'inertia-data',
+        networkTimeoutSeconds: 5, // Fallback to cache after 5 seconds
         plugins: [
             new CacheableResponsePlugin({
                 statuses: [0, 200],
@@ -55,18 +81,35 @@ registerRoute(
     }),
 )
 
-// Handle navigation requests (Inertia app shell)
-// When offline, fallback to the root '/' which is precached
-const navigationRoute = new NavigationRoute(
-    new StaleWhileRevalidate({
+// Handle navigation requests with NetworkFirst and offline fallback
+registerRoute(
+    ({ request }) => request.mode === 'navigate',
+    new NetworkFirst({
         cacheName: 'navigations',
+        networkTimeoutSeconds: 5,
+        plugins: [
+            new CacheableResponsePlugin({
+                statuses: [0, 200],
+            }),
+        ],
     }),
-    {
-        // Don't intercept API calls or other non-navigation routes
-        denylist: [/^\/api/, /^\/login/, /^\/register/, /^\/logout/],
-    },
 )
-registerRoute(navigationRoute)
+
+// Fallback for failed navigation requests
+setDefaultHandler(new NetworkFirst())
+
+// Handle failed navigations with offline page
+self.addEventListener('fetch', (event) => {
+    if (event.request.mode === 'navigate') {
+        event.respondWith(
+            fetch(event.request).catch(async () => {
+                const cache = await caches.open('offline-fallback')
+                const cachedResponse = await cache.match(OFFLINE_URL)
+                return cachedResponse || new Response('Offline', { status: 503 })
+            }),
+        )
+    }
+})
 
 // Handle Push notifications
 self.addEventListener('push', (event) => {
@@ -90,15 +133,5 @@ self.addEventListener('push', (event) => {
 // Handle Notification clicks
 self.addEventListener('notificationclick', (event) => {
     event.notification.close()
-
     event.waitUntil(clients.openWindow(event.notification.data))
-})
-
-// Skip waiting to activate new service worker immediately
-self.addEventListener('install', () => {
-    self.skipWaiting()
-})
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim())
 })
