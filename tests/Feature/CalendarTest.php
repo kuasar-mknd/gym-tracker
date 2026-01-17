@@ -6,8 +6,8 @@ use App\Models\DailyJournal;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
 
 class CalendarTest extends TestCase
 {

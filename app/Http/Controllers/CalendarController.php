@@ -45,7 +45,7 @@ class CalendarController extends Controller
                     'id' => $journal->id,
                     'date' => $journal->date->toDateString(),
                     'mood_score' => $journal->mood_score,
-                    'has_note' => !empty($journal->content),
+                    'has_note' => ! empty($journal->content),
                 ];
             });
 
