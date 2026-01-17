@@ -2,7 +2,6 @@
 import Checkbox from '@/Components/Checkbox.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import Checkbox from '@/Components/Checkbox.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 
