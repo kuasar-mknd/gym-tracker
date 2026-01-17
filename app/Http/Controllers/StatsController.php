@@ -23,11 +23,7 @@ class StatsController extends Controller
         // Security: Filter exercises by user to prevent information disclosure
         $userId = auth()->id();
         $exercises = Cache::remember("exercises_list_{$userId}", 3600, function () use ($userId) {
-            return Exercise::query()
-                ->whereNull('user_id')
-                ->orWhere('user_id', $userId)
-                ->orderBy('name')
-                ->get();
+            return Exercise::forUser($userId)->orderBy('name')->get();
         });
 
         // Body metrics and weight history
