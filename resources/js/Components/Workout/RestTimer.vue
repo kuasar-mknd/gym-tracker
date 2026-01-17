@@ -122,7 +122,7 @@ watch(
 </script>
 
 <template>
-    <div class="animate-bounce-in fixed bottom-24 left-4 right-4 z-50 sm:left-auto sm:right-4 sm:w-80">
+    <div class="animate-bounce-in fixed bottom-36 left-4 right-4 z-[60] sm:left-auto sm:right-4 sm:w-80">
         <GlassCard
             class="overflow-hidden border-accent-primary/20 bg-black/80 shadow-2xl backdrop-blur-xl"
             padding="p-0"

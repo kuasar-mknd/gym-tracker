@@ -17,9 +17,9 @@ defineProps({
 <template>
     <Head title="Mon Profil" />
 
-    <AuthenticatedLayout page-title="Mon Profil">
+    <AuthenticatedLayout page-title="Mon Profil" show-back back-route="profile.index">
         <template #header>
-            <h2 class="text-xl font-semibold text-white">Mon Profil</h2>
+            <h2 class="text-xl font-semibold text-text-main">Mon Profil</h2>
         </template>
 
         <div class="space-y-6">
