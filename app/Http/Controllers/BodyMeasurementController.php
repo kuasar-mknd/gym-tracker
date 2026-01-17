@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Models\BodyMeasurement;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -30,18 +31,11 @@ class BodyMeasurementController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(BodyMeasurementStoreRequest $request)
     {
         $this->authorize('create', BodyMeasurement::class);
 
-        $validated = $request->validate([
-            'weight' => ['required', 'numeric', 'min:1', 'max:500'],
-            'body_fat' => ['nullable', 'numeric', 'min:1', 'max:100'],
-            'measured_at' => ['required', 'date'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $request->user()->bodyMeasurements()->create($validated);
+        $request->user()->bodyMeasurements()->create($request->validated());
 
         $this->statsService->clearUserStatsCache($request->user());
 
