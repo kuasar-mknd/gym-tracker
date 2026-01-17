@@ -221,35 +221,41 @@ class StatsService
      */
     public function getMonthlyVolumeComparison(User $user): array
     {
-        $currentMonthStart = now()->startOfMonth();
-        $previousMonthStart = now()->subMonth()->startOfMonth();
-        $previousMonthEnd = now()->subMonth()->endOfMonth();
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.monthly_volume_comparison.{$user->id}",
+            now()->addMinutes(30),
+            function () use ($user) {
+                $currentMonthStart = now()->startOfMonth();
+                $previousMonthStart = now()->subMonth()->startOfMonth();
+                $previousMonthEnd = now()->subMonth()->endOfMonth();
 
-        $currentVolume = DB::table('sets')
-            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->where('workouts.user_id', $user->id)
-            ->where('workouts.started_at', '>=', $currentMonthStart)
-            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-            ->sum(DB::raw('sets.weight * sets.reps'));
+                $currentVolume = DB::table('sets')
+                    ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+                    ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+                    ->where('workouts.user_id', $user->id)
+                    ->where('workouts.started_at', '>=', $currentMonthStart)
+                    // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                    ->sum(DB::raw('sets.weight * sets.reps'));
 
-        $previousVolume = DB::table('sets')
-            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->where('workouts.user_id', $user->id)
-            ->whereBetween('workouts.started_at', [$previousMonthStart, $previousMonthEnd])
-            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-            ->sum(DB::raw('sets.weight * sets.reps'));
+                $previousVolume = DB::table('sets')
+                    ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+                    ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+                    ->where('workouts.user_id', $user->id)
+                    ->whereBetween('workouts.started_at', [$previousMonthStart, $previousMonthEnd])
+                    // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                    ->sum(DB::raw('sets.weight * sets.reps'));
 
-        $diff = $currentVolume - $previousVolume;
-        $percentage = $previousVolume > 0 ? ($diff / $previousVolume) * 100 : ($currentVolume > 0 ? 100 : 0);
+                $diff = $currentVolume - $previousVolume;
+                $percentage = $previousVolume > 0 ? ($diff / $previousVolume) * 100 : ($currentVolume > 0 ? 100 : 0);
 
-        return [
-            'current_month_volume' => (float) $currentVolume,
-            'previous_month_volume' => (float) $previousVolume,
-            'difference' => (float) $diff,
-            'percentage' => (float) round($percentage, 1),
-        ];
+                return [
+                    'current_month_volume' => (float) $currentVolume,
+                    'previous_month_volume' => (float) $previousVolume,
+                    'difference' => (float) $diff,
+                    'percentage' => (float) round($percentage, 1),
+                ];
+            }
+        );
     }
 
     /**
