@@ -38,6 +38,7 @@ const sizeClasses = {
     <button
         :type="type"
         :disabled="disabled || loading"
+        :aria-busy="loading"
         :class="[
             'glass-button transition-all active:scale-95',
             sizeClasses[size],
@@ -59,6 +60,7 @@ const sizeClasses = {
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
+            aria-hidden="true"
         >
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path
@@ -73,6 +75,7 @@ const sizeClasses = {
             v-if="icon && !loading"
             class="material-symbols-outlined mr-1 text-current"
             :style="{ fontSize: size === 'sm' ? '18px' : size === 'lg' ? '28px' : '24px' }"
+            aria-hidden="true"
         >
             {{ icon }}
         </span>
