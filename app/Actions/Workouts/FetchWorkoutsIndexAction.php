@@ -16,15 +16,20 @@ class FetchWorkoutsIndexAction
     public function execute(User $user): array
     {
         // Get last 6 months frequency
-        $monthlyFrequency = Workout::select('started_at')
-            ->where('user_id', $user->id)
+        // Optimized: Use toBase() to skip model hydration and fetch only needed column
+        $monthlyFrequency = Workout::where('user_id', $user->id)
             ->where('started_at', '>=', now()->subMonths(5)->startOfMonth())
             ->orderBy('started_at')
-            ->get()
-            ->groupBy(fn ($workout) => $workout->started_at->format('Y-m'))
-            ->map(fn ($workouts, $month) => [
+            ->toBase()
+            ->get(['started_at'])
+            ->groupBy(function ($row) {
+                // Handle both string (from DB) and Carbon (if ever hydrated, though toBase prevents it)
+                // With toBase(), it's a string 'YYYY-MM-DD HH:MM:SS'
+                return substr($row->started_at, 0, 7); // 'YYYY-MM'
+            })
+            ->map(fn ($rows, $month) => [
                 'month' => Carbon::createFromFormat('Y-m', $month)->format('M'),
-                'count' => $workouts->count(),
+                'count' => $rows->count(),
             ])
             ->values();
 
