@@ -45,9 +45,9 @@ test('user can create workout template with nested exercises', function () {
                 'sets' => [
                     ['reps' => 10, 'weight' => 100, 'is_warmup' => true],
                     ['reps' => 5, 'weight' => 120, 'is_warmup' => false],
-                ]
-            ]
-        ]
+                ],
+            ],
+        ],
     ];
 
     $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/workout-templates', $data);
@@ -86,10 +86,10 @@ test('user can update workout template', function () {
             [
                 'id' => $exercise->id,
                 'sets' => [
-                    ['reps' => 12, 'weight' => 50]
-                ]
-            ]
-        ]
+                    ['reps' => 12, 'weight' => 50],
+                ],
+            ],
+        ],
     ];
 
     $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/workout-templates/{$template->id}", $data);
