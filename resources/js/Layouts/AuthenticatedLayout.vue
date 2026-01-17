@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
+import OfflineIndicator from '@/Components/UI/OfflineIndicator.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
@@ -229,5 +230,8 @@ const showingNavigationDropdown = ref(false)
 
         <!-- Achievement Celebration Modal -->
         <CelebrationModal />
+
+        <!-- Offline Indicator -->
+        <OfflineIndicator />
     </div>
 </template>
