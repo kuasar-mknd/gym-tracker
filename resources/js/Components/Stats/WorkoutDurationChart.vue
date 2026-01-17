@@ -9,11 +9,10 @@ import {
     Title,
     Tooltip,
     Legend,
-    Filler,
 } from 'chart.js'
 import { computed } from 'vue'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
 const props = defineProps({
     data: {
@@ -28,15 +27,19 @@ const chartData = computed(() => {
         datasets: [
             {
                 label: 'Durée (min)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderColor: '#3b82f6',
-                pointBackgroundColor: '#3b82f6',
-                pointBorderColor: '#3b82f6',
-                pointRadius: 4,
-                pointHoverRadius: 6,
                 data: props.data.map((item) => item.duration),
+                fill: false,
                 tension: 0.3,
-                fill: true,
+                borderColor: '#8800FF',
+                borderWidth: 3,
+                pointRadius: 4,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: '#8800FF',
+                pointBorderWidth: 2,
+                pointHoverRadius: 7,
+                pointHoverBackgroundColor: '#8800FF',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2,
             },
         ],
     }
@@ -50,27 +53,21 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
             padding: 12,
-            cornerRadius: 8,
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            callbacks: {
-                label: function (context) {
-                    return context.parsed.y + ' min'
-                },
-            },
+            cornerRadius: 12,
+            titleColor: '#1e293b',
+            bodyColor: '#1e293b',
         },
     },
     scales: {
         y: {
-            beginAtZero: true,
             grid: {
-                color: 'rgba(255, 255, 255, 0.05)',
+                color: 'rgba(0, 0, 0, 0.03)',
             },
             ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
-                font: { size: 10 },
+                color: '#64748B',
+                font: { size: 10, weight: 'bold' },
             },
         },
         x: {
@@ -78,8 +75,8 @@ const chartOptions = {
                 display: false,
             },
             ticks: {
-                color: 'rgba(255, 255, 255, 0.5)',
-                font: { size: 10 },
+                color: '#64748B',
+                font: { size: 10, weight: 'bold' },
             },
         },
     },

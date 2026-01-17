@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import WeeklyVolumeChart from '@/Components/Stats/WeeklyVolumeChart.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 
 /**
@@ -17,6 +18,8 @@ const props = defineProps({
     activeGoals: { type: Array, default: () => [] },
     weeklyVolume: { type: Number, default: 0 },
     volumeChange: { type: Number, default: 0 },
+    weeklyVolumeTrend: { type: Array, default: () => [] },
+    volumeTrend: { type: Array, default: () => [] },
 })
 
 const form = useForm({})
@@ -166,66 +169,15 @@ const colorForWorkout = (index) => {
                     </div>
                 </div>
 
-                <!-- SVG Chart (Static for now, can be made dynamic) -->
-                <div class="relative -mx-2 h-40 w-full">
-                    <svg
-                        class="h-full w-full overflow-visible"
-                        fill="none"
-                        preserveAspectRatio="none"
-                        viewBox="0 0 375 150"
-                    >
-                        <defs>
-                            <linearGradient id="gradient-chart-light" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#FF5500" stop-opacity="0.2"></stop>
-                                <stop offset="100%" stop-color="#FF5500" stop-opacity="0"></stop>
-                            </linearGradient>
-                            <linearGradient id="stroke-gradient-light" x1="0" x2="1" y1="0" y2="0">
-                                <stop offset="0%" stop-color="#FF5500"></stop>
-                                <stop offset="50%" stop-color="#FF0080"></stop>
-                                <stop offset="100%" stop-color="#8800FF"></stop>
-                            </linearGradient>
-                            <filter height="140%" id="glow-line-light" width="140%" x="-20%" y="-20%">
-                                <feGaussianBlur result="coloredBlur" stdDeviation="3"></feGaussianBlur>
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur"></feMergeNode>
-                                    <feMergeNode in="SourceGraphic"></feMergeNode>
-                                </feMerge>
-                            </filter>
-                        </defs>
-                        <path
-                            d="M0 100 Q 40 100, 60 80 T 120 70 T 180 90 T 240 40 T 300 60 T 375 30 V 150 H 0 Z"
-                            fill="url(#gradient-chart-light)"
-                        ></path>
-                        <path
-                            d="M0 100 Q 40 100, 60 80 T 120 70 T 180 90 T 240 40 T 300 60 T 375 30"
-                            fill="none"
-                            filter="url(#glow-line-light)"
-                            stroke="url(#stroke-gradient-light)"
-                            stroke-linecap="round"
-                            stroke-width="4"
-                        ></path>
-                        <circle cx="240" cy="40" fill="#fff" r="6" stroke="#FF0080" stroke-width="3"></circle>
-                        <circle
-                            cx="240"
-                            cy="40"
-                            fill="none"
-                            r="12"
-                            stroke="#FF0080"
-                            stroke-opacity="0.3"
-                            stroke-width="2"
-                        ></circle>
-                    </svg>
-                </div>
-
-                <!-- Day labels -->
-                <div class="mt-2 flex justify-between border-t border-slate-200 px-2 pt-3">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Lun</span>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Mar</span>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Mer</span>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-electric-orange">Jeu</span>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Ven</span>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sam</span>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Dim</span>
+                <!-- Weekly Volume Chart -->
+                <div class="relative -mx-2 mt-2 h-48 w-auto">
+                    <WeeklyVolumeChart
+                        v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0"
+                        :data="weeklyVolumeTrend"
+                    />
+                    <div v-else class="flex h-full items-center justify-center text-text-muted">
+                        <p class="text-sm">Pas de données cette semaine</p>
+                    </div>
                 </div>
             </section>
 
@@ -289,17 +241,20 @@ const colorForWorkout = (index) => {
                                     •
                                     {{
                                         workout.duration_minutes ||
-                                        Math.round(
-                                            (new Date(workout.finished_at) - new Date(workout.started_at)) / 60000,
-                                        ) ||
-                                        '?'
+                                        (workout.ended_at
+                                            ? Math.round(
+                                                  (new Date(workout.ended_at) - new Date(workout.started_at)) / 60000,
+                                              )
+                                            : null) ||
+                                        '--'
                                     }}
                                     min
                                 </p>
                             </div>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="glass-badge glass-badge-success">Fait</span>
+                            <span v-if="workout.ended_at" class="glass-badge glass-badge-success">Fait</span>
+                            <span v-else class="glass-badge glass-badge-warning animate-pulse">En cours</span>
                             <span class="mt-1 font-mono text-xs text-text-muted">
                                 {{
                                     new Date(workout.started_at).toLocaleTimeString('fr-FR', {

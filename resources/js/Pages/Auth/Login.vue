@@ -2,6 +2,7 @@
 import Checkbox from '@/Components/Checkbox.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import Checkbox from '@/Components/Checkbox.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 
@@ -65,7 +66,7 @@ const submit = () => {
 
             <div class="flex items-center justify-between">
                 <label class="flex cursor-pointer items-center">
-                    <Checkbox :checked="form.remember" @update:checked="form.remember = $event" />
+                    <Checkbox :checked="form.remember" @update:checked="(val) => (form.remember = val)" />
                     <span class="ml-2 text-sm font-medium text-text-muted">Se souvenir</span>
                 </label>
 

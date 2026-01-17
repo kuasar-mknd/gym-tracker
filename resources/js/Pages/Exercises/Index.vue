@@ -90,7 +90,7 @@ const categoryColors = {
     Pectoraux: 'bg-electric-orange',
     Dos: 'bg-vivid-violet',
     Épaules: 'bg-hot-pink',
-    Bras: 'bg-cyan-pure',
+    Bras: 'bg-cyan-pure text-text-main',
     Jambes: 'bg-neon-green text-text-main',
     Core: 'bg-magenta-pure',
     Cardio: 'bg-lime-pure text-text-main',
