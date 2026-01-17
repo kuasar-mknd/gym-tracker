@@ -2,9 +2,11 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import WorkoutsPerMonthChart from '@/Components/Stats/WorkoutsPerMonthChart.vue'
-import WorkoutDurationChart from '@/Components/Stats/WorkoutDurationChart.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
+import { defineAsyncComponent } from 'vue'
+
+const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
+const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
 
 const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }

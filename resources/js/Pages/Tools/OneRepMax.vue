@@ -71,9 +71,7 @@
                 <GlassCard class="h-full">
                     <div class="p-6">
                         <h2 class="mb-4 text-xl font-bold text-text-main">Training Percentages</h2>
-                        <div
-                            class="overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md"
-                        >
+                        <div class="overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
                             <table class="w-full text-left text-sm text-text-muted">
                                 <thead class="border-b border-white/20 bg-white/10 text-xs uppercase text-text-main">
                                     <tr>
