@@ -138,7 +138,7 @@ const formatDateFull = (dateStr) => {
                     <span class="material-symbols-outlined">chevron_left</span>
                 </GlassButton>
 
-                <h2 class="text-xl font-black uppercase italic tracking-tighter text-white">
+                <h2 class="text-xl font-black uppercase italic tracking-tighter text-text-main">
                     {{ currentMonthName }} <span class="text-electric-orange">{{ currentYear }}</span>
                 </h2>
 
@@ -150,11 +150,11 @@ const formatDateFull = (dateStr) => {
             <!-- Calendar Grid -->
             <GlassCard class="overflow-hidden" padding="p-0">
                 <!-- Weekday Headers -->
-                <div class="grid grid-cols-7 border-b border-white/10 bg-white/5 py-2">
+                <div class="grid grid-cols-7 border-b border-white/40 bg-white/40 py-2">
                     <div
                         v-for="day in weekDays"
                         :key="day"
-                        class="text-center text-[10px] font-bold uppercase tracking-wider text-white/60"
+                        class="text-center text-[10px] font-bold uppercase tracking-wider text-text-muted"
                     >
                         {{ day }}
                     </div>
@@ -178,7 +178,7 @@ const formatDateFull = (dateStr) => {
                             <span
                                 :class="[
                                     'flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold',
-                                    day.isToday ? 'bg-electric-orange text-white' : 'text-white/80',
+                                    day.isToday ? 'bg-electric-orange text-white' : 'text-text-main',
                                 ]"
                             >
                                 {{ day.day }}
@@ -203,11 +203,11 @@ const formatDateFull = (dateStr) => {
             <!-- Selected Day Details -->
             <div v-if="selectedDayDetails" class="animate-slide-up space-y-4">
                 <div class="flex items-center gap-2">
-                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                    <h3 class="font-display text-lg font-bold capitalize text-white">
+                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-text-muted/10 to-transparent"></div>
+                    <h3 class="font-display text-lg font-bold capitalize text-text-main">
                         {{ formatDateFull(selectedDayDetails.dateStr) }}
                     </h3>
-                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-text-muted/10 to-transparent"></div>
                 </div>
 
                 <!-- Workouts -->
@@ -228,10 +228,10 @@ const formatDateFull = (dateStr) => {
                                         <span class="material-symbols-outlined">fitness_center</span>
                                     </div>
                                     <div>
-                                        <div class="font-bold text-white">{{ workout.name }}</div>
-                                        <div class="text-xs text-white/50">
+                                        <div class="font-bold text-text-main">{{ workout.name }}</div>
+                                        <div class="text-xs text-text-muted">
                                             {{ workout.exercises_count }} exercices
-                                            <span v-if="workout.preview_exercises.length" class="text-white/30"
+                                            <span v-if="workout.preview_exercises.length" class="text-text-muted/60"
                                                 >• {{ workout.preview_exercises.join(', ') }}</span
                                             >
                                         </div>
@@ -255,18 +255,18 @@ const formatDateFull = (dateStr) => {
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="font-bold text-white">Entrée Journal</span>
+                                    <span class="font-bold text-text-main">Entrée Journal</span>
                                     <span
                                         v-if="selectedDayDetails.journal.mood_score"
-                                        class="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-white/80"
+                                        class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-text-main"
                                     >
                                         Humeur: {{ selectedDayDetails.journal.mood_score }}/10
                                     </span>
                                 </div>
-                                <div v-if="selectedDayDetails.journal.has_note" class="mt-1 text-sm text-white/60">
+                                <div v-if="selectedDayDetails.journal.has_note" class="mt-1 text-sm text-text-muted">
                                     Notes ajoutées...
                                 </div>
-                                <div v-else class="mt-1 text-sm italic text-white/40">Aucune note écrite.</div>
+                                <div v-else class="mt-1 text-sm italic text-text-muted/60">Aucune note écrite.</div>
                             </div>
                         </div>
                     </GlassCard>
@@ -275,14 +275,14 @@ const formatDateFull = (dateStr) => {
                 <!-- Empty State -->
                 <div
                     v-if="!selectedDayDetails.workouts.length && !selectedDayDetails.journal"
-                    class="py-8 text-center text-white/40"
+                    class="py-8 text-center text-text-muted/60"
                 >
                     <span class="material-symbols-outlined mb-2 text-4xl opacity-50">event_busy</span>
                     <p>Aucune activité ce jour-là.</p>
                 </div>
             </div>
 
-            <div v-else class="py-12 text-center text-white/30">
+            <div v-else class="py-12 text-center text-text-muted/40">
                 <span class="material-symbols-outlined mb-2 animate-pulse text-4xl">touch_app</span>
                 <p>Sélectionne une date pour voir les détails</p>
             </div>

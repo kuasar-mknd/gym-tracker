@@ -7,6 +7,7 @@ use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class WorkoutTemplatesController extends Controller
@@ -30,7 +31,11 @@ class WorkoutTemplatesController extends Controller
         $this->authorize('create', WorkoutTemplate::class);
 
         return Inertia::render('Workouts/Templates/Create', [
-            'exercises' => \App\Models\Exercise::orderBy('name')->get(),
+            'exercises' => Cache::remember('exercises_list_'.auth()->id(), 3600, function () {
+                return \App\Models\Exercise::forUser(auth()->id())
+                    ->orderBy('name')
+                    ->get();
+            }),
         ]);
     }
 

@@ -180,6 +180,7 @@ const showingNavigationDropdown = ref(false)
         <header
             v-if="pageTitle || showBack"
             class="sticky top-0 z-30 flex items-center justify-between border-b border-white/40 bg-pearl-white/80 px-5 py-4 backdrop-blur-xl sm:hidden"
+            :style="{ paddingTop: 'calc(1rem + var(--safe-area-top))' }"
         >
             <div class="flex items-center gap-4">
                 <Link
@@ -225,7 +226,10 @@ const showingNavigationDropdown = ref(false)
         </header>
 
         <!-- Page Content -->
-        <main class="relative z-10 px-5 py-6 pb-36 sm:px-6 lg:px-8">
+        <main
+            class="relative z-10 px-5 py-6 sm:px-6 lg:px-8"
+            :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
+        >
             <div class="mx-auto max-w-7xl">
                 <slot />
             </div>

@@ -20,4 +20,12 @@ class Exercise extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Scope the query to include system exercises and exercises owned by the given user.
+     */
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $userId));
+    }
 }

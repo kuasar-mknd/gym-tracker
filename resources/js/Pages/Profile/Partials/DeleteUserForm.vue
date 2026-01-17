@@ -34,8 +34,8 @@ const closeModal = () => {
 <template>
     <section class="space-y-6">
         <header>
-            <h2 class="text-lg font-semibold text-white">Supprimer le compte</h2>
-            <p class="mt-1 text-sm text-white/60">
+            <h2 class="text-lg font-semibold text-text-main">Supprimer le compte</h2>
+            <p class="mt-1 text-sm text-text-muted">
                 Une fois ton compte supprimé, toutes tes données seront définitivement effacées.
             </p>
         </header>
@@ -49,9 +49,9 @@ const closeModal = () => {
                     class="fixed inset-x-4 bottom-4 top-auto sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2"
                 >
                     <div class="glass-modal animate-slide-up p-6">
-                        <h2 class="text-lg font-semibold text-white">Confirmer la suppression</h2>
+                        <h2 class="text-lg font-semibold text-text-main">Confirmer la suppression</h2>
 
-                        <p class="mt-2 text-sm text-white/60">
+                        <p class="mt-2 text-sm text-text-muted">
                             Cette action est irréversible. Entre ton mot de passe pour confirmer.
                         </p>
 
