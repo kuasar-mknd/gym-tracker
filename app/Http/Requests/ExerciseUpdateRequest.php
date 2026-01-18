@@ -33,9 +33,9 @@ class ExerciseUpdateRequest extends FormRequest
                     ->where(function ($query) {
                         return $query->where(function ($q) {
                             $q->whereNull('user_id')
-                              ->orWhere('user_id', $this->user()?->id);
+                                ->orWhere('user_id', $this->user()?->id);
                         });
-                    })
+                    }),
             ],
             'type' => ['sometimes', 'required', Rule::in(['strength', 'cardio', 'timed'])],
             'category' => ['nullable', 'string', 'max:255'],

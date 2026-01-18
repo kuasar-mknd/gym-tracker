@@ -30,9 +30,9 @@ class ExerciseStoreRequest extends FormRequest
                 Rule::unique('exercises')->where(function ($query) {
                     return $query->where(function ($q) {
                         $q->whereNull('user_id')
-                          ->orWhere('user_id', $this->user()?->id);
+                            ->orWhere('user_id', $this->user()?->id);
                     });
-                })
+                }),
             ],
             'type' => ['required', Rule::in(['strength', 'cardio', 'timed'])],
             'category' => ['nullable', 'string', 'max:255'],
