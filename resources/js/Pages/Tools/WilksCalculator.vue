@@ -25,14 +25,22 @@
                             <button
                                 @click="form.unit = 'kg'"
                                 class="rounded-md px-4 py-1 text-sm font-bold transition-all"
-                                :class="form.unit === 'kg' ? 'bg-white shadow-sm text-text-main' : 'text-text-muted hover:text-text-main'"
+                                :class="
+                                    form.unit === 'kg'
+                                        ? 'bg-white text-text-main shadow-sm'
+                                        : 'text-text-muted hover:text-text-main'
+                                "
                             >
                                 KG
                             </button>
                             <button
                                 @click="form.unit = 'lbs'"
                                 class="rounded-md px-4 py-1 text-sm font-bold transition-all"
-                                :class="form.unit === 'lbs' ? 'bg-white shadow-sm text-text-main' : 'text-text-muted hover:text-text-main'"
+                                :class="
+                                    form.unit === 'lbs'
+                                        ? 'bg-white text-text-main shadow-sm'
+                                        : 'text-text-muted hover:text-text-main'
+                                "
                             >
                                 LBS
                             </button>
@@ -47,14 +55,22 @@
                                 <button
                                     @click="form.gender = 'male'"
                                     class="flex h-16 items-center justify-center rounded-2xl border-2 transition-all"
-                                    :class="form.gender === 'male' ? 'border-electric-orange bg-electric-orange/10 text-electric-orange' : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'"
+                                    :class="
+                                        form.gender === 'male'
+                                            ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
+                                            : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                    "
                                 >
                                     <span class="font-display text-lg font-black uppercase">Homme</span>
                                 </button>
                                 <button
                                     @click="form.gender = 'female'"
                                     class="flex h-16 items-center justify-center rounded-2xl border-2 transition-all"
-                                    :class="form.gender === 'female' ? 'border-hot-pink bg-hot-pink/10 text-hot-pink' : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'"
+                                    :class="
+                                        form.gender === 'female'
+                                            ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
+                                            : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                    "
                                 >
                                     <span class="font-display text-lg font-black uppercase">Femme</span>
                                 </button>
@@ -73,7 +89,10 @@
                                         step="0.1"
                                         class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
                                     />
-                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-text-muted uppercase">{{ form.unit }}</span>
+                                    <span
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 font-bold uppercase text-text-muted"
+                                        >{{ form.unit }}</span
+                                    >
                                 </div>
                             </div>
                             <div>
@@ -86,16 +105,23 @@
                                         step="0.5"
                                         class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
                                     />
-                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-text-muted uppercase">{{ form.unit }}</span>
+                                    <span
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 font-bold uppercase text-text-muted"
+                                        >{{ form.unit }}</span
+                                    >
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Result -->
-                    <div class="mt-6 flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 p-8 text-center">
+                    <div
+                        class="mt-6 flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 p-8 text-center"
+                    >
                         <p class="text-sm font-bold uppercase tracking-wider text-text-muted">Ton Score Wilks</p>
-                        <div class="mt-2 font-display text-6xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-electric-orange to-hot-pink">
+                        <div
+                            class="mt-2 bg-gradient-to-r from-electric-orange to-hot-pink bg-clip-text font-display text-6xl font-black italic tracking-tighter text-transparent"
+                        >
                             {{ calculatedScore }}
                         </div>
 
@@ -116,14 +142,14 @@
             <!-- History Section -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
                 <div class="space-y-5">
-                    <h2 class="font-display text-lg font-black uppercase italic text-text-main">
-                        Historique
-                    </h2>
+                    <h2 class="font-display text-lg font-black uppercase italic text-text-main">Historique</h2>
 
                     <div v-if="history.length === 0" class="py-12 text-center">
                         <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">history</span>
                         <p class="font-medium text-text-muted">Aucun historique.</p>
-                        <p class="mt-1 text-sm text-text-muted/70">Calcule ton score pour commencer à suivre tes progrès.</p>
+                        <p class="mt-1 text-sm text-text-muted/70">
+                            Calcule ton score pour commencer à suivre tes progrès.
+                        </p>
                     </div>
 
                     <div v-else class="space-y-3">
@@ -133,14 +159,17 @@
                             class="group relative flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 transition-all hover:border-slate-200 hover:shadow-sm"
                         >
                             <div class="flex items-center gap-4">
-                                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-xl font-bold text-text-main">
+                                <div
+                                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-xl font-bold text-text-main"
+                                >
                                     {{ parseFloat(entry.score).toFixed(0) }}
                                 </div>
                                 <div>
                                     <p class="font-bold text-text-main">
-                                        {{ parseFloat(entry.lifted_weight) }} {{ entry.unit }} / {{ parseFloat(entry.body_weight) }} {{ entry.unit }}
+                                        {{ parseFloat(entry.lifted_weight) }} {{ entry.unit }} /
+                                        {{ parseFloat(entry.body_weight) }} {{ entry.unit }}
                                     </p>
-                                    <p class="text-xs text-text-muted uppercase tracking-wider">
+                                    <p class="text-xs uppercase tracking-wider text-text-muted">
                                         {{ new Date(entry.created_at).toLocaleDateString() }}
                                     </p>
                                 </div>
@@ -148,7 +177,7 @@
 
                             <button
                                 @click="deleteEntry(entry)"
-                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>
@@ -204,18 +233,24 @@ const calculateWilks = (bw, lifted, gender, unit) => {
         b = 16.2606339
         c = -0.002388645
         d = -0.00113732
-        e = 7.01863e-06
-        f = -1.291e-08
+        e = 7.01863e-6
+        f = -1.291e-8
     } else {
         a = 594.31747775582
         b = -27.23842536447
         c = 0.82112226871
         d = -0.00930733913
-        e = 4.731582e-05
-        f = -9.054e-08
+        e = 4.731582e-5
+        f = -9.054e-8
     }
 
-    const denominator = a + b * weight + c * Math.pow(weight, 2) + d * Math.pow(weight, 3) + e * Math.pow(weight, 4) + f * Math.pow(weight, 5)
+    const denominator =
+        a +
+        b * weight +
+        c * Math.pow(weight, 2) +
+        d * Math.pow(weight, 3) +
+        e * Math.pow(weight, 4) +
+        f * Math.pow(weight, 5)
     const coeff = 500 / denominator
 
     return (total * coeff).toFixed(2)
