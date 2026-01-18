@@ -5,10 +5,22 @@ namespace App\Services;
 use App\Models\Goal;
 use App\Models\User;
 
+/**
+ * Service for managing user goals and tracking progress.
+ *
+ * This service is responsible for synchronizing goal progress based on user activity
+ * (workouts, measurements) and determining if a goal has been achieved.
+ * It handles different types of goals: weight (strength), frequency, volume, and body measurements.
+ */
 class GoalService
 {
     /**
      * Synchronize all active goals for a user.
+     *
+     * Iterates through all the user's incomplete goals and triggers a progress update
+     * for each one. This is typically called after a workout is finished or a measurement is added.
+     *
+     * @param  User  $user  The user whose goals should be synchronized.
      */
     public function syncGoals(User $user): void
     {
@@ -19,6 +31,11 @@ class GoalService
 
     /**
      * Update progress for a specific goal.
+     *
+     * Dispatches the update logic to the appropriate method based on the goal's type.
+     * After updating the progress value, it checks if the goal has been completed.
+     *
+     * @param  Goal  $goal  The goal to update.
      */
     public function updateGoalProgress(Goal $goal): void
     {
@@ -40,6 +57,13 @@ class GoalService
         $this->checkCompletion($goal);
     }
 
+    /**
+     * Update progress for a weight (strength) goal.
+     *
+     * Finds the maximum weight lifted for the associated exercise across all user workouts.
+     *
+     * @param  Goal  $goal  The weight goal to update.
+     */
     protected function updateWeightGoal(Goal $goal): void
     {
         if (! $goal->exercise_id) {
@@ -57,12 +81,27 @@ class GoalService
         }
     }
 
+    /**
+     * Update progress for a frequency goal.
+     *
+     * Counts the total number of workouts the user has completed.
+     *
+     * @param  Goal  $goal  The frequency goal to update.
+     */
     protected function updateFrequencyGoal(Goal $goal): void
     {
         $count = $goal->user->workouts()->count();
         $goal->update(['current_value' => $count]);
     }
 
+    /**
+     * Update progress for a volume goal.
+     *
+     * Finds the maximum volume (weight * reps) achieved in a single workout
+     * for the associated exercise.
+     *
+     * @param  Goal  $goal  The volume goal to update.
+     */
     protected function updateVolumeGoal(Goal $goal): void
     {
         if (! $goal->exercise_id) {
@@ -82,6 +121,13 @@ class GoalService
         }
     }
 
+    /**
+     * Update progress for a body measurement goal.
+     *
+     * Retrieves the most recent recorded value for the specified measurement type.
+     *
+     * @param  Goal  $goal  The measurement goal to update.
+     */
     protected function updateMeasurementGoal(Goal $goal): void
     {
         if (! $goal->measurement_type) {
@@ -97,6 +143,16 @@ class GoalService
         }
     }
 
+    /**
+     * Check if a goal has been completed.
+     *
+     * Compares the current value against the target value.
+     * Handles both "higher is better" (strength, frequency) and "lower is better"
+     * (e.g., weight loss) scenarios.
+     * Updates the `completed_at` timestamp if the condition is met.
+     *
+     * @param  Goal  $goal  The goal to check.
+     */
     protected function checkCompletion(Goal $goal): void
     {
         $isCompleted = false;
