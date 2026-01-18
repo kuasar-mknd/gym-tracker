@@ -51,4 +51,15 @@ export default defineConfig({
             host: 'localhost',
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['vue', 'axios', '@inertiajs/vue3', 'ziggy-js'],
+                    chartjs: ['chart.js', 'vue-chartjs'],
+                },
+            },
+        },
+        chunkSizeWarningLimit: 1000,
+    },
 });
