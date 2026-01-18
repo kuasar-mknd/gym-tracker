@@ -193,11 +193,6 @@ const typeLabel = (type) => {
                 </button>
             </div>
 
-            <!-- Add Button FAB -->
-            <button @click="showAddForm = !showAddForm" class="glass-fab" :class="{ 'rotate-45': showAddForm }">
-                <span class="material-symbols-outlined text-3xl">add</span>
-            </button>
-
             <!-- Add Form Modal -->
             <GlassCard v-if="showAddForm" class="animate-scale-in" variant="solid">
                 <h3 class="mb-5 font-display text-xl font-black uppercase text-text-main">Nouvel exercice</h3>

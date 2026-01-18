@@ -30,6 +30,15 @@ const formatDate = (dateStr) => {
         month: 'short',
     })
 }
+
+const deleteForm = useForm({})
+const confirmDeletion = (workout) => {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer la séance "${workout.name || 'Séance'}" ?`)) {
+        deleteForm.delete(route('workouts.destroy', { workout: workout.id }), {
+            preserveScroll: true,
+        })
+    }
+}
 </script>
 
 <template>
@@ -231,20 +240,29 @@ const formatDate = (dateStr) => {
                                         </span>
                                     </div>
                                 </div>
-                                <svg
-                                    class="h-5 w-5 flex-shrink-0 text-text-muted/30"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M9 5l7 7-7 7"
-                                    />
-                                </svg>
+                                <div class="flex items-center gap-3">
+                                    <button
+                                        @click.prevent="confirmDeletion(workout)"
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted/30 transition-colors hover:bg-red-50 hover:text-red-500"
+                                        title="Supprimer la séance"
+                                    >
+                                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                                    </button>
+                                    <svg
+                                        class="h-5 w-5 flex-shrink-0 text-text-muted/30"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                </div>
                             </div>
                         </GlassCard>
                     </Link>

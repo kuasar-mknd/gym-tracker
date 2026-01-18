@@ -130,4 +130,18 @@ class WorkoutsController extends Controller
 
         return back();
     }
+
+    /**
+     * Remove the specified workout from storage.
+     */
+    public function destroy(Workout $workout): \Illuminate\Http\RedirectResponse
+    {
+        $this->authorize('delete', $workout);
+
+        $workout->delete();
+
+        $this->statsService->clearUserStatsCache(auth()->user());
+
+        return redirect()->route('workouts.index');
+    }
 }

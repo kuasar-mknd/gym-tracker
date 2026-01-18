@@ -111,6 +111,14 @@ const confirmFinishWorkout = () => {
     )
 }
 
+const deleteWorkout = () => {
+    confirmMessage.value = 'Êtes-vous sûr de vouloir supprimer définitivement cette séance ?'
+    confirmAction.value = () => {
+        router.delete(route('workouts.destroy', { workout: props.workout.id }))
+    }
+    showConfirmModal.value = true
+}
+
 /** Controls visibility of the "Add Exercise" modal. */
 const showAddExercise = ref(false)
 
@@ -404,6 +412,14 @@ const hasNoResults = computed(() => {
                         <span class="material-symbols-outlined text-sm">check_circle</span>
                         Terminée
                     </span>
+
+                    <button
+                        @click="deleteWorkout"
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-red-200 bg-white text-red-500 shadow-sm transition-all hover:bg-red-50 active:scale-95"
+                        title="Supprimer la séance"
+                    >
+                        <span class="material-symbols-outlined">delete</span>
+                    </button>
                 </div>
             </div>
         </template>
@@ -662,25 +678,6 @@ const hasNoResults = computed(() => {
                 </div>
             </GlassCard>
         </div>
-
-        <!-- FAB -->
-        <button
-            v-if="!workout.ended_at"
-            @click="showAddExercise = true"
-            class="glass-fab sm:hidden"
-            aria-label="Ajouter un exercice"
-        >
-            <svg
-                class="h-6 w-6 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-        </button>
 
         <!-- Add Exercise Modal -->
         <Teleport to="body">
