@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { Bar } from 'vue-chartjs'
+import GlassCard from '@/Components/UI/GlassCard.vue'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -38,10 +39,11 @@ const chartData = computed(() => {
             {
                 label: 'Workouts',
                 data: Object.values(months),
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                borderColor: 'rgba(255, 255, 255, 0.8)',
                 borderWidth: 1,
-                borderRadius: 4,
+                borderRadius: 8,
+                hoverBackgroundColor: 'rgba(255, 255, 255, 0.8)',
             },
         ],
     }
@@ -56,50 +58,68 @@ const chartOptions = {
         },
         title: {
             display: true,
-            text: 'Monthly Workout Volume',
-            color: '#4B5563', // gray-600
+            text: 'Volume Mensuel',
+            color: 'rgba(255, 255, 255, 0.9)',
             font: {
                 size: 16,
                 weight: 'bold',
+                family: 'sans-serif',
             },
+            padding: {
+                bottom: 20
+            }
         },
+        tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            cornerRadius: 10,
+            padding: 10,
+            backdropFilter: 'blur(4px)',
+        }
     },
     scales: {
         y: {
             beginAtZero: true,
             grid: {
-                color: 'rgba(0, 0, 0, 0.05)',
+                color: 'rgba(255, 255, 255, 0.1)',
             },
             ticks: {
                 stepSize: 1,
+                color: 'rgba(255, 255, 255, 0.7)',
+                font: {
+                    weight: 'bold'
+                }
             },
+            border: {
+                display: false
+            }
         },
         x: {
             grid: {
                 display: false,
             },
+            ticks: {
+                color: 'rgba(255, 255, 255, 0.7)',
+                font: {
+                    weight: 'bold'
+                }
+            },
+            border: {
+                display: false
+            }
         },
     },
 }
 </script>
 
 <template>
-    <div class="stats-container relative overflow-hidden p-6">
-        <div class="absolute inset-0 rounded-xl border border-white/50 bg-white/40 shadow-lg backdrop-blur-md"></div>
-        <div class="relative z-10 h-64">
+    <GlassCard variant="iridescent" padding="p-6" class="relative overflow-hidden group">
+        <div class="relative z-10 h-64 transition-transform duration-500 group-hover:scale-[1.02]">
             <Bar :data="chartData" :options="chartOptions" />
         </div>
-    </div>
-</template>
 
-<style scoped>
-.stats-container {
-    /* Liquid Glass Aesthetic */
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-</style>
+        <!-- Subtle decorative glow -->
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:bg-white/20 transition-all duration-700"></div>
+    </GlassCard>
+</template>
