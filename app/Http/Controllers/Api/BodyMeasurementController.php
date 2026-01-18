@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\BodyMeasurementStoreRequest;
+use App\Http\Requests\BodyMeasurementUpdateRequest;
 use App\Http\Resources\BodyMeasurementResource;
 use App\Models\BodyMeasurement;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -35,15 +36,9 @@ class BodyMeasurementController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(BodyMeasurementStoreRequest $request)
     {
-        $validated = $request->validate([
-            'weight' => 'required|numeric|min:0',
-            'measured_at' => 'required|date',
-            'notes' => 'nullable|string',
-        ]);
-
-        $measurement = new BodyMeasurement($validated);
+        $measurement = new BodyMeasurement($request->validated());
         $measurement->user_id = Auth::id();
         $measurement->save();
 
@@ -65,19 +60,13 @@ class BodyMeasurementController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, BodyMeasurement $bodyMeasurement)
+    public function update(BodyMeasurementUpdateRequest $request, BodyMeasurement $bodyMeasurement)
     {
         if ($bodyMeasurement->user_id !== Auth::id()) {
             abort(403);
         }
 
-        $validated = $request->validate([
-            'weight' => 'sometimes|required|numeric|min:0',
-            'measured_at' => 'sometimes|required|date',
-            'notes' => 'nullable|string',
-        ]);
-
-        $bodyMeasurement->update($validated);
+        $bodyMeasurement->update($request->validated());
 
         return new BodyMeasurementResource($bodyMeasurement);
     }
