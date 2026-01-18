@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\WilksScore;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class WilksScoreController extends Controller
 {
