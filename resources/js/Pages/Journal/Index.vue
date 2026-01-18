@@ -4,7 +4,9 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
+
+const JournalChart = defineAsyncComponent(() => import('@/Components/Stats/JournalChart.vue'))
 
 const props = defineProps({
     journals: Array,
@@ -130,6 +132,15 @@ const formatDate = (dateStr) => {
         </template>
 
         <div class="space-y-6">
+            <!-- Stats Chart -->
+            <GlassCard v-if="journals.length > 1" class="animate-slide-up">
+                <div class="mb-4">
+                    <h3 class="font-display text-lg font-black uppercase italic text-text-main">Tendances</h3>
+                    <p class="text-xs font-semibold text-text-muted">Évolution de vos métriques</p>
+                </div>
+                <JournalChart :data="journals" />
+            </GlassCard>
+
             <!-- Add/Edit Form -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
                 <div class="mb-4 flex items-center justify-between">
