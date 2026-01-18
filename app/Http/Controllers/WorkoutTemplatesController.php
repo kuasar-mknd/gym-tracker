@@ -49,6 +49,9 @@ class WorkoutTemplatesController extends Controller
     {
         $this->authorize('view', $template);
 
+        // OPTIMIZATION: Eager load relationships to prevent N+1 queries
+        $template->load(['workoutTemplateLines.workoutTemplateSets']);
+
         $workout = new Workout([
             'name' => $template->name,
             'started_at' => now(),
@@ -77,6 +80,9 @@ class WorkoutTemplatesController extends Controller
     public function saveFromWorkout(Workout $workout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('view', $workout);
+
+        // OPTIMIZATION: Eager load relationships to prevent N+1 queries
+        $workout->load(['workoutLines.sets']);
 
         $template = new WorkoutTemplate([
             'name' => $workout->name.' (Modèle)',
