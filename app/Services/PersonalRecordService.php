@@ -7,10 +7,24 @@ use App\Models\Set;
 use App\Models\User;
 use App\Notifications\PersonalRecordAchieved;
 
+/**
+ * Service for managing Personal Records (PRs).
+ *
+ * This service handles the evaluation and recording of different types of personal records
+ * achieved during workout sessions. It currently supports:
+ * - Max Weight: The heaviest weight lifted for a specific exercise.
+ * - Max 1RM (Estimated): The highest estimated One Rep Max using the Epley formula.
+ * - Max Volume: The highest volume (Weight * Reps) achieved in a single set.
+ */
 class PersonalRecordService
 {
     /**
      * Check and record PRs for a specific set.
+     *
+     * This method evaluates the completed set against existing records for the
+     * user and exercise. It triggers checks for all supported PR types.
+     *
+     * @param  Set  $set  The completed set to evaluate.
      */
     public function syncSetPRs(Set $set): void
     {
@@ -28,6 +42,14 @@ class PersonalRecordService
         $this->updateMaxVolumeSetPR($user, $exerciseId, $set, $workoutId);
     }
 
+    /**
+     * Update Max Weight PR if the current set's weight is higher than the existing record.
+     *
+     * @param  User  $user  The user who performed the set.
+     * @param  int  $exerciseId  The ID of the exercise.
+     * @param  Set  $set  The set being evaluated.
+     * @param  int  $workoutId  The ID of the current workout.
+     */
     protected function updateMaxWeightPR(User $user, int $exerciseId, Set $set, int $workoutId): void
     {
         if (! $set->weight) {
@@ -44,6 +66,16 @@ class PersonalRecordService
         }
     }
 
+    /**
+     * Update Estimated 1RM PR if the current set's e1RM is higher than the existing record.
+     *
+     * Uses the calculate1RM method to determine the estimated one rep max.
+     *
+     * @param  User  $user  The user who performed the set.
+     * @param  int  $exerciseId  The ID of the exercise.
+     * @param  Set  $set  The set being evaluated.
+     * @param  int  $workoutId  The ID of the current workout.
+     */
     protected function updateMax1RMPR(User $user, int $exerciseId, Set $set, int $workoutId): void
     {
         if (! $set->weight || ! $set->reps) {
@@ -62,6 +94,14 @@ class PersonalRecordService
         }
     }
 
+    /**
+     * Update Max Volume Set PR if the current set's volume (weight * reps) is higher than the existing record.
+     *
+     * @param  User  $user  The user who performed the set.
+     * @param  int  $exerciseId  The ID of the exercise.
+     * @param  Set  $set  The set being evaluated.
+     * @param  int  $workoutId  The ID of the current workout.
+     */
     protected function updateMaxVolumeSetPR(User $user, int $exerciseId, Set $set, int $workoutId): void
     {
         if (! $set->weight || ! $set->reps) {
@@ -80,6 +120,20 @@ class PersonalRecordService
         }
     }
 
+    /**
+     * Persist the Personal Record to the database and notify the user.
+     *
+     * If a record of the same type exists, it updates it; otherwise, it creates a new one.
+     * Sends a `PersonalRecordAchieved` notification if enabled by the user.
+     *
+     * @param  User  $user  The user who achieved the PR.
+     * @param  int  $exerciseId  The exercise ID.
+     * @param  string  $type  The type of PR ('max_weight', 'max_1rm', 'max_volume_set').
+     * @param  float  $value  The primary value of the record (e.g., weight, 1RM, volume).
+     * @param  float|null  $secondary  Secondary value for context (e.g., reps for max_weight).
+     * @param  int  $workoutId  The workout ID.
+     * @param  int  $setId  The set ID.
+     */
     protected function savePR(User $user, int $exerciseId, string $type, float $value, ?float $secondary, int $workoutId, int $setId): void
     {
         $pr = PersonalRecord::where('user_id', $user->id)
@@ -111,7 +165,13 @@ class PersonalRecordService
     }
 
     /**
-     * Estimated 1RM using Epley formula.
+     * Calculate Estimated 1RM using the Epley formula.
+     *
+     * Formula: Weight * (1 + Reps / 30)
+     *
+     * @param  float  $weight  The weight lifted.
+     * @param  int  $reps  The number of repetitions.
+     * @return float The estimated One Rep Max.
      */
     public function calculate1RM(float $weight, int $reps): float
     {
