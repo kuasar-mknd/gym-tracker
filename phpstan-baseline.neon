@@ -63,7 +63,7 @@ parameters:
 		-
 			message: '#^Cannot call method format\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 3
+			count: 2
 			path: app/Actions/Workouts/FetchWorkoutsIndexAction.php
 
 		-
