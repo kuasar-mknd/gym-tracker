@@ -18,10 +18,10 @@ test('index returns list of user workouts', function () {
         ->assertJsonCount(3, 'data')
         ->assertJsonStructure([
             'data' => [
-                '*' => ['id', 'name', 'started_at', 'ended_at', 'notes']
+                '*' => ['id', 'name', 'started_at', 'ended_at', 'notes'],
             ],
             'links',
-            'meta'
+            'meta',
         ]);
 });
 
