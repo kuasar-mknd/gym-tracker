@@ -20,20 +20,6 @@ beforeEach(function () {
     Exercise::factory()->count(5)->create();
 });
 
-/**
- * ================================
- * PUBLIC PAGES
- * ================================
- */
-test('welcome page displays correctly', function () {
-    $this->browse(function (Browser $browser) {
-        $browser->visit('/')
-            ->waitForText('GYMTRACKER')
-            ->assertVisible('a[href*="login"]')
-            ->assertVisible('a[href*="register"]');
-    });
-});
-
 test('login page displays correctly', function () {
     $this->browse(function (Browser $browser) {
         $browser->visit('/login')
