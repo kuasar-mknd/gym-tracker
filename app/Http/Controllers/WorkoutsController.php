@@ -7,6 +7,7 @@ use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use App\Http\Requests\UpdateWorkoutRequest;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
@@ -102,16 +103,9 @@ class WorkoutsController extends Controller
     /**
      * Update the specified workout in storage.
      */
-    public function update(Request $request, Workout $workout): \Illuminate\Http\RedirectResponse
+    public function update(UpdateWorkoutRequest $request, Workout $workout): \Illuminate\Http\RedirectResponse
     {
-        $this->authorize('update', $workout);
-
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'started_at' => 'nullable|date',
-            'notes' => 'nullable|string|max:1000',
-            'is_finished' => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
         if (isset($validated['started_at'])) {
             $workout->started_at = $validated['started_at'];
