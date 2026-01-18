@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\CreateWorkoutTemplateAction;
+use App\Actions\CreateWorkoutTemplateFromWorkoutAction;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -74,32 +75,11 @@ class WorkoutTemplatesController extends Controller
         return redirect()->route('workouts.show', $workout);
     }
 
-    public function saveFromWorkout(Workout $workout): \Illuminate\Http\RedirectResponse
+    public function saveFromWorkout(Workout $workout, CreateWorkoutTemplateFromWorkoutAction $createTemplate): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('view', $workout);
 
-        $template = new WorkoutTemplate([
-            'name' => $workout->name.' (Modèle)',
-            'description' => 'Créé à partir de la séance du '.$workout->created_at->format('d/m/Y'),
-        ]);
-        $template->user_id = auth()->id();
-        $template->save();
-
-        foreach ($workout->workoutLines as $line) {
-            $templateLine = $template->workoutTemplateLines()->create([
-                'exercise_id' => $line->exercise_id,
-                'order' => $line->order,
-            ]);
-
-            foreach ($line->sets as $set) {
-                $templateLine->workoutTemplateSets()->create([
-                    'reps' => $set->reps,
-                    'weight' => $set->weight,
-                    'is_warmup' => $set->is_warmup,
-                    'order' => $set->id, // Simple order for now
-                ]);
-            }
-        }
+        $createTemplate->execute(auth()->user(), $workout);
 
         return redirect()->route('templates.index')->with('success', 'Modèle enregistré avec succès !');
     }
