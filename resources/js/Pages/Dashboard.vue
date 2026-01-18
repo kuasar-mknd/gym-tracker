@@ -2,8 +2,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import WeeklyVolumeChart from '@/Components/Stats/WeeklyVolumeChart.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
+import { defineAsyncComponent } from 'vue'
+
+const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 
 /**
  * Dashboard - Command Center
