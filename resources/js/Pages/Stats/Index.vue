@@ -75,7 +75,7 @@ watch(selectedExercise, (newVal) => {
     <AuthenticatedLayout liquid-variant="cyan-magenta">
         <div class="space-y-6">
             <!-- Header -->
-            <header class="flex animate-fade-in items-start justify-between">
+            <header class="flex animate-fade-in flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h1
                         class="font-display text-4xl font-black uppercase italic leading-none tracking-tighter text-text-main"
@@ -86,13 +86,15 @@ watch(selectedExercise, (newVal) => {
                 </div>
 
                 <!-- Period Selector -->
-                <div class="flex rounded-xl border border-glass-border bg-white/50 p-1 shadow-sm backdrop-blur-sm">
+                <div
+                    class="flex w-full overflow-x-auto rounded-xl border border-glass-border bg-white/50 p-1 shadow-sm backdrop-blur-sm sm:w-auto"
+                >
                     <button
                         v-for="period in periods"
                         :key="period.value"
                         @click="handlePeriodChange(period.value)"
                         :class="[
-                            'rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all',
+                            'flex-1 rounded-lg px-3 py-1.5 text-center text-[10px] font-black uppercase tracking-wider transition-all sm:flex-none',
                             currentPeriod === period.value
                                 ? 'bg-cyan-pure text-text-main shadow-sm'
                                 : 'text-text-muted hover:text-text-main',

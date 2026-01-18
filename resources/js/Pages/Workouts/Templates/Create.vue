@@ -2,13 +2,26 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import GlassInput from '@/Components/UI/GlassInput.vue'
+import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
 const props = defineProps({
     exercises: {
         type: Array,
         default: () => [],
+    },
+    categories: {
+        type: Array,
+        default: () => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
+    },
+    types: {
+        type: Array,
+        default: () => [
+            { value: 'strength', label: 'Force' },
+            { value: 'cardio', label: 'Cardio' },
+            { value: 'timed', label: 'Temps' },
+        ],
     },
 })
 
@@ -19,11 +32,24 @@ const form = useForm({
 })
 
 const searchQuery = ref('')
-const showExerciseList = ref(false)
+const showAddExercise = ref(false)
+const showCreateForm = ref(false)
+const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
+
+const createExerciseForm = useForm({
+    name: '',
+    type: 'strength',
+    category: '',
+})
 
 const filteredExercises = computed(() => {
-    if (!searchQuery.value) return props.exercises
-    return props.exercises.filter((e) => e.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
+    const exercises = localExercises.value
+    if (!searchQuery.value) return exercises
+    return exercises.filter((e) => e.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
+})
+
+const hasNoResults = computed(() => {
+    return searchQuery.value && filteredExercises.value.length === 0
 })
 
 const addExercise = (exercise) => {
@@ -32,7 +58,72 @@ const addExercise = (exercise) => {
         name: exercise.name,
         sets: [{ reps: 10, weight: null, is_warmup: false }],
     })
-    showExerciseList.value = false
+    showAddExercise.value = false
+    searchQuery.value = ''
+}
+
+const createAndAddExercise = async () => {
+    createExerciseForm.processing = true
+    createExerciseForm.clearErrors()
+
+    try {
+        const response = await fetch(route('exercises.store'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-Quick-Create': 'true',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            },
+            body: JSON.stringify({
+                name: createExerciseForm.name,
+                type: createExerciseForm.type,
+                category: createExerciseForm.category,
+            }),
+        })
+
+        if (response.ok) {
+            const responseData = await response.json()
+            const exercise = responseData.exercise || responseData.data || responseData
+
+            if (!exercise || !exercise.id) {
+                createExerciseForm.processing = false
+                return
+            }
+
+            localExercises.value.push(exercise)
+            localExercises.value.sort((a, b) => a.name.localeCompare(b.name))
+
+            addExercise(exercise)
+
+            createExerciseForm.reset()
+            showCreateForm.value = false
+            createExerciseForm.processing = false
+        } else if (response.status === 422) {
+            const errors = await response.json()
+            if (errors.errors) {
+                Object.keys(errors.errors).forEach((key) => {
+                    createExerciseForm.setError(key, errors.errors[key][0])
+                })
+            }
+            createExerciseForm.processing = false
+        } else {
+            createExerciseForm.processing = false
+        }
+    } catch (error) {
+        console.error('Error creating exercise:', error)
+        createExerciseForm.processing = false
+    }
+}
+
+const quickCreate = () => {
+    createExerciseForm.name = searchQuery.value
+    showCreateForm.value = true
+}
+
+const closeAddModal = () => {
+    showAddExercise.value = false
+    showCreateForm.value = false
     searchQuery.value = ''
 }
 
@@ -127,20 +218,20 @@ const submit = () => {
                                     <input
                                         v-model="set.reps"
                                         type="number"
-                                        class="w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm text-text-main placeholder:text-text-muted/40"
+                                        class="h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm text-text-main placeholder:text-text-muted/40"
                                         placeholder="reps"
                                     />
                                     <input
                                         v-model="set.weight"
                                         type="number"
                                         step="0.5"
-                                        class="w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm text-text-main placeholder:text-text-muted/40"
+                                        class="h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm text-text-main placeholder:text-text-muted/40"
                                         placeholder="kg"
                                     />
                                     <button
                                         @click="set.is_warmup = !set.is_warmup"
                                         type="button"
-                                        class="rounded-lg px-2 py-1 text-[10px] font-bold transition"
+                                        class="h-10 rounded-lg px-2 py-1 text-[10px] font-bold transition"
                                         :class="
                                             set.is_warmup
                                                 ? 'bg-orange-500/20 text-orange-400'
@@ -175,35 +266,9 @@ const submit = () => {
                         </GlassCard>
                     </div>
 
-                    <div class="relative">
-                        <GlassButton @click="showExerciseList = !showExerciseList" type="button" class="w-full">
-                            + Ajouter un exercice
-                        </GlassButton>
-
-                        <div
-                            v-if="showExerciseList"
-                            class="absolute bottom-full left-0 right-0 z-50 mb-2 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl"
-                        >
-                            <input
-                                v-model="searchQuery"
-                                type="text"
-                                class="sticky top-0 mb-2 w-full rounded-xl border border-slate-200 bg-slate-50 text-sm text-text-main"
-                                placeholder="Rechercher..."
-                            />
-                            <div class="space-y-1">
-                                <button
-                                    v-for="ex in filteredExercises"
-                                    :key="ex.id"
-                                    type="button"
-                                    @click="addExercise(ex)"
-                                    class="w-full rounded-xl p-3 text-left transition hover:bg-slate-50"
-                                >
-                                    <div class="text-sm font-medium text-text-main">{{ ex.name }}</div>
-                                    <div class="text-[10px] text-text-muted">{{ ex.category }}</div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <GlassButton @click="showAddExercise = true" type="button" class="w-full">
+                        + Ajouter un exercice
+                    </GlassButton>
                 </div>
             </div>
 
@@ -213,5 +278,126 @@ const submit = () => {
                 </GlassButton>
             </div>
         </form>
+
+        <!-- Add Exercise Modal -->
+        <Teleport to="body">
+            <div v-if="showAddExercise" class="glass-overlay animate-fade-in" @click.self="closeAddModal">
+                <div
+                    class="fixed inset-x-4 bottom-4 top-auto max-h-[80vh] sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
+                >
+                    <div class="glass-modal animate-slide-up overflow-hidden">
+                        <!-- Modal Header -->
+                        <div class="flex items-center justify-between border-b border-slate-200 p-4">
+                            <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                                {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
+                            </h3>
+                            <button
+                                @click="closeAddModal"
+                                type="button"
+                                class="rounded-xl p-2 text-text-muted hover:bg-slate-100 hover:text-text-main"
+                                aria-label="Fermer"
+                            >
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Create Exercise Form -->
+                        <div v-if="showCreateForm" class="p-4">
+                            <form @submit.prevent="createAndAddExercise" class="space-y-4">
+                                <GlassInput
+                                    v-model="createExerciseForm.name"
+                                    label="Nom de l'exercice"
+                                    placeholder="Ex: Développé couché"
+                                    :error="createExerciseForm.errors.name"
+                                    autofocus
+                                />
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted"
+                                            >Type</label
+                                        >
+                                        <select v-model="createExerciseForm.type" class="glass-input w-full text-sm">
+                                            <option v-for="t in types" :key="t.value" :value="t.value">
+                                                {{ t.label }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label
+                                            class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted"
+                                            >Catégorie</label
+                                        >
+                                        <select
+                                            v-model="createExerciseForm.category"
+                                            class="glass-input w-full text-sm"
+                                        >
+                                            <option value="">— Aucune —</option>
+                                            <option v-for="cat in categories" :key="cat" :value="cat">
+                                                {{ cat }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <GlassButton
+                                        type="submit"
+                                        variant="primary"
+                                        class="flex-1"
+                                        :loading="createExerciseForm.processing"
+                                    >
+                                        Créer et ajouter
+                                    </GlassButton>
+                                    <GlassButton type="button" variant="ghost" @click="showCreateForm = false">
+                                        Annuler
+                                    </GlassButton>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Search & List -->
+                        <template v-else>
+                            <div class="p-4 uppercase">
+                                <GlassInput v-model="searchQuery" placeholder="Rechercher..." autofocus />
+                            </div>
+
+                            <div class="max-h-[50vh] overflow-y-auto p-4 pt-0">
+                                <!-- No Results - Quick Create -->
+                                <div v-if="hasNoResults" class="py-6 text-center">
+                                    <p class="mb-3 text-text-muted">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
+                                    <GlassButton variant="primary" type="button" @click="quickCreate">
+                                        Créer "{{ searchQuery }}"
+                                    </GlassButton>
+                                </div>
+
+                                <!-- Exercise List -->
+                                <div v-else class="space-y-2">
+                                    <button
+                                        v-for="ex in filteredExercises"
+                                        :key="ex.id"
+                                        type="button"
+                                        @click="addExercise(ex)"
+                                        class="flex w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-accent-primary hover:bg-white"
+                                    >
+                                        <div class="text-left">
+                                            <div class="font-bold text-text-main">{{ ex.name }}</div>
+                                            <div class="text-xs text-text-muted">{{ ex.category }}</div>
+                                        </div>
+                                        <span class="material-symbols-outlined text-accent-primary">add_circle</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </AuthenticatedLayout>
 </template>
