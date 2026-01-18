@@ -10,10 +10,12 @@ const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/V
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
+const DurationDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/DurationDistributionChart.vue'))
 
 const props = defineProps({
     volumeTrend: Array,
     muscleDistribution: Array,
+    durationDistribution: Array,
     monthlyComparison: Object,
     weightHistory: Array,
     bodyFatHistory: Array,
@@ -205,6 +207,23 @@ watch(selectedExercise, (newVal) => {
                     </div>
                 </GlassCard>
             </div>
+
+            <!-- Duration Distribution -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.22s">
+                <div class="mb-4">
+                    <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                        Durée des Séances
+                    </h3>
+                    <p class="text-xs font-semibold text-text-muted">Répartition par durée</p>
+                </div>
+                <div v-if="durationDistribution && durationDistribution.some(d => d.count > 0)" class="h-52">
+                    <DurationDistributionChart :data="durationDistribution" />
+                </div>
+                <div v-else class="flex h-52 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">timer</span>
+                    <p class="text-sm text-text-muted">Pas assez de données de durée</p>
+                </div>
+            </GlassCard>
 
             <!-- Volume Trend Chart -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.15s">

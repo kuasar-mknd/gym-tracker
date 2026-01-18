@@ -457,11 +457,72 @@ class StatsService
             \Illuminate\Support\Facades\Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.weight_history.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
+            \Illuminate\Support\Facades\Cache::forget("stats.duration_dist.{$user->id}.{$days}");
         }
 
         // Clear dashboard-specific cache
         \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
 
         // Note: Individual exercise 1RM progress is not cleared here as it's exercise-specific
+    }
+
+    /**
+     * Get workout duration distribution.
+     *
+     * Buckets workouts into duration ranges.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  Number of days to look back (default: 90).
+     * @return array<int, array{range: string, count: int}>
+     */
+    public function getWorkoutDurationDistribution(User $user, int $days = 90): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.duration_dist.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $days) {
+                $workouts = DB::table('workouts')
+                    ->where('user_id', $user->id)
+                    ->where('started_at', '>=', now()->subDays($days))
+                    ->whereNotNull('ended_at')
+                    ->get(['started_at', 'ended_at']);
+
+                $distribution = [
+                    '< 30m' => 0,
+                    '30-45m' => 0,
+                    '45-60m' => 0,
+                    '60-90m' => 0,
+                    '90m+' => 0,
+                ];
+
+                foreach ($workouts as $workout) {
+                    $start = Carbon::parse($workout->started_at);
+                    $end = Carbon::parse($workout->ended_at);
+                    $minutes = $end->diffInMinutes($start);
+
+                    if ($minutes < 30) {
+                        $distribution['< 30m']++;
+                    } elseif ($minutes < 45) {
+                        $distribution['30-45m']++;
+                    } elseif ($minutes < 60) {
+                        $distribution['45-60m']++;
+                    } elseif ($minutes < 90) {
+                        $distribution['60-90m']++;
+                    } else {
+                        $distribution['90m+']++;
+                    }
+                }
+
+                $result = [];
+                foreach ($distribution as $range => $count) {
+                    $result[] = [
+                        'range' => $range,
+                        'count' => $count,
+                    ];
+                }
+
+                return $result;
+            }
+        );
     }
 }

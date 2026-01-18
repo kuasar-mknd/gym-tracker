@@ -224,3 +224,46 @@ test('stats do not include other users data', function () {
             ->where('volumeTrend', []) // Should be empty for this user
         );
 });
+
+test('stats page calculates duration distribution correctly', function () {
+    $user = User::factory()->create();
+
+    // < 30m
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => now()->subHours(2),
+        'ended_at' => now()->subHours(2)->addMinutes(20),
+    ]);
+
+    // 30-45m
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => now()->subDay(),
+        'ended_at' => now()->subDay()->addMinutes(40),
+    ]);
+
+    // 90m+
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => now()->subDays(2),
+        'ended_at' => now()->subDays(2)->addMinutes(100),
+    ]);
+
+    actingAs($user)
+        ->get(route('stats.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Stats/Index')
+            ->where('durationDistribution', function ($dist) {
+                $under30 = collect($dist)->firstWhere('range', '< 30m');
+                $thirtyTo45 = collect($dist)->firstWhere('range', '30-45m');
+                $over90 = collect($dist)->firstWhere('range', '90m+');
+                $sixtyTo90 = collect($dist)->firstWhere('range', '60-90m');
+
+                return $under30['count'] === 1
+                    && $thirtyTo45['count'] === 1
+                    && $over90['count'] === 1
+                    && $sixtyTo90['count'] === 0;
+            })
+        );
+});
