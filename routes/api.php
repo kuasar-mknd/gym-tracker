@@ -15,6 +15,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     });
 
     Route::apiResource('exercises', ExerciseController::class);
+    Route::apiResource('plates', \App\Http\Controllers\Api\PlateController::class);
     Route::apiResource('workouts', WorkoutController::class);
     Route::apiResource('sets', SetController::class);
     Route::apiResource('personal-records', \App\Http\Controllers\Api\PersonalRecordController::class);
