@@ -50,6 +50,29 @@ class FetchWorkoutsIndexAction
             ->reverse()
             ->values();
 
+        // Get volume history for the last 20 workouts
+        $volumeHistory = Workout::with(['workoutLines.sets'])
+            ->where('user_id', $user->id)
+            ->whereNotNull('ended_at')
+            ->latest('started_at')
+            ->take(20)
+            ->get()
+            ->map(function ($workout) {
+                $volume = $workout->workoutLines->reduce(function ($carry, $line) {
+                    return $carry + $line->sets->reduce(function ($carrySet, $set) {
+                        return $carrySet + ($set->weight * $set->reps);
+                    }, 0);
+                }, 0);
+
+                return [
+                    'date' => $workout->started_at->format('d/m'),
+                    'volume' => $volume,
+                    'name' => $workout->name,
+                ];
+            })
+            ->reverse()
+            ->values();
+
         // NITRO FIX: Paginate workouts instead of loading all
         $workouts = Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
             ->where('user_id', $user->id)
@@ -60,6 +83,7 @@ class FetchWorkoutsIndexAction
             'workouts' => $workouts,
             'monthlyFrequency' => $monthlyFrequency,
             'durationHistory' => $durationHistory,
+            'volumeHistory' => $volumeHistory,
         ];
     }
 }
