@@ -50,6 +50,9 @@ class WorkoutTemplatesController extends Controller
     {
         $this->authorize('view', $template);
 
+        // Optimize: Eager load relationships to prevent N+1 queries during iteration
+        $template->load(['workoutTemplateLines.workoutTemplateSets']);
+
         $workout = new Workout([
             'name' => $template->name,
             'started_at' => now(),

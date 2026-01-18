@@ -5,3 +5,7 @@
 ## 2026-01-17 - Button Accessibility States
 **Learning:** Reusable button components often lack explicit accessibility states for loading and decorative elements. Adding `aria-busy` for loading states and `aria-hidden="true"` for decorative icons/spinners significantly improves screen reader experience without visual changes.
 **Action:** When creating or modifying button components, always ensure loading states include `aria-busy` and visual-only elements (icons, spinners) are hidden from assistive technology.
+
+## 2026-01-20 - Form Input Label Association
+**Learning:** Custom input components (like `GlassInput`) often wrap native inputs but fail to propagate `id`s for `label` association, breaking accessibility.
+**Action:** Always ensure custom input wrappers generate a unique ID (if one isn't provided) and bind it to both the `input` and the `label`'s `for` attribute.
