@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Resources\BodyMeasurementResource;
 use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Http\Requests\BodyMeasurementUpdateRequest;
+use App\Http\Resources\BodyMeasurementResource;
 use App\Models\BodyMeasurement;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
