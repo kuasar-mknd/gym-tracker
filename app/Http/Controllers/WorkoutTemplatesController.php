@@ -6,7 +6,6 @@ use App\Actions\CreateWorkoutTemplateAction;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
@@ -39,15 +38,9 @@ class WorkoutTemplatesController extends Controller
         ]);
     }
 
-    public function store(Request $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
+    public function store(\App\Http\Requests\StoreWorkoutTemplateRequest $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'exercises' => 'nullable|array',
-        ]);
-
-        $createWorkoutTemplateAction->execute($request->user(), $validated);
+        $createWorkoutTemplateAction->execute($request->user(), $request->validated());
 
         return redirect()->route('templates.index');
     }
