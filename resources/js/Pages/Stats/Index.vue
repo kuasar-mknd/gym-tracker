@@ -2,13 +2,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, defineAsyncComponent } from 'vue'
 import axios from 'axios'
-import MuscleDistributionChart from '@/Components/Stats/MuscleDistributionChart.vue'
-import VolumeTrendChart from '@/Components/Stats/VolumeTrendChart.vue'
-import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
-import WeightHistoryChart from '@/Components/Stats/WeightHistoryChart.vue'
-import BodyFatChart from '@/Components/Stats/BodyFatChart.vue'
+
+const MuscleDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/MuscleDistributionChart.vue'))
+const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
+const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
+const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
+const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
 
 const props = defineProps({
     volumeTrend: Array,
