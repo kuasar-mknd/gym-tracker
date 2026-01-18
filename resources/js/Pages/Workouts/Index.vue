@@ -4,6 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import WorkoutsPerMonthChart from '@/Components/Stats/WorkoutsPerMonthChart.vue'
 import WorkoutDurationChart from '@/Components/Stats/WorkoutDurationChart.vue'
+import VolumePerWorkoutChart from '@/Components/Stats/VolumePerWorkoutChart.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -11,6 +12,7 @@ const props = defineProps({
     exercises: Array,
     monthlyFrequency: Array,
     durationHistory: Array,
+    volumeHistory: Array,
 })
 
 const form = useForm({})
@@ -136,6 +138,15 @@ const formatDate = (dateStr) => {
                             <p class="text-xs text-text-muted">Temps d'entraînement (min)</p>
                         </div>
                         <WorkoutDurationChart :data="durationHistory" />
+                    </GlassCard>
+
+                    <!-- Volume per Workout Chart -->
+                    <GlassCard v-if="volumeHistory && volumeHistory.length > 0" class="lg:col-span-2">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-text-main">Volume par Séance</h3>
+                            <p class="text-xs text-text-muted">Volume total soulevé (kg)</p>
+                        </div>
+                        <VolumePerWorkoutChart :data="volumeHistory" />
                     </GlassCard>
                 </div>
             </div>
