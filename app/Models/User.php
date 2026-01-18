@@ -84,6 +84,11 @@ class User extends Authenticatable
         return $this->hasMany(Plate::class);
     }
 
+    public function wilksScores(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(WilksScore::class);
+    }
+
     public function notificationPreferences(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(NotificationPreference::class);

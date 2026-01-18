@@ -4,8 +4,9 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
-import WeightHistoryChart from '@/Components/Stats/WeightHistoryChart.vue'
+import { computed, ref, defineAsyncComponent } from 'vue'
+
+const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 
 const props = defineProps({
     measurements: Array,

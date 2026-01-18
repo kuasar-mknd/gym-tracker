@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import ExerciseCategoryChart from '@/Components/Stats/ExerciseCategoryChart.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
@@ -127,10 +128,26 @@ const typeLabel = (type) => {
                 </p>
             </header>
 
+            <!-- Stats Chart -->
+            <div v-if="exercises.length > 0" class="animate-slide-up" style="animation-delay: 0.05s">
+                <GlassCard padding="p-4">
+                    <div class="mb-2 flex items-center justify-between">
+                        <h3 class="font-display text-sm font-black uppercase tracking-wider text-text-main">
+                            Répartition
+                        </h3>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <ExerciseCategoryChart :exercises="exercises" />
+                        </div>
+                    </div>
+                </GlassCard>
+            </div>
+
             <!-- Search Bar -->
             <div
                 class="glass-panel-light flex animate-slide-up items-center gap-3 rounded-2xl p-3"
-                style="animation-delay: 0.05s"
+                style="animation-delay: 0.1s"
             >
                 <span class="material-symbols-outlined text-[24px] text-text-muted">search</span>
                 <input
@@ -148,7 +165,7 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Category Pills -->
-            <div class="hide-scrollbar flex animate-slide-up gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
+            <div class="hide-scrollbar flex animate-slide-up gap-2 overflow-x-auto pb-2" style="animation-delay: 0.15s">
                 <button
                     @click="activeCategory = 'all'"
                     :class="[
@@ -246,7 +263,7 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Exercises List by Category -->
-            <div v-else class="animate-slide-up space-y-8" style="animation-delay: 0.15s">
+            <div v-else class="animate-slide-up space-y-8" style="animation-delay: 0.2s">
                 <div v-for="(exercisesInCat, category) in groupedExercises" :key="category">
                     <div class="mb-4 flex items-center gap-3">
                         <div :class="['size-3 rounded-full', categoryColors[category] || 'bg-slate-400']"></div>
