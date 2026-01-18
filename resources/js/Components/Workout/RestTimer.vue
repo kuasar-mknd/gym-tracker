@@ -1,8 +1,26 @@
+<!--
+  Components/Workout/RestTimer.vue
+
+  A floating countdown timer component used during workouts to track rest periods between sets.
+
+  Features:
+  - Visual progress bar indicating remaining time.
+  - Controls to add time (+30s), pause/resume, and skip.
+  - Audio and Haptic feedback upon completion.
+  - Minimizable/Closeable interface.
+  - Draggable or fixed positioning (currently fixed).
+-->
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
+/**
+ * Component Props
+ *
+ * @property {Number} duration - The initial duration of the timer in seconds (default: 90).
+ * @property {Boolean} autoStart - Whether to start the timer immediately upon mounting (default: false).
+ */
 const props = defineProps({
     duration: {
         type: Number,
@@ -14,22 +32,42 @@ const props = defineProps({
     },
 })
 
+/**
+ * Component Emits
+ *
+ * @event finished - Fired when the timer reaches 0.
+ * @event close - Fired when the user manually closes the timer.
+ */
 const emit = defineEmits(['finished', 'close'])
 
+// --- State ---
+
+/** Remaining time in seconds. */
 const timeLeft = ref(props.duration)
+
+/** Whether the timer is currently running. */
 const isActive = ref(false)
+
+/** Interval ID for the timer loop. */
 const timer = ref(null)
 
+/** Calculated progress percentage for the visual bar. */
 const progress = computed(() => {
     return (timeLeft.value / props.duration) * 100
 })
 
+/**
+ * Formats seconds into MM:SS format.
+ * @param {Number} seconds
+ * @return {String} Formatted time string.
+ */
 const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+/** Starts the countdown timer. */
 const startTimer = () => {
     if (timer.value) return
     isActive.value = true
@@ -42,12 +80,14 @@ const startTimer = () => {
     }, 1000)
 }
 
+/** Pauses the countdown timer. */
 const pauseTimer = () => {
     clearInterval(timer.value)
     timer.value = null
     isActive.value = false
 }
 
+/** Toggles between start and pause states. */
 const toggleTimer = () => {
     if (isActive.value) {
         pauseTimer()
@@ -56,14 +96,23 @@ const toggleTimer = () => {
     }
 }
 
+/**
+ * Adds extra time to the current timer.
+ * @param {Number} seconds - Amount of seconds to add.
+ */
 const addTime = (seconds) => {
     timeLeft.value += seconds
 }
 
+/** Immediately finishes the timer. */
 const skipTimer = () => {
     finishTimer()
 }
 
+/**
+ * Handles timer completion logic.
+ * Triggers haptic feedback, plays sound, and emits 'finished' event.
+ */
 const finishTimer = () => {
     pauseTimer()
     timeLeft.value = 0
@@ -96,11 +145,13 @@ const finishTimer = () => {
     emit('finished')
 }
 
+/** Closes the timer component. */
 const close = () => {
     pauseTimer()
     emit('close')
 }
 
+// Lifecycle Hooks
 onMounted(() => {
     if (props.autoStart) {
         startTimer()
@@ -111,6 +162,7 @@ onUnmounted(() => {
     pauseTimer()
 })
 
+// Watchers
 watch(
     () => props.duration,
     (newVal) => {
