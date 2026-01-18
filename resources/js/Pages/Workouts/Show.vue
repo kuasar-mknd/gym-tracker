@@ -17,7 +17,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import Modal from '@/Components/Modal.vue'
-import { Head, useForm, router, usePage } from '@inertiajs/vue3'
+import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
 /**
@@ -457,10 +457,18 @@ const hasNoResults = computed(() => {
         <!-- Only keep template save button if needed somewhere else or secondary -->
         <template #header-actions>
             <button
+                @click="showSettingsModal = true"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-all hover:bg-slate-50 active:scale-95"
+                title="Paramètres de la séance"
+            >
+                <span class="material-symbols-outlined">settings</span>
+            </button>
+
+            <button
                 v-if="!workout.ended_at"
                 id="finish-workout-mobile"
                 @click="finishWorkout"
-                class="flex items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
+                class="flex shrink-0 items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
             >
                 <span class="material-symbols-outlined text-sm">stop_circle</span>
                 Terminer
@@ -468,7 +476,7 @@ const hasNoResults = computed(() => {
             <span
                 v-else
                 id="workout-status-badge-mobile"
-                class="glass-badge glass-badge-success flex items-center gap-1 rounded-full px-4 py-2 text-xs"
+                class="glass-badge glass-badge-success flex shrink-0 items-center gap-1 rounded-full px-4 py-2 text-xs"
             >
                 <span class="material-symbols-outlined text-sm">check_circle</span>
                 Terminée

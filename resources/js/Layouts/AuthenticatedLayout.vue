@@ -182,17 +182,17 @@ const showingNavigationDropdown = ref(false)
             class="sticky top-0 z-30 flex items-center justify-between border-b border-white/40 bg-pearl-white/80 px-5 py-4 backdrop-blur-xl sm:hidden"
             :style="{ paddingTop: 'calc(1rem + var(--safe-area-top))' }"
         >
-            <div class="flex items-center gap-4">
+            <div class="flex min-w-0 items-center gap-4">
                 <Link
                     v-if="showBack"
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
-                    class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
                 >
                     <span class="material-symbols-outlined">arrow_back</span>
                 </Link>
                 <h1
                     v-if="pageTitle"
-                    class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main"
+                    class="truncate font-display text-2xl font-black uppercase italic tracking-tight text-text-main"
                 >
                     {{ pageTitle }}
                 </h1>
