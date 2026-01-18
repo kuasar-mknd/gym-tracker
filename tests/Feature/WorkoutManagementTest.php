@@ -53,3 +53,46 @@ it('can update its workout date and name', function () {
         'name' => $newName,
     ]);
 });
+
+it('cannot update someone else\'s workout', function () {
+    $otherUser = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
+    $oldName = $workout->name;
+
+    actingAs($this->user)
+        ->patch(route('workouts.update', $workout), [
+            'name' => 'Trying to steal and rename',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('workouts', [
+        'id' => $workout->id,
+        'name' => $oldName,
+    ]);
+});
+
+it('validates workout started_at date format', function () {
+    $workout = Workout::factory()->create(['user_id' => $this->user->id]);
+
+    actingAs($this->user)
+        ->patch(route('workouts.update', $workout), [
+            'started_at' => 'not-a-date',
+        ])
+        ->assertSessionHasErrors(['started_at']);
+});
+
+it('can update workout notes', function () {
+    $workout = Workout::factory()->create(['user_id' => $this->user->id]);
+    $newNotes = 'These are some updated notes.';
+
+    actingAs($this->user)
+        ->patch(route('workouts.update', $workout), [
+            'notes' => $newNotes,
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('workouts', [
+        'id' => $workout->id,
+        'notes' => $newNotes,
+    ]);
+});
