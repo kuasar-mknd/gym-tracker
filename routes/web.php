@@ -70,6 +70,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/tools', [\App\Http\Controllers\ToolsController::class, 'index'])->name('tools.index');
     Route::get('/tools/1rm', [\App\Http\Controllers\ToolsController::class, 'oneRepMax'])->name('tools.1rm');
+    Route::get('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'index'])->name('tools.wilks');
+    Route::post('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'store'])->name('tools.wilks.store');
+    Route::delete('/tools/wilks/{wilksScore}', [\App\Http\Controllers\WilksScoreController::class, 'destroy'])->name('tools.wilks.destroy');
 });
 
 // Social Login

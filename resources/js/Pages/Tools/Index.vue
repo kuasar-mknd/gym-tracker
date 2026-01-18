@@ -72,6 +72,36 @@
                     </div>
                 </GlassCard>
             </Link>
+
+            <!-- Wilks Calculator -->
+            <Link :href="route('tools.wilks')" class="group">
+                <GlassCard
+                    class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
+                >
+                    <div class="flex flex-col items-center space-y-4 text-center">
+                        <div class="rounded-full bg-electric-orange/20 p-4 text-electric-orange">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-8 w-8"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-text-main">Wilks Calculator</h3>
+                        <p class="text-sm text-text-muted">
+                            Calculate your relative strength score regardless of body weight.
+                        </p>
+                    </div>
+                </GlassCard>
+            </Link>
         </div>
     </AuthenticatedLayout>
 </template>
