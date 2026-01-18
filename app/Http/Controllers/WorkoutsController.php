@@ -108,9 +108,14 @@ class WorkoutsController extends Controller
 
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
+            'started_at' => 'nullable|date',
             'notes' => 'nullable|string|max:1000',
             'is_finished' => 'nullable|boolean',
         ]);
+
+        if (isset($validated['started_at'])) {
+            $workout->started_at = $validated['started_at'];
+        }
 
         if (isset($validated['name'])) {
             $workout->name = $validated['name'];

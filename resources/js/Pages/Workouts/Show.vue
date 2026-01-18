@@ -140,6 +140,28 @@ const confirmAction = ref(null)
 /** Message displayed in the confirmation modal. */
 const confirmMessage = ref('')
 
+/** Controls visibility of the workout settings modal. */
+const showSettingsModal = ref(false)
+
+/** Form for editing workout details (name, date, notes). */
+const settingsForm = useForm({
+    name: props.workout.name,
+    started_at: props.workout.started_at ? new Date(props.workout.started_at).toISOString().slice(0, 16) : '',
+    notes: props.workout.notes || '',
+})
+
+/**
+ * Updates the workout settings (name, date, notes).
+ */
+const updateSettings = () => {
+    settingsForm.patch(route('workouts.update', { workout: props.workout.id }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showSettingsModal.value = false
+        },
+    })
+}
+
 /** Form for adding an existing exercise to the workout. */
 const addExerciseForm = useForm({
     exercise_id: '',
@@ -412,6 +434,14 @@ const hasNoResults = computed(() => {
                         <span class="material-symbols-outlined text-sm">check_circle</span>
                         Terminée
                     </span>
+
+                    <button
+                        @click="showSettingsModal = true"
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-all hover:bg-slate-50 active:scale-95"
+                        title="Paramètres de la séance"
+                    >
+                        <span class="material-symbols-outlined">settings</span>
+                    </button>
 
                     <button
                         @click="deleteWorkout"
@@ -904,6 +934,79 @@ const hasNoResults = computed(() => {
             @finished="showTimer = false"
             @close="showTimer = false"
         />
+
+        <!-- Workout Settings Modal -->
+        <Teleport to="body">
+            <div v-if="showSettingsModal" class="glass-overlay animate-fade-in" @click.self="showSettingsModal = false">
+                <div
+                    class="fixed inset-x-4 bottom-4 top-auto max-h-[90vh] sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
+                >
+                    <div class="glass-modal animate-slide-up overflow-hidden">
+                        <div class="flex items-center justify-between border-b border-slate-200 p-4">
+                            <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                                Paramètres de la séance
+                            </h3>
+                            <button
+                                @click="showSettingsModal = false"
+                                class="rounded-xl p-2 text-text-muted hover:bg-slate-100 hover:text-text-main"
+                            >
+                                <span class="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="updateSettings" class="space-y-4 p-6">
+                            <GlassInput
+                                v-model="settingsForm.name"
+                                label="Nom de la séance"
+                                placeholder="Ex: Séance Jambes"
+                                :error="settingsForm.errors.name"
+                            />
+
+                            <GlassInput
+                                v-model="settingsForm.started_at"
+                                label="Date et heure"
+                                type="datetime-local"
+                                :error="settingsForm.errors.started_at"
+                            />
+
+                            <div>
+                                <label class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted">
+                                    Notes
+                                </label>
+                                <textarea
+                                    v-model="settingsForm.notes"
+                                    rows="4"
+                                    class="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 text-text-main placeholder-text-muted/30 backdrop-blur-md focus:border-electric-orange focus:outline-none focus:ring-1 focus:ring-electric-orange"
+                                    placeholder="Comment s'est passée votre séance ?"
+                                ></textarea>
+                                <div v-if="settingsForm.errors.notes" class="mt-1 text-xs text-red-500">
+                                    {{ settingsForm.errors.notes }}
+                                </div>
+                            </div>
+
+                            <div class="flex gap-3 pt-2">
+                                <GlassButton
+                                    type="button"
+                                    variant="ghost"
+                                    class="flex-1"
+                                    @click="showSettingsModal = false"
+                                >
+                                    Annuler
+                                </GlassButton>
+                                <GlassButton
+                                    type="submit"
+                                    variant="primary"
+                                    class="flex-1"
+                                    :loading="settingsForm.processing"
+                                >
+                                    Enregistrer
+                                </GlassButton>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
 
         <!-- Confirmation Modal -->
         <Modal :show="showFinishModal" @close="showFinishModal = false" maxWidth="sm">

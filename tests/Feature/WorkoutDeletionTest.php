@@ -34,3 +34,22 @@ it('cannot delete someone else\'s workout', function () {
 
     $this->assertDatabaseHas('workouts', ['id' => $workout->id]);
 });
+
+it('can update its workout date and name', function () {
+    $workout = Workout::factory()->create(['user_id' => $this->user->id]);
+    $newDate = '2025-01-01 10:00:00';
+    $newName = 'New Workout Name';
+
+    actingAs($this->user)
+        ->patch(route('workouts.update', $workout), [
+            'started_at' => $newDate,
+            'name' => $newName,
+        ])
+        ->assertRedirect();
+
+    $this->assertDatabaseHas('workouts', [
+        'id' => $workout->id,
+        'started_at' => $newDate,
+        'name' => $newName,
+    ]);
+});
