@@ -46,12 +46,13 @@ test('dashboard page renders with correct props', function () {
     actingAs($this->user)
         ->get('/dashboard')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Dashboard')
-            ->has('workoutsCount')
-            ->has('thisWeekCount')
-            ->has('recentWorkouts')
-            ->has('activeGoals')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->has('workoutsCount')
+                ->has('thisWeekCount')
+                ->has('recentWorkouts')
+                ->has('activeGoals')
         );
 });
 
@@ -67,12 +68,13 @@ test('workouts index page renders with paginated data structure', function () {
     actingAs($this->user)
         ->get('/workouts')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Workouts/Index')
-            // CRITICAL: workouts must be paginated object with data array
-            ->has('workouts.data')
-            ->has('workouts.links')
-            ->has('monthlyFrequency')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Workouts/Index')
+                // CRITICAL: workouts must be paginated object with data array
+                ->has('workouts.data')
+                ->has('workouts.links')
+                ->has('monthlyFrequency')
         );
 });
 
@@ -80,9 +82,10 @@ test('workouts index page renders correctly when empty', function () {
     actingAs($this->user)
         ->get('/workouts')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Workouts/Index')
-            ->has('workouts.data', 0)  // Empty array
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Workouts/Index')
+                ->has('workouts.data', 0)  // Empty array
         );
 });
 
@@ -101,11 +104,12 @@ test('workout show page renders with correct props', function () {
     actingAs($this->user)
         ->get("/workouts/{$workout->id}")
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Workouts/Show')
-            ->has('workout')
-            ->has('workout.workout_lines')
-            ->has('exercises')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Workouts/Show')
+                ->has('workout')
+                ->has('workout.workout_lines')
+                ->has('exercises')
         );
 });
 
@@ -130,12 +134,13 @@ test('stats page renders without cache errors', function () {
     actingAs($this->user)
         ->get('/stats')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Stats/Index')
-            ->has('volumeTrend')
-            ->has('muscleDistribution')
-            ->has('monthlyComparison')
-            ->has('exercises')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Stats/Index')
+                ->has('volumeTrend')
+                ->has('muscleDistribution')
+                ->has('monthlyComparison')
+                ->has('exercises')
         );
 });
 
@@ -150,9 +155,10 @@ test('goals index page renders with correct props', function () {
     actingAs($this->user)
         ->get('/goals')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Goals/Index')
-            ->has('goals')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Goals/Index')
+                ->has('goals')
         );
 });
 
@@ -167,10 +173,11 @@ test('exercises index page renders with correct props', function () {
     actingAs($this->user)
         ->get('/exercises')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Exercises/Index')
-            ->has('exercises')
-            ->has('categories')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Exercises/Index')
+                ->has('exercises')
+                ->has('categories')
         );
 });
 
@@ -183,9 +190,10 @@ test('templates index page renders with correct props', function () {
     actingAs($this->user)
         ->get('/templates')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Workouts/Templates/Index')
-            ->has('templates')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Workouts/Templates/Index')
+                ->has('templates')
         );
 });
 
@@ -200,9 +208,10 @@ test('body measurements index page renders with correct props', function () {
     actingAs($this->user)
         ->get('/body-measurements')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Measurements/Index')
-            ->has('measurements')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Measurements/Index')
+                ->has('measurements')
         );
 });
 
@@ -217,9 +226,10 @@ test('daily journals index page renders with correct props', function () {
     actingAs($this->user)
         ->get('/daily-journals')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Journal/Index')
-            ->has('journals')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Journal/Index')
+                ->has('journals')
         );
 });
 
@@ -232,9 +242,10 @@ test('notifications index page renders correctly', function () {
     actingAs($this->user)
         ->get('/notifications')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Notifications/Index')
-            ->has('notifications')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Notifications/Index')
+                ->has('notifications')
         );
 });
 
@@ -249,9 +260,10 @@ test('achievements index page renders with correct props', function () {
     actingAs($this->user)
         ->get('/achievements')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Achievements/Index')
-            ->has('achievements')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Achievements/Index')
+                ->has('achievements')
         );
 });
 
@@ -264,8 +276,9 @@ test('profile edit page renders with correct props', function () {
     actingAs($this->user)
         ->get('/profile')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Profile/Index')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Profile/Index')
             // mustVerifyEmail is the standard prop from Breeze
         );
 });
@@ -279,8 +292,9 @@ test('tools index page renders correctly', function () {
     actingAs($this->user)
         ->get('/tools')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Tools/Index')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Tools/Index')
         );
 });
 
@@ -288,8 +302,9 @@ test('one rep max calculator page renders correctly', function () {
     actingAs($this->user)
         ->get('/tools/1rm')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Tools/OneRepMax')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Tools/OneRepMax')
         );
 });
 
@@ -304,9 +319,10 @@ test('plates index page renders with correct props', function () {
     actingAs($this->user)
         ->get('/plates')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Tools/PlateCalculator')
-            ->has('plates')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Tools/PlateCalculator')
+                ->has('plates')
         );
 });
 
@@ -335,17 +351,13 @@ test('unauthenticated users are redirected to login for all protected pages', fu
 
 /**
  * ================================
- * WELCOME PAGE (PUBLIC)
+ * ROOT REDIRECT
  * ================================
  */
-test('welcome page renders correctly for guests', function () {
+test('root redirects to dashboard', function () {
     $this->get('/')
-        ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Welcome')
-            ->has('canLogin')
-            ->has('canRegister')
-        );
+        ->assertStatus(302)
+        ->assertRedirect('/dashboard');
 });
 
 /**
@@ -356,15 +368,17 @@ test('welcome page renders correctly for guests', function () {
 test('login page renders correctly', function () {
     $this->get('/login')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Auth/Login')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Auth/Login')
         );
 });
 
 test('register page renders correctly', function () {
     $this->get('/register')
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('Auth/Register')
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Auth/Register')
         );
 });
