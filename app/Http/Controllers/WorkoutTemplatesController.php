@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CreateWorkoutFromTemplateAction;
 use App\Actions\CreateWorkoutTemplateAction;
 use App\Actions\CreateWorkoutTemplateFromWorkoutAction;
 use App\Models\Workout;
@@ -46,31 +47,11 @@ class WorkoutTemplatesController extends Controller
         return redirect()->route('templates.index');
     }
 
-    public function execute(WorkoutTemplate $template): \Illuminate\Http\RedirectResponse
+    public function execute(WorkoutTemplate $template, CreateWorkoutFromTemplateAction $createWorkout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('view', $template);
 
-        $workout = new Workout([
-            'name' => $template->name,
-            'started_at' => now(),
-        ]);
-        $workout->user_id = auth()->id();
-        $workout->save();
-
-        foreach ($template->workoutTemplateLines as $templateLine) {
-            $workoutLine = $workout->workoutLines()->create([
-                'exercise_id' => $templateLine->exercise_id,
-                'order' => $templateLine->order,
-            ]);
-
-            foreach ($templateLine->workoutTemplateSets as $templateSet) {
-                $workoutLine->sets()->create([
-                    'reps' => $templateSet->reps,
-                    'weight' => $templateSet->weight,
-                    'is_warmup' => $templateSet->is_warmup,
-                ]);
-            }
-        }
+        $workout = $createWorkout->execute(auth()->user(), $template);
 
         return redirect()->route('workouts.show', $workout);
     }
