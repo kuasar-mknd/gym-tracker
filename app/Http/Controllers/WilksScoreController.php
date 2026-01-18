@@ -27,14 +27,9 @@ class WilksScoreController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(\App\Http\Requests\StoreWilksScoreRequest $request)
     {
-        $validated = $request->validate([
-            'body_weight' => ['required', 'numeric', 'min:1', 'max:500'],
-            'lifted_weight' => ['required', 'numeric', 'min:1', 'max:1000'],
-            'gender' => ['required', 'string', 'in:male,female'],
-            'unit' => ['required', 'string', 'in:kg,lbs'],
-        ]);
+        $validated = $request->validated();
 
         // Calculate Score on Backend
         $bw = $validated['body_weight'];
