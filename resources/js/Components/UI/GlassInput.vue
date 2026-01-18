@@ -1,4 +1,6 @@
 <script setup>
+import { computed, useAttrs, getCurrentInstance } from 'vue'
+
 const props = defineProps({
     modelValue: {
         type: [String, Number],
@@ -28,6 +30,12 @@ const props = defineProps({
 
 defineEmits(['update:modelValue'])
 
+const attrs = useAttrs()
+const instance = getCurrentInstance()
+const inputId = computed(() => {
+    return attrs.id || `glass-input-${instance?.uid}`
+})
+
 const sizeClasses = {
     sm: 'min-h-[36px] text-sm rounded-lg',
     md: 'min-h-[44px] text-base rounded-xl',
@@ -38,7 +46,7 @@ const sizeClasses = {
 
 <template>
     <div class="w-full">
-        <label v-if="label" class="font-display-label mb-2 block text-text-muted">
+        <label v-if="label" :for="inputId" class="font-display-label mb-2 block text-text-muted">
             {{ label }}
         </label>
 
@@ -54,6 +62,7 @@ const sizeClasses = {
                 {{ label }}
             </label>
             <input
+                :id="inputId"
                 :type="type"
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
@@ -61,10 +70,13 @@ const sizeClasses = {
                 inputmode="decimal"
                 v-bind="$attrs"
             />
-            <div class="mt-3 flex w-full justify-between px-4 opacity-30 transition-opacity group-hover:opacity-100">
+            <div
+                class="mt-3 flex w-full justify-between px-4 opacity-30 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+            >
                 <button
                     type="button"
                     class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold text-text-main shadow-sm transition-transform hover:scale-110 active:bg-neon-green"
+                    :aria-label="`Decrease ${label || 'value'}`"
                     @click="$emit('update:modelValue', Math.max(0, Number(modelValue) - 2.5))"
                 >
                     -
@@ -72,6 +84,7 @@ const sizeClasses = {
                 <button
                     type="button"
                     class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold text-text-main shadow-sm transition-transform hover:scale-110 active:bg-neon-green"
+                    :aria-label="`Increase ${label || 'value'}`"
                     @click="$emit('update:modelValue', Number(modelValue) + 2.5)"
                 >
                     +
@@ -82,6 +95,7 @@ const sizeClasses = {
         <!-- Standard input -->
         <template v-else>
             <input
+                :id="inputId"
                 :type="type"
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
