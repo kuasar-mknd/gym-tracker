@@ -7,12 +7,14 @@ import { defineAsyncComponent } from 'vue'
 
 const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
 const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
+const VolumePerWorkoutChart = defineAsyncComponent(() => import('@/Components/Stats/VolumePerWorkoutChart.vue'))
 
 const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     exercises: Array,
     monthlyFrequency: Array,
     durationHistory: Array,
+    volumeHistory: Array,
 })
 
 const form = useForm({})
@@ -138,6 +140,15 @@ const formatDate = (dateStr) => {
                             <p class="text-xs text-text-muted">Temps d'entraînement (min)</p>
                         </div>
                         <WorkoutDurationChart :data="durationHistory" />
+                    </GlassCard>
+
+                    <!-- Volume per Workout Chart -->
+                    <GlassCard v-if="volumeHistory && volumeHistory.length > 0" class="lg:col-span-2">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-text-main">Volume par Séance</h3>
+                            <p class="text-xs text-text-muted">Volume total soulevé (kg)</p>
+                        </div>
+                        <VolumePerWorkoutChart :data="volumeHistory" />
                     </GlassCard>
                 </div>
             </div>
