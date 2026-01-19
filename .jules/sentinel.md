@@ -12,3 +12,8 @@
 **Vulnerability:** The `unique:exercises` validation rule in `ExerciseStoreRequest` and `ExerciseUpdateRequest` checked against the entire table globally. This allowed users to enumerate other users' private exercise names (IDOR/Info Disclosure) and prevented them from creating exercises with common names if already taken by someone else (DoS).
 **Learning:** Laravel's standard `unique` rule is global by default. When validating user-owned resources, we must explicitly scope the uniqueness check to the user's ID (and optionally system records).
 **Prevention:** Use `Rule::unique('table')->where(...)` to scope uniqueness checks to the authenticated user for any resource that is user-specific.
+
+## 2026-06-15 - SQL Precedence Bug in Validation Logic
+**Vulnerability:** Adding `orWhere` conditions to `Rule::exists` validation queries without explicit grouping creates a SQL operator precedence bug (`AND A OR B`), potentially bypassing the intended security check (IDOR).
+**Learning:** Unlike Eloquent's `where(Closure)`, `Rule::exists` callbacks execute directly on the query builder. You must manually nest closures to group `OR` conditions correctly.
+**Prevention:** Always use nested closures when adding `OR` conditions to validation rules: `$query->where(fn($q) => $q->where(...)->orWhere(...))`.

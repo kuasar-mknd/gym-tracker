@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class GoalStoreRequest extends FormRequest
 {
@@ -25,7 +26,15 @@ class GoalStoreRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:weight,frequency,volume,measurement'],
             'target_value' => ['required', 'numeric', 'min:0'],
-            'exercise_id' => ['required_if:type,weight,volume', 'nullable', 'exists:exercises,id'],
+            'exercise_id' => [
+                'required_if:type,weight,volume',
+                'nullable',
+                Rule::exists('exercises', 'id')->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->whereNull('user_id')->orWhere('user_id', $this->user()->id);
+                    });
+                }),
+            ],
             'measurement_type' => ['required_if:type,measurement', 'nullable', 'string'],
             'deadline' => ['nullable', 'date', 'after:today'],
             'start_value' => ['nullable', 'numeric'],
