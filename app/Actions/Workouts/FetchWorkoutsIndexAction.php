@@ -5,6 +5,7 @@ namespace App\Actions\Workouts;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class FetchWorkoutsIndexAction
 {
@@ -51,23 +52,23 @@ class FetchWorkoutsIndexAction
             ->values();
 
         // Get volume history for the last 20 workouts
-        $volumeHistory = Workout::with(['workoutLines.sets'])
-            ->where('user_id', $user->id)
-            ->whereNotNull('ended_at')
-            ->latest('started_at')
-            ->take(20)
+        // Optimized: Use DB query to avoid hydrating nested models (N+1 memory issue)
+        $volumeHistory = DB::table('workouts')
+            ->select('workouts.id', 'workouts.name', 'workouts.started_at')
+            ->selectRaw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->whereNotNull('workouts.ended_at')
+            ->groupBy('workouts.id', 'workouts.name', 'workouts.started_at')
+            ->orderBy('workouts.started_at', 'desc')
+            ->limit(20)
             ->get()
-            ->map(function ($workout) {
-                $volume = $workout->workoutLines->reduce(function ($carry, $line) {
-                    return $carry + $line->sets->reduce(function ($carrySet, $set) {
-                        return $carrySet + ($set->weight * $set->reps);
-                    }, 0);
-                }, 0);
-
+            ->map(function ($row) {
                 return [
-                    'date' => $workout->started_at->format('d/m'),
-                    'volume' => $volume,
-                    'name' => $workout->name,
+                    'date' => Carbon::parse($row->started_at)->format('d/m'),
+                    'volume' => (float) $row->volume,
+                    'name' => $row->name,
                 ];
             })
             ->reverse()
