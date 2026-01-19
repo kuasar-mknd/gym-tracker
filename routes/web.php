@@ -67,6 +67,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'index'])->name('tools.wilks');
     Route::post('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'store'])->name('tools.wilks.store');
     Route::delete('/tools/wilks/{wilksScore}', [\App\Http\Controllers\WilksScoreController::class, 'destroy'])->name('tools.wilks.destroy');
+
+    Route::get('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'index'])->name('tools.macro-calculator');
+    Route::post('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'store'])->name('tools.macro-calculator.store');
+    Route::delete('/tools/macro-calculator/{macroCalculation}', [\App\Http\Controllers\MacroCalculatorController::class, 'destroy'])->name('tools.macro-calculator.destroy');
 });
 
 // Social Login
