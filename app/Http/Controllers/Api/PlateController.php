@@ -59,11 +59,6 @@ class PlateController extends Controller
      */
     public function update(UpdatePlateRequest $request, Plate $plate)
     {
-        // Validation logic is handled in the Request class
-        // Authorization is handled in the Request class as well, but we can double check or rely on Policy
-        // Note: UpdatePlateRequest uses $this->user() !== null, it doesn't check ownership of the plate explicitly there usually
-        // Let's check UpdatePlateRequest again.
-
         $this->authorize('update', $plate);
 
         $plate->update($request->validated());
