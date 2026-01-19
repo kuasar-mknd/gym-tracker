@@ -3,112 +3,180 @@
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\WorkoutTemplate;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 
-uses(RefreshDatabase::class);
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-test('guest cannot access workout templates', function () {
-    $response = $this->getJson('/api/v1/workout-templates');
-    $response->assertUnauthorized();
+beforeEach(function () {
+    $this->user = User::factory()->create();
+});
+
+test('unauthenticated user cannot access workout templates', function () {
+    $this->getJson(route('api.v1.workout-templates.index'))->assertUnauthorized();
+    $this->postJson(route('api.v1.workout-templates.store'), [])->assertUnauthorized();
+    $template = WorkoutTemplate::factory()->create();
+    $this->getJson(route('api.v1.workout-templates.show', $template))->assertUnauthorized();
+    $this->putJson(route('api.v1.workout-templates.update', $template), [])->assertUnauthorized();
+    $this->deleteJson(route('api.v1.workout-templates.destroy', $template))->assertUnauthorized();
 });
 
 test('user can list own workout templates', function () {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
+    Sanctum::actingAs($this->user);
+    WorkoutTemplate::factory()->count(3)->create(['user_id' => $this->user->id]);
 
-    $template = new WorkoutTemplate(['name' => 'My Template']);
-    $template->user_id = $user->id;
-    $template->save();
+    // Create other user's template
+    WorkoutTemplate::factory()->create();
 
-    $otherTemplate = new WorkoutTemplate(['name' => 'Other Template']);
-    $otherTemplate->user_id = $otherUser->id;
-    $otherTemplate->save();
-
-    $response = $this->actingAs($user, 'sanctum')->getJson('/api/v1/workout-templates');
+    $response = $this->getJson(route('api.v1.workout-templates.index'));
 
     $response->assertOk()
-        ->assertJsonCount(1, 'data')
-        ->assertJsonFragment(['name' => 'My Template'])
-        ->assertJsonMissing(['name' => 'Other Template']);
+        ->assertJsonCount(3, 'data');
 });
 
-test('user can create workout template with nested exercises', function () {
-    $user = User::factory()->create();
-    $exercise = Exercise::factory()->create(['name' => 'Bench Press']);
-
-    $data = [
-        'name' => 'Push Day',
-        'description' => 'Best day',
-        'exercises' => [
-            [
-                'id' => $exercise->id,
-                'sets' => [
-                    ['reps' => 10, 'weight' => 100, 'is_warmup' => true],
-                    ['reps' => 5, 'weight' => 120, 'is_warmup' => false],
-                ],
-            ],
-        ],
-    ];
-
-    $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/workout-templates', $data);
-
-    $response->assertCreated()
-        ->assertJsonPath('data.name', 'Push Day')
-        ->assertJsonPath('data.lines.0.exercise.id', $exercise->id)
-        ->assertJsonPath('data.lines.0.sets.0.reps', 10);
-
-    $this->assertDatabaseHas('workout_templates', ['name' => 'Push Day']);
-});
-
-test('user can show workout template', function () {
-    $user = User::factory()->create();
-    $template = new WorkoutTemplate(['name' => 'Leg Day']);
-    $template->user_id = $user->id;
-    $template->save();
-
-    $response = $this->actingAs($user, 'sanctum')->getJson("/api/v1/workout-templates/{$template->id}");
-
-    $response->assertOk()
-        ->assertJsonPath('data.id', $template->id)
-        ->assertJsonPath('data.name', 'Leg Day');
-});
-
-test('user can update workout template', function () {
-    $user = User::factory()->create();
-    $template = new WorkoutTemplate(['name' => 'Leg Day']);
-    $template->user_id = $user->id;
-    $template->save();
+test('user can create workout template', function () {
+    Sanctum::actingAs($this->user);
     $exercise = Exercise::factory()->create();
 
     $data = [
-        'name' => 'Updated Leg Day',
+        'name' => 'My New Template',
+        'description' => 'A description',
         'exercises' => [
             [
                 'id' => $exercise->id,
                 'sets' => [
-                    ['reps' => 12, 'weight' => 50],
+                    ['reps' => 10, 'weight' => 100, 'is_warmup' => false],
                 ],
             ],
         ],
     ];
 
-    $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/workout-templates/{$template->id}", $data);
+    $response = $this->postJson(route('api.v1.workout-templates.store'), $data);
 
-    $response->assertOk()
-        ->assertJsonPath('data.name', 'Updated Leg Day')
+    $response->assertCreated()
+        ->assertJsonPath('data.name', 'My New Template')
         ->assertJsonPath('data.lines.0.exercise.id', $exercise->id);
 
-    $this->assertDatabaseHas('workout_templates', ['id' => $template->id, 'name' => 'Updated Leg Day']);
+    $this->assertDatabaseHas('workout_templates', [
+        'name' => 'My New Template',
+        'user_id' => $this->user->id,
+    ]);
 });
 
-test('user can delete workout template', function () {
-    $user = User::factory()->create();
-    $template = new WorkoutTemplate(['name' => 'Delete Me']);
-    $template->user_id = $user->id;
-    $template->save();
+test('create template requires name', function () {
+    Sanctum::actingAs($this->user);
 
-    $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/workout-templates/{$template->id}");
+    $response = $this->postJson(route('api.v1.workout-templates.store'), [
+        'description' => 'No name provided',
+    ]);
 
-    $response->assertNoContent();
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['name']);
+});
+
+test('create template requires valid exercise id', function () {
+    Sanctum::actingAs($this->user);
+
+    $response = $this->postJson(route('api.v1.workout-templates.store'), [
+        'name' => 'Invalid Exercise',
+        'exercises' => [
+            ['id' => 999999],
+        ],
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['exercises.0.id']);
+});
+
+test('create template validates set data types', function () {
+    Sanctum::actingAs($this->user);
+    $exercise = Exercise::factory()->create();
+
+    $response = $this->postJson(route('api.v1.workout-templates.store'), [
+        'name' => 'Invalid Sets',
+        'exercises' => [
+            [
+                'id' => $exercise->id,
+                'sets' => [
+                    ['reps' => 'not-a-number', 'weight' => 'heavy', 'is_warmup' => 'maybe'],
+                ],
+            ],
+        ],
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'exercises.0.sets.0.reps',
+            'exercises.0.sets.0.weight',
+            'exercises.0.sets.0.is_warmup'
+        ]);
+});
+
+test('user can show own workout template', function () {
+    Sanctum::actingAs($this->user);
+    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+
+    $this->getJson(route('api.v1.workout-templates.show', $template))
+        ->assertOk()
+        ->assertJsonPath('data.id', $template->id);
+});
+
+test('user cannot show other users workout template', function () {
+    Sanctum::actingAs($this->user);
+    $otherUser = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
+
+    $this->getJson(route('api.v1.workout-templates.show', $template))
+        ->assertForbidden();
+});
+
+test('user can update own workout template', function () {
+    Sanctum::actingAs($this->user);
+    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $exercise = Exercise::factory()->create();
+
+    $data = [
+        'name' => 'Updated Name',
+        'exercises' => [
+            ['id' => $exercise->id],
+        ],
+    ];
+
+    $this->putJson(route('api.v1.workout-templates.update', $template), $data)
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Updated Name');
+
+    $this->assertDatabaseHas('workout_templates', [
+        'id' => $template->id,
+        'name' => 'Updated Name',
+    ]);
+});
+
+test('user cannot update other users workout template', function () {
+    Sanctum::actingAs($this->user);
+    $otherUser = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
+
+    $this->putJson(route('api.v1.workout-templates.update', $template), ['name' => 'Hacked'])
+        ->assertForbidden();
+});
+
+test('user can delete own workout template', function () {
+    Sanctum::actingAs($this->user);
+    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+
+    $this->deleteJson(route('api.v1.workout-templates.destroy', $template))
+        ->assertNoContent();
+
     $this->assertDatabaseMissing('workout_templates', ['id' => $template->id]);
+});
+
+test('user cannot delete other users workout template', function () {
+    Sanctum::actingAs($this->user);
+    $otherUser = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
+
+    $this->deleteJson(route('api.v1.workout-templates.destroy', $template))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('workout_templates', ['id' => $template->id]);
 });
