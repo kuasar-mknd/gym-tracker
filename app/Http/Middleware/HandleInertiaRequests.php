@@ -42,7 +42,7 @@ class HandleInertiaRequests extends Middleware
                         ->where('type', 'App\Notifications\AchievementUnlocked')
                         ->latest()
                         ->first(),
-                    'current_streak' => $request->user()->current_streak,
+                    'current_streak' => ($request->user()->last_workout_at && $request->user()->last_workout_at->startOfDay()->diffInDays(now()->startOfDay()) > 1) ? 0 : $request->user()->current_streak,
                     'longest_streak' => $request->user()->longest_streak,
                 ] : null,
             ],

@@ -26,6 +26,10 @@ const props = defineProps({
         type: String,
         default: 'default', // default | fat
     },
+    selectOnFocus: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 defineEmits(['update:modelValue'])
@@ -66,6 +70,7 @@ const sizeClasses = {
                 :type="type"
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
+                @focus="selectOnFocus ? $event.target.select() : null"
                 class="glass-input-fat w-full"
                 inputmode="decimal"
                 v-bind="$attrs"
@@ -99,6 +104,7 @@ const sizeClasses = {
                 :type="type"
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
+                @focus="selectOnFocus ? $event.target.select() : null"
                 :class="[
                     'glass-input',
                     sizeClasses[size],

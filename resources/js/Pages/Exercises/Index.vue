@@ -98,6 +98,17 @@ const categoryColors = {
     Autres: 'bg-slate-500',
 }
 
+const categoryBorderColors = {
+    Pectoraux: 'border-l-electric-orange',
+    Dos: 'border-l-vivid-violet',
+    Épaules: 'border-l-hot-pink',
+    Bras: 'border-l-cyan-pure',
+    Jambes: 'border-l-neon-green',
+    Core: 'border-l-magenta-pure',
+    Cardio: 'border-l-lime-pure',
+    Autres: 'border-l-slate-400',
+}
+
 const typeIcons = {
     strength: 'fitness_center',
     cardio: 'directions_run',
@@ -116,17 +127,35 @@ const typeLabel = (type) => {
     <AuthenticatedLayout liquid-variant="subtle">
         <div class="space-y-6">
             <!-- Header -->
-            <header class="animate-fade-in">
-                <h1
-                    class="font-display text-5xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1
+                        class="font-display text-5xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+                    >
+                        La<br />
+                        <span class="text-gradient">Bibliothèque</span>
+                    </h1>
+                    <p class="mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">
+                        {{ exercises.length }} exercices disponibles
+                    </p>
+                </div>
+                <button
+                    @click="showAddForm = true"
+                    class="flex size-14 items-center justify-center rounded-2xl bg-gradient-main text-white shadow-lg shadow-orange-500/20 active:scale-95 sm:hidden"
+                    data-testid="create-exercise-mobile-header"
                 >
-                    La<br />
-                    <span class="text-gradient">Bibliothèque</span>
-                </h1>
-                <p class="mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">
-                    {{ exercises.length }} exercices disponibles
-                </p>
-            </header>
+                    <span class="material-symbols-outlined text-4xl">add</span>
+                </button>
+                <GlassButton
+                    @click="showAddForm = true"
+                    variant="primary"
+                    class="hidden sm:flex"
+                    data-testid="create-exercise-desktop"
+                >
+                    <span class="material-symbols-outlined mr-2">add</span>
+                    Nouvel Exercice
+                </GlassButton>
+            </div>
 
             <!-- Stats Chart -->
             <div v-if="exercises.length > 0" class="animate-slide-up" style="animation-delay: 0.05s">
@@ -225,7 +254,13 @@ const typeLabel = (type) => {
                             </select>
                         </div>
                     </div>
-                    <GlassButton type="submit" variant="primary" class="w-full" :loading="form.processing">
+                    <GlassButton
+                        type="submit"
+                        variant="primary"
+                        class="w-full"
+                        :loading="form.processing"
+                        data-testid="submit-exercise-button"
+                    >
                         Créer l'exercice
                     </GlassButton>
                 </form>
@@ -242,7 +277,12 @@ const typeLabel = (type) => {
                     <div class="mb-4 text-6xl">🏋️</div>
                     <p class="text-lg font-bold text-text-main">Aucun exercice pour l'instant</p>
                     <p class="mt-1 text-text-muted">Commence par créer ton premier exercice</p>
-                    <GlassButton variant="primary" class="mt-6" @click="showAddForm = true">
+                    <GlassButton
+                        variant="primary"
+                        class="mt-6"
+                        @click="showAddForm = true"
+                        data-testid="create-exercise-button"
+                    >
                         <span class="material-symbols-outlined mr-2">add</span>
                         Créer le premier exercice
                     </GlassButton>
@@ -260,10 +300,12 @@ const typeLabel = (type) => {
             <!-- Exercises List by Category -->
             <div v-else class="animate-slide-up space-y-8" style="animation-delay: 0.2s">
                 <div v-for="(exercisesInCat, category) in groupedExercises" :key="category">
-                    <div class="mb-4 flex items-center gap-3">
-                        <div :class="['size-3 rounded-full', categoryColors[category] || 'bg-slate-400']"></div>
-                        <h3 class="text-xs font-black uppercase tracking-[0.2em] text-text-muted">{{ category }}</h3>
-                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-text-muted/50">
+                    <div class="mb-3 flex items-center gap-2 px-1">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.25em] text-text-muted/60">
+                            {{ category }}
+                        </h3>
+                        <div class="h-px flex-1 bg-slate-100"></div>
+                        <span class="text-[10px] font-black text-text-muted/30">
                             {{ exercisesInCat.length }}
                         </span>
                     </div>
@@ -272,9 +314,12 @@ const typeLabel = (type) => {
                         <GlassCard
                             v-for="exercise in exercisesInCat"
                             :key="exercise.id"
-                            variant="iridescent"
                             padding="p-4"
-                            class="group"
+                            :class="[
+                                'group relative overflow-hidden transition-all duration-300',
+                                'border-l-[6px]',
+                                categoryBorderColors[category] || 'border-l-slate-300',
+                            ]"
                         >
                             <!-- View Mode -->
                             <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
@@ -307,17 +352,19 @@ const typeLabel = (type) => {
                                     </div>
                                 </div>
                                 <div
-                                    class="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100"
+                                    class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                 >
                                     <button
                                         @click="startEdit(exercise)"
                                         class="flex size-10 items-center justify-center rounded-xl text-text-muted transition-all hover:bg-electric-orange/10 hover:text-electric-orange"
+                                        data-testid="edit-exercise-button"
                                     >
                                         <span class="material-symbols-outlined">edit</span>
                                     </button>
                                     <button
                                         @click="deleteExercise(exercise.id)"
                                         class="flex size-10 items-center justify-center rounded-xl text-text-muted transition-all hover:bg-red-50 hover:text-red-500"
+                                        data-testid="delete-exercise-button"
                                     >
                                         <span class="material-symbols-outlined">delete</span>
                                     </button>
@@ -350,6 +397,7 @@ const typeLabel = (type) => {
                                         variant="primary"
                                         size="sm"
                                         :loading="editForm.processing"
+                                        data-testid="save-exercise-button"
                                     >
                                         Sauvegarder
                                     </GlassButton>
@@ -362,6 +410,8 @@ const typeLabel = (type) => {
                     </div>
                 </div>
             </div>
+            <!-- List Padding for Mobile Bottom Nav -->
+            <div class="h-24 sm:hidden"></div>
         </div>
     </AuthenticatedLayout>
 </template>

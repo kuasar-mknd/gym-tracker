@@ -23,6 +23,14 @@ const menuGroups = [
                 color: 'text-electric-orange',
                 bgColor: 'bg-orange-100/50',
             },
+            {
+                name: 'Bibliothèque',
+                icon: 'library_books',
+                route: 'exercises.index',
+                description: 'Gérer tes exercices',
+                color: 'text-cyan-pure',
+                bgColor: 'bg-cyan-100/50',
+            },
         ],
     },
     {

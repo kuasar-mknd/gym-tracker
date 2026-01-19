@@ -19,6 +19,7 @@ import RestTimer from '@/Components/Workout/RestTimer.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
+import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 
 /**
  * Component Props
@@ -88,6 +89,7 @@ const saveAsTemplate = () => {
         route('templates.save-from-workout', { workout: props.workout.id }),
         {},
         {
+            preserveScroll: true,
             onFinish: () => (savingTemplate.value = false),
         },
     )
@@ -146,7 +148,7 @@ const showSettingsModal = ref(false)
 /** Form for editing workout details (name, date, notes). */
 const settingsForm = useForm({
     name: props.workout.name,
-    started_at: props.workout.started_at ? new Date(props.workout.started_at).toISOString().slice(0, 16) : '',
+    started_at: formatToLocalISO(props.workout.started_at),
     notes: props.workout.notes || '',
 })
 
@@ -154,12 +156,17 @@ const settingsForm = useForm({
  * Updates the workout settings (name, date, notes).
  */
 const updateSettings = () => {
-    settingsForm.patch(route('workouts.update', { workout: props.workout.id }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            showSettingsModal.value = false
-        },
-    })
+    settingsForm
+        .transform((data) => ({
+            ...data,
+            started_at: formatToUTC(data.started_at),
+        }))
+        .patch(route('workouts.update', { workout: props.workout.id }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showSettingsModal.value = false
+            },
+        })
 }
 
 /** Form for adding an existing exercise to the workout. */
@@ -182,6 +189,7 @@ const createExerciseForm = useForm({
 const addExercise = (exerciseId) => {
     addExerciseForm.exercise_id = exerciseId
     addExerciseForm.post(route('workout-lines.store', { workout: props.workout.id }), {
+        preserveScroll: true,
         onSuccess: () => {
             showAddExercise.value = false
             searchQuery.value = ''
@@ -301,7 +309,9 @@ const closeModal = () => {
 const removeLine = (lineId) => {
     confirmMessage.value = 'Supprimer cet exercice de la séance ?'
     confirmAction.value = () => {
-        router.delete(route('workout-lines.destroy', { workoutLine: lineId }))
+        router.delete(route('workout-lines.destroy', { workoutLine: lineId }), {
+            preserveScroll: true,
+        })
         showConfirmModal.value = false
     }
     showConfirmModal.value = true
@@ -313,10 +323,18 @@ const cancelConfirm = () => {
     confirmAction.value = null
 }
 
-const formatDuration = (seconds, type) => {
-    if (!seconds && seconds !== 0) return ''
-    if (type === 'cardio') return (seconds / 60).toString() // Minutes for cardio
-    return seconds.toString() // Seconds for timed
+const secondsToTime = (totalSeconds) => {
+    if (!totalSeconds && totalSeconds !== 0) return ''
+    const date = new Date(0)
+    date.setSeconds(totalSeconds)
+    return date.toISOString().substr(11, 8) // HH:mm:ss
+}
+
+const updateDurationFromTime = (set, timeString) => {
+    if (!timeString) return
+    const [hours, minutes, seconds] = timeString.split(':').map(Number)
+    const totalSeconds = hours * 3600 + minutes * 60 + (seconds || 0)
+    updateSet(set, 'duration_seconds', totalSeconds)
 }
 
 /**
@@ -348,7 +366,9 @@ const addSet = (lineId) => {
         data.duration_seconds = 0
     }
 
-    router.post(route('sets.store', { workoutLine: lineId }), data)
+    router.post(route('sets.store', { workoutLine: lineId }), data, {
+        preserveScroll: true,
+    })
 }
 
 /**
@@ -360,16 +380,6 @@ const addSet = (lineId) => {
  */
 const updateSet = (set, field, value) => {
     router.patch(route('sets.update', { set: set.id }), { [field]: value }, { preserveScroll: true, only: ['workout'] })
-}
-
-const updateDuration = (set, value, type) => {
-    let seconds = 0
-    if (type === 'cardio') {
-        seconds = Math.round(parseFloat(value) * 60) // Minutes to seconds
-    } else {
-        seconds = Math.round(parseFloat(value)) // Seconds
-    }
-    updateSet(set, 'duration_seconds', seconds)
 }
 
 /**
@@ -466,15 +476,24 @@ const hasNoResults = computed(() => {
 
             <button
                 v-if="!workout.ended_at"
+                @click="showAddExercise = true"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-electric-orange text-white shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+                title="Ajouter un exercice"
+            >
+                <span class="material-symbols-outlined">add</span>
+            </button>
+
+            <button
+                v-if="!workout.ended_at"
                 id="finish-workout-mobile"
                 @click="finishWorkout"
-                class="flex shrink-0 items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
+                class="flex shrink-0 items-center gap-2 rounded-full border border-electric-orange/20 bg-electric-orange/10 px-4 py-2 text-xs font-black uppercase tracking-widest text-electric-orange transition hover:bg-electric-orange/20 active:scale-95"
             >
                 <span class="material-symbols-outlined text-sm">stop_circle</span>
                 Terminer
             </button>
             <span
-                v-else
+                v-if="workout.ended_at"
                 id="workout-status-badge-mobile"
                 class="glass-badge glass-badge-success flex shrink-0 items-center gap-1 rounded-full px-4 py-2 text-xs"
             >
@@ -553,9 +572,15 @@ const hasNoResults = computed(() => {
 
                         <!-- Set Number -->
                         <div
-                            class="flex h-11 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-text-muted"
+                            class="relative flex h-11 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-black transition-colors"
+                            :class="
+                                set.personal_record
+                                    ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
+                                    : 'bg-slate-100 text-text-muted'
+                            "
                         >
                             {{ index + 1 }}
+                            <span v-if="set.personal_record" class="absolute -right-2 -top-2 text-sm">🏆</span>
                         </div>
 
                         <!-- INPUTS BASED ON EXERCISE TYPE -->
@@ -567,6 +592,7 @@ const hasNoResults = computed(() => {
                                     type="number"
                                     :value="set.distance_km"
                                     @change="(e) => updateSet(set, 'distance_km', e.target.value)"
+                                    @focus="(e) => e.target.select()"
                                     class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     inputmode="decimal"
@@ -577,15 +603,14 @@ const hasNoResults = computed(() => {
                             </div>
                             <div class="flex flex-1 items-center gap-2">
                                 <input
-                                    type="number"
-                                    :value="formatDuration(set.duration_seconds, 'cardio')"
-                                    @change="(e) => updateDuration(set, e.target.value, 'cardio')"
-                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    type="time"
+                                    step="1"
+                                    :value="secondsToTime(set.duration_seconds)"
+                                    @change="(e) => updateDurationFromTime(set, e.target.value)"
+                                    class="h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
-                                    inputmode="decimal"
-                                    :aria-label="`${line.exercise.name} : Durée série ${index + 1}`"
+                                    aria-label="Durée"
                                 />
-                                <span class="text-xs font-bold uppercase text-text-muted">min</span>
                             </div>
                         </template>
 
@@ -596,6 +621,7 @@ const hasNoResults = computed(() => {
                                     type="number"
                                     :value="set.weight"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                    @focus="(e) => e.target.select()"
                                     class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     inputmode="decimal"
@@ -606,15 +632,14 @@ const hasNoResults = computed(() => {
                             </div>
                             <div class="flex flex-1 items-center gap-2">
                                 <input
-                                    type="number"
-                                    :value="formatDuration(set.duration_seconds, 'timed')"
-                                    @change="(e) => updateDuration(set, e.target.value, 'timed')"
-                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    type="time"
+                                    step="1"
+                                    :value="secondsToTime(set.duration_seconds)"
+                                    @change="(e) => updateDurationFromTime(set, e.target.value)"
+                                    class="h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
-                                    inputmode="numeric"
-                                    :aria-label="`${line.exercise.name} : Durée série ${index + 1}`"
+                                    aria-label="Durée"
                                 />
-                                <span class="text-xs font-bold uppercase text-text-muted">sec</span>
                             </div>
                         </template>
 
@@ -625,6 +650,7 @@ const hasNoResults = computed(() => {
                                     type="number"
                                     :value="set.weight"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                    @focus="(e) => e.target.select()"
                                     class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     inputmode="decimal"
@@ -637,6 +663,7 @@ const hasNoResults = computed(() => {
                                     type="number"
                                     :value="set.reps"
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
+                                    @focus="(e) => e.target.select()"
                                     class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     inputmode="numeric"
@@ -645,13 +672,6 @@ const hasNoResults = computed(() => {
                                 <span class="text-xs font-bold uppercase text-text-muted">reps</span>
                             </div>
                         </template>
-
-                        <!-- PR Badge -->
-                        <div v-if="set.personal_record" class="flex-shrink-0" title="Record personnel !">
-                            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-warning/20">
-                                <span class="text-xl">🏆</span>
-                            </div>
-                        </div>
 
                         <!-- Delete Set -->
                         <button
@@ -698,6 +718,16 @@ const hasNoResults = computed(() => {
                     Ajouter une série
                 </button>
             </GlassCard>
+
+            <!-- Persistent Add Exercise Button (when not empty) -->
+            <button
+                v-if="!workout.ended_at && workout.workout_lines.length > 0"
+                @click="showAddExercise = true"
+                class="flex min-h-[80px] w-full animate-slide-up items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 py-6 text-sm font-black uppercase tracking-widest text-text-muted transition-all hover:border-electric-orange hover:bg-electric-orange/5 hover:text-electric-orange active:scale-[0.98]"
+            >
+                <span class="material-symbols-outlined text-3xl">add_circle</span>
+                Ajouter un exercice
+            </button>
 
             <!-- Empty State -->
             <GlassCard v-if="workout.workout_lines.length === 0" class="animate-slide-up">

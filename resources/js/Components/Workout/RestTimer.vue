@@ -51,6 +51,9 @@ const isActive = ref(false)
 /** Interval ID for the timer loop. */
 const timer = ref(null)
 
+/** Timestamp (ms) when the timer should finish. */
+const endTime = ref(null)
+
 /** Calculated progress percentage for the visual bar. */
 const progress = computed(() => {
     return (timeLeft.value / props.duration) * 100
@@ -71,13 +74,21 @@ const formatTime = (seconds) => {
 const startTimer = () => {
     if (timer.value) return
     isActive.value = true
+    endTime.value = Date.now() + timeLeft.value * 1000
+
     timer.value = setInterval(() => {
-        if (timeLeft.value > 0) {
-            timeLeft.value--
-        } else {
-            finishTimer()
-        }
+        updateTimer()
     }, 1000)
+}
+
+/** Updates the timeLeft based on the endTime. */
+const updateTimer = () => {
+    const now = Date.now()
+    if (now >= endTime.value) {
+        finishTimer()
+    } else {
+        timeLeft.value = Math.ceil((endTime.value - now) / 1000)
+    }
 }
 
 /** Pauses the countdown timer. */
@@ -102,6 +113,9 @@ const toggleTimer = () => {
  */
 const addTime = (seconds) => {
     timeLeft.value += seconds
+    if (isActive.value && endTime.value) {
+        endTime.value += seconds * 1000
+    }
 }
 
 /** Immediately finishes the timer. */
@@ -151,14 +165,23 @@ const close = () => {
     emit('close')
 }
 
+/** Handles document visibility changes to sync the timer when app returns from background. */
+const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible' && isActive.value) {
+        updateTimer()
+    }
+}
+
 // Lifecycle Hooks
 onMounted(() => {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     if (props.autoStart) {
         startTimer()
     }
 })
 
 onUnmounted(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
     pauseTimer()
 })
 
