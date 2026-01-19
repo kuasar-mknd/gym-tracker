@@ -63,6 +63,8 @@ class WorkoutTemplatesController extends Controller
         $createTemplate->execute(auth()->user(), $workout);
 
         return redirect()->route('templates.index')->with('success', 'Modèle enregistré avec succès !');
+
+        return redirect()->route('templates.index')->with('success', 'Modèle enregistré avec succès !');
     }
 
     public function destroy(WorkoutTemplate $template): \Illuminate\Http\RedirectResponse
