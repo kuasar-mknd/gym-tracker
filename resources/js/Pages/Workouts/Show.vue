@@ -572,9 +572,15 @@ const hasNoResults = computed(() => {
 
                         <!-- Set Number -->
                         <div
-                            class="flex h-11 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black text-text-muted"
+                            class="relative flex h-11 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-black transition-colors"
+                            :class="
+                                set.personal_record
+                                    ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
+                                    : 'bg-slate-100 text-text-muted'
+                            "
                         >
                             {{ index + 1 }}
+                            <span v-if="set.personal_record" class="absolute -right-2 -top-2 text-sm">🏆</span>
                         </div>
 
                         <!-- INPUTS BASED ON EXERCISE TYPE -->
@@ -666,13 +672,6 @@ const hasNoResults = computed(() => {
                                 <span class="text-xs font-bold uppercase text-text-muted">reps</span>
                             </div>
                         </template>
-
-                        <!-- PR Badge -->
-                        <div v-if="set.personal_record" class="flex-shrink-0" title="Record personnel !">
-                            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-warning/20">
-                                <span class="text-xl">🏆</span>
-                            </div>
-                        </div>
 
                         <!-- Delete Set -->
                         <button
