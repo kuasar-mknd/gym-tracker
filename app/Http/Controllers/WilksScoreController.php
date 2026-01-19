@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Tools\CreateWilksScoreAction;
+use App\Http\Requests\StoreWilksScoreRequest;
 use App\Models\WilksScore;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -28,14 +28,9 @@ class WilksScoreController extends Controller
         ]);
     }
 
-    public function store(Request $request, CreateWilksScoreAction $createWilksScoreAction)
+    public function store(StoreWilksScoreRequest $request, CreateWilksScoreAction $createWilksScoreAction)
     {
-        $validated = $request->validate([
-            'body_weight' => ['required', 'numeric', 'min:1', 'max:500'],
-            'lifted_weight' => ['required', 'numeric', 'min:1', 'max:1000'],
-            'gender' => ['required', 'string', 'in:male,female'],
-            'unit' => ['required', 'string', 'in:kg,lbs'],
-        ]);
+        $validated = $request->validated();
 
         $createWilksScoreAction->execute($request->user(), $validated);
 
