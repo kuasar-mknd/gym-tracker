@@ -1,7 +1,10 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
+
+uses(DatabaseTruncation::class);
 
 test('user can manage exercises from mobile plus menu', function () {
     $user = User::factory()->create();
