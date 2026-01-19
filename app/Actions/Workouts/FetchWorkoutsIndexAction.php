@@ -51,23 +51,24 @@ class FetchWorkoutsIndexAction
             ->values();
 
         // Get volume history for the last 20 workouts
-        $volumeHistory = Workout::with(['workoutLines.sets'])
-            ->where('user_id', $user->id)
-            ->whereNotNull('ended_at')
-            ->latest('started_at')
-            ->take(20)
+        // Optimized: Calculate volume in DB to avoid loading thousands of Set models
+        $volumeHistory = Workout::query()
+            ->select(['workouts.id', 'workouts.name', 'workouts.started_at'])
+            ->selectRaw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->whereNotNull('workouts.ended_at')
+            ->groupBy('workouts.id', 'workouts.name', 'workouts.started_at')
+            ->orderByDesc('workouts.started_at')
+            ->limit(20)
+            ->toBase()
             ->get()
-            ->map(function ($workout) {
-                $volume = $workout->workoutLines->reduce(function ($carry, $line) {
-                    return $carry + $line->sets->reduce(function ($carrySet, $set) {
-                        return $carrySet + ($set->weight * $set->reps);
-                    }, 0);
-                }, 0);
-
+            ->map(function ($row) {
                 return [
-                    'date' => $workout->started_at->format('d/m'),
-                    'volume' => $volume,
-                    'name' => $workout->name,
+                    'date' => Carbon::parse($row->started_at)->format('d/m'),
+                    'volume' => (float) $row->volume,
+                    'name' => $row->name,
                 ];
             })
             ->reverse()

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Tools\CreateWilksScoreAction;
 use App\Models\WilksScore;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class WilksScoreController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, CreateWilksScoreAction $createWilksScoreAction)
     {
         $validated = $request->validate([
             'body_weight' => ['required', 'numeric', 'min:1', 'max:500'],
@@ -36,25 +37,7 @@ class WilksScoreController extends Controller
             'unit' => ['required', 'string', 'in:kg,lbs'],
         ]);
 
-        // Calculate Score on Backend
-        $bw = $validated['body_weight'];
-        $lifted = $validated['lifted_weight'];
-        $gender = $validated['gender'];
-        $unit = $validated['unit'];
-
-        // Convert to KG for calculation if necessary
-        $bwKg = $unit === 'lbs' ? $bw / 2.20462 : $bw;
-        $liftedKg = $unit === 'lbs' ? $lifted / 2.20462 : $lifted;
-
-        $score = $this->calculateWilks($bwKg, $liftedKg, $gender);
-
-        $request->user()->wilksScores()->create([
-            'body_weight' => $bw,
-            'lifted_weight' => $lifted,
-            'gender' => $gender,
-            'unit' => $unit,
-            'score' => $score,
-        ]);
+        $createWilksScoreAction->execute($request->user(), $validated);
 
         return redirect()->back();
     }
@@ -69,28 +52,5 @@ class WilksScoreController extends Controller
         $wilksScore->delete();
 
         return redirect()->back();
-    }
-
-    private function calculateWilks($bw, $lifted, $gender)
-    {
-        if ($gender === 'male') {
-            $a = -216.0475144;
-            $b = 16.2606339;
-            $c = -0.002388645;
-            $d = -0.00113732;
-            $e = 7.01863E-06;
-            $f = -1.291E-08;
-        } else {
-            $a = 594.31747775582;
-            $b = -27.23842536447;
-            $c = 0.82112226871;
-            $d = -0.00930733913;
-            $e = 4.731582E-05;
-            $f = -9.054E-08;
-        }
-
-        $coeff = 500 / ($a + $b * $bw + $c * pow($bw, 2) + $d * pow($bw, 3) + $e * pow($bw, 4) + $f * pow($bw, 5));
-
-        return round($lifted * $coeff, 2);
     }
 }
