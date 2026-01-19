@@ -131,4 +131,9 @@ class User extends Authenticatable
             ->where('is_push_enabled', true)
             ->exists();
     }
+
+    public function warmupPreference(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(WarmupPreference::class);
+    }
 }

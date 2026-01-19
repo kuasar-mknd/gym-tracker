@@ -71,6 +71,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'index'])->name('tools.macro-calculator');
     Route::post('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'store'])->name('tools.macro-calculator.store');
     Route::delete('/tools/macro-calculator/{macroCalculation}', [\App\Http\Controllers\MacroCalculatorController::class, 'destroy'])->name('tools.macro-calculator.destroy');
+
+    Route::get('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'index'])->name('tools.warmup');
+    Route::post('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'update'])->name('tools.warmup.update');
 });
 
 // Social Login
