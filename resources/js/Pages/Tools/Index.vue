@@ -102,6 +102,36 @@
                     </div>
                 </GlassCard>
             </Link>
+
+            <!-- Warmup Calculator -->
+            <Link :href="route('tools.warmup')" class="group">
+                <GlassCard
+                    class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
+                >
+                    <div class="flex flex-col items-center space-y-4 text-center">
+                        <div class="rounded-full bg-blue-500/20 p-4 text-blue-500">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-8 w-8"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                                />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-text-main">Warmup Calculator</h3>
+                        <p class="text-sm text-text-muted">
+                            Calculate warmup sets based on your working weight.
+                        </p>
+                    </div>
+                </GlassCard>
+            </Link>
         </div>
     </AuthenticatedLayout>
 </template>
