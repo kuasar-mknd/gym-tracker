@@ -254,7 +254,13 @@ const typeLabel = (type) => {
                             </select>
                         </div>
                     </div>
-                    <GlassButton type="submit" variant="primary" class="w-full" :loading="form.processing">
+                    <GlassButton
+                        type="submit"
+                        variant="primary"
+                        class="w-full"
+                        :loading="form.processing"
+                        data-testid="submit-exercise-button"
+                    >
                         Créer l'exercice
                     </GlassButton>
                 </form>
@@ -391,6 +397,7 @@ const typeLabel = (type) => {
                                         variant="primary"
                                         size="sm"
                                         :loading="editForm.processing"
+                                        data-testid="save-exercise-button"
                                     >
                                         Sauvegarder
                                     </GlassButton>

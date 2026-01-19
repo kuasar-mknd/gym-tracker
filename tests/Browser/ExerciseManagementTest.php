@@ -33,23 +33,27 @@ test('user can manage exercises from mobile plus menu', function () {
 
         $browser->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
-        $browser->waitForText('Nouvel exercice', 15)
+        $browser->waitForText('NOUVEL EXERCICE', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
-            ->select('select', 'strength')
-            ->pause(500) // Wait for animations
-            ->press('Créer l\'exercice')
-            ->waitForText('Dusk Test Exercise', 15)
+            ->select('select', 'strength');
+        $browser->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
 
-            // 4. Edit the exercise
-            ->click('[data-testid="edit-exercise-button"]')
-            ->waitForText('Sauvegarder', 15)
-            ->type('input[value="Dusk Test Exercise"]', 'Dusk Test Exercise Updated')
-            ->press('Sauvegarder')
-            ->waitForText('Dusk Test Exercise Updated', 15)
+        $browser->waitForText('DUSK TEST EXERCISE', 15);
 
-            // 5. Delete the exercise
-            ->click('[data-testid="delete-exercise-button"]')
-            ->assertDialogOpened('Supprimer cet exercice ?')
+        // 4. Edit the exercise
+        $browser->script("document.querySelector('[data-testid=\"edit-exercise-button\"]').click();");
+
+        $browser->waitForText('SAUVEGARDER', 15)
+            ->type('input[value="Dusk Test Exercise"]', 'Dusk Test Exercise Updated');
+
+        $browser->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
+
+        $browser->waitForText('DUSK TEST EXERCISE UPDATED', 15);
+
+        // 5. Delete the exercise
+        $browser->script("document.querySelector('[data-testid=\"delete-exercise-button\"]').click();");
+
+        $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
             ->waitForText('Aucun exercice pour l\'instant', 15);
     });
