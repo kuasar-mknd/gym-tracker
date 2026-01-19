@@ -20,11 +20,11 @@ test('user can manage exercises from mobile plus menu', function () {
             // 1. Navigate to "Plus" menu
             ->click('a[aria-label="Plus"]')
             ->waitForLocation('/profile')
-            ->waitForText('Biblioth', 15)
+            ->waitForText('Exercices', 15)
             ->assertPathIs('/profile')
 
-            // 2. Click "Bibliothèque"
-            ->clickLink('Bibliothèque')
+            // 2. Click "Exercices" in Navigation section
+            ->clickLink('Exercices')
             ->waitForLocation('/exercises')
             ->assertPathIs('/exercises')
 

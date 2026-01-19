@@ -66,8 +66,8 @@ const chartOptions = {
                 family: 'sans-serif',
             },
             padding: {
-                bottom: 20
-            }
+                bottom: 20,
+            },
         },
         tooltip: {
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -76,7 +76,7 @@ const chartOptions = {
             cornerRadius: 10,
             padding: 10,
             backdropFilter: 'blur(4px)',
-        }
+        },
     },
     scales: {
         y: {
@@ -88,12 +88,12 @@ const chartOptions = {
                 stepSize: 1,
                 color: 'rgba(255, 255, 255, 0.7)',
                 font: {
-                    weight: 'bold'
-                }
+                    weight: 'bold',
+                },
             },
             border: {
-                display: false
-            }
+                display: false,
+            },
         },
         x: {
             grid: {
@@ -102,24 +102,26 @@ const chartOptions = {
             ticks: {
                 color: 'rgba(255, 255, 255, 0.7)',
                 font: {
-                    weight: 'bold'
-                }
+                    weight: 'bold',
+                },
             },
             border: {
-                display: false
-            }
+                display: false,
+            },
         },
     },
 }
 </script>
 
 <template>
-    <GlassCard variant="iridescent" padding="p-6" class="relative overflow-hidden group">
+    <GlassCard variant="iridescent" padding="p-6" class="group relative overflow-hidden">
         <div class="relative z-10 h-64 transition-transform duration-500 group-hover:scale-[1.02]">
             <Bar :data="chartData" :options="chartOptions" />
         </div>
 
         <!-- Subtle decorative glow -->
-        <div class="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-3xl pointer-events-none group-hover:bg-white/20 transition-all duration-700"></div>
+        <div
+            class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-3xl transition-all duration-700 group-hover:bg-white/20"
+        ></div>
     </GlassCard>
 </template>

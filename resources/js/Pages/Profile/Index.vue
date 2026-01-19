@@ -5,31 +5,31 @@ import { Head, Link } from '@inertiajs/vue3'
 
 const menuGroups = [
     {
-        title: 'Outils Entraînement',
+        title: 'Navigation',
         items: [
             {
-                name: '1RM Estimé',
-                icon: 'monitoring',
-                route: 'tools.1rm',
-                description: 'Calcule ta force max',
-                color: 'text-vivid-violet',
-                bgColor: 'bg-violet-100/50',
+                name: 'Calendrier',
+                icon: 'calendar_month',
+                route: 'calendar.index',
+                description: 'Vue calendrier des séances',
+                color: 'text-blue-500',
+                bgColor: 'bg-blue-100/50',
             },
             {
-                name: 'Calculatrice Plaques',
-                icon: 'fitness_center',
-                route: 'plates.index',
-                description: 'Optimise ton chargement',
-                color: 'text-electric-orange',
-                bgColor: 'bg-orange-100/50',
-            },
-            {
-                name: 'Bibliothèque',
+                name: 'Exercices',
                 icon: 'library_books',
                 route: 'exercises.index',
-                description: 'Gérer tes exercices',
+                description: 'Gérer ta bibliothèque',
                 color: 'text-cyan-pure',
                 bgColor: 'bg-cyan-100/50',
+            },
+            {
+                name: 'Outils',
+                icon: 'handyman',
+                route: 'tools.index',
+                description: 'Calculatrices & utilitaires',
+                color: 'text-indigo-500',
+                bgColor: 'bg-indigo-100/50',
             },
         ],
     },
@@ -63,13 +63,13 @@ const menuGroups = [
         ],
     },
     {
-        title: 'Compte & Paramètres',
+        title: 'Compte',
         items: [
             {
                 name: 'Modifier Profil',
                 icon: 'person_edit',
                 route: 'profile.edit',
-                description: 'Infos & Preferences',
+                description: 'Infos & Préférences',
                 color: 'text-text-main',
                 bgColor: 'bg-slate-100/50',
             },
