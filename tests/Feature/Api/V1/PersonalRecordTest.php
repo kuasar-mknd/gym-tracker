@@ -5,7 +5,6 @@ use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
@@ -60,7 +59,7 @@ test('user can create a personal record', function () {
     actingAs($user, 'sanctum')
         ->postJson(route('api.v1.personal-records.store'), $data)
         ->assertCreated()
-        ->assertJsonPath('data.value', 100.5)
+        ->assertJsonPath('data.value', '100.50')
         ->assertJsonPath('data.type', '1RM');
 
     assertDatabaseHas('personal_records', [
@@ -89,7 +88,7 @@ test('user can update a personal record', function () {
             'value' => 110.5,
         ])
         ->assertOk()
-        ->assertJsonPath('data.value', 110.5);
+        ->assertJsonPath('data.value', '110.50');
 
     assertDatabaseHas('personal_records', [
         'id' => $pr->id,

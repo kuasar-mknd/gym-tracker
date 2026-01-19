@@ -25,7 +25,7 @@ class PlateController extends Controller
             ->allowedSorts(['weight', 'quantity', 'created_at'])
             ->defaultSort('weight')
             ->where('user_id', Auth::id())
-            ->get();
+            ->paginate();
 
         return PlateResource::collection($plates);
     }

@@ -108,6 +108,7 @@ class PlateTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->putJson("/api/v1/plates/{$plate->id}", [
                 'weight' => 15.5,
+                'quantity' => 2,
             ]);
 
         $response->assertForbidden();
