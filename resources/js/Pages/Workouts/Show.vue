@@ -19,6 +19,7 @@ import RestTimer from '@/Components/Workout/RestTimer.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
+import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 
 /**
  * Component Props
@@ -146,7 +147,7 @@ const showSettingsModal = ref(false)
 /** Form for editing workout details (name, date, notes). */
 const settingsForm = useForm({
     name: props.workout.name,
-    started_at: props.workout.started_at ? new Date(props.workout.started_at).toISOString().slice(0, 16) : '',
+    started_at: formatToLocalISO(props.workout.started_at),
     notes: props.workout.notes || '',
 })
 
@@ -154,12 +155,17 @@ const settingsForm = useForm({
  * Updates the workout settings (name, date, notes).
  */
 const updateSettings = () => {
-    settingsForm.patch(route('workouts.update', { workout: props.workout.id }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            showSettingsModal.value = false
-        },
-    })
+    settingsForm
+        .transform((data) => ({
+            ...data,
+            started_at: formatToUTC(data.started_at),
+        }))
+        .patch(route('workouts.update', { workout: props.workout.id }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showSettingsModal.value = false
+            },
+        })
 }
 
 /** Form for adding an existing exercise to the workout. */
@@ -466,15 +472,24 @@ const hasNoResults = computed(() => {
 
             <button
                 v-if="!workout.ended_at"
+                @click="showAddExercise = true"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-electric-orange text-white shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+                title="Ajouter un exercice"
+            >
+                <span class="material-symbols-outlined">add</span>
+            </button>
+
+            <button
+                v-if="!workout.ended_at"
                 id="finish-workout-mobile"
                 @click="finishWorkout"
-                class="flex shrink-0 items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
+                class="flex shrink-0 items-center gap-2 rounded-full border border-electric-orange/20 bg-electric-orange/10 px-4 py-2 text-xs font-black uppercase tracking-widest text-electric-orange transition hover:bg-electric-orange/20 active:scale-95"
             >
                 <span class="material-symbols-outlined text-sm">stop_circle</span>
                 Terminer
             </button>
             <span
-                v-else
+                v-if="workout.ended_at"
                 id="workout-status-badge-mobile"
                 class="glass-badge glass-badge-success flex shrink-0 items-center gap-1 rounded-full px-4 py-2 text-xs"
             >
@@ -698,6 +713,16 @@ const hasNoResults = computed(() => {
                     Ajouter une série
                 </button>
             </GlassCard>
+
+            <!-- Persistent Add Exercise Button (when not empty) -->
+            <button
+                v-if="!workout.ended_at && workout.workout_lines.length > 0"
+                @click="showAddExercise = true"
+                class="flex min-h-[80px] w-full animate-slide-up items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 py-6 text-sm font-black uppercase tracking-widest text-text-muted transition-all hover:border-electric-orange hover:bg-electric-orange/5 hover:text-electric-orange active:scale-[0.98]"
+            >
+                <span class="material-symbols-outlined text-3xl">add_circle</span>
+                Ajouter un exercice
+            </button>
 
             <!-- Empty State -->
             <GlassCard v-if="workout.workout_lines.length === 0" class="animate-slide-up">
