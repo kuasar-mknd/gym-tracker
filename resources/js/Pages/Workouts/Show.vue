@@ -323,10 +323,18 @@ const cancelConfirm = () => {
     confirmAction.value = null
 }
 
-const formatDuration = (seconds, type) => {
-    if (!seconds && seconds !== 0) return ''
-    if (type === 'cardio') return (seconds / 60).toString() // Minutes for cardio
-    return seconds.toString() // Seconds for timed
+const secondsToTime = (totalSeconds) => {
+    if (!totalSeconds && totalSeconds !== 0) return ''
+    const date = new Date(0)
+    date.setSeconds(totalSeconds)
+    return date.toISOString().substr(11, 8) // HH:mm:ss
+}
+
+const updateDurationFromTime = (set, timeString) => {
+    if (!timeString) return
+    const [hours, minutes, seconds] = timeString.split(':').map(Number)
+    const totalSeconds = hours * 3600 + minutes * 60 + (seconds || 0)
+    updateSet(set, 'duration_seconds', totalSeconds)
 }
 
 /**
@@ -372,16 +380,6 @@ const addSet = (lineId) => {
  */
 const updateSet = (set, field, value) => {
     router.patch(route('sets.update', { set: set.id }), { [field]: value }, { preserveScroll: true, only: ['workout'] })
-}
-
-const updateDuration = (set, value, type) => {
-    let seconds = 0
-    if (type === 'cardio') {
-        seconds = Math.round(parseFloat(value) * 60) // Minutes to seconds
-    } else {
-        seconds = Math.round(parseFloat(value)) // Seconds
-    }
-    updateSet(set, 'duration_seconds', seconds)
 }
 
 /**
@@ -599,16 +597,14 @@ const hasNoResults = computed(() => {
                             </div>
                             <div class="flex flex-1 items-center gap-2">
                                 <input
-                                    type="number"
-                                    :value="formatDuration(set.duration_seconds, 'cardio')"
-                                    @change="(e) => updateDuration(set, e.target.value, 'cardio')"
-                                    @focus="(e) => e.target.select()"
-                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    type="time"
+                                    step="1"
+                                    :value="secondsToTime(set.duration_seconds)"
+                                    @change="(e) => updateDurationFromTime(set, e.target.value)"
+                                    class="h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
-                                    inputmode="decimal"
-                                    :aria-label="`${line.exercise.name} : Durée série ${index + 1}`"
+                                    aria-label="Durée"
                                 />
-                                <span class="text-xs font-bold uppercase text-text-muted">min</span>
                             </div>
                         </template>
 
@@ -630,16 +626,14 @@ const hasNoResults = computed(() => {
                             </div>
                             <div class="flex flex-1 items-center gap-2">
                                 <input
-                                    type="number"
-                                    :value="formatDuration(set.duration_seconds, 'timed')"
-                                    @change="(e) => updateDuration(set, e.target.value, 'timed')"
-                                    @focus="(e) => e.target.select()"
-                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    type="time"
+                                    step="1"
+                                    :value="secondsToTime(set.duration_seconds)"
+                                    @change="(e) => updateDurationFromTime(set, e.target.value)"
+                                    class="h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
-                                    inputmode="numeric"
-                                    :aria-label="`${line.exercise.name} : Durée série ${index + 1}`"
+                                    aria-label="Durée"
                                 />
-                                <span class="text-xs font-bold uppercase text-text-muted">sec</span>
                             </div>
                         </template>
 
