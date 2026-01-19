@@ -124,7 +124,9 @@
                         class="mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-100 bg-slate-50 p-6 text-center"
                     >
                         <div>
-                            <p class="text-sm font-bold uppercase tracking-wider text-text-muted">Cibles Journalières</p>
+                            <p class="text-sm font-bold uppercase tracking-wider text-text-muted">
+                                Cibles Journalières
+                            </p>
                             <div
                                 class="mt-1 bg-gradient-to-r from-electric-orange to-hot-pink bg-clip-text font-display text-5xl font-black italic tracking-tighter text-transparent"
                             >
@@ -136,15 +138,21 @@
                         <div class="grid w-full grid-cols-3 gap-4 border-t border-slate-200 pt-4">
                             <div>
                                 <p class="text-xs font-bold uppercase text-text-muted">Protéines</p>
-                                <p class="font-display text-2xl font-black text-text-main">{{ calculatedResults.protein }}g</p>
+                                <p class="font-display text-2xl font-black text-text-main">
+                                    {{ calculatedResults.protein }}g
+                                </p>
                             </div>
                             <div>
                                 <p class="text-xs font-bold uppercase text-text-muted">Glucides</p>
-                                <p class="font-display text-2xl font-black text-text-main">{{ calculatedResults.carbs }}g</p>
+                                <p class="font-display text-2xl font-black text-text-main">
+                                    {{ calculatedResults.carbs }}g
+                                </p>
                             </div>
                             <div>
                                 <p class="text-xs font-bold uppercase text-text-muted">Lipides</p>
-                                <p class="font-display text-2xl font-black text-text-main">{{ calculatedResults.fat }}g</p>
+                                <p class="font-display text-2xl font-black text-text-main">
+                                    {{ calculatedResults.fat }}g
+                                </p>
                             </div>
                         </div>
 
@@ -189,7 +197,14 @@
                                         {{ entry.protein }}P / {{ entry.carbs }}C / {{ entry.fat }}L
                                     </p>
                                     <p class="text-xs uppercase tracking-wider text-text-muted">
-                                        {{ entry.goal === 'cut' ? 'Sèche' : entry.goal === 'maintain' ? 'Maintien' : 'Prise' }} • {{ new Date(entry.created_at).toLocaleDateString() }}
+                                        {{
+                                            entry.goal === 'cut'
+                                                ? 'Sèche'
+                                                : entry.goal === 'maintain'
+                                                  ? 'Maintien'
+                                                  : 'Prise'
+                                        }}
+                                        • {{ new Date(entry.created_at).toLocaleDateString() }}
                                     </p>
                                 </div>
                             </div>
@@ -279,7 +294,7 @@ const calculatedResults = computed(() => {
 
     if (remaining < 0) {
         fat = Math.max(30, Math.round((target - proteinCal) / 9))
-        remaining = target - (proteinCal + (fat * 9))
+        remaining = target - (proteinCal + fat * 9)
     }
 
     const carbs = Math.max(0, Math.round(remaining / 4))
@@ -289,7 +304,7 @@ const calculatedResults = computed(() => {
         targetCalories: Math.round(target),
         protein,
         fat,
-        carbs
+        carbs,
     }
 })
 
