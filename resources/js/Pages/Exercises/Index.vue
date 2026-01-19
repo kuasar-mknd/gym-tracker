@@ -143,8 +143,9 @@ const typeLabel = (type) => {
                     @click="showAddForm = true"
                     class="flex size-14 items-center justify-center rounded-2xl bg-gradient-main text-white shadow-lg shadow-orange-500/20 active:scale-95 sm:hidden"
                     data-testid="create-exercise-mobile-header"
+                    aria-label="Nouvel exercice"
                 >
-                    <span class="material-symbols-outlined text-4xl">add</span>
+                    <span class="material-symbols-outlined text-4xl" aria-hidden="true">add</span>
                 </button>
                 <GlassButton
                     @click="showAddForm = true"
@@ -374,15 +375,17 @@ const typeLabel = (type) => {
                                         @click="startEdit(exercise)"
                                         class="flex size-10 items-center justify-center rounded-xl text-text-muted transition-all hover:bg-electric-orange/10 hover:text-electric-orange"
                                         data-testid="edit-exercise-button"
+                                        aria-label="Modifier l'exercice"
                                     >
-                                        <span class="material-symbols-outlined">edit</span>
+                                        <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                                     </button>
                                     <button
                                         @click="deleteExercise(exercise.id)"
                                         class="flex size-10 items-center justify-center rounded-xl text-text-muted transition-all hover:bg-red-50 hover:text-red-500"
                                         data-testid="delete-exercise-button"
+                                        aria-label="Supprimer l'exercice"
                                     >
-                                        <span class="material-symbols-outlined">delete</span>
+                                        <span class="material-symbols-outlined" aria-hidden="true">delete</span>
                                     </button>
                                 </div>
                             </div>

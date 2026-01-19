@@ -245,8 +245,11 @@ const confirmDeletion = (workout) => {
                                         @click.prevent="confirmDeletion(workout)"
                                         class="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted/30 transition-colors hover:bg-red-50 hover:text-red-500"
                                         title="Supprimer la séance"
+                                        aria-label="Supprimer la séance"
                                     >
-                                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true"
+                                            >delete</span
+                                        >
                                     </button>
                                     <svg
                                         class="h-5 w-5 flex-shrink-0 text-text-muted/30"
