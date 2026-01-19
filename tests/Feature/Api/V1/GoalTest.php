@@ -83,11 +83,14 @@ describe('Authenticated', function () {
 
     describe('Store', function () {
         test('user can create a goal', function () {
+            $exercise = Exercise::factory()->create();
+
             $data = [
                 'title' => 'New Goal',
                 'type' => 'weight',
                 'target_value' => 100,
                 'start_value' => 50,
+                'exercise_id' => $exercise->id,
                 'deadline' => now()->addMonth()->format('Y-m-d'),
             ];
 
@@ -201,7 +204,7 @@ describe('Authenticated', function () {
 
             putJson(route('api.v1.goals.update', $goal), ['target_value' => 200])
                 ->assertOk()
-                ->assertJsonPath('data.target_value', '200.00');
+                ->assertJsonPath('data.target_value', 200);
         });
 
         test('validation: deadline can be any date on update', function () {
