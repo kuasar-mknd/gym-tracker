@@ -208,43 +208,25 @@ test('achievements page renders correctly', function () {
 });
 
 test('profile page renders correctly', function () {
-    $user = User::factory()->create([
-        'password' => bcrypt('password123'),
-    ]);
+    $user = User::factory()->create();
 
     $this->browse(function (Browser $browser) use ($user) {
-        $browser->logout()
-            ->resize(1920, 1080)
-            ->visit('/login')
-            ->type('input[type="email"]', $user->email)
-            ->type('input[type="password"]', 'password123')
-            ->click('button[type="submit"]')
-            ->waitForLocation('/dashboard')
+        $browser->loginAs($user)
             ->visit('/profile')
-            ->waitForLocation('/profile', 10)
             ->assertPathIs('/profile')
-            ->waitFor('main', 10) // Wait for main content area
+            ->waitFor('main', 10)
             ->assertNoConsoleExceptions();
     });
 });
 
 test('tools page renders correctly', function () {
-    $user = User::factory()->create([
-        'password' => bcrypt('password123'),
-    ]);
+    $user = User::factory()->create();
 
     $this->browse(function (Browser $browser) use ($user) {
-        $browser->logout()
-            ->resize(1920, 1080)
-            ->visit('/login')
-            ->type('input[type="email"]', $user->email)
-            ->type('input[type="password"]', 'password123')
-            ->click('button[type="submit"]')
-            ->waitForLocation('/dashboard')
+        $browser->loginAs($user)
             ->visit('/tools')
-            ->waitForLocation('/tools', 10)
             ->assertPathIs('/tools')
-            ->waitFor('main', 10) // Wait for main content area
+            ->waitForText('Outils')
             ->assertNoConsoleExceptions();
     });
 });
