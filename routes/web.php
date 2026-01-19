@@ -49,12 +49,16 @@ Route::middleware('auth')->group(function () {
         Route::patch('/sets/{set}', [\App\Http\Controllers\SetsController::class, 'update'])->name('sets.update');
         Route::delete('/sets/{set}', [\App\Http\Controllers\SetsController::class, 'destroy'])->name('sets.destroy');
 
+        Route::post('/habits/{habit}/toggle', [\App\Http\Controllers\HabitController::class, 'toggle'])->name('habits.toggle');
+        Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['store', 'update', 'destroy']);
+
         Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['store', 'update', 'destroy']);
         Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['store', 'destroy']);
         Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['store', 'update', 'destroy']);
         Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['store', 'destroy']);
     });
 
+    Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
     Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index', 'show']);
     Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->only(['index', 'show']);
     Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index']);

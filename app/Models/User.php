@@ -124,6 +124,11 @@ class User extends Authenticatable
         return $this->hasMany(MacroCalculation::class);
     }
 
+    public function habits(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Habit::class);
+    }
+
     public function isPushEnabled(string $type): bool
     {
         return (bool) $this->notificationPreferences()
