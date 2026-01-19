@@ -12,10 +12,11 @@ const props = defineProps({
     },
 })
 
+// Liquid Glass aesthetics for NavLink
 const classes = computed(() =>
     props.active
-        ? 'inline-flex items-center px-1 pt-1 border-b-2 border-indigo-400 text-sm font-medium leading-5 text-gray-900 focus:outline-none focus:border-indigo-700 transition duration-150 ease-in-out'
-        : 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none focus:text-gray-700 focus:border-gray-300 transition duration-150 ease-in-out',
+        ? 'inline-flex items-center justify-center rounded-xl border border-electric-orange/20 bg-electric-orange/10 px-4 py-2 text-sm font-bold uppercase tracking-wide text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.15)] backdrop-blur-md transition-all duration-300'
+        : 'inline-flex items-center justify-center rounded-xl border border-transparent px-4 py-2 text-sm font-bold uppercase tracking-wide text-text-muted transition-all duration-300 hover:bg-white/60 hover:text-text-main hover:shadow-sm hover:backdrop-blur-sm',
 )
 </script>
 
