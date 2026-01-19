@@ -15,10 +15,10 @@ test('user can manage exercises from mobile plus menu', function () {
             ->visit('/dashboard')
             ->assertPathIs('/dashboard')
             ->waitFor('.glass-nav', 15)
-            ->waitFor('a[href*="/profile"]', 15)
+            ->waitFor('a[aria-label="Plus"]', 15)
 
             // 1. Navigate to "Plus" menu
-            ->click('a[href*="/profile"]')
+            ->click('a[aria-label="Plus"]')
             ->waitForLocation('/profile')
             ->waitForText('Biblioth', 15)
             ->assertPathIs('/profile')
