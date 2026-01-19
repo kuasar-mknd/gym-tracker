@@ -10,7 +10,6 @@ const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/V
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
-const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
 
 const props = defineProps({
     volumeTrend: Array,
@@ -18,7 +17,6 @@ const props = defineProps({
     monthlyComparison: Object,
     weightHistory: Array,
     bodyFatHistory: Array,
-    durationHistory: Array,
     exercises: Array,
     latestWeight: Number,
     weightChange: Number,
@@ -77,7 +75,7 @@ watch(selectedExercise, (newVal) => {
     <AuthenticatedLayout liquid-variant="cyan-magenta">
         <div class="space-y-6">
             <!-- Header -->
-            <header class="flex animate-fade-in flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <header class="flex animate-fade-in items-start justify-between">
                 <div>
                     <h1
                         class="font-display text-4xl font-black uppercase italic leading-none tracking-tighter text-text-main"
@@ -88,15 +86,13 @@ watch(selectedExercise, (newVal) => {
                 </div>
 
                 <!-- Period Selector -->
-                <div
-                    class="flex w-full overflow-x-auto rounded-xl border border-glass-border bg-white/50 p-1 shadow-sm backdrop-blur-sm sm:w-auto"
-                >
+                <div class="flex rounded-xl border border-glass-border bg-white/50 p-1 shadow-sm backdrop-blur-sm">
                     <button
                         v-for="period in periods"
                         :key="period.value"
                         @click="handlePeriodChange(period.value)"
                         :class="[
-                            'flex-1 rounded-lg px-3 py-1.5 text-center text-[10px] font-black uppercase tracking-wider transition-all sm:flex-none',
+                            'rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all',
                             currentPeriod === period.value
                                 ? 'bg-cyan-pure text-text-main shadow-sm'
                                 : 'text-text-muted hover:text-text-main',
@@ -242,23 +238,6 @@ watch(selectedExercise, (newVal) => {
                 <div v-else class="flex h-48 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">bar_chart</span>
                     <p class="text-sm text-text-muted">Pas encore de données de volume</p>
-                </div>
-            </GlassCard>
-
-            <!-- Duration Trend Chart -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
-                <div class="mb-4">
-                    <h3 class="font-display text-lg font-black uppercase italic text-text-main">
-                        Temps d'entraînement
-                    </h3>
-                    <p class="text-xs font-semibold text-text-muted">Durée par séance (min)</p>
-                </div>
-                <div v-if="durationHistory && durationHistory.length > 0" class="h-48">
-                    <WorkoutDurationChart :data="durationHistory" />
-                </div>
-                <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">timer</span>
-                    <p class="text-sm text-text-muted">Pas encore de données de durée</p>
                 </div>
             </GlassCard>
 
