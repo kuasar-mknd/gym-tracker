@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 
 it('calculates volume history correctly', function () {
     $user = User::factory()->create();
-    $action = new FetchWorkoutsIndexAction();
+    $action = app(FetchWorkoutsIndexAction::class);
 
     // Workout 1: 125 kg total volume
     // 10 * 10 = 100
@@ -45,7 +45,6 @@ it('calculates volume history correctly', function () {
     $line3 = WorkoutLine::factory()->create(['workout_id' => $workout3->id]);
     Set::factory()->create(['workout_line_id' => $line3->id, 'weight' => 100, 'reps' => 1]);
 
-
     $result = $action->execute($user);
     $volumeHistory = $result['volumeHistory'];
 
@@ -61,5 +60,5 @@ it('calculates volume history correctly', function () {
 
     // Workout 2 (Newest)
     expect($volumeHistory[1]['name'])->toBe('Workout 2');
-    expect($volumeHistory[1]['volume'])->toBe(0.0); // or 0
+    expect($volumeHistory[1]['volume'])->toEqual(0); // or 0
 });
