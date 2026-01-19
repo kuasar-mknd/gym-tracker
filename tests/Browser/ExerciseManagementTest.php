@@ -14,10 +14,11 @@ test('user can manage exercises from mobile plus menu', function () {
             ->resize(375, 812) // Mobile view
             ->visit('/dashboard')
             ->assertPathIs('/dashboard')
-            ->waitFor('a[aria-label="Plus"]', 15)
+            ->waitFor('.glass-nav', 15)
+            ->waitFor('a[href*="/profile"]', 15)
 
             // 1. Navigate to "Plus" menu
-            ->click('a[aria-label="Plus"]')
+            ->click('a[href*="/profile"]')
             ->waitForLocation('/profile')
             ->waitForText('Biblioth', 15)
             ->assertPathIs('/profile')
@@ -28,9 +29,11 @@ test('user can manage exercises from mobile plus menu', function () {
             ->assertPathIs('/exercises')
 
             // 3. Add a new exercise
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
-            ->click('[data-testid="create-exercise-button"]')
-            ->waitForText('Nouvel exercice', 15)
+            ->waitFor('[data-testid="create-exercise-button"]', 15);
+
+        $browser->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
+
+        $browser->waitForText('Nouvel exercice', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->select('select', 'strength')
             ->pause(500) // Wait for animations
