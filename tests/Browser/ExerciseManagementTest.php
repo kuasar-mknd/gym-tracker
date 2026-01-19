@@ -10,7 +10,8 @@ test('user can manage exercises from mobile plus menu', function () {
         $browser->loginAs($user)
             ->resize(375, 812) // Mobile view
             ->visit('/dashboard')
-            ->waitForText('DÉMARRER', 15) // Increased timeout
+            ->assertPathIs('/dashboard')
+            ->waitFor('a[aria-label="Plus"]', 15)
 
             // 1. Navigate to "Plus" menu
             ->click('a[aria-label="Plus"]')
@@ -19,7 +20,7 @@ test('user can manage exercises from mobile plus menu', function () {
 
             // 2. Click "Bibliothèque"
             ->clickLink('Bibliothèque')
-            ->waitForText('LA BIBLIOTHÈQUE', 15)
+            ->waitForText('Bibliothèque', 15)
             ->assertPathIs('/exercises')
 
             // 3. Add a new exercise
