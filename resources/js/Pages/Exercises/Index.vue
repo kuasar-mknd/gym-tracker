@@ -173,6 +173,22 @@ const typeLabel = (type) => {
                 </GlassCard>
             </div>
 
+            <!-- Stats Chart -->
+            <div v-if="exercises.length > 0" class="animate-slide-up" style="animation-delay: 0.05s">
+                <GlassCard padding="p-4">
+                    <div class="mb-2 flex items-center justify-between">
+                        <h3 class="font-display text-sm font-black uppercase tracking-wider text-text-main">
+                            Répartition
+                        </h3>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <ExerciseCategoryChart :exercises="exercises" />
+                        </div>
+                    </div>
+                </GlassCard>
+            </div>
+
             <!-- Search Bar -->
             <div
                 class="glass-panel-light flex animate-slide-up items-center gap-3 rounded-2xl p-3"
