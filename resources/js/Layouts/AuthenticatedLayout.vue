@@ -30,7 +30,7 @@ const showingNavigationDropdown = ref(false)
 </script>
 
 <template>
-    <div class="relative min-h-[100dvh] min-h-screen">
+    <div class="relative min-h-[100dvh] w-full overflow-x-hidden">
         <!-- Liquid Glass Background -->
         <LiquidBackground :variant="liquidVariant" />
 
