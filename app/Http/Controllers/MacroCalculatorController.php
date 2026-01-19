@@ -70,8 +70,12 @@ class MacroCalculatorController extends Controller
         }
 
         // Ensure healthy minimum
-        if ($gender === 'male' && $targetCalories < 1500) $targetCalories = 1500;
-        if ($gender === 'female' && $targetCalories < 1200) $targetCalories = 1200;
+        if ($gender === 'male' && $targetCalories < 1500) {
+            $targetCalories = 1500;
+        }
+        if ($gender === 'female' && $targetCalories < 1200) {
+            $targetCalories = 1200;
+        }
 
         // 4. Calculate Macros
         // Strategy: 2g Protein/kg, 0.8g Fat/kg, rest Carbs

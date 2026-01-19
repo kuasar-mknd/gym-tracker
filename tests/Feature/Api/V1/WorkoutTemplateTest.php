@@ -107,7 +107,7 @@ test('create template validates set data types', function () {
         ->assertJsonValidationErrors([
             'exercises.0.sets.0.reps',
             'exercises.0.sets.0.weight',
-            'exercises.0.sets.0.is_warmup'
+            'exercises.0.sets.0.is_warmup',
         ]);
 });
 
