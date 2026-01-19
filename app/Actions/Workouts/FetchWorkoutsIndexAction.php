@@ -4,10 +4,13 @@ namespace App\Actions\Workouts;
 
 use App\Models\User;
 use App\Models\Workout;
+use App\Services\StatsService;
 use Illuminate\Support\Carbon;
 
 class FetchWorkoutsIndexAction
 {
+    public function __construct(protected StatsService $statsService) {}
+
     /**
      * Fetch workouts and related statistics for the index page.
      *
@@ -34,44 +37,10 @@ class FetchWorkoutsIndexAction
             ->values();
 
         // Get duration history for the last 20 workouts
-        $durationHistory = Workout::select('name', 'started_at', 'ended_at')
-            ->where('user_id', $user->id)
-            ->whereNotNull('ended_at')
-            ->latest('started_at')
-            ->take(20)
-            ->get()
-            ->map(function ($workout) {
-                return [
-                    'date' => $workout->started_at->format('d/m'),
-                    'duration' => $workout->ended_at->diffInMinutes($workout->started_at),
-                    'name' => $workout->name,
-                ];
-            })
-            ->reverse()
-            ->values();
+        $durationHistory = $this->statsService->getDurationHistory($user, 20);
 
         // Get volume history for the last 20 workouts
-        $volumeHistory = Workout::with(['workoutLines.sets'])
-            ->where('user_id', $user->id)
-            ->whereNotNull('ended_at')
-            ->latest('started_at')
-            ->take(20)
-            ->get()
-            ->map(function ($workout) {
-                $volume = $workout->workoutLines->reduce(function ($carry, $line) {
-                    return $carry + $line->sets->reduce(function ($carrySet, $set) {
-                        return $carrySet + ($set->weight * $set->reps);
-                    }, 0);
-                }, 0);
-
-                return [
-                    'date' => $workout->started_at->format('d/m'),
-                    'volume' => $volume,
-                    'name' => $workout->name,
-                ];
-            })
-            ->reverse()
-            ->values();
+        $volumeHistory = $this->statsService->getVolumeHistory($user, 20);
 
         // NITRO FIX: Paginate workouts instead of loading all
         $workouts = Workout::with(['workoutLines.exercise', 'workoutLines.sets'])

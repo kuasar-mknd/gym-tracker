@@ -37,6 +37,7 @@ class StatsController extends Controller
             'monthlyComparison' => $this->statsService->getMonthlyVolumeComparison($user),
             'weightHistory' => $weightHistory,
             'bodyFatHistory' => $bodyFatHistory,
+            'durationHistory' => $this->statsService->getDurationHistory($user, 30),
             'latestWeight' => $bodyMetrics['latest_weight'],
             'weightChange' => $bodyMetrics['weight_change'],
             'bodyFat' => $bodyMetrics['latest_body_fat'],
