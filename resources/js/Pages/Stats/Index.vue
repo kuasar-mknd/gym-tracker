@@ -10,10 +10,12 @@ const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/V
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
+const DurationDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/DurationDistributionChart.vue'))
 
 const props = defineProps({
     volumeTrend: Array,
     muscleDistribution: Array,
+    durationDistribution: Object,
     monthlyComparison: Object,
     weightHistory: Array,
     bodyFatHistory: Array,
@@ -240,6 +242,19 @@ watch(selectedExercise, (newVal) => {
                 <div v-else class="flex h-48 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">bar_chart</span>
                     <p class="text-sm text-text-muted">Pas encore de données de volume</p>
+                </div>
+            </GlassCard>
+
+            <!-- Duration Distribution Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
+                <div class="mb-4">
+                    <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                        Distribution de la Durée
+                    </h3>
+                    <p class="text-xs font-semibold text-text-muted">Temps passé par séance</p>
+                </div>
+                <div v-if="durationDistribution" class="h-52">
+                    <DurationDistributionChart :data="durationDistribution" />
                 </div>
             </GlassCard>
 

@@ -20,6 +20,7 @@ test('authenticated user can view stats page', function () {
             ->component('Stats/Index')
             ->has('volumeTrend')
             ->has('muscleDistribution')
+            ->has('durationDistribution')
             ->has('monthlyComparison')
             ->has('exercises')
         );
@@ -222,5 +223,42 @@ test('stats do not include other users data', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('Stats/Index')
             ->where('volumeTrend', []) // Should be empty for this user
+        );
+});
+
+test('stats page calculates duration distribution correctly', function () {
+    $user = User::factory()->create();
+
+    // < 30m
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => now()->subDays(1),
+        'ended_at' => now()->subDays(1)->addMinutes(20),
+    ]);
+
+    // 30-45m
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => now()->subDays(2),
+        'ended_at' => now()->subDays(2)->addMinutes(35),
+    ]);
+
+    // 60-90m
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => now()->subDays(3),
+        'ended_at' => now()->subDays(3)->addMinutes(70),
+    ]);
+
+    actingAs($user)
+        ->get(route('stats.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Stats/Index')
+            ->has('durationDistribution')
+            ->where('durationDistribution.< 30m', 1)
+            ->where('durationDistribution.30-45m', 1)
+            ->where('durationDistribution.45-60m', 0)
+            ->where('durationDistribution.60-90m', 1)
         );
 });
