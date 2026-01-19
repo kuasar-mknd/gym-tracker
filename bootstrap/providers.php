@@ -1,7 +1,9 @@
 <?php
 
-return [
+return array_filter([
     App\Providers\AppServiceProvider::class,
     App\Providers\HorizonServiceProvider::class,
-    App\Providers\TelescopeServiceProvider::class,
-];
+    class_exists(Laravel\Telescope\TelescopeApplicationServiceProvider::class)
+        ? App\Providers\TelescopeServiceProvider::class
+        : null,
+]);
