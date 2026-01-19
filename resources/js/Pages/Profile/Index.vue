@@ -5,6 +5,27 @@ import { Head, Link } from '@inertiajs/vue3'
 
 const menuGroups = [
     {
+        title: 'Navigation',
+        items: [
+            {
+                name: 'Calendrier',
+                icon: 'calendar_month',
+                route: 'calendar.index',
+                description: 'Vue calendrier des séances',
+                color: 'text-blue-500',
+                bgColor: 'bg-blue-100/50',
+            },
+            {
+                name: 'Tous les Outils',
+                icon: 'handyman',
+                route: 'tools.index',
+                description: 'Calculatrices & utilitaires',
+                color: 'text-indigo-500',
+                bgColor: 'bg-indigo-100/50',
+            },
+        ],
+    },
+    {
         title: 'Outils Entraînement',
         items: [
             {
