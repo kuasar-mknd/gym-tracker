@@ -33,6 +33,7 @@ test('user can manage exercises from mobile plus menu', function () {
             ->waitForText('Nouvel exercice', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->select('select', 'strength')
+            ->pause(500) // Wait for animations
             ->press('Créer l\'exercice')
             ->waitForText('Dusk Test Exercise', 15)
 
