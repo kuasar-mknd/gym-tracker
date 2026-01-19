@@ -25,8 +25,8 @@ test('user can manage exercises from mobile plus menu', function () {
             ->assertPathIs('/exercises')
 
             // 3. Add a new exercise
-            ->waitFor('[data-testid="create-exercise-mobile-header"]', 15)
-            ->click('[data-testid="create-exercise-mobile-header"]')
+            ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->click('[data-testid="create-exercise-button"]')
             ->waitForText('Nouvel exercice', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->select('select', 'strength')
