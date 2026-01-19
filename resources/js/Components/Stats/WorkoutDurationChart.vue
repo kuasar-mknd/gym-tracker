@@ -9,10 +9,11 @@ import {
     Title,
     Tooltip,
     Legend,
+    Filler,
 } from 'chart.js'
 import { computed } from 'vue'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
 const props = defineProps({
     data: {
@@ -28,15 +29,24 @@ const chartData = computed(() => {
             {
                 label: 'Durée (min)',
                 data: props.data.map((item) => item.duration),
-                fill: false,
-                tension: 0.3,
+                fill: true,
+                tension: 0.4,
                 borderColor: '#8800FF',
+                backgroundColor: (context) => {
+                    const chart = context.chart
+                    const { ctx, chartArea } = chart
+                    if (!chartArea) return null
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+                    gradient.addColorStop(0, 'rgba(136, 0, 255, 0.2)')
+                    gradient.addColorStop(1, 'rgba(136, 0, 255, 0)')
+                    return gradient
+                },
                 borderWidth: 3,
                 pointRadius: 4,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: '#8800FF',
                 pointBorderWidth: 2,
-                pointHoverRadius: 7,
+                pointHoverRadius: 6,
                 pointHoverBackgroundColor: '#8800FF',
                 pointHoverBorderColor: '#fff',
                 pointHoverBorderWidth: 2,
@@ -58,6 +68,12 @@ const chartOptions = {
             cornerRadius: 12,
             titleColor: '#1e293b',
             bodyColor: '#1e293b',
+            displayColors: false,
+            borderColor: 'rgba(136, 0, 255, 0.1)',
+            borderWidth: 1,
+            callbacks: {
+                label: (context) => `${context.parsed.y} min`,
+            },
         },
     },
     scales: {
@@ -80,11 +96,15 @@ const chartOptions = {
             },
         },
     },
+    interaction: {
+        mode: 'index',
+        intersect: false,
+    },
 }
 </script>
 
 <template>
-    <div class="h-48 w-full sm:h-64">
+    <div class="h-48 w-full">
         <Line :data="chartData" :options="chartOptions" />
     </div>
 </template>

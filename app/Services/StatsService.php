@@ -445,6 +445,74 @@ class StatsService
     }
 
     /**
+     * Get workout duration history.
+     *
+     * @return array<int, array{date: string, duration: int, name: string}>
+     */
+    public function getDurationHistory(User $user, int $limit = 20): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.duration_history.{$user->id}.{$limit}",
+            now()->addMinutes(30),
+            function () use ($user, $limit) {
+                return Workout::select('name', 'started_at', 'ended_at')
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->latest('started_at')
+                    ->take($limit)
+                    ->get()
+                    ->map(function ($workout) {
+                        return [
+                            'date' => $workout->started_at->format('d/m'),
+                            'duration' => $workout->ended_at->diffInMinutes($workout->started_at),
+                            'name' => $workout->name,
+                        ];
+                    })
+                    ->reverse()
+                    ->values()
+                    ->toArray();
+            }
+        );
+    }
+
+    /**
+     * Get volume history per workout.
+     *
+     * @return array<int, array{date: string, volume: float, name: string}>
+     */
+    public function getVolumeHistory(User $user, int $limit = 20): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.volume_history.{$user->id}.{$limit}",
+            now()->addMinutes(30),
+            function () use ($user, $limit) {
+                return Workout::with(['workoutLines.sets'])
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->latest('started_at')
+                    ->take($limit)
+                    ->get()
+                    ->map(function ($workout) {
+                        $volume = $workout->workoutLines->reduce(function ($carry, $line) {
+                            return $carry + $line->sets->reduce(function ($carrySet, $set) {
+                                return $carrySet + ($set->weight * $set->reps);
+                            }, 0);
+                        }, 0);
+
+                        return [
+                            'date' => $workout->started_at->format('d/m'),
+                            'volume' => $volume,
+                            'name' => $workout->name,
+                        ];
+                    })
+                    ->reverse()
+                    ->values()
+                    ->toArray();
+            }
+        );
+    }
+
+    /**
      * Clear all cached statistics for a given user.
      */
     public function clearUserStatsCache(User $user): void
@@ -461,6 +529,12 @@ class StatsService
 
         // Clear dashboard-specific cache
         \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
+
+        // Clear duration and volume history caches
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.20");
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
+        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
+        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
 
         // Note: Individual exercise 1RM progress is not cleared here as it's exercise-specific
     }

@@ -10,6 +10,7 @@ const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/V
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
+const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
 
 const props = defineProps({
     volumeTrend: Array,
@@ -17,6 +18,7 @@ const props = defineProps({
     monthlyComparison: Object,
     weightHistory: Array,
     bodyFatHistory: Array,
+    durationHistory: Array,
     exercises: Array,
     latestWeight: Number,
     weightChange: Number,
@@ -240,6 +242,23 @@ watch(selectedExercise, (newVal) => {
                 <div v-else class="flex h-48 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">bar_chart</span>
                     <p class="text-sm text-text-muted">Pas encore de données de volume</p>
+                </div>
+            </GlassCard>
+
+            <!-- Duration Trend Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
+                <div class="mb-4">
+                    <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                        Temps d'entraînement
+                    </h3>
+                    <p class="text-xs font-semibold text-text-muted">Durée par séance (min)</p>
+                </div>
+                <div v-if="durationHistory && durationHistory.length > 0" class="h-48">
+                    <WorkoutDurationChart :data="durationHistory" />
+                </div>
+                <div v-else class="flex h-48 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">timer</span>
+                    <p class="text-sm text-text-muted">Pas encore de données de durée</p>
                 </div>
             </GlassCard>
 
