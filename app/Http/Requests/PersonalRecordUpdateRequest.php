@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PersonalRecordUpdateRequest extends FormRequest
 {
@@ -14,7 +15,14 @@ class PersonalRecordUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'exercise_id' => 'sometimes|exists:exercises,id',
+            'exercise_id' => [
+                'sometimes',
+                Rule::exists('exercises', 'id')->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->whereNull('user_id')->orWhere('user_id', $this->user()->id);
+                    });
+                }),
+            ],
             'type' => 'sometimes|string',
             'value' => 'sometimes|numeric',
             'secondary_value' => 'nullable|numeric',

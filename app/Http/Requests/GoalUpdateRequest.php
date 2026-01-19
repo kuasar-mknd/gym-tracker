@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class GoalUpdateRequest extends FormRequest
 {
@@ -27,7 +28,15 @@ class GoalUpdateRequest extends FormRequest
             'target_value' => ['sometimes', 'required', 'numeric', 'min:0'],
             'current_value' => ['sometimes', 'numeric'],
             'start_value' => ['sometimes', 'numeric'],
-            'exercise_id' => ['sometimes', 'nullable', 'exists:exercises,id'],
+            'exercise_id' => [
+                'sometimes',
+                'nullable',
+                Rule::exists('exercises', 'id')->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->whereNull('user_id')->orWhere('user_id', $this->user()->id);
+                    });
+                }),
+            ],
             'measurement_type' => ['sometimes', 'nullable', 'string'],
             'deadline' => ['nullable', 'date'], // Removed after:today to allow editing old goals without validation error if deadline passed
             'completed_at' => ['nullable', 'date'],
