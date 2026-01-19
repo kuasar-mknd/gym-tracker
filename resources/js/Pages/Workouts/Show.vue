@@ -89,6 +89,7 @@ const saveAsTemplate = () => {
         route('templates.save-from-workout', { workout: props.workout.id }),
         {},
         {
+            preserveScroll: true,
             onFinish: () => (savingTemplate.value = false),
         },
     )
@@ -188,6 +189,7 @@ const createExerciseForm = useForm({
 const addExercise = (exerciseId) => {
     addExerciseForm.exercise_id = exerciseId
     addExerciseForm.post(route('workout-lines.store', { workout: props.workout.id }), {
+        preserveScroll: true,
         onSuccess: () => {
             showAddExercise.value = false
             searchQuery.value = ''
@@ -307,7 +309,9 @@ const closeModal = () => {
 const removeLine = (lineId) => {
     confirmMessage.value = 'Supprimer cet exercice de la séance ?'
     confirmAction.value = () => {
-        router.delete(route('workout-lines.destroy', { workoutLine: lineId }))
+        router.delete(route('workout-lines.destroy', { workoutLine: lineId }), {
+            preserveScroll: true,
+        })
         showConfirmModal.value = false
     }
     showConfirmModal.value = true
@@ -354,7 +358,9 @@ const addSet = (lineId) => {
         data.duration_seconds = 0
     }
 
-    router.post(route('sets.store', { workoutLine: lineId }), data)
+    router.post(route('sets.store', { workoutLine: lineId }), data, {
+        preserveScroll: true,
+    })
 }
 
 /**
