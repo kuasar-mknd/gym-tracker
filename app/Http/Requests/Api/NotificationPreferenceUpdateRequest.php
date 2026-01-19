@@ -29,9 +29,9 @@ class NotificationPreferenceUpdateRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('notification_preferences')->ignore($this->route('notification_preference'))->where(function ($query) {
-                    return $query->where('user_id', $this->user()->id);
-                }),
+                Rule::unique('notification_preferences')
+                    ->ignore($this->route('notification_preference'))
+                    ->where(fn ($query) => $query->where('user_id', $this->user()->id)),
             ],
             'is_enabled' => ['sometimes', 'required', 'boolean'],
             'is_push_enabled' => ['sometimes', 'required', 'boolean'],
