@@ -9,3 +9,7 @@
 ## 2026-01-20 - Form Input Label Association
 **Learning:** Custom input components (like `GlassInput`) often wrap native inputs but fail to propagate `id`s for `label` association, breaking accessibility.
 **Action:** Always ensure custom input wrappers generate a unique ID (if one isn't provided) and bind it to both the `input` and the `label`'s `for` attribute.
+
+## 2026-05-23 - Visual Regression with Transparent Glass Overlays
+**Learning:** Applying transparent/glassy backgrounds (`bg-white/60`) to elements positioned over borders (like dividers) causes the underlying border to show through the text, looking like a strikethrough.
+**Action:** When using glass effects on overlay elements, restructure the layout (e.g., using flexbox with side lines) to ensure the background behind the transparent element is clear, rather than relying on opacity masking.

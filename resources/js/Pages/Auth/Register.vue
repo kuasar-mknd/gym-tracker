@@ -86,15 +86,14 @@ const submit = () => {
             </GlassButton>
 
             <!-- Social Login -->
-            <div class="relative my-6">
-                <div class="absolute inset-0 flex items-center">
-                    <div class="w-full border-t border-slate-200"></div>
-                </div>
-                <div class="relative flex justify-center text-sm">
-                    <span class="rounded-full bg-white px-4 py-1 font-medium text-text-muted">
-                        Ou s'inscrire avec
-                    </span>
-                </div>
+            <div class="my-6 flex items-center justify-center gap-4 text-sm">
+                <div class="h-px flex-1 bg-slate-200"></div>
+                <span
+                    class="rounded-full border border-white/50 bg-white/60 px-4 py-1 font-medium text-text-muted backdrop-blur-md"
+                >
+                    Ou s'inscrire avec
+                </span>
+                <div class="h-px flex-1 bg-slate-200"></div>
             </div>
 
             <div class="flex justify-center gap-4">
