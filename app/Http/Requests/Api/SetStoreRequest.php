@@ -4,7 +4,6 @@ namespace App\Http\Requests\Api;
 
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class SetStoreRequest extends FormRequest
 {
