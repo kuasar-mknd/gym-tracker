@@ -25,13 +25,21 @@ class SecurityHeaders
         // Build CSP with nonce if available, otherwise generate one or fall back
         $nonce = $request->attributes->get('csp-nonce');
 
+        // DEBUG: Log the request path and nonce status
+        \Illuminate\Support\Facades\Log::info('SecurityHeaders Debug', [
+            'url' => $request->fullUrl(),
+            'path' => $request->path(),
+            'nonce_exists' => (bool) $nonce,
+            'is_backoffice' => str_contains($request->fullUrl(), 'backoffice'),
+        ]);
+
         if (! $nonce) {
             $nonce = \Illuminate\Support\Str::random(32);
             $request->attributes->set('csp-nonce', $nonce);
             \Illuminate\Support\Facades\Vite::useCspNonce($nonce);
         }
 
-        if (str_contains($request->fullUrl(), 'backoffice')) {
+        if (str_contains($request->fullUrl(), 'backoffice') || str_contains($request->header('Referer'), 'backoffice')) {
             // ADMIN / BACKOFFICE: Relaxed CSP (Allows Alpine/Livewire eval + Avatars)
             $csp = implode('; ', [
                 "default-src 'self'",
