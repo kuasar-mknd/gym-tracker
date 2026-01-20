@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
+use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Http\Requests\UpdateWorkoutRequest;
 use App\Models\Exercise;
 use App\Models\Workout;
@@ -103,29 +104,9 @@ class WorkoutsController extends Controller
     /**
      * Update the specified workout in storage.
      */
-    public function update(UpdateWorkoutRequest $request, Workout $workout): \Illuminate\Http\RedirectResponse
+    public function update(UpdateWorkoutRequest $request, Workout $workout, UpdateWorkoutAction $updateWorkout): \Illuminate\Http\RedirectResponse
     {
-        $validated = $request->validated();
-
-        if (isset($validated['started_at'])) {
-            $workout->started_at = $validated['started_at'];
-        }
-
-        if (isset($validated['name'])) {
-            $workout->name = $validated['name'];
-        }
-
-        if (isset($validated['notes'])) {
-            $workout->notes = $validated['notes'];
-        }
-
-        if (! empty($validated['is_finished']) && $validated['is_finished']) {
-            $workout->ended_at = now();
-        }
-
-        $workout->save();
-
-        $this->statsService->clearUserStatsCache(auth()->user());
+        $updateWorkout->execute($workout, $request->validated());
 
         return back();
     }

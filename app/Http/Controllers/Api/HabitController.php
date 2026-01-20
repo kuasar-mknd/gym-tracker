@@ -1,0 +1,117 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Requests\StoreHabitRequest;
+use App\Http\Requests\UpdateHabitRequest;
+use App\Http\Resources\HabitResource;
+use App\Models\Habit;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+use OpenApi\Attributes as OA;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
+
+class HabitController extends Controller
+{
+    use AuthorizesRequests;
+
+    #[OA\Get(
+        path: '/habits',
+        summary: 'Get list of habits',
+        tags: ['Habits']
+    )]
+    #[OA\Response(response: 200, description: 'Successful operation')]
+    #[OA\Response(response: 401, description: 'Unauthenticated')]
+    public function index()
+    {
+        $this->authorize('viewAny', Habit::class);
+
+        $habits = QueryBuilder::for(Habit::class)
+            ->allowedIncludes(['logs'])
+            ->allowedFilters([
+                AllowedFilter::exact('archived'),
+                'name',
+            ])
+            ->allowedSorts(['name', 'created_at', 'goal_times_per_week'])
+            ->defaultSort('name')
+            ->where('user_id', Auth::id())
+            ->paginate();
+
+        return HabitResource::collection($habits);
+    }
+
+    #[OA\Post(
+        path: '/habits',
+        summary: 'Create a new habit',
+        tags: ['Habits']
+    )]
+    #[OA\Response(response: 201, description: 'Created successfully')]
+    #[OA\Response(response: 422, description: 'Validation error')]
+    public function store(StoreHabitRequest $request)
+    {
+        $this->authorize('create', Habit::class);
+
+        $validated = $request->validated();
+
+        $habit = new Habit($validated);
+        $habit->user_id = Auth::id();
+        $habit->save();
+
+        return (new HabitResource($habit))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
+    }
+
+    #[OA\Get(
+        path: '/habits/{habit}',
+        summary: 'Get a specific habit',
+        tags: ['Habits']
+    )]
+    #[OA\Response(response: 200, description: 'Successful operation')]
+    #[OA\Response(response: 404, description: 'Not found')]
+    public function show(Habit $habit)
+    {
+        $this->authorize('view', $habit);
+
+        $habit->load(['logs' => function ($query) {
+            $query->latest('date')->limit(10);
+        }]);
+
+        return new HabitResource($habit);
+    }
+
+    #[OA\Put(
+        path: '/habits/{habit}',
+        summary: 'Update a habit',
+        tags: ['Habits']
+    )]
+    #[OA\Response(response: 200, description: 'Updated successfully')]
+    #[OA\Response(response: 422, description: 'Validation error')]
+    public function update(UpdateHabitRequest $request, Habit $habit)
+    {
+        // Authorization handled in UpdateHabitRequest
+
+        $validated = $request->validated();
+
+        $habit->update($validated);
+
+        return new HabitResource($habit);
+    }
+
+    #[OA\Delete(
+        path: '/habits/{habit}',
+        summary: 'Delete a habit',
+        tags: ['Habits']
+    )]
+    #[OA\Response(response: 204, description: 'Deleted successfully')]
+    public function destroy(Habit $habit)
+    {
+        $this->authorize('delete', $habit);
+
+        $habit->delete();
+
+        return response()->noContent();
+    }
+}
