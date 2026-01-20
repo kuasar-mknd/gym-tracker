@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Supplement;
 use App\Models\SupplementLog;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class SupplementController extends Controller
@@ -27,8 +29,31 @@ class SupplementController extends Controller
                 ];
             });
 
+        // Calculate usage history for the last 30 days
+        $days = 30;
+        $usageHistoryRaw = SupplementLog::where('user_id', Auth::id())
+            ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
+            ->select(
+                DB::raw('DATE(consumed_at) as date'),
+                DB::raw('SUM(quantity) as count')
+            )
+            ->groupBy('date')
+            ->get()
+            ->pluck('count', 'date');
+
+        $usageHistory = [];
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $dateString = $date->format('Y-m-d');
+            $usageHistory[] = [
+                'date' => $date->format('d/m'),
+                'count' => (int) ($usageHistoryRaw[$dateString] ?? 0),
+            ];
+        }
+
         return Inertia::render('Supplements/Index', [
             'supplements' => $supplements,
+            'usageHistory' => $usageHistory,
         ]);
     }
 

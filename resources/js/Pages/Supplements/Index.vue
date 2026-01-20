@@ -4,10 +4,13 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
+
+const SupplementUsageChart = defineAsyncComponent(() => import('@/Components/Stats/SupplementUsageChart.vue'))
 
 const props = defineProps({
     supplements: Array,
+    usageHistory: Array,
 })
 
 const showAddForm = ref(false)
@@ -121,6 +124,25 @@ const formatDate = (dateString) => {
                 >
                     <span class="material-symbols-outlined">add</span>
                 </button>
+            </div>
+
+            <!-- Usage Chart -->
+            <div v-if="usageHistory && usageHistory.length > 0" class="animate-slide-up">
+                <GlassCard padding="p-5">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                                Consommation Mensuelle
+                            </h3>
+                            <p class="text-xs font-semibold text-text-muted">
+                                30 derniers jours
+                            </p>
+                        </div>
+                    </div>
+                    <div class="h-48 w-full">
+                        <SupplementUsageChart :data="usageHistory" />
+                    </div>
+                </GlassCard>
             </div>
 
             <!-- Add Form -->
