@@ -22,6 +22,8 @@ class WorkoutTemplateUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        $userId = $this->user()->id;
+
         return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -29,8 +31,8 @@ class WorkoutTemplateUpdateRequest extends FormRequest
             'exercises.*.id' => [
                 'required',
                 'integer',
-                Rule::exists('exercises', 'id')->where(function ($query) {
-                    $query->where('user_id', $this->user()->id)
+                Rule::exists('exercises', 'id')->where(function ($query) use ($userId) {
+                    $query->where('user_id', $userId)
                         ->orWhereNull('user_id');
                 }),
             ],

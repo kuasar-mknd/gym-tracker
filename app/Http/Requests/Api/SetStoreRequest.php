@@ -22,15 +22,17 @@ class SetStoreRequest extends FormRequest
      */
     public function rules(): array
     {
+        $userId = $this->user()->id;
+
         return [
             'workout_line_id' => [
                 'required',
-                Rule::exists('workout_lines', 'id')->where(function ($query) {
+                Rule::exists('workout_lines', 'id')->where(function ($query) use ($userId) {
                     // Check if the workout line belongs to a workout owned by the user
-                    $query->whereIn('workout_id', function ($subQuery) {
+                    $query->whereIn('workout_id', function ($subQuery) use ($userId) {
                         $subQuery->select('id')
                             ->from('workouts')
-                            ->where('user_id', $this->user()->id);
+                            ->where('user_id', $userId);
                     });
                 }),
             ],

@@ -10,7 +10,6 @@ use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Resources\WorkoutTemplateResource;
 use App\Models\WorkoutTemplate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\Request;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkoutTemplateController extends Controller
