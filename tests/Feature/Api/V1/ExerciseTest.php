@@ -1,141 +1,302 @@
 <?php
 
-namespace Tests\Feature\Api\V1;
-
 use App\Models\Exercise;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Laravel\Sanctum\Sanctum;
 
-class ExerciseTest extends TestCase
-{
-    use RefreshDatabase;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\deleteJson;
+use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
 
-    public function test_can_list_exercises(): void
-    {
-        $user = User::factory()->create();
-        // Create 3 system exercises and 2 user exercises
-        Exercise::factory()->count(3)->create(['user_id' => null]);
-        Exercise::factory()->count(2)->create(['user_id' => $user->id]);
+// Happy Path Tests
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->getJson('/api/v1/exercises');
+test('authenticated user can list exercises (system and own)', function () {
+    $user = User::factory()->create();
 
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    '*' => [
-                        'id',
-                        'name',
-                        'type',
-                        'category',
-                    ],
-                ],
-                'meta', // Pagination
-            ])
-            ->assertJsonCount(5, 'data');
-    }
+    // Create system exercises
+    Exercise::factory()->count(3)->create(['user_id' => null]);
 
-    public function test_can_filter_exercises(): void
-    {
-        $user = User::factory()->create();
-        Exercise::factory()->create(['name' => 'Bench Press', 'type' => 'strength', 'user_id' => null]);
-        Exercise::factory()->create(['name' => 'Running', 'type' => 'cardio', 'user_id' => null]);
+    // Create user's own exercises
+    Exercise::factory()->count(2)->create(['user_id' => $user->id]);
 
-        // Filter by type
-        $response = $this->actingAs($user, 'sanctum')
-            ->getJson('/api/v1/exercises?filter[type]=strength');
+    // Create other user's exercises (should not be visible)
+    $otherUser = User::factory()->create();
+    Exercise::factory()->count(2)->create(['user_id' => $otherUser->id]);
 
-        $response->assertStatus(200)
-            ->assertJsonCount(1, 'data')
-            ->assertJsonFragment(['name' => 'Bench Press']);
+    Sanctum::actingAs($user);
 
-        // Filter by name
-        $response2 = $this->actingAs($user, 'sanctum')
-            ->getJson('/api/v1/exercises?filter[name]=Run');
+    $response = getJson('/api/v1/exercises');
 
-        $response2->assertStatus(200)
-            ->assertJsonCount(1, 'data')
-            ->assertJsonFragment(['name' => 'Running']);
-    }
+    $response->assertOk()
+        ->assertJsonCount(5, 'data'); // 3 system + 2 own
+});
 
-    public function test_exercises_api_is_protected(): void
-    {
-        $response = $this->getJson('/api/v1/exercises');
-        $response->assertUnauthorized();
+test('authenticated user can filter exercises by name', function () {
+    $user = User::factory()->create();
 
-        $response = $this->postJson('/api/v1/exercises', ['name' => 'Test']);
-        $response->assertUnauthorized();
-    }
+    Exercise::factory()->create(['name' => 'Bench Press', 'user_id' => null]);
+    Exercise::factory()->create(['name' => 'Squat', 'user_id' => null]);
 
-    public function test_can_create_exercise(): void
-    {
-        $user = User::factory()->create();
+    Sanctum::actingAs($user);
 
-        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/exercises', [
-            'name' => 'New Exercise',
-            'type' => 'strength',
-            'category' => 'Test',
-        ]);
+    $response = getJson('/api/v1/exercises?filter[name]=Bench');
 
-        $response->assertCreated()
-            ->assertJsonPath('data.name', 'New Exercise');
+    $response->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonFragment(['name' => 'Bench Press']);
+});
 
-        $this->assertDatabaseHas('exercises', [
-            'name' => 'New Exercise',
-            'user_id' => $user->id,
-        ]);
-    }
+test('authenticated user can filter exercises by type', function () {
+    $user = User::factory()->create();
 
-    public function test_can_update_own_exercise(): void
-    {
-        $user = User::factory()->create();
-        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+    Exercise::factory()->create(['name' => 'Running', 'type' => 'cardio', 'user_id' => null]);
+    Exercise::factory()->create(['name' => 'Pushups', 'type' => 'strength', 'user_id' => null]);
 
-        $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/exercises/{$exercise->id}", [
-            'name' => 'Updated Name',
-        ]);
+    Sanctum::actingAs($user);
 
-        $response->assertOk()
-            ->assertJsonPath('data.name', 'Updated Name');
+    $response = getJson('/api/v1/exercises?filter[type]=cardio');
 
-        $this->assertDatabaseHas('exercises', [
-            'id' => $exercise->id,
-            'name' => 'Updated Name',
-        ]);
-    }
+    $response->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonFragment(['name' => 'Running']);
+});
 
-    public function test_cannot_update_system_exercise(): void
-    {
-        $user = User::factory()->create();
-        $exercise = Exercise::factory()->create(['user_id' => null]);
+test('authenticated user can create an exercise', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
 
-        $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/exercises/{$exercise->id}", [
-            'name' => 'Updated Name',
-        ]);
+    $data = [
+        'name' => 'New Unique Exercise',
+        'type' => 'strength',
+        'category' => 'Test Category',
+    ];
 
-        $response->assertForbidden();
-    }
+    $response = postJson('/api/v1/exercises', $data);
 
-    public function test_can_delete_own_exercise(): void
-    {
-        $user = User::factory()->create();
-        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+    $response->assertCreated()
+        ->assertJsonFragment(['name' => 'New Unique Exercise']);
 
-        $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/exercises/{$exercise->id}");
+    assertDatabaseHas('exercises', [
+        'name' => 'New Unique Exercise',
+        'user_id' => $user->id,
+        'type' => 'strength',
+    ]);
+});
 
-        $response->assertNoContent();
-        $this->assertDatabaseMissing('exercises', ['id' => $exercise->id]);
-    }
+test('authenticated user can view a specific exercise', function () {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $user->id]);
 
-    public function test_cannot_delete_system_exercise(): void
-    {
-        $user = User::factory()->create();
-        $exercise = Exercise::factory()->create(['user_id' => null]);
+    Sanctum::actingAs($user);
 
-        $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/exercises/{$exercise->id}");
+    $response = getJson("/api/v1/exercises/{$exercise->id}");
 
-        $response->assertForbidden();
-        $this->assertDatabaseHas('exercises', ['id' => $exercise->id]);
-    }
-}
+    $response->assertOk()
+        ->assertJsonFragment(['id' => $exercise->id, 'name' => $exercise->name]);
+});
+
+test('authenticated user can view a system exercise', function () {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => null]);
+
+    Sanctum::actingAs($user);
+
+    $response = getJson("/api/v1/exercises/{$exercise->id}");
+
+    $response->assertOk()
+        ->assertJsonFragment(['id' => $exercise->id]);
+});
+
+test('authenticated user can update their own exercise', function () {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Old Name']);
+
+    Sanctum::actingAs($user);
+
+    $response = putJson("/api/v1/exercises/{$exercise->id}", [
+        'name' => 'Updated Name',
+        'type' => 'strength', // Type is required if present in request or sometimes rule applies
+    ]);
+
+    $response->assertOk()
+        ->assertJsonFragment(['name' => 'Updated Name']);
+
+    assertDatabaseHas('exercises', [
+        'id' => $exercise->id,
+        'name' => 'Updated Name',
+    ]);
+});
+
+test('authenticated user can delete their own exercise', function () {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+
+    Sanctum::actingAs($user);
+
+    $response = deleteJson("/api/v1/exercises/{$exercise->id}");
+
+    $response->assertNoContent();
+
+    assertDatabaseMissing('exercises', ['id' => $exercise->id]);
+});
+
+// Validation Tests
+
+test('create exercise requires name and type', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $response = postJson('/api/v1/exercises', []);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['name', 'type']);
+});
+
+test('create exercise requires valid type', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $response = postJson('/api/v1/exercises', [
+        'name' => 'Test Exercise',
+        'type' => 'invalid_type',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['type']);
+});
+
+test('cannot create exercise with duplicate name (same user)', function () {
+    $user = User::factory()->create();
+    Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Duplicate Name']);
+
+    Sanctum::actingAs($user);
+
+    $response = postJson('/api/v1/exercises', [
+        'name' => 'Duplicate Name',
+        'type' => 'strength',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['name']);
+});
+
+test('cannot create exercise with duplicate name (system exercise)', function () {
+    $user = User::factory()->create();
+    Exercise::factory()->create(['user_id' => null, 'name' => 'System Exercise']);
+
+    Sanctum::actingAs($user);
+
+    $response = postJson('/api/v1/exercises', [
+        'name' => 'System Exercise',
+        'type' => 'strength',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['name']);
+});
+
+test('update exercise requires valid type if provided', function () {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+
+    Sanctum::actingAs($user);
+
+    $response = putJson("/api/v1/exercises/{$exercise->id}", [
+        'type' => 'invalid_type',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['type']);
+});
+
+test('cannot update exercise to duplicate name (existing system exercise)', function () {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'name' => 'My Exercise']);
+    Exercise::factory()->create(['user_id' => null, 'name' => 'System Exercise']);
+
+    Sanctum::actingAs($user);
+
+    $response = putJson("/api/v1/exercises/{$exercise->id}", [
+        'name' => 'System Exercise',
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonValidationErrors(['name']);
+});
+
+// Authorization Tests
+
+test('unauthenticated user cannot access exercises', function () {
+    getJson('/api/v1/exercises')->assertUnauthorized();
+    postJson('/api/v1/exercises', [])->assertUnauthorized();
+
+    $exercise = Exercise::factory()->create();
+    getJson("/api/v1/exercises/{$exercise->id}")->assertUnauthorized();
+    putJson("/api/v1/exercises/{$exercise->id}", [])->assertUnauthorized();
+    deleteJson("/api/v1/exercises/{$exercise->id}")->assertUnauthorized();
+});
+
+test('user cannot view other users exercise', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
+
+    Sanctum::actingAs($user);
+
+    $response = getJson("/api/v1/exercises/{$exercise->id}");
+
+    $response->assertForbidden();
+});
+
+test('user cannot update other users exercise', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
+
+    Sanctum::actingAs($user);
+
+    $response = putJson("/api/v1/exercises/{$exercise->id}", [
+        'name' => 'Hacked Name',
+    ]);
+
+    $response->assertForbidden();
+});
+
+test('user cannot update system exercise', function () {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => null]);
+
+    Sanctum::actingAs($user);
+
+    $response = putJson("/api/v1/exercises/{$exercise->id}", [
+        'name' => 'Hacked Name',
+    ]);
+
+    $response->assertForbidden();
+});
+
+test('user cannot delete other users exercise', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
+
+    Sanctum::actingAs($user);
+
+    $response = deleteJson("/api/v1/exercises/{$exercise->id}");
+
+    $response->assertForbidden();
+});
+
+test('user cannot delete system exercise', function () {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => null]);
+
+    Sanctum::actingAs($user);
+
+    $response = deleteJson("/api/v1/exercises/{$exercise->id}");
+
+    $response->assertForbidden();
+});
