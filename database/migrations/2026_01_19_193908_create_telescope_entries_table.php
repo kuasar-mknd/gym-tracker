@@ -19,6 +19,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! app()->isLocal()) {
+            return;
+        }
+
         $schema = Schema::connection($this->getConnection());
 
         if (! $schema->hasTable('telescope_entries')) {
