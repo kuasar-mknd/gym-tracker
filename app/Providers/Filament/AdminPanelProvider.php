@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -28,11 +29,14 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('backoffice')
             ->login()
+            ->profile() // Required for MFA setup
             ->authGuard('admin')
             ->colors([
                 'primary' => Color::Violet,
             ])
-            ->twoFactorAuthentication()
+            ->multiFactorAuthentication([
+                AppAuthentication::make(),
+            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
@@ -42,6 +46,9 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
                 FilamentInfoWidget::class,
+                \App\Filament\Widgets\StatsOverview::class,
+                \App\Filament\Widgets\UserActivityChart::class,
+                \App\Filament\Widgets\RecentUsersTable::class,
             ])
             ->middleware([
                 EncryptCookies::class,
