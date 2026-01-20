@@ -125,4 +125,6 @@ return [
 
     'admin_allowed_ips' => array_filter(explode(',', (string) env('ADMIN_ALLOWED_IPS', ''))),
 
+    'admin_initial_password' => env('ADMIN_INITIAL_PASSWORD', 'CHANGE_THIS_PASSWORD'),
+
 ];

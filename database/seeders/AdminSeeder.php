@@ -17,7 +17,7 @@ class AdminSeeder extends Seeder
             ['email' => 'admin@gymtracker.app'],
             [
                 'name' => 'Admin',
-                'password' => Hash::make('CHANGE_THIS_PASSWORD'),
+                'password' => Hash::make(config('app.admin_initial_password', 'CHANGE_THIS_PASSWORD')),
             ]
         );
 
