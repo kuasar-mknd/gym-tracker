@@ -21,25 +21,25 @@
                 <div class="space-y-6">
                     <!-- Unit Selection -->
                     <div class="flex justify-center">
-                        <div class="inline-flex rounded-lg bg-slate-100 p-1">
+                        <div class="inline-flex rounded-xl border border-white/20 bg-white/10 p-1 backdrop-blur-md">
                             <button
                                 @click="form.unit = 'kg'"
-                                class="rounded-md px-4 py-1 text-sm font-bold transition-all"
+                                class="rounded-lg px-6 py-2 text-sm font-bold transition-all duration-300"
                                 :class="
                                     form.unit === 'kg'
-                                        ? 'bg-white text-text-main shadow-sm'
-                                        : 'text-text-muted hover:text-text-main'
+                                        ? 'scale-105 bg-white text-text-main shadow-lg'
+                                        : 'text-text-muted hover:bg-white/10 hover:text-text-main'
                                 "
                             >
                                 KG
                             </button>
                             <button
                                 @click="form.unit = 'lbs'"
-                                class="rounded-md px-4 py-1 text-sm font-bold transition-all"
+                                class="rounded-lg px-6 py-2 text-sm font-bold transition-all duration-300"
                                 :class="
                                     form.unit === 'lbs'
-                                        ? 'bg-white text-text-main shadow-sm'
-                                        : 'text-text-muted hover:text-text-main'
+                                        ? 'scale-105 bg-white text-text-main shadow-lg'
+                                        : 'text-text-muted hover:bg-white/10 hover:text-text-main'
                                 "
                             >
                                 LBS
@@ -54,25 +54,55 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <button
                                     @click="form.gender = 'male'"
-                                    class="flex h-16 items-center justify-center rounded-2xl border-2 transition-all"
+                                    class="group relative flex h-20 items-center justify-center overflow-hidden rounded-2xl border transition-all duration-300 hover:scale-[1.02]"
                                     :class="
                                         form.gender === 'male'
-                                            ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                            : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                            ? 'border-electric-orange bg-electric-orange/10 shadow-[0_0_20px_rgba(255,85,0,0.15)]'
+                                            : 'border-white/20 bg-white/5 hover:bg-white/10'
                                     "
                                 >
-                                    <span class="font-display text-lg font-black uppercase">Homme</span>
+                                    <div class="relative z-10 flex flex-col items-center gap-1">
+                                        <span
+                                            class="material-symbols-outlined"
+                                            :class="form.gender === 'male' ? 'text-electric-orange' : 'text-text-muted'"
+                                            >male</span
+                                        >
+                                        <span
+                                            class="font-display text-sm font-black uppercase"
+                                            :class="form.gender === 'male' ? 'text-electric-orange' : 'text-text-muted'"
+                                            >Homme</span
+                                        >
+                                    </div>
+                                    <div
+                                        class="absolute inset-0 bg-gradient-to-br from-electric-orange/20 to-transparent opacity-0 transition-opacity duration-300"
+                                        :class="{ 'opacity-100': form.gender === 'male' }"
+                                    ></div>
                                 </button>
                                 <button
                                     @click="form.gender = 'female'"
-                                    class="flex h-16 items-center justify-center rounded-2xl border-2 transition-all"
+                                    class="group relative flex h-20 items-center justify-center overflow-hidden rounded-2xl border transition-all duration-300 hover:scale-[1.02]"
                                     :class="
                                         form.gender === 'female'
-                                            ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
-                                            : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                            ? 'border-hot-pink bg-hot-pink/10 shadow-[0_0_20px_rgba(255,0,128,0.15)]'
+                                            : 'border-white/20 bg-white/5 hover:bg-white/10'
                                     "
                                 >
-                                    <span class="font-display text-lg font-black uppercase">Femme</span>
+                                    <div class="relative z-10 flex flex-col items-center gap-1">
+                                        <span
+                                            class="material-symbols-outlined"
+                                            :class="form.gender === 'female' ? 'text-hot-pink' : 'text-text-muted'"
+                                            >female</span
+                                        >
+                                        <span
+                                            class="font-display text-sm font-black uppercase"
+                                            :class="form.gender === 'female' ? 'text-hot-pink' : 'text-text-muted'"
+                                            >Femme</span
+                                        >
+                                    </div>
+                                    <div
+                                        class="absolute inset-0 bg-gradient-to-br from-hot-pink/20 to-transparent opacity-0 transition-opacity duration-300"
+                                        :class="{ 'opacity-100': form.gender === 'female' }"
+                                    ></div>
                                 </button>
                             </div>
                         </div>
@@ -80,33 +110,31 @@
                         <!-- Inputs -->
                         <div class="space-y-4">
                             <div>
-                                <label class="font-display-label mb-2 block text-text-muted">Poids de corps</label>
                                 <div class="relative">
-                                    <input
+                                    <GlassInput
                                         type="number"
+                                        label="Poids de corps"
                                         v-model="form.body_weight"
                                         placeholder="80"
                                         step="0.1"
-                                        class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
                                     />
                                     <span
-                                        class="absolute right-4 top-1/2 -translate-y-1/2 font-bold uppercase text-text-muted"
+                                        class="absolute right-4 top-[42px] text-xs font-bold uppercase text-text-muted"
                                         >{{ form.unit }}</span
                                     >
                                 </div>
                             </div>
                             <div>
-                                <label class="font-display-label mb-2 block text-text-muted">Total soulevé</label>
                                 <div class="relative">
-                                    <input
+                                    <GlassInput
                                         type="number"
+                                        label="Total soulevé"
                                         v-model="form.lifted_weight"
                                         placeholder="400"
                                         step="0.5"
-                                        class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
                                     />
                                     <span
-                                        class="absolute right-4 top-1/2 -translate-y-1/2 font-bold uppercase text-text-muted"
+                                        class="absolute right-4 top-[42px] text-xs font-bold uppercase text-text-muted"
                                         >{{ form.unit }}</span
                                     >
                                 </div>
@@ -115,26 +143,39 @@
                     </div>
 
                     <!-- Result -->
-                    <div
-                        class="mt-6 flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 p-8 text-center"
-                    >
-                        <p class="text-sm font-bold uppercase tracking-wider text-text-muted">Ton Score Wilks</p>
-                        <div
-                            class="mt-2 bg-gradient-to-r from-electric-orange to-hot-pink bg-clip-text font-display text-6xl font-black italic tracking-tighter text-transparent"
+                    <div class="mt-6">
+                        <GlassCard
+                            variant="iridescent"
+                            padding="p-8"
+                            class="group relative overflow-hidden text-center"
                         >
-                            {{ calculatedScore }}
-                        </div>
+                            <!-- Background Glow -->
+                            <div
+                                class="absolute inset-0 bg-gradient-to-br from-electric-orange/10 via-transparent to-hot-pink/10 opacity-50 blur-xl transition-opacity duration-500 group-hover:opacity-80"
+                            ></div>
 
-                        <div class="mt-6">
-                            <GlassButton
-                                @click="saveScore"
-                                variant="primary"
-                                :disabled="!isValid || form.processing"
-                                class="min-w-[200px]"
-                            >
-                                Enregistrer
-                            </GlassButton>
-                        </div>
+                            <div class="relative z-10">
+                                <p class="text-xs font-black uppercase tracking-[0.2em] text-text-muted">
+                                    Ton Score Wilks
+                                </p>
+                                <div
+                                    class="mt-4 transform bg-gradient-to-r from-electric-orange to-hot-pink bg-clip-text font-display text-7xl font-black italic tracking-tighter text-transparent drop-shadow-sm transition-transform duration-500 hover:scale-105"
+                                >
+                                    {{ calculatedScore }}
+                                </div>
+
+                                <div class="mt-8 flex justify-center">
+                                    <GlassButton
+                                        @click="saveScore"
+                                        variant="primary"
+                                        :disabled="!isValid || form.processing"
+                                        class="min-w-[200px] shadow-glow-orange"
+                                    >
+                                        Enregistrer le score
+                                    </GlassButton>
+                                </div>
+                            </div>
+                        </GlassCard>
                     </div>
                 </div>
             </GlassCard>
@@ -142,10 +183,13 @@
             <!-- History Section -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
                 <div class="space-y-5">
-                    <h2 class="font-display text-lg font-black uppercase italic text-text-main">Historique</h2>
+                    <h2 class="pl-2 font-display text-lg font-black uppercase italic text-text-main">Historique</h2>
 
-                    <div v-if="history.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">history</span>
+                    <div
+                        v-if="history.length === 0"
+                        class="rounded-2xl border border-white/10 bg-white/5 py-12 text-center"
+                    >
+                        <span class="material-symbols-outlined mb-3 text-6xl text-white/20">history</span>
                         <p class="font-medium text-text-muted">Aucun historique.</p>
                         <p class="mt-1 text-sm text-text-muted/70">
                             Calcule ton score pour commencer à suivre tes progrès.
@@ -156,20 +200,24 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group relative flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 transition-all hover:border-slate-200 hover:shadow-sm"
+                            class="group relative flex items-center justify-between rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:bg-white/20 hover:shadow-lg"
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-xl font-bold text-text-main"
+                                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-gradient-to-br from-white/20 to-white/5 text-xl font-bold text-text-main shadow-inner"
                                 >
                                     {{ parseFloat(entry.score).toFixed(0) }}
                                 </div>
                                 <div>
                                     <p class="font-bold text-text-main">
-                                        {{ parseFloat(entry.lifted_weight) }} {{ entry.unit }} /
-                                        {{ parseFloat(entry.body_weight) }} {{ entry.unit }}
+                                        {{ parseFloat(entry.lifted_weight) }}
+                                        <span class="text-xs text-text-muted">{{ entry.unit }}</span>
+                                        <span class="mx-1 text-text-muted">/</span>
+                                        {{ parseFloat(entry.body_weight) }}
+                                        <span class="text-xs text-text-muted">{{ entry.unit }}</span>
                                     </p>
-                                    <p class="text-xs uppercase tracking-wider text-text-muted">
+                                    <p class="flex items-center gap-1 text-xs uppercase tracking-wider text-text-muted">
+                                        <span class="material-symbols-outlined text-[10px]">calendar_today</span>
                                         {{ new Date(entry.created_at).toLocaleDateString() }}
                                     </p>
                                 </div>
@@ -177,7 +225,7 @@
 
                             <button
                                 @click="deleteEntry(entry)"
-                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                class="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-all duration-300 hover:scale-110 hover:bg-red-500/20 hover:text-red-500 active:scale-95"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>
@@ -195,6 +243,7 @@ import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassInput from '@/Components/UI/GlassInput.vue'
 
 const props = defineProps({
     history: {
