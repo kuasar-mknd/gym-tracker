@@ -15,21 +15,22 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v6
+              uses: actions/checkout@v4
 
             - name: Setup Node
-              uses: actions/setup-node@v6
+              uses: actions/setup-node@v4
               with:
                   node-version: 20
+                  cache: 'npm'
 
             - name: Install Node Dependencies
-              run: npm install --legacy-peer-deps
+              run: npm ci --legacy-peer-deps
 
             - name: Build Assets
               run: npm run build
 
             - name: Upload Build Artifacts
-              uses: actions/upload-artifact@v6
+              uses: actions/upload-artifact@v4
               with:
                   name: build-assets
                   path: public/build
@@ -39,10 +40,10 @@ jobs:
         needs: frontend-build
         steps:
             - name: Checkout code
-              uses: actions/checkout@v6
+              uses: actions/checkout@v4
 
             - name: Download Build Artifacts
-              uses: actions/download-artifact@v7
+              uses: actions/download-artifact@v4
               with:
                   name: build-assets
                   path: public/build
@@ -53,6 +54,20 @@ jobs:
                   php-version: '8.4'
                   extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
                   coverage: none
+                  tools: composer:v2
+
+            - name: Get Composer Cache Directory
+              id: composer-cache
+              run: |
+                  echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+            - name: Cache Composer dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ${{ steps.composer-cache.outputs.dir }}
+                  key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: |
+                      ${{ runner.os }}-composer-
 
             - name: Install PHP Dependencies
               run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
@@ -89,10 +104,10 @@ jobs:
                 options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
         steps:
             - name: Checkout code
-              uses: actions/checkout@v6
+              uses: actions/checkout@v4
 
             - name: Download Build Artifacts
-              uses: actions/download-artifact@v7
+              uses: actions/download-artifact@v4
               with:
                   name: build-assets
                   path: public/build
@@ -103,6 +118,20 @@ jobs:
                   php-version: '8.4'
                   extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
                   coverage: none
+                  tools: composer:v2
+
+            - name: Get Composer Cache Directory
+              id: composer-cache
+              run: |
+                  echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+            - name: Cache Composer dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ${{ steps.composer-cache.outputs.dir }}
+                  key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: |
+                      ${{ runner.os }}-composer-
 
             - name: Install PHP Dependencies
               run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
@@ -165,14 +194,14 @@ jobs:
 
             - name: Upload Test Screenshots
               if: failure()
-              uses: actions/upload-artifact@v6
+              uses: actions/upload-artifact@v4
               with:
                   name: dusk-screenshots
                   path: tests/Browser/screenshots
 
             - name: Upload Test Logs
               if: failure()
-              uses: actions/upload-artifact@v6
+              uses: actions/upload-artifact@v4
               with:
                   name: dusk-logs
                   path: tests/Browser/logs
@@ -181,7 +210,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v6
+              uses: actions/checkout@v4
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -189,6 +218,20 @@ jobs:
                   php-version: '8.4'
                   extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
                   coverage: none
+                  tools: composer:v2
+
+            - name: Get Composer Cache Directory
+              id: composer-cache
+              run: |
+                  echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+            - name: Cache Composer dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ${{ steps.composer-cache.outputs.dir }}
+                  key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: |
+                      ${{ runner.os }}-composer-
 
             - name: Install PHP Dependencies
               run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
@@ -209,7 +252,7 @@ jobs:
             IMAGE_NAME: ${{ github.repository }}
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v6
+              uses: actions/checkout@v4
 
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v3
