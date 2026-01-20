@@ -36,7 +36,6 @@ class SecurityHeaders
                 "frame-src 'self' https:",
                 "object-src 'none'",
                 "base-uri 'self'",
-                "base-uri 'self'",
                 "form-action 'self'",
             ]);
         } elseif ($request->is('backoffice*')) {
@@ -45,7 +44,7 @@ class SecurityHeaders
                 "default-src 'self'",
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.bunny.net",
                 "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
-                "img-src 'self' data: https:",
+                "img-src 'self' data: https: https://ui-avatars.com",
                 "font-src 'self' https://fonts.bunny.net https://fonts.gstatic.com data:",
                 "connect-src 'self'".(app()->isLocal() ? ' ws://localhost:* wss://localhost:* http://localhost:*' : ''),
             ]);
