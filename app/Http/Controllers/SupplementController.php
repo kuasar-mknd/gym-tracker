@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Supplement;
 use App\Models\SupplementLog;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
