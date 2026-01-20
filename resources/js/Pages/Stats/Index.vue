@@ -10,6 +10,7 @@ const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/V
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
+const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
 
 const props = defineProps({
     volumeTrend: Array,
@@ -22,6 +23,7 @@ const props = defineProps({
     weightChange: Number,
     bodyFat: Number,
     selectedPeriod: String,
+    durationHistory: Array,
 })
 
 const currentPeriod = ref(props.selectedPeriod || '30j')
@@ -238,6 +240,30 @@ watch(selectedExercise, (newVal) => {
                 <div v-else class="flex h-48 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">bar_chart</span>
                     <p class="text-sm text-text-muted">Pas encore de données de volume</p>
+                </div>
+            </GlassCard>
+
+            <!-- Workout Duration Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
+                <div class="mb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                            Durée des Séances
+                        </h3>
+                        <p class="text-xs font-semibold text-text-muted">
+                            Historique des 30 dernières séances
+                        </p>
+                    </div>
+                    <div class="flex size-10 items-center justify-center rounded-xl bg-violet-500/10">
+                        <span class="material-symbols-outlined text-xl text-violet-500">timer</span>
+                    </div>
+                </div>
+                <div v-if="durationHistory && durationHistory.length > 0" class="h-48">
+                    <WorkoutDurationChart :data="durationHistory" />
+                </div>
+                <div v-else class="flex h-48 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">timer_off</span>
+                    <p class="text-sm text-text-muted">Pas encore de données de durée</p>
                 </div>
             </GlassCard>
 
