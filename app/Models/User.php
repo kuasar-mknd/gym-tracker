@@ -8,11 +8,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasPushSubscriptions, Notifiable;
+    use HasApiTokens, HasFactory, HasPushSubscriptions, LogsActivity, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -140,5 +142,13 @@ class User extends Authenticatable
     public function warmupPreference(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(WarmupPreference::class);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email', 'avatar', 'default_rest_time'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 }
