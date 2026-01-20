@@ -39,8 +39,6 @@ class SecurityHeaders
                 "form-action 'self'",
             ]);
         } elseif ($request->is('backoffice*') || str_contains($request->url(), '/backoffice')) {
-            // DEBUG: Confirm matching
-            $response->headers->set('X-CSP-Mode', 'backoffice-relaxed');
 
             // Filament/Livewire needs looser CSP for now to ensure Alpine/JS works reliably
             $csp = implode('; ', [
