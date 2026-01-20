@@ -22,10 +22,16 @@ class SecurityHeaders
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'no-referrer-when-downgrade');
 
-        // Build CSP with nonce if available, otherwise fall back to unsafe-inline
+        // Build CSP with nonce if available, otherwise generate one or fall back
         $nonce = $request->attributes->get('csp-nonce');
 
-        if (str_contains($request->path(), 'backoffice')) {
+        if (! $nonce) {
+            $nonce = \Illuminate\Support\Str::random(32);
+            $request->attributes->set('csp-nonce', $nonce);
+            \Illuminate\Support\Facades\Vite::useCspNonce($nonce);
+        }
+
+        if (str_contains($request->fullUrl(), 'backoffice')) {
             // ADMIN / BACKOFFICE: Relaxed CSP (Allows Alpine/Livewire eval + Avatars)
             $csp = implode('; ', [
                 "default-src 'self'",
@@ -60,10 +66,12 @@ class SecurityHeaders
                 "img-src 'self' data: https:",
                 "font-src 'self' https://fonts.bunny.net https://fonts.gstatic.com data:",
                 "connect-src 'self'".(app()->isLocal() ? ' ws://localhost:* wss://localhost:* http://localhost:*' : ''),
+                "base-uri 'self'",
+                "form-action 'self'",
             ]);
         } else {
             // Fallback for non-web requests (API, console, etc.)
-            $csp = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self';";
+            $csp = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; form-action 'self';";
         }
 
         $response->headers->set('Content-Security-Policy', $csp);
