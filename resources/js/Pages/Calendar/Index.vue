@@ -124,7 +124,7 @@ const formatDateFull = (dateStr) => {
         <template #header-actions>
             <GlassButton
                 @click="changeMonth(0)"
-                class="!px-3"
+                class="px-3!"
                 v-if="currentMonth !== new Date().getMonth() + 1 || currentYear !== new Date().getFullYear()"
             >
                 Aujourd'hui
@@ -134,15 +134,15 @@ const formatDateFull = (dateStr) => {
         <div class="space-y-6">
             <!-- Calendar Navigation -->
             <div class="flex items-center justify-between">
-                <GlassButton @click="changeMonth(-1)" class="!px-3">
+                <GlassButton @click="changeMonth(-1)" class="px-3!">
                     <span class="material-symbols-outlined">chevron_left</span>
                 </GlassButton>
 
-                <h2 class="text-xl font-black uppercase italic tracking-tighter text-text-main">
+                <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic">
                     {{ currentMonthName }} <span class="text-electric-orange">{{ currentYear }}</span>
                 </h2>
 
-                <GlassButton @click="changeMonth(1)" class="!px-3">
+                <GlassButton @click="changeMonth(1)" class="px-3!">
                     <span class="material-symbols-outlined">chevron_right</span>
                 </GlassButton>
             </div>
@@ -154,7 +154,7 @@ const formatDateFull = (dateStr) => {
                     <div
                         v-for="day in weekDays"
                         :key="day"
-                        class="text-center text-[10px] font-bold uppercase tracking-wider text-text-muted"
+                        class="text-text-muted text-center text-[10px] font-bold tracking-wider uppercase"
                     >
                         {{ day }}
                     </div>
@@ -167,7 +167,7 @@ const formatDateFull = (dateStr) => {
                         :key="index"
                         @click="selectDate(day)"
                         :class="[
-                            'relative flex aspect-square cursor-pointer flex-col items-center justify-center border-b border-r border-white/5 transition-all hover:bg-white/10',
+                            'relative flex aspect-square cursor-pointer flex-col items-center justify-center border-r border-b border-white/5 transition-all hover:bg-white/10',
                             day.day ? '' : 'pointer-events-none',
                             selectedDate?.dateStr === day.dateStr ? 'bg-white/15 shadow-inner' : '',
                             (index + 1) % 7 === 0 ? 'border-r-0' : '', // Remove right border for last column
@@ -188,7 +188,7 @@ const formatDateFull = (dateStr) => {
                             <div class="mt-1 flex gap-1">
                                 <span
                                     v-if="day.hasWorkout"
-                                    class="h-1.5 w-1.5 rounded-full bg-vivid-violet shadow-[0_0_4px_rgba(136,0,255,0.8)]"
+                                    class="bg-vivid-violet h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgba(136,0,255,0.8)]"
                                 ></span>
                                 <span
                                     v-if="day.hasJournal"
@@ -203,16 +203,16 @@ const formatDateFull = (dateStr) => {
             <!-- Selected Day Details -->
             <div v-if="selectedDayDetails" class="animate-slide-up space-y-4">
                 <div class="flex items-center gap-2">
-                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-text-muted/10 to-transparent"></div>
-                    <h3 class="font-display text-lg font-bold capitalize text-text-main">
+                    <div class="via-text-muted/10 h-px flex-1 bg-linear-to-r from-transparent to-transparent"></div>
+                    <h3 class="font-display text-text-main text-lg font-bold capitalize">
                         {{ formatDateFull(selectedDayDetails.dateStr) }}
                     </h3>
-                    <div class="h-px flex-1 bg-gradient-to-r from-transparent via-text-muted/10 to-transparent"></div>
+                    <div class="via-text-muted/10 h-px flex-1 bg-linear-to-r from-transparent to-transparent"></div>
                 </div>
 
                 <!-- Workouts -->
                 <div v-if="selectedDayDetails.workouts.length > 0" class="space-y-3">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-text-muted">Séances</h4>
+                    <h4 class="text-text-muted text-xs font-black tracking-widest uppercase">Séances</h4>
                     <Link
                         v-for="workout in selectedDayDetails.workouts"
                         :key="workout.id"
@@ -223,13 +223,13 @@ const formatDateFull = (dateStr) => {
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-vivid-violet/20 text-vivid-violet"
+                                        class="bg-vivid-violet/20 text-vivid-violet flex h-10 w-10 items-center justify-center rounded-xl"
                                     >
                                         <span class="material-symbols-outlined">fitness_center</span>
                                     </div>
                                     <div>
-                                        <div class="font-bold text-text-main">{{ workout.name }}</div>
-                                        <div class="text-xs text-text-muted">
+                                        <div class="text-text-main font-bold">{{ workout.name }}</div>
+                                        <div class="text-text-muted text-xs">
                                             {{ workout.exercises_count }} exercices
                                             <span v-if="workout.preview_exercises.length" class="text-text-muted/60"
                                                 >• {{ workout.preview_exercises.join(', ') }}</span
@@ -245,7 +245,7 @@ const formatDateFull = (dateStr) => {
 
                 <!-- Journal -->
                 <div v-if="selectedDayDetails.journal" class="space-y-3">
-                    <h4 class="text-xs font-black uppercase tracking-widest text-text-muted">Journal</h4>
+                    <h4 class="text-text-muted text-xs font-black tracking-widest uppercase">Journal</h4>
                     <GlassCard padding="p-4">
                         <div class="flex items-start gap-3">
                             <div
@@ -255,18 +255,18 @@ const formatDateFull = (dateStr) => {
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="font-bold text-text-main">Entrée Journal</span>
+                                    <span class="text-text-main font-bold">Entrée Journal</span>
                                     <span
                                         v-if="selectedDayDetails.journal.mood_score"
-                                        class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-text-main"
+                                        class="text-text-main rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold"
                                     >
                                         Humeur: {{ selectedDayDetails.journal.mood_score }}/10
                                     </span>
                                 </div>
-                                <div v-if="selectedDayDetails.journal.has_note" class="mt-1 text-sm text-text-muted">
+                                <div v-if="selectedDayDetails.journal.has_note" class="text-text-muted mt-1 text-sm">
                                     Notes ajoutées...
                                 </div>
-                                <div v-else class="mt-1 text-sm italic text-text-muted/60">Aucune note écrite.</div>
+                                <div v-else class="text-text-muted/60 mt-1 text-sm italic">Aucune note écrite.</div>
                             </div>
                         </div>
                     </GlassCard>
@@ -275,14 +275,14 @@ const formatDateFull = (dateStr) => {
                 <!-- Empty State -->
                 <div
                     v-if="!selectedDayDetails.workouts.length && !selectedDayDetails.journal"
-                    class="py-8 text-center text-text-muted/60"
+                    class="text-text-muted/60 py-8 text-center"
                 >
                     <span class="material-symbols-outlined mb-2 text-4xl opacity-50">event_busy</span>
                     <p>Aucune activité ce jour-là.</p>
                 </div>
             </div>
 
-            <div v-else class="py-12 text-center text-text-muted/40">
+            <div v-else class="text-text-muted/40 py-12 text-center">
                 <span class="material-symbols-outlined mb-2 animate-pulse text-4xl">touch_app</span>
                 <p>Sélectionne une date pour voir les détails</p>
             </div>

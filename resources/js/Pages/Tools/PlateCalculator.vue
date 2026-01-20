@@ -6,12 +6,12 @@
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1
-                    class="font-display text-4xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                 >
                     Calculateur<br />
                     <span class="text-gradient">de Plaques</span>
                 </h1>
-                <p class="mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">
+                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
                     Charge ta barre parfaitement
                 </p>
             </header>
@@ -21,30 +21,30 @@
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Poids Cible</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Poids Cible</label>
                             <div class="relative">
                                 <input
                                     type="number"
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center font-display text-3xl font-black text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
                                 />
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-text-muted"
+                                <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
                                 >
                             </div>
                         </div>
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Poids Barre</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Poids Barre</label>
                             <div class="relative">
                                 <input
                                     type="number"
                                     v-model="barWeight"
                                     placeholder="20"
-                                    class="h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center font-display text-3xl font-black text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
                                 />
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-text-muted"
+                                <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
                                 >
                             </div>
@@ -59,7 +59,7 @@
                         <div class="relative flex h-[200px] min-w-[300px] items-center justify-center">
                             <!-- Bar -->
                             <div
-                                class="absolute z-0 h-5 w-full rounded-full bg-gradient-to-r from-slate-300 via-slate-400 to-slate-300 shadow-inner"
+                                class="absolute z-0 h-5 w-full rounded-full bg-linear-to-r from-slate-300 via-slate-400 to-slate-300 shadow-inner"
                             ></div>
 
                             <!-- Center Marker -->
@@ -112,13 +112,13 @@
 
                         <!-- Weight Info -->
                         <div class="mt-6 text-center">
-                            <p class="text-lg font-bold text-text-main">
+                            <p class="text-text-main text-lg font-bold">
                                 Poids Total:
-                                <span class="font-display text-2xl font-black text-electric-orange"
+                                <span class="font-display text-electric-orange text-2xl font-black"
                                     >{{ actualWeight }} kg</span
                                 >
                             </p>
-                            <p class="mt-2 text-sm text-text-muted">
+                            <p class="text-text-muted mt-2 text-sm">
                                 Plaques par côté:
                                 <span class="font-bold">{{
                                     calculatedPlates.map((p) => p.weight + 'kg').join(' + ')
@@ -133,7 +133,7 @@
                         class="mt-8 rounded-3xl border border-slate-100 bg-slate-50 py-8 text-center"
                     >
                         <span class="material-symbols-outlined mb-3 text-5xl text-slate-300">error</span>
-                        <p class="font-medium text-text-muted">
+                        <p class="text-text-muted font-medium">
                             Impossible de charger ce poids avec les plaques disponibles.
                         </p>
                     </div>
@@ -145,10 +145,10 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="font-display text-lg font-black uppercase italic text-text-main">
+                            <h2 class="font-display text-text-main text-lg font-black uppercase italic">
                                 Mon Inventaire
                             </h2>
-                            <p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-muted">
+                            <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
                                 Plaques disponibles
                             </p>
                         </div>
@@ -159,8 +159,8 @@
 
                     <div v-if="plates.length === 0" class="py-12 text-center">
                         <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">inventory_2</span>
-                        <p class="font-medium text-text-muted">Aucune plaque dans l'inventaire.</p>
-                        <p class="mt-1 text-sm text-text-muted/70">Ajoute tes plaques pour commencer.</p>
+                        <p class="text-text-muted font-medium">Aucune plaque dans l'inventaire.</p>
+                        <p class="text-text-muted/70 mt-1 text-sm">Ajoute tes plaques pour commencer.</p>
                     </div>
 
                     <div v-else class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
@@ -185,7 +185,7 @@
                                     {{ plate.weight }}
                                 </div>
                                 <div
-                                    class="mt-1 text-xs font-bold uppercase tracking-wider"
+                                    class="mt-1 text-xs font-bold tracking-wider uppercase"
                                     :class="
                                         parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
                                             ? 'text-text-muted'
@@ -196,7 +196,7 @@
                                 </div>
                                 <button
                                     @click="deletePlate(plate)"
-                                    class="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all hover:bg-red-600 group-hover:opacity-100"
+                                    class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all group-hover:opacity-100 hover:bg-red-600"
                                 >
                                     <span class="material-symbols-outlined text-sm">close</span>
                                 </button>
@@ -210,17 +210,17 @@
         <!-- Add Plate Modal -->
         <Modal :show="addingPlate" @close="addingPlate = false">
             <div class="space-y-6 p-6">
-                <h2 class="font-display text-xl font-black uppercase italic text-text-main">Ajouter une plaque</h2>
+                <h2 class="font-display text-text-main text-xl font-black uppercase italic">Ajouter une plaque</h2>
 
                 <div class="space-y-4">
                     <div>
-                        <label class="font-display-label mb-2 block text-text-muted">Poids (kg)</label>
+                        <label class="font-display-label text-text-muted mb-2 block">Poids (kg)</label>
                         <GlassInput type="number" v-model="newPlate.weight" placeholder="ex: 20" step="0.5" />
                     </div>
                     <div>
-                        <label class="font-display-label mb-2 block text-text-muted">Quantité (total)</label>
+                        <label class="font-display-label text-text-muted mb-2 block">Quantité (total)</label>
                         <GlassInput type="number" v-model="newPlate.quantity" placeholder="ex: 4" />
-                        <p class="mt-2 text-xs text-text-muted">Nombre total de plaques disponibles (pas de paires)</p>
+                        <p class="text-text-muted mt-2 text-xs">Nombre total de plaques disponibles (pas de paires)</p>
                     </div>
                 </div>
 

@@ -57,7 +57,7 @@ Or if you want inline:
 +<span class="bg-dark-800/80 px-2 text-white/50 backdrop-blur-sm">Ou continuer avec</span>
 ```
 
-Or use CSS variable: `bg-[var(--gradient-bg)]` if applicable.
+Or use CSS variable: `bg-(--gradient-bg)` if applicable.
 
 ---
 
@@ -77,7 +77,7 @@ Or use CSS variable: `bg-[var(--gradient-bg)]` if applicable.
 
 ```diff
 -<div class="h-full bg-accent-primary transition-all duration-1000" ...></div>
-+<div class="h-full bg-gradient-to-r from-accent-primary via-purple-400 to-accent-primary shadow-lg shadow-accent-primary/40 transition-all duration-1000" ...></div>
++<div class="h-full bg-linear-to-r from-accent-primary via-purple-400 to-accent-primary shadow-lg shadow-accent-primary/40 transition-all duration-1000" ...></div>
 ```
 
 ---
@@ -87,7 +87,7 @@ Or use CSS variable: `bg-[var(--gradient-bg)]` if applicable.
 **The Offense:** [Workouts/Index.vue:L125](file:///Users/samueldulex/git/gym-tracker/resources/js/Pages/Workouts/Index.vue#L125)
 
 ```html
-<div class="flex-shrink-0 rounded-xl bg-glass px-3 py-2 text-sm"></div>
+<div class="shrink-0 rounded-xl bg-glass px-3 py-2 text-sm"></div>
 ```
 
 **Why it's bland:** These exercise pills look like plain tags. They need a subtle border to catch light — the hallmark of glass.
@@ -95,8 +95,8 @@ Or use CSS variable: `bg-[var(--gradient-bg)]` if applicable.
 **The Fix:**
 
 ```diff
--<div class="flex-shrink-0 rounded-xl bg-glass px-3 py-2 text-sm">
-+<div class="flex-shrink-0 rounded-xl bg-glass border border-white/10 px-3 py-2 text-sm shadow-sm">
+-<div class="shrink-0 rounded-xl bg-glass px-3 py-2 text-sm">
++<div class="shrink-0 rounded-xl bg-glass border border-white/10 px-3 py-2 text-sm shadow-sm">
 ```
 
 ---
@@ -171,7 +171,7 @@ Apply to all `text-2xl`+ headings across the app.
 **The Suggestion:** For consistency, consider making all stat values use gradient text with accent-specific colors:
 
 ```html
-<div class="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-2xl font-bold text-transparent"></div>
+<div class="bg-linear-to-r from-green-400 to-emerald-500 bg-clip-text text-2xl font-bold text-transparent"></div>
 ```
 
 ---

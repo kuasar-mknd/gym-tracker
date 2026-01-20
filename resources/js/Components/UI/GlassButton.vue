@@ -28,7 +28,7 @@ defineProps({
 
 const sizeClasses = {
     sm: 'min-h-[36px] px-4 py-2 text-sm rounded-xl',
-    md: 'min-h-[44px] px-5 py-2.5 text-base rounded-xl',
+    md: 'min-h-touch px-5 py-2.5 text-base rounded-xl',
     lg: 'min-h-[52px] px-6 py-3 text-lg rounded-2xl',
     xl: 'min-h-[64px] px-8 py-4 text-xl rounded-2xl',
 }

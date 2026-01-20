@@ -44,11 +44,11 @@ const formatDate = (date) => {
     <AuthenticatedLayout page-title="Notifications">
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-text-main">Notifications</h2>
+                <h2 class="text-text-main text-xl font-semibold">Notifications</h2>
                 <GlassButton
                     v-if="notifications.data.some((n) => !n.read_at)"
                     @click="markAllAsRead"
-                    class="!py-1.5 !text-xs"
+                    class="py-1.5! text-xs!"
                 >
                     Tout marquer comme lu
                 </GlassButton>
@@ -61,7 +61,7 @@ const formatDate = (date) => {
                 class="flex flex-col items-center justify-center py-12 text-center"
             >
                 <div
-                    class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-text-muted/20"
+                    class="text-text-muted/20 mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -78,15 +78,15 @@ const formatDate = (date) => {
                         />
                     </svg>
                 </div>
-                <h3 class="text-lg font-medium text-text-main">Aucune notification</h3>
-                <p class="mt-1 text-text-muted">Tu es à jour !</p>
+                <h3 class="text-text-main text-lg font-medium">Aucune notification</h3>
+                <p class="text-text-muted mt-1">Tu es à jour !</p>
             </div>
 
             <div v-else class="space-y-3">
                 <GlassCard
                     v-for="notification in notifications.data"
                     :key="notification.id"
-                    :class="['transition', !notification.read_at ? 'ring-1 ring-accent-primary/30' : 'opacity-70']"
+                    :class="['transition', !notification.read_at ? 'ring-accent-primary/30 ring-1' : 'opacity-70']"
                 >
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex gap-4">
@@ -130,9 +130,9 @@ const formatDate = (date) => {
                                 </svg>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-text-main">{{ notification.data.title }}</h4>
-                                <p class="text-sm text-text-muted">{{ notification.data.message }}</p>
-                                <span class="mt-2 block text-[10px] uppercase tracking-wider text-text-muted/30">
+                                <h4 class="text-text-main font-semibold">{{ notification.data.title }}</h4>
+                                <p class="text-text-muted text-sm">{{ notification.data.message }}</p>
+                                <span class="text-text-muted/30 mt-2 block text-[10px] tracking-wider uppercase">
                                     {{ formatDate(notification.created_at) }}
                                 </span>
                             </div>
@@ -141,7 +141,7 @@ const formatDate = (date) => {
                         <button
                             v-if="!notification.read_at"
                             @click="markAsRead(notification.id)"
-                            class="rounded-lg p-1 text-text-muted/20 hover:bg-slate-100/50 hover:text-text-main"
+                            class="text-text-muted/20 hover:text-text-main rounded-lg p-1 hover:bg-slate-100/50"
                             title="Marquer comme lu"
                         >
                             <svg

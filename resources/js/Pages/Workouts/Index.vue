@@ -48,7 +48,7 @@ const confirmDeletion = (workout) => {
         <template #header-actions>
             <GlassButton
                 variant="primary"
-                class="flex !h-11 !min-h-[44px] !w-11 items-center justify-center !p-0"
+                class="min-h-touch! flex h-11! w-11! items-center justify-center p-0!"
                 :loading="form.processing"
                 @click="createWorkout"
                 aria-label="Nouvelle séance"
@@ -68,7 +68,7 @@ const confirmDeletion = (workout) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-text-main">Mes Séances</h2>
+                <h2 class="text-text-main text-xl font-semibold">Mes Séances</h2>
                 <div class="flex gap-2">
                     <Link :href="route('calendar.index')">
                         <GlassButton>
@@ -118,15 +118,15 @@ const confirmDeletion = (workout) => {
                     <GlassCard padding="p-4">
                         <div class="text-center">
                             <div class="text-gradient text-2xl font-bold">{{ workouts.data?.length || 0 }}</div>
-                            <div class="mt-1 text-xs text-text-muted">Total séances</div>
+                            <div class="text-text-muted mt-1 text-xs">Total séances</div>
                         </div>
                     </GlassCard>
                     <GlassCard padding="p-4">
                         <div class="text-center">
-                            <div class="text-2xl font-bold text-accent-success">
+                            <div class="text-accent-success text-2xl font-bold">
                                 {{ workouts.data?.reduce((acc, w) => acc + w.workout_lines.length, 0) || 0 }}
                             </div>
-                            <div class="mt-1 text-xs text-text-muted">Exercices</div>
+                            <div class="text-text-muted mt-1 text-xs">Exercices</div>
                         </div>
                     </GlassCard>
                 </div>
@@ -136,8 +136,8 @@ const confirmDeletion = (workout) => {
                     <!-- Frequency Chart -->
                     <GlassCard v-if="monthlyFrequency && monthlyFrequency.length > 0">
                         <div class="mb-4">
-                            <h3 class="text-lg font-bold text-text-main">Fréquence</h3>
-                            <p class="text-xs text-text-muted">Séances par mois</p>
+                            <h3 class="text-text-main text-lg font-bold">Fréquence</h3>
+                            <p class="text-text-muted text-xs">Séances par mois</p>
                         </div>
                         <WorkoutsPerMonthChart :data="monthlyFrequency" />
                     </GlassCard>
@@ -145,8 +145,8 @@ const confirmDeletion = (workout) => {
                     <!-- Duration Chart -->
                     <GlassCard v-if="durationHistory && durationHistory.length > 0">
                         <div class="mb-4">
-                            <h3 class="text-lg font-bold text-text-main">Durée</h3>
-                            <p class="text-xs text-text-muted">Temps d'entraînement (min)</p>
+                            <h3 class="text-text-main text-lg font-bold">Durée</h3>
+                            <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
                         </div>
                         <WorkoutDurationChart :data="durationHistory" />
                     </GlassCard>
@@ -154,8 +154,8 @@ const confirmDeletion = (workout) => {
                     <!-- Volume per Workout Chart -->
                     <GlassCard v-if="volumeHistory && volumeHistory.length > 0" class="lg:col-span-2">
                         <div class="mb-4">
-                            <h3 class="text-lg font-bold text-text-main">Volume par Séance</h3>
-                            <p class="text-xs text-text-muted">Volume total soulevé (kg)</p>
+                            <h3 class="text-text-main text-lg font-bold">Volume par Séance</h3>
+                            <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
                         </div>
                         <VolumePerWorkoutChart :data="volumeHistory" />
                     </GlassCard>
@@ -164,29 +164,29 @@ const confirmDeletion = (workout) => {
 
             <!-- Available Exercises -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="mb-3 font-semibold text-text-main">Exercices disponibles</h3>
+                <h3 class="text-text-main mb-3 font-semibold">Exercices disponibles</h3>
                 <div class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
                     <div
                         v-for="exercise in exercises"
                         :key="exercise.id"
-                        class="flex-shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm"
+                        class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm"
                     >
-                        <div class="font-medium text-text-main">{{ exercise.name }}</div>
-                        <div class="text-xs text-text-muted">{{ exercise.category }}</div>
+                        <div class="text-text-main font-medium">{{ exercise.name }}</div>
+                        <div class="text-text-muted text-xs">{{ exercise.category }}</div>
                     </div>
                 </div>
             </div>
 
             <!-- Workouts List -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="mb-3 font-semibold text-text-main">Historique</h3>
+                <h3 class="text-text-main mb-3 font-semibold">Historique</h3>
 
                 <div v-if="!workouts.data || workouts.data.length === 0">
                     <GlassCard>
                         <div class="py-12 text-center">
                             <div class="mb-3 text-5xl">💪</div>
-                            <h3 class="text-lg font-semibold text-text-main">Aucune séance</h3>
-                            <p class="mt-1 text-text-muted">Clique sur le bouton + pour commencer</p>
+                            <h3 class="text-text-main text-lg font-semibold">Aucune séance</h3>
+                            <p class="text-text-muted mt-1">Clique sur le bouton + pour commencer</p>
                             <GlassButton
                                 variant="primary"
                                 class="mt-4"
@@ -211,14 +211,14 @@ const confirmDeletion = (workout) => {
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2">
-                                        <h4 class="font-semibold text-text-main">
+                                        <h4 class="text-text-main font-semibold">
                                             {{ workout.name || 'Séance' }}
                                         </h4>
                                         <span class="glass-badge glass-badge-primary text-xs">
                                             {{ workout.workout_lines.length }} exo
                                         </span>
                                     </div>
-                                    <div class="mt-1 text-sm text-text-muted">
+                                    <div class="text-text-muted mt-1 text-sm">
                                         {{ formatDate(workout.started_at) }}
                                     </div>
 
@@ -227,14 +227,14 @@ const confirmDeletion = (workout) => {
                                         <span
                                             v-for="line in workout.workout_lines.slice(0, 3)"
                                             :key="line.id"
-                                            class="rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs text-text-muted"
+                                            class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs"
                                         >
                                             {{ line.exercise.name }}
                                             <span class="text-text-muted/50">• {{ line.sets.length }} séries</span>
                                         </span>
                                         <span
                                             v-if="workout.workout_lines.length > 3"
-                                            class="rounded-lg bg-white/50 px-2 py-1 text-xs text-text-muted/50"
+                                            class="text-text-muted/50 rounded-lg bg-white/50 px-2 py-1 text-xs"
                                         >
                                             +{{ workout.workout_lines.length - 3 }}
                                         </span>
@@ -243,7 +243,7 @@ const confirmDeletion = (workout) => {
                                 <div class="flex items-center gap-3">
                                     <button
                                         @click.prevent="confirmDeletion(workout)"
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted/30 transition-colors hover:bg-red-50 hover:text-red-500"
+                                        class="text-text-muted/30 flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-red-50 hover:text-red-500"
                                         title="Supprimer la séance"
                                         aria-label="Supprimer la séance"
                                     >
@@ -252,7 +252,7 @@ const confirmDeletion = (workout) => {
                                         >
                                     </button>
                                     <svg
-                                        class="h-5 w-5 flex-shrink-0 text-text-muted/30"
+                                        class="text-text-muted/30 h-5 w-5 shrink-0"
                                         xmlns="http://www.w3.org/2000/svg"
                                         fill="none"
                                         viewBox="0 0 24 24"

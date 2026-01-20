@@ -417,11 +417,11 @@ const hasNoResults = computed(() => {
                 <div class="flex items-center gap-4">
                     <Link
                         :href="route('workouts.index')"
-                        class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
+                        class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
                     >
                         <span class="material-symbols-outlined">arrow_back</span>
                     </Link>
-                    <h1 class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main">
+                    <h1 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
                         {{ workout.name || 'Séance' }}
                     </h1>
                 </div>
@@ -431,7 +431,7 @@ const hasNoResults = computed(() => {
                         v-if="!workout.ended_at"
                         id="finish-workout-desktop"
                         @click="finishWorkout"
-                        class="flex items-center gap-2 rounded-full bg-electric-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
+                        class="bg-electric-orange flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black tracking-widest text-white uppercase shadow-lg shadow-orange-500/30 transition hover:bg-orange-600 active:scale-95"
                     >
                         <span class="material-symbols-outlined text-sm">stop_circle</span>
                         Terminer
@@ -447,7 +447,7 @@ const hasNoResults = computed(() => {
 
                     <button
                         @click="showSettingsModal = true"
-                        class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-all hover:bg-slate-50 active:scale-95"
+                        class="text-text-muted flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-all hover:bg-slate-50 active:scale-95"
                         title="Paramètres de la séance"
                     >
                         <span class="material-symbols-outlined">settings</span>
@@ -468,7 +468,7 @@ const hasNoResults = computed(() => {
         <template #header-actions>
             <button
                 @click="showSettingsModal = true"
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-all hover:bg-slate-50 active:scale-95"
+                class="text-text-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-all hover:bg-slate-50 active:scale-95"
                 title="Paramètres de la séance"
             >
                 <span class="material-symbols-outlined">settings</span>
@@ -477,7 +477,7 @@ const hasNoResults = computed(() => {
             <button
                 v-if="!workout.ended_at"
                 @click="showAddExercise = true"
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-electric-orange text-white shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+                class="bg-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white shadow-lg shadow-orange-500/30 transition-all active:scale-95"
                 title="Ajouter un exercice"
             >
                 <span class="material-symbols-outlined">add</span>
@@ -487,7 +487,7 @@ const hasNoResults = computed(() => {
                 v-if="!workout.ended_at"
                 id="finish-workout-mobile"
                 @click="finishWorkout"
-                class="flex shrink-0 items-center gap-2 rounded-full border border-electric-orange/20 bg-electric-orange/10 px-4 py-2 text-xs font-black uppercase tracking-widest text-electric-orange transition hover:bg-electric-orange/20 active:scale-95"
+                class="border-electric-orange/20 bg-electric-orange/10 text-electric-orange hover:bg-electric-orange/20 flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-xs font-black tracking-widest uppercase transition active:scale-95"
             >
                 <span class="material-symbols-outlined text-sm">stop_circle</span>
                 Terminer
@@ -508,17 +508,17 @@ const hasNoResults = computed(() => {
                 <!-- Exercise Header -->
                 <div class="mb-4 flex items-center justify-between">
                     <div>
-                        <h3 class="font-display text-xl font-black uppercase italic tracking-tight text-text-main">
+                        <h3 class="font-display text-text-main text-xl font-black tracking-tight uppercase italic">
                             {{ line.exercise.name }}
                         </h3>
-                        <p class="text-xs font-bold uppercase tracking-wider text-text-muted">
+                        <p class="text-text-muted text-xs font-bold tracking-wider uppercase">
                             {{ line.exercise.category }}
                         </p>
                     </div>
                     <button
                         v-if="!workout.ended_at"
                         @click="removeLine(line.id)"
-                        class="rounded-xl p-2 text-text-muted transition hover:bg-red-50 hover:text-red-500"
+                        class="text-text-muted rounded-xl p-2 transition hover:bg-red-50 hover:text-red-500"
                         aria-label="Supprimer l'exercice"
                     >
                         <svg
@@ -550,11 +550,11 @@ const hasNoResults = computed(() => {
                         <!-- Complete Button -->
                         <button
                             @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
-                            class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
                             :class="[
                                 set.is_completed
                                     ? 'bg-neon-green text-text-main shadow-neon'
-                                    : 'bg-slate-100 text-slate-300 hover:bg-neon-green/20 hover:text-neon-green',
+                                    : 'hover:bg-neon-green/20 hover:text-neon-green bg-slate-100 text-slate-300',
                                 { 'cursor-not-allowed opacity-50': workout.ended_at },
                             ]"
                             :disabled="!!workout.ended_at"
@@ -572,15 +572,15 @@ const hasNoResults = computed(() => {
 
                         <!-- Set Number -->
                         <div
-                            class="relative flex h-11 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-black transition-colors"
+                            class="relative flex h-11 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-black transition-colors"
                             :class="
                                 set.personal_record
                                     ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
-                                    : 'bg-slate-100 text-text-muted'
+                                    : 'text-text-muted bg-slate-100'
                             "
                         >
                             {{ index + 1 }}
-                            <span v-if="set.personal_record" class="absolute -right-2 -top-2 text-sm">🏆</span>
+                            <span v-if="set.personal_record" class="absolute -top-2 -right-2 text-sm">🏆</span>
                         </div>
 
                         <!-- INPUTS BASED ON EXERCISE TYPE -->
@@ -593,13 +593,13 @@ const hasNoResults = computed(() => {
                                     :value="set.distance_km"
                                     @change="(e) => updateSet(set, 'distance_km', e.target.value)"
                                     @focus="(e) => e.target.select()"
-                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     inputmode="decimal"
                                     step="0.01"
                                     :aria-label="`${line.exercise.name} : Distance série ${index + 1}`"
                                 />
-                                <span class="text-xs font-bold uppercase text-text-muted">km</span>
+                                <span class="text-text-muted text-xs font-bold uppercase">km</span>
                             </div>
                             <div class="flex flex-1 items-center gap-2">
                                 <input
@@ -607,7 +607,7 @@ const hasNoResults = computed(() => {
                                     step="1"
                                     :value="secondsToTime(set.duration_seconds)"
                                     @change="(e) => updateDurationFromTime(set, e.target.value)"
-                                    class="h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     aria-label="Durée"
                                 />
@@ -622,13 +622,13 @@ const hasNoResults = computed(() => {
                                     :value="set.weight"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
                                     @focus="(e) => e.target.select()"
-                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     inputmode="decimal"
                                     placeholder="-"
                                     :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
                                 />
-                                <span class="text-xs font-bold uppercase text-text-muted">kg</span>
+                                <span class="text-text-muted text-xs font-bold uppercase">kg</span>
                             </div>
                             <div class="flex flex-1 items-center gap-2">
                                 <input
@@ -636,7 +636,7 @@ const hasNoResults = computed(() => {
                                     step="1"
                                     :value="secondsToTime(set.duration_seconds)"
                                     @change="(e) => updateDurationFromTime(set, e.target.value)"
-                                    class="h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     aria-label="Durée"
                                 />
@@ -651,12 +651,12 @@ const hasNoResults = computed(() => {
                                     :value="set.weight"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
                                     @focus="(e) => e.target.select()"
-                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     inputmode="decimal"
                                     :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
                                 />
-                                <span class="text-xs font-bold uppercase text-text-muted">kg</span>
+                                <span class="text-text-muted text-xs font-bold uppercase">kg</span>
                             </div>
                             <div class="flex flex-1 items-center gap-2">
                                 <input
@@ -664,12 +664,12 @@ const hasNoResults = computed(() => {
                                     :value="set.reps"
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
                                     @focus="(e) => e.target.select()"
-                                    class="h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20 disabled:opacity-50"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
                                     :disabled="set.is_completed || !!workout.ended_at"
                                     inputmode="numeric"
                                     :aria-label="`${line.exercise.name} : Répétitions série ${index + 1}`"
                                 />
-                                <span class="text-xs font-bold uppercase text-text-muted">reps</span>
+                                <span class="text-text-muted text-xs font-bold uppercase">reps</span>
                             </div>
                         </template>
 
@@ -677,7 +677,7 @@ const hasNoResults = computed(() => {
                         <button
                             v-if="!workout.ended_at"
                             @click="removeSet(set.id)"
-                            class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-slate-300 transition-all hover:bg-red-50 hover:text-red-500"
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-300 transition-all hover:bg-red-50 hover:text-red-500"
                             aria-label="Supprimer la série"
                         >
                             <svg
@@ -703,7 +703,7 @@ const hasNoResults = computed(() => {
                 <button
                     v-if="!workout.ended_at"
                     @click="addSet(line.id)"
-                    class="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 py-3 text-sm font-bold uppercase tracking-wider text-text-muted transition-all hover:border-neon-green hover:bg-neon-green/5 hover:text-text-main active:scale-[0.98]"
+                    class="text-text-muted hover:border-neon-green hover:bg-neon-green/5 hover:text-text-main mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 py-3 text-sm font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
                 >
                     <svg
                         class="h-5 w-5"
@@ -723,7 +723,7 @@ const hasNoResults = computed(() => {
             <button
                 v-if="!workout.ended_at && workout.workout_lines.length > 0"
                 @click="showAddExercise = true"
-                class="flex min-h-[80px] w-full animate-slide-up items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 py-6 text-sm font-black uppercase tracking-widest text-text-muted transition-all hover:border-electric-orange hover:bg-electric-orange/5 hover:text-electric-orange active:scale-[0.98]"
+                class="animate-slide-up text-text-muted hover:border-electric-orange hover:bg-electric-orange/5 hover:text-electric-orange flex min-h-[80px] w-full items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 py-6 text-sm font-black tracking-widest uppercase transition-all active:scale-[0.98]"
             >
                 <span class="material-symbols-outlined text-3xl">add_circle</span>
                 Ajouter un exercice
@@ -733,8 +733,8 @@ const hasNoResults = computed(() => {
             <GlassCard v-if="workout.workout_lines.length === 0" class="animate-slide-up">
                 <div class="py-12 text-center">
                     <div class="mb-3 text-5xl">🎯</div>
-                    <h3 class="text-lg font-bold text-text-main">Séance vide</h3>
-                    <p class="mt-1 text-text-muted">Ajoute ton premier exercice</p>
+                    <h3 class="text-text-main text-lg font-bold">Séance vide</h3>
+                    <p class="text-text-muted mt-1">Ajoute ton premier exercice</p>
                     <GlassButton
                         v-if="!workout.ended_at"
                         variant="primary"
@@ -751,17 +751,17 @@ const hasNoResults = computed(() => {
         <Teleport to="body">
             <div v-if="showAddExercise" class="glass-overlay animate-fade-in" @click.self="showAddExercise = false">
                 <div
-                    class="fixed inset-x-4 bottom-4 top-auto max-h-[80vh] sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
+                    class="fixed inset-x-4 top-auto bottom-4 max-h-[80vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
                 >
                     <div class="glass-modal animate-slide-up overflow-hidden">
                         <!-- Modal Header -->
                         <div class="flex items-center justify-between border-b border-slate-200 p-4">
-                            <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                                 {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
                             </h3>
                             <button
                                 @click="closeModal"
-                                class="rounded-xl p-2 text-text-muted hover:bg-slate-100 hover:text-text-main"
+                                class="text-text-muted hover:text-text-main rounded-xl p-2 hover:bg-slate-100"
                                 aria-label="Fermer"
                             >
                                 <svg
@@ -795,7 +795,7 @@ const hasNoResults = computed(() => {
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <label
-                                            class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted"
+                                            class="text-text-muted mb-2 block text-xs font-black tracking-widest uppercase"
                                             >Type</label
                                         >
                                         <select v-model="createExerciseForm.type" class="glass-input w-full text-sm">
@@ -806,7 +806,7 @@ const hasNoResults = computed(() => {
                                     </div>
                                     <div>
                                         <label
-                                            class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted"
+                                            class="text-text-muted mb-2 block text-xs font-black tracking-widest uppercase"
                                             >Catégorie</label
                                         >
                                         <select
@@ -847,7 +847,7 @@ const hasNoResults = computed(() => {
                             <div class="max-h-[50vh] overflow-y-auto p-4 pt-0">
                                 <!-- No Results - Quick Create -->
                                 <div v-if="hasNoResults" class="py-6 text-center">
-                                    <p class="mb-3 text-text-muted">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
+                                    <p class="text-text-muted mb-3">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
                                     <GlassButton variant="primary" @click="quickCreate">
                                         <svg
                                             class="mr-2 h-4 w-4"
@@ -872,13 +872,13 @@ const hasNoResults = computed(() => {
                                     <!-- Create New Button -->
                                     <button
                                         @click="showCreateForm = true"
-                                        class="flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 p-4 text-left transition hover:border-electric-orange/30 hover:bg-electric-orange/5"
+                                        class="hover:border-electric-orange/30 hover:bg-electric-orange/5 flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 p-4 text-left transition"
                                     >
                                         <div
-                                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-electric-orange/10"
+                                            class="bg-electric-orange/10 flex h-10 w-10 items-center justify-center rounded-lg"
                                         >
                                             <svg
-                                                class="h-5 w-5 text-electric-orange"
+                                                class="text-electric-orange h-5 w-5"
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
                                                 viewBox="0 0 24 24"
@@ -893,8 +893,8 @@ const hasNoResults = computed(() => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <div class="font-semibold text-text-main">Créer un nouvel exercice</div>
-                                            <div class="text-sm text-text-muted">Si tu ne trouves pas ton exercice</div>
+                                            <div class="text-text-main font-semibold">Créer un nouvel exercice</div>
+                                            <div class="text-text-muted text-sm">Si tu ne trouves pas ton exercice</div>
                                         </div>
                                     </button>
 
@@ -908,11 +908,11 @@ const hasNoResults = computed(() => {
                                         :aria-label="`Ajouter ${exercise.name}`"
                                     >
                                         <div>
-                                            <div class="font-semibold text-text-main">{{ exercise.name }}</div>
-                                            <div class="text-sm text-text-muted">{{ exercise.category }}</div>
+                                            <div class="text-text-main font-semibold">{{ exercise.name }}</div>
+                                            <div class="text-text-muted text-sm">{{ exercise.category }}</div>
                                         </div>
                                         <span
-                                            class="text-2xl text-electric-orange opacity-0 transition group-hover:opacity-100"
+                                            class="text-electric-orange text-2xl opacity-0 transition group-hover:opacity-100"
                                             >+</span
                                         >
                                     </button>
@@ -928,7 +928,7 @@ const hasNoResults = computed(() => {
         <Teleport to="body">
             <div v-if="showConfirmModal" class="glass-overlay animate-fade-in" @click.self="cancelConfirm">
                 <div
-                    class="fixed inset-x-4 bottom-auto top-1/2 -translate-y-1/2 sm:inset-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2"
+                    class="fixed inset-x-4 top-1/2 bottom-auto -translate-y-1/2 sm:inset-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2"
                 >
                     <div class="glass-modal animate-slide-up overflow-hidden">
                         <div class="p-6 text-center">
@@ -950,8 +950,8 @@ const hasNoResults = computed(() => {
                                     />
                                 </svg>
                             </div>
-                            <h3 class="mb-2 text-lg font-bold text-text-main">Confirmer la suppression</h3>
-                            <p class="mb-6 text-text-muted">{{ confirmMessage }}</p>
+                            <h3 class="text-text-main mb-2 text-lg font-bold">Confirmer la suppression</h3>
+                            <p class="text-text-muted mb-6">{{ confirmMessage }}</p>
                             <div class="flex gap-3">
                                 <GlassButton class="flex-1" @click="cancelConfirm"> Annuler </GlassButton>
                                 <GlassButton variant="danger" class="flex-1" @click="confirmAction">
@@ -977,16 +977,16 @@ const hasNoResults = computed(() => {
         <Teleport to="body">
             <div v-if="showSettingsModal" class="glass-overlay animate-fade-in" @click.self="showSettingsModal = false">
                 <div
-                    class="fixed inset-x-4 bottom-4 top-auto max-h-[90vh] sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
+                    class="fixed inset-x-4 top-auto bottom-4 max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
                 >
                     <div class="glass-modal animate-slide-up overflow-hidden">
                         <div class="flex items-center justify-between border-b border-slate-200 p-4">
-                            <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                                 Paramètres de la séance
                             </h3>
                             <button
                                 @click="showSettingsModal = false"
-                                class="rounded-xl p-2 text-text-muted hover:bg-slate-100 hover:text-text-main"
+                                class="text-text-muted hover:text-text-main rounded-xl p-2 hover:bg-slate-100"
                             >
                                 <span class="material-symbols-outlined">close</span>
                             </button>
@@ -1008,13 +1008,13 @@ const hasNoResults = computed(() => {
                             />
 
                             <div>
-                                <label class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted">
+                                <label class="text-text-muted mb-2 block text-xs font-black tracking-widest uppercase">
                                     Notes
                                 </label>
                                 <textarea
                                     v-model="settingsForm.notes"
                                     rows="4"
-                                    class="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 text-text-main placeholder-text-muted/30 backdrop-blur-md focus:border-electric-orange focus:outline-none focus:ring-1 focus:ring-electric-orange"
+                                    class="text-text-main placeholder-text-muted/30 focus:border-electric-orange focus:ring-electric-orange w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 backdrop-blur-md focus:ring-1 focus:outline-none"
                                     placeholder="Comment s'est passée votre séance ?"
                                 ></textarea>
                                 <div v-if="settingsForm.errors.notes" class="mt-1 text-xs text-red-500">
@@ -1050,15 +1050,15 @@ const hasNoResults = computed(() => {
         <Modal :show="showFinishModal" @close="showFinishModal = false" maxWidth="sm">
             <div class="p-6">
                 <div class="mb-5 flex items-center justify-center">
-                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-electric-orange/20">
-                        <span class="material-symbols-outlined text-4xl text-electric-orange">check_circle</span>
+                    <div class="bg-electric-orange/20 flex h-16 w-16 items-center justify-center rounded-full">
+                        <span class="material-symbols-outlined text-electric-orange text-4xl">check_circle</span>
                     </div>
                 </div>
 
-                <h2 class="mb-2 text-center font-display text-xl font-black uppercase italic text-text-main">
+                <h2 class="font-display text-text-main mb-2 text-center text-xl font-black uppercase italic">
                     Terminer la séance ?
                 </h2>
-                <p class="mb-6 text-center text-sm text-text-muted">
+                <p class="text-text-muted mb-6 text-center text-sm">
                     Vous ne pourrez plus modifier cette séance. La durée sera enregistrée.
                 </p>
 

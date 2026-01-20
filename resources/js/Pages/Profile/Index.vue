@@ -84,9 +84,9 @@ const menuGroups = [
     <AuthenticatedLayout page-title="Plus">
         <div class="space-y-8">
             <!-- User Profile Quick View -->
-            <div class="flex animate-fade-in items-center gap-4 py-2">
+            <div class="animate-fade-in flex items-center gap-4 py-2">
                 <div
-                    class="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-main p-[3px] shadow-lg shadow-orange-500/20"
+                    class="bg-gradient-main flex h-20 w-20 items-center justify-center rounded-3xl p-[3px] shadow-lg shadow-orange-500/20"
                 >
                     <div
                         class="flex h-full w-full items-center justify-center rounded-[1.2rem] bg-white text-3xl font-black"
@@ -95,16 +95,16 @@ const menuGroups = [
                     </div>
                 </div>
                 <div>
-                    <h2 class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main">
+                    <h2 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
                         {{ $page.props.auth.user.name }}
                     </h2>
-                    <p class="text-sm font-bold text-text-muted">{{ $page.props.auth.user.email }}</p>
+                    <p class="text-text-muted text-sm font-bold">{{ $page.props.auth.user.email }}</p>
                     <div class="mt-2 flex gap-2">
                         <Link
                             :href="route('logout')"
                             method="post"
                             as="button"
-                            class="text-xs font-black uppercase tracking-widest text-red-500 hover:text-red-600"
+                            class="text-xs font-black tracking-widest text-red-500 uppercase hover:text-red-600"
                         >
                             Déconnexion
                         </Link>
@@ -119,13 +119,13 @@ const menuGroups = [
                 class="animate-slide-up"
                 :style="{ animationDelay: `${0.1 + gIdx * 0.1}s` }"
             >
-                <h3 class="mb-4 ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">
+                <h3 class="text-text-muted mb-4 ml-1 text-[10px] font-black tracking-[0.2em] uppercase">
                     {{ group.title }}
                 </h3>
 
                 <div class="grid grid-cols-1 gap-3">
                     <Link v-for="item in group.items" :key="item.name" :href="route(item.route)" class="group block">
-                        <GlassCard padding="p-4" :hover="true" class="!rounded-2xl border-white/40 bg-white/60">
+                        <GlassCard padding="p-4" :hover="true" class="rounded-2xl! border-white/40 bg-white/60">
                             <div class="flex items-center gap-4">
                                 <div
                                     :class="[
@@ -137,11 +137,11 @@ const menuGroups = [
                                     <span class="material-symbols-outlined text-2xl">{{ item.icon }}</span>
                                 </div>
                                 <div class="flex-1">
-                                    <h4 class="font-bold text-text-main">{{ item.name }}</h4>
-                                    <p class="text-xs text-text-muted">{{ item.description }}</p>
+                                    <h4 class="text-text-main font-bold">{{ item.name }}</h4>
+                                    <p class="text-text-muted text-xs">{{ item.description }}</p>
                                 </div>
                                 <span
-                                    class="material-symbols-outlined text-text-muted/30 transition-all group-hover:translate-x-1 group-hover:text-text-main"
+                                    class="material-symbols-outlined text-text-muted/30 group-hover:text-text-main transition-all group-hover:translate-x-1"
                                 >
                                     chevron_right
                                 </span>

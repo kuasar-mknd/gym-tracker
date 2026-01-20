@@ -5,7 +5,7 @@ import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 
 <template>
     <div
-        class="relative flex min-h-[100dvh] min-h-screen flex-col items-center justify-center px-6 py-12"
+        class="relative flex min-h-dvh min-h-screen flex-col items-center justify-center px-6 py-12"
         :style="{
             paddingTop: 'calc(3rem + var(--safe-area-top))',
             paddingBottom: 'calc(3rem + var(--safe-area-bottom))',
@@ -15,23 +15,23 @@ import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
         <LiquidBackground variant="default" />
 
         <!-- Logo -->
-        <div class="relative z-10 mb-8 animate-fade-in">
+        <div class="animate-fade-in relative z-10 mb-8">
             <Link href="/">
-                <span class="text-gradient font-display text-4xl font-black uppercase italic tracking-tight">
+                <span class="text-gradient font-display text-4xl font-black tracking-tight uppercase italic">
                     GymTracker
                 </span>
             </Link>
         </div>
 
         <!-- Glass Card -->
-        <div class="relative z-10 w-full max-w-md animate-slide-up">
-            <div class="glass-panel-light rounded-3xl p-8 shadow-glass-card">
+        <div class="animate-slide-up relative z-10 w-full max-w-md">
+            <div class="glass-panel-light shadow-glass-card rounded-3xl p-8">
                 <slot />
             </div>
         </div>
 
         <!-- Footer links -->
-        <div class="relative z-10 mt-8 animate-fade-in text-center text-sm text-text-muted">
+        <div class="animate-fade-in text-text-muted relative z-10 mt-8 text-center text-sm">
             <slot name="footer" />
         </div>
     </div>
