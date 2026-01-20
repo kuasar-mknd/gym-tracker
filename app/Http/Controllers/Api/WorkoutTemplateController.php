@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Actions\CreateWorkoutTemplateAction;
 use App\Actions\UpdateWorkoutTemplateAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\WorkoutTemplateStoreRequest;
+use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Resources\WorkoutTemplateResource;
 use App\Models\WorkoutTemplate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -28,22 +30,11 @@ class WorkoutTemplateController extends Controller
         return WorkoutTemplateResource::collection($templates);
     }
 
-    public function store(Request $request, CreateWorkoutTemplateAction $action)
+    public function store(WorkoutTemplateStoreRequest $request, CreateWorkoutTemplateAction $action)
     {
         $this->authorize('create', WorkoutTemplate::class);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'exercises' => 'nullable|array',
-            'exercises.*.id' => 'required|exists:exercises,id',
-            'exercises.*.sets' => 'nullable|array',
-            'exercises.*.sets.*.reps' => 'nullable|integer',
-            'exercises.*.sets.*.weight' => 'nullable|numeric',
-            'exercises.*.sets.*.is_warmup' => 'boolean',
-        ]);
-
-        $template = $action->execute($request->user(), $validated);
+        $template = $action->execute($request->user(), $request->validated());
 
         return new WorkoutTemplateResource($template->load(['workoutTemplateLines.workoutTemplateSets', 'workoutTemplateLines.exercise']));
     }
@@ -55,22 +46,11 @@ class WorkoutTemplateController extends Controller
         return new WorkoutTemplateResource($workoutTemplate->load(['workoutTemplateLines.workoutTemplateSets', 'workoutTemplateLines.exercise']));
     }
 
-    public function update(Request $request, WorkoutTemplate $workoutTemplate, UpdateWorkoutTemplateAction $action)
+    public function update(WorkoutTemplateUpdateRequest $request, WorkoutTemplate $workoutTemplate, UpdateWorkoutTemplateAction $action)
     {
         $this->authorize('update', $workoutTemplate);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'exercises' => 'nullable|array',
-            'exercises.*.id' => 'required|exists:exercises,id',
-            'exercises.*.sets' => 'nullable|array',
-            'exercises.*.sets.*.reps' => 'nullable|integer',
-            'exercises.*.sets.*.weight' => 'nullable|numeric',
-            'exercises.*.sets.*.is_warmup' => 'boolean',
-        ]);
-
-        $template = $action->execute($workoutTemplate, $validated);
+        $template = $action->execute($workoutTemplate, $request->validated());
 
         return new WorkoutTemplateResource($template);
     }

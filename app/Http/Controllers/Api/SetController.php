@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\Api\SetStoreRequest;
+use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
 use App\Models\WorkoutLine;
@@ -34,23 +36,11 @@ class SetController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(SetStoreRequest $request)
     {
-        $validated = $request->validate([
-            'workout_line_id' => 'required|exists:workout_lines,id',
-            'weight' => 'nullable|numeric|min:0',
-            'reps' => 'nullable|integer|min:0',
-            'duration_seconds' => 'nullable|integer|min:0',
-            'distance_km' => 'nullable|numeric|min:0',
-            'is_warmup' => 'boolean',
-            'is_completed' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
-        // Verify ownership
         $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
-        if ($workoutLine->workout->user_id !== Auth::id()) {
-            abort(403, 'You do not own this workout line.');
-        }
 
         $set = $workoutLine->sets()->create($validated);
 
@@ -70,20 +60,11 @@ class SetController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Set $set)
+    public function update(SetUpdateRequest $request, Set $set)
     {
         $this->authorize('update', $set);
 
-        $validated = $request->validate([
-            'weight' => 'nullable|numeric|min:0',
-            'reps' => 'nullable|integer|min:0',
-            'duration_seconds' => 'nullable|integer|min:0',
-            'distance_km' => 'nullable|numeric|min:0',
-            'is_warmup' => 'boolean',
-            'is_completed' => 'boolean',
-        ]);
-
-        $set->update($validated);
+        $set->update($request->validated());
 
         return new SetResource($set);
     }
