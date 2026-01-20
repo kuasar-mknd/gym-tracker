@@ -52,9 +52,7 @@ class ExerciseController extends Controller
         $exercise->user_id = Auth::id();
         $exercise->save();
 
-        return (new ExerciseResource($exercise))
-            ->response()
-            ->setStatusCode(201);
+        return new ExerciseResource($exercise);
     }
 
     /**

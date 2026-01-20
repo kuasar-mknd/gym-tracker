@@ -455,17 +455,16 @@ class StatsService
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
             function () use ($user, $limit) {
-                return DB::table('workouts')
-                    ->select('name', 'started_at', 'ended_at')
+                return Workout::select('name', 'started_at', 'ended_at')
                     ->where('user_id', $user->id)
                     ->whereNotNull('ended_at')
-                    ->orderByDesc('started_at')
-                    ->limit($limit)
+                    ->latest('started_at')
+                    ->take($limit)
                     ->get()
                     ->map(function ($workout) {
                         return [
-                            'date' => Carbon::parse($workout->started_at)->format('d/m'),
-                            'duration' => Carbon::parse($workout->ended_at)->diffInMinutes(Carbon::parse($workout->started_at)),
+                            'date' => $workout->started_at->format('d/m'),
+                            'duration' => $workout->ended_at->diffInMinutes($workout->started_at),
                             'name' => $workout->name,
                         ];
                     })
@@ -487,25 +486,23 @@ class StatsService
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
             function () use ($user, $limit) {
-                return DB::table('workouts')
-                    ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                    ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                    ->where('workouts.user_id', $user->id)
-                    ->whereNotNull('workouts.ended_at')
-                    ->select(
-                        'workouts.name',
-                        'workouts.started_at',
-                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
-                    )
-                    ->groupBy('workouts.id', 'workouts.name', 'workouts.started_at')
-                    ->orderByDesc('workouts.started_at')
-                    ->limit($limit)
+                return Workout::with(['workoutLines.sets'])
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->latest('started_at')
+                    ->take($limit)
                     ->get()
-                    ->map(function ($row) {
+                    ->map(function ($workout) {
+                        $volume = $workout->workoutLines->reduce(function ($carry, $line) {
+                            return $carry + $line->sets->reduce(function ($carrySet, $set) {
+                                return $carrySet + ($set->weight * $set->reps);
+                            }, 0);
+                        }, 0);
+
                         return [
-                            'date' => Carbon::parse($row->started_at)->format('d/m'),
-                            'volume' => (float) $row->volume,
-                            'name' => $row->name,
+                            'date' => $workout->started_at->format('d/m'),
+                            'volume' => $volume,
+                            'name' => $workout->name,
                         ];
                     })
                     ->reverse()

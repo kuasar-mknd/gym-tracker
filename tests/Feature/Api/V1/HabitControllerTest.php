@@ -5,11 +5,14 @@ namespace Tests\Feature\Api\V1;
 use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class HabitControllerTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_user_can_list_habits()
     {
         $user = User::factory()->create();
