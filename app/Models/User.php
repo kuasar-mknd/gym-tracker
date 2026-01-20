@@ -69,6 +69,11 @@ class User extends Authenticatable
         return $this->hasMany(BodyMeasurement::class);
     }
 
+    public function bodyPartMeasurements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BodyPartMeasurement::class);
+    }
+
     public function personalRecords(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(PersonalRecord::class);

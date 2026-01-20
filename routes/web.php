@@ -54,6 +54,10 @@ Route::middleware('auth')->group(function () {
 
         Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['store', 'update', 'destroy']);
         Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['store', 'destroy']);
+
+        Route::post('/body-metrics', [\App\Http\Controllers\BodyPartMeasurementController::class, 'store'])->name('body-parts.store');
+        Route::delete('/body-metrics/{bodyPartMeasurement}', [\App\Http\Controllers\BodyPartMeasurementController::class, 'destroy'])->name('body-parts.destroy');
+
         Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['store', 'update', 'destroy']);
         Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['store', 'destroy']);
 
@@ -67,6 +71,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->only(['index', 'show']);
     Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index']);
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
+
+    Route::get('/body-metrics', [\App\Http\Controllers\BodyPartMeasurementController::class, 'index'])->name('body-parts.index');
+    Route::get('/body-metrics/{part}', [\App\Http\Controllers\BodyPartMeasurementController::class, 'show'])->name('body-parts.show');
+
     Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['index']);
     Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['index']);
 
