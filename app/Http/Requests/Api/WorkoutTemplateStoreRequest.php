@@ -22,20 +22,11 @@ class WorkoutTemplateStoreRequest extends FormRequest
      */
     public function rules(): array
     {
-        $userId = $this->user()->id;
-
         return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'exercises' => 'nullable|array',
-            'exercises.*.id' => [
-                'required',
-                'integer',
-                Rule::exists('exercises', 'id')->where(function ($query) use ($userId) {
-                    $query->where('user_id', $userId)
-                        ->orWhereNull('user_id');
-                }),
-            ],
+            'exercises.*.id' => 'required|integer|exists:exercises,id',
             'exercises.*.sets' => 'nullable|array',
             'exercises.*.sets.*.reps' => 'nullable|integer',
             'exercises.*.sets.*.weight' => 'nullable|numeric',
