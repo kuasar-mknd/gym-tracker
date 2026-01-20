@@ -1,49 +1,69 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
 use App\Models\Goal;
-use App\Models\User;
+use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Foundation\Auth\User as AuthUser;
 
 class GoalPolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
-    public function viewAny(User $user): bool
+    use HandlesAuthorization;
+
+    public function viewAny(AuthUser $authUser): bool
     {
-        return true;
+        return $authUser->can('ViewAny:Goal');
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
-    public function view(User $user, Goal $goal): bool
+    public function view(AuthUser $authUser, Goal $goal): bool
     {
-        return $user->id === $goal->user_id;
+        return $authUser->can('View:Goal');
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
+    public function create(AuthUser $authUser): bool
     {
-        return true;
+        return $authUser->can('Create:Goal');
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, Goal $goal): bool
+    public function update(AuthUser $authUser, Goal $goal): bool
     {
-        return $user->id === $goal->user_id;
+        return $authUser->can('Update:Goal');
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
-    public function delete(User $user, Goal $goal): bool
+    public function delete(AuthUser $authUser, Goal $goal): bool
     {
-        return $user->id === $goal->user_id;
+        return $authUser->can('Delete:Goal');
+    }
+
+    public function restore(AuthUser $authUser, Goal $goal): bool
+    {
+        return $authUser->can('Restore:Goal');
+    }
+
+    public function forceDelete(AuthUser $authUser, Goal $goal): bool
+    {
+        return $authUser->can('ForceDelete:Goal');
+    }
+
+    public function forceDeleteAny(AuthUser $authUser): bool
+    {
+        return $authUser->can('ForceDeleteAny:Goal');
+    }
+
+    public function restoreAny(AuthUser $authUser): bool
+    {
+        return $authUser->can('RestoreAny:Goal');
+    }
+
+    public function replicate(AuthUser $authUser, Goal $goal): bool
+    {
+        return $authUser->can('Replicate:Goal');
+    }
+
+    public function reorder(AuthUser $authUser): bool
+    {
+        return $authUser->can('Reorder:Goal');
     }
 }

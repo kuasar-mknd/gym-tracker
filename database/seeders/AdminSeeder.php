@@ -13,12 +13,14 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        Admin::updateOrCreate(
+        $admin = Admin::updateOrCreate(
             ['email' => 'admin@gymtracker.app'],
             [
                 'name' => 'Admin',
                 'password' => Hash::make('CHANGE_THIS_PASSWORD'),
             ]
         );
+
+        $admin->assignRole(config('filament-shield.super_admin.name', 'super_admin'));
     }
 }

@@ -26,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::before(function ($user, $ability) {
-            return $user instanceof \App\Models\Admin ? true : null;
+            return $user instanceof \App\Models\Admin && $user->hasRole(config('filament-shield.super_admin.name', 'super_admin')) ? true : null;
         });
 
         Vite::prefetch(concurrency: 3);
