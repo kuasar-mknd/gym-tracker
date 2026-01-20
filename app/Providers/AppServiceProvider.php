@@ -6,6 +6,7 @@ use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::before(function ($user, $ability) {
+            return $user instanceof \App\Models\Admin && $user->hasRole(config('filament-shield.super_admin.name', 'super_admin')) ? true : null;
+        });
+
         Vite::prefetch(concurrency: 3);
 
         Event::listen(

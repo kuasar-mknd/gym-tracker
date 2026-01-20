@@ -6,12 +6,12 @@
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1
-                    class="font-display text-4xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                 >
                     Calculateur<br />
                     <span class="text-gradient">Wilks</span>
                 </h1>
-                <p class="mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">
+                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
                     Compare ta force relative
                 </p>
             </header>
@@ -27,7 +27,7 @@
                                 class="rounded-md px-4 py-1 text-sm font-bold transition-all"
                                 :class="
                                     form.unit === 'kg'
-                                        ? 'bg-white text-text-main shadow-sm'
+                                        ? 'text-text-main bg-white shadow-sm'
                                         : 'text-text-muted hover:text-text-main'
                                 "
                             >
@@ -38,7 +38,7 @@
                                 class="rounded-md px-4 py-1 text-sm font-bold transition-all"
                                 :class="
                                     form.unit === 'lbs'
-                                        ? 'bg-white text-text-main shadow-sm'
+                                        ? 'text-text-main bg-white shadow-sm'
                                         : 'text-text-muted hover:text-text-main'
                                 "
                             >
@@ -50,7 +50,7 @@
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <!-- Gender Selection -->
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Sexe</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Sexe</label>
                             <div class="grid grid-cols-2 gap-3">
                                 <button
                                     @click="form.gender = 'male'"
@@ -58,7 +58,7 @@
                                     :class="
                                         form.gender === 'male'
                                             ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                            : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                            : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
                                     "
                                 >
                                     <span class="font-display text-lg font-black uppercase">Homme</span>
@@ -69,7 +69,7 @@
                                     :class="
                                         form.gender === 'female'
                                             ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
-                                            : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                            : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
                                     "
                                 >
                                     <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -80,33 +80,33 @@
                         <!-- Inputs -->
                         <div class="space-y-4">
                             <div>
-                                <label class="font-display-label mb-2 block text-text-muted">Poids de corps</label>
+                                <label class="font-display-label text-text-muted mb-2 block">Poids de corps</label>
                                 <div class="relative">
                                     <input
                                         type="number"
                                         v-model="form.body_weight"
                                         placeholder="80"
                                         step="0.1"
-                                        class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                        class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
                                     />
                                     <span
-                                        class="absolute right-4 top-1/2 -translate-y-1/2 font-bold uppercase text-text-muted"
+                                        class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold uppercase"
                                         >{{ form.unit }}</span
                                     >
                                 </div>
                             </div>
                             <div>
-                                <label class="font-display-label mb-2 block text-text-muted">Total soulevé</label>
+                                <label class="font-display-label text-text-muted mb-2 block">Total soulevé</label>
                                 <div class="relative">
                                     <input
                                         type="number"
                                         v-model="form.lifted_weight"
                                         placeholder="400"
                                         step="0.5"
-                                        class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                        class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
                                     />
                                     <span
-                                        class="absolute right-4 top-1/2 -translate-y-1/2 font-bold uppercase text-text-muted"
+                                        class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold uppercase"
                                         >{{ form.unit }}</span
                                     >
                                 </div>
@@ -118,9 +118,9 @@
                     <div
                         class="mt-6 flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 p-8 text-center"
                     >
-                        <p class="text-sm font-bold uppercase tracking-wider text-text-muted">Ton Score Wilks</p>
+                        <p class="text-text-muted text-sm font-bold tracking-wider uppercase">Ton Score Wilks</p>
                         <div
-                            class="mt-2 bg-gradient-to-r from-electric-orange to-hot-pink bg-clip-text font-display text-6xl font-black italic tracking-tighter text-transparent"
+                            class="from-electric-orange to-hot-pink font-display mt-2 bg-linear-to-r bg-clip-text text-6xl font-black tracking-tighter text-transparent italic"
                         >
                             {{ calculatedScore }}
                         </div>
@@ -142,12 +142,12 @@
             <!-- History Section -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
                 <div class="space-y-5">
-                    <h2 class="font-display text-lg font-black uppercase italic text-text-main">Historique</h2>
+                    <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
 
                     <div v-if="history.length === 0" class="py-12 text-center">
                         <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">history</span>
-                        <p class="font-medium text-text-muted">Aucun historique.</p>
-                        <p class="mt-1 text-sm text-text-muted/70">
+                        <p class="text-text-muted font-medium">Aucun historique.</p>
+                        <p class="text-text-muted/70 mt-1 text-sm">
                             Calcule ton score pour commencer à suivre tes progrès.
                         </p>
                     </div>
@@ -160,16 +160,16 @@
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-xl font-bold text-text-main"
+                                    class="text-text-main flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-xl font-bold"
                                 >
                                     {{ parseFloat(entry.score).toFixed(0) }}
                                 </div>
                                 <div>
-                                    <p class="font-bold text-text-main">
+                                    <p class="text-text-main font-bold">
                                         {{ parseFloat(entry.lifted_weight) }} {{ entry.unit }} /
                                         {{ parseFloat(entry.body_weight) }} {{ entry.unit }}
                                     </p>
-                                    <p class="text-xs uppercase tracking-wider text-text-muted">
+                                    <p class="text-text-muted text-xs tracking-wider uppercase">
                                         {{ new Date(entry.created_at).toLocaleDateString() }}
                                     </p>
                                 </div>

@@ -130,18 +130,18 @@ const typeLabel = (type) => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1
-                        class="font-display text-5xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+                        class="font-display text-text-main text-5xl leading-none font-black tracking-tighter uppercase italic"
                     >
                         La<br />
                         <span class="text-gradient">Bibliothèque</span>
                     </h1>
-                    <p class="mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">
+                    <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
                         {{ exercises.length }} exercices disponibles
                     </p>
                 </div>
                 <button
                     @click="showAddForm = true"
-                    class="flex size-14 items-center justify-center rounded-2xl bg-gradient-main text-white shadow-lg shadow-orange-500/20 active:scale-95 sm:hidden"
+                    class="bg-gradient-main flex size-14 items-center justify-center rounded-2xl text-white shadow-lg shadow-orange-500/20 active:scale-95 sm:hidden"
                     data-testid="create-exercise-mobile-header"
                     aria-label="Nouvel exercice"
                 >
@@ -162,7 +162,7 @@ const typeLabel = (type) => {
             <div v-if="exercises.length > 0" class="animate-slide-up" style="animation-delay: 0.05s">
                 <GlassCard padding="p-4">
                     <div class="mb-2 flex items-center justify-between">
-                        <h3 class="font-display text-sm font-black uppercase tracking-wider text-text-main">
+                        <h3 class="font-display text-text-main text-sm font-black tracking-wider uppercase">
                             Répartition
                         </h3>
                     </div>
@@ -178,7 +178,7 @@ const typeLabel = (type) => {
             <div v-if="exercises.length > 0" class="animate-slide-up" style="animation-delay: 0.05s">
                 <GlassCard padding="p-4">
                     <div class="mb-2 flex items-center justify-between">
-                        <h3 class="font-display text-sm font-black uppercase tracking-wider text-text-main">
+                        <h3 class="font-display text-text-main text-sm font-black tracking-wider uppercase">
                             Répartition
                         </h3>
                     </div>
@@ -192,18 +192,18 @@ const typeLabel = (type) => {
 
             <!-- Search Bar -->
             <div
-                class="glass-panel-light flex animate-slide-up items-center gap-3 rounded-2xl p-3"
+                class="glass-panel-light animate-slide-up flex items-center gap-3 rounded-2xl p-3"
                 style="animation-delay: 0.1s"
             >
-                <span class="material-symbols-outlined text-[24px] text-text-muted">search</span>
+                <span class="material-symbols-outlined text-text-muted text-[24px]">search</span>
                 <input
                     v-model="searchQuery"
                     type="search"
                     placeholder="Recherche exercices..."
-                    class="flex-1 border-none bg-transparent text-lg text-text-main placeholder:text-text-muted/50 focus:outline-none focus:ring-0"
+                    class="text-text-main placeholder:text-text-muted/50 flex-1 border-none bg-transparent text-lg focus:ring-0 focus:outline-none"
                 />
                 <div
-                    class="hidden items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-text-muted/40 sm:flex"
+                    class="text-text-muted/40 hidden items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
                 >
                     <span class="material-symbols-outlined text-sm">keyboard</span>
                     ⌘K
@@ -211,14 +211,14 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Category Pills -->
-            <div class="hide-scrollbar flex animate-slide-up gap-2 overflow-x-auto pb-2" style="animation-delay: 0.15s">
+            <div class="hide-scrollbar animate-slide-up flex gap-2 overflow-x-auto pb-2" style="animation-delay: 0.15s">
                 <button
                     @click="activeCategory = 'all'"
                     :class="[
-                        'category-pill flex-shrink-0 transition-all',
+                        'category-pill shrink-0 transition-all',
                         activeCategory === 'all'
                             ? 'bg-text-main text-white shadow-lg'
-                            : 'border border-slate-200 bg-white text-text-main',
+                            : 'text-text-main border border-slate-200 bg-white',
                     ]"
                 >
                     <span class="material-symbols-outlined text-lg">apps</span>
@@ -229,10 +229,10 @@ const typeLabel = (type) => {
                     :key="cat"
                     @click="activeCategory = cat"
                     :class="[
-                        'category-pill flex-shrink-0 transition-all',
+                        'category-pill shrink-0 transition-all',
                         activeCategory === cat
                             ? `${categoryColors[cat] || 'bg-slate-500'} text-white`
-                            : 'border border-slate-200 bg-white text-text-main',
+                            : 'text-text-main border border-slate-200 bg-white',
                     ]"
                 >
                     {{ cat }}
@@ -241,7 +241,7 @@ const typeLabel = (type) => {
 
             <!-- Add Form Modal -->
             <GlassCard v-if="showAddForm" class="animate-scale-in" variant="solid">
-                <h3 class="mb-5 font-display text-xl font-black uppercase text-text-main">Nouvel exercice</h3>
+                <h3 class="font-display text-text-main mb-5 text-xl font-black uppercase">Nouvel exercice</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <GlassInput
                         v-model="form.name"
@@ -251,7 +251,7 @@ const typeLabel = (type) => {
                     />
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Type</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Type</label>
                             <select v-model="form.type" class="glass-input w-full">
                                 <option v-for="t in types" :key="t.value" :value="t.value">
                                     {{ t.label }}
@@ -262,7 +262,7 @@ const typeLabel = (type) => {
                             </p>
                         </div>
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Catégorie</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Catégorie</label>
                             <select v-model="form.category" class="glass-input w-full">
                                 <option value="">— Aucune —</option>
                                 <option v-for="cat in categories" :key="cat" :value="cat">
@@ -292,8 +292,8 @@ const typeLabel = (type) => {
             <div v-if="filteredExercises.length === 0 && !searchQuery" class="animate-slide-up">
                 <GlassCard class="py-12 text-center">
                     <div class="mb-4 text-6xl">🏋️</div>
-                    <p class="text-lg font-bold text-text-main">Aucun exercice pour l'instant</p>
-                    <p class="mt-1 text-text-muted">Commence par créer ton premier exercice</p>
+                    <p class="text-text-main text-lg font-bold">Aucun exercice pour l'instant</p>
+                    <p class="text-text-muted mt-1">Commence par créer ton premier exercice</p>
                     <GlassButton
                         variant="primary"
                         class="mt-6"
@@ -309,8 +309,8 @@ const typeLabel = (type) => {
             <!-- No Search Results -->
             <div v-else-if="filteredExercises.length === 0" class="animate-slide-up">
                 <GlassCard class="py-8 text-center">
-                    <span class="material-symbols-outlined mb-3 text-6xl text-text-muted/30">search_off</span>
-                    <p class="font-bold text-text-main">Aucun résultat pour "{{ searchQuery }}"</p>
+                    <span class="material-symbols-outlined text-text-muted/30 mb-3 text-6xl">search_off</span>
+                    <p class="text-text-main font-bold">Aucun résultat pour "{{ searchQuery }}"</p>
                 </GlassCard>
             </div>
 
@@ -318,11 +318,11 @@ const typeLabel = (type) => {
             <div v-else class="animate-slide-up space-y-8" style="animation-delay: 0.2s">
                 <div v-for="(exercisesInCat, category) in groupedExercises" :key="category">
                     <div class="mb-3 flex items-center gap-2 px-1">
-                        <h3 class="text-[10px] font-black uppercase tracking-[0.25em] text-text-muted/60">
+                        <h3 class="text-text-muted/60 text-[10px] font-black tracking-[0.25em] uppercase">
                             {{ category }}
                         </h3>
                         <div class="h-px flex-1 bg-slate-100"></div>
-                        <span class="text-[10px] font-black text-text-muted/30">
+                        <span class="text-text-muted/30 text-[10px] font-black">
                             {{ exercisesInCat.length }}
                         </span>
                     </div>
@@ -357,12 +357,12 @@ const typeLabel = (type) => {
                                     </div>
                                     <div>
                                         <div
-                                            class="font-display text-lg font-bold uppercase italic leading-tight text-text-main"
+                                            class="font-display text-text-main text-lg leading-tight font-bold uppercase italic"
                                         >
                                             {{ exercise.name }}
                                         </div>
                                         <div
-                                            class="mt-1 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                                            class="text-text-muted mt-1 text-xs font-semibold tracking-wider uppercase"
                                         >
                                             {{ typeLabel(exercise.type) }}
                                         </div>
@@ -373,7 +373,7 @@ const typeLabel = (type) => {
                                 >
                                     <button
                                         @click="startEdit(exercise)"
-                                        class="flex size-10 items-center justify-center rounded-xl text-text-muted transition-all hover:bg-electric-orange/10 hover:text-electric-orange"
+                                        class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all"
                                         data-testid="edit-exercise-button"
                                         aria-label="Modifier l'exercice"
                                     >
@@ -381,7 +381,7 @@ const typeLabel = (type) => {
                                     </button>
                                     <button
                                         @click="deleteExercise(exercise.id)"
-                                        class="flex size-10 items-center justify-center rounded-xl text-text-muted transition-all hover:bg-red-50 hover:text-red-500"
+                                        class="text-text-muted flex size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500"
                                         data-testid="delete-exercise-button"
                                         aria-label="Supprimer l'exercice"
                                     >

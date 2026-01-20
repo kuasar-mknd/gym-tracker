@@ -6,12 +6,12 @@
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1
-                    class="font-display text-4xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                 >
                     Calculateur<br />
                     <span class="text-gradient">Macros</span>
                 </h1>
-                <p class="mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">
+                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
                     Estime tes besoins caloriques
                 </p>
             </header>
@@ -21,7 +21,7 @@
                 <div class="space-y-6">
                     <!-- Gender Selection -->
                     <div>
-                        <label class="font-display-label mb-2 block text-text-muted">Sexe</label>
+                        <label class="font-display-label text-text-muted mb-2 block">Sexe</label>
                         <div class="grid grid-cols-2 gap-3">
                             <button
                                 @click="form.gender = 'male'"
@@ -29,7 +29,7 @@
                                 :class="
                                     form.gender === 'male'
                                         ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                        : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                        : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Homme</span>
@@ -40,7 +40,7 @@
                                 :class="
                                     form.gender === 'female'
                                         ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
-                                        : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                        : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -51,42 +51,42 @@
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <!-- Age -->
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Age</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Age</label>
                             <input
                                 type="number"
                                 v-model="form.age"
                                 placeholder="25"
-                                class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
                             />
                         </div>
                         <!-- Height -->
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Taille (cm)</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Taille (cm)</label>
                             <input
                                 type="number"
                                 v-model="form.height"
                                 placeholder="175"
-                                class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
                             />
                         </div>
                         <!-- Weight -->
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Poids (kg)</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Poids (kg)</label>
                             <input
                                 type="number"
                                 v-model="form.weight"
                                 placeholder="70"
-                                class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-xl font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
                             />
                         </div>
                     </div>
 
                     <!-- Activity Level -->
                     <div>
-                        <label class="font-display-label mb-2 block text-text-muted">Niveau d'activité</label>
+                        <label class="font-display-label text-text-muted mb-2 block">Niveau d'activité</label>
                         <select
                             v-model="form.activity_level"
-                            class="h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 font-display text-lg font-bold text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                            class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-lg font-bold transition-all outline-none focus:ring-2"
                         >
                             <option value="sedentary">Sédentaire (peu ou pas d'exercice)</option>
                             <option value="light">Légèrement actif (1-3 jours/semaine)</option>
@@ -98,7 +98,7 @@
 
                     <!-- Goal -->
                     <div>
-                        <label class="font-display-label mb-2 block text-text-muted">Objectif</label>
+                        <label class="font-display-label text-text-muted mb-2 block">Objectif</label>
                         <div class="grid grid-cols-3 gap-3">
                             <button
                                 v-for="goalOption in ['cut', 'maintain', 'bulk']"
@@ -108,7 +108,7 @@
                                 :class="
                                     form.goal === goalOption
                                         ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                        : 'border-slate-200 bg-white text-text-muted hover:border-slate-300'
+                                        : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
                                 "
                             >
                                 <span class="font-display font-bold uppercase">{{
@@ -124,33 +124,33 @@
                         class="mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-100 bg-slate-50 p-6 text-center"
                     >
                         <div>
-                            <p class="text-sm font-bold uppercase tracking-wider text-text-muted">
+                            <p class="text-text-muted text-sm font-bold tracking-wider uppercase">
                                 Cibles Journalières
                             </p>
                             <div
-                                class="mt-1 bg-gradient-to-r from-electric-orange to-hot-pink bg-clip-text font-display text-5xl font-black italic tracking-tighter text-transparent"
+                                class="from-electric-orange to-hot-pink font-display mt-1 bg-linear-to-r bg-clip-text text-5xl font-black tracking-tighter text-transparent italic"
                             >
                                 {{ calculatedResults.targetCalories }} kcal
                             </div>
-                            <p class="text-xs font-semibold text-text-muted">TDEE: {{ calculatedResults.tdee }} kcal</p>
+                            <p class="text-text-muted text-xs font-semibold">TDEE: {{ calculatedResults.tdee }} kcal</p>
                         </div>
 
                         <div class="grid w-full grid-cols-3 gap-4 border-t border-slate-200 pt-4">
                             <div>
-                                <p class="text-xs font-bold uppercase text-text-muted">Protéines</p>
-                                <p class="font-display text-2xl font-black text-text-main">
+                                <p class="text-text-muted text-xs font-bold uppercase">Protéines</p>
+                                <p class="font-display text-text-main text-2xl font-black">
                                     {{ calculatedResults.protein }}g
                                 </p>
                             </div>
                             <div>
-                                <p class="text-xs font-bold uppercase text-text-muted">Glucides</p>
-                                <p class="font-display text-2xl font-black text-text-main">
+                                <p class="text-text-muted text-xs font-bold uppercase">Glucides</p>
+                                <p class="font-display text-text-main text-2xl font-black">
                                     {{ calculatedResults.carbs }}g
                                 </p>
                             </div>
                             <div>
-                                <p class="text-xs font-bold uppercase text-text-muted">Lipides</p>
-                                <p class="font-display text-2xl font-black text-text-main">
+                                <p class="text-text-muted text-xs font-bold uppercase">Lipides</p>
+                                <p class="font-display text-text-main text-2xl font-black">
                                     {{ calculatedResults.fat }}g
                                 </p>
                             </div>
@@ -173,11 +173,11 @@
             <!-- History Section -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
                 <div class="space-y-5">
-                    <h2 class="font-display text-lg font-black uppercase italic text-text-main">Historique</h2>
+                    <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
 
                     <div v-if="history.length === 0" class="py-12 text-center">
                         <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">history</span>
-                        <p class="font-medium text-text-muted">Aucun historique.</p>
+                        <p class="text-text-muted font-medium">Aucun historique.</p>
                     </div>
 
                     <div v-else class="space-y-3">
@@ -188,15 +188,15 @@
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="flex h-12 w-16 items-center justify-center rounded-xl bg-slate-50 text-lg font-bold text-text-main"
+                                    class="text-text-main flex h-12 w-16 items-center justify-center rounded-xl bg-slate-50 text-lg font-bold"
                                 >
                                     {{ entry.target_calories }}
                                 </div>
                                 <div>
-                                    <p class="font-bold text-text-main">
+                                    <p class="text-text-main font-bold">
                                         {{ entry.protein }}P / {{ entry.carbs }}C / {{ entry.fat }}L
                                     </p>
-                                    <p class="text-xs uppercase tracking-wider text-text-muted">
+                                    <p class="text-text-muted text-xs tracking-wider uppercase">
                                         {{
                                             entry.goal === 'cut'
                                                 ? 'Sèche'
@@ -211,7 +211,7 @@
 
                             <button
                                 @click="deleteEntry(entry)"
-                                class="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 sm:static"
+                                class="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 sm:static"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>

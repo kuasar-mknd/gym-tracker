@@ -60,7 +60,7 @@ const progressBarColor = computed(() => {
         <!-- Completion Badge -->
         <div
             v-if="isCompleted"
-            class="absolute -right-2 -top-2 z-10 rotate-12 bg-green-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-lg"
+            class="absolute -top-2 -right-2 z-10 rotate-12 bg-green-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-lg"
         >
             COMPLÉTÉ
         </div>
@@ -71,8 +71,8 @@ const progressBarColor = computed(() => {
                     {{ typeIcon }}
                 </div>
                 <div>
-                    <h4 class="line-clamp-1 font-bold text-text-main">{{ goal.title }}</h4>
-                    <span class="text-xs font-medium uppercase tracking-wider text-text-muted">{{ typeLabel }}</span>
+                    <h4 class="text-text-main line-clamp-1 font-bold">{{ goal.title }}</h4>
+                    <span class="text-text-muted text-xs font-medium tracking-wider uppercase">{{ typeLabel }}</span>
                 </div>
             </div>
 
@@ -84,7 +84,7 @@ const progressBarColor = computed(() => {
         <div class="space-y-4">
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
-                <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-text-muted/50">
+                <div class="text-text-muted/50 flex justify-between text-[10px] font-bold tracking-widest uppercase">
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
@@ -94,7 +94,7 @@ const progressBarColor = computed(() => {
                         :class="progressBarColor"
                         :style="{ width: progress + '%' }"
                     >
-                        <div class="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent to-white/20"></div>
+                        <div class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent to-white/20"></div>
                     </div>
                 </div>
             </div>
@@ -102,20 +102,20 @@ const progressBarColor = computed(() => {
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
-                    <p class="text-[10px] font-bold uppercase tracking-tight text-text-muted/50">Actuel</p>
-                    <p class="text-sm font-semibold text-text-main">
-                        {{ goal.current_value }} <span class="text-[10px] text-text-muted">{{ goal.unit }}</span>
+                    <p class="text-text-muted/50 text-[10px] font-bold tracking-tight uppercase">Actuel</p>
+                    <p class="text-text-main text-sm font-semibold">
+                        {{ goal.current_value }} <span class="text-text-muted text-[10px]">{{ goal.unit }}</span>
                     </p>
                 </div>
                 <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
-                    <p class="text-[10px] font-bold uppercase tracking-tight text-text-muted/50">Cible</p>
-                    <p class="text-sm font-semibold text-text-main">
-                        {{ goal.target_value }} <span class="text-[10px] text-text-muted">{{ goal.unit }}</span>
+                    <p class="text-text-muted/50 text-[10px] font-bold tracking-tight uppercase">Cible</p>
+                    <p class="text-text-main text-sm font-semibold">
+                        {{ goal.target_value }} <span class="text-text-muted text-[10px]">{{ goal.unit }}</span>
                     </p>
                 </div>
             </div>
 
-            <div v-if="goal.deadline" class="flex items-center gap-1.5 pt-2 text-[10px] italic text-text-muted">
+            <div v-if="goal.deadline" class="text-text-muted flex items-center gap-1.5 pt-2 text-[10px] italic">
                 <span>⏱️ Échéance : {{ new Date(goal.deadline).toLocaleDateString() }}</span>
             </div>
         </div>

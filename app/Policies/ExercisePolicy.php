@@ -1,49 +1,89 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
 use App\Models\Exercise;
-use App\Models\User;
+use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Foundation\Auth\User as AuthUser;
 
 class ExercisePolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
-    public function viewAny(User $user): bool
+    use HandlesAuthorization;
+
+    public function viewAny(AuthUser $authUser): bool
     {
-        return true;
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
+        return $authUser->can('ViewAny:Exercise');
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
-    public function view(User $user, Exercise $exercise): bool
+    public function view(AuthUser $authUser, Exercise $exercise): bool
     {
-        return $exercise->user_id === null || $user->id === $exercise->user_id;
+        if ($authUser instanceof \App\Models\User) {
+            return $exercise->user_id === null || $authUser->id === $exercise->user_id;
+        }
+
+        return $authUser->can('View:Exercise');
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
+    public function create(AuthUser $authUser): bool
     {
-        return true;
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
+        return $authUser->can('Create:Exercise');
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, Exercise $exercise): bool
+    public function update(AuthUser $authUser, Exercise $exercise): bool
     {
-        return $exercise->user_id !== null && $user->id === $exercise->user_id;
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $exercise->user_id;
+        }
+
+        return $authUser->can('Update:Exercise');
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
-    public function delete(User $user, Exercise $exercise): bool
+    public function delete(AuthUser $authUser, Exercise $exercise): bool
     {
-        return $exercise->user_id !== null && $user->id === $exercise->user_id;
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $exercise->user_id;
+        }
+
+        return $authUser->can('Delete:Exercise');
+    }
+
+    public function restore(AuthUser $authUser, Exercise $exercise): bool
+    {
+        return $authUser->can('Restore:Exercise');
+    }
+
+    public function forceDelete(AuthUser $authUser, Exercise $exercise): bool
+    {
+        return $authUser->can('ForceDelete:Exercise');
+    }
+
+    public function forceDeleteAny(AuthUser $authUser): bool
+    {
+        return $authUser->can('ForceDeleteAny:Exercise');
+    }
+
+    public function restoreAny(AuthUser $authUser): bool
+    {
+        return $authUser->can('RestoreAny:Exercise');
+    }
+
+    public function replicate(AuthUser $authUser, Exercise $exercise): bool
+    {
+        return $authUser->can('Replicate:Exercise');
+    }
+
+    public function reorder(AuthUser $authUser): bool
+    {
+        return $authUser->can('Reorder:Exercise');
     }
 }

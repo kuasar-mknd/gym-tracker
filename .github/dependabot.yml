@@ -13,7 +13,7 @@ updates:
           day: 'monday'
           time: '09:00'
           timezone: 'America/Montreal'
-      open-pull-requests-limit: 10
+      open-pull-requests-limit: 15
       reviewers:
           - 'kuasar-mknd'
       labels:
@@ -80,7 +80,7 @@ updates:
           day: 'monday'
           time: '09:00'
           timezone: 'America/Montreal'
-      open-pull-requests-limit: 10
+      open-pull-requests-limit: 15
       reviewers:
           - 'kuasar-mknd'
       labels:
@@ -131,10 +131,6 @@ updates:
       ignore:
           # Ignore major version updates for critical frontend packages
           - dependency-name: 'vue'
-            update-types: ['version-update:semver-major']
-          - dependency-name: 'tailwindcss'
-            update-types: ['version-update:semver-major']
-          - dependency-name: 'vite'
             update-types: ['version-update:semver-major']
 
     # ========================================

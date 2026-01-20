@@ -13,7 +13,7 @@ defineProps({
     <GlassCard padding="p-4" class="group relative overflow-hidden">
         <div class="flex items-center gap-3">
             <!-- Icon with Glow -->
-            <div class="relative flex-shrink-0">
+            <div class="relative shrink-0">
                 <div
                     class="absolute inset-0 rounded-full blur-lg transition-all duration-700"
                     :class="count > 0 ? 'bg-orange-500/50 group-hover:bg-orange-400/60' : 'bg-gray-500/20'"
@@ -22,18 +22,18 @@ defineProps({
                     class="relative flex h-12 w-12 items-center justify-center rounded-2xl border transition-all duration-300"
                     :class="
                         count > 0
-                            ? 'border-orange-500/30 bg-gradient-to-br from-orange-400/20 to-red-500/20'
+                            ? 'border-orange-500/30 bg-linear-to-br from-orange-400/20 to-red-500/20'
                             : 'border-white/10 bg-white/5'
                     "
                 >
-                    <div class="relative z-10 animate-pulse-slow text-2xl" v-if="count > 0">🔥</div>
+                    <div class="animate-pulse-slow relative z-10 text-2xl" v-if="count > 0">🔥</div>
                     <div class="text-2xl opacity-50 grayscale" v-else>🔥</div>
                 </div>
             </div>
 
             <!-- Content -->
             <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-white/40">Série actuelle</p>
+                <p class="text-xs font-bold tracking-wider text-white/40 uppercase">Série actuelle</p>
                 <div class="flex items-baseline gap-1">
                     <span class="text-2xl font-bold text-white">{{ count }}</span>
                     <span class="text-xs text-white/60">jours</span>
@@ -43,7 +43,7 @@ defineProps({
 
         <!-- Background Effect -->
         <div
-            class="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-gradient-to-tl from-orange-500/10 to-transparent blur-xl transition-opacity duration-300"
+            class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full bg-linear-to-tl from-orange-500/10 to-transparent blur-xl transition-opacity duration-300"
             :class="count > 0 ? 'opacity-100' : 'opacity-0'"
         ></div>
     </GlassCard>

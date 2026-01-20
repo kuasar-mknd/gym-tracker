@@ -1,9 +1,9 @@
 <?php
 
-return array_filter([
+return [
     App\Providers\AppServiceProvider::class,
+    App\Providers\Filament\AdminPanelProvider::class,
+    App\Providers\FortifyServiceProvider::class,
     App\Providers\HorizonServiceProvider::class,
-    class_exists(Laravel\Telescope\TelescopeApplicationServiceProvider::class)
-        ? App\Providers\TelescopeServiceProvider::class
-        : null,
-]);
+    App\Providers\TelescopeServiceProvider::class,
+];

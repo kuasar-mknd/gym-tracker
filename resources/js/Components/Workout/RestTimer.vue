@@ -197,15 +197,15 @@ watch(
 </script>
 
 <template>
-    <div class="animate-bounce-in fixed bottom-36 left-4 right-4 z-[60] sm:left-auto sm:right-4 sm:w-80">
+    <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-60 sm:right-4 sm:left-auto sm:w-80">
         <GlassCard
-            class="overflow-hidden border-accent-primary/20 bg-black/80 shadow-2xl backdrop-blur-xl"
+            class="border-accent-primary/20 overflow-hidden bg-black/80 shadow-2xl backdrop-blur-xl"
             padding="p-0"
         >
             <!-- Progress bar -->
             <div class="h-1 w-full bg-white/5">
                 <div
-                    class="h-full bg-accent-primary transition-all duration-1000 ease-linear"
+                    class="bg-accent-primary h-full transition-all duration-1000 ease-linear"
                     :style="{ width: `${progress}%` }"
                 ></div>
             </div>
@@ -213,8 +213,8 @@ watch(
             <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold uppercase tracking-wider text-white/40">Repos en cours</div>
-                        <div class="text-3xl font-black tabular-nums text-white">
+                        <div class="text-xs font-bold tracking-wider text-white/40 uppercase">Repos en cours</div>
+                        <div class="text-3xl font-black text-white tabular-nums">
                             {{ formatTime(timeLeft) }}
                         </div>
                     </div>
@@ -230,7 +230,7 @@ watch(
 
                         <button
                             @click="toggleTimer"
-                            class="flex h-10 w-10 items-center justify-center rounded-full bg-accent-primary text-black transition hover:brightness-110 active:scale-95"
+                            class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black transition hover:brightness-110 active:scale-95"
                         >
                             <svg v-if="isActive" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 4h4v16H6V4zm8 0h4v16h4V4z" />

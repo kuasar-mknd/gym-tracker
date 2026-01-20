@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Goal extends Model
 {
     /** @use HasFactory<\Database\Factories\GoalFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $fillable = [
         'title',
@@ -75,5 +77,13 @@ class Goal extends Model
             default:
                 return '';
         }
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['title', 'type', 'target_value', 'current_value', 'deadline', 'completed_at'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 }

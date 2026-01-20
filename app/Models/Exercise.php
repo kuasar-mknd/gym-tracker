@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Exercise extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
 
@@ -27,5 +29,13 @@ class Exercise extends Model
     public function scopeForUser($query, $userId)
     {
         return $query->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $userId));
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'type', 'category', 'default_rest_time'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 }

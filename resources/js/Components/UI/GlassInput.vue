@@ -42,7 +42,7 @@ const inputId = computed(() => {
 
 const sizeClasses = {
     sm: 'min-h-[36px] text-sm rounded-lg',
-    md: 'min-h-[44px] text-base rounded-xl',
+    md: 'min-h-touch text-base rounded-xl',
     lg: 'min-h-[56px] text-lg rounded-2xl',
     fat: 'text-[4.5rem] leading-none rounded-[2rem] p-5',
 }
@@ -50,18 +50,18 @@ const sizeClasses = {
 
 <template>
     <div class="w-full">
-        <label v-if="label" :for="inputId" class="font-display-label mb-2 block text-text-muted">
+        <label v-if="label" :for="inputId" class="font-display-label text-text-muted mb-2 block">
             {{ label }}
         </label>
 
         <!-- Fat numeric input for workout logging -->
         <div
             v-if="variant === 'fat'"
-            class="glass-panel-light group flex flex-col items-center rounded-[2rem] p-5 transition-all focus-within:shadow-neon focus-within:ring-2 focus-within:ring-neon-green"
+            class="glass-panel-light group focus-within:shadow-neon focus-within:ring-neon-green flex flex-col items-center rounded-[2rem] p-5 transition-all focus-within:ring-2"
         >
             <label
                 v-if="label"
-                class="mb-2 text-center text-[10px] font-black uppercase tracking-widest text-text-muted"
+                class="text-text-muted mb-2 text-center text-[10px] font-black tracking-widest uppercase"
             >
                 {{ label }}
             </label>
@@ -80,7 +80,7 @@ const sizeClasses = {
             >
                 <button
                     type="button"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold text-text-main shadow-sm transition-transform hover:scale-110 active:bg-neon-green"
+                    class="text-text-main active:bg-neon-green flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold shadow-sm transition-transform hover:scale-110"
                     :aria-label="`Decrease ${label || 'value'}`"
                     @click="$emit('update:modelValue', Math.max(0, Number(modelValue) - 2.5))"
                 >
@@ -88,7 +88,7 @@ const sizeClasses = {
                 </button>
                 <button
                     type="button"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold text-text-main shadow-sm transition-transform hover:scale-110 active:bg-neon-green"
+                    class="text-text-main active:bg-neon-green flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold shadow-sm transition-transform hover:scale-110"
                     :aria-label="`Increase ${label || 'value'}`"
                     @click="$emit('update:modelValue', Number(modelValue) + 2.5)"
                 >
