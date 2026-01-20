@@ -25,7 +25,19 @@ class SecurityHeaders
         // Build CSP with nonce if available, otherwise fall back to unsafe-inline
         $nonce = $request->attributes->get('csp-nonce');
 
-        if (app()->environment('local', 'testing')) {
+        if (str_contains($request->path(), 'backoffice')) {
+            // ADMIN / BACKOFFICE: Relaxed CSP (Allows Alpine/Livewire eval + Avatars)
+            $csp = implode('; ', [
+                "default-src 'self'",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.bunny.net",
+                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
+                "img-src 'self' data: https: https://ui-avatars.com",
+                "font-src 'self' https://fonts.bunny.net https://fonts.gstatic.com data:",
+                "connect-src 'self'".(app()->isLocal() ? ' ws://localhost:* wss://localhost:* http://localhost:*' : ''),
+                "base-uri 'self'",
+                "form-action 'self'",
+            ]);
+        } elseif (app()->environment('local', 'testing')) {
             $csp = implode('; ', [
                 "default-src 'self' http://localhost:5173 ws://localhost:5173",
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173",
@@ -38,22 +50,11 @@ class SecurityHeaders
                 "base-uri 'self'",
                 "form-action 'self'",
             ]);
-        } elseif ($request->is('backoffice*') || str_contains($request->url(), '/backoffice')) {
-
-            // Filament/Livewire needs looser CSP for now to ensure Alpine/JS works reliably
-            $csp = implode('; ', [
-                "default-src 'self'",
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.bunny.net",
-                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
-                "img-src 'self' data: https: https://ui-avatars.com",
-                "font-src 'self' https://fonts.bunny.net https://fonts.gstatic.com data:",
-                "connect-src 'self'".(app()->isLocal() ? ' ws://localhost:* wss://localhost:* http://localhost:*' : ''),
-            ]);
         } elseif ($nonce) {
-            // CSP with nonce for inline scripts, but allowing external font stylesheets
+            // FRONTEND (Production): Strict CSP with Nonce
             $csp = implode('; ', [
                 "default-src 'self'",
-                "script-src 'self' 'nonce-{$nonce}'",
+                "script-src 'self' 'nonce-{$nonce}'", // No unsafe-eval here!
                 // External font stylesheets (fonts.bunny.net) require 'unsafe-inline' as they can't have nonces
                 "style-src 'self' 'unsafe-inline' https://fonts.bunny.net https://fonts.googleapis.com",
                 "img-src 'self' data: https:",
