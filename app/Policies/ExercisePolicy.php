@@ -14,26 +14,46 @@ class ExercisePolicy
 
     public function viewAny(AuthUser $authUser): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
         return $authUser->can('ViewAny:Exercise');
     }
 
     public function view(AuthUser $authUser, Exercise $exercise): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $exercise->user_id === null || $authUser->id === $exercise->user_id;
+        }
+
         return $authUser->can('View:Exercise');
     }
 
     public function create(AuthUser $authUser): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
         return $authUser->can('Create:Exercise');
     }
 
     public function update(AuthUser $authUser, Exercise $exercise): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $exercise->user_id;
+        }
+
         return $authUser->can('Update:Exercise');
     }
 
     public function delete(AuthUser $authUser, Exercise $exercise): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $exercise->user_id;
+        }
+
         return $authUser->can('Delete:Exercise');
     }
 

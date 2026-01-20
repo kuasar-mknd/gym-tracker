@@ -14,26 +14,46 @@ class SupplementPolicy
 
     public function viewAny(AuthUser $authUser): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
         return $authUser->can('ViewAny:Supplement');
     }
 
     public function view(AuthUser $authUser, Supplement $supplement): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $supplement->user_id;
+        }
+
         return $authUser->can('View:Supplement');
     }
 
     public function create(AuthUser $authUser): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
         return $authUser->can('Create:Supplement');
     }
 
     public function update(AuthUser $authUser, Supplement $supplement): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $supplement->user_id;
+        }
+
         return $authUser->can('Update:Supplement');
     }
 
     public function delete(AuthUser $authUser, Supplement $supplement): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $supplement->user_id;
+        }
+
         return $authUser->can('Delete:Supplement');
     }
 

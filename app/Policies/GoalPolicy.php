@@ -14,26 +14,46 @@ class GoalPolicy
 
     public function viewAny(AuthUser $authUser): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
         return $authUser->can('ViewAny:Goal');
     }
 
     public function view(AuthUser $authUser, Goal $goal): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $goal->user_id;
+        }
+
         return $authUser->can('View:Goal');
     }
 
     public function create(AuthUser $authUser): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
         return $authUser->can('Create:Goal');
     }
 
     public function update(AuthUser $authUser, Goal $goal): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $goal->user_id;
+        }
+
         return $authUser->can('Update:Goal');
     }
 
     public function delete(AuthUser $authUser, Goal $goal): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $goal->user_id;
+        }
+
         return $authUser->can('Delete:Goal');
     }
 

@@ -14,26 +14,46 @@ class WorkoutPolicy
 
     public function viewAny(AuthUser $authUser): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
         return $authUser->can('ViewAny:Workout');
     }
 
     public function view(AuthUser $authUser, Workout $workout): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $workout->user_id;
+        }
+
         return $authUser->can('View:Workout');
     }
 
     public function create(AuthUser $authUser): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return true;
+        }
+
         return $authUser->can('Create:Workout');
     }
 
     public function update(AuthUser $authUser, Workout $workout): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $workout->user_id && is_null($workout->ended_at);
+        }
+
         return $authUser->can('Update:Workout');
     }
 
     public function delete(AuthUser $authUser, Workout $workout): bool
     {
+        if ($authUser instanceof \App\Models\User) {
+            return $authUser->id === $workout->user_id;
+        }
+
         return $authUser->can('Delete:Workout');
     }
 
