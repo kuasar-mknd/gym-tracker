@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 class HabitLog extends Model
 {
@@ -35,8 +34,9 @@ class HabitLog extends Model
         $dates = is_array($dates[0]) ? $dates[0] : $dates;
 
         if (count($dates) >= 2) {
-             return $query->whereBetween('date', [$dates[0], $dates[1]]);
+            return $query->whereBetween('date', [$dates[0], $dates[1]]);
         }
+
         return $query;
     }
 }

@@ -32,7 +32,7 @@ class HabitLogController extends Controller
             ->allowedIncludes(['habit'])
             ->allowedFilters([
                 AllowedFilter::exact('habit_id'),
-                AllowedFilter::scope('date_between', 'whereDateBetween'), // Assumes scope exists or custom filter
+                AllowedFilter::scope('date_between', 'whereDateBetween'),
             ])
             ->allowedSorts(['date', 'created_at'])
             ->defaultSort('-date')
