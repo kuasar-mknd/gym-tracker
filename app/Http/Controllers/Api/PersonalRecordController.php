@@ -42,6 +42,8 @@ class PersonalRecordController extends Controller
      */
     public function store(PersonalRecordStoreRequest $request): PersonalRecordResource
     {
+        $this->authorize('create', PersonalRecord::class);
+
         $validated = $request->validated();
 
         $personalRecord = new PersonalRecord;

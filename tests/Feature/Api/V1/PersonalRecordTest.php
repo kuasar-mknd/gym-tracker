@@ -217,3 +217,23 @@ test('user cannot delete other user personal record', function (): void {
         ->deleteJson(route('api.v1.personal-records.destroy', $pr))
         ->assertForbidden();
 });
+
+test('user cannot link personal record to another users workout', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $exercise = Exercise::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
+
+    $data = [
+        'exercise_id' => $exercise->id,
+        'type' => '1RM',
+        'value' => 100.5,
+        'workout_id' => $workout->id,
+        'achieved_at' => now()->toDateString(),
+    ];
+
+    actingAs($user, 'sanctum')
+        ->postJson(route('api.v1.personal-records.store'), $data)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['workout_id']);
+});

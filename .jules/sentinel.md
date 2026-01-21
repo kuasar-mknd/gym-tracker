@@ -17,3 +17,8 @@
 **Vulnerability:** Adding `orWhere` conditions to `Rule::exists` validation queries without explicit grouping creates a SQL operator precedence bug (`AND A OR B`), potentially bypassing the intended security check (IDOR).
 **Learning:** Unlike Eloquent's `where(Closure)`, `Rule::exists` callbacks execute directly on the query builder. You must manually nest closures to group `OR` conditions correctly.
 **Prevention:** Always use nested closures when adding `OR` conditions to validation rules: `$query->where(fn($q) => $q->where(...)->orWhere(...))`.
+
+## 2026-06-16 - Broken Reference Integrity via Unscoped Exists Validation
+**Vulnerability:** Users could create Personal Records linked to Workouts and Sets belonging to other users because validation only checked for ID existence (`exists:workouts,id`) without verifying ownership.
+**Learning:** Standard `exists` validation confirms a record is in the database but ignores ownership. This allows linking to private resources of others, polluting data relationships.
+**Prevention:** Always scope `exists` checks to `user_id` when validating relationships to user-owned resources: `Rule::exists('table')->where('user_id', $this->user()->id)`.

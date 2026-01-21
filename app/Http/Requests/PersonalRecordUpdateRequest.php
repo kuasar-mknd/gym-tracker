@@ -29,8 +29,22 @@ class PersonalRecordUpdateRequest extends FormRequest
             'type' => 'sometimes|string',
             'value' => 'sometimes|numeric',
             'secondary_value' => 'nullable|numeric',
-            'workout_id' => 'nullable|exists:workouts,id',
-            'set_id' => 'nullable|exists:sets,id',
+            'workout_id' => [
+                'nullable',
+                Rule::exists('workouts', 'id')->where(function ($query) {
+                    return $query->where('user_id', $this->user()->id);
+                }),
+            ],
+            'set_id' => [
+                'nullable',
+                Rule::exists('sets', 'id')->where(function ($query) {
+                    return $query->whereIn('workout_line_id', function ($q) {
+                        $q->select('id')->from('workout_lines')->whereIn('workout_id', function ($q2) {
+                            $q2->select('id')->from('workouts')->where('user_id', $this->user()->id);
+                        });
+                    });
+                }),
+            ],
             'achieved_at' => 'sometimes|date',
         ];
     }
