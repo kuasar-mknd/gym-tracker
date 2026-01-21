@@ -59,8 +59,23 @@ class ProfileController extends Controller
      */
     public function updatePreferences(Request $request): RedirectResponse
     {
+        $allowedTypes = [
+            'daily_reminder',
+            'workout_streak_reminder',
+            'no_activity_reminder',
+            'weekly_summary',
+            'achievement_unlocked',
+            'goal_progress',
+        ];
+
         $validated = $request->validate([
-            'preferences' => ['required', 'array'],
+            'preferences' => ['required', 'array', 'bail', function ($attribute, $value, $fail) use ($allowedTypes) {
+                $keys = array_keys($value);
+                $diff = array_diff($keys, $allowedTypes);
+                if (! empty($diff)) {
+                    $fail('Invalid preference types: '.implode(', ', $diff));
+                }
+            }],
             'preferences.*' => ['boolean'],
             'push_preferences' => ['required', 'array'],
             'push_preferences.*' => ['boolean'],
