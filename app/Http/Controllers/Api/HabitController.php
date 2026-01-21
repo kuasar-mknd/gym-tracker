@@ -10,7 +10,6 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
-use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class HabitController extends Controller
@@ -28,16 +27,16 @@ class HabitController extends Controller
     {
         $this->authorize('viewAny', Habit::class);
 
-        $habits = QueryBuilder::for(Habit::class)
+        $query = QueryBuilder::for(Habit::class)
             ->allowedIncludes(['logs'])
-            ->allowedFilters([
-                AllowedFilter::exact('archived'),
-                'name',
-            ])
             ->allowedSorts(['name', 'created_at', 'goal_times_per_week'])
             ->defaultSort('name')
-            ->where('user_id', $this->user()->id)
-            ->paginate($request->get('per_page', 15));
+            ->where('user_id', $this->user()->id);
+
+        /** @var int $perPage */
+        $perPage = $request->get('per_page', 15);
+
+        $habits = $query->paginate($perPage);
 
         return HabitResource::collection($habits);
     }

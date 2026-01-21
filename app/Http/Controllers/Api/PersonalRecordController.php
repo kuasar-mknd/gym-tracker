@@ -26,7 +26,7 @@ class PersonalRecordController extends Controller
             'exercise_id' => 'nullable|integer|exists:exercises,id',
         ]);
 
-        $query = PersonalRecord::query()->where('user_id', $this->user()->id);
+        $query = PersonalRecord::query()->where('user_id', $this->user()->getAuthIdentifier());
 
         if (isset($validated['exercise_id'])) {
             $query->where('exercise_id', $validated['exercise_id']);
@@ -48,7 +48,11 @@ class PersonalRecordController extends Controller
 
         $personalRecord = new PersonalRecord;
         $personalRecord->fill($validated);
-        $personalRecord->user_id = $this->user()->id;
+
+        /** @var int|string $userId */
+        $userId = $this->user()->getAuthIdentifier();
+        $personalRecord->user_id = (int) $userId;
+
         $personalRecord->save();
 
         return new PersonalRecordResource($personalRecord);

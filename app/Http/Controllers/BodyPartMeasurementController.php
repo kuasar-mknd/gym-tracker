@@ -12,8 +12,9 @@ class BodyPartMeasurementController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index()
+    public function index(): \Inertia\Response
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         // Group by part, get latest for card display
@@ -21,15 +22,17 @@ class BodyPartMeasurementController extends Controller
             ->orderBy('measured_at', 'desc')
             ->get()
             ->groupBy('part')
-            ->map(function ($group) {
+            ->map(function ($group): array {
+                /** @var \App\Models\BodyPartMeasurement $latest */
                 $latest = $group->first();
+                /** @var \App\Models\BodyPartMeasurement|null $previous */
                 $previous = $group->skip(1)->first();
 
                 return [
                     'part' => $latest->part,
                     'current' => $latest->value,
                     'unit' => $latest->unit,
-                    'date' => $latest->measured_at->format('Y-m-d'),
+                    'date' => \Illuminate\Support\Carbon::parse($latest->measured_at)->format('Y-m-d'),
                     'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
                 ];
             })->values();
@@ -40,8 +43,9 @@ class BodyPartMeasurementController extends Controller
         ]);
     }
 
-    public function show(string $part)
+    public function show(string $part): \Illuminate\Http\RedirectResponse|\Inertia\Response
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         $history = $user->bodyPartMeasurements()
@@ -59,14 +63,16 @@ class BodyPartMeasurementController extends Controller
         ]);
     }
 
-    public function store(BodyPartMeasurementStoreRequest $request)
+    public function store(BodyPartMeasurementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $request->user()->bodyPartMeasurements()->create($request->validated());
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        $user->bodyPartMeasurements()->create($request->validated());
 
         return redirect()->back()->with('success', 'Measurement added.');
     }
 
-    public function destroy(BodyPartMeasurement $bodyPartMeasurement)
+    public function destroy(BodyPartMeasurement $bodyPartMeasurement): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $bodyPartMeasurement);
 
@@ -75,15 +81,25 @@ class BodyPartMeasurementController extends Controller
         return redirect()->back()->with('success', 'Measurement deleted.');
     }
 
-    private function getCommonParts()
+    /**
+     * @return array<int, string>
+     */
+    private function getCommonParts(): array
     {
         return [
-            'Neck', 'Shoulders', 'Chest',
-            'Biceps L', 'Biceps R',
-            'Forearm L', 'Forearm R',
-            'Waist', 'Hips',
-            'Thigh L', 'Thigh R',
-            'Calf L', 'Calf R',
+            'Neck',
+            'Shoulders',
+            'Chest',
+            'Biceps L',
+            'Biceps R',
+            'Forearm L',
+            'Forearm R',
+            'Waist',
+            'Hips',
+            'Thigh L',
+            'Thigh R',
+            'Calf L',
+            'Calf R',
         ];
     }
 }

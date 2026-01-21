@@ -11,7 +11,10 @@ class UpdateHabitRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->id === $this->route('habit')->user_id;
+        /** @var \App\Models\Habit $habit */
+        $habit = $this->route('habit');
+
+        return $this->user()?->getAuthIdentifier() === $habit->user_id;
     }
 
     /**

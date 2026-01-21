@@ -27,13 +27,19 @@ class WaterLog extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\WaterLog>  $query
+     * @param  array<mixed>|string  $dates
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\WaterLog>
+     */
     public function scopeConsumedAtBetween(Builder $query, $dates): Builder
     {
-        $dates = is_array($dates) ? $dates : explode(',', $dates);
+        /** @var array<int, string> $datesArray */
+        $datesArray = is_array($dates) ? $dates : explode(',', (string) $dates);
 
         return $query->whereBetween('consumed_at', [
-            Carbon::parse($dates[0])->startOfDay(),
-            Carbon::parse($dates[1] ?? $dates[0])->endOfDay(),
+            Carbon::parse((string) $datesArray[0])->startOfDay(),
+            Carbon::parse((string) ($datesArray[1] ?? $datesArray[0]))->endOfDay(),
         ]);
     }
 

@@ -89,11 +89,12 @@ class SupplementController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: ?float}>
+     * @return \Illuminate\Support\Collection<int, mixed>
      */
     protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
     {
-        return Supplement::forUser($user->id)
+        /** @var \Illuminate\Support\Collection<int, mixed> $results */
+        $results = Supplement::forUser($user->id)
             ->with(['latestLog'])
             ->get()
             ->map(fn (Supplement $supplement): array => [
@@ -104,6 +105,8 @@ class SupplementController extends Controller
                 'unit' => 'servings',
                 'daily_goal' => null,
             ]);
+
+        return $results;
     }
 
     /** @return array<int, array{date: string, count: float}> */
@@ -120,7 +123,10 @@ class SupplementController extends Controller
             ->get()
             ->pluck('count', 'date');
 
-        return $this->fillUsageHistory($usageHistoryRaw, $days);
+        /** @var \Illuminate\Support\Collection<string, float> $results */
+        $results = $usageHistoryRaw;
+
+        return $this->fillUsageHistory($results, $days);
     }
 
     /**

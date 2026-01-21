@@ -55,7 +55,8 @@ class NewPasswordController extends Controller
 
     private function resetPassword(Request $request): string
     {
-        return Password::reset(
+        /** @var string $status */
+        $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (\App\Models\User $user) use ($request): void {
                 /** @var string $password */
@@ -69,5 +70,7 @@ class NewPasswordController extends Controller
                 event(new PasswordReset($user));
             }
         );
+
+        return $status;
     }
 }

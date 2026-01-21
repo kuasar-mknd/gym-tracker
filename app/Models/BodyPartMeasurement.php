@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BodyPartMeasurement extends Model
 {
+    /** @use HasFactory<\Database\Factories\BodyPartMeasurementFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -19,6 +20,9 @@ class BodyPartMeasurement extends Model
         'notes',
     ];
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

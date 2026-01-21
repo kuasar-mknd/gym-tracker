@@ -87,13 +87,16 @@ class AchievementService
             ->latest('started_at')
             ->pluck('started_at')
             ->map(function ($date) {
-                /** @var \Illuminate\Support\Carbon $date */
-                return $date->format('Y-m-d');
+                /** @var \Illuminate\Support\Carbon|string $date */
+                return \Illuminate\Support\Carbon::parse($date)->format('Y-m-d');
             })
             ->unique()
             ->values();
 
-        return $dates->toArray();
+        /** @var array<int, string> $result */
+        $result = $dates->toArray();
+
+        return $result;
     }
 
     /**

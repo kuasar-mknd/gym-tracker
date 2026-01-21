@@ -47,7 +47,9 @@ class WaterLogController extends Controller
         $validated = $request->validated();
 
         $log = new WaterLog($validated);
-        $log->user_id = $this->user()->id;
+        /** @var int<0, max> $userId */
+        $userId = abs((int) $this->user()->id);
+        $log->user_id = $userId;
         $log->save();
 
         return (new WaterLogResource($log))
