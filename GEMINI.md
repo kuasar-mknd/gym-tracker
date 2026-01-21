@@ -462,3 +462,86 @@ grepai trace graph "ValidateToken" --depth 3 --json
 3. Use `Read` tool to examine files from results
 4. Only use Grep for exact string searches if needed
 
+=== filament/v3 rules ===
+
+## Filament V3
+
+- Use the `search-docs` tool with queries like `filament table filters` or `filament form schema` before generating code.
+- When creating Resources, always use `vendor/bin/sail artisan make:filament-resource`.
+- **Forms:** Use the chaining syntax for configuring fields. Always explicitly define `schema()` in the form method.
+- **Tables:** Use `TextColumn::make()` and ensure strictly typed columns.
+- **Widgets:** Prefer `StatsOverview` for dashboards.
+- **Actions:** Use Filament Actions (`EditAction`, `DeleteAction`) inside tables rather than custom buttons where possible.
+
+=== mcp/integration rules ===
+
+## Documentation Strategy (HIERARCHY)
+1.  **Primary Source (`laravel-boost`):** ALWAYS use the `search-docs` tool from Laravel Boost first for any core Laravel, Filament, or Inertia questions. It is context-aware of my installed versions.
+2.  **Secondary Source (`context7`):** Use `context7` ONLY IF `search-docs` yields no results or if I ask about a library NOT installed in my `composer.json`.
+3.  **Fallback (`perplexity`):** Use `perplexity` for high-level comparisons or architectural research (e.g., "Best practice for X vs Y").
+
+## Docker MCP Usage
+- When I ask about "container status", "logs", or "services", use the `docker` tool.
+- If the app crashes, check the container logs first: `docker_logs` for `laravel.test`.
+- NEVER try to run `docker` commands via shell. Always use the MCP tool.
+
+## GitHub MCP Usage
+- When I ask "what changed recently?" or "check the PR", use the `github` tool.
+- Before starting a big feature, check for open Issues related to it using `github_search_issues`.
+- When I say "Create a PR", use `github_create_pull_request` and summarize the changes from the `git` history.
+
+## Puppeteer Usage
+- If I ask to "verify visually" or "take a screenshot of the homepage", use `puppeteer_screenshot`.
+- Use Puppeteer to debug UI issues that don't appear in backend logs.
+
+=== php/strict-quality rules ===
+
+## The "Zero Tolerance" Protocol
+You act as a Senior Architect who refuses technical debt. Your goal is to pass the CI pipeline which enforces **100% scores** on Architecture and Complexity. 
+
+For every PHP file you modify or create, you must strictly follow this **5-step Quality Gate**.
+
+### 1. Modernization & Style (Pint & Rector)
+- **Constraint:** Code must be "Future Ready".
+- **Rules:**
+    - Use Constructor Property Promotion.
+    - Use Readonly classes where possible.
+    - Use Arrow functions for short closures.
+    - **Dead Code:** Remove unused imports, variables, and private methods immediately.
+- **Action:** Run `vendor/bin/sail bin pint` AND ensure code complies with Rector rules.
+
+### 2. Static Analysis (Larastan/PHPStan)
+- **Constraint:** Maximum Type Safety.
+- **Rules:**
+    - **MANDATORY:** First line of every PHP file must be `declare(strict_types=1);`.
+    - **No Mixed:** Do not use `mixed` return types. Create specific DTOs or Value Objects.
+    - **Docs:** All arrays must have PHPDoc definitions (e.g., `/** @return array<int, string> */`).
+- **Action:** Run `vendor/bin/sail artisan phpstan:analyse --memory-limit=2G` on the file.
+
+### 3. Architecture & Complexity (PHP Insights 100/100)
+- **Constraint:** The CI fails if Quality, Complexity, or Architecture is below 100.
+- **Coding Standards to Achieve 100/100:**
+    - **Cyclomatic Complexity:** MAX 3 per method. If you have more than 2 `if` statements, extract a method or use a Strategy pattern.
+    - **Method Length:** MAX 15 lines of code per method.
+    - **Class Length:** MAX 200 lines per class.
+    - **No Else:** `else` and `elseif` are FORBIDDEN. Use Guard Clauses (Early Returns).
+    - **Controllers:** Must be "Skinny". Move ALL logic to Actions, Services, or Jobs. A controller method should only validate, call a service, and return a response.
+    - **Coupling:** Do not use `Model::query()` or static calls inside Controllers. Inject a Repository or Service.
+- **Verification Command:**
+  `vendor/bin/sail artisan insights --no-interaction --min-quality=100 --min-complexity=100 --min-architecture=100 --min-style=90`
+
+### 4. Failure Handling (Refactoring Loop)
+- If the *Insights* command above fails, you generally need to:
+    1. Extract private methods to reduce complexity.
+    2. Create a Value Object to reduce argument count.
+    3. Move logic to a dedicated `App\Actions` class.
+- **You must loop this step until the command passes.**
+
+### 5. Final Verification (Omni-Test)
+- **Constraint:** CI runs both Unit and Browser tests.
+- **Action:** You MUST run this exact sequence before confirming the task is done:
+  ```bash
+  vendor/bin/sail artisan test && vendor/bin/sail artisan dusk
+  ```
+- **Constraint:** if Dusk fails, use puppeteer_screenshot to debug the UI state.  
+
