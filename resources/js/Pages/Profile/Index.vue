@@ -90,13 +90,15 @@ const menuGroups = [
                     class="bg-gradient-main flex h-20 w-20 items-center justify-center rounded-3xl p-[3px] shadow-lg shadow-orange-500/20"
                 >
                     <div
-                        class="flex h-full w-full items-center justify-center rounded-[1.2rem] bg-white text-3xl font-black"
+                        class="flex h-full w-full items-center justify-center rounded-[1.2rem] bg-white text-3xl font-black dark:bg-slate-800"
                     >
                         {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                     </div>
                 </div>
                 <div>
-                    <h2 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
+                    <h2
+                        class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic dark:text-white"
+                    >
                         {{ $page.props.auth.user.name }}
                     </h2>
                     <p class="text-text-muted text-sm font-bold">{{ $page.props.auth.user.email }}</p>
@@ -131,7 +133,11 @@ const menuGroups = [
 
                 <div class="grid grid-cols-1 gap-3">
                     <Link v-for="item in group.items" :key="item.name" :href="route(item.route)" class="group block">
-                        <GlassCard padding="p-4" :hover="true" class="rounded-2xl! border-white/40 bg-white/60">
+                        <GlassCard
+                            padding="p-4"
+                            :hover="true"
+                            class="rounded-2xl! border-white/40 bg-white/60 dark:border-slate-700/40 dark:bg-slate-800/60"
+                        >
                             <div class="flex items-center gap-4">
                                 <div
                                     :class="[
@@ -143,7 +149,7 @@ const menuGroups = [
                                     <span class="material-symbols-outlined text-2xl">{{ item.icon }}</span>
                                 </div>
                                 <div class="flex-1">
-                                    <h4 class="text-text-main font-bold">{{ item.name }}</h4>
+                                    <h4 class="text-text-main font-bold dark:text-white">{{ item.name }}</h4>
                                     <p class="text-text-muted text-xs">{{ item.description }}</p>
                                 </div>
                                 <span

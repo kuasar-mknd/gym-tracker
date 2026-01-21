@@ -68,7 +68,7 @@ const confirmDeletion = (workout) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Mes Séances</h2>
+                <h2 class="text-text-main text-xl font-semibold dark:text-white">Mes Séances</h2>
                 <div class="flex gap-2">
                     <Link :href="route('calendar.index')">
                         <GlassButton>
@@ -136,7 +136,7 @@ const confirmDeletion = (workout) => {
                     <!-- Frequency Chart -->
                     <GlassCard v-if="monthlyFrequency && monthlyFrequency.length > 0">
                         <div class="mb-4">
-                            <h3 class="text-text-main text-lg font-bold">Fréquence</h3>
+                            <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence</h3>
                             <p class="text-text-muted text-xs">Séances par mois</p>
                         </div>
                         <WorkoutsPerMonthChart :data="monthlyFrequency" />
@@ -145,7 +145,7 @@ const confirmDeletion = (workout) => {
                     <!-- Duration Chart -->
                     <GlassCard v-if="durationHistory && durationHistory.length > 0">
                         <div class="mb-4">
-                            <h3 class="text-text-main text-lg font-bold">Durée</h3>
+                            <h3 class="text-text-main text-lg font-bold dark:text-white">Durée</h3>
                             <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
                         </div>
                         <WorkoutDurationChart :data="durationHistory" />
@@ -154,7 +154,7 @@ const confirmDeletion = (workout) => {
                     <!-- Volume per Workout Chart -->
                     <GlassCard v-if="volumeHistory && volumeHistory.length > 0" class="lg:col-span-2">
                         <div class="mb-4">
-                            <h3 class="text-text-main text-lg font-bold">Volume par Séance</h3>
+                            <h3 class="text-text-main text-lg font-bold dark:text-white">Volume par Séance</h3>
                             <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
                         </div>
                         <VolumePerWorkoutChart :data="volumeHistory" />
@@ -164,14 +164,14 @@ const confirmDeletion = (workout) => {
 
             <!-- Available Exercises -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="text-text-main mb-3 font-semibold">Exercices disponibles</h3>
+                <h3 class="text-text-main mb-3 font-semibold dark:text-white">Exercices disponibles</h3>
                 <div class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
                     <div
                         v-for="exercise in exercises"
                         :key="exercise.id"
-                        class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm"
+                        class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800/50"
                     >
-                        <div class="text-text-main font-medium">{{ exercise.name }}</div>
+                        <div class="text-text-main font-medium dark:text-white">{{ exercise.name }}</div>
                         <div class="text-text-muted text-xs">{{ exercise.category }}</div>
                     </div>
                 </div>
@@ -179,13 +179,13 @@ const confirmDeletion = (workout) => {
 
             <!-- Workouts List -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="text-text-main mb-3 font-semibold">Historique</h3>
+                <h3 class="text-text-main mb-3 font-semibold dark:text-white">Historique</h3>
 
                 <div v-if="!workouts.data || workouts.data.length === 0">
                     <GlassCard>
                         <div class="py-12 text-center">
                             <div class="mb-3 text-5xl">💪</div>
-                            <h3 class="text-text-main text-lg font-semibold">Aucune séance</h3>
+                            <h3 class="text-text-main text-lg font-semibold dark:text-white">Aucune séance</h3>
                             <p class="text-text-muted mt-1">Clique sur le bouton + pour commencer</p>
                             <GlassButton
                                 variant="primary"
@@ -211,7 +211,7 @@ const confirmDeletion = (workout) => {
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2">
-                                        <h4 class="text-text-main font-semibold">
+                                        <h4 class="text-text-main font-semibold dark:text-white">
                                             {{ workout.name || 'Séance' }}
                                         </h4>
                                         <span class="glass-badge glass-badge-primary text-xs">
@@ -227,7 +227,7 @@ const confirmDeletion = (workout) => {
                                         <span
                                             v-for="line in workout.workout_lines.slice(0, 3)"
                                             :key="line.id"
-                                            class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs"
+                                            class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/50"
                                         >
                                             {{ line.exercise.name }}
                                             <span class="text-text-muted/50">• {{ line.sets.length }} séries</span>
