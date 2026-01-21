@@ -40,6 +40,10 @@ const inputId = computed(() => {
     return attrs.id || `glass-input-${instance?.uid}`
 })
 
+const errorId = computed(() => {
+    return `${inputId.value}-error`
+})
+
 const sizeClasses = {
     sm: 'min-h-[36px] text-sm rounded-lg',
     md: 'min-h-touch text-base rounded-xl',
@@ -105,6 +109,8 @@ const sizeClasses = {
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
                 @focus="selectOnFocus ? $event.target.select() : null"
+                :aria-invalid="!!error"
+                :aria-describedby="error ? errorId : undefined"
                 :class="[
                     'glass-input',
                     sizeClasses[size],
@@ -114,7 +120,7 @@ const sizeClasses = {
                 ]"
                 v-bind="$attrs"
             />
-            <p v-if="error" class="mt-2 text-sm font-medium text-red-600">
+            <p v-if="error" :id="errorId" class="mt-2 text-sm font-medium text-red-600">
                 {{ error }}
             </p>
         </template>
