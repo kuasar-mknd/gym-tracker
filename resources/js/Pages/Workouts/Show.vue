@@ -61,23 +61,35 @@ const timerDuration = ref(90)
 
 /**
  * Marks a set as completed/incomplete and triggers the rest timer if completed.
+ * Uses optimistic UI pattern: update locally first, then sync with server.
  *
  * @param {Object} set - The set object to update.
  * @param {Number|null} exerciseRestTime - The default rest time for the exercise.
  */
 const toggleSetCompletion = (set, exerciseRestTime) => {
     const newState = !set.is_completed
+    const previousState = set.is_completed
+
+    // Optimistic update: apply change immediately for instant feedback
+    set.is_completed = newState
+    vibrate('tap')
+
+    // Start timer immediately if completing
+    if (newState) {
+        timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
+        showTimer.value = true
+    }
+
     router.patch(
         route('sets.update', { set: set.id }),
         { is_completed: newState },
         {
             preserveScroll: true,
             only: ['workout'],
-            onSuccess: () => {
-                if (newState) {
-                    timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
-                    showTimer.value = true
-                }
+            onError: () => {
+                // Rollback on error
+                set.is_completed = previousState
+                vibrate('error')
             },
         },
     )
