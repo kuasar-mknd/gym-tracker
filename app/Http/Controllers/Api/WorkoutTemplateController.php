@@ -35,7 +35,10 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('create', WorkoutTemplate::class);
 
-        $template = $action->execute($this->user(), $request->validated());
+        /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $validated */
+        $validated = $request->validated();
+
+        $template = $action->execute($this->user(), $validated);
 
         return new WorkoutTemplateResource($template->load(['workoutTemplateLines.workoutTemplateSets', 'workoutTemplateLines.exercise']));
     }
@@ -51,7 +54,10 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('update', $workoutTemplate);
 
-        $template = $action->execute($workoutTemplate, $request->validated());
+        /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $validated */
+        $validated = $request->validated();
+
+        $template = $action->execute($workoutTemplate, $validated);
 
         return new WorkoutTemplateResource($template);
     }

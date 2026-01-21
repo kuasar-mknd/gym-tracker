@@ -16,11 +16,11 @@ class AchievementService
         $achievements = Achievement::all();
 
         // NITRO FIX: Pre-load unlocked IDs to avoid N+1 query in loop
-        $unlockedIds = $user->achievements()->pluck('achievement_id')->toArray();
+        $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
 
         foreach ($achievements as $achievement) {
             // Skip if already unlocked - memory check, no query
-            if (in_array($achievement->id, $unlockedIds)) {
+            if (in_array($achievement->id, $unlockedAchievementIds)) {
                 continue;
             }
 
@@ -93,8 +93,10 @@ class AchievementService
             ->unique()
             ->values();
 
-        /** @var array<int, string> */
-        return $dates->toArray();
+        /** @var array<int, string> $result */
+        $result = $dates->toArray();
+
+        return $result;
     }
 
     /**

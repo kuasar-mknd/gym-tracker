@@ -51,7 +51,9 @@ class SupplementController extends Controller
         $validated = $request->validated();
 
         $supplement = new Supplement($validated);
-        $supplement->user_id = $this->user()->id;
+        /** @var int<0, max> $userId */
+        $userId = $this->user()->id;
+        $supplement->user_id = $userId;
         $supplement->save();
 
         return (new SupplementResource($supplement))

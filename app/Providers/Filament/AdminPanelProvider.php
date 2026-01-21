@@ -32,10 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('GymTracker')
             ->favicon(asset('favicon.ico'))
             ->authGuard('admin')
-            ->colors([
-                'primary' => Color::Indigo,
-                'gray' => Color::Slate,
-            ])
+            ->colors($this->getPanelColors())
             ->multiFactorAuthentication([AppAuthentication::make()])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
@@ -46,6 +43,21 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([Authenticate::class])
             ->plugins([FilamentShieldPlugin::make()])
             ->navigationItems($this->getNavigationItems());
+    }
+
+    /**
+     * @return array<string, array<int, string>|string>
+     */
+    private function getPanelColors(): array
+    {
+        return [
+            'primary' => Color::Amber,
+            'gray' => Color::Slate,
+            'danger' => Color::Rose,
+            'success' => Color::Emerald,
+            'warning' => Color::Orange,
+            'info' => Color::Blue,
+        ];
     }
 
     /**
@@ -71,7 +83,12 @@ class AdminPanelProvider extends PanelProvider
                 ->icon('heroicon-o-presentation-chart-line')
                 ->group('Système')
                 ->sort(100)
-                ->visible(fn (): bool => auth('admin')->user()?->can('viewPulse') ?? false),
+                ->visible(function (): bool {
+                    /** @var \App\Models\Admin|null $user */
+                    $user = auth('admin')->user();
+
+                    return $user?->can('viewPulse') ?? false;
+                }),
         ];
     }
 

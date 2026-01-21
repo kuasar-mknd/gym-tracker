@@ -218,7 +218,7 @@ test('user cannot delete other user personal record', function (): void {
         ->assertForbidden();
 });
 
-test('user cannot link personal record to another users workout', function () {
+test('user cannot link personal record to another users workout', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $exercise = Exercise::factory()->create();

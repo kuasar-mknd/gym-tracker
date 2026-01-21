@@ -37,20 +37,32 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('habits', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'archived']);
-        });
+        try {
+            Schema::table('habits', function (Blueprint $table) {
+                $table->dropIndex(['user_id', 'archived']);
+            });
+        } catch (\Throwable $e) {
+        }
 
-        Schema::table('exercises', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'category', 'name']);
-        });
+        try {
+            Schema::table('exercises', function (Blueprint $table) {
+                $table->dropIndex(['user_id', 'category', 'name']);
+            });
+        } catch (\Throwable $e) {
+        }
 
-        Schema::table('personal_records', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'achieved_at']);
-        });
+        try {
+            Schema::table('personal_records', function (Blueprint $table) {
+                $table->dropIndex(['user_id', 'achieved_at']);
+            });
+        } catch (\Throwable $e) {
+        }
 
-        Schema::table('body_measurements', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'measured_at']);
-        });
+        try {
+            Schema::table('body_measurements', function (Blueprint $table) {
+                $table->dropIndex(['user_id', 'measured_at']);
+            });
+        } catch (\Throwable $e) {
+        }
     }
 };

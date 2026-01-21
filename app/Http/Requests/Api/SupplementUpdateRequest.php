@@ -2,9 +2,7 @@
 
 namespace App\Http\Requests\Api;
 
-use App\Models\Supplement;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class SupplementUpdateRequest extends FormRequest
 {

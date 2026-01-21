@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreWaterLogRequest;
+use App\Models\User;
 use App\Models\WaterLog;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -13,42 +14,18 @@ class WaterController extends Controller
 {
     public function index(): Response
     {
+        /** @var User $user */
         $user = $this->user();
 
-        // Get today's logs
         $todayLogs = $user->waterLogs()
             ->whereDate('consumed_at', Carbon::today())
             ->orderByDesc('consumed_at')
             ->get();
 
-        $todayTotal = $todayLogs->sum('amount');
-
-        // Get history for the last 7 days
-        $startDate = Carbon::now()->subDays(6)->startOfDay();
-        $historyLogs = $user->waterLogs()
-            ->where('consumed_at', '>=', $startDate)
-            ->get();
-
-        $history = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $dateString = $date->format('Y-m-d');
-
-            $dayTotal = $historyLogs->filter(function ($log) use ($dateString) {
-                return $log->consumed_at->format('Y-m-d') === $dateString;
-            })->sum('amount');
-
-            $history[] = [
-                'date' => $dateString,
-                'day_name' => $date->locale('en')->dayName,
-                'total' => $dayTotal,
-            ];
-        }
-
         return Inertia::render('Tools/WaterTracker', [
             'logs' => $todayLogs,
-            'todayTotal' => $todayTotal,
-            'history' => $history,
+            'todayTotal' => $todayLogs->sum('amount'),
+            'history' => $this->getWaterHistory($user),
             'goal' => 2500, // Hardcoded goal for now
         ]);
     }
@@ -75,5 +52,38 @@ class WaterController extends Controller
         $waterLog->delete();
 
         return redirect()->back();
+    }
+
+    /** @return array<int, array{date: string, day_name: string, total: float}> */
+    private function getWaterHistory(User $user): array
+    {
+        $startDate = Carbon::now()->subDays(6)->startOfDay();
+        $historyLogs = $user->waterLogs()
+            ->where('consumed_at', '>=', $startDate)
+            ->get();
+
+        $history = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $dateString = $date->format('Y-m-d');
+
+            $dayTotal = $historyLogs->filter(function (WaterLog $log) use ($dateString): bool {
+                /** @var \Carbon\Carbon $consumedAt */
+                $consumedAt = $log->consumed_at;
+
+                return $consumedAt->format('Y-m-d') === $dateString;
+            })->sum('amount');
+
+            /** @var float|int $dayTotal */
+            $dayTotalValue = (float) $dayTotal;
+
+            $history[] = [
+                'date' => $dateString,
+                'day_name' => $date->dayName,
+                'total' => $dayTotalValue,
+            ];
+        }
+
+        return $history;
     }
 }

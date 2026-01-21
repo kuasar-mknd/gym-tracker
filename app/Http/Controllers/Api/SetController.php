@@ -39,6 +39,7 @@ class SetController extends Controller
     {
         $validated = $request->validated();
 
+        /** @var \App\Models\WorkoutLine $workoutLine */
         $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
 
         $set = $workoutLine->sets()->create($validated);

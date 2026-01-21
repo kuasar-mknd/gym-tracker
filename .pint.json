@@ -1,0 +1,17 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "new_with_parentheses": true,
+        "single_line_empty_body": false,
+        "braces": {
+            "position_after_functions_and_oop_constructs": "next"
+        },
+        "function_declaration": {
+            "closure_fn_spacing": "one"
+        },
+        "phpdoc_separation": true,
+        "concat_space": {
+            "spacing": "one"
+        }
+    }
+}

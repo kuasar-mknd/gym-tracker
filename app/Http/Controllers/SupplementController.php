@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Supplement;
 use App\Models\SupplementLog;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -11,39 +12,12 @@ class SupplementController extends Controller
 {
     public function index(): \Inertia\Response
     {
-        $supplements = Supplement::forUser($this->user()->id)
-            ->with('latestLog')
-            ->get()
-            ->map(fn ($supplement): array => [
-                'id' => $supplement->id,
-                'name' => $supplement->name,
-                'brand' => $supplement->brand,
-                'dosage' => $supplement->dosage,
-                'servings_remaining' => $supplement->servings_remaining,
-                'low_stock_threshold' => $supplement->low_stock_threshold,
-                'last_taken_at' => $supplement->latestLog?->consumed_at,
-            ]);
-
-        // Calculate intake history for the last 30 days
-        $logs = SupplementLog::where('user_id', $this->user()->id)
-            ->where('consumed_at', '>=', now()->subDays(29)->startOfDay())
-            ->get()
-            ->groupBy(function ($log) {
-                return $log->consumed_at->format('Y-m-d');
-            });
-
-        $intakeHistory = [];
-        for ($i = 29; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
-            $intakeHistory[] = [
-                'date' => now()->subDays($i)->format('d/m'),
-                'count' => isset($logs[$date]) ? $logs[$date]->sum('quantity') : 0,
-            ];
-        }
+        /** @var User $user */
+        $user = $this->user();
 
         return Inertia::render('Supplements/Index', [
-            'supplements' => $supplements,
-            'intakeHistory' => $intakeHistory,
+            'supplements' => $this->getSupplementsWithLatestLog($user),
+            'intakeHistory' => $this->getIntakeHistory($user),
         ]);
     }
 
@@ -111,5 +85,56 @@ class SupplementController extends Controller
         }
 
         return redirect()->back()->with('success', 'Consommation enregistrée.');
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: ?float}>
+     */
+    protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
+    {
+        /** @var \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: ?float}> $supplements */
+        $supplements = Supplement::forUser($user->id)
+            ->with(['latestLog'])
+            ->get()
+            ->map(fn (Supplement $supplement): array => [
+                'id' => (int) $supplement->id,
+                'name' => (string) $supplement->name,
+                'icon' => 'heroicon-o-beaker',
+                'current_log' => (float) ($supplement->latestLog->quantity ?? 0.0),
+                'unit' => 'servings',
+                'daily_goal' => null,
+            ]);
+
+        return $supplements;
+    }
+
+    /** @return array<int, array{date: string, count: float}> */
+    private function getIntakeHistory(User $user): array
+    {
+        $logs = SupplementLog::where('user_id', $user->id)
+            ->where('consumed_at', '>=', now()->subDays(29)->startOfDay())
+            ->get()
+            ->groupBy(function (SupplementLog $log): string {
+                /** @var \Carbon\Carbon $date */
+                $date = $log->consumed_at;
+
+                return $date->format('Y-m-d');
+            });
+
+        $history = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $carbonDate = now()->subDays($i);
+            $dateKey = $carbonDate->format('Y-m-d');
+            $dateString = $carbonDate->format('d/m');
+
+            $rawTotal = isset($logs[$dateKey]) ? $logs[$dateKey]->sum('quantity') : 0.0;
+
+            $history[] = [
+                'date' => $dateString,
+                'count' => is_numeric($rawTotal) ? (float) $rawTotal : 0.0,
+            ];
+        }
+
+        return $history;
     }
 }
