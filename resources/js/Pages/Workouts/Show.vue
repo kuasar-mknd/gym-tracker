@@ -21,11 +21,7 @@ import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
-import { useRestTimer } from '@/composables/useRestTimer'
 import { vibrate } from '@/composables/useHaptics'
-
-// Get global rest timer
-const restTimer = useRestTimer()
 
 /**
  * Component Props
