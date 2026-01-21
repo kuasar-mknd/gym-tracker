@@ -46,6 +46,10 @@ class AppServiceProvider extends ServiceProvider
             return is_string($role) && method_exists($user, 'hasRole') && $user->hasRole($role);
         });
 
+        if ($this->app->bound('csp-nonce')) {
+            Vite::useCspNonce(app('csp-nonce'));
+        }
+
         Vite::prefetch(concurrency: 3);
 
         Event::listen(

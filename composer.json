@@ -26,6 +26,7 @@
         "laravel/tinker": "^2.10.1",
         "socialiteproviders/apple": "^5.7",
         "spatie/laravel-activitylog": "^4.0",
+        "spatie/laravel-csp": "^3.21",
         "spatie/laravel-query-builder": "^6.4",
         "tightenco/ziggy": "^2.0"
     },
