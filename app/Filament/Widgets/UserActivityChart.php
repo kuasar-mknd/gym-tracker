@@ -8,7 +8,7 @@ use App\Models\User;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 
-final class UserActivityChart extends ChartWidget
+class UserActivityChart extends ChartWidget
 {
     protected ?string $heading = 'User Registrations';
 

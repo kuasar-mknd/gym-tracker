@@ -146,7 +146,7 @@ jobs:
               run: php artisan dusk:chrome-driver --detect
 
             - name: Start Chrome Driver
-              run: ./vendor/laravel/dusk/bin/chromedriver-linux &
+              run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
 
             - name: Run Dusk Tests
               env:
@@ -164,6 +164,7 @@ jobs:
                   MAIL_MAILER: array
                   APP_DEBUG: false
                   LOG_LEVEL: debug
+                  DUSK_DRIVER_URL: http://localhost:9515
               run: |
                   # Write environment variables to .env so artisan serve subprocess uses them
                   cat >> .env << 'EOF'
