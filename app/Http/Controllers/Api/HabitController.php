@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\StoreHabitRequest;
-use App\Http\Requests\UpdateHabitRequest;
+use App\Http\Requests\Api\StoreHabitRequest;
+use App\Http\Requests\Api\UpdateHabitRequest;
 use App\Http\Resources\HabitResource;
 use App\Models\Habit;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -23,7 +24,7 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Habit::class);
 
@@ -36,7 +37,7 @@ class HabitController extends Controller
             ->allowedSorts(['name', 'created_at', 'goal_times_per_week'])
             ->defaultSort('name')
             ->where('user_id', $this->user()->id)
-            ->paginate();
+            ->paginate($request->get('per_page', 15));
 
         return HabitResource::collection($habits);
     }
@@ -53,6 +54,13 @@ class HabitController extends Controller
         $this->authorize('create', Habit::class);
 
         $validated = $request->validated();
+
+        if (empty($validated['color'])) {
+            $validated['color'] = 'bg-slate-500';
+        }
+        if (empty($validated['icon'])) {
+            $validated['icon'] = 'check_circle';
+        }
 
         $habit = new Habit($validated);
         $habit->user_id = $this->user()->id;
@@ -92,7 +100,7 @@ class HabitController extends Controller
     #[OA\Response(response: 422, description: 'Validation error')]
     public function update(UpdateHabitRequest $request, Habit $habit): HabitResource
     {
-        // Authorization handled in UpdateHabitRequest
+        $this->authorize('update', $habit);
 
         $validated = $request->validated();
 
