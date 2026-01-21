@@ -55,9 +55,7 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureVite(): void
     {
-        if ($this->app->bound('csp-nonce')) {
-            Vite::useCspNonce(app('csp-nonce'));
-        }
+        Vite::useCspNonce(csp_nonce());
 
         Vite::prefetch(concurrency: 3);
     }
