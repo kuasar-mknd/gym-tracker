@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Models\BodyMeasurement;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class BodyMeasurementController extends Controller
@@ -14,15 +13,15 @@ class BodyMeasurementController extends Controller
 
     public function __construct(protected \App\Services\StatsService $statsService) {}
 
-    public function index()
+    public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', BodyMeasurement::class);
 
-        $measurements = Auth::user()->bodyMeasurements()
+        $measurements = $this->user()->bodyMeasurements()
             ->orderBy('measured_at', 'asc')
             ->get();
 
-        $weightHistory = $this->statsService->getWeightHistory(Auth::user(), 365);
+        $weightHistory = $this->statsService->getWeightHistory($this->user(), 365);
 
         return Inertia::render('Measurements/Index', [
             'measurements' => $measurements,
@@ -30,22 +29,22 @@ class BodyMeasurementController extends Controller
         ]);
     }
 
-    public function store(BodyMeasurementStoreRequest $request)
+    public function store(BodyMeasurementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', BodyMeasurement::class);
 
-        $request->user()->bodyMeasurements()->create($request->validated());
+        $this->user()->bodyMeasurements()->create($request->validated());
 
-        $this->statsService->clearUserStatsCache($request->user());
+        $this->statsService->clearUserStatsCache($this->user());
 
         return redirect()->back();
     }
 
-    public function destroy(BodyMeasurement $bodyMeasurement)
+    public function destroy(BodyMeasurement $bodyMeasurement): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $bodyMeasurement);
 
-        $user = Auth::user();
+        $user = $this->user();
         $bodyMeasurement->delete();
 
         $this->statsService->clearUserStatsCache($user);

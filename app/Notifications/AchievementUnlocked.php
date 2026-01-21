@@ -21,6 +21,7 @@ class AchievementUnlocked extends Notification implements ShouldQueue
     /**
      * Get the notification's delivery channels.
      *
+     * @param  \App\Models\User  $notifiable
      * @return array<int, string>
      */
     public function via(object $notifiable): array
@@ -37,6 +38,7 @@ class AchievementUnlocked extends Notification implements ShouldQueue
     /**
      * Get the array representation of the notification.
      *
+     * @param  \App\Models\User  $notifiable
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
@@ -52,6 +54,9 @@ class AchievementUnlocked extends Notification implements ShouldQueue
 
     /**
      * Get the Web Push representation of the notification.
+     *
+     * @param  \App\Models\User  $notifiable
+     * @param  mixed  $notification
      */
     public function toWebPush(object $notifiable, $notification): WebPushMessage
     {

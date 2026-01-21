@@ -8,7 +8,6 @@ use App\Http\Resources\HabitLogResource;
 use App\Models\HabitLog;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -24,7 +23,7 @@ class HabitLogController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index()
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', HabitLog::class);
 
@@ -36,8 +35,8 @@ class HabitLogController extends Controller
             ])
             ->allowedSorts(['date', 'created_at'])
             ->defaultSort('-date')
-            ->whereHas('habit', function ($query) {
-                $query->where('user_id', Auth::id());
+            ->whereHas('habit', function ($query): void {
+                $query->where('user_id', $this->user()->id);
             })
             ->paginate();
 
@@ -51,12 +50,13 @@ class HabitLogController extends Controller
     )]
     #[OA\Response(response: 201, description: 'Created successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function store(StoreHabitLogRequest $request)
+    public function store(StoreHabitLogRequest $request): \Illuminate\Http\JsonResponse
     {
         $this->authorize('create', HabitLog::class);
 
         $validated = $request->validated();
 
+        /** @var HabitLog $log */
         $log = HabitLog::create($validated);
 
         return (new HabitLogResource($log))
@@ -71,7 +71,7 @@ class HabitLogController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 404, description: 'Not found')]
-    public function show(HabitLog $habit_log)
+    public function show(HabitLog $habit_log): HabitLogResource
     {
         $this->authorize('view', $habit_log);
 
@@ -87,7 +87,7 @@ class HabitLogController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Updated successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function update(UpdateHabitLogRequest $request, HabitLog $habit_log)
+    public function update(UpdateHabitLogRequest $request, HabitLog $habit_log): HabitLogResource
     {
         // Authorization handled in UpdateHabitLogRequest
 
@@ -104,7 +104,7 @@ class HabitLogController extends Controller
         tags: ['HabitLogs']
     )]
     #[OA\Response(response: 204, description: 'Deleted successfully')]
-    public function destroy(HabitLog $habit_log)
+    public function destroy(HabitLog $habit_log): \Illuminate\Http\Response
     {
         $this->authorize('delete', $habit_log);
 

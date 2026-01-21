@@ -5,14 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Supplement;
 use App\Models\SupplementLog;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class SupplementController extends Controller
 {
-    public function index()
+    public function index(): \Inertia\Response
     {
-        $supplements = Supplement::forUser(Auth::id())
+        $supplements = Supplement::forUser($this->user()->id)
             ->with('latestLog')
             ->get()
             ->map(function ($supplement) {
@@ -32,7 +31,7 @@ class SupplementController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -42,14 +41,14 @@ class SupplementController extends Controller
             'low_stock_threshold' => ['required', 'integer', 'min:0'],
         ]);
 
-        Supplement::create(array_merge($validated, ['user_id' => Auth::id()]));
+        Supplement::create(array_merge($validated, ['user_id' => $this->user()->id]));
 
         return redirect()->back()->with('success', 'Complément ajouté.');
     }
 
-    public function update(Request $request, Supplement $supplement)
+    public function update(Request $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
-        if ($supplement->user_id !== Auth::id()) {
+        if ($supplement->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -66,9 +65,9 @@ class SupplementController extends Controller
         return redirect()->back()->with('success', 'Complément mis à jour.');
     }
 
-    public function destroy(Supplement $supplement)
+    public function destroy(Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
-        if ($supplement->user_id !== Auth::id()) {
+        if ($supplement->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -77,15 +76,15 @@ class SupplementController extends Controller
         return redirect()->back()->with('success', 'Complément supprimé.');
     }
 
-    public function consume(Request $request, Supplement $supplement)
+    public function consume(Request $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
-        if ($supplement->user_id !== Auth::id()) {
+        if ($supplement->user_id !== $this->user()->id) {
             abort(403);
         }
 
         // Create log
         SupplementLog::create([
-            'user_id' => Auth::id(),
+            'user_id' => $this->user()->id,
             'supplement_id' => $supplement->id,
             'quantity' => 1,
             'consumed_at' => now(),

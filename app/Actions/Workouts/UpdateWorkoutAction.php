@@ -9,21 +9,16 @@ class UpdateWorkoutAction
 {
     public function __construct(protected StatsService $statsService) {}
 
+    /**
+     * Update the given workout with new data.
+     *
+     * @param  array{started_at?: string|null, name?: string|null, notes?: string|null, is_finished?: bool}  $data
+     */
     public function execute(Workout $workout, array $data): Workout
     {
-        if (isset($data['started_at'])) {
-            $workout->started_at = $data['started_at'];
-        }
+        $workout->fill(collect($data)->only(['started_at', 'name', 'notes'])->toArray());
 
-        if (isset($data['name'])) {
-            $workout->name = $data['name'];
-        }
-
-        if (isset($data['notes'])) {
-            $workout->notes = $data['notes'];
-        }
-
-        if (! empty($data['is_finished']) && $data['is_finished']) {
+        if ($data['is_finished'] ?? false) {
             $workout->ended_at = now();
         }
 

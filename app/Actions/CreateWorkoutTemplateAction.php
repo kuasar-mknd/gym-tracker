@@ -10,6 +10,19 @@ class CreateWorkoutTemplateAction
 {
     /**
      * Create a new workout template with exercises and sets.
+     *
+     * @param array{
+     *     name: string,
+     *     description?: string|null,
+     *     exercises?: array<int, array{
+     *         id: int,
+     *         sets?: array<int, array{
+     *             reps?: int|null,
+     *             weight?: float|null,
+     *             is_warmup?: bool
+     *         }>
+     *     }>
+     * } $data
      */
     public function execute(User $user, array $data): WorkoutTemplate
     {
@@ -22,26 +35,32 @@ class CreateWorkoutTemplateAction
             $template->save();
 
             if (isset($data['exercises'])) {
-                foreach ($data['exercises'] as $index => $ex) {
-                    $line = $template->workoutTemplateLines()->create([
-                        'exercise_id' => $ex['id'],
-                        'order' => $index,
-                    ]);
-
-                    if (isset($ex['sets'])) {
-                        foreach ($ex['sets'] as $setIndex => $set) {
-                            $line->workoutTemplateSets()->create([
-                                'reps' => $set['reps'] ?? null,
-                                'weight' => $set['weight'] ?? null,
-                                'is_warmup' => $set['is_warmup'] ?? false,
-                                'order' => $setIndex,
-                            ]);
-                        }
-                    }
-                }
+                $this->addExercises($template, $data['exercises']);
             }
 
             return $template;
         });
+    }
+
+    /** @param array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}> $exercises */
+    private function addExercises(WorkoutTemplate $template, array $exercises): void
+    {
+        foreach ($exercises as $index => $ex) {
+            $line = $template->workoutTemplateLines()->create([
+                'exercise_id' => $ex['id'],
+                'order' => $index,
+            ]);
+
+            if (isset($ex['sets'])) {
+                foreach ($ex['sets'] as $setIndex => $set) {
+                    $line->workoutTemplateSets()->create([
+                        'reps' => $set['reps'] ?? null,
+                        'weight' => $set['weight'] ?? null,
+                        'is_warmup' => $set['is_warmup'] ?? false,
+                        'order' => $setIndex,
+                    ]);
+                }
+            }
+        }
     }
 }

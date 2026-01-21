@@ -24,8 +24,8 @@ class Swagger
         response: 200,
         description: 'OK'
     )]
-    public function status()
+    public function status(): \Illuminate\Http\JsonResponse
     {
-        //
+        return response()->json(['status' => 'ok']);
     }
 }

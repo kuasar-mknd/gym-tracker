@@ -15,9 +15,17 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property string $password
+ */
 class Admin extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery
 {
+    /** @use HasFactory<\Database\Factories\AdminFactory> */
     use HasFactory, HasRoles, LogsActivity, Notifiable;
+
     use InteractsWithAppAuthentication;
     use InteractsWithAppAuthenticationRecovery;
 
@@ -42,19 +50,6 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
-
     public function canAccessPanel(Panel $panel): bool
     {
         // For now, allow all admins in the admin table
@@ -67,5 +62,18 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
             ->logOnly(['name', 'email'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
     }
 }

@@ -19,9 +19,12 @@ class DailyJournalController extends Controller
     {
         $this->authorize('viewAny', DailyJournal::class);
 
-        $journals = $request->user()->dailyJournals()
+        /** @var int $perPage */
+        $perPage = $request->get('per_page', 15);
+
+        $journals = $this->user()->dailyJournals()
             ->orderBy('date', 'desc')
-            ->paginate($request->get('per_page', 15));
+            ->paginate($perPage);
 
         return DailyJournalResource::collection($journals);
     }
@@ -36,7 +39,7 @@ class DailyJournalController extends Controller
         $validated = $request->validated();
 
         $journal = new DailyJournal($validated);
-        $journal->user_id = $request->user()->id;
+        $journal->user_id = $this->user()->id;
         $journal->save();
 
         return new DailyJournalResource($journal);
@@ -67,7 +70,7 @@ class DailyJournalController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(DailyJournal $dailyJournal)
+    public function destroy(DailyJournal $dailyJournal): \Illuminate\Http\Response
     {
         $this->authorize('delete', $dailyJournal);
 

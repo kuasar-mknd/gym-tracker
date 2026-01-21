@@ -16,32 +16,24 @@ class StatsController extends Controller
      */
     public function index(\Illuminate\Http\Request $request): \Inertia\Response
     {
-        $user = auth()->user();
+        $user = $this->user();
         $days = $this->parsePeriod($request->query('period', '30j'));
-
-        // NITRO FIX: Cache exercises list for 1 hour
-        // Security: Filter exercises by user to prevent information disclosure
-        $userId = auth()->id();
-        $exercises = Cache::remember("exercises_list_{$userId}", 3600, function () use ($userId) {
-            return Exercise::forUser($userId)->orderBy('name')->get();
-        });
 
         // Body metrics and weight history
         $bodyMetrics = $this->statsService->getLatestBodyMetrics($user);
         $weightHistory = $this->statsService->getWeightHistory($user, $days);
-        $bodyFatHistory = $this->statsService->getBodyFatHistory($user, $days);
 
         return Inertia::render('Stats/Index', [
             'volumeTrend' => $this->statsService->getVolumeTrend($user, $days),
             'muscleDistribution' => $this->statsService->getMuscleDistribution($user, $days),
             'monthlyComparison' => $this->statsService->getMonthlyVolumeComparison($user),
             'weightHistory' => $weightHistory,
-            'bodyFatHistory' => $bodyFatHistory,
+            'bodyFatHistory' => $this->statsService->getBodyFatHistory($user, $days),
             'durationHistory' => $this->statsService->getDurationHistory($user, 30),
             'latestWeight' => $bodyMetrics['latest_weight'],
             'weightChange' => $bodyMetrics['weight_change'],
             'bodyFat' => $bodyMetrics['latest_body_fat'],
-            'exercises' => $exercises,
+            'exercises' => $this->getFilteredExercises($user->id),
             'selectedPeriod' => $request->query('period', '30j'),
         ]);
     }
@@ -52,7 +44,7 @@ class StatsController extends Controller
     public function exercise(Exercise $exercise): \Illuminate\Http\JsonResponse
     {
         return response()->json([
-            'progress' => $this->statsService->getExercise1RMProgress(auth()->user(), $exercise->id),
+            'progress' => $this->statsService->getExercise1RMProgress($this->user(), $exercise->id),
         ]);
     }
 
@@ -65,5 +57,13 @@ class StatsController extends Controller
             '1a' => 365,
             default => 30,
         };
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, Exercise> */
+    private function getFilteredExercises(int $userId): \Illuminate\Database\Eloquent\Collection
+    {
+        return Cache::remember("exercises_list_{$userId}", 3600, function () use ($userId) {
+            return Exercise::forUser($userId)->orderBy('name')->get();
+        });
     }
 }

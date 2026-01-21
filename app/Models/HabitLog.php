@@ -7,8 +7,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $habit_id
+ * @property \Illuminate\Support\Carbon $date
+ * @property string|null $notes
+ * @property-read \App\Models\Habit $habit
+ */
 class HabitLog extends Model
 {
+    /** @use HasFactory<\Database\Factories\HabitLogFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -17,15 +25,19 @@ class HabitLog extends Model
         'notes',
     ];
 
-    protected $casts = [
-        'date' => 'date',
-    ];
-
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Habit, $this>
+     */
     public function habit(): BelongsTo
     {
         return $this->belongsTo(Habit::class);
     }
 
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<$this>  $query
+     * @param  array<int, mixed>|mixed  $dates
+     * @return \Illuminate\Database\Eloquent\Builder<$this>
+     */
     public function scopeWhereDateBetween(Builder $query, ...$dates): Builder
     {
         // Spatie QueryBuilder passes arguments as an array if they come from a single filter parameter,
@@ -38,5 +50,12 @@ class HabitLog extends Model
         }
 
         return $query;
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'date' => 'date',
+        ];
     }
 }

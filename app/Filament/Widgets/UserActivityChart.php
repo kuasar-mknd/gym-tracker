@@ -10,38 +10,52 @@ class UserActivityChart extends ChartWidget
 {
     protected ?string $heading = 'User Registrations';
 
+    protected function getType(): string
+    {
+        return 'bar';
+    }
+
     protected function getData(): array
     {
-        $usersPerMonth = User::selectRaw('COUNT(*) as count, MONTH(created_at) as month')
-            ->whereYear('created_at', Carbon::now()->year)
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('count', 'month')
-            ->toArray();
-
-        // Fill missing months with 0
-        $data = [];
-        $labels = [];
-        for ($i = 1; $i <= 12; $i++) {
-            $data[] = $usersPerMonth[$i] ?? 0;
-            $labels[] = Carbon::create()->month($i)->format('M');
-        }
+        $usersPerMonth = $this->getUsersPerMonth();
 
         return [
             'datasets' => [
                 [
                     'label' => 'New Users',
-                    'data' => $data,
+                    'data' => $this->fillMonthlyData($usersPerMonth)['data'],
                     'backgroundColor' => '#8b5cf6', // Violet
                     'borderColor' => '#8b5cf6',
                 ],
             ],
-            'labels' => $labels,
+            'labels' => $this->fillMonthlyData($usersPerMonth)['labels'],
         ];
     }
 
-    protected function getType(): string
+    /** @return array<int, int> */
+    private function getUsersPerMonth(): array
     {
-        return 'bar';
+        return User::selectRaw('COUNT(*) as count, MONTH(created_at) as month')
+            ->whereYear('created_at', Carbon::now()->year)
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('count', 'month')
+            ->toArray();
+    }
+
+    /**
+     * @param  array<int, int>  $usersPerMonth
+     * @return array{data: array<int, int>, labels: array<int, string>}
+     */
+    private function fillMonthlyData(array $usersPerMonth): array
+    {
+        $data = [];
+        $labels = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $data[] = $usersPerMonth[$i] ?? 0;
+            $labels[] = ($date = Carbon::create(null, $i, 1)) ? $date->format('M') : '';
+        }
+
+        return ['data' => $data, 'labels' => $labels];
     }
 }

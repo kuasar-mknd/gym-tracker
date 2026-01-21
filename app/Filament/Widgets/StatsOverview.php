@@ -15,20 +15,17 @@ class StatsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $newUsersCount = User::where('created_at', '>=', Carbon::now()->subDays(7))->count();
-        $workoutsToday = Workout::whereDate('started_at', Carbon::today())->count();
-
         return [
             Stat::make('Total Users', User::count())
                 ->description('Total registered users')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->chart([7, 2, 10, 3, 15, 4, 17])
                 ->color('success'),
-            Stat::make('New Users (7d)', $newUsersCount)
+            Stat::make('New Users (7d)', $this->getNewUsersCount())
                 ->description('Users joined in last 7 days')
                 ->descriptionIcon('heroicon-m-user-plus')
                 ->color('info'),
-            Stat::make('Workouts Today', $workoutsToday)
+            Stat::make('Workouts Today', $this->getWorkoutsTodayCount())
                 ->description('Sessions started today')
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('warning'),
@@ -37,5 +34,15 @@ class StatsOverview extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-book-open')
                 ->color('primary'),
         ];
+    }
+
+    private function getNewUsersCount(): int
+    {
+        return User::where('created_at', '>=', Carbon::now()->subDays(7))->count();
+    }
+
+    private function getWorkoutsTodayCount(): int
+    {
+        return Workout::whereDate('started_at', Carbon::today())->count();
     }
 }

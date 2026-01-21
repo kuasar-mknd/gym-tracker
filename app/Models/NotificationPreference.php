@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NotificationPreference extends Model
 {
+    /** @use HasFactory<\Database\Factories\NotificationPreferenceFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -18,14 +19,20 @@ class NotificationPreference extends Model
         'value',
     ];
 
-    protected $casts = [
-        'is_enabled' => 'boolean',
-        'is_push_enabled' => 'boolean',
-        'value' => 'integer',
-    ];
-
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'is_enabled' => 'boolean',
+            'is_push_enabled' => 'boolean',
+            'value' => 'integer',
+        ];
     }
 }

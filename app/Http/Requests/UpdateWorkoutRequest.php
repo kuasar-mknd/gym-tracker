@@ -11,7 +11,7 @@ class UpdateWorkoutRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('workout'));
+        return $this->user()?->can('update', $this->route('workout')) ?? false;
     }
 
     /**

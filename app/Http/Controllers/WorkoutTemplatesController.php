@@ -21,7 +21,7 @@ class WorkoutTemplatesController extends Controller
 
         return Inertia::render('Workouts/Templates/Index', [
             'templates' => WorkoutTemplate::with(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets'])
-                ->where('user_id', auth()->id())
+                ->where('user_id', $this->user()->id)
                 ->latest()
                 ->get(),
         ]);
@@ -31,9 +31,11 @@ class WorkoutTemplatesController extends Controller
     {
         $this->authorize('create', WorkoutTemplate::class);
 
+        $userId = $this->user()->id;
+
         return Inertia::render('Workouts/Templates/Create', [
-            'exercises' => Cache::remember('exercises_list_'.auth()->id(), 3600, function () {
-                return \App\Models\Exercise::forUser(auth()->id())
+            'exercises' => Cache::remember('exercises_list_'.$userId, 3600, function () use ($userId) {
+                return \App\Models\Exercise::forUser($userId)
                     ->orderBy('name')
                     ->get();
             }),
@@ -42,7 +44,9 @@ class WorkoutTemplatesController extends Controller
 
     public function store(\App\Http\Requests\StoreWorkoutTemplateRequest $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
     {
-        $createWorkoutTemplateAction->execute($request->user(), $request->validated());
+        /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $validated */
+        $validated = $request->validated();
+        $createWorkoutTemplateAction->execute($this->user(), $validated);
 
         return redirect()->route('templates.index');
     }
@@ -51,7 +55,7 @@ class WorkoutTemplatesController extends Controller
     {
         $this->authorize('view', $template);
 
-        $workout = $createWorkout->execute(auth()->user(), $template);
+        $workout = $createWorkout->execute($this->user(), $template);
 
         return redirect()->route('workouts.show', $workout);
     }
@@ -60,9 +64,7 @@ class WorkoutTemplatesController extends Controller
     {
         $this->authorize('view', $workout);
 
-        $createTemplate->execute(auth()->user(), $workout);
-
-        return redirect()->route('templates.index')->with('success', 'Modèle enregistré avec succès !');
+        $createTemplate->execute($this->user(), $workout);
 
         return redirect()->route('templates.index')->with('success', 'Modèle enregistré avec succès !');
     }

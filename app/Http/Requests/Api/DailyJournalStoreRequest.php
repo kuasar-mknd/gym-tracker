@@ -20,7 +20,7 @@ class DailyJournalStoreRequest extends BaseDailyJournalStoreRequest
             'required',
             'date',
             Rule::unique('daily_journals')->where(function ($query) {
-                return $query->where('user_id', $this->user()->id);
+                return $query->where('user_id', $this->user()?->id);
             }),
         ];
 

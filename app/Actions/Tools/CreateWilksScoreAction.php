@@ -7,6 +7,9 @@ use App\Models\WilksScore;
 
 class CreateWilksScoreAction
 {
+    /**
+     * @param  array{body_weight: float, lifted_weight: float, gender: string, unit: string}  $data
+     */
     public function execute(User $user, array $data): WilksScore
     {
         $bw = $data['body_weight'];

@@ -17,7 +17,7 @@ class PlateController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Plate::class);
 
@@ -33,12 +33,12 @@ class PlateController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StorePlateRequest $request)
+    public function store(StorePlateRequest $request): PlateResource
     {
         $validated = $request->validated();
 
         $plate = new Plate($validated);
-        $plate->user_id = Auth::id();
+        $plate->user_id = $this->user()->id;
         $plate->save();
 
         return new PlateResource($plate);
@@ -47,7 +47,7 @@ class PlateController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Plate $plate)
+    public function show(Plate $plate): PlateResource
     {
         $this->authorize('view', $plate);
 
@@ -57,7 +57,7 @@ class PlateController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdatePlateRequest $request, Plate $plate)
+    public function update(UpdatePlateRequest $request, Plate $plate): PlateResource
     {
         $this->authorize('update', $plate);
 
@@ -69,7 +69,7 @@ class PlateController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Plate $plate)
+    public function destroy(Plate $plate): \Illuminate\Http\Response
     {
         $this->authorize('delete', $plate);
 

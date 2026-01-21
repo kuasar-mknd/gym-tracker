@@ -14,58 +14,81 @@ class FetchDashboardDataAction
 
     /**
      * Fetch dashboard data for the given user.
+     *
+     * @return array{
+     *     workoutsCount: int,
+     *     thisWeekCount: int,
+     *     latestWeight: float|string|null,
+     *     recentWorkouts: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
+     *     recentPRs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>,
+     *     activeGoals: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>,
+     *     weeklyVolume: float,
+     *     volumeChange: float|int,
+     *     weeklyVolumeTrend: array<int, array{date: string, day_label: string, volume: float}>,
+     *     volumeTrend: array<int, array{date: string, day_name: string, volume: float}>
+     * }
      */
     public function execute(User $user): array
     {
         // Cache dashboard data for 10 minutes
         return Cache::remember("dashboard_data_{$user->id}", 600, function () use ($user) {
-            $workoutsCount = $user->workouts()->count();
+            $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
 
             $weeklyStats = $this->statsService->getWeeklyVolumeComparison($user);
             $weeklyTrend = $this->statsService->getWeeklyVolumeTrend($user);
-
-            $startOfWeek = now()->startOfWeek();
-            $thisWeekCount = $user->workouts()
-                ->where('started_at', '>=', $startOfWeek)
-                ->count();
-
-            $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
-
-            $recentWorkouts = $user->workouts()
-                ->with('workoutLines.exercise', 'workoutLines.sets')
-                ->latest('started_at')
-                ->limit(5)
-                ->get();
-
-            $recentPRs = $user->personalRecords()
-                ->with('exercise')
-                ->latest('achieved_at')
-                ->take(5)
-                ->get();
-
-            $activeGoals = $user->goals()
-                ->with('exercise')
-                ->whereNull('completed_at')
-                ->latest()
-                ->take(3)
-                ->get()
-                ->append(['progress', 'unit']);
-
             $volumeTrend = $this->statsService->getDailyVolumeTrend($user, 7);
-            $weeklyVolume = array_sum(array_column($volumeTrend, 'volume'));
 
             return [
-                'workoutsCount' => $workoutsCount,
-                'thisWeekCount' => $thisWeekCount,
+                'workoutsCount' => $user->workouts()->count(),
+                'thisWeekCount' => $this->getThisWeekCount($user),
                 'latestWeight' => $latestMeasurement?->weight,
-                'recentWorkouts' => $recentWorkouts,
-                'recentPRs' => $recentPRs,
-                'activeGoals' => $activeGoals,
+                'recentWorkouts' => $this->getRecentWorkouts($user),
+                'recentPRs' => $this->getRecentPRs($user),
+                'activeGoals' => $this->getActiveGoals($user),
                 'weeklyVolume' => $weeklyStats['current_week_volume'],
                 'volumeChange' => $weeklyStats['percentage'],
                 'weeklyVolumeTrend' => $weeklyTrend,
                 'volumeTrend' => $volumeTrend,
             ];
         });
+    }
+
+    private function getThisWeekCount(User $user): int
+    {
+        return $user->workouts()
+            ->where('started_at', '>=', now()->startOfWeek())
+            ->count();
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord> */
+    private function getRecentPRs(User $user): \Illuminate\Database\Eloquent\Collection
+    {
+        return $user->personalRecords()
+            ->with('exercise')
+            ->latest('achieved_at')
+            ->take(5)
+            ->get();
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal> */
+    private function getActiveGoals(User $user): \Illuminate\Database\Eloquent\Collection
+    {
+        return $user->goals()
+            ->with('exercise')
+            ->whereNull('completed_at')
+            ->latest()
+            ->take(3)
+            ->get()
+            ->append(['progress', 'unit']);
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout> */
+    private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
+    {
+        return $user->workouts()
+            ->with('workoutLines.exercise', 'workoutLines.sets')
+            ->latest('started_at')
+            ->limit(5)
+            ->get();
     }
 }

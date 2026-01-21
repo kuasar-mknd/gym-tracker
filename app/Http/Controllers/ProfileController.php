@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,14 +26,16 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => true,
             'status' => session('status'),
-            'notificationPreferences' => $request->user()->notificationPreferences()->get()->mapWithKeys(function ($pref) {
-                return [$pref->type => [
-                    'is_enabled' => $pref->is_enabled,
-                    'is_push_enabled' => $pref->is_push_enabled,
-                    'value' => $pref->value,
-                ]];
+            'notificationPreferences' => $this->user()->notificationPreferences()->get()->mapWithKeys(function ($pref) {
+                return [
+                    $pref->type => [
+                        'is_enabled' => $pref->is_enabled,
+                        'is_push_enabled' => $pref->is_push_enabled,
+                        'value' => $pref->value,
+                    ],
+                ];
             }),
         ]);
     }
@@ -44,13 +45,13 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $this->user()->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($this->user()->isDirty('email')) {
+            $this->user()->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $this->user()->save();
 
         return Redirect::route('profile.edit');
     }
@@ -70,7 +71,7 @@ class ProfileController extends Controller
         ]);
 
         foreach ($validated['preferences'] as $type => $isEnabled) {
-            $request->user()->notificationPreferences()->updateOrCreate(
+            $this->user()->notificationPreferences()->updateOrCreate(
                 ['type' => $type],
                 [
                     'is_enabled' => $isEnabled,
@@ -92,7 +93,7 @@ class ProfileController extends Controller
             'password' => ['required', 'current_password'],
         ]);
 
-        $user = $request->user();
+        $user = $this->user();
 
         Auth::logout();
 

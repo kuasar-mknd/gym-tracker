@@ -11,52 +11,81 @@ class StreakService
     /**
      * Update user streak based on the latest workout.
      */
-    public function updateStreak(User $user): void
+    public function updateStreak(User $user, ?Workout $workout = null): void
     {
-        // Get the latest workout date
-        $latestWorkout = $user->workouts()->latest('started_at')->first();
+        $user->refresh();
 
-        if (! $latestWorkout) {
+        $workoutDate = $this->resolveWorkoutDate($user, $workout);
+
+        if (! $workoutDate) {
             return;
         }
 
-        $workoutDate = Carbon::parse($latestWorkout->started_at)->startOfDay();
-        $lastRecordedDate = $user->last_workout_at ? Carbon::parse($user->last_workout_at)->startOfDay() : null;
+        $lastRecordedDate = $this->getLastRecordedDate($user);
 
-        // If this workout is on the same day as the last recorded one, do nothing (streak already updated for today)
-        if ($lastRecordedDate && $workoutDate->equalTo($lastRecordedDate)) {
+        if ($lastRecordedDate?->equalTo($workoutDate)) {
             return;
         }
 
-        // Calculate expected next day (yesterday relative to workout date, or just "previous day")
-        // But we are processing "this" workout.
-        // If last recorded date was Yesterday relative to this workout, increment streak.
-        // If last recorded date was older, reset streak to 1.
-        // If no last recorded date, set streak to 1.
+        $this->calculateNewStreak($user, $workoutDate, $lastRecordedDate);
 
-        if ($lastRecordedDate) {
-            $diffInDays = $lastRecordedDate->diffInDays($workoutDate);
+        // Ensure we assign a Carbon instance or null, handling the mixed return of value()
+        $latestStartedAt = $user->workouts()->latest('started_at')->value('started_at');
+        $latestStartedAtCarbon = null;
 
-            if ($diffInDays == 1) {
+        if ($latestStartedAt && is_scalar($latestStartedAt)) {
+            $latestStartedAtCarbon = Carbon::parse((string) $latestStartedAt);
+        }
+
+        $user->last_workout_at = $workout->started_at ?? $latestStartedAtCarbon;
+        $user->save();
+    }
+
+    /**
+     * Get the last recorded workout date as Carbon.
+     */
+    protected function getLastRecordedDate(User $user): ?Carbon
+    {
+        return $user->last_workout_at ? Carbon::parse($user->last_workout_at)->startOfDay() : null;
+    }
+
+    /**
+     * Calculate and update the user's streak.
+     */
+    protected function calculateNewStreak(User $user, Carbon $workoutDate, ?Carbon $lastRecordedDate): void
+    {
+        if (! $lastRecordedDate) {
+            // First workout ever
+            $user->current_streak = 1;
+        } else {
+            $diffInDays = (int) $lastRecordedDate->diffInDays($workoutDate);
+
+            if ($diffInDays === 1) {
                 // Consecutive day
-                $user->increment('current_streak');
+                $user->current_streak++;
             } elseif ($diffInDays > 1) {
                 // Streak broken
                 $user->current_streak = 1;
             }
-            // If diffInDays == 0, blocked by check above.
-        } else {
-            // First workout ever
-            $user->current_streak = 1;
         }
 
         // Update longest streak if necessary
         if ($user->current_streak > $user->longest_streak) {
             $user->longest_streak = $user->current_streak;
         }
+    }
 
-        // Update last workout timestamp
-        $user->last_workout_at = $latestWorkout->started_at;
-        $user->save();
+    /**
+     * Resolve the workout date to be processed.
+     */
+    private function resolveWorkoutDate(User $user, ?Workout $workout): ?Carbon
+    {
+        $startedAt = $workout->started_at ?? $user->workouts()->latest('started_at')->value('started_at');
+
+        if ($startedAt instanceof Carbon) {
+            return $startedAt->copy()->startOfDay();
+        }
+
+        return $startedAt && is_scalar($startedAt) ? Carbon::parse((string) $startedAt)->startOfDay() : null;
     }
 }

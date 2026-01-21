@@ -6,7 +6,6 @@ use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Http\Requests\BodyMeasurementUpdateRequest;
 use App\Http\Resources\BodyMeasurementResource;
 use App\Models\BodyMeasurement;
-use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -22,12 +21,12 @@ class BodyMeasurementController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index()
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $measurements = QueryBuilder::for(BodyMeasurement::class)
             ->allowedSorts(['measured_at', 'weight', 'created_at'])
             ->defaultSort('-measured_at')
-            ->where('user_id', Auth::id())
+            ->where('user_id', $this->user()->id)
             ->paginate();
 
         return BodyMeasurementResource::collection($measurements);
@@ -36,10 +35,10 @@ class BodyMeasurementController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(BodyMeasurementStoreRequest $request)
+    public function store(BodyMeasurementStoreRequest $request): BodyMeasurementResource
     {
         $measurement = new BodyMeasurement($request->validated());
-        $measurement->user_id = Auth::id();
+        $measurement->user_id = $this->user()->id;
         $measurement->save();
 
         return new BodyMeasurementResource($measurement);
@@ -48,9 +47,9 @@ class BodyMeasurementController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(BodyMeasurement $bodyMeasurement)
+    public function show(BodyMeasurement $bodyMeasurement): BodyMeasurementResource
     {
-        if ($bodyMeasurement->user_id !== Auth::id()) {
+        if ($bodyMeasurement->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -60,9 +59,9 @@ class BodyMeasurementController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(BodyMeasurementUpdateRequest $request, BodyMeasurement $bodyMeasurement)
+    public function update(BodyMeasurementUpdateRequest $request, BodyMeasurement $bodyMeasurement): BodyMeasurementResource
     {
-        if ($bodyMeasurement->user_id !== Auth::id()) {
+        if ($bodyMeasurement->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -74,9 +73,9 @@ class BodyMeasurementController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(BodyMeasurement $bodyMeasurement)
+    public function destroy(BodyMeasurement $bodyMeasurement): \Illuminate\Http\Response
     {
-        if ($bodyMeasurement->user_id !== Auth::id()) {
+        if ($bodyMeasurement->user_id !== $this->user()->id) {
             abort(403);
         }
 

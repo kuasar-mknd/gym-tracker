@@ -6,12 +6,12 @@ use Inertia\Inertia;
 
 class ToolsController extends Controller
 {
-    public function index()
+    public function index(): \Inertia\Response
     {
         return Inertia::render('Tools/Index');
     }
 
-    public function oneRepMax()
+    public function oneRepMax(): \Inertia\Response
     {
         return Inertia::render('Tools/OneRepMax');
     }

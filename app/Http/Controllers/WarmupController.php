@@ -4,14 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\WarmupPreference;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class WarmupController extends Controller
 {
-    public function index()
+    public function index(): \Inertia\Response
     {
-        $preference = Auth::user()->warmupPreference ?? new WarmupPreference([
+        $preference = $this->user()->warmupPreference ?? new WarmupPreference([
             'bar_weight' => 20,
             'rounding_increment' => 2.5,
             'steps' => [
@@ -27,7 +26,7 @@ class WarmupController extends Controller
         ]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validate([
             'bar_weight' => ['required', 'numeric', 'min:0'],
@@ -38,8 +37,8 @@ class WarmupController extends Controller
             'steps.*.label' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $preference = Auth::user()->warmupPreference()->updateOrCreate(
-            ['user_id' => Auth::id()],
+        $this->user()->warmupPreference()->updateOrCreate(
+            ['user_id' => $this->user()->id],
             $validated
         );
 

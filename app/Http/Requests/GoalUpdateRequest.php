@@ -12,7 +12,7 @@ class GoalUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('goal'));
+        return $this->user()?->can('update', $this->route('goal')) ?? false;
     }
 
     /**
@@ -31,9 +31,9 @@ class GoalUpdateRequest extends FormRequest
             'exercise_id' => [
                 'sometimes',
                 'nullable',
-                Rule::exists('exercises', 'id')->where(function ($query) {
-                    $query->where(function ($q) {
-                        $q->whereNull('user_id')->orWhere('user_id', $this->user()->id);
+                Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
+                        $q->whereNull('user_id')->orWhere('user_id', $this->user()?->id);
                     });
                 }),
             ],

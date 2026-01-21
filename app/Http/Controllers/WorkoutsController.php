@@ -37,7 +37,7 @@ class WorkoutsController extends Controller
     {
         $this->authorize('viewAny', Workout::class);
 
-        $data = $fetchWorkouts->execute($request->user());
+        $data = $fetchWorkouts->execute($this->user());
 
         return Inertia::render('Workouts/Index', $data);
     }
@@ -59,7 +59,7 @@ class WorkoutsController extends Controller
 
         // NITRO FIX: Cache exercises list for 1 hour
         // Security: Filter exercises by user to prevent information disclosure
-        $userId = auth()->id();
+        $userId = $this->user()->id;
         $exercises = Cache::remember("exercises_list_{$userId}", 3600, function () use ($userId) {
             return Exercise::forUser($userId)->orderBy('name')->get();
         });
@@ -93,10 +93,10 @@ class WorkoutsController extends Controller
             'started_at' => now(),
             'name' => 'Séance du '.now()->format('d/m/Y'),
         ]);
-        $workout->user_id = auth()->id();
+        $workout->user_id = $this->user()->id;
         $workout->save();
 
-        $this->statsService->clearUserStatsCache(auth()->user());
+        $this->statsService->clearUserStatsCache($this->user());
 
         return redirect()->route('workouts.show', $workout);
     }
@@ -106,7 +106,9 @@ class WorkoutsController extends Controller
      */
     public function update(UpdateWorkoutRequest $request, Workout $workout, UpdateWorkoutAction $updateWorkout): \Illuminate\Http\RedirectResponse
     {
-        $updateWorkout->execute($workout, $request->validated());
+        /** @var array{started_at?: string|null, name?: string|null, notes?: string|null, is_finished?: bool} $data */
+        $data = $request->validated();
+        $updateWorkout->execute($workout, $data);
 
         return back();
     }
@@ -120,7 +122,7 @@ class WorkoutsController extends Controller
 
         $workout->delete();
 
-        $this->statsService->clearUserStatsCache(auth()->user());
+        $this->statsService->clearUserStatsCache($this->user());
 
         return redirect()->route('workouts.index');
     }

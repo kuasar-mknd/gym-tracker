@@ -26,12 +26,12 @@ class TrainingReminderCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): void
     {
         $this->info('Starting training reminders check...');
 
         $count = 0;
-        User::all()->each(function (User $user) use (&$count) {
+        User::all()->each(function (User $user) use (&$count): void {
             $preference = $user->notificationPreferences()
                 ->where('type', 'training_reminder')
                 ->first();

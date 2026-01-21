@@ -28,7 +28,7 @@ class ExerciseStoreRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('exercises')->where(function ($query) {
-                    return $query->where(function ($q) {
+                    return $query->where(function ($q): void {
                         $q->whereNull('user_id')
                             ->orWhere('user_id', $this->user()?->id);
                     });

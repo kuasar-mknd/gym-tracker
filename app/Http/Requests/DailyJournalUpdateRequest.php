@@ -12,7 +12,7 @@ class DailyJournalUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('daily_journal'));
+        return $this->user()?->can('update', $this->route('daily_journal')) ?? false;
     }
 
     /**
@@ -28,7 +28,7 @@ class DailyJournalUpdateRequest extends FormRequest
                 'required',
                 'date',
                 Rule::unique('daily_journals')->where(function ($query) {
-                    return $query->where('user_id', $this->user()->id);
+                    return $query->where('user_id', $this->user()?->id);
                 })->ignore($this->route('daily_journal')),
             ],
             'content' => ['nullable', 'string', 'max:5000'],

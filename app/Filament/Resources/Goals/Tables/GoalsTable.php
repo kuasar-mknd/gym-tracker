@@ -13,44 +13,8 @@ class GoalsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->columns([
-                TextColumn::make('user.name')
-                    ->searchable(),
-                TextColumn::make('title')
-                    ->searchable(),
-                TextColumn::make('type')
-                    ->badge(),
-                TextColumn::make('target_value')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('current_value')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('start_value')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('exercise.name')
-                    ->searchable(),
-                TextColumn::make('measurement_type')
-                    ->searchable(),
-                TextColumn::make('deadline')
-                    ->date()
-                    ->sortable(),
-                TextColumn::make('completed_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
+            ->columns(self::getColumns())
+            ->filters([])
             ->recordActions([
                 EditAction::make(),
             ])
@@ -59,5 +23,24 @@ class GoalsTable
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /** @return array<\Filament\Tables\Columns\Column> */
+    private static function getColumns(): array
+    {
+        return [
+            TextColumn::make('user.name')->searchable(),
+            TextColumn::make('title')->searchable(),
+            TextColumn::make('type')->badge(),
+            TextColumn::make('target_value')->numeric()->sortable(),
+            TextColumn::make('current_value')->numeric()->sortable(),
+            TextColumn::make('start_value')->numeric()->sortable(),
+            TextColumn::make('exercise.name')->searchable(),
+            TextColumn::make('measurement_type')->searchable(),
+            TextColumn::make('deadline')->date()->sortable(),
+            TextColumn::make('completed_at')->dateTime()->sortable(),
+            TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+        ];
     }
 }

@@ -8,7 +8,6 @@ use App\Http\Resources\HabitResource;
 use App\Models\Habit;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -24,7 +23,7 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index()
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Habit::class);
 
@@ -36,7 +35,7 @@ class HabitController extends Controller
             ])
             ->allowedSorts(['name', 'created_at', 'goal_times_per_week'])
             ->defaultSort('name')
-            ->where('user_id', Auth::id())
+            ->where('user_id', $this->user()->id)
             ->paginate();
 
         return HabitResource::collection($habits);
@@ -49,14 +48,14 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 201, description: 'Created successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function store(StoreHabitRequest $request)
+    public function store(StoreHabitRequest $request): \Illuminate\Http\JsonResponse
     {
         $this->authorize('create', Habit::class);
 
         $validated = $request->validated();
 
         $habit = new Habit($validated);
-        $habit->user_id = Auth::id();
+        $habit->user_id = $this->user()->id;
         $habit->save();
 
         return (new HabitResource($habit))
@@ -71,13 +70,15 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 404, description: 'Not found')]
-    public function show(Habit $habit)
+    public function show(Habit $habit): HabitResource
     {
         $this->authorize('view', $habit);
 
-        $habit->load(['logs' => function ($query) {
-            $query->latest('date')->limit(10);
-        }]);
+        $habit->load([
+            'logs' => function ($query): void {
+                $query->latest('date')->limit(10);
+            },
+        ]);
 
         return new HabitResource($habit);
     }
@@ -89,7 +90,7 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Updated successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function update(UpdateHabitRequest $request, Habit $habit)
+    public function update(UpdateHabitRequest $request, Habit $habit): HabitResource
     {
         // Authorization handled in UpdateHabitRequest
 
@@ -106,7 +107,7 @@ class HabitController extends Controller
         tags: ['Habits']
     )]
     #[OA\Response(response: 204, description: 'Deleted successfully')]
-    public function destroy(Habit $habit)
+    public function destroy(Habit $habit): \Illuminate\Http\Response
     {
         $this->authorize('delete', $habit);
 

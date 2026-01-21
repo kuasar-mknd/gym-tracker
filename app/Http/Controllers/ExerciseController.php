@@ -14,11 +14,11 @@ class ExerciseController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index()
+    public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', Exercise::class);
 
-        $exercises = Exercise::forUser(Auth::id())
+        $exercises = Exercise::forUser($this->user()->id)
             ->orderBy('category')
             ->orderBy('name')
             ->get();
@@ -34,19 +34,17 @@ class ExerciseController extends Controller
         ]);
     }
 
-    public function store(ExerciseStoreRequest $request)
+    public function store(ExerciseStoreRequest $request): \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
     {
-        if (! Auth::check()) {
-            abort(401);
-        }
+        // Auth check handled by middleware/request
 
         $data = $request->validated();
         $exercise = new Exercise($data);
-        $exercise->user_id = Auth::id();
+        $exercise->user_id = $this->user()->id;
         $exercise->save();
 
         // NITRO FIX: Invalidate exercises cache
-        Cache::forget('exercises_list_'.Auth::id());
+        Cache::forget('exercises_list_'.$this->user()->id);
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
         if ($request->wantsJson() || $request->header('X-Quick-Create')) {
@@ -56,7 +54,7 @@ class ExerciseController extends Controller
         return redirect()->back();
     }
 
-    public function update(ExerciseUpdateRequest $request, Exercise $exercise)
+    public function update(ExerciseUpdateRequest $request, Exercise $exercise): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $exercise);
 
@@ -68,7 +66,7 @@ class ExerciseController extends Controller
         return redirect()->back();
     }
 
-    public function destroy(Exercise $exercise)
+    public function destroy(Exercise $exercise): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $exercise);
 

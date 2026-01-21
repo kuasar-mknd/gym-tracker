@@ -15,7 +15,7 @@ class FetchCalendarEventsAction
      * @param  User  $user  The user to fetch events for.
      * @param  int  $year  The year of the events.
      * @param  int  $month  The month of the events.
-     * @return array An array containing 'workouts' and 'journals' collections.
+     * @return array{workouts: \Illuminate\Support\Collection<int, mixed>, journals: \Illuminate\Support\Collection<int, mixed>}
      */
     public function execute(User $user, int $year, int $month): array
     {
@@ -23,10 +23,18 @@ class FetchCalendarEventsAction
         $startOfMonth = $date->copy()->startOfMonth();
         $endOfMonth = $date->copy()->endOfMonth();
 
-        // Fetch Workouts
-        $workouts = Workout::where('user_id', $user->id)
-            ->whereBetween('started_at', [$startOfMonth, $endOfMonth])
-            ->with(['workoutLines.exercise']) // Eager load for quick preview
+        return [
+            'workouts' => $this->getWorkouts($user, $startOfMonth, $endOfMonth),
+            'journals' => $this->getJournals($user, $startOfMonth, $endOfMonth),
+        ];
+    }
+
+    /** @return \Illuminate\Support\Collection<int, mixed> */
+    private function getWorkouts(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
+    {
+        return Workout::where('user_id', $user->id)
+            ->whereBetween('started_at', [$start, $end])
+            ->with(['workoutLines.exercise'])
             ->get()
             ->map(function ($workout) {
                 return [
@@ -38,23 +46,21 @@ class FetchCalendarEventsAction
                     'preview_exercises' => $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray(),
                 ];
             });
+    }
 
-        // Fetch Journals
-        $journals = DailyJournal::where('user_id', $user->id)
-            ->whereBetween('date', [$startOfMonth, $endOfMonth])
+    /** @return \Illuminate\Support\Collection<int, mixed> */
+    private function getJournals(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
+    {
+        return DailyJournal::where('user_id', $user->id)
+            ->whereBetween('date', [$start, $end])
             ->get()
             ->map(function ($journal) {
                 return [
                     'id' => $journal->id,
                     'date' => $journal->date->toDateString(),
                     'mood_score' => $journal->mood_score,
-                    'has_note' => ! empty($journal->content),
+                    'has_note' => (bool) ($journal->content ?? false),
                 ];
             });
-
-        return [
-            'workouts' => $workouts,
-            'journals' => $journals,
-        ];
     }
 }

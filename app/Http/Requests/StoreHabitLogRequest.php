@@ -27,7 +27,7 @@ class StoreHabitLogRequest extends FormRequest
                 'required',
                 'integer',
                 Rule::exists('habits', 'id')->where(function ($query) {
-                    return $query->where('user_id', $this->user()->id);
+                    return $query->where('user_id', $this->user()?->id);
                 }),
             ],
             'date' => ['required', 'date'],

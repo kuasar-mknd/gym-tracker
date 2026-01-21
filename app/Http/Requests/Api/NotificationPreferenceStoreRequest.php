@@ -28,7 +28,7 @@ class NotificationPreferenceStoreRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('notification_preferences')->where(function ($query) {
-                    return $query->where('user_id', $this->user()->id);
+                    return $query->where('user_id', $this->user()?->id);
                 }),
             ],
             'value' => ['nullable', 'integer'],

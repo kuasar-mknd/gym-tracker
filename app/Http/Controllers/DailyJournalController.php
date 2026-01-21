@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DailyJournalStoreRequest;
 use App\Models\DailyJournal;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DailyJournalController extends Controller
@@ -15,11 +14,11 @@ class DailyJournalController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', DailyJournal::class);
 
-        $journals = Auth::user()->dailyJournals()
+        $journals = $this->user()->dailyJournals()
             ->orderBy('date', 'desc')
             ->limit(30) // Show last 30 days
             ->get();
@@ -32,17 +31,22 @@ class DailyJournalController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(DailyJournalStoreRequest $request)
+    public function store(DailyJournalStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', DailyJournal::class);
 
         $validated = $request->validated();
-        $date = \Carbon\Carbon::parse($validated['date'])->format('Y-m-d');
+        $dateInput = $validated['date'];
+        if (! is_string($dateInput)) {
+            throw new \UnexpectedValueException('Date must be a string');
+        }
+        $date = \Illuminate\Support\Carbon::parse($dateInput);
+        $dateString = $date->format('Y-m-d');
 
-        $journal = $request->user()->dailyJournals()->where('date', $date)->first() ?? new DailyJournal;
+        $journal = $this->user()->dailyJournals()->where('date', $dateString)->first() ?? new DailyJournal;
 
         if (! $journal->exists) {
-            $journal->user_id = $request->user()->id;
+            $journal->user_id = $this->user()->id;
             $journal->date = $date;
         }
 
@@ -55,7 +59,7 @@ class DailyJournalController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(DailyJournal $dailyJournal)
+    public function destroy(DailyJournal $dailyJournal): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $dailyJournal);
 

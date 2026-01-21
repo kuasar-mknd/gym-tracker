@@ -24,7 +24,7 @@ class GoalService
      */
     public function syncGoals(User $user): void
     {
-        $user->goals()->whereNull('completed_at')->each(function (Goal $goal) {
+        $user->goals()->whereNull('completed_at')->each(function (Goal $goal): void {
             $this->updateGoalProgress($goal);
         });
     }
@@ -39,20 +39,13 @@ class GoalService
      */
     public function updateGoalProgress(Goal $goal): void
     {
-        switch ($goal->type) {
-            case 'weight':
-                $this->updateWeightGoal($goal);
-                break;
-            case 'frequency':
-                $this->updateFrequencyGoal($goal);
-                break;
-            case 'volume':
-                $this->updateVolumeGoal($goal);
-                break;
-            case 'measurement':
-                $this->updateMeasurementGoal($goal);
-                break;
-        }
+        match ($goal->type) {
+            'weight' => $this->updateWeightGoal($goal),
+            'frequency' => $this->updateFrequencyGoal($goal),
+            'volume' => $this->updateVolumeGoal($goal),
+            'measurement' => $this->updateMeasurementGoal($goal),
+            default => null,
+        };
 
         $this->checkCompletion($goal);
     }
@@ -138,7 +131,7 @@ class GoalService
             ->latest('measured_at')
             ->value($goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type);
 
-        if ($latestValue) {
+        if ($latestValue && is_numeric($latestValue)) {
             $goal->update(['current_value' => (float) $latestValue]);
         }
     }
@@ -155,26 +148,30 @@ class GoalService
      */
     protected function checkCompletion(Goal $goal): void
     {
-        $isCompleted = false;
-
-        // For most goals, higher is better
-        if ($goal->current_value >= $goal->target_value) {
-            $isCompleted = true;
-        }
-
-        // Handle "lower is better" for specific measurements (e.g., body weight loss)
-        if ($goal->type === 'measurement' && $goal->target_value < $goal->start_value) {
-            if ($goal->current_value <= $goal->target_value && $goal->current_value > 0) {
-                $isCompleted = true;
-            } else {
-                $isCompleted = false;
-            }
-        }
+        $isCompleted = $this->isGoalCriteriaMet($goal);
 
         if ($isCompleted && ! $goal->completed_at) {
             $goal->update(['completed_at' => now()]);
-        } elseif (! $isCompleted && $goal->completed_at) {
+
+            return;
+        }
+
+        if (! $isCompleted && $goal->completed_at) {
             $goal->update(['completed_at' => null]);
         }
+    }
+
+    /**
+     * Determine if the goal's target criteria has been met.
+     */
+    protected function isGoalCriteriaMet(Goal $goal): bool
+    {
+        // Handle "lower is better" for specific measurements (e.g., body weight loss)
+        if ($goal->type === 'measurement' && $goal->target_value < $goal->start_value) {
+            return $goal->current_value <= $goal->target_value && $goal->current_value > 0;
+        }
+
+        // For most goals, higher is better
+        return $goal->current_value >= $goal->target_value;
     }
 }

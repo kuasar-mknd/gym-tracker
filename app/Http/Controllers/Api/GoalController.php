@@ -22,7 +22,7 @@ class GoalController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index()
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Goal::class);
 
@@ -36,7 +36,7 @@ class GoalController extends Controller
         return GoalResource::collection($goals);
     }
 
-    public function store(GoalStoreRequest $request)
+    public function store(GoalStoreRequest $request): GoalResource
     {
         // Authorization handled in GoalStoreRequest::authorize() (returns true)
         // Ideally should be checked here or policy.
@@ -46,13 +46,13 @@ class GoalController extends Controller
         $validated = $request->validated();
 
         $goal = new Goal($validated);
-        $goal->user_id = Auth::id();
+        $goal->user_id = $this->user()->id;
         $goal->save();
 
         return new GoalResource($goal);
     }
 
-    public function show(Goal $goal)
+    public function show(Goal $goal): GoalResource
     {
         $this->authorize('view', $goal);
 
@@ -61,7 +61,7 @@ class GoalController extends Controller
         return new GoalResource($goal);
     }
 
-    public function update(GoalUpdateRequest $request, Goal $goal)
+    public function update(GoalUpdateRequest $request, Goal $goal): GoalResource
     {
         // Authorization handled in GoalUpdateRequest::authorize()
 
@@ -72,7 +72,7 @@ class GoalController extends Controller
         return new GoalResource($goal);
     }
 
-    public function destroy(Goal $goal)
+    public function destroy(Goal $goal): \Illuminate\Http\Response
     {
         $this->authorize('delete', $goal);
 

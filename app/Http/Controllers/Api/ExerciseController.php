@@ -7,7 +7,6 @@ use App\Http\Requests\ExerciseUpdateRequest;
 use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 
 class ExerciseController extends Controller
@@ -24,7 +23,7 @@ class ExerciseController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index()
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Exercise::class);
 
@@ -32,9 +31,9 @@ class ExerciseController extends Controller
             ->allowedFilters(['name', 'type', 'category'])
             ->allowedSorts(['name', 'created_at'])
             ->defaultSort('name')
-            ->where(function ($query) {
+            ->where(function ($query): void {
                 $query->whereNull('user_id')
-                    ->orWhere('user_id', Auth::id());
+                    ->orWhere('user_id', $this->user()->id);
             })
             ->paginate();
 
@@ -44,12 +43,12 @@ class ExerciseController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(ExerciseStoreRequest $request)
+    public function store(ExerciseStoreRequest $request): ExerciseResource
     {
         $validated = $request->validated();
 
         $exercise = new Exercise($validated);
-        $exercise->user_id = Auth::id();
+        $exercise->user_id = $this->user()->id;
         $exercise->save();
 
         return new ExerciseResource($exercise);
@@ -58,7 +57,7 @@ class ExerciseController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Exercise $exercise)
+    public function show(Exercise $exercise): ExerciseResource
     {
         $this->authorize('view', $exercise);
 
@@ -68,7 +67,7 @@ class ExerciseController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(ExerciseUpdateRequest $request, Exercise $exercise)
+    public function update(ExerciseUpdateRequest $request, Exercise $exercise): ExerciseResource
     {
         $validated = $request->validated();
 
@@ -80,7 +79,7 @@ class ExerciseController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Exercise $exercise)
+    public function destroy(Exercise $exercise): \Illuminate\Http\Response
     {
         $this->authorize('delete', $exercise);
 

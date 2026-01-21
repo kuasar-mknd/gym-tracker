@@ -12,7 +12,7 @@ class SocialAuthController extends Controller
     /**
      * Redirect the user to the provider authentication page.
      */
-    public function redirect($provider)
+    public function redirect(string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         return Socialite::driver($provider)->redirect();
     }
@@ -20,7 +20,7 @@ class SocialAuthController extends Controller
     /**
      * Obtain the user information from the provider.
      */
-    public function callback(ResolveSocialUserAction $resolver, string $provider)
+    public function callback(ResolveSocialUserAction $resolver, string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         try {
             $socialUser = Socialite::driver($provider)->user();

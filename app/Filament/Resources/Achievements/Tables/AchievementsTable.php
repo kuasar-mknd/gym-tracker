@@ -13,32 +13,8 @@ class AchievementsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->columns([
-                TextColumn::make('slug')
-                    ->searchable(),
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('icon')
-                    ->searchable(),
-                TextColumn::make('type')
-                    ->searchable(),
-                TextColumn::make('threshold')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('category')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
-            ])
+            ->columns(self::getColumns())
+            ->filters([])
             ->recordActions([
                 EditAction::make(),
             ])
@@ -47,5 +23,20 @@ class AchievementsTable
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /** @return array<\Filament\Tables\Columns\Column> */
+    private static function getColumns(): array
+    {
+        return [
+            TextColumn::make('slug')->searchable(),
+            TextColumn::make('name')->searchable(),
+            TextColumn::make('icon')->searchable(),
+            TextColumn::make('type')->searchable(),
+            TextColumn::make('threshold')->numeric()->sortable(),
+            TextColumn::make('category')->searchable(),
+            TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+        ];
     }
 }

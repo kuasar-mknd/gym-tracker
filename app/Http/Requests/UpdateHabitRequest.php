@@ -11,7 +11,7 @@ class UpdateHabitRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('habit'));
+        return $this->user()?->can('update', $this->route('habit')) ?? false;
     }
 
     /**

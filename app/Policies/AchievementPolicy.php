@@ -24,7 +24,7 @@ class AchievementPolicy
     public function view(AuthUser $authUser, Achievement $achievement): bool
     {
         if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $achievement->user_id;
+            return true;
         }
 
         return $authUser->can('View:Achievement');
@@ -38,7 +38,7 @@ class AchievementPolicy
     public function update(AuthUser $authUser, Achievement $achievement): bool
     {
         if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $achievement->user_id;
+            return false;
         }
 
         return $authUser->can('Update:Achievement');
@@ -47,7 +47,7 @@ class AchievementPolicy
     public function delete(AuthUser $authUser, Achievement $achievement): bool
     {
         if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $achievement->user_id;
+            return false;
         }
 
         return $authUser->can('Delete:Achievement');

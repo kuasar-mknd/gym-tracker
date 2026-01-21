@@ -12,24 +12,8 @@ class AchievementController extends Controller
      */
     public function index(): \Inertia\Response
     {
-        $user = auth()->user();
-
-        $userAchievements = $user->achievements()->get()->keyBy('id');
-
-        $achievements = Achievement::all()->map(function ($achievement) use ($userAchievements) {
-            $userAchievement = $userAchievements->get($achievement->id);
-
-            return [
-                'id' => $achievement->id,
-                'slug' => $achievement->slug,
-                'name' => $achievement->name,
-                'description' => $achievement->description,
-                'icon' => $achievement->icon,
-                'category' => $achievement->category,
-                'is_unlocked' => (bool) $userAchievement,
-                'unlocked_at' => $userAchievement ? $userAchievement->pivot->achieved_at : null,
-            ];
-        });
+        $userAchievements = $this->user()->achievements()->get()->keyBy('id');
+        $achievements = Achievement::all()->map(fn ($achievement) => $this->formatAchievement($achievement, $userAchievements));
 
         return Inertia::render('Achievements/Index', [
             'achievements' => $achievements,
@@ -38,5 +22,26 @@ class AchievementController extends Controller
                 'unlocked' => $achievements->where('is_unlocked', true)->count(),
             ],
         ]);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Achievement>  $userAchievements
+     * @return array<string, mixed>
+     */
+    private function formatAchievement(Achievement $achievement, $userAchievements): array
+    {
+        $userAchievement = $userAchievements->get($achievement->id);
+
+        return [
+            'id' => $achievement->id,
+            'slug' => $achievement->slug,
+            'name' => $achievement->name,
+            'description' => $achievement->description,
+            'icon' => $achievement->icon,
+            'category' => $achievement->category,
+            'is_unlocked' => (bool) $userAchievement,
+            // @phpstan-ignore-next-line
+            'unlocked_at' => $userAchievement ? $userAchievement->pivot->achieved_at : null,
+        ];
     }
 }

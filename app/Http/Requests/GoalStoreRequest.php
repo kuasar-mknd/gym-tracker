@@ -29,9 +29,9 @@ class GoalStoreRequest extends FormRequest
             'exercise_id' => [
                 'required_if:type,weight,volume',
                 'nullable',
-                Rule::exists('exercises', 'id')->where(function ($query) {
-                    $query->where(function ($q) {
-                        $q->whereNull('user_id')->orWhere('user_id', $this->user()->id);
+                Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
+                        $q->whereNull('user_id')->orWhere('user_id', $this->user()?->id);
                     });
                 }),
             ],

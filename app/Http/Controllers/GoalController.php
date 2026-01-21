@@ -19,13 +19,13 @@ class GoalController extends Controller
     public function index(): \Inertia\Response
     {
         return Inertia::render('Goals/Index', [
-            'goals' => auth()->user()->goals()
+            'goals' => $this->user()->goals()
                 ->with('exercise')
                 ->latest()
                 ->get()
                 ->append(['progress', 'unit']),
-            'exercises' => Cache::remember('exercises_list_'.auth()->id(), 3600, function () {
-                return Exercise::forUser(auth()->id())->orderBy('name')->get();
+            'exercises' => Cache::remember('exercises_list_'.$this->user()->id, 3600, function () {
+                return Exercise::forUser($this->user()->id)->orderBy('name')->get();
             }),
             'measurementTypes' => [
                 ['value' => 'weight', 'label' => 'Poids de corps'],
@@ -48,7 +48,7 @@ class GoalController extends Controller
 
         $goal = new Goal;
         $goal->fill($data);
-        $goal->user_id = auth()->id();
+        $goal->user_id = $this->user()->id;
         $goal->save();
 
         $this->goalService->updateGoalProgress($goal);

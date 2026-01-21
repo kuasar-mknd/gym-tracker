@@ -10,7 +10,6 @@ use App\Models\PersonalRecord;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Facades\Auth;
 
 class PersonalRecordController extends Controller
 {
@@ -27,7 +26,7 @@ class PersonalRecordController extends Controller
             'exercise_id' => 'nullable|integer|exists:exercises,id',
         ]);
 
-        $query = PersonalRecord::query()->where('user_id', Auth::id());
+        $query = PersonalRecord::query()->where('user_id', $this->user()->id);
 
         if (isset($validated['exercise_id'])) {
             $query->where('exercise_id', $validated['exercise_id']);
@@ -47,7 +46,7 @@ class PersonalRecordController extends Controller
 
         $personalRecord = new PersonalRecord;
         $personalRecord->fill($validated);
-        $personalRecord->user_id = Auth::id();
+        $personalRecord->user_id = $this->user()->id;
         $personalRecord->save();
 
         return new PersonalRecordResource($personalRecord);

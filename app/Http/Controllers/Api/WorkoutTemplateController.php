@@ -15,20 +15,22 @@ class WorkoutTemplateController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index()
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
+        // @phpstan-ignore-next-line
         $templates = QueryBuilder::for(WorkoutTemplate::class)
-            ->where('user_id', auth()->id())
+            ->where('user_id', $this->user()->id)
             ->allowedSorts(['created_at', 'name'])
-            ->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets'])
-            ->paginate();
+            ->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets']);
+
+        $templates = $templates->paginate();
 
         return WorkoutTemplateResource::collection($templates);
     }
 
-    public function store(Request $request, CreateWorkoutTemplateAction $action)
+    public function store(Request $request, CreateWorkoutTemplateAction $action): WorkoutTemplateResource
     {
         $this->authorize('create', WorkoutTemplate::class);
 
@@ -43,19 +45,19 @@ class WorkoutTemplateController extends Controller
             'exercises.*.sets.*.is_warmup' => 'boolean',
         ]);
 
-        $template = $action->execute($request->user(), $validated);
+        $template = $action->execute($this->user(), $validated);
 
         return new WorkoutTemplateResource($template->load(['workoutTemplateLines.workoutTemplateSets', 'workoutTemplateLines.exercise']));
     }
 
-    public function show(WorkoutTemplate $workoutTemplate)
+    public function show(WorkoutTemplate $workoutTemplate): WorkoutTemplateResource
     {
         $this->authorize('view', $workoutTemplate);
 
         return new WorkoutTemplateResource($workoutTemplate->load(['workoutTemplateLines.workoutTemplateSets', 'workoutTemplateLines.exercise']));
     }
 
-    public function update(Request $request, WorkoutTemplate $workoutTemplate, UpdateWorkoutTemplateAction $action)
+    public function update(Request $request, WorkoutTemplate $workoutTemplate, UpdateWorkoutTemplateAction $action): WorkoutTemplateResource
     {
         $this->authorize('update', $workoutTemplate);
 
@@ -75,7 +77,7 @@ class WorkoutTemplateController extends Controller
         return new WorkoutTemplateResource($template);
     }
 
-    public function destroy(WorkoutTemplate $workoutTemplate)
+    public function destroy(WorkoutTemplate $workoutTemplate): \Illuminate\Http\Response
     {
         $this->authorize('delete', $workoutTemplate);
 

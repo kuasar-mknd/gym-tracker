@@ -21,6 +21,7 @@ class PersonalRecordAchieved extends Notification implements ShouldQueue
     /**
      * Get the notification's delivery channels.
      *
+     * @param  \App\Models\User  $notifiable
      * @return array<int, string>
      */
     public function via(object $notifiable): array
@@ -34,18 +35,24 @@ class PersonalRecordAchieved extends Notification implements ShouldQueue
         return $channels;
     }
 
-    public function toWebPush($notifiable, $notification)
+    /**
+     * @param  \App\Models\User  $notifiable
+     * @param  mixed  $notification
+     */
+    public function toWebPush(object $notifiable, $notification): WebPushMessage
     {
         return (new WebPushMessage)
             ->title('Nouveau Record ! 🏆')
             ->icon('/logo.svg')
-            ->body($this->toArray($notifiable)['message'])
+            /** @phpstan-ignore-next-line */
+            ->body((string) ($this->toArray($notifiable)['message'] ?? ''))
             ->action('Voir mes stats', url('/stats'));
     }
 
     /**
      * Get the array representation of the notification.
      *
+     * @param  \App\Models\User  $notifiable
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array

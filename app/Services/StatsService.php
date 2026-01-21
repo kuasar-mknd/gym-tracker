@@ -40,6 +40,8 @@ class StatsService
      *   ['date' => '01/05', 'full_date' => '2023-05-01', 'name' => 'Leg Day', 'volume' => 12500],
      *   ...
      * ]
+     *   ...
+     * ]
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
@@ -47,31 +49,12 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
-            function () use ($user, $days) {
-                $results = DB::table('workouts')
-                    ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                    ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                    ->where('workouts.user_id', $user->id)
-                    ->where('workouts.started_at', '>=', now()->subDays($days))
-                    ->select(
-                        'workouts.id',
-                        'workouts.started_at',
-                        'workouts.name',
-                        // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
-                    )
-                    ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
-                    ->orderBy('workouts.started_at')
-                    ->get();
+            function () use ($user, $days): array {
+                $results = $this->fetchVolumeTrendData($user, $days);
 
-                return $results->map(function ($row) {
-                    return [
-                        'date' => Carbon::parse($row->started_at)->format('d/m'),
-                        'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'),
-                        'name' => $row->name,
-                        'volume' => (float) $row->volume,
-                    ];
-                })->values()->toArray();
+                return $results->map(fn ($row) => $this->formatVolumeTrendItem($row))
+                    ->values()
+                    ->toArray();
             }
         );
     }
@@ -79,7 +62,6 @@ class StatsService
     /**
      * Get daily volume trend for the last X days.
      *
-     * Returns an array of volume for each day, ensuring zero values for days without workouts.
      *
      * @return array<int, array{date: string, day_name: string, volume: float}>
      */
@@ -89,34 +71,17 @@ class StatsService
             "stats.daily_volume.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days) {
-                $end = now()->endOfDay();
                 $start = now()->subDays($days - 1)->startOfDay();
-
+                // @phpstan-ignore-next-line
                 $results = DB::table('workouts')
                     ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
                     ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
                     ->where('workouts.user_id', $user->id)
-                    ->whereBetween('workouts.started_at', [$start, $end])
-                    ->select(
-                        DB::raw('DATE(workouts.started_at) as date'),
-                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
-                    )
-                    ->groupBy('date')
-                    ->get()
-                    ->pluck('volume', 'date');
+                    ->whereBetween('workouts.started_at', [$start, now()->endOfDay()])
+                    ->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))
+                    ->groupBy('date')->get()->pluck('volume', 'date');
 
-                $data = [];
-                for ($i = 0; $i < $days; $i++) {
-                    $date = $start->copy()->addDays($i);
-                    $dateString = $date->format('Y-m-d');
-                    $data[] = [
-                        'date' => $date->format('d/m'),
-                        'day_name' => $date->translatedFormat('D'),
-                        'volume' => (float) ($results[$dateString] ?? 0),
-                    ];
-                }
-
-                return $data;
+                return $this->fillDailyTrend($start, $days, $results);
             }
         );
     }
@@ -129,10 +94,7 @@ class StatsService
      *
      * @param  User  $user  The user to retrieve stats for.
      * @param  int  $days  Number of days to look back (default: 30).
-     * @return array<int, object{
-     *     category: string,
-     *     volume: string|float
-     * }> Array of objects containing category names and aggregated volume.
+     * @return array<int, \stdClass>
      *
      * @example
      * [
@@ -145,7 +107,7 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
-            function () use ($user, $days) {
+            function () use ($user, $days): array {
                 $results = DB::table('sets')
                     ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
                     ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
@@ -182,7 +144,7 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
             now()->addMinutes(30),
-            function () use ($user, $exerciseId, $days) {
+            function () use ($user, $exerciseId, $days): array {
                 $sets = DB::table('sets')
                     ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
                     ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
@@ -194,13 +156,7 @@ class StatsService
                     ->orderBy('workouts.started_at')
                     ->get();
 
-                return $sets->map(function ($set) {
-                    return [
-                        'date' => Carbon::parse($set->started_at)->format('d/m'),
-                        'full_date' => Carbon::parse($set->started_at)->format('Y-m-d'),
-                        'one_rep_max' => (float) round($set->epley_1rm, 2),
-                    ];
-                })->toArray();
+                return $sets->map(fn ($set) => $this->formatExercise1RMItem($set))->toArray();
             }
         );
     }
@@ -210,6 +166,7 @@ class StatsService
      *
      * Calculates the total volume lifted in the current month versus the previous month
      * and returns the percentage difference.
+     *
      *
      * @param  User  $user  The user to retrieve stats for.
      * @return array{
@@ -225,28 +182,11 @@ class StatsService
             "stats.monthly_volume_comparison.{$user->id}",
             now()->addMinutes(30),
             function () use ($user) {
-                $currentMonthStart = now()->startOfMonth();
-                $previousMonthStart = now()->subMonth()->startOfMonth();
-                $previousMonthEnd = now()->subMonth()->endOfMonth();
-
-                $currentVolume = DB::table('sets')
-                    ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-                    ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-                    ->where('workouts.user_id', $user->id)
-                    ->where('workouts.started_at', '>=', $currentMonthStart)
-                    // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-                    ->sum(DB::raw('sets.weight * sets.reps'));
-
-                $previousVolume = DB::table('sets')
-                    ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-                    ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-                    ->where('workouts.user_id', $user->id)
-                    ->whereBetween('workouts.started_at', [$previousMonthStart, $previousMonthEnd])
-                    // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-                    ->sum(DB::raw('sets.weight * sets.reps'));
+                $currentVolume = $this->getPeriodVolume($user, now()->startOfMonth());
+                $previousVolume = $this->getPeriodVolume($user, now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth());
 
                 $diff = $currentVolume - $previousVolume;
-                $percentage = $previousVolume > 0 ? ($diff / $previousVolume) * 100 : ($currentVolume > 0 ? 100 : 0);
+                $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
                 return [
                     'current_month_volume' => (float) $currentVolume,
@@ -274,13 +214,16 @@ class StatsService
                     ->orderBy('measured_at', 'asc')
                     ->get();
 
-                return $measurements->map(function ($m) {
+                /** @var array<int, array{date: string, weight: float}> $data */
+                $data = $measurements->map(function ($m) {
                     return [
                         'date' => Carbon::parse($m->measured_at)->format('d/m'),
                         'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
                         'weight' => (float) $m->weight,
                     ];
                 })->toArray();
+
+                return $data;
             }
         );
     }
@@ -315,7 +258,6 @@ class StatsService
     }
 
     /**
-    /**
      * Get body fat history for the last X days.
      *
      * @return array<int, array{date: string, body_fat: float}>
@@ -332,13 +274,16 @@ class StatsService
                     ->orderBy('measured_at', 'asc')
                     ->get();
 
-                return $measurements->map(function ($m) {
+                /** @var array<int, array{date: string, body_fat: float}> $data */
+                $data = $measurements->map(function ($m) {
                     return [
                         'date' => Carbon::parse($m->measured_at)->format('d/m'),
                         'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
                         'body_fat' => (float) $m->body_fat,
                     ];
                 })->toArray();
+
+                return $data;
             }
         );
     }
@@ -348,6 +293,7 @@ class StatsService
      *
      * Returns an array of objects for each day of the current week,
      * with volume summed up. Fills missing days with 0.
+     *
      *
      * @param  User  $user  The user to retrieve stats for.
      * @return array<int, array{
@@ -365,45 +311,16 @@ class StatsService
                 $startOfWeek = now()->startOfWeek();
                 $endOfWeek = now()->endOfWeek();
 
-                // Get raw data from DB
-                $workouts = DB::table('workouts')
-                    ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                    ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                    ->where('workouts.user_id', $user->id)
-                    ->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])
-                    ->select(
-                        DB::raw('DATE(workouts.started_at) as date'),
-                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
-                    )
-                    ->groupBy(DB::raw('DATE(workouts.started_at)'))
-                    ->get()
-                    ->keyBy('date');
+                $workouts = $this->fetchWeeklyVolumeData($user, $startOfWeek, $endOfWeek);
 
-                // Fill Mon-Sun
-                $trend = [];
-                $current = $startOfWeek->copy();
-                $labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-
-                for ($i = 0; $i < 7; $i++) {
-                    $dateStr = $current->format('Y-m-d');
-                    $volume = isset($workouts[$dateStr]) ? (float) $workouts[$dateStr]->volume : 0.0;
-
-                    $trend[] = [
-                        'date' => $dateStr,
-                        'day_label' => $labels[$i],
-                        'volume' => $volume,
-                    ];
-
-                    $current->addDay();
-                }
-
-                return $trend;
+                return $this->fillWeeklyTrend($startOfWeek, $workouts);
             }
         );
     }
 
     /**
      * Get volume comparison between current week and previous week.
+     *
      *
      * @param  User  $user  The user to retrieve stats for.
      * @return array{
@@ -415,26 +332,11 @@ class StatsService
      */
     public function getWeeklyVolumeComparison(User $user): array
     {
-        $currentStart = now()->startOfWeek();
-        $previousStart = now()->subWeek()->startOfWeek();
-        $previousEnd = now()->subWeek()->endOfWeek();
-
-        $currentVolume = DB::table('sets')
-            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->where('workouts.user_id', $user->id)
-            ->where('workouts.started_at', '>=', $currentStart)
-            ->sum(DB::raw('sets.weight * sets.reps'));
-
-        $previousVolume = DB::table('sets')
-            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->where('workouts.user_id', $user->id)
-            ->whereBetween('workouts.started_at', [$previousStart, $previousEnd])
-            ->sum(DB::raw('sets.weight * sets.reps'));
+        $currentVolume = $this->getPeriodVolume($user, now()->startOfWeek());
+        $previousVolume = $this->getPeriodVolume($user, now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek());
 
         $diff = $currentVolume - $previousVolume;
-        $percentage = $previousVolume > 0 ? ($diff / $previousVolume) * 100 : ($currentVolume > 0 ? 100 : 0);
+        $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return [
             'current_week_volume' => (float) $currentVolume,
@@ -454,23 +356,19 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            function () use ($user, $limit) {
-                return Workout::select('name', 'started_at', 'ended_at')
+            function () use ($user, $limit): array {
+                return Workout::select(['name', 'started_at', 'ended_at'])
                     ->where('user_id', $user->id)
                     ->whereNotNull('ended_at')
                     ->latest('started_at')
                     ->take($limit)
                     ->get()
-                    ->map(function ($workout) {
-                        return [
-                            'date' => $workout->started_at->format('d/m'),
-                            'duration' => $workout->ended_at->diffInMinutes($workout->started_at),
-                            'name' => $workout->name,
-                        ];
-                    })
+                    ->map(fn ($workout) => $this->formatDurationHistoryItem($workout))
                     ->reverse()
                     ->values()
                     ->toArray();
+
+                return $data;
             }
         );
     }
@@ -485,36 +383,23 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            function () use ($user, $limit) {
+            function () use ($user, $limit): array {
                 return Workout::with(['workoutLines.sets'])
                     ->where('user_id', $user->id)
                     ->whereNotNull('ended_at')
                     ->latest('started_at')
                     ->take($limit)
                     ->get()
-                    ->map(function ($workout) {
-                        $volume = $workout->workoutLines->reduce(function ($carry, $line) {
-                            return $carry + $line->sets->reduce(function ($carrySet, $set) {
-                                return $carrySet + ($set->weight * $set->reps);
-                            }, 0);
-                        }, 0);
-
-                        return [
-                            'date' => $workout->started_at->format('d/m'),
-                            'volume' => $volume,
-                            'name' => $workout->name,
-                        ];
-                    })
+                    ->map(fn ($workout) => $this->formatVolumeHistoryItem($workout))
                     ->reverse()
                     ->values()
                     ->toArray();
+
+                return $data;
             }
         );
     }
 
-    /**
-     * Clear all cached statistics for a given user.
-     */
     public function clearUserStatsCache(User $user): void
     {
         // Clear all possible period variations
@@ -537,5 +422,184 @@ class StatsService
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
 
         // Note: Individual exercise 1RM progress is not cleared here as it's exercise-specific
+    }
+
+    protected function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
+    {
+        $query = DB::table('sets')
+            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+            ->where('workouts.user_id', $user->id);
+
+        if ($end) {
+            $query->whereBetween('workouts.started_at', [$start, $end]);
+        } else {
+            $query->where('workouts.started_at', '>=', $start);
+        }
+
+        return (float) $query->sum(DB::raw('sets.weight * sets.reps'));
+    }
+
+    /**
+     * Fetch weekly volume data from DB.
+     *
+     * @return \Illuminate\Support\Collection<string, \stdClass>
+     */
+    protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): \Illuminate\Support\Collection
+    {
+        return DB::table('workouts')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])
+            ->select(
+                DB::raw('DATE(workouts.started_at) as date'),
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy(DB::raw('DATE(workouts.started_at)'))
+            ->get()
+            ->keyBy('date');
+    }
+
+    /**
+     * Fill missing days with zero volume.
+     *
+     * @param  \Illuminate\Support\Collection<string, float>  $results
+     * @return array<int, array{date: string, day_name: string, volume: float}>
+     */
+    protected function fillDailyTrend(Carbon $start, int $days, \Illuminate\Support\Collection $results): array
+    {
+        $data = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = $start->copy()->addDays($i);
+            $dateString = $date->format('Y-m-d');
+            /** @var float $volume */
+            $volume = $results[$dateString] ?? 0.0;
+            $data[] = [
+                'date' => $date->format('d/m'),
+                'day_name' => $date->translatedFormat('D'),
+                'volume' => (float) $volume,
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Fill missing days in weekly trend with zero volume.
+     *
+     * @param  \Illuminate\Support\Collection<string, \stdClass>  $workouts
+     * @return array<int, array{date: string, day_label: string, volume: float}>
+     */
+    protected function fillWeeklyTrend(Carbon $startOfWeek, \Illuminate\Support\Collection $workouts): array
+    {
+        $trend = [];
+        $current = $startOfWeek->copy();
+        $labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+        for ($i = 0; $i < 7; $i++) {
+            $dateStr = $current->format('Y-m-d');
+            $volume = 0.0;
+            if (isset($workouts[$dateStr])) {
+                /** @var object{volume: int|float} $workoutData */
+                $workoutData = $workouts[$dateStr];
+                $volume = (float) $workoutData->volume;
+            }
+
+            $trend[] = [
+                'date' => $dateStr,
+                'day_label' => $labels[$i],
+                'volume' => $volume,
+            ];
+            $current->addDay();
+        }
+
+        return $trend;
+    }
+
+    /**
+     * Format row for volume trend.
+     *
+     * @return array{date: string, full_date: string, name: string, volume: float}
+     */
+    protected function formatVolumeTrendItem(\stdClass $row): array
+    {
+        return [
+            'date' => Carbon::parse($row->started_at)->format('d/m'),
+            'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'),
+            'name' => $row->name,
+            'volume' => (float) $row->volume,
+        ];
+    }
+
+    /**
+     * Format set for 1RM item.
+     *
+     * @return array{date: string, full_date: string, one_rep_max: float}
+     */
+    protected function formatExercise1RMItem(\stdClass $set): array
+    {
+        return [
+            'date' => Carbon::parse($set->started_at)->format('d/m'),
+            'full_date' => Carbon::parse($set->started_at)->format('Y-m-d'),
+            'one_rep_max' => round((float) $set->epley_1rm, 2),
+        ];
+    }
+
+    /**
+     * Format workout for duration history.
+     *
+     * @return array{date: string, duration: int, name: string}
+     */
+    protected function formatDurationHistoryItem(Workout $workout): array
+    {
+        return [
+            'date' => $workout->started_at->format('d/m'),
+            'duration' => (int) ($workout->ended_at ? $workout->ended_at->diffInMinutes($workout->started_at) : 0),
+            'name' => (string) $workout->name,
+        ];
+    }
+
+    /**
+     * Format workout for volume history.
+     *
+     * @return array{date: string, volume: float, name: string}
+     */
+    protected function formatVolumeHistoryItem(Workout $workout): array
+    {
+        $volume = $workout->workoutLines->reduce(function ($carry, $line) {
+            return $carry + $line->sets->reduce(function ($carrySet, $set) {
+                return $carrySet + ($set->weight * $set->reps);
+            }, 0.0);
+        }, 0.0);
+
+        return [
+            'date' => $workout->started_at->format('d/m'),
+            'volume' => (float) $volume,
+            'name' => (string) $workout->name,
+        ];
+    }
+
+    /**
+     * Fetch volume trend data from DB.
+     *
+     * @return \Illuminate\Support\Collection<int, \stdClass>
+     */
+    protected function fetchVolumeTrendData(User $user, int $days): \Illuminate\Support\Collection
+    {
+        return DB::table('workouts')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->where('workouts.started_at', '>=', now()->subDays($days))
+            ->select(
+                'workouts.id',
+                'workouts.started_at',
+                'workouts.name',
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
+            ->orderBy('workouts.started_at')
+            ->get();
     }
 }

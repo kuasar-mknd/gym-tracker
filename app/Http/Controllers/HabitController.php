@@ -9,16 +9,18 @@ use Inertia\Inertia;
 
 class HabitController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): \Inertia\Response
     {
         $startOfWeek = Carbon::now()->startOfWeek();
         $endOfWeek = Carbon::now()->endOfWeek();
 
-        $habits = auth()->user()->habits()
+        $habits = $this->user()->habits()
             ->where('archived', false)
-            ->with(['logs' => function ($query) use ($startOfWeek, $endOfWeek) {
-                $query->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')]);
-            }])
+            ->with([
+                'logs' => function ($query) use ($startOfWeek, $endOfWeek): void {
+                    $query->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')]);
+                },
+            ])
             ->get();
 
         return Inertia::render('Habits/Index', [
@@ -27,7 +29,7 @@ class HabitController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -38,21 +40,21 @@ class HabitController extends Controller
         ]);
 
         $data = $validated;
-        if (empty($data['color'])) {
+        if (! ($data['color'] ?? null)) {
             $data['color'] = 'bg-slate-500';
         }
-        if (empty($data['icon'])) {
+        if (! ($data['icon'] ?? null)) {
             $data['icon'] = 'check_circle';
         }
 
-        auth()->user()->habits()->create($data);
+        $this->user()->habits()->create($data);
 
         return redirect()->back()->with('success', 'Habitude créée.');
     }
 
-    public function update(Request $request, Habit $habit)
+    public function update(Request $request, Habit $habit): \Illuminate\Http\RedirectResponse
     {
-        if ($habit->user_id !== auth()->id()) {
+        if ($habit->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -70,9 +72,9 @@ class HabitController extends Controller
         return redirect()->back()->with('success', 'Habitude mise à jour.');
     }
 
-    public function destroy(Habit $habit)
+    public function destroy(Habit $habit): \Illuminate\Http\RedirectResponse
     {
-        if ($habit->user_id !== auth()->id()) {
+        if ($habit->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -81,9 +83,9 @@ class HabitController extends Controller
         return redirect()->back()->with('success', 'Habitude supprimée.');
     }
 
-    public function toggle(Request $request, Habit $habit)
+    public function toggle(Request $request, Habit $habit): \Illuminate\Http\RedirectResponse
     {
-        if ($habit->user_id !== auth()->id()) {
+        if ($habit->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -93,7 +95,13 @@ class HabitController extends Controller
 
         $date = $request->date;
 
-        $log = $habit->logs()->whereDate('date', $date)->first();
+        $dateInput = $request->date;
+        if (! is_string($dateInput)) {
+            throw new \UnexpectedValueException('Date must be a string');
+        }
+
+        /** @var \App\Models\HabitLog|null $log */
+        $log = $habit->logs()->whereDate('date', $dateInput)->first();
 
         if ($log) {
             $log->delete();
@@ -104,16 +112,26 @@ class HabitController extends Controller
         return redirect()->back();
     }
 
-    private function getWeekDates()
+    /**
+     * @return array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
+     */
+    private function getWeekDates(): array
     {
         $start = Carbon::now()->startOfWeek();
         $dates = [];
         for ($i = 0; $i < 7; $i++) {
             $date = $start->copy()->addDays($i);
+
+            if (! $date instanceof \Illuminate\Support\Carbon) {
+                continue;
+            }
+
             $dates[] = [
                 'date' => $date->format('Y-m-d'),
                 'day' => $date->format('D'),
+                // @phpstan-ignore-next-line
                 'day_name' => $date->locale('fr')->dayName,
+                // @phpstan-ignore-next-line
                 'day_short' => $date->locale('fr')->shortDayName,
                 'day_num' => $date->day,
                 'is_today' => $date->isToday(),

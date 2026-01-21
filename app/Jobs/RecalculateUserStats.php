@@ -12,10 +12,7 @@ class RecalculateUserStats implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public \App\Models\User $user)
-    {
-        //
-    }
+    public function __construct(public \App\Models\User $user) {}
 
     /**
      * Execute the job.

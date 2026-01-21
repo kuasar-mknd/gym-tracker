@@ -8,12 +8,15 @@ use Inertia\Inertia;
 
 class CalendarController extends Controller
 {
-    public function index(Request $request, FetchCalendarEventsAction $fetchCalendarEvents)
+    public function index(Request $request, FetchCalendarEventsAction $fetchCalendarEvents): \Inertia\Response
     {
-        $year = $request->input('year', now()->year);
-        $month = $request->input('month', now()->month);
+        $yearInput = $request->input('year');
+        $monthInput = $request->input('month');
 
-        $data = $fetchCalendarEvents->execute($request->user(), $year, $month);
+        $year = is_numeric($yearInput) ? (int) $yearInput : now()->year;
+        $month = is_numeric($monthInput) ? (int) $monthInput : now()->month;
+
+        $data = $fetchCalendarEvents->execute($this->user(), $year, $month);
 
         return Inertia::render('Calendar/Index', [
             'year' => (int) $year,

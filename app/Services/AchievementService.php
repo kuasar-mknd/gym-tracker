@@ -67,34 +67,48 @@ class AchievementService
 
     protected function checkStreak(User $user, float $threshold): bool
     {
-        // NITRO FIX: Only fetch dates within a reasonable window for streak checking
-        $workoutDates = $user->workouts()
-            ->where('started_at', '>=', now()->subDays((int) $threshold + 30))
-            ->latest('started_at')
-            ->pluck('started_at')
-            ->map(fn ($date) => $date->format('Y-m-d'))
-            ->unique()
-            ->values()
-            ->toArray();
+        $workoutDates = $this->getUniqueWorkoutDates($user, (int) $threshold);
 
-        $days = (int) $threshold;
-
-        if (count($workoutDates) < $days) {
+        if (count($workoutDates) < (int) $threshold) {
             return false;
         }
 
-        // Check if there is a window of X consecutive days
+        return $this->calculateMaxStreak($workoutDates) >= (int) $threshold;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function getUniqueWorkoutDates(User $user, int $days): array
+    {
+        /** @var \Illuminate\Support\Collection<int, string> $dates */
+        $dates = $user->workouts()
+            ->where('started_at', '>=', now()->subDays($days + 30))
+            ->latest('started_at')
+            ->pluck('started_at')
+            ->map(function ($date) {
+                /** @var \Illuminate\Support\Carbon $date */
+                return $date->format('Y-m-d');
+            })
+            ->unique()
+            ->values();
+
+        return $dates->toArray();
+    }
+
+    /**
+     * @param  array<int, string>  $dates
+     */
+    private function calculateMaxStreak(array $dates): int
+    {
         $currentStreak = 1;
         $maxStreak = 1;
+        $count = count($dates);
 
-        for ($i = 0; $i < count($workoutDates) - 1; $i++) {
-            $current = \Carbon\Carbon::parse($workoutDates[$i]);
-            $next = \Carbon\Carbon::parse($workoutDates[$i + 1]);
+        for ($i = 0; $i < $count - 1; $i++) {
+            $current = \Carbon\Carbon::parse($dates[$i]);
+            $next = \Carbon\Carbon::parse($dates[$i + 1]);
 
-            // Dates are ordered descending (latest first)
-            // Dates are ordered descending (latest first)
-            // So if current is Today, next should be Yesterday (diff = 1)
-            // Use abs() or explicit check because diffInDays may return negative if order is reversed
             if (abs((int) $current->diffInDays($next, false)) === 1) {
                 $currentStreak++;
             } else {
@@ -102,8 +116,7 @@ class AchievementService
                 $currentStreak = 1;
             }
         }
-        $maxStreak = max($maxStreak, $currentStreak);
 
-        return $maxStreak >= $threshold;
+        return max($maxStreak, $currentStreak);
     }
 }

@@ -31,7 +31,7 @@ class ExerciseUpdateRequest extends FormRequest
                 Rule::unique('exercises')
                     ->ignore($this->exercise)
                     ->where(function ($query) {
-                        return $query->where(function ($q) {
+                        return $query->where(function ($q): void {
                             $q->whereNull('user_id')
                                 ->orWhere('user_id', $this->user()?->id);
                         });

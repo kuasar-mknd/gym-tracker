@@ -43,6 +43,20 @@ class PersonalRecordService
     }
 
     /**
+     * Calculate Estimated 1RM using the Epley formula.
+     *
+     * Formula: Weight * (1 + Reps / 30)
+     */
+    public function calculate1RM(float $weight, int $reps): float
+    {
+        return match (true) {
+            $reps <= 0 => 0.0,
+            $reps === 1 => $weight,
+            default => round($weight * (1 + $reps / 30), 2),
+        };
+    }
+
+    /**
      * Update Max Weight PR if the current set's weight is higher than the existing record.
      *
      * @param  User  $user  The user who performed the set.
@@ -136,17 +150,11 @@ class PersonalRecordService
      */
     protected function savePR(User $user, int $exerciseId, string $type, float $value, ?float $secondary, int $workoutId, int $setId): void
     {
-        $pr = PersonalRecord::where('user_id', $user->id)
-            ->where('exercise_id', $exerciseId)
-            ->where('type', $type)
-            ->first();
-
-        if (! $pr) {
-            $pr = new PersonalRecord;
-            $pr->user_id = $user->id;
-            $pr->exercise_id = $exerciseId;
-            $pr->type = $type;
-        }
+        $pr = PersonalRecord::firstOrNew([
+            'user_id' => $user->id,
+            'exercise_id' => $exerciseId,
+            'type' => $type,
+        ]);
 
         $pr->fill([
             'value' => $value,
@@ -154,34 +162,10 @@ class PersonalRecordService
             'workout_id' => $workoutId,
             'set_id' => $setId,
             'achieved_at' => now(),
-        ]);
+        ])->save();
 
-        $pr->save();
-
-        // Notify user if enabled
         if ($user->isNotificationEnabled('personal_record')) {
             $user->notify(new PersonalRecordAchieved($pr));
         }
-    }
-
-    /**
-     * Calculate Estimated 1RM using the Epley formula.
-     *
-     * Formula: Weight * (1 + Reps / 30)
-     *
-     * @param  float  $weight  The weight lifted.
-     * @param  int  $reps  The number of repetitions.
-     * @return float The estimated One Rep Max.
-     */
-    public function calculate1RM(float $weight, int $reps): float
-    {
-        if ($reps <= 0) {
-            return 0;
-        }
-        if ($reps === 1) {
-            return $weight;
-        }
-
-        return round($weight * (1 + $reps / 30), 2);
     }
 }

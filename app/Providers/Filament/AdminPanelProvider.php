@@ -30,45 +30,51 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->path('backoffice')
             ->login()
-            ->profile() // Required for MFA setup
+            ->profile()
             ->authGuard('admin')
-            ->colors([
-                'primary' => Color::Violet,
-            ])
-            ->multiFactorAuthentication([
-                AppAuthentication::make(),
-            ])
+            ->colors(['primary' => Color::Violet])
+            ->multiFactorAuthentication([AppAuthentication::make()])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
-            ->pages([
-                Dashboard::class,
-            ])
+            ->pages([Dashboard::class])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
-                \App\Filament\Widgets\StatsOverview::class,
-                \App\Filament\Widgets\UserActivityChart::class,
-                \App\Filament\Widgets\RecentUsersTable::class,
-            ])
-            ->middleware([
-                EncryptCookies::class,
-                AddQueuedCookiesToResponse::class,
-                StartSession::class,
-                AuthenticateSession::class,
-                ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
-                SubstituteBindings::class,
-                DisableBladeIconComponents::class,
-                DispatchServingFilamentEvent::class,
-                \App\Http\Middleware\AdminRateLimiter::class,
-                \App\Http\Middleware\IpWhitelist::class,
-            ])
-            ->authMiddleware([
-                Authenticate::class,
-            ])
-            ->plugins([
-                FilamentShieldPlugin::make(),
-            ]);
+            ->widgets($this->getWidgets())
+            ->middleware($this->getMiddleware())
+            ->authMiddleware([Authenticate::class])
+            ->plugins([FilamentShieldPlugin::make()]);
+    }
+
+    /**
+     * @return array<class-string<\Filament\Widgets\Widget>>
+     */
+    private function getWidgets(): array
+    {
+        return [
+            AccountWidget::class,
+            FilamentInfoWidget::class,
+            \App\Filament\Widgets\StatsOverview::class,
+            \App\Filament\Widgets\UserActivityChart::class,
+            \App\Filament\Widgets\RecentUsersTable::class,
+        ];
+    }
+
+    /**
+     * @return array<int, class-string>
+     */
+    private function getMiddleware(): array
+    {
+        return [
+            EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
+            StartSession::class,
+            AuthenticateSession::class,
+            ShareErrorsFromSession::class,
+            VerifyCsrfToken::class,
+            SubstituteBindings::class,
+            DisableBladeIconComponents::class,
+            DispatchServingFilamentEvent::class,
+            \App\Http\Middleware\AdminRateLimiter::class,
+            \App\Http\Middleware\IpWhitelist::class,
+        ];
     }
 }

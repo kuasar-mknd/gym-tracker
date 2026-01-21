@@ -14,16 +14,16 @@ class NotificationController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('Notifications/Index', [
-            'notifications' => $request->user()->notifications()->paginate(20),
+            'notifications' => $this->user()->notifications()->paginate(20),
         ]);
     }
 
     /**
      * Mark a notification as read.
      */
-    public function markAsRead(Request $request, string $id)
+    public function markAsRead(Request $request, string $id): \Illuminate\Http\RedirectResponse
     {
-        $request->user()->unreadNotifications()->where('id', $id)->update(['read_at' => now()]);
+        $this->user()->unreadNotifications()->where('id', $id)->update(['read_at' => now()]);
 
         return back();
     }
@@ -31,9 +31,9 @@ class NotificationController extends Controller
     /**
      * Mark all notifications as read.
      */
-    public function markAllAsRead(Request $request)
+    public function markAllAsRead(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $request->user()->unreadNotifications->markAsRead();
+        $this->user()->unreadNotifications->markAsRead();
 
         return back();
     }

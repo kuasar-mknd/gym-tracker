@@ -8,7 +8,6 @@ use App\Http\Requests\Api\NotificationPreferenceUpdateRequest;
 use App\Http\Resources\NotificationPreferenceResource;
 use App\Models\NotificationPreference;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class NotificationPreferenceController extends Controller
@@ -16,12 +15,14 @@ class NotificationPreferenceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
+        // @phpstan-ignore-next-line
         $preferences = QueryBuilder::for(NotificationPreference::class)
-            ->where('user_id', Auth::id())
-            ->allowedSorts(['type', 'created_at'])
-            ->get();
+            ->where('user_id', $this->user()->id)
+            ->allowedSorts(['type', 'created_at']);
+
+        $preferences = $preferences->get();
 
         return NotificationPreferenceResource::collection($preferences);
     }
@@ -29,12 +30,13 @@ class NotificationPreferenceController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(NotificationPreferenceStoreRequest $request)
+    public function store(NotificationPreferenceStoreRequest $request): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validated();
 
         $preference = new NotificationPreference($validated);
-        $preference->user_id = Auth::id();
+        // @phpstan-ignore-next-line
+        $preference->user_id = (int) $this->user()->id;
         $preference->save();
 
         return (new NotificationPreferenceResource($preference))
@@ -45,9 +47,9 @@ class NotificationPreferenceController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(NotificationPreference $notification_preference)
+    public function show(NotificationPreference $notification_preference): NotificationPreferenceResource
     {
-        if ($notification_preference->user_id !== Auth::id()) {
+        if ($notification_preference->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -57,9 +59,9 @@ class NotificationPreferenceController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(NotificationPreferenceUpdateRequest $request, NotificationPreference $notification_preference)
+    public function update(NotificationPreferenceUpdateRequest $request, NotificationPreference $notification_preference): NotificationPreferenceResource
     {
-        if ($notification_preference->user_id !== Auth::id()) {
+        if ($notification_preference->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -71,9 +73,9 @@ class NotificationPreferenceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(NotificationPreference $notification_preference)
+    public function destroy(NotificationPreference $notification_preference): \Illuminate\Http\Response
     {
-        if ($notification_preference->user_id !== Auth::id()) {
+        if ($notification_preference->user_id !== $this->user()->id) {
             abort(403);
         }
 

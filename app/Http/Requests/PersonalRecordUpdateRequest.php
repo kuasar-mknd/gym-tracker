@@ -9,17 +9,20 @@ class PersonalRecordUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('personal_record'));
+        return $this->user()?->can('update', $this->route('personal_record')) ?? false;
     }
 
+    /**
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [
             'exercise_id' => [
                 'sometimes',
-                Rule::exists('exercises', 'id')->where(function ($query) {
-                    $query->where(function ($q) {
-                        $q->whereNull('user_id')->orWhere('user_id', $this->user()->id);
+                Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
+                        $q->whereNull('user_id')->orWhere('user_id', $this->user()?->id);
                     });
                 }),
             ],

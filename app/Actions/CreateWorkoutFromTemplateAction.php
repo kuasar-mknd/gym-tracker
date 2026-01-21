@@ -25,22 +25,28 @@ class CreateWorkoutFromTemplateAction
             $workout->user_id = $user->id;
             $workout->save();
 
-            foreach ($template->workoutTemplateLines as $templateLine) {
-                $workoutLine = $workout->workoutLines()->create([
-                    'exercise_id' => $templateLine->exercise_id,
-                    'order' => $templateLine->order,
-                ]);
-
-                foreach ($templateLine->workoutTemplateSets as $templateSet) {
-                    $workoutLine->sets()->create([
-                        'reps' => $templateSet->reps,
-                        'weight' => $templateSet->weight,
-                        'is_warmup' => $templateSet->is_warmup,
-                    ]);
-                }
-            }
+            $this->createLinesAndSets($workout, $template);
 
             return $workout;
         });
+    }
+
+    private function createLinesAndSets(Workout $workout, WorkoutTemplate $template): void
+    {
+        foreach ($template->workoutTemplateLines as $templateLine) {
+            /** @var \App\Models\WorkoutLine $workoutLine */
+            $workoutLine = $workout->workoutLines()->create([
+                'exercise_id' => $templateLine->exercise_id,
+                'order' => $templateLine->order,
+            ]);
+
+            foreach ($templateLine->workoutTemplateSets as $templateSet) {
+                $workoutLine->sets()->create([
+                    'reps' => $templateSet->reps,
+                    'weight' => $templateSet->weight,
+                    'is_warmup' => $templateSet->is_warmup,
+                ]);
+            }
+        }
     }
 }

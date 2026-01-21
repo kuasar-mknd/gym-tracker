@@ -18,7 +18,7 @@ class PushSubscriptionController extends Controller
             'keys.p256dh' => 'required',
         ]);
 
-        $request->user()->updatePushSubscription(
+        $this->user()->updatePushSubscription(
             $validated['endpoint'],
             $validated['keys']['p256dh'],
             $validated['keys']['auth']
@@ -36,7 +36,7 @@ class PushSubscriptionController extends Controller
             'endpoint' => 'required|url',
         ]);
 
-        $request->user()->deletePushSubscription($validated['endpoint']);
+        $this->user()->deletePushSubscription($validated['endpoint']);
 
         return response()->json(['message' => 'Abonnement supprimé avec succès.']);
     }

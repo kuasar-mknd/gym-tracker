@@ -13,30 +13,8 @@ class ExercisesTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->columns([
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('type')
-                    ->badge(),
-                TextColumn::make('default_rest_time')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('category')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('user.name')
-                    ->searchable(),
-            ])
-            ->filters([
-                //
-            ])
+            ->columns(self::getColumns())
+            ->filters([])
             ->recordActions([
                 EditAction::make(),
             ])
@@ -45,5 +23,19 @@ class ExercisesTable
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /** @return array<\Filament\Tables\Columns\Column> */
+    private static function getColumns(): array
+    {
+        return [
+            TextColumn::make('name')->searchable(),
+            TextColumn::make('type')->badge(),
+            TextColumn::make('default_rest_time')->numeric()->sortable(),
+            TextColumn::make('category')->searchable(),
+            TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('user.name')->searchable(),
+        ];
     }
 }

@@ -7,7 +7,6 @@ use App\Models\Set;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class SetController extends Controller
@@ -17,14 +16,14 @@ class SetController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Set::class);
 
         $sets = QueryBuilder::for(Set::class)
             ->allowedFilters(['workout_line_id'])
-            ->whereHas('workoutLine.workout', function ($query) {
-                $query->where('user_id', Auth::id());
+            ->whereHas('workoutLine.workout', function ($query): void {
+                $query->where('user_id', $this->user()->id);
             })
             ->paginate();
 
@@ -34,7 +33,7 @@ class SetController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request): SetResource
     {
         $validated = $request->validate([
             'workout_line_id' => 'required|exists:workout_lines,id',
@@ -47,8 +46,9 @@ class SetController extends Controller
         ]);
 
         // Verify ownership
+        /** @var \App\Models\WorkoutLine $workoutLine */
         $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
-        if ($workoutLine->workout->user_id !== Auth::id()) {
+        if ($workoutLine->workout->user_id !== $this->user()->id) {
             abort(403, 'You do not own this workout line.');
         }
 
@@ -60,7 +60,7 @@ class SetController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Set $set)
+    public function show(Set $set): SetResource
     {
         $this->authorize('view', $set);
 
@@ -70,7 +70,7 @@ class SetController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Set $set)
+    public function update(Request $request, Set $set): SetResource
     {
         $this->authorize('update', $set);
 
@@ -91,7 +91,7 @@ class SetController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Set $set)
+    public function destroy(Set $set): \Illuminate\Http\Response
     {
         $this->authorize('delete', $set);
 

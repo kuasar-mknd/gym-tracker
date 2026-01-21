@@ -31,9 +31,9 @@ class DashboardController extends Controller
      * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
      * @return \Inertia\Response The Inertia response rendering the 'Dashboard' page with the aggregated data.
      */
-    public function __invoke(Request $request, FetchDashboardDataAction $fetchDashboardData)
+    public function __invoke(Request $request, FetchDashboardDataAction $fetchDashboardData): \Inertia\Response
     {
-        $data = $fetchDashboardData->execute($request->user());
+        $data = $fetchDashboardData->execute($this->user());
 
         return Inertia::render('Dashboard', $data);
     }

@@ -28,8 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::before(function ($user, $ability) {
-            return $user instanceof \App\Models\Admin && $user->hasRole(config('filament-shield.super_admin.name', 'super_admin')) ? true : null;
+        Gate::before(function ($user) {
+            $role = config('filament-shield.super_admin.name', 'super_admin');
+
+            return $user instanceof \App\Models\Admin && is_string($role) && $user->hasRole($role) ? true : null;
         });
 
         Vite::prefetch(concurrency: 3);
@@ -54,6 +56,6 @@ class AppServiceProvider extends ServiceProvider
         Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
         // Streak Tracking Hooks
-        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user));
+        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
     }
 }
