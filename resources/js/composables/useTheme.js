@@ -4,7 +4,7 @@
  * Manages dark/light mode with system preference detection
  * and localStorage persistence.
  */
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 
 /**
  * @typedef {'system' | 'light' | 'dark'} ThemeMode
@@ -18,10 +18,15 @@ const theme = ref('system')
 /** @type {import('vue').Ref<boolean>} */
 const isDark = ref(false)
 
+/** Track if theme has been initialized */
+let initialized = false
+
 /**
  * Apply the theme to the document
  */
 function applyTheme() {
+    if (typeof document === 'undefined') return
+
     const root = document.documentElement
 
     if (theme.value === 'system') {
@@ -60,8 +65,11 @@ function toggleTheme() {
 
 /**
  * Initialize theme from localStorage or default to system
+ * Can be called multiple times safely
  */
-function initTheme() {
+export function initTheme() {
+    if (initialized || typeof window === 'undefined') return
+
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored && ['system', 'light', 'dark'].includes(stored)) {
         theme.value = stored
@@ -74,16 +82,19 @@ function initTheme() {
             applyTheme()
         }
     })
+
+    initialized = true
+}
+
+// Auto-initialize on import (browser only)
+if (typeof window !== 'undefined') {
+    initTheme()
 }
 
 /**
  * Vue composable for theme management
  */
 export function useTheme() {
-    onMounted(() => {
-        initTheme()
-    })
-
     return {
         theme,
         isDark,
