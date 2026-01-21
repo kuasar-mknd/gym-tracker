@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import ThemeToggle from '@/Components/UI/ThemeToggle.vue'
 import { Head, Link } from '@inertiajs/vue3'
 
 const menuGroups = [
@@ -110,6 +111,11 @@ const menuGroups = [
                         </Link>
                     </div>
                 </div>
+            </div>
+
+            <!-- Theme Toggle -->
+            <div class="animate-fade-in">
+                <ThemeToggle class="w-full" />
             </div>
 
             <!-- Menu Groups -->
