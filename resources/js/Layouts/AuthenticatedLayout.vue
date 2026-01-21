@@ -31,12 +31,14 @@ const showingNavigationDropdown = ref(false)
 </script>
 
 <template>
-    <div class="relative min-h-dvh w-full overflow-x-hidden">
+    <div class="bg-pearl-white relative min-h-dvh w-full overflow-x-hidden dark:bg-slate-900">
         <!-- Liquid Glass Background -->
         <LiquidBackground :variant="liquidVariant" />
 
         <!-- Desktop Navigation -->
-        <nav class="bg-pearl-white/80 sticky top-0 z-40 hidden border-b border-white/40 backdrop-blur-xl sm:block">
+        <nav
+            class="bg-pearl-white/80 sticky top-0 z-40 hidden border-b border-white/40 backdrop-blur-xl sm:block dark:border-slate-700/40 dark:bg-slate-900/80"
+        >
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
                     <div class="flex">
@@ -44,7 +46,7 @@ const showingNavigationDropdown = ref(false)
                         <div class="flex shrink-0 items-center">
                             <Link
                                 :href="route('dashboard')"
-                                class="text-gradient font-display text-2xl font-black tracking-tight uppercase italic"
+                                class="text-gradient font-display text-2xl font-black tracking-tight uppercase italic dark:text-white"
                             >
                                 GymTracker
                             </Link>
@@ -78,7 +80,7 @@ const showingNavigationDropdown = ref(false)
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="text-text-muted hover:text-electric-orange relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all hover:bg-white hover:shadow-md"
+                            class="text-text-muted hover:text-electric-orange relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-700"
                         >
                             <span class="material-symbols-outlined text-[22px]">notifications</span>
                             <span
@@ -95,7 +97,7 @@ const showingNavigationDropdown = ref(false)
                                 <template #trigger>
                                     <button
                                         type="button"
-                                        class="text-text-main inline-flex items-center gap-2 rounded-xl border border-white bg-white/60 px-4 py-2 text-sm font-bold transition-all hover:bg-white hover:shadow-md"
+                                        class="text-text-main inline-flex items-center gap-2 rounded-xl border border-white bg-white/60 px-4 py-2 text-sm font-bold transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:hover:bg-slate-700"
                                     >
                                         <div
                                             class="bg-gradient-main flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white"
@@ -133,20 +135,20 @@ const showingNavigationDropdown = ref(false)
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-pearl-white/80 sticky top-0 z-30 flex items-center justify-between border-b border-white/40 px-5 py-4 backdrop-blur-xl sm:hidden"
+            class="bg-pearl-white/80 sticky top-0 z-30 flex items-center justify-between border-b border-white/40 px-5 py-4 backdrop-blur-xl sm:hidden dark:border-slate-700/40 dark:bg-slate-900/80"
             :style="{ paddingTop: 'calc(1rem + var(--safe-area-top))' }"
         >
             <div class="flex min-w-0 items-center gap-4">
                 <Link
                     v-if="showBack"
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
-                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
+                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                 >
                     <span class="material-symbols-outlined">arrow_back</span>
                 </Link>
                 <h1
                     v-if="pageTitle"
-                    class="font-display text-text-main truncate text-2xl font-black tracking-tight uppercase italic"
+                    class="font-display text-text-main truncate text-2xl font-black tracking-tight uppercase italic dark:text-white"
                 >
                     {{ pageTitle }}
                 </h1>
@@ -155,7 +157,7 @@ const showingNavigationDropdown = ref(false)
             <div class="flex items-center gap-2">
                 <Link
                     :href="route('notifications.index')"
-                    class="text-text-muted relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all active:scale-95"
+                    class="text-text-muted relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all active:scale-95 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
                 >
                     <span class="material-symbols-outlined text-[22px]">notifications</span>
                     <span
@@ -172,7 +174,7 @@ const showingNavigationDropdown = ref(false)
         <!-- Desktop Page Heading Slot -->
         <header
             v-if="$slots.header"
-            class="bg-pearl-white/50 backdrop-blur-glass hidden border-b border-white/40 sm:block"
+            class="bg-pearl-white/50 backdrop-blur-glass hidden border-b border-white/40 sm:block dark:border-slate-700/40 dark:bg-slate-900/50"
         >
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <slot name="header" />
