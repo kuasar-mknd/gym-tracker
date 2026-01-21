@@ -25,6 +25,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('plates', \App\Http\Controllers\Api\PlateController::class);
     Route::apiResource('habits', \App\Http\Controllers\Api\HabitController::class);
     Route::apiResource('habit-logs', \App\Http\Controllers\Api\HabitLogController::class);
+    Route::apiResource('supplements', \App\Http\Controllers\Api\SupplementController::class);
 
     Route::get('/status', fn () => response()->json(['status' => 'ok']));
 });
