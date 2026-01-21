@@ -5,6 +5,7 @@ import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
+import NavLink from '@/Components/NavLink.vue'
 import { Link } from '@inertiajs/vue3'
 
 defineProps({
@@ -51,72 +52,27 @@ const showingNavigationDropdown = ref(false)
 
                         <!-- Desktop Navigation Links -->
                         <div class="hidden space-x-1 sm:ms-8 sm:flex">
-                            <Link
-                                :href="route('dashboard')"
-                                :class="[
-                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold tracking-wide uppercase transition-all',
-                                    route().current('dashboard')
-                                        ? 'bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted hover:text-text-main hover:bg-white/50',
-                                ]"
-                            >
+                            <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                 Accueil
-                            </Link>
-                            <Link
-                                :href="route('workouts.index')"
-                                :class="[
-                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold tracking-wide uppercase transition-all',
-                                    route().current('workouts.*')
-                                        ? 'bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted hover:text-text-main hover:bg-white/50',
-                                ]"
-                            >
+                            </NavLink>
+                            <NavLink :href="route('workouts.index')" :active="route().current('workouts.*')">
                                 Séances
-                            </Link>
-                            <Link
-                                :href="route('calendar.index')"
-                                :class="[
-                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold tracking-wide uppercase transition-all',
-                                    route().current('calendar.*')
-                                        ? 'bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted hover:text-text-main hover:bg-white/50',
-                                ]"
-                            >
+                            </NavLink>
+                            <NavLink :href="route('calendar.index')" :active="route().current('calendar.*')">
                                 Calendrier
-                            </Link>
-                            <Link
-                                :href="route('stats.index')"
-                                :class="[
-                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold tracking-wide uppercase transition-all',
-                                    route().current('stats.*')
-                                        ? 'bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted hover:text-text-main hover:bg-white/50',
-                                ]"
-                            >
+                            </NavLink>
+                            <NavLink :href="route('stats.index')" :active="route().current('stats.*')">
                                 Stats
-                            </Link>
-                            <Link
-                                :href="route('exercises.index')"
-                                :class="[
-                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold tracking-wide uppercase transition-all',
-                                    route().current('exercises.*')
-                                        ? 'bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted hover:text-text-main hover:bg-white/50',
-                                ]"
-                            >
+                            </NavLink>
+                            <NavLink :href="route('exercises.index')" :active="route().current('exercises.*')">
                                 Exercices
-                            </Link>
-                            <Link
+                            </NavLink>
+                            <NavLink
                                 :href="route('tools.index')"
-                                :class="[
-                                    'inline-flex items-center rounded-lg px-3 py-2 text-sm font-bold tracking-wide uppercase transition-all',
-                                    route().current('tools.*') || route().current('plates.*')
-                                        ? 'bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted hover:text-text-main hover:bg-white/50',
-                                ]"
+                                :active="route().current('tools.*') || route().current('plates.*')"
                             >
                                 Outils
-                            </Link>
+                            </NavLink>
                         </div>
                     </div>
 
