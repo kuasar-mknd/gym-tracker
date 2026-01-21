@@ -41,7 +41,7 @@ class FetchCalendarEventsAction
             ->whereBetween('started_at', [$start, $end])
             ->with(['workoutLines.exercise'])
             ->get()
-            ->map(function ($workout) {
+            ->map(function ($workout): array {
                 /** @var array<int, string> $preview */
                 $preview = $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray();
 
@@ -62,7 +62,7 @@ class FetchCalendarEventsAction
         return DailyJournal::where('user_id', $user->id)
             ->whereBetween('date', [$start, $end])
             ->get()
-            ->map(fn ($journal) => [
+            ->map(fn ($journal): array => [
                 'id' => $journal->id,
                 'date' => $journal->date->toDateString(),
                 'mood_score' => $journal->mood_score,

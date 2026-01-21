@@ -165,6 +165,7 @@ jobs:
                   APP_DEBUG: false
                   LOG_LEVEL: debug
                   DUSK_DRIVER_URL: http://localhost:9515
+                  CSP_ENABLED: false
               run: |
                   # Write environment variables to .env so artisan serve subprocess uses them
                   cat >> .env << 'EOF'
