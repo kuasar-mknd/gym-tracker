@@ -8,12 +8,15 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::connection(config('webpush.database_connection'))->create(config('webpush.table_name'), function (Blueprint $table) {
+        /** @var string|null $connection */
+        $connection = config('webpush.database_connection');
+        /** @var string $table */
+        $table = config('webpush.table_name');
+
+        Schema::connection($connection)->create($table, function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->morphs('subscribable', 'push_subscriptions_subscribable_morph_idx');
             $table->string('endpoint', 500)->unique();
@@ -26,11 +29,14 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::connection(config('webpush.database_connection'))->dropIfExists(config('webpush.table_name'));
+        /** @var string|null $connection */
+        $connection = config('webpush.database_connection');
+        /** @var string $table */
+        $table = config('webpush.table_name');
+
+        Schema::connection($connection)->dropIfExists($table);
     }
 };

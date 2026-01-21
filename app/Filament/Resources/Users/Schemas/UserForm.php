@@ -14,7 +14,7 @@ class UserForm
             ->components(self::getComponents());
     }
 
-    /** @return array<\Filament\Forms\Components\Component> */
+    /** @return array<int, \Illuminate\Contracts\Support\Htmlable|string> */
     private static function getComponents(): array
     {
         return [

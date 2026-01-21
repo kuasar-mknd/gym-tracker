@@ -42,7 +42,7 @@ class FetchWorkoutsIndexAction
             ->values();
     }
 
-    /** @return \Illuminate\Pagination\LengthAwarePaginator<\App\Models\Workout> */
+    /** @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout> */
     private function getWorkouts(User $user): \Illuminate\Pagination\LengthAwarePaginator
     {
         return Workout::with(['workoutLines.exercise', 'workoutLines.sets'])

@@ -11,7 +11,10 @@ return new class extends Migration
      */
     public function getConnection(): ?string
     {
-        return config('telescope.storage.database.connection');
+        /** @var string|null $connection */
+        $connection = config('telescope.storage.database.connection');
+
+        return $connection;
     }
 
     /**

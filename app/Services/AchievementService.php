@@ -93,6 +93,7 @@ class AchievementService
             ->unique()
             ->values();
 
+        /** @var array<int, string> */
         return $dates->toArray();
     }
 

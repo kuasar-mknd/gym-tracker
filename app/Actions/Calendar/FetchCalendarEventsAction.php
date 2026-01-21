@@ -15,7 +15,10 @@ class FetchCalendarEventsAction
      * @param  User  $user  The user to fetch events for.
      * @param  int  $year  The year of the events.
      * @param  int  $month  The month of the events.
-     * @return array{workouts: \Illuminate\Support\Collection<int, mixed>, journals: \Illuminate\Support\Collection<int, mixed>}
+     * @return array{
+     *   workouts: \Illuminate\Support\Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}>,
+     *   journals: \Illuminate\Support\Collection<int, array{id: int, date: string, mood_score: int|null, has_note: bool}>
+     * }
      */
     public function execute(User $user, int $year, int $month): array
     {
@@ -29,24 +32,29 @@ class FetchCalendarEventsAction
         ];
     }
 
-    /** @return \Illuminate\Support\Collection<int, mixed> */
+    /** @return \Illuminate\Support\Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}> */
     private function getWorkouts(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
     {
         return Workout::where('user_id', $user->id)
             ->whereBetween('started_at', [$start, $end])
             ->with(['workoutLines.exercise'])
             ->get()
-            ->map(fn ($workout) => [
-                'id' => $workout->id,
-                'name' => $workout->name ?? 'Séance',
-                'date' => $workout->started_at->toDateString(),
-                'started_at' => $workout->started_at->toIso8601String(),
-                'exercises_count' => $workout->workoutLines->count(),
-                'preview_exercises' => $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray(),
-            ]);
+            ->map(function ($workout) {
+                /** @var array<int, string> $preview */
+                $preview = $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray();
+
+                return [
+                    'id' => $workout->id,
+                    'name' => $workout->name ?? 'Séance',
+                    'date' => $workout->started_at->toDateString(),
+                    'started_at' => $workout->started_at->toIso8601String(),
+                    'exercises_count' => $workout->workoutLines->count(),
+                    'preview_exercises' => $preview,
+                ];
+            });
     }
 
-    /** @return \Illuminate\Support\Collection<int, mixed> */
+    /** @return \Illuminate\Support\Collection<int, array{id: int, date: string, mood_score: int|null, has_note: bool}> */
     private function getJournals(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
     {
         return DailyJournal::where('user_id', $user->id)

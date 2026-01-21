@@ -32,11 +32,17 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('admins', function (Blueprint $table) {
-            $table->dropColumn([
+            $columns = [
                 'two_factor_secret',
                 'two_factor_recovery_codes',
                 'two_factor_confirmed_at',
-            ]);
+            ];
+
+            foreach ($columns as $column) {
+                if (Schema::hasColumn('admins', $column)) {
+                    $table->dropColumn($column);
+                }
+            }
         });
     }
 };

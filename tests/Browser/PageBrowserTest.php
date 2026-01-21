@@ -68,9 +68,16 @@ test('user can register', function (): void {
             ->type('input[name="email"]', 'test-dusk-'.time().'@example.com')
             ->type('input[name="password"]', 'password123')
             ->type('input[name="password_confirmation"]', 'password123')
-            ->press('CRÉER MON COMPTE')
-            ->waitForText('Vérification', 20)
-            ->assertPathIs('/verify-email');
+            ->press('CRÉER MON COMPTE');
+
+        try {
+            $browser->waitForText('Vérifie ton email', 20)
+                ->assertPathIs('/verify-email');
+        } catch (\Exception $e) {
+            $browser->screenshot('debug-verify-email-failed')
+                ->storeSource('debug-verify-email-source');
+            throw $e;
+        }
     });
 });
 

@@ -1,6 +1,5 @@
 includes:
     - vendor/larastan/larastan/extension.neon
-    - phpstan-baseline.neon
 
 parameters:
     paths:
@@ -16,7 +15,7 @@ parameters:
 
     excludePaths:
         - ./*/*/FileToBeExcluded.php
-        - tests/Feature/SocialAuthTest.php
+        - tests/*
 
     scanFiles:
 

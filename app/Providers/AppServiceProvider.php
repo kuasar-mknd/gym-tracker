@@ -49,7 +49,7 @@ class AppServiceProvider extends ServiceProvider
                 return true;
             }
 
-            return is_string($role) && method_exists($user, 'hasRole') && $user->hasRole($role);
+            return is_object($user) && is_string($role) && method_exists($user, 'hasRole') && $user->hasRole($role);
         });
     }
 

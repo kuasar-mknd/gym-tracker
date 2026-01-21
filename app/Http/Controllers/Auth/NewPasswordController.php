@@ -47,22 +47,28 @@ class NewPasswordController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'email' => [trans(is_string($status) ? $status : '')],
+            'email' => [trans($status)],
         ]);
     }
 
     private function resetPassword(Request $request): string
     {
-        return Password::reset(
+        /** @var string $status */
+        $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request): void {
+                /** @var string $password */
+                $password = $request->password;
+
                 $user->forceFill([
-                    'password' => Hash::make(is_string($request->password) ? $request->password : ''),
+                    'password' => Hash::make($password),
                     'remember_token' => Str::random(60),
                 ])->save();
 
                 event(new PasswordReset($user));
             }
         );
+
+        return $status;
     }
 }

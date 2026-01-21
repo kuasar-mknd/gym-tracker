@@ -13,14 +13,24 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
+        $password = config('app.admin_initial_password', 'CHANGE_THIS_PASSWORD');
+        if (! is_string($password)) {
+            throw new \RuntimeException('Admin password must be a string');
+        }
+
         $admin = Admin::updateOrCreate(
             ['email' => 'admin@gymtracker.app'],
             [
                 'name' => 'Admin',
-                'password' => Hash::make(config('app.admin_initial_password', 'CHANGE_THIS_PASSWORD')),
+                'password' => Hash::make($password),
             ]
         );
 
-        $admin->assignRole(config('filament-shield.super_admin.name', 'super_admin'));
+        $role = config('filament-shield.super_admin.name', 'super_admin');
+        if (! is_string($role)) {
+            throw new \RuntimeException('Super admin role name must be a string');
+        }
+
+        $admin->assignRole($role);
     }
 }

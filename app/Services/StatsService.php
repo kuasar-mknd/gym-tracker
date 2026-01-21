@@ -81,6 +81,7 @@ class StatsService
                     ->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))
                     ->groupBy('date')->get()->pluck('volume', 'date');
 
+                /** @var \Illuminate\Support\Collection<string, float> $results */
                 return $this->fillDailyTrend($start, $days, $results);
             }
         );
@@ -215,12 +216,16 @@ class StatsService
                     ->get();
 
                 if ($measurements->isNotEmpty()) {
-                    /** @var array<int, array{date: string, weight: float}> $data */
-                    return $measurements->map(fn ($m) => [
+                    $formatted = $measurements->map(fn ($m) => [
                         'date' => Carbon::parse($m->measured_at)->format('d/m'),
                         'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
                         'weight' => (float) $m->weight,
                     ])->toArray();
+
+                    /** @var array<int, array{date: string, weight: float}> $result */
+                    $result = $formatted;
+
+                    return $result;
                 }
 
                 return [];
