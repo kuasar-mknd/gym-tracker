@@ -41,7 +41,15 @@ class AdminPanelProvider extends PanelProvider
             ->widgets($this->getWidgets())
             ->middleware($this->getMiddleware())
             ->authMiddleware([Authenticate::class])
-            ->plugins([FilamentShieldPlugin::make()]);
+            ->plugins([FilamentShieldPlugin::make()])
+            ->navigationItems([
+                \Filament\Navigation\NavigationItem::make('Server Pulse')
+                    ->url('/pulse', shouldOpenInNewTab: true)
+                    ->icon('heroicon-o-presentation-chart-line')
+                    ->group('System')
+                    ->sort(100)
+                    ->visible(fn (): bool => auth()->user()?->can('viewPulse')),
+            ]);
     }
 
     /**
