@@ -6,22 +6,19 @@ use App\Models\Set;
 use App\Models\WorkoutLine;
 
 /**
- * Controller for managing Sets within a Workout.
+ * Controller for managing Sets within Workout Lines.
  *
- * This controller handles the CRUD operations for sets (weight, reps, etc.)
- * belonging to a specific exercise (WorkoutLine). It interacts with:
- * - PersonalRecordService: To check and update any new PRs achieved.
- * - StatsService: To invalidate user statistics caches when data changes.
- *
- * It is primarily used by the Inertia frontend.
+ * This controller handles the CRUD operations for sets (weight, reps, etc.) via Inertia requests.
+ * It is responsible for ensuring that Personal Records are synced and user statistics caches
+ * are cleared whenever a set is created, updated, or deleted.
  */
 class SetsController extends Controller
 {
     /**
      * Create a new SetsController instance.
      *
-     * @param  \App\Services\PersonalRecordService  $prService  Service for calculating and syncing Personal Records.
-     * @param  \App\Services\StatsService  $statsService  Service for managing user statistics and caching.
+     * @param  \App\Services\PersonalRecordService  $prService  Service to handle Personal Record calculations and updates.
+     * @param  \App\Services\StatsService  $statsService  Service to handle user statistics and cache invalidation.
      */
     public function __construct(
         protected \App\Services\PersonalRecordService $prService,
@@ -31,14 +28,15 @@ class SetsController extends Controller
     /**
      * Store a newly created set in storage.
      *
-     * Creates a new set for the specified workout line.
-     * Automatically checks for new Personal Records and invalidates the user's stats cache.
+     * Creates a new set associated with the given workout line. After creation,
+     * it triggers a sync of Personal Records (to check if this set is a new PR)
+     * and clears the user's statistics cache to ensure dashboards reflect the new data.
      *
-     * @param  \App\Http\Requests\SetStoreRequest  $request  The validated request containing set details (weight, reps, etc.).
-     * @param  \App\Models\WorkoutLine  $workoutLine  The workout line (exercise) to attach the set to.
-     * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page (typically the workout view).
+     * @param  \App\Http\Requests\SetStoreRequest  $request  The validated request containing set data (weight, reps, etc.).
+     * @param  \App\Models\WorkoutLine  $workoutLine  The workout line the set belongs to.
+     * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to add sets to this workout line.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create sets for this workout line.
      */
     public function store(\App\Http\Requests\SetStoreRequest $request, WorkoutLine $workoutLine): \Illuminate\Http\RedirectResponse
     {
@@ -54,10 +52,10 @@ class SetsController extends Controller
     /**
      * Update the specified set in storage.
      *
-     * Updates an existing set's details.
-     * Re-evaluates Personal Records based on the updated values and invalidates the user's stats cache.
+     * Updates an existing set with new data. Like creation, this triggers
+     * a PR sync and statistics cache clearance.
      *
-     * @param  \App\Http\Requests\SetUpdateRequest  $request  The validated request containing updated set details.
+     * @param  \App\Http\Requests\SetUpdateRequest  $request  The validated request containing updated set data.
      * @param  \App\Models\Set  $set  The set to update.
      * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
      *
@@ -77,9 +75,8 @@ class SetsController extends Controller
     /**
      * Remove the specified set from storage.
      *
-     * Deletes the set and invalidates the user's stats cache.
-     * Note: Deleting a set does not currently remove associated Personal Records if it was a PR set
-     * (unless handled by model observers or database cascades).
+     * Deletes a set permanently. This action also triggers a clearance of the
+     * user's statistics cache to remove the deleted set's data from aggregations.
      *
      * @param  \App\Models\Set  $set  The set to delete.
      * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
