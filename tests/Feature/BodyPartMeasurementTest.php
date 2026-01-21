@@ -28,7 +28,7 @@ test('can add body part measurement', function () {
         'part' => 'Chest',
         'value' => 100.5,
         'unit' => 'cm',
-        'measured_at' => '2023-01-01 00:00:00',
+        'measured_at' => '2023-01-01',
     ]);
 });
 

@@ -111,7 +111,7 @@ class HabitTest extends TestCase
         $response->assertCreated();
         $this->assertDatabaseHas('habit_logs', [
             'habit_id' => $habit->id,
-            'date' => '2023-01-01',
+            'date' => '2023-01-01 00:00:00',
         ]);
     }
 

@@ -3,11 +3,8 @@
 use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
+
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\deleteJson;
-use function Pest\Laravel\getJson;
-use function Pest\Laravel\postJson;
-use function Pest\Laravel\putJson;
 
 beforeEach(function () {
     // Setup if needed, but factories handle most things
@@ -90,7 +87,7 @@ test('user can create a habit log', function () {
 
     $this->assertDatabaseHas('habit_logs', [
         'habit_id' => $habit->id,
-        'date' => '2023-10-10',
+        'date' => '2023-10-10 00:00:00',
     ]);
 });
 

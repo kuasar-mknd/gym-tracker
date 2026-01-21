@@ -33,7 +33,10 @@ test('user can filter habit logs by habit', function (): void {
     HabitLog::factory()->create(['habit_id' => $habit2->id]);
 
     actingAs($user, 'sanctum')
-        ->getJson(route('api.v1.habit-logs.index', ['filter[habit_id]' => $habit1->id]))
+        ->getJson(route('api.v1.habit-logs.index', [
+            'filter[habit_id]' => $habit1->id,
+            'include' => 'habit',
+        ]))
         ->assertOk()
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.habit.id', $habit1->id);
@@ -49,7 +52,7 @@ test('user can filter habit logs by date range', function (): void {
 
     actingAs($user, 'sanctum')
         ->getJson(route('api.v1.habit-logs.index', [
-            'filter[date_between]' => ['2023-01-01', '2023-01-31']
+            'filter[date_between]' => ['2023-01-01', '2023-01-31'],
         ]))
         ->assertOk()
         ->assertJsonCount(2, 'data');
