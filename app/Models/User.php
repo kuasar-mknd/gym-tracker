@@ -163,6 +163,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Habit::class);
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WaterLog, $this>
+     */
+    public function waterLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(WaterLog::class);
+    }
+
     public function isPushEnabled(string $type): bool
     {
         return (bool) $this->notificationPreferences()

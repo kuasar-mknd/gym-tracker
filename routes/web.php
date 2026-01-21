@@ -80,6 +80,10 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'index'])->name('tools.warmup');
     Route::post('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'update'])->name('tools.warmup.update');
+
+    Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
+    Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
+    Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
 });
 
 // Social Login
