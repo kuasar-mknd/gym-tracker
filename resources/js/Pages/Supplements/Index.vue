@@ -6,11 +6,11 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent } from 'vue'
 
-const SupplementIntakeChart = defineAsyncComponent(() => import('@/Components/Stats/SupplementIntakeChart.vue'))
+const SupplementUsageChart = defineAsyncComponent(() => import('@/Components/Stats/SupplementUsageChart.vue'))
 
 const props = defineProps({
     supplements: Array,
-    intakeHistory: Array,
+    usageHistory: Array,
 })
 
 const showAddForm = ref(false)
@@ -128,15 +128,15 @@ const formatDate = (dateString) => {
                 </button>
             </div>
 
-            <!-- Intake Chart -->
-            <GlassCard v-if="intakeHistory && intakeHistory.some(d => d.count > 0)" class="animate-slide-up">
+            <!-- Usage Chart -->
+            <GlassCard v-if="usageHistory && usageHistory.some((d) => d.count > 0)" class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-lg font-black uppercase italic text-text-main">
-                        Historique de consommation
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                        Consommation Mensuelle
                     </h3>
-                    <p class="text-xs font-semibold text-text-muted">30 derniers jours</p>
+                    <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
                 </div>
-                <SupplementIntakeChart :data="intakeHistory" />
+                <SupplementUsageChart :data="usageHistory" />
             </GlassCard>
 
             <!-- Add Form -->

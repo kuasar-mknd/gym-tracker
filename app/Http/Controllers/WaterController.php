@@ -73,7 +73,6 @@ class WaterController extends Controller
 
                 return $consumedAt->format('Y-m-d') === $dateString;
             })->sum('amount');
-
             /** @var float|int $dayTotal */
             $dayTotalValue = (float) $dayTotal;
 

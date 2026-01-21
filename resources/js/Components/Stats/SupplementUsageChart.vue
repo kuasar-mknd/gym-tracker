@@ -1,0 +1,91 @@
+<script setup>
+import { Bar } from 'vue-chartjs'
+import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
+import { computed } from 'vue'
+
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+
+const props = defineProps({
+    data: {
+        type: Array,
+        required: true,
+    },
+})
+
+const chartData = computed(() => {
+    return {
+        labels: props.data.map((item) => item.date),
+        datasets: [
+            {
+                label: 'Doses prises',
+                data: props.data.map((item) => item.count),
+                backgroundColor: (context) => {
+                    const chart = context.chart
+                    const { ctx, chartArea } = chart
+                    if (!chartArea) return null
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+                    gradient.addColorStop(0, '#06B6D4') // Cyan
+                    gradient.addColorStop(1, '#3B82F6') // Blue
+                    return gradient
+                },
+                borderRadius: 6,
+                hoverBackgroundColor: '#0EA5E9',
+            },
+        ],
+    }
+})
+
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+        y: {
+            beginAtZero: true,
+            grid: {
+                color: 'rgba(0, 0, 0, 0.03)',
+            },
+            ticks: {
+                color: '#64748B',
+                font: { size: 10, weight: 'bold' },
+                stepSize: 1,
+                precision: 0,
+            },
+        },
+        x: {
+            grid: {
+                display: false,
+            },
+            ticks: {
+                color: '#64748B',
+                font: { size: 10, weight: 'bold' },
+                maxRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 7,
+            },
+        },
+    },
+    plugins: {
+        legend: {
+            display: false,
+        },
+        tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: '#1e293b',
+            bodyColor: '#1e293b',
+            padding: 12,
+            cornerRadius: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(0, 0, 0, 0.05)',
+            callbacks: {
+                label: (context) => `${context.raw} doses`,
+            },
+        },
+    },
+}
+</script>
+
+<template>
+    <div class="h-48 w-full">
+        <Bar :data="chartData" :options="chartOptions" />
+    </div>
+</template>

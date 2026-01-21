@@ -217,16 +217,18 @@ class StatsService
      */
     public function getBodyFatHistory(User $user, int $days = 90): array
     {
-        /** @var array<int, array{date: string, body_fat: float}> $history */
-        $history = \Illuminate\Support\Facades\Cache::remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn () => $this->fetchBodyFatHistoryData($user, $days)
-                ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
-                ->toArray()
-        );
+            function () use ($user, $days): array {
+                /** @var array<int, array{date: string, body_fat: float}> $results */
+                $results = $this->fetchBodyFatHistoryData($user, $days)
+                    ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+                    ->toArray();
 
-        return $history;
+                return $results;
+            }
+        );
     }
 
     /**
@@ -294,23 +296,25 @@ class StatsService
      */
     public function getDurationHistory(User $user, int $limit = 20): array
     {
-        /** @var array<int, array{date: string, duration: int, name: string}> $history */
-        $history = \Illuminate\Support\Facades\Cache::remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn () => Workout::select(['name', 'started_at', 'ended_at'])
-                ->where('user_id', $user->id)
-                ->whereNotNull('ended_at')
-                ->latest('started_at')
-                ->take($limit)
-                ->get()
-                ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
-                ->reverse()
-                ->values()
-                ->toArray()
-        );
+            function () use ($user, $limit): array {
+                /** @var array<int, array{date: string, duration: int, name: string}> $results */
+                $results = Workout::select(['name', 'started_at', 'ended_at'])
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->latest('started_at')
+                    ->take($limit)
+                    ->get()
+                    ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                    ->reverse()
+                    ->values()
+                    ->toArray();
 
-        return $history;
+                return $results;
+            }
+        );
     }
 
     /**
@@ -565,7 +569,8 @@ class StatsService
      */
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('sets')
+        /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
+        $results = DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
@@ -574,6 +579,8 @@ class StatsService
             ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
             ->groupBy('exercises.category')
             ->get();
+
+        return $results;
     }
 
     /**
@@ -583,7 +590,8 @@ class StatsService
      */
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('sets')
+        /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
+        $results = DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
@@ -593,6 +601,8 @@ class StatsService
             ->groupBy('workouts.started_at')
             ->orderBy('workouts.started_at')
             ->get();
+
+        return $results;
     }
 
     /**

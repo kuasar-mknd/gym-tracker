@@ -85,16 +85,13 @@ class AchievementService
         $dates = $user->workouts()
             ->where('started_at', '>=', now()->subDays($days + 30))
             ->latest('started_at')
-            ->pluck('started_at')
-            ->map(function ($date) {
-                /** @var \Illuminate\Support\Carbon $date */
-                return $date->format('Y-m-d');
-            })
-            ->unique()
-            ->values();
+            ->pluck('started_at');
 
         /** @var array<int, string> $result */
-        $result = $dates->toArray();
+        $result = $dates->map(fn (string $date): string => \Illuminate\Support\Carbon::parse($date)->format('Y-m-d'))
+            ->unique()
+            ->values()
+            ->toArray();
 
         return $result;
     }

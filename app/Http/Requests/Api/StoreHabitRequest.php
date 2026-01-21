@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreWaterLogRequest extends FormRequest
+class StoreHabitRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,8 +22,11 @@ class StoreWaterLogRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => ['required', 'integer', 'min:1'],
-            'consumed_at' => ['required', 'date'],
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'color' => 'nullable|string',
+            'icon' => 'nullable|string',
+            'goal_times_per_week' => 'required|integer|min:1|max:7',
         ];
     }
 }

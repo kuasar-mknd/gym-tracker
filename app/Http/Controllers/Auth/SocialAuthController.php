@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Actions\ResolveSocialUserAction;
+use App\Actions\HandleSocialCallbackAction;
+use App\Exceptions\SocialAuthException;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -20,32 +21,13 @@ class SocialAuthController extends Controller
     /**
      * Obtain the user information from the provider.
      */
-    public function callback(ResolveSocialUserAction $resolver, string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function callback(HandleSocialCallbackAction $action, string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         try {
-            $socialUser = Socialite::driver($provider)->user();
-        } catch (\Exception) {
-            return redirect()->route('login')->with('status', 'Erreur lors de la connexion avec '.ucfirst($provider));
+            $user = $action->execute($provider);
+        } catch (SocialAuthException $e) {
+            return redirect()->route('login')->with('status', $e->getMessage());
         }
-
-        // Security check: Ensure email is verified by the provider
-        // Note: Not all providers set this, but Socialite attempts to capture it.
-        // If not present, we should be cautious about auto-linking.
-        $isVerified = $socialUser->user['email_verified'] ?? $socialUser->user['verified_email'] ?? $socialUser->user['verified'] ?? false;
-
-        if (! $isVerified) {
-            if (app()->environment('local')) {
-                // SECURITY: Log when email verification is bypassed in local environment
-                \Illuminate\Support\Facades\Log::warning('Social auth email verification bypassed in local environment', [
-                    'provider' => $provider,
-                    'email' => $socialUser->getEmail(),
-                ]);
-            } else {
-                return redirect()->route('login')->with('status', 'Votre email n\'est pas vérifié par '.ucfirst($provider));
-            }
-        }
-
-        $user = $resolver->execute($provider, $socialUser);
 
         Auth::login($user);
 

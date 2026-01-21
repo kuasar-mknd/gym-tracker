@@ -6,6 +6,7 @@ use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class SupplementController extends Controller
@@ -17,7 +18,7 @@ class SupplementController extends Controller
 
         return Inertia::render('Supplements/Index', [
             'supplements' => $this->getSupplementsWithLatestLog($user),
-            'intakeHistory' => $this->getIntakeHistory($user),
+            'usageHistory' => $this->getUsageHistory($user),
         ]);
     }
 
@@ -88,12 +89,12 @@ class SupplementController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: ?float}>
+     * @return \Illuminate\Support\Collection<int, mixed>
      */
     protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: ?float}> $supplements */
-        $supplements = Supplement::forUser($user->id)
+        /** @var \Illuminate\Support\Collection<int, mixed> $results */
+        $results = Supplement::forUser($user->id)
             ->with(['latestLog'])
             ->get()
             ->map(fn (Supplement $supplement): array => [
@@ -105,33 +106,46 @@ class SupplementController extends Controller
                 'daily_goal' => null,
             ]);
 
-        return $supplements;
+        return $results;
     }
 
     /** @return array<int, array{date: string, count: float}> */
-    private function getIntakeHistory(User $user): array
+    private function getUsageHistory(User $user): array
     {
-        $logs = SupplementLog::where('user_id', $user->id)
-            ->where('consumed_at', '>=', now()->subDays(29)->startOfDay())
+        $days = 30;
+        $usageHistoryRaw = SupplementLog::where('user_id', $user->id)
+            ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
+            ->select(
+                DB::raw('DATE(consumed_at) as date'),
+                DB::raw('SUM(quantity) as count')
+            )
+            ->groupBy('date')
             ->get()
-            ->groupBy(function (SupplementLog $log): string {
-                /** @var \Carbon\Carbon $date */
-                $date = $log->consumed_at;
+            ->pluck('count', 'date');
 
-                return $date->format('Y-m-d');
-            });
+        /** @var \Illuminate\Support\Collection<string, float> $results */
+        $results = $usageHistoryRaw;
 
+        return $this->fillUsageHistory($results, $days);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<string, float>  $usageHistoryRaw
+     * @return array<int, array{date: string, count: float}>
+     */
+    private function fillUsageHistory(\Illuminate\Support\Collection $usageHistoryRaw, int $days): array
+    {
         $history = [];
-        for ($i = 29; $i >= 0; $i--) {
+        for ($i = $days - 1; $i >= 0; $i--) {
             $carbonDate = now()->subDays($i);
             $dateKey = $carbonDate->format('Y-m-d');
             $dateString = $carbonDate->format('d/m');
 
-            $rawTotal = isset($logs[$dateKey]) ? $logs[$dateKey]->sum('quantity') : 0.0;
+            $rawTotal = $usageHistoryRaw[$dateKey] ?? 0.0;
 
             $history[] = [
                 'date' => $dateString,
-                'count' => is_numeric($rawTotal) ? (float) $rawTotal : 0.0,
+                'count' => (float) $rawTotal,
             ];
         }
 

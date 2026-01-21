@@ -37,15 +37,16 @@ class UserActivityChart extends ChartWidget
     /** @return array<int, int> */
     private function getUsersPerMonth(): array
     {
-        /** @var array<int, int> $results */
-        $results = User::selectRaw('COUNT(*) as count, MONTH(created_at) as month')
+
+        /** @var array<int, int> $result */
+        $result = User::selectRaw('COUNT(*) as count, MONTH(created_at) as month')
             ->whereYear('created_at', Carbon::now()->year)
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('count', 'month')
             ->toArray();
 
-        return $results;
+        return $result;
     }
 
     /**

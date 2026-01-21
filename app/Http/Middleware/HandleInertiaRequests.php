@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -29,15 +30,12 @@ class HandleInertiaRequests extends Middleware
             'is_testing' => app()->environment('testing'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             'ziggy' => fn (): array => [
-                (new \Tighten\Ziggy\Ziggy)->toArray(),
+                ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
         ];
     }
 
-    /**
-     * Get the shared user data.
-     */
     /**
      * Get the shared user data.
      *
