@@ -4,11 +4,11 @@
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('profile.index')"
-                    class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
+                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
                 >
                     <span class="material-symbols-outlined">arrow_back</span>
                 </Link>
-                <h2 class="text-xl font-semibold text-text-main">Outils</h2>
+                <h2 class="text-text-main text-xl font-semibold">Outils</h2>
             </div>
         </template>
 
@@ -19,7 +19,7 @@
                     class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="rounded-full bg-accent-primary/20 p-4 text-accent-primary">
+                        <div class="bg-accent-primary/20 text-accent-primary rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"
@@ -35,9 +35,9 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-text-main">Plate Calculator</h3>
-                        <p class="text-sm text-text-muted">
-                            Calculate which plates to load on the bar for a specific weight.
+                        <h3 class="text-text-main text-xl font-bold">Calculateur de Plaques</h3>
+                        <p class="text-text-muted text-sm">
+                            Calcule quelles plaques charger sur la barre pour un poids spécifique.
                         </p>
                     </div>
                 </GlassCard>
@@ -65,9 +65,9 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-text-main">1RM Calculator</h3>
-                        <p class="text-sm text-text-muted">
-                            Estimate your One Rep Max based on your lifted weight and reps.
+                        <h3 class="text-text-main text-xl font-bold">Calculateur 1RM</h3>
+                        <p class="text-text-muted text-sm">
+                            Estime ton maximum sur une répétition basé sur le poids soulevé et les répétitions.
                         </p>
                     </div>
                 </GlassCard>
@@ -79,7 +79,7 @@
                     class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="rounded-full bg-electric-orange/20 p-4 text-electric-orange">
+                        <div class="bg-electric-orange/20 text-electric-orange rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"
@@ -95,9 +95,9 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-text-main">Wilks Calculator</h3>
-                        <p class="text-sm text-text-muted">
-                            Calculate your relative strength score regardless of body weight.
+                        <h3 class="text-text-main text-xl font-bold">Calculateur Wilks</h3>
+                        <p class="text-text-muted text-sm">
+                            Calcule ton score de force relative indépendamment de ton poids de corps.
                         </p>
                     </div>
                 </GlassCard>
@@ -112,9 +112,9 @@
                         <div class="rounded-full bg-emerald-500/20 p-4 text-emerald-500">
                             <span class="material-symbols-outlined text-3xl">local_fire_department</span>
                         </div>
-                        <h3 class="text-xl font-bold text-text-main">Macro Calculator</h3>
-                        <p class="text-sm text-text-muted">
-                            Estimate your daily calorie and macro needs based on your goals.
+                        <h3 class="text-text-main text-xl font-bold">Calculateur de Macros</h3>
+                        <p class="text-text-muted text-sm">
+                            Estime tes besoins quotidiens en calories et macros selon tes objectifs.
                         </p>
                     </div>
                 </GlassCard>
@@ -142,8 +142,10 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-xl font-bold text-text-main">Warmup Calculator</h3>
-                        <p class="text-sm text-text-muted">Calculate warmup sets based on your working weight.</p>
+                        <h3 class="text-text-main text-xl font-bold">Calculateur d'Échauffement</h3>
+                        <p class="text-text-muted text-sm">
+                            Calcule tes séries d'échauffement basées sur ton poids de travail.
+                        </p>
                     </div>
                 </GlassCard>
             </Link>

@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" href="/logo.svg">
     <link rel="manifest" href="/build/manifest.webmanifest">
 
-    <title inertia>{{ config('app.name', 'Laravel') }}</title>
+    <title inertia>{{ config('app.name', 'GymTracker') }}</title>
 
     <!-- Fonts: Archivo (Display), Space Grotesk (Body), Barlow Condensed (Accent) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

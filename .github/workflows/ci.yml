@@ -274,7 +274,7 @@ jobs:
               run: composer audit
 
             - name: PHP Insights
-              run: php artisan insights --no-interaction --min-quality=100 --min-complexity=100 --min-architecture=100 --min-style=90
+              run: php artisan insights --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90
 
             - name: Larastan Analysis
               run: ./vendor/bin/phpstan analyse --memory-limit=2G

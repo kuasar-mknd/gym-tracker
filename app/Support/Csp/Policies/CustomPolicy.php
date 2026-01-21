@@ -30,6 +30,7 @@ class CustomPolicy extends Basic
             ->add(Directive::SCRIPT, 'http://localhost:5173')
             ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
             ->add(Directive::STYLE, 'http://localhost:5173')
+            ->add(Directive::STYLE, Keyword::UNSAFE_INLINE)
             ->add(Directive::IMG, 'http://localhost:5173')
             ->add(Directive::IMG, 'blob:')
             ->add(Directive::FONT, 'http://localhost:5173')
@@ -47,9 +48,8 @@ class CustomPolicy extends Basic
     protected function configureExternalResources(Policy $policy): void
     {
         $policy
-            ->add(Directive::SCRIPT, 'https://fonts.bunny.net')
-            ->add(Directive::STYLE, 'https://fonts.bunny.net')
             ->add(Directive::STYLE, 'https://fonts.googleapis.com')
+            ->add(Directive::STYLE, 'https://fonts.bunny.net')
             ->add(Directive::IMG, 'https:')
             ->add(Directive::IMG, 'data:')
             ->add(Directive::IMG, 'https://ui-avatars.com')

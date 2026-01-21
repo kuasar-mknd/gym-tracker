@@ -156,23 +156,23 @@ const submit = () => {
             <GlassCard class="animate-slide-up">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-text-muted">Nom du modèle</label>
+                        <label class="text-text-muted block text-sm font-medium">Nom du modèle</label>
                         <input
                             v-model="form.name"
                             type="text"
                             required
-                            class="mt-1 w-full rounded-xl border border-slate-200 bg-white/50 text-text-main focus:ring-2 focus:ring-accent-primary"
+                            class="text-text-main focus:ring-accent-primary mt-1 w-full rounded-xl border border-slate-200 bg-white/50 focus:ring-2"
                             placeholder="ex: Full Body Lundi"
                         />
                         <div v-if="form.errors.name" class="mt-1 text-xs text-red-400">{{ form.errors.name }}</div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-text-muted">Description (optionnel)</label>
+                        <label class="text-text-muted block text-sm font-medium">Description (optionnel)</label>
                         <textarea
                             v-model="form.description"
                             rows="2"
-                            class="mt-1 w-full rounded-xl border border-slate-200 bg-white/50 text-text-main focus:ring-2 focus:ring-accent-primary"
+                            class="text-text-main focus:ring-accent-primary mt-1 w-full rounded-xl border border-slate-200 bg-white/50 focus:ring-2"
                             placeholder="Détails de la séance..."
                         ></textarea>
                     </div>
@@ -180,7 +180,7 @@ const submit = () => {
             </GlassCard>
 
             <div class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="mb-3 font-semibold text-text-main">Exercices</h3>
+                <h3 class="text-text-main mb-3 font-semibold">Exercices</h3>
 
                 <div class="space-y-4">
                     <div v-for="(exercise, exIndex) in form.exercises" :key="exIndex">
@@ -188,7 +188,7 @@ const submit = () => {
                             <button
                                 @click="removeExercise(exIndex)"
                                 type="button"
-                                class="absolute right-4 top-4 text-text-muted/30 hover:text-red-400"
+                                class="text-text-muted/30 absolute top-4 right-4 hover:text-red-400"
                             >
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path
@@ -201,7 +201,7 @@ const submit = () => {
                             </button>
 
                             <div class="mb-4">
-                                <h4 class="text-lg font-bold text-text-main">{{ exercise.name }}</h4>
+                                <h4 class="text-text-main text-lg font-bold">{{ exercise.name }}</h4>
                             </div>
 
                             <div class="space-y-2">
@@ -211,21 +211,21 @@ const submit = () => {
                                     class="flex items-center gap-2"
                                 >
                                     <div
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-text-muted"
+                                        class="text-text-muted flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold"
                                     >
                                         {{ setIndex + 1 }}
                                     </div>
                                     <input
                                         v-model="set.reps"
                                         type="number"
-                                        class="h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm text-text-main placeholder:text-text-muted/40"
+                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm"
                                         placeholder="reps"
                                     />
                                     <input
                                         v-model="set.weight"
                                         type="number"
                                         step="0.5"
-                                        class="h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm text-text-main placeholder:text-text-muted/40"
+                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm"
                                         placeholder="kg"
                                     />
                                     <button
@@ -235,7 +235,7 @@ const submit = () => {
                                         :class="
                                             set.is_warmup
                                                 ? 'bg-orange-500/20 text-orange-400'
-                                                : 'bg-slate-100 text-text-muted/50'
+                                                : 'text-text-muted/50 bg-slate-100'
                                         "
                                     >
                                         W
@@ -243,7 +243,7 @@ const submit = () => {
                                     <button
                                         @click="removeSet(exIndex, setIndex)"
                                         type="button"
-                                        class="ml-auto p-1 text-text-muted/20 hover:text-red-400"
+                                        class="text-text-muted/20 ml-auto p-1 hover:text-red-400"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path
@@ -258,7 +258,7 @@ const submit = () => {
                                 <button
                                     @click="addSet(exIndex)"
                                     type="button"
-                                    class="text-xs text-accent-primary hover:underline"
+                                    class="text-accent-primary text-xs hover:underline"
                                 >
                                     + Ajouter une série
                                 </button>
@@ -283,18 +283,18 @@ const submit = () => {
         <Teleport to="body">
             <div v-if="showAddExercise" class="glass-overlay animate-fade-in" @click.self="closeAddModal">
                 <div
-                    class="fixed inset-x-4 bottom-4 top-auto max-h-[80vh] sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
+                    class="fixed inset-x-4 top-auto bottom-4 max-h-[80vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
                 >
                     <div class="glass-modal animate-slide-up overflow-hidden">
                         <!-- Modal Header -->
                         <div class="flex items-center justify-between border-b border-slate-200 p-4">
-                            <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                                 {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
                             </h3>
                             <button
                                 @click="closeAddModal"
                                 type="button"
-                                class="rounded-xl p-2 text-text-muted hover:bg-slate-100 hover:text-text-main"
+                                class="text-text-muted hover:text-text-main rounded-xl p-2 hover:bg-slate-100"
                                 aria-label="Fermer"
                             >
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -321,7 +321,7 @@ const submit = () => {
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <label
-                                            class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted"
+                                            class="text-text-muted mb-2 block text-xs font-black tracking-widest uppercase"
                                             >Type</label
                                         >
                                         <select v-model="createExerciseForm.type" class="glass-input w-full text-sm">
@@ -332,7 +332,7 @@ const submit = () => {
                                     </div>
                                     <div>
                                         <label
-                                            class="mb-2 block text-xs font-black uppercase tracking-widest text-text-muted"
+                                            class="text-text-muted mb-2 block text-xs font-black tracking-widest uppercase"
                                             >Catégorie</label
                                         >
                                         <select
@@ -371,7 +371,7 @@ const submit = () => {
                             <div class="max-h-[50vh] overflow-y-auto p-4 pt-0">
                                 <!-- No Results - Quick Create -->
                                 <div v-if="hasNoResults" class="py-6 text-center">
-                                    <p class="mb-3 text-text-muted">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
+                                    <p class="text-text-muted mb-3">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
                                     <GlassButton variant="primary" type="button" @click="quickCreate">
                                         Créer "{{ searchQuery }}"
                                     </GlassButton>
@@ -384,11 +384,11 @@ const submit = () => {
                                         :key="ex.id"
                                         type="button"
                                         @click="addExercise(ex)"
-                                        class="flex w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-accent-primary hover:bg-white"
+                                        class="hover:border-accent-primary flex w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white"
                                     >
                                         <div class="text-left">
-                                            <div class="font-bold text-text-main">{{ ex.name }}</div>
-                                            <div class="text-xs text-text-muted">{{ ex.category }}</div>
+                                            <div class="text-text-main font-bold">{{ ex.name }}</div>
+                                            <div class="text-text-muted text-xs">{{ ex.category }}</div>
                                         </div>
                                         <span class="material-symbols-outlined text-accent-primary">add_circle</span>
                                     </button>

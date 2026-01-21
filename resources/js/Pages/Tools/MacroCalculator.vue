@@ -1,7 +1,7 @@
 <template>
     <Head title="Calculateur de Macros" />
 
-    <AuthenticatedLayout page-title="Macros" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Calculateur de Macros" show-back back-route="tools.index">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
@@ -320,7 +320,7 @@ const saveCalculation = () => {
 }
 
 const deleteEntry = (entry) => {
-    if (confirm('Supprimer ce calcul ?')) {
+    if (confirm('Voulez-vous supprimer ce calcul ?')) {
         router.delete(route('tools.macro-calculator.destroy', { macroCalculation: entry.id }), {
             preserveScroll: true,
         })

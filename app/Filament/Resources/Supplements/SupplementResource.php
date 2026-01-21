@@ -7,7 +7,6 @@ use App\Filament\Resources\Supplements\Pages\EditSupplement;
 use App\Filament\Resources\Supplements\Pages\ListSupplements;
 use App\Filament\Resources\Supplements\Schemas\SupplementForm;
 use App\Filament\Resources\Supplements\Tables\SupplementsTable;
-use App\Models\Supplement;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -16,11 +15,15 @@ use Filament\Tables\Table;
 
 class SupplementResource extends Resource
 {
-    protected static ?string $model = Supplement::class;
+    protected static ?string $modelLabel = 'Supplément';
+
+    protected static ?string $pluralModelLabel = 'Suppléments';
+
+    protected static ?string $navigationLabel = 'Suppléments';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBeaker;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'User Data';
+    protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
     public static function form(Schema $schema): Schema
     {

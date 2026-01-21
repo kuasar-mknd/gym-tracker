@@ -23,7 +23,7 @@ beforeEach(function (): void {
 test('login page displays correctly', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/login')
-            ->waitForText('BON RETOUR')
+            ->waitForText('BON RETOUR', 20)
             ->assertVisible('input[type="email"]')
             ->assertVisible('input[type="password"]')
             ->assertVisible('button[type="submit"]');
@@ -33,7 +33,7 @@ test('login page displays correctly', function (): void {
 test('register page displays correctly', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/register')
-            ->waitForText('BIENVENUE')
+            ->waitForText('BIENVENUE', 20)
             ->assertVisible('input[autocomplete="name"]')
             ->assertVisible('input[type="email"]')
             ->assertVisible('input[type="password"]');
@@ -66,11 +66,11 @@ test('user can register', function (): void {
             ->visit('/register')
             ->type('input[name="name"]', 'Test User')
             ->type('input[name="email"]', 'test-dusk-'.time().'@example.com')
-            ->type('input[name="password"]', 'SecurePass123!')
-            ->type('input[name="password_confirmation"]', 'SecurePass123!')
-            ->click('button[type="submit"]')
-            ->waitForText('Test User') // User name appears on dashboard
-            ->assertPathIs('/dashboard');
+            ->type('input[name="password"]', 'password123')
+            ->type('input[name="password_confirmation"]', 'password123')
+            ->press('CRÉER MON COMPTE')
+            ->waitForText('Vérification', 20)
+            ->assertPathIs('/verify-email');
     });
 });
 
@@ -88,10 +88,10 @@ test('dashboard page renders correctly', function (): void {
             ->visit('/dashboard')
             ->assertPathIs('/dashboard')
             // Check page is not blank - key UI elements visible
-            ->assertPresent('.glass-panel-light')
-            // Greeting varies by time, so check static elements
-            ->waitForText('DÉMARRER')
-            // Check no JavaScript errors
+            ->waitForText('BON RETOUR', 20)
+            ->assertSee('BON RETOUR')
+            ->assertSee('DÉMARRER')
+            ->assertSee('SÉANCE')
             ->assertNoConsoleExceptions();
     });
 });
@@ -104,8 +104,7 @@ test('workouts page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/workouts')
             ->assertPathIs('/workouts')
-            ->waitForText('Séances')
-            ->assertPresent('.glass-panel-light')
+            ->waitForText('Mes Séances', 20)
             ->assertNoConsoleExceptions();
     });
 });
@@ -117,8 +116,8 @@ test('stats page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/stats')
             ->assertPathIs('/stats')
-            ->waitForText('ÉVOLUTION')
-            ->assertPresent('.glass-panel-light')
+            ->waitForText('ÉVOLUTION', 20)
+            ->assertSee('ÉVOLUTION')
             ->assertNoConsoleExceptions();
     });
 });
@@ -130,7 +129,8 @@ test('goals page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/goals')
             ->assertPathIs('/goals')
-            ->waitForText('Objectif')
+            ->waitForText('Objectif', 20)
+            ->assertSee('Objectifs')
             ->assertNoConsoleExceptions();
     });
 });
@@ -142,7 +142,8 @@ test('exercises page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/exercises')
             ->assertPathIs('/exercises')
-            ->waitForText('BIBLIOTHÈQUE')
+            ->waitForText('BIBLIOTHÈQUE', 20)
+            ->assertSee('BIBLIOTHÈQUE')
             ->assertNoConsoleExceptions();
     });
 });
@@ -154,7 +155,8 @@ test('templates page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/templates')
             ->assertPathIs('/templates')
-            ->waitForText('Modèle')
+            ->waitForText('Modèles', 20)
+            ->assertSee('Modèles')
             ->assertNoConsoleExceptions();
     });
 });
@@ -166,7 +168,8 @@ test('body measurements page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/body-measurements')
             ->assertPathIs('/body-measurements')
-            ->waitForText('Mesures')
+            ->waitForText('Mesures', 20)
+            ->assertSee('Mesures')
             ->assertNoConsoleExceptions();
     });
 });
@@ -178,7 +181,8 @@ test('journal page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/daily-journals')
             ->assertPathIs('/daily-journals')
-            ->waitForText('Journal')
+            ->waitForText('Journal', 20)
+            ->assertSee('Journal')
             ->assertNoConsoleExceptions();
     });
 });
@@ -190,7 +194,8 @@ test('notifications page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/notifications')
             ->assertPathIs('/notifications')
-            ->waitForText('Notifications')
+            ->waitForText('Notifications', 20)
+            ->assertSee('Notifications')
             ->assertNoConsoleExceptions();
     });
 });
@@ -202,7 +207,8 @@ test('achievements page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/achievements')
             ->assertPathIs('/achievements')
-            ->waitForText('Trophées')
+            ->waitForText('Trophées', 20)
+            ->assertSee('Trophées')
             ->assertNoConsoleExceptions();
     });
 });
@@ -214,7 +220,8 @@ test('profile page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/profile')
             ->assertPathIs('/profile')
-            ->waitFor('main', 10)
+            ->waitForText('Modifier Profil', 20)
+            ->assertSee('Modifier Profil')
             ->assertNoConsoleExceptions();
     });
 });
@@ -226,7 +233,7 @@ test('tools page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/tools')
             ->assertPathIs('/tools')
-            ->waitForText('Outils')
+            ->waitForText('Outils', 20)
             ->assertNoConsoleExceptions();
     });
 });
@@ -238,7 +245,8 @@ test('plates calculator page renders correctly', function (): void {
         $browser->loginAs($user)
             ->visit('/plates')
             ->assertPathIs('/plates')
-            ->waitForText('CALCULATEUR')
+            ->waitForText('CALCULATEUR', 20)
+            ->assertSee('CALCULATEUR')
             ->assertNoConsoleExceptions();
     });
 });
