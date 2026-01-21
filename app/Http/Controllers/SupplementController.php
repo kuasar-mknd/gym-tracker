@@ -24,8 +24,26 @@ class SupplementController extends Controller
                 'last_taken_at' => $supplement->latestLog?->consumed_at,
             ]);
 
+        // Calculate intake history for the last 30 days
+        $logs = SupplementLog::where('user_id', $this->user()->id)
+            ->where('consumed_at', '>=', now()->subDays(29)->startOfDay())
+            ->get()
+            ->groupBy(function ($log) {
+                return $log->consumed_at->format('Y-m-d');
+            });
+
+        $intakeHistory = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $intakeHistory[] = [
+                'date' => now()->subDays($i)->format('d/m'),
+                'count' => isset($logs[$date]) ? $logs[$date]->sum('quantity') : 0,
+            ];
+        }
+
         return Inertia::render('Supplements/Index', [
             'supplements' => $supplements,
+            'intakeHistory' => $intakeHistory,
         ]);
     }
 
