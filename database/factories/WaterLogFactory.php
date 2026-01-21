@@ -17,7 +17,9 @@ class WaterLogFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'user_id' => \App\Models\User::factory(),
+            'amount' => $this->faker->numberBetween(100, 1000), // ml
+            'consumed_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
         ];
     }
 }
