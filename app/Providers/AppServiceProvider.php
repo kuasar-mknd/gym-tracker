@@ -28,6 +28,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureGates();
+        $this->configureVite();
+        $this->configureSocialite();
+        $this->configureModelHooks();
+    }
+
+    private function configureGates(): void
+    {
         Gate::before(function ($user): ?true {
             $role = config('filament-shield.super_admin.name', 'super_admin');
 
@@ -37,27 +45,33 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewPulse', function ($user) {
             $role = config('filament-shield.super_admin.name', 'super_admin');
 
-            // Allow if user is Admin and has super_admin role
             if ($user instanceof \App\Models\Admin && is_string($role) && $user->hasRole($role)) {
                 return true;
             }
 
-            // Also allow generic valid 'super_admin' check for User model if you use mixed auth
             return is_string($role) && method_exists($user, 'hasRole') && $user->hasRole($role);
         });
+    }
 
+    private function configureVite(): void
+    {
         if ($this->app->bound('csp-nonce')) {
             Vite::useCspNonce(app('csp-nonce'));
         }
 
         Vite::prefetch(concurrency: 3);
+    }
 
+    private function configureSocialite(): void
+    {
         Event::listen(
             \SocialiteProviders\Manager\SocialiteWasCalled::class,
             \SocialiteProviders\Apple\AppleExtendSocialite::class
         );
+    }
 
-        // Goal Tracking Hooks
+    private function configureModelHooks(): void
+    {
         Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
         Workout::deleted(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
 
@@ -67,11 +81,9 @@ class AppServiceProvider extends ServiceProvider
         BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
         BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
 
-        // Achievement Tracking Hooks
         Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
         Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
-        // Streak Tracking Hooks
         Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
     }
 }

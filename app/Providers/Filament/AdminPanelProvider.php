@@ -12,8 +12,6 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -43,22 +41,11 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([Dashboard::class])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets([
-                \App\Filament\Widgets\StatsOverview::class,
-                \App\Filament\Widgets\UserActivityChart::class,
-                \App\Filament\Widgets\RecentUsersTable::class,
-            ])
+            ->widgets($this->getWidgets())
             ->middleware($this->getMiddleware())
             ->authMiddleware([Authenticate::class])
             ->plugins([FilamentShieldPlugin::make()])
-            ->navigationItems([
-                \Filament\Navigation\NavigationItem::make('Pulse Serveur')
-                    ->url('/pulse', shouldOpenInNewTab: true)
-                    ->icon('heroicon-o-presentation-chart-line')
-                    ->group('Système')
-                    ->sort(100)
-                    ->visible(fn (): bool => auth()->user()?->can('viewPulse')),
-            ]);
+            ->navigationItems($this->getNavigationItems());
     }
 
     /**
@@ -67,11 +54,24 @@ class AdminPanelProvider extends PanelProvider
     private function getWidgets(): array
     {
         return [
-            AccountWidget::class,
-            FilamentInfoWidget::class,
             \App\Filament\Widgets\StatsOverview::class,
             \App\Filament\Widgets\UserActivityChart::class,
             \App\Filament\Widgets\RecentUsersTable::class,
+        ];
+    }
+
+    /**
+     * @return array<int, \Filament\Navigation\NavigationItem>
+     */
+    private function getNavigationItems(): array
+    {
+        return [
+            \Filament\Navigation\NavigationItem::make('Pulse Serveur')
+                ->url('/pulse', shouldOpenInNewTab: true)
+                ->icon('heroicon-o-presentation-chart-line')
+                ->group('Système')
+                ->sort(100)
+                ->visible(fn (): bool => auth('admin')->user()?->can('viewPulse') ?? false),
         ];
     }
 
