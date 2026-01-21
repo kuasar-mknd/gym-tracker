@@ -12,7 +12,7 @@ test('user can view notifications page', function (): void {
     // Create a notification for the user using relationship
     $notification = $user->notifications()->create([
         'id' => Str::uuid()->toString(),
-        'type' => 'App\Notifications\PersonalRecordAchieved',
+        'type' => \App\Notifications\PersonalRecordAchieved::class,
         'data' => ['message' => 'New PR!', 'action_url' => '/'],
         'read_at' => null,
     ]);
@@ -38,7 +38,7 @@ test('user can mark a notification as read', function (): void {
 
     $notification = $user->notifications()->create([
         'id' => Str::uuid()->toString(),
-        'type' => 'App\Notifications\PersonalRecordAchieved',
+        'type' => \App\Notifications\PersonalRecordAchieved::class,
         'data' => ['message' => 'New PR!'],
         'read_at' => null,
     ]);
@@ -56,7 +56,7 @@ test('user cannot mark another users notification as read', function (): void {
 
     $notification = $otherUser->notifications()->create([
         'id' => Str::uuid()->toString(),
-        'type' => 'App\Notifications\PersonalRecordAchieved',
+        'type' => \App\Notifications\PersonalRecordAchieved::class,
         'data' => ['message' => 'New PR!'],
         'read_at' => null,
     ]);
@@ -73,14 +73,14 @@ test('user can mark all notifications as read', function (): void {
 
     $user->notifications()->create([
         'id' => Str::uuid()->toString(),
-        'type' => 'App\Notifications\PersonalRecordAchieved',
+        'type' => \App\Notifications\PersonalRecordAchieved::class,
         'data' => ['message' => '1'],
         'read_at' => null,
     ]);
 
     $user->notifications()->create([
         'id' => Str::uuid()->toString(),
-        'type' => 'App\Notifications\PersonalRecordAchieved',
+        'type' => \App\Notifications\PersonalRecordAchieved::class,
         'data' => ['message' => '2'],
         'read_at' => null,
     ]);

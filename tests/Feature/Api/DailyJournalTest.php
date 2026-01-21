@@ -12,7 +12,7 @@ class DailyJournalTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_can_list_daily_journals()
+    public function test_can_list_daily_journals(): void
     {
         $user = User::factory()->create();
         DailyJournal::factory()->count(3)->create(['user_id' => $user->id]);
@@ -25,7 +25,7 @@ class DailyJournalTest extends TestCase
             ->assertJsonCount(3, 'data');
     }
 
-    public function test_can_create_daily_journal()
+    public function test_can_create_daily_journal(): void
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
@@ -47,7 +47,7 @@ class DailyJournalTest extends TestCase
         ]);
     }
 
-    public function test_cannot_create_duplicate_daily_journal_for_same_date()
+    public function test_cannot_create_duplicate_daily_journal_for_same_date(): void
     {
         $user = User::factory()->create();
         DailyJournal::factory()->create(['user_id' => $user->id, 'date' => '2023-01-01']);
@@ -63,7 +63,7 @@ class DailyJournalTest extends TestCase
         $response->assertUnprocessable();
     }
 
-    public function test_can_show_daily_journal()
+    public function test_can_show_daily_journal(): void
     {
         $user = User::factory()->create();
         $journal = DailyJournal::factory()->create(['user_id' => $user->id]);
@@ -75,7 +75,7 @@ class DailyJournalTest extends TestCase
             ->assertJsonFragment(['id' => $journal->id]);
     }
 
-    public function test_cannot_show_other_users_daily_journal()
+    public function test_cannot_show_other_users_daily_journal(): void
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -87,7 +87,7 @@ class DailyJournalTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_can_update_daily_journal()
+    public function test_can_update_daily_journal(): void
     {
         $user = User::factory()->create();
         $journal = DailyJournal::factory()->create(['user_id' => $user->id, 'mood_score' => 1]);
@@ -108,7 +108,7 @@ class DailyJournalTest extends TestCase
         ]);
     }
 
-    public function test_cannot_update_daily_journal_to_existing_date()
+    public function test_cannot_update_daily_journal_to_existing_date(): void
     {
         $user = User::factory()->create();
         DailyJournal::factory()->create(['user_id' => $user->id, 'date' => '2023-01-01']);
@@ -124,7 +124,7 @@ class DailyJournalTest extends TestCase
         $response->assertUnprocessable();
     }
 
-    public function test_can_delete_daily_journal()
+    public function test_can_delete_daily_journal(): void
     {
         $user = User::factory()->create();
         $journal = DailyJournal::factory()->create(['user_id' => $user->id]);

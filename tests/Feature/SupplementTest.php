@@ -11,7 +11,7 @@ class SupplementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_view_supplements_page()
+    public function test_user_can_view_supplements_page(): void
     {
         $user = User::factory()->create();
 
@@ -20,7 +20,7 @@ class SupplementTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_user_can_create_supplement()
+    public function test_user_can_create_supplement(): void
     {
         $user = User::factory()->create();
 
@@ -40,7 +40,7 @@ class SupplementTest extends TestCase
         ]);
     }
 
-    public function test_user_can_consume_supplement()
+    public function test_user_can_consume_supplement(): void
     {
         $user = User::factory()->create();
         $supplement = Supplement::create([
@@ -66,7 +66,7 @@ class SupplementTest extends TestCase
         ]);
     }
 
-    public function test_user_cannot_consume_others_supplement()
+    public function test_user_cannot_consume_others_supplement(): void
     {
         $user1 = User::factory()->create();
         $user2 = User::factory()->create();

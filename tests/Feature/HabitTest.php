@@ -10,7 +10,7 @@ test('user can view habits page', function (): void {
     $this->actingAs($user)
         ->get(route('habits.index'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page
+        ->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Habits/Index')
             ->has('habits')
             ->has('weekDates')

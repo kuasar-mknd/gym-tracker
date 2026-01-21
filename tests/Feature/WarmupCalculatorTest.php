@@ -12,20 +12,20 @@ class WarmupCalculatorTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_warmup_calculator_page_can_be_rendered()
+    public function test_warmup_calculator_page_can_be_rendered(): void
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get(route('tools.warmup'));
 
         $response->assertStatus(200)
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Tools/WarmupCalculator')
                 ->has('preference')
             );
     }
 
-    public function test_warmup_calculator_loads_default_preferences()
+    public function test_warmup_calculator_loads_default_preferences(): void
     {
         $user = User::factory()->create();
 
@@ -38,7 +38,7 @@ class WarmupCalculatorTest extends TestCase
         $this->assertIsArray($props['preference']['steps']);
     }
 
-    public function test_user_can_update_warmup_preferences()
+    public function test_user_can_update_warmup_preferences(): void
     {
         $user = User::factory()->create();
 
@@ -65,7 +65,7 @@ class WarmupCalculatorTest extends TestCase
         $this->assertEquals($steps, $pref->steps);
     }
 
-    public function test_user_can_update_existing_preferences()
+    public function test_user_can_update_existing_preferences(): void
     {
         $user = User::factory()->create();
         WarmupPreference::create([
@@ -91,7 +91,7 @@ class WarmupCalculatorTest extends TestCase
         $this->assertEquals(1, WarmupPreference::where('user_id', $user->id)->count());
     }
 
-    public function test_validation_rules()
+    public function test_validation_rules(): void
     {
         $user = User::factory()->create();
 

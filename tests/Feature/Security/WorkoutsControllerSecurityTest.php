@@ -21,13 +21,13 @@ class WorkoutsControllerSecurityTest extends TestCase
         $attacker = User::factory()->create();
 
         // 2. Victim creates a private exercise
-        $secretExercise = Exercise::factory()->create([
+        Exercise::factory()->create([
             'user_id' => $victim->id,
             'name' => 'SUPER SECRET TECHNIQUE',
         ]);
 
         // 3. System exercise (visible to everyone)
-        $publicExercise = Exercise::factory()->create([
+        Exercise::factory()->create([
             'user_id' => null,
             'name' => 'Public Pushup',
         ]);
@@ -58,7 +58,7 @@ class WorkoutsControllerSecurityTest extends TestCase
         $victim = User::factory()->create();
         $attacker = User::factory()->create();
 
-        $victimExercise = Exercise::factory()->create([
+        Exercise::factory()->create([
             'user_id' => $victim->id,
             'name' => 'Victim Private Move',
         ]);

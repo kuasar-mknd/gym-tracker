@@ -14,7 +14,7 @@ class WorkoutCompletionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_finish_workout()
+    public function test_user_can_finish_workout(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now(), 'ended_at' => null]);
@@ -29,7 +29,7 @@ class WorkoutCompletionTest extends TestCase
         // In our Vue component we handle the redirect, but the controller likely returns a redirect.
     }
 
-    public function test_user_cannot_modify_finished_workout()
+    public function test_user_cannot_modify_finished_workout(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create([
@@ -45,7 +45,7 @@ class WorkoutCompletionTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_user_cannot_add_exercise_to_finished_workout()
+    public function test_user_cannot_add_exercise_to_finished_workout(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create([
@@ -62,7 +62,7 @@ class WorkoutCompletionTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_user_cannot_remove_exercise_from_finished_workout()
+    public function test_user_cannot_remove_exercise_from_finished_workout(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create([
@@ -77,7 +77,7 @@ class WorkoutCompletionTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_user_cannot_add_set_to_finished_workout()
+    public function test_user_cannot_add_set_to_finished_workout(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create([
@@ -95,7 +95,7 @@ class WorkoutCompletionTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_user_cannot_update_set_in_finished_workout()
+    public function test_user_cannot_update_set_in_finished_workout(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create([
@@ -113,7 +113,7 @@ class WorkoutCompletionTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_user_cannot_delete_set_in_finished_workout()
+    public function test_user_cannot_delete_set_in_finished_workout(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create([

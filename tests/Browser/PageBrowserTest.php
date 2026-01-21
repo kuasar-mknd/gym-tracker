@@ -291,10 +291,8 @@ test('user can perform full workout logging flow', function (): void {
             ->waitFor('.bg-accent-success')
             ->refresh()
             ->waitForText('Bench Press')
-            ->waitUsing(10, 100, function () use ($browser) {
-                return $browser->inputValue('input[aria-label*="Poids"]') === '80'
-                    && $browser->inputValue('input[aria-label*="Répétitions"]') === '12';
-            })
+            ->waitUsing(10, 100, fn () => $browser->inputValue('input[aria-label*="Poids"]') === '80'
+                && $browser->inputValue('input[aria-label*="Répétitions"]') === '12')
             ->assertInputValue('input[aria-label*="Poids"]', '80')
             ->assertInputValue('input[aria-label*="Répétitions"]', '12');
     });

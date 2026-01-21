@@ -10,9 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.')->group(function (): void {
-    Route::get('/user', function (Request $request) {
-        return new \App\Http\Resources\UserResource($request->user());
-    });
+    Route::get('/user', fn (Request $request) => new \App\Http\Resources\UserResource($request->user()));
 
     Route::apiResource('exercises', ExerciseController::class);
     Route::apiResource('plates', \App\Http\Controllers\Api\PlateController::class);
@@ -28,7 +26,5 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('habits', \App\Http\Controllers\Api\HabitController::class);
     Route::apiResource('habit-logs', \App\Http\Controllers\Api\HabitLogController::class);
 
-    Route::get('/status', function () {
-        return response()->json(['status' => 'ok']);
-    });
+    Route::get('/status', fn () => response()->json(['status' => 'ok']));
 });

@@ -27,12 +27,10 @@ abstract class DuskTestCase extends BaseTestCase
     {
         parent::setUp();
 
-        Browser::macro('assertNoConsoleExceptions', function () {
+        Browser::macro('assertNoConsoleExceptions', function (): object {
             /** @var Browser $this */
             $logs = $this->driver->manage()->getLog('browser');
-            $failures = collect($logs)->filter(function ($log) {
-                return $log['level'] === 'SEVERE';
-            });
+            $failures = collect($logs)->filter(fn ($log) => $log['level'] === 'SEVERE');
 
             \PHPUnit\Framework\Assert::assertTrue(
                 $failures->isEmpty(),
@@ -52,16 +50,14 @@ abstract class DuskTestCase extends BaseTestCase
             $this->shouldStartMaximized() ? '--start-maximized' : '--window-size=1920,1080',
             '--disable-search-engine-choice-screen',
             '--disable-smooth-scrolling',
-        ])->unless($this->hasHeadlessDisabled(), function (Collection $items) {
-            return $items->merge([
-                '--disable-gpu',
-                '--headless=new',
-                '--no-sandbox',
-                '--disable-dev-shm-usage',
-                '--ignore-certificate-errors',
-                '--window-size=1920,1080',
-            ]);
-        })->all());
+        ])->unless($this->hasHeadlessDisabled(), fn (Collection $items) => $items->merge([
+            '--disable-gpu',
+            '--headless=new',
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
+            '--ignore-certificate-errors',
+            '--window-size=1920,1080',
+        ]))->all());
 
         return RemoteWebDriver::create(
             $_ENV['DUSK_DRIVER_URL'] ?? env('DUSK_DRIVER_URL') ?? 'http://localhost:9515',

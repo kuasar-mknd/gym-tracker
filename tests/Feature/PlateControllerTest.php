@@ -13,7 +13,7 @@ class PlateControllerTest extends TestCase
     public function test_can_list_plates(): void
     {
         $user = User::factory()->create();
-        $plate = $user->plates()->create([
+        $user->plates()->create([
             'weight' => 20,
             'quantity' => 2,
         ]);

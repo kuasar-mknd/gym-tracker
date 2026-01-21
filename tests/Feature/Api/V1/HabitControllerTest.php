@@ -13,7 +13,7 @@ class HabitControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_list_habits()
+    public function test_user_can_list_habits(): void
     {
         $user = User::factory()->create();
         Habit::factory()->count(3)->create(['user_id' => $user->id]);
@@ -26,7 +26,7 @@ class HabitControllerTest extends TestCase
             ->assertJsonCount(3, 'data');
     }
 
-    public function test_user_can_create_habit()
+    public function test_user_can_create_habit(): void
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
@@ -48,7 +48,7 @@ class HabitControllerTest extends TestCase
         ]);
     }
 
-    public function test_user_can_update_habit()
+    public function test_user_can_update_habit(): void
     {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
@@ -68,7 +68,7 @@ class HabitControllerTest extends TestCase
         ]);
     }
 
-    public function test_user_can_delete_habit()
+    public function test_user_can_delete_habit(): void
     {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
@@ -82,7 +82,7 @@ class HabitControllerTest extends TestCase
         $this->assertDatabaseMissing('habits', ['id' => $habit->id]);
     }
 
-    public function test_user_cannot_access_others_habits()
+    public function test_user_cannot_access_others_habits(): void
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -95,7 +95,7 @@ class HabitControllerTest extends TestCase
         $this->deleteJson(route('api.v1.habits.destroy', $habit))->assertForbidden();
     }
 
-    public function test_user_can_create_habit_log()
+    public function test_user_can_create_habit_log(): void
     {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
@@ -114,7 +114,7 @@ class HabitControllerTest extends TestCase
         $this->assertDatabaseHas('habit_logs', ['habit_id' => $habit->id]);
     }
 
-    public function test_user_cannot_log_for_others_habit()
+    public function test_user_cannot_log_for_others_habit(): void
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -132,7 +132,7 @@ class HabitControllerTest extends TestCase
         $response->assertUnprocessable(); // Validation should fail due to exists rule scope
     }
 
-    public function test_user_can_list_habit_logs()
+    public function test_user_can_list_habit_logs(): void
     {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);

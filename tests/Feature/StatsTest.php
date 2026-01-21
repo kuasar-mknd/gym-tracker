@@ -16,7 +16,7 @@ test('authenticated user can view stats page', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->has('volumeTrend')
             ->has('muscleDistribution')
@@ -60,7 +60,7 @@ test('stats page calculates volume trend correctly', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->where('volumeTrend.0.volume', 1500)
             ->where('volumeTrend.0.name', $workout->name)
@@ -102,10 +102,10 @@ test('stats page calculates muscle distribution correctly', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->has('muscleDistribution', 2)
-            ->where('muscleDistribution', function ($distribution) {
+            ->where('muscleDistribution', function ($distribution): bool {
                 $chest = collect($distribution)->firstWhere('category', 'Pectoraux');
                 $back = collect($distribution)->firstWhere('category', 'Dos');
 
@@ -147,11 +147,11 @@ test('stats page calculates monthly comparison correctly', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
-            ->where('monthlyComparison.current_month_volume', fn ($val) => $val == 1000)
-            ->where('monthlyComparison.previous_month_volume', fn ($val) => $val == 500)
-            ->where('monthlyComparison.percentage', fn ($val) => $val == 100)
+            ->where('monthlyComparison.current_month_volume', fn ($val): bool => $val == 1000)
+            ->where('monthlyComparison.previous_month_volume', fn ($val): bool => $val == 500)
+            ->where('monthlyComparison.percentage', fn ($val): bool => $val == 100)
         );
 });
 
@@ -180,7 +180,7 @@ test('can retrieve exercise progress (1RM)', function (): void {
         ->get(route('stats.exercise', $exercise))
         ->assertOk()
         ->assertJsonStructure(['progress'])
-        ->assertJsonPath('progress.0.one_rep_max', fn ($val) => $val == 200);
+        ->assertJsonPath('progress.0.one_rep_max', fn ($val): bool => $val == 200);
 });
 
 test('unauthenticated user cannot access stats', function (): void {
@@ -219,7 +219,7 @@ test('stats do not include other users data', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->where('volumeTrend', []) // Should be empty for this user
         );

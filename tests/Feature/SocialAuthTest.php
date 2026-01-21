@@ -25,7 +25,7 @@ class SocialAuthTest extends TestCase
 
     public function test_social_callback_creates_new_user(): void
     {
-        $socialiteUser = \Mockery::mock('Laravel\Socialite\Two\User');
+        $socialiteUser = \Mockery::mock(\Laravel\Socialite\Two\User::class);
         $socialiteUser->shouldReceive('getId')->andReturn('12345');
         $socialiteUser->shouldReceive('getEmail')->andReturn('new@example.com');
         $socialiteUser->shouldReceive('getName')->andReturn('New User');
@@ -33,7 +33,7 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
         $socialiteUser->user = ['email_verified' => true];
 
-        $provider = \Mockery::mock('Laravel\Socialite\Contracts\Provider');
+        $provider = \Mockery::mock(\Laravel\Socialite\Contracts\Provider::class);
         $provider->shouldReceive('user')->andReturn($socialiteUser);
 
         \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('github')->andReturn($provider);
@@ -58,7 +58,7 @@ class SocialAuthTest extends TestCase
             'provider_id' => '67890',
         ]);
 
-        $socialiteUser = \Mockery::mock('Laravel\Socialite\Two\User');
+        $socialiteUser = \Mockery::mock(\Laravel\Socialite\Two\User::class);
         $socialiteUser->shouldReceive('getId')->andReturn('67890');
         $socialiteUser->shouldReceive('getEmail')->andReturn('existing@example.com');
         $socialiteUser->shouldReceive('getName')->andReturn('Existing User');
@@ -66,7 +66,7 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
         $socialiteUser->user = ['verified_email' => true];
 
-        $provider = \Mockery::mock('Laravel\Socialite\Contracts\Provider');
+        $provider = \Mockery::mock(\Laravel\Socialite\Contracts\Provider::class);
         $provider->shouldReceive('user')->andReturn($socialiteUser);
 
         \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
@@ -85,7 +85,7 @@ class SocialAuthTest extends TestCase
             'provider_id' => null,
         ]);
 
-        $socialiteUser = \Mockery::mock('Laravel\Socialite\Two\User');
+        $socialiteUser = \Mockery::mock(\Laravel\Socialite\Two\User::class);
         $socialiteUser->shouldReceive('getId')->andReturn('112233');
         $socialiteUser->shouldReceive('getEmail')->andReturn('match@example.com');
         $socialiteUser->shouldReceive('getName')->andReturn('Match User');
@@ -93,7 +93,7 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
         $socialiteUser->user = ['verified' => true];
 
-        $provider = \Mockery::mock('Laravel\Socialite\Contracts\Provider');
+        $provider = \Mockery::mock(\Laravel\Socialite\Contracts\Provider::class);
         $provider->shouldReceive('user')->andReturn($socialiteUser);
 
         \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('github')->andReturn($provider);

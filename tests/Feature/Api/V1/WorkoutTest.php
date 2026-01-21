@@ -76,7 +76,7 @@ class WorkoutTest extends TestCase
 
         $response->assertCreated()
             ->assertJsonPath('data.name', 'My New Workout')
-            ->assertJsonPath('data.id', fn ($id) => is_int($id));
+            ->assertJsonPath('data.id', fn ($id): bool => is_int($id));
 
         $this->assertDatabaseHas('workouts', [
             'user_id' => $user->id,

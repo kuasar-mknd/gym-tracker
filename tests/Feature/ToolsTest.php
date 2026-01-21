@@ -10,7 +10,7 @@ class ToolsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_tools_index_is_displayed_for_authenticated_user()
+    public function test_tools_index_is_displayed_for_authenticated_user(): void
     {
         $user = User::factory()->create();
 
@@ -20,7 +20,7 @@ class ToolsTest extends TestCase
         $response->assertInertia(fn ($page) => $page->component('Tools/Index'));
     }
 
-    public function test_1rm_calculator_is_displayed_for_authenticated_user()
+    public function test_1rm_calculator_is_displayed_for_authenticated_user(): void
     {
         $user = User::factory()->create();
 
@@ -30,14 +30,14 @@ class ToolsTest extends TestCase
         $response->assertInertia(fn ($page) => $page->component('Tools/OneRepMax'));
     }
 
-    public function test_unauthenticated_user_cannot_access_tools()
+    public function test_unauthenticated_user_cannot_access_tools(): void
     {
         $response = $this->get(route('tools.index'));
 
         $response->assertRedirect(route('login'));
     }
 
-    public function test_unauthenticated_user_cannot_access_1rm_calculator()
+    public function test_unauthenticated_user_cannot_access_1rm_calculator(): void
     {
         $response = $this->get(route('tools.1rm'));
 
