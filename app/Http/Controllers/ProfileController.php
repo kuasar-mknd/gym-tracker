@@ -66,6 +66,8 @@ class ProfileController extends Controller
             'weekly_summary',
             'achievement_unlocked',
             'goal_progress',
+            'personal_record',
+            'training_reminder',
         ];
 
         $validated = $request->validate([
