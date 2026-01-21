@@ -88,9 +88,7 @@ class AchievementService
             ->pluck('started_at');
 
         /** @var array<int, string> $result */
-        $result = $dates->map(function (string $date): string {
-            return \Illuminate\Support\Carbon::parse($date)->format('Y-m-d');
-        })
+        $result = $dates->map(fn (string $date): string => \Illuminate\Support\Carbon::parse($date)->format('Y-m-d'))
             ->unique()
             ->values()
             ->toArray();
