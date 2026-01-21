@@ -86,7 +86,7 @@ class AchievementService
             ->where('started_at', '>=', now()->subDays($days + 30))
             ->latest('started_at')
             ->pluck('started_at')
-            ->map(function ($date) {
+            ->map(function (\DateTimeInterface|\Carbon\WeekDay|\Carbon\Month|string|int|float|null $date): string {
                 /** @var \Illuminate\Support\Carbon|string $date */
                 return \Illuminate\Support\Carbon::parse($date)->format('Y-m-d');
             })

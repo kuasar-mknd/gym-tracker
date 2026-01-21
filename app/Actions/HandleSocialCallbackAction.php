@@ -22,7 +22,7 @@ class HandleSocialCallbackAction
     {
         try {
             $socialUser = Socialite::driver($provider)->user();
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($provider));
         }
 

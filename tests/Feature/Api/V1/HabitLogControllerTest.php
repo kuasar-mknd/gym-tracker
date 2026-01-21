@@ -6,11 +6,11 @@ use App\Models\User;
 
 use function Pest\Laravel\actingAs;
 
-beforeEach(function () {
+beforeEach(function (): void {
     // Setup if needed, but factories handle most things
 });
 
-test('user can list their habit logs', function () {
+test('user can list their habit logs', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
     HabitLog::factory()->count(3)->create(['habit_id' => $habit->id]);
@@ -27,7 +27,7 @@ test('user can list their habit logs', function () {
         ->assertJsonStructure(['data' => [['id', 'habit_id', 'date', 'notes']]]);
 });
 
-test('user can list habit logs filtered by habit_id', function () {
+test('user can list habit logs filtered by habit_id', function (): void {
     $user = User::factory()->create();
     $habit1 = Habit::factory()->create(['user_id' => $user->id]);
     $habit2 = Habit::factory()->create(['user_id' => $user->id]);
@@ -41,7 +41,7 @@ test('user can list habit logs filtered by habit_id', function () {
         ->assertJsonCount(2, 'data');
 });
 
-test('user can view a specific habit log', function () {
+test('user can view a specific habit log', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
     $log = HabitLog::factory()->create(['habit_id' => $habit->id]);
@@ -52,7 +52,7 @@ test('user can view a specific habit log', function () {
         ->assertJsonFragment(['id' => $log->id]);
 });
 
-test('user cannot view another users habit log', function () {
+test('user cannot view another users habit log', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
@@ -63,14 +63,14 @@ test('user cannot view another users habit log', function () {
         ->assertForbidden();
 });
 
-test('user gets 404 for non-existent habit log', function () {
+test('user gets 404 for non-existent habit log', function (): void {
     $user = User::factory()->create();
     actingAs($user)
         ->getJson(route('api.v1.habit-logs.show', 99999))
         ->assertNotFound();
 });
 
-test('user can create a habit log', function () {
+test('user can create a habit log', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
@@ -91,7 +91,7 @@ test('user can create a habit log', function () {
     ]);
 });
 
-test('user cannot create a habit log for another users habit', function () {
+test('user cannot create a habit log for another users habit', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
@@ -106,7 +106,7 @@ test('user cannot create a habit log for another users habit', function () {
         ->assertUnprocessable(); // Validation should fail due to 'exists' rule checking ownership
 });
 
-test('validation fails for invalid data', function () {
+test('validation fails for invalid data', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -115,7 +115,7 @@ test('validation fails for invalid data', function () {
         ->assertJsonValidationErrors(['habit_id', 'date']);
 });
 
-test('user can update their habit log', function () {
+test('user can update their habit log', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
     $log = HabitLog::factory()->create(['habit_id' => $habit->id]);
@@ -133,7 +133,7 @@ test('user can update their habit log', function () {
     ]);
 });
 
-test('user cannot update another users habit log', function () {
+test('user cannot update another users habit log', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
@@ -144,7 +144,7 @@ test('user cannot update another users habit log', function () {
         ->assertForbidden();
 });
 
-test('user can delete their habit log', function () {
+test('user can delete their habit log', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
     $log = HabitLog::factory()->create(['habit_id' => $habit->id]);
@@ -156,7 +156,7 @@ test('user can delete their habit log', function () {
     $this->assertDatabaseMissing('habit_logs', ['id' => $log->id]);
 });
 
-test('user cannot delete another users habit log', function () {
+test('user cannot delete another users habit log', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);

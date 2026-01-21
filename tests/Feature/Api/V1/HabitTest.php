@@ -12,7 +12,7 @@ class HabitTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_list_habits()
+    public function test_user_can_list_habits(): void
     {
         $user = User::factory()->create();
         Habit::factory()->count(3)->create(['user_id' => $user->id]);
@@ -25,7 +25,7 @@ class HabitTest extends TestCase
             ->assertJsonCount(3, 'data');
     }
 
-    public function test_user_can_create_habit()
+    public function test_user_can_create_habit(): void
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
@@ -47,7 +47,7 @@ class HabitTest extends TestCase
         ]);
     }
 
-    public function test_user_can_update_habit()
+    public function test_user_can_update_habit(): void
     {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
@@ -68,7 +68,7 @@ class HabitTest extends TestCase
         ]);
     }
 
-    public function test_user_cannot_update_others_habit()
+    public function test_user_cannot_update_others_habit(): void
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -82,7 +82,7 @@ class HabitTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_user_can_delete_habit()
+    public function test_user_can_delete_habit(): void
     {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
@@ -94,7 +94,7 @@ class HabitTest extends TestCase
         $this->assertDatabaseMissing('habits', ['id' => $habit->id]);
     }
 
-    public function test_user_can_log_habit()
+    public function test_user_can_log_habit(): void
     {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
@@ -115,7 +115,7 @@ class HabitTest extends TestCase
         ]);
     }
 
-    public function test_user_cannot_log_others_habit()
+    public function test_user_cannot_log_others_habit(): void
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();

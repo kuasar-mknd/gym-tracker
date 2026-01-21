@@ -3,7 +3,7 @@
 use App\Models\BodyPartMeasurement;
 use App\Models\User;
 
-test('body parts index page is displayed', function () {
+test('body parts index page is displayed', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route('body-parts.index'));
@@ -11,7 +11,7 @@ test('body parts index page is displayed', function () {
     $response->assertOk();
 });
 
-test('can add body part measurement', function () {
+test('can add body part measurement', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('body-parts.store'), [
@@ -32,7 +32,7 @@ test('can add body part measurement', function () {
     ]);
 });
 
-test('can delete body part measurement', function () {
+test('can delete body part measurement', function (): void {
     $user = User::factory()->create();
     $measurement = BodyPartMeasurement::factory()->create([
         'user_id' => $user->id,
@@ -46,7 +46,7 @@ test('can delete body part measurement', function () {
     ]);
 });
 
-test('cannot delete others body part measurement', function () {
+test('cannot delete others body part measurement', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $measurement = BodyPartMeasurement::factory()->create([
@@ -61,7 +61,7 @@ test('cannot delete others body part measurement', function () {
     ]);
 });
 
-test('show page displays history for a part', function () {
+test('show page displays history for a part', function (): void {
     $user = User::factory()->create();
     BodyPartMeasurement::factory()->create([
         'user_id' => $user->id,

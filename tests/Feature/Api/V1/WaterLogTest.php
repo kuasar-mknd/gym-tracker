@@ -5,12 +5,12 @@ use App\Models\WaterLog;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->user = User::factory()->create();
     $this->actingAs($this->user);
 });
 
-test('can list water logs', function () {
+test('can list water logs', function (): void {
     WaterLog::factory()->count(3)->create(['user_id' => $this->user->id]);
 
     $response = $this->getJson(route('api.v1.water-logs.index'));
@@ -19,7 +19,7 @@ test('can list water logs', function () {
         ->assertJsonCount(3, 'data');
 });
 
-test('can create a water log', function () {
+test('can create a water log', function (): void {
     $data = [
         'amount' => 500,
         'consumed_at' => now()->toIso8601String(),
@@ -36,7 +36,7 @@ test('can create a water log', function () {
     ]);
 });
 
-test('can view a specific water log', function () {
+test('can view a specific water log', function (): void {
     $log = WaterLog::factory()->create(['user_id' => $this->user->id]);
 
     $response = $this->getJson(route('api.v1.water-logs.show', $log));
@@ -45,7 +45,7 @@ test('can view a specific water log', function () {
         ->assertJsonFragment(['id' => $log->id]);
 });
 
-test('cannot view another users water log', function () {
+test('cannot view another users water log', function (): void {
     $otherUser = User::factory()->create();
     $log = WaterLog::factory()->create(['user_id' => $otherUser->id]);
 
@@ -54,7 +54,7 @@ test('cannot view another users water log', function () {
     $response->assertStatus(403);
 });
 
-test('can update a water log', function () {
+test('can update a water log', function (): void {
     $log = WaterLog::factory()->create(['user_id' => $this->user->id]);
     $data = ['amount' => 750];
 
@@ -69,7 +69,7 @@ test('can update a water log', function () {
     ]);
 });
 
-test('cannot update another users water log', function () {
+test('cannot update another users water log', function (): void {
     $otherUser = User::factory()->create();
     $log = WaterLog::factory()->create(['user_id' => $otherUser->id]);
     $data = ['amount' => 750];
@@ -79,7 +79,7 @@ test('cannot update another users water log', function () {
     $response->assertStatus(403);
 });
 
-test('can delete a water log', function () {
+test('can delete a water log', function (): void {
     $log = WaterLog::factory()->create(['user_id' => $this->user->id]);
 
     $response = $this->deleteJson(route('api.v1.water-logs.destroy', $log));
@@ -89,7 +89,7 @@ test('can delete a water log', function () {
     $this->assertDatabaseMissing('water_logs', ['id' => $log->id]);
 });
 
-test('cannot delete another users water log', function () {
+test('cannot delete another users water log', function (): void {
     $otherUser = User::factory()->create();
     $log = WaterLog::factory()->create(['user_id' => $otherUser->id]);
 
