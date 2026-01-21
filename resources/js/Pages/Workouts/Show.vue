@@ -394,7 +394,28 @@ const updateSet = (set, field, value) => {
  * @param {Number} setId - The ID of the set to delete.
  */
 const removeSet = (setId) => {
+    vibrate('warning')
     router.delete(route('sets.destroy', { set: setId }), { preserveScroll: true })
+}
+
+/**
+ * Duplicates a set by creating a new one with the same values.
+ *
+ * @param {Object} set - The set to duplicate.
+ * @param {Number} lineId - The workout line ID.
+ */
+const duplicateSet = (set, lineId) => {
+    vibrate('success')
+    router.post(
+        route('sets.store', { workoutLine: lineId }),
+        {
+            weight: set.weight,
+            reps: set.reps,
+            distance_km: set.distance_km,
+            duration_seconds: set.duration_seconds,
+        },
+        { preserveScroll: true },
+    )
 }
 
 /**
@@ -547,162 +568,168 @@ const hasNoResults = computed(() => {
 
                 <!-- Sets List -->
                 <div class="space-y-2">
-                    <div
+                    <SwipeableRow
                         v-for="(set, index) in line.sets"
                         :key="set.id"
-                        class="flex items-center gap-3 rounded-2xl border border-white bg-white/80 p-4 shadow-sm transition-all"
-                        :class="{ 'bg-slate-50 opacity-50': set.is_completed }"
+                        :disabled="!!workout.ended_at || set.is_completed"
+                        @delete="removeSet(set.id)"
+                        @duplicate="duplicateSet(set, line.id)"
                     >
-                        <!-- Complete Button -->
-                        <button
-                            @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
-                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
-                            :class="[
-                                set.is_completed
-                                    ? 'bg-neon-green text-text-main shadow-neon'
-                                    : 'hover:bg-neon-green/20 hover:text-neon-green bg-slate-100 text-slate-300',
-                                { 'cursor-not-allowed opacity-50': workout.ended_at },
-                            ]"
-                            :disabled="!!workout.ended_at"
-                            aria-label="Marquer comme complété"
-                        >
-                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M5 13l4 4L19 7"
-                                />
-                            </svg>
-                        </button>
-
-                        <!-- Set Number -->
                         <div
-                            class="relative flex h-11 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-black transition-colors"
-                            :class="
-                                set.personal_record
-                                    ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
-                                    : 'text-text-muted bg-slate-100'
-                            "
+                            class="flex items-center gap-3 rounded-2xl border border-white bg-white/80 p-4 shadow-sm transition-all"
+                            :class="{ 'bg-slate-50 opacity-50': set.is_completed }"
                         >
-                            {{ index + 1 }}
-                            <span v-if="set.personal_record" class="absolute -top-2 -right-2 text-sm">🏆</span>
-                        </div>
-
-                        <!-- INPUTS BASED ON EXERCISE TYPE -->
-
-                        <!-- CARDIO: Distance (km) & Duration (min) -->
-                        <template v-if="line.exercise.type === 'cardio'">
-                            <div class="flex flex-1 items-center gap-2">
-                                <input
-                                    type="number"
-                                    :value="set.distance_km"
-                                    @change="(e) => updateSet(set, 'distance_km', e.target.value)"
-                                    @focus="(e) => e.target.select()"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
-                                    :disabled="set.is_completed || !!workout.ended_at"
-                                    inputmode="decimal"
-                                    step="0.01"
-                                    :aria-label="`${line.exercise.name} : Distance série ${index + 1}`"
-                                />
-                                <span class="text-text-muted text-xs font-bold uppercase">km</span>
-                            </div>
-                            <div class="flex flex-1 items-center gap-2">
-                                <input
-                                    type="time"
-                                    step="1"
-                                    :value="secondsToTime(set.duration_seconds)"
-                                    @change="(e) => updateDurationFromTime(set, e.target.value)"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
-                                    :disabled="set.is_completed || !!workout.ended_at"
-                                    aria-label="Durée"
-                                />
-                            </div>
-                        </template>
-
-                        <!-- TIMED: Weight (kg) & Duration (sec) -->
-                        <template v-else-if="line.exercise.type === 'timed'">
-                            <div class="flex flex-1 items-center gap-2">
-                                <input
-                                    type="number"
-                                    :value="set.weight"
-                                    @change="(e) => updateSet(set, 'weight', e.target.value)"
-                                    @focus="(e) => e.target.select()"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
-                                    :disabled="set.is_completed || !!workout.ended_at"
-                                    inputmode="decimal"
-                                    placeholder="-"
-                                    :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
-                                />
-                                <span class="text-text-muted text-xs font-bold uppercase">kg</span>
-                            </div>
-                            <div class="flex flex-1 items-center gap-2">
-                                <input
-                                    type="time"
-                                    step="1"
-                                    :value="secondsToTime(set.duration_seconds)"
-                                    @change="(e) => updateDurationFromTime(set, e.target.value)"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
-                                    :disabled="set.is_completed || !!workout.ended_at"
-                                    aria-label="Durée"
-                                />
-                            </div>
-                        </template>
-
-                        <!-- STRENGTH: Weight (kg) & Reps -->
-                        <template v-else>
-                            <div class="flex flex-1 items-center gap-2">
-                                <input
-                                    type="number"
-                                    :value="set.weight"
-                                    @change="(e) => updateSet(set, 'weight', e.target.value)"
-                                    @focus="(e) => e.target.select()"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
-                                    :disabled="set.is_completed || !!workout.ended_at"
-                                    inputmode="decimal"
-                                    :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
-                                />
-                                <span class="text-text-muted text-xs font-bold uppercase">kg</span>
-                            </div>
-                            <div class="flex flex-1 items-center gap-2">
-                                <input
-                                    type="number"
-                                    :value="set.reps"
-                                    @change="(e) => updateSet(set, 'reps', e.target.value)"
-                                    @focus="(e) => e.target.select()"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
-                                    :disabled="set.is_completed || !!workout.ended_at"
-                                    inputmode="numeric"
-                                    :aria-label="`${line.exercise.name} : Répétitions série ${index + 1}`"
-                                />
-                                <span class="text-text-muted text-xs font-bold uppercase">reps</span>
-                            </div>
-                        </template>
-
-                        <!-- Delete Set -->
-                        <button
-                            v-if="!workout.ended_at"
-                            @click="removeSet(set.id)"
-                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-300 transition-all hover:bg-red-50 hover:text-red-500"
-                            aria-label="Supprimer la série"
-                        >
-                            <svg
-                                class="h-5 w-5"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                aria-hidden="true"
+                            <!-- Complete Button -->
+                            <button
+                                @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
+                                :class="[
+                                    set.is_completed
+                                        ? 'bg-neon-green text-text-main shadow-neon'
+                                        : 'hover:bg-neon-green/20 hover:text-neon-green bg-slate-100 text-slate-300',
+                                    { 'cursor-not-allowed opacity-50': workout.ended_at },
+                                ]"
+                                :disabled="!!workout.ended_at"
+                                aria-label="Marquer comme complété"
                             >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12"
-                                />
-                            </svg>
-                        </button>
-                    </div>
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M5 13l4 4L19 7"
+                                    />
+                                </svg>
+                            </button>
+
+                            <!-- Set Number -->
+                            <div
+                                class="relative flex h-11 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-black transition-colors"
+                                :class="
+                                    set.personal_record
+                                        ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
+                                        : 'text-text-muted bg-slate-100'
+                                "
+                            >
+                                {{ index + 1 }}
+                                <span v-if="set.personal_record" class="absolute -top-2 -right-2 text-sm">🏆</span>
+                            </div>
+
+                            <!-- INPUTS BASED ON EXERCISE TYPE -->
+
+                            <!-- CARDIO: Distance (km) & Duration (min) -->
+                            <template v-if="line.exercise.type === 'cardio'">
+                                <div class="flex flex-1 items-center gap-2">
+                                    <input
+                                        type="number"
+                                        :value="set.distance_km"
+                                        @change="(e) => updateSet(set, 'distance_km', e.target.value)"
+                                        @focus="(e) => e.target.select()"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
+                                        :disabled="set.is_completed || !!workout.ended_at"
+                                        inputmode="decimal"
+                                        step="0.01"
+                                        :aria-label="`${line.exercise.name} : Distance série ${index + 1}`"
+                                    />
+                                    <span class="text-text-muted text-xs font-bold uppercase">km</span>
+                                </div>
+                                <div class="flex flex-1 items-center gap-2">
+                                    <input
+                                        type="time"
+                                        step="1"
+                                        :value="secondsToTime(set.duration_seconds)"
+                                        @change="(e) => updateDurationFromTime(set, e.target.value)"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
+                                        :disabled="set.is_completed || !!workout.ended_at"
+                                        aria-label="Durée"
+                                    />
+                                </div>
+                            </template>
+
+                            <!-- TIMED: Weight (kg) & Duration (sec) -->
+                            <template v-else-if="line.exercise.type === 'timed'">
+                                <div class="flex flex-1 items-center gap-2">
+                                    <input
+                                        type="number"
+                                        :value="set.weight"
+                                        @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                        @focus="(e) => e.target.select()"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
+                                        :disabled="set.is_completed || !!workout.ended_at"
+                                        inputmode="decimal"
+                                        placeholder="-"
+                                        :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
+                                    />
+                                    <span class="text-text-muted text-xs font-bold uppercase">kg</span>
+                                </div>
+                                <div class="flex flex-1 items-center gap-2">
+                                    <input
+                                        type="time"
+                                        step="1"
+                                        :value="secondsToTime(set.duration_seconds)"
+                                        @change="(e) => updateDurationFromTime(set, e.target.value)"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-32 min-w-0 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
+                                        :disabled="set.is_completed || !!workout.ended_at"
+                                        aria-label="Durée"
+                                    />
+                                </div>
+                            </template>
+
+                            <!-- STRENGTH: Weight (kg) & Reps -->
+                            <template v-else>
+                                <div class="flex flex-1 items-center gap-2">
+                                    <input
+                                        type="number"
+                                        :value="set.weight"
+                                        @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                        @focus="(e) => e.target.select()"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
+                                        :disabled="set.is_completed || !!workout.ended_at"
+                                        inputmode="decimal"
+                                        :aria-label="`${line.exercise.name} : Poids série ${index + 1}`"
+                                    />
+                                    <span class="text-text-muted text-xs font-bold uppercase">kg</span>
+                                </div>
+                                <div class="flex flex-1 items-center gap-2">
+                                    <input
+                                        type="number"
+                                        :value="set.reps"
+                                        @change="(e) => updateSet(set, 'reps', e.target.value)"
+                                        @focus="(e) => e.target.select()"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
+                                        :disabled="set.is_completed || !!workout.ended_at"
+                                        inputmode="numeric"
+                                        :aria-label="`${line.exercise.name} : Répétitions série ${index + 1}`"
+                                    />
+                                    <span class="text-text-muted text-xs font-bold uppercase">reps</span>
+                                </div>
+                            </template>
+
+                            <!-- Delete Set -->
+                            <button
+                                v-if="!workout.ended_at"
+                                @click="removeSet(set.id)"
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-300 transition-all hover:bg-red-50 hover:text-red-500"
+                                aria-label="Supprimer la série"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                    </SwipeableRow>
                 </div>
 
                 <!-- Add Set Button -->
