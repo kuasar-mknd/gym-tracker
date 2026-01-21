@@ -13,7 +13,7 @@ RUN install-php-extensions \
     sockets
 
 # 2. Builder stage for Frontend assets
-FROM --platform=$BUILDPLATFORM node:20-slim AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:25-slim AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
