@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -50,47 +51,34 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('goals')) {
-            Schema::table('goals', function (Blueprint $table) {
-                if (Schema::hasIndex('goals', ['user_id'])) {
-                    $table->dropIndex(['user_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX goals_user_id_index ON goals');
+        } catch (\Throwable $e) {
         }
 
-        if (Schema::hasTable('body_measurements')) {
-            Schema::table('body_measurements', function (Blueprint $table) {
-                if (Schema::hasIndex('body_measurements', ['user_id'])) {
-                    $table->dropIndex(['user_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX body_measurements_user_id_index ON body_measurements');
+        } catch (\Throwable $e) {
         }
 
-        if (Schema::hasTable('workout_templates')) {
-            Schema::table('workout_templates', function (Blueprint $table) {
-                if (Schema::hasIndex('workout_templates', ['user_id'])) {
-                    $table->dropIndex(['user_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX workout_templates_user_id_index ON workout_templates');
+        } catch (\Throwable $e) {
         }
 
-        if (Schema::hasTable('workout_template_lines')) {
-            Schema::table('workout_template_lines', function (Blueprint $table) {
-                if (Schema::hasIndex('workout_template_lines', ['workout_template_id'])) {
-                    $table->dropIndex(['workout_template_id']);
-                }
-                if (Schema::hasIndex('workout_template_lines', ['exercise_id'])) {
-                    $table->dropIndex(['exercise_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX workout_template_lines_workout_template_id_index ON workout_template_lines');
+        } catch (\Throwable $e) {
         }
 
-        if (Schema::hasTable('workout_template_sets')) {
-            Schema::table('workout_template_sets', function (Blueprint $table) {
-                if (Schema::hasIndex('workout_template_sets', ['workout_template_line_id'])) {
-                    $table->dropIndex(['workout_template_line_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX workout_template_lines_exercise_id_index ON workout_template_lines');
+        } catch (\Throwable $e) {
+        }
+
+        try {
+            DB::statement('DROP INDEX workout_template_sets_workout_template_line_id_index ON workout_template_sets');
+        } catch (\Throwable $e) {
         }
     }
 };

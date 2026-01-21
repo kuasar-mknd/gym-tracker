@@ -20,7 +20,7 @@ class DebugDashboardTest extends DuskTestCase
         $user = User::factory()->create();
         Workout::factory()->count(3)->create(['user_id' => $user->id]);
 
-        $this->browse(function (Browser $browser) use ($user) {
+        $this->browse(function (Browser $browser) use ($user): void {
             $browser->loginAs($user)
                 ->visit('/dashboard')
                 ->pause(2000)

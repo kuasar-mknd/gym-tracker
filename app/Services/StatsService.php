@@ -216,7 +216,7 @@ class StatsService
                     ->get();
 
                 if ($measurements->isNotEmpty()) {
-                    $formatted = $measurements->map(fn ($m) => [
+                    $formatted = $measurements->map(fn ($m): array => [
                         'date' => Carbon::parse($m->measured_at)->format('d/m'),
                         'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
                         'weight' => (float) $m->weight,
@@ -281,7 +281,7 @@ class StatsService
 
                 if ($measurements->isNotEmpty()) {
                     /** @var array<int, array{date: string, body_fat: float}> */
-                    return $measurements->map(fn ($m) => [
+                    return $measurements->map(fn ($m): array => [
                         'date' => Carbon::parse($m->measured_at)->format('d/m'),
                         'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
                         'body_fat' => (float) $m->body_fat,
@@ -564,7 +564,7 @@ class StatsService
      */
     protected function formatVolumeHistoryItem(Workout $workout): array
     {
-        $volume = $workout->workoutLines->reduce(fn ($carry, $line) => $carry + $line->sets->reduce(fn ($carrySet, $set) => $carrySet + ($set->weight * $set->reps), 0.0), 0.0);
+        $volume = $workout->workoutLines->reduce(fn ($carry, $line): int|float => $carry + $line->sets->reduce(fn ($carrySet, $set): int|float => $carrySet + ($set->weight * $set->reps), 0.0), 0.0);
 
         return [
             'date' => $workout->started_at->format('d/m'),

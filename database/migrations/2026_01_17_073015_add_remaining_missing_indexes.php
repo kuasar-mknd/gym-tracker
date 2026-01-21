@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -32,23 +33,19 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('plates')) {
-            Schema::table('plates', function (Blueprint $table) {
-                if (Schema::hasIndex('plates', ['user_id'])) {
-                    $table->dropIndex(['user_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX plates_user_id_index ON plates');
+        } catch (\Throwable $e) {
         }
 
-        if (Schema::hasTable('personal_records')) {
-            Schema::table('personal_records', function (Blueprint $table) {
-                if (Schema::hasIndex('personal_records', ['workout_id'])) {
-                    $table->dropIndex(['workout_id']);
-                }
-                if (Schema::hasIndex('personal_records', ['set_id'])) {
-                    $table->dropIndex(['set_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX personal_records_workout_id_index ON personal_records');
+        } catch (\Throwable $e) {
+        }
+
+        try {
+            DB::statement('DROP INDEX personal_records_set_id_index ON personal_records');
+        } catch (\Throwable $e) {
         }
     }
 };

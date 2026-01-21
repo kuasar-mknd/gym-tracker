@@ -14,7 +14,7 @@ class SupplementController extends Controller
         $supplements = Supplement::forUser($this->user()->id)
             ->with('latestLog')
             ->get()
-            ->map(fn ($supplement) => [
+            ->map(fn ($supplement): array => [
                 'id' => $supplement->id,
                 'name' => $supplement->name,
                 'brand' => $supplement->brand,

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -31,22 +32,14 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('personal_records')) {
-            Schema::table('personal_records', function (Blueprint $table) {
-                if (Schema::hasIndex('personal_records', ['exercise_id'])) {
-                    // Be careful not to drop the composite index if it starts with exercise_id (it doesn't, it starts with user_id)
-                    // But standard dropIndex drops by name or column list.
-                    $table->dropIndex(['exercise_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX personal_records_exercise_id_index ON personal_records');
+        } catch (\Throwable $e) {
         }
 
-        if (Schema::hasTable('user_achievements')) {
-            Schema::table('user_achievements', function (Blueprint $table) {
-                if (Schema::hasIndex('user_achievements', ['achievement_id'])) {
-                    $table->dropIndex(['achievement_id']);
-                }
-            });
+        try {
+            DB::statement('DROP INDEX user_achievements_achievement_id_index ON user_achievements');
+        } catch (\Throwable $e) {
         }
     }
 };

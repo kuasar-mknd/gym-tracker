@@ -38,7 +38,7 @@ class AchievementTest extends TestCase
         Notification::assertSentTo(
             $user,
             AchievementUnlocked::class,
-            fn ($notification, $channels) => $notification->achievement->slug === 'first-workout'
+            fn ($notification, $channels): bool => $notification->achievement->slug === 'first-workout'
         );
     }
 

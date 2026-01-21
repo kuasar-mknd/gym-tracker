@@ -42,7 +42,7 @@ class AppServiceProvider extends ServiceProvider
             return $user instanceof \App\Models\Admin && is_string($role) && $user->hasRole($role) ? true : null;
         });
 
-        Gate::define('viewPulse', function ($user) {
+        Gate::define('viewPulse', function ($user): bool {
             $role = config('filament-shield.super_admin.name', 'super_admin');
 
             if ($user instanceof \App\Models\Admin && is_string($role) && $user->hasRole($role)) {

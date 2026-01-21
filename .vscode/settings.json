@@ -16,5 +16,6 @@
     },
     "[blade]": {
         "editor.defaultFormatter": "shufo.vscode-blade-formatter"
-    }
+    },
+    "php.version": "8.5"
 }

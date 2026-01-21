@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions\Calendar;
 
 use App\Models\DailyJournal;
@@ -7,7 +9,7 @@ use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Carbon;
 
-class FetchCalendarEventsAction
+final class FetchCalendarEventsAction
 {
     /**
      * Fetch calendar events (workouts and journals) for a given user and month.
@@ -16,8 +18,8 @@ class FetchCalendarEventsAction
      * @param  int  $year  The year of the events.
      * @param  int  $month  The month of the events.
      * @return array{
-     *   workouts: \Illuminate\Support\Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}>,
-     *   journals: \Illuminate\Support\Collection<int, array{id: int, date: string, mood_score: int|null, has_note: bool}>
+     *     workouts: \Illuminate\Support\Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}>,
+     *     journals: \Illuminate\Support\Collection<int, array{id: int, date: string, mood_score: int|null, has_note: bool}>
      * }
      */
     public function execute(User $user, int $year, int $month): array

@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Widgets;
 
 use App\Models\User;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 
-class UserActivityChart extends ChartWidget
+final class UserActivityChart extends ChartWidget
 {
     protected ?string $heading = 'User Registrations';
 
