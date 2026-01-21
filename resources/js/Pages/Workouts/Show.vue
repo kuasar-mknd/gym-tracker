@@ -15,11 +15,17 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
+import { useRestTimer } from '@/composables/useRestTimer'
+import { vibrate } from '@/composables/useHaptics'
+
+// Get global rest timer
+const restTimer = useRestTimer()
 
 /**
  * Component Props
