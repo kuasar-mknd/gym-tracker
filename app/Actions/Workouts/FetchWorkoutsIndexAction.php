@@ -27,19 +27,32 @@ class FetchWorkoutsIndexAction
     }
 
     /** @return \Illuminate\Support\Collection<int, array{month: string, count: int}> */
+    /** @return \Illuminate\Support\Collection<int, array{month: string, count: int}> */
     private function getMonthlyFrequency(User $user): \Illuminate\Support\Collection
     {
-        return Workout::where('user_id', $user->id)
-            ->where('started_at', '>=', now()->subMonths(5)->startOfMonth())
+        $startDate = now()->subMonths(5)->startOfMonth();
+
+        // 1. Fetch Data (Simple Query)
+        $rawWorkouts = Workout::query()
+            ->select('started_at')
+            ->where('user_id', $user->id)
+            ->where('started_at', '>=', $startDate)
             ->orderBy('started_at')
-            ->toBase()
-            ->get(['started_at'])
-            ->groupBy(fn ($row) => substr($row->started_at, 0, 7))
-            ->map(fn ($rows, $month) => [
-                'month' => Carbon::createFromFormat('Y-m', $month)?->format('M') ?? '',
-                'count' => $rows->count(),
-            ])
-            ->values();
+            ->toBase() // Keep performance optimization
+            ->get();
+
+        // 2. Group Manually (Avoid nested closure scopes that confuse Rector)
+        $groupedByMonth = $rawWorkouts->groupBy(fn (object $row): string => substr((string) $row->started_at, 0, 7));
+
+        // 3. Map Manually
+        return $groupedByMonth->map(function ($rows, string $month): array {
+            $date = Carbon::createFromFormat('Y-m', $month);
+
+            return [
+                'month' => $date instanceof Carbon ? $date->format('M') : '',
+                'count' => count($rows),
+            ];
+        })->values();
     }
 
     /** @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout> */

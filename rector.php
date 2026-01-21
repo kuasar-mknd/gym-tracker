@@ -20,6 +20,5 @@ return RectorConfig::configure()
         typeDeclarations: true
     )
     ->withSkip([
-        __DIR__.'/app/Actions/Workouts/FetchWorkoutsIndexAction.php',
         __DIR__.'/bootstrap/cache',
     ]);
