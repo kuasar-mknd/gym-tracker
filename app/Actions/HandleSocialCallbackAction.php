@@ -23,7 +23,7 @@ class HandleSocialCallbackAction
         try {
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Exception $e) {
-            throw new SocialAuthException('Erreur lors de la connexion avec ' . ucfirst($provider));
+            throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($provider));
         }
 
         // Security check: Ensure email is verified by the provider
@@ -42,7 +42,7 @@ class HandleSocialCallbackAction
                     'email' => $socialUser->getEmail(),
                 ]);
             } else {
-                throw new SocialAuthException('Votre email n\'est pas vérifié par ' . ucfirst($provider));
+                throw new SocialAuthException('Votre email n\'est pas vérifié par '.ucfirst($provider));
             }
         }
 

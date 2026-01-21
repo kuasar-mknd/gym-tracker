@@ -19,16 +19,16 @@ class BodyPartMeasurement extends Model
         'notes',
     ];
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     protected function casts(): array
     {
         return [
             'measured_at' => 'date:Y-m-d',
             'value' => 'decimal:2',
         ];
-    }
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

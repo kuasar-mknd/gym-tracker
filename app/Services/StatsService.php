@@ -217,16 +217,13 @@ class StatsService
      */
     public function getBodyFatHistory(User $user, int $days = 90): array
     {
-        /** @var array<int, array{date: string, body_fat: float}> $history */
-        $history = \Illuminate\Support\Facades\Cache::remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn () => $this->fetchBodyFatHistoryData($user, $days)
                 ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
                 ->toArray()
         );
-
-        return $history;
     }
 
     /**
@@ -294,8 +291,7 @@ class StatsService
      */
     public function getDurationHistory(User $user, int $limit = 20): array
     {
-        /** @var array<int, array{date: string, duration: int, name: string}> $history */
-        $history = \Illuminate\Support\Facades\Cache::remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
             fn () => Workout::select(['name', 'started_at', 'ended_at'])
@@ -309,8 +305,6 @@ class StatsService
                 ->values()
                 ->toArray()
         );
-
-        return $history;
     }
 
     /**
@@ -542,8 +536,7 @@ class StatsService
      */
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<string, float> $results */
-        $results = DB::table('workouts')
+        return DB::table('workouts')
             ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $user->id)
@@ -554,8 +547,6 @@ class StatsService
             )
             ->groupBy('date')
             ->pluck('volume', 'date');
-
-        return $results;
     }
 
     /**

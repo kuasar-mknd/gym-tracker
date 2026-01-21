@@ -27,14 +27,6 @@ class WaterLog extends Model
         return $this->belongsTo(User::class);
     }
 
-    protected function casts(): array
-    {
-        return [
-            'amount' => 'integer',
-            'consumed_at' => 'datetime',
-        ];
-    }
-
     public function scopeConsumedAtBetween(Builder $query, $dates): Builder
     {
         $dates = is_array($dates) ? $dates : explode(',', $dates);
@@ -43,5 +35,13 @@ class WaterLog extends Model
             Carbon::parse($dates[0])->startOfDay(),
             Carbon::parse($dates[1] ?? $dates[0])->endOfDay(),
         ]);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'amount' => 'integer',
+            'consumed_at' => 'datetime',
+        ];
     }
 }

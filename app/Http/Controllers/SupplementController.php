@@ -93,8 +93,7 @@ class SupplementController extends Controller
      */
     protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: ?float}> $supplements */
-        $supplements = Supplement::forUser($user->id)
+        return Supplement::forUser($user->id)
             ->with(['latestLog'])
             ->get()
             ->map(fn (Supplement $supplement): array => [
@@ -105,8 +104,6 @@ class SupplementController extends Controller
                 'unit' => 'servings',
                 'daily_goal' => null,
             ]);
-
-        return $supplements;
     }
 
     /** @return array<int, array{date: string, count: float}> */
@@ -123,6 +120,15 @@ class SupplementController extends Controller
             ->get()
             ->pluck('count', 'date');
 
+        return $this->fillUsageHistory($usageHistoryRaw, $days);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<string, float>  $usageHistoryRaw
+     * @return array<int, array{date: string, count: float}>
+     */
+    private function fillUsageHistory(\Illuminate\Support\Collection $usageHistoryRaw, int $days): array
+    {
         $history = [];
         for ($i = $days - 1; $i >= 0; $i--) {
             $carbonDate = now()->subDays($i);

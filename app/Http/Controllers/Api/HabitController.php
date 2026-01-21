@@ -55,10 +55,10 @@ class HabitController extends Controller
 
         $validated = $request->validated();
 
-        if (empty($validated['color'])) {
+        if (($validated['color'] ?? null) === null) {
             $validated['color'] = 'bg-slate-500';
         }
-        if (empty($validated['icon'])) {
+        if (($validated['icon'] ?? null) === null) {
             $validated['icon'] = 'check_circle';
         }
 
