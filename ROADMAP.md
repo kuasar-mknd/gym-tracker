@@ -52,19 +52,30 @@ Faire de GymTracker la meilleure application mobile-first de suivi de musculatio
 
 ## 📅 Planifié
 
-### v1.4 — Mobile Premium UX (Prioritaire)
+### v1.4 — Mobile Premium UX (Complété ✅)
 
-- **Smart Rest Timer** :
-    - [ ] Déclenchement automatique après chaque série.
-    - [ ] Durée personnalisable par exercice.
-    - [ ] Notifications sonores et haptiques.
-- **Gestes Tactiles (Swipe)** :
-    - [ ] Swipe pour supprimer une série (Gauche).
-    - [ ] Swipe pour dupliquer une série (Droite).
-- **Design & Polish** :
-    - [ ] Sélecteur de Thème Sombre/Clair manuel.
-    - [ ] Micro-animations (Feedback tactile, transitions de listes).
-    - [ ] Optimistic UI pour un logging sans latence.
+- [x] Smart Rest Timer (existait déjà)
+- [x] Gestes Tactiles (SwipeableRow)
+- [x] Sélecteur de Thème (useTheme + ThemeToggle)
+- [x] Micro-animations (v-press, CheckAnimation)
+- [x] Optimistic UI (toggle set)
+- [x] Haptic Feedback (useHaptics)
+
+### v1.4.1 — UX Polish & Dark Mode (Prioritaire)
+
+- **🔴 Critique** :
+    - [ ] Dark mode sur tous les composants (actuellement seul ThemeToggle fonctionne)
+    - [ ] Fixer Modal.vue pour mode clair
+    - [ ] Keyboard avoidance pour inputs
+- **🟠 UX Incomplète** :
+    - [ ] SwipeableRow sur listes workouts/exercises
+    - [ ] Haptic feedback sur navigation et formulaires
+    - [ ] Optimistic UI pour add/delete/update sets
+- **🟡 Améliorations** :
+    - [ ] Pull-to-refresh sur pages principales
+    - [ ] Skeleton loading (utiliser .glass-skeleton)
+    - [ ] Transitions de page (Inertia)
+    - [ ] Empty states avec illustrations
 
 ### v1.5 — Social & Exports
 
