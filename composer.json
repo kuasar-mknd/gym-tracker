@@ -30,6 +30,7 @@
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",
+        "exin/enlightn": "^2.11",
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.0",
         "laravel/boost": "^1.8",

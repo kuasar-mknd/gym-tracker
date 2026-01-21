@@ -279,6 +279,9 @@ jobs:
             - name: Larastan Analysis
               run: ./vendor/bin/phpstan analyse --memory-limit=2G
 
+            - name: Enlightn Security & Performance Scan
+              run: php artisan enlightn --no-interaction --report
+
             - name: Rector (Dry Run)
               run: ./vendor/bin/rector process --dry-run --no-progress-bar
 

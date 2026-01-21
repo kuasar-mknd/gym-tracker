@@ -40,7 +40,7 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 120),
             'after_commit' => false,
         ],
 
@@ -75,10 +75,12 @@ return [
 
         'deferred' => [
             'driver' => 'deferred',
+            'retry_after' => 120,
         ],
 
         'background' => [
             'driver' => 'background',
+            'retry_after' => 120,
         ],
 
         'failover' => [
@@ -87,6 +89,7 @@ return [
                 'database',
                 'deferred',
             ],
+            'retry_after' => 120,
         ],
 
     ],
