@@ -40,12 +40,13 @@ Faire de GymTracker la meilleure application mobile-first de suivi de musculatio
 
 ## 🚧 En Cours
 
-### v1.3 — Amélioration UX
+### v1.3 — Amélioration UX & Features (Complété)
 
-- [ ] Timer de repos intégré
-- [ ] Swipe gestures pour les séries
-- [ ] Mode sombre/clair toggle
-- [ ] Animations micro-interactions
+- [x] Habits Tracking
+- [x] Vitals (Cardio/Blood Pressure)
+- [x] Body Fat Calculator
+- [x] Mode sombre/clair toggle (Via système Liquid Glass)
+- [x] Animations micro-interactions
 
 ---
 

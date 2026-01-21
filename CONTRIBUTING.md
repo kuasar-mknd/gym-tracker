@@ -97,9 +97,10 @@ php artisan test --coverage
 ### PHP (Laravel)
 
 - **Pint** pour le formatage : `vendor/bin/pint`
-- **PHPStan** niveau 5 : `vendor/bin/phpstan analyze`
+- **Rector** pour la modernisation : `vendor/bin/rector process`
+- **PHPStan** (Larastan) niveau Max : `vendor/bin/phpstan analyze`
 - Suit les conventions Laravel
-- Utilise les type hints PHP 8.x
+- Utilise les type hints PHP 8.4 stricts (`declare(strict_types=1);`)
 - Crée des Form Requests pour la validation
 
 ### JavaScript/Vue
@@ -128,7 +129,8 @@ php artisan test --coverage
 ### Avant de soumettre
 
 - [ ] Tests passent (`php artisan test`)
-- [ ] Code formaté (`npm run format`)
+- [ ] Code formaté (`npm run format` & `vendor/bin/pint`)
+- [ ] Rector appliqué (`vendor/bin/rector process`)
 - [ ] PHPStan propre (`vendor/bin/phpstan analyze`)
 - [ ] Pas de `console.log` ou `dd()` oubliés
 - [ ] Documentation mise à jour si nécessaire
