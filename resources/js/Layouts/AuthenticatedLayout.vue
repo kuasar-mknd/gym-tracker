@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
+import RestTimerOverlay from '@/Components/Timer/RestTimerOverlay.vue'
 import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
 import NavLink from '@/Components/NavLink.vue'
@@ -61,9 +62,7 @@ const showingNavigationDropdown = ref(false)
                             <NavLink :href="route('calendar.index')" :active="route().current('calendar.*')">
                                 Calendrier
                             </NavLink>
-                            <NavLink :href="route('stats.index')" :active="route().current('stats.*')">
-                                Stats
-                            </NavLink>
+                            <NavLink :href="route('stats.index')" :active="route().current('stats.*')"> Stats </NavLink>
                             <NavLink :href="route('exercises.index')" :active="route().current('exercises.*')">
                                 Exercices
                             </NavLink>
@@ -196,5 +195,8 @@ const showingNavigationDropdown = ref(false)
 
         <!-- Achievement Celebration Modal -->
         <CelebrationModal />
+
+        <!-- Rest Timer Overlay (Mobile Sticky) -->
+        <RestTimerOverlay />
     </div>
 </template>
