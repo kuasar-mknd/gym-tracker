@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class WaterLog extends Model
 {
@@ -31,5 +33,15 @@ class WaterLog extends Model
             'amount' => 'integer',
             'consumed_at' => 'datetime',
         ];
+    }
+
+    public function scopeConsumedAtBetween(Builder $query, $dates): Builder
+    {
+        $dates = is_array($dates) ? $dates : explode(',', $dates);
+
+        return $query->whereBetween('consumed_at', [
+            Carbon::parse($dates[0])->startOfDay(),
+            Carbon::parse($dates[1] ?? $dates[0])->endOfDay(),
+        ]);
     }
 }

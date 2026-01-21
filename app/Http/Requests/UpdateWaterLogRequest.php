@@ -5,13 +5,14 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreWaterLogRequest extends FormRequest
+class UpdateWaterLogRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
+        // Ownership check is usually handled by Policy or Route Model Binding scope
         return true;
     }
 
@@ -23,8 +24,8 @@ class StoreWaterLogRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => ['required', 'integer', 'min:1'],
-            'consumed_at' => ['required', 'date'],
+            'amount' => ['sometimes', 'integer', 'min:1'],
+            'consumed_at' => ['sometimes', 'date'],
         ];
     }
 }
