@@ -11,7 +11,23 @@ class CustomPolicy extends Basic
 {
     public function configure(Policy $policy): void
     {
-        parent::configure($policy);
+        // Don't call parent::configure() because Basic preset adds a nonce to STYLE,
+        // which completely breaks 'unsafe-inline' for style attributes (required by Filament).
+
+        // Replicate Basic preset but without style nonce
+        $policy
+            ->add(Directive::BASE, Keyword::SELF)
+            ->add(Directive::CONNECT, Keyword::SELF)
+            ->add(Directive::DEFAULT, Keyword::SELF)
+            ->add(Directive::FONT, Keyword::SELF)
+            ->add(Directive::FORM_ACTION, Keyword::SELF)
+            ->add(Directive::FRAME, Keyword::SELF)
+            ->add(Directive::IMG, Keyword::SELF)
+            ->add(Directive::MEDIA, Keyword::SELF)
+            ->add(Directive::OBJECT, Keyword::NONE)
+            ->add(Directive::SCRIPT, Keyword::SELF)
+            ->add(Directive::STYLE, Keyword::SELF)
+            ->addNonce(Directive::SCRIPT);
 
         if (app()->environment('local', 'testing')) {
             $this->configureLocal($policy);
@@ -25,24 +41,17 @@ class CustomPolicy extends Basic
     protected function configureLocal(Policy $policy): void
     {
         $policy
-            ->add(Directive::DEFAULT, 'http://localhost:5173')
-            ->add(Directive::DEFAULT, 'ws://localhost:5173')
-            ->add(Directive::SCRIPT, 'http://localhost:5173')
             ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
-            ->add(Directive::STYLE, 'http://localhost:5173')
-            ->add(Directive::STYLE, Keyword::UNSAFE_INLINE)
-            ->add(Directive::IMG, 'http://localhost:5173')
-            ->add(Directive::IMG, 'blob:')
-            ->add(Directive::FONT, 'http://localhost:5173')
-            ->add(Directive::CONNECT, 'http://localhost:5173')
-            ->add(Directive::CONNECT, 'ws://localhost:5173');
+            ->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
     }
 
     protected function configureProduction(Policy $policy): void
     {
-        $policy
-            ->addNonce(Directive::SCRIPT)
-            ->add(Directive::STYLE, Keyword::UNSAFE_INLINE); // Keep for now as many components might rely on it
+        // Fix for AlpineJS (needs strict nonce AND unsafe-eval)
+        $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
+
+        // Fix for Filament Style Attributes (needs unsafe-inline WITHOUT nonce)
+        $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
     }
 
     protected function configureExternalResources(Policy $policy): void
