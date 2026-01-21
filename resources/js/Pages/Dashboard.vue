@@ -50,7 +50,7 @@ const colorForWorkout = (index) => {
                             class="from-electric-orange to-vivid-violet relative size-14 overflow-hidden rounded-full bg-linear-to-tr p-[2px]"
                         >
                             <div
-                                class="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white"
+                                class="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white dark:border-slate-700 dark:bg-slate-800"
                             >
                                 <span class="text-gradient text-2xl font-black">
                                     {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
@@ -62,7 +62,9 @@ const colorForWorkout = (index) => {
                         <p class="text-text-muted mb-0.5 text-[10px] font-black tracking-[0.2em] uppercase">
                             BON RETOUR
                         </p>
-                        <h1 class="font-display text-text-main text-3xl font-black tracking-tighter uppercase italic">
+                        <h1
+                            class="font-display text-text-main text-3xl font-black tracking-tighter uppercase italic dark:text-white"
+                        >
                             {{ $page.props.auth.user.name?.split(' ')[0] }}
                         </h1>
                     </div>
@@ -75,7 +77,7 @@ const colorForWorkout = (index) => {
                         style="font-variation-settings: 'FILL' 1"
                         >local_fire_department</span
                     >
-                    <span class="text-text-main text-xl font-black italic">
+                    <span class="text-text-main text-xl font-black italic dark:text-white">
                         {{ $page.props.auth.user.current_streak || 0 }}
                         <span class="text-text-muted ml-0.5 text-[10px] font-bold uppercase not-italic">Jours</span>
                     </span>
@@ -90,7 +92,7 @@ const colorForWorkout = (index) => {
                     :disabled="form.processing"
                     class="hover:shadow-glow-orange/70 group shadow-glow-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 active:scale-95"
                 >
-                    <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md"></div>
+                    <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md dark:bg-slate-800/60"></div>
                     <div
                         class="from-electric-orange/10 absolute inset-0 z-0 bg-linear-to-br to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     ></div>
@@ -104,7 +106,7 @@ const colorForWorkout = (index) => {
                             <span class="material-symbols-outlined text-4xl text-white">fitness_center</span>
                         </div>
                         <span
-                            class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"
+                            class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic dark:text-white"
                         >
                             Démarrer<br />Séance
                         </span>
@@ -116,7 +118,7 @@ const colorForWorkout = (index) => {
                     :href="route('templates.index')"
                     class="hover:shadow-glow-violet/70 group shadow-glow-violet relative h-52 overflow-hidden rounded-3xl transition-all duration-300 active:scale-95"
                 >
-                    <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md"></div>
+                    <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md dark:bg-slate-800/60"></div>
                     <div
                         class="from-vivid-violet/10 absolute inset-0 z-0 bg-linear-to-br to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     ></div>
@@ -130,7 +132,7 @@ const colorForWorkout = (index) => {
                             <span class="material-symbols-outlined text-4xl text-white">assignment_add</span>
                         </div>
                         <span
-                            class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"
+                            class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic dark:text-white"
                         >
                             Mes<br />Programmes
                         </span>
@@ -148,7 +150,9 @@ const colorForWorkout = (index) => {
                         <h3 class="text-electric-orange mb-1 text-[10px] font-black tracking-[0.2em] uppercase">
                             Aperçu
                         </h3>
-                        <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume Hebdo</p>
+                        <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                            Volume Hebdo
+                        </p>
                     </div>
                     <div class="text-right">
                         <p
@@ -198,7 +202,7 @@ const colorForWorkout = (index) => {
                 <!-- Empty State -->
                 <div v-if="recentWorkouts.length === 0" class="glass-panel-light rounded-3xl p-8 text-center">
                     <div class="mb-3 text-5xl">🏋️</div>
-                    <p class="text-text-main font-bold">Aucune séance pour l'instant</p>
+                    <p class="text-text-main font-bold dark:text-white">Aucune séance pour l'instant</p>
                     <p class="text-text-muted mt-1 text-sm">Commence ton parcours fitness !</p>
                 </div>
 
@@ -228,7 +232,7 @@ const colorForWorkout = (index) => {
                             </div>
                             <div>
                                 <h4
-                                    class="font-display text-text-main text-lg leading-tight font-bold uppercase italic"
+                                    class="font-display text-text-main text-lg leading-tight font-bold uppercase italic dark:text-white"
                                 >
                                     {{ workout.name || 'Séance' }}
                                 </h4>
