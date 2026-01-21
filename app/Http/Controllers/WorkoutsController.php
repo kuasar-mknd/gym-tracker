@@ -60,9 +60,7 @@ class WorkoutsController extends Controller
         // NITRO FIX: Cache exercises list for 1 hour
         // Security: Filter exercises by user to prevent information disclosure
         $userId = $this->user()->id;
-        $exercises = Cache::remember("exercises_list_{$userId}", 3600, function () use ($userId) {
-            return Exercise::forUser($userId)->orderBy('name')->get();
-        });
+        $exercises = Cache::remember("exercises_list_{$userId}", 3600, fn () => Exercise::forUser($userId)->orderBy('name')->get());
 
         return Inertia::render('Workouts/Show', [
             'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),

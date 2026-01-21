@@ -26,7 +26,7 @@ class CreateWorkoutTemplateAction
      */
     public function execute(User $user, array $data): WorkoutTemplate
     {
-        return DB::transaction(function () use ($user, $data) {
+        return DB::transaction(function () use ($user, $data): \App\Models\WorkoutTemplate {
             $template = new WorkoutTemplate([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,

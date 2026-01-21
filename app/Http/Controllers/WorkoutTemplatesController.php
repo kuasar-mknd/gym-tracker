@@ -34,11 +34,9 @@ class WorkoutTemplatesController extends Controller
         $userId = $this->user()->id;
 
         return Inertia::render('Workouts/Templates/Create', [
-            'exercises' => Cache::remember('exercises_list_'.$userId, 3600, function () use ($userId) {
-                return \App\Models\Exercise::forUser($userId)
-                    ->orderBy('name')
-                    ->get();
-            }),
+            'exercises' => Cache::remember('exercises_list_'.$userId, 3600, fn () => \App\Models\Exercise::forUser($userId)
+                ->orderBy('name')
+                ->get()),
         ]);
     }
 

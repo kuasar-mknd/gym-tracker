@@ -19,9 +19,7 @@ class DailyJournalStoreRequest extends BaseDailyJournalStoreRequest
         $rules['date'] = [
             'required',
             'date',
-            Rule::unique('daily_journals')->where(function ($query) {
-                return $query->where('user_id', $this->user()?->id);
-            }),
+            Rule::unique('daily_journals')->where(fn ($query) => $query->where('user_id', $this->user()?->id)),
         ];
 
         return $rules;

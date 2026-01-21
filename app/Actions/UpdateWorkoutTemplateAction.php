@@ -25,7 +25,7 @@ class UpdateWorkoutTemplateAction
      */
     public function execute(WorkoutTemplate $template, array $data): WorkoutTemplate
     {
-        return DB::transaction(function () use ($template, $data) {
+        return DB::transaction(function () use ($template, $data): \App\Models\WorkoutTemplate {
             $template->update([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? $template->description,

@@ -24,7 +24,7 @@ class SocialAuthController extends Controller
     {
         try {
             $socialUser = Socialite::driver($provider)->user();
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return redirect()->route('login')->with('status', 'Erreur lors de la connexion avec '.ucfirst($provider));
         }
 

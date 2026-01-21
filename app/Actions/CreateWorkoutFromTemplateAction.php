@@ -17,7 +17,7 @@ class CreateWorkoutFromTemplateAction
         // Optimize: Eager load relationships to prevent N+1 queries during iteration
         $template->load(['workoutTemplateLines.workoutTemplateSets']);
 
-        return DB::transaction(function () use ($user, $template) {
+        return DB::transaction(function () use ($user, $template): \App\Models\Workout {
             $workout = new Workout([
                 'name' => $template->name,
                 'started_at' => now(),

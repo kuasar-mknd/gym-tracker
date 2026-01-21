@@ -14,8 +14,11 @@ return RectorConfig::configure()
         __DIR__.'/routes',
         __DIR__.'/tests',
     ])
-    // uncomment to reach your current PHP version
-    // ->withPhpSets()
-    ->withTypeCoverageLevel(0)
-    ->withDeadCodeLevel(0)
-    ->withCodeQualityLevel(0);
+    ->withPhpSets(php84: true)
+    ->withPreparedSets(
+        deadCode: true,
+        typeDeclarations: true
+    )
+    ->withSkip([
+        __DIR__.'/app/Actions/Workouts/FetchWorkoutsIndexAction.php',
+    ]);

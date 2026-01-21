@@ -28,7 +28,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'is_testing' => app()->environment('testing'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
-            'ziggy' => fn () => [
+            'ziggy' => fn (): array => [
                 (new \Tighten\Ziggy\Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
@@ -58,7 +58,7 @@ class HandleInertiaRequests extends Middleware
             'avatar' => $user->avatar,
             'unread_notifications_count' => $user->unreadNotifications()->count(),
             'latest_achievement' => $user->unreadNotifications()
-                ->where('type', 'App\Notifications\AchievementUnlocked')
+                ->where('type', \App\Notifications\AchievementUnlocked::class)
                 ->latest()
                 ->first(),
             'current_streak' => $user->last_workout_at && $user->last_workout_at->startOfDay()->diffInDays(now()->startOfDay()) > 1 ? 0 : $user->current_streak,

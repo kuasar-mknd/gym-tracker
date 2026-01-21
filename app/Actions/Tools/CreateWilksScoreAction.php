@@ -50,7 +50,7 @@ class CreateWilksScoreAction
             $f = -9.054E-08;
         }
 
-        $coeff = 500 / ($a + $b * $bw + $c * pow($bw, 2) + $d * pow($bw, 3) + $e * pow($bw, 4) + $f * pow($bw, 5));
+        $coeff = 500 / ($a + $b * $bw + $c * $bw ** 2 + $d * $bw ** 3 + $e * $bw ** 4 + $f * $bw ** 5);
 
         return round($lifted * $coeff, 2);
     }

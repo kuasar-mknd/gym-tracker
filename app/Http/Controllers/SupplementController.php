@@ -14,17 +14,15 @@ class SupplementController extends Controller
         $supplements = Supplement::forUser($this->user()->id)
             ->with('latestLog')
             ->get()
-            ->map(function ($supplement) {
-                return [
-                    'id' => $supplement->id,
-                    'name' => $supplement->name,
-                    'brand' => $supplement->brand,
-                    'dosage' => $supplement->dosage,
-                    'servings_remaining' => $supplement->servings_remaining,
-                    'low_stock_threshold' => $supplement->low_stock_threshold,
-                    'last_taken_at' => $supplement->latestLog?->consumed_at,
-                ];
-            });
+            ->map(fn ($supplement) => [
+                'id' => $supplement->id,
+                'name' => $supplement->name,
+                'brand' => $supplement->brand,
+                'dosage' => $supplement->dosage,
+                'servings_remaining' => $supplement->servings_remaining,
+                'low_stock_threshold' => $supplement->low_stock_threshold,
+                'last_taken_at' => $supplement->latestLog?->consumed_at,
+            ]);
 
         return Inertia::render('Supplements/Index', [
             'supplements' => $supplements,

@@ -52,7 +52,7 @@ class StatsService
             function () use ($user, $days): array {
                 $results = $this->fetchVolumeTrendData($user, $days);
 
-                return $results->map(fn ($row) => $this->formatVolumeTrendItem($row))
+                return $results->map(fn (\stdClass $row): array => $this->formatVolumeTrendItem($row))
                     ->values()
                     ->toArray();
             }
@@ -70,7 +70,7 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.daily_volume.{$user->id}.{$days}",
             now()->addMinutes(30),
-            function () use ($user, $days) {
+            function () use ($user, $days): array {
                 $start = now()->subDays($days - 1)->startOfDay();
                 // @phpstan-ignore-next-line
                 $results = DB::table('workouts')
@@ -156,7 +156,7 @@ class StatsService
                     ->orderBy('workouts.started_at')
                     ->get();
 
-                return $sets->map(fn ($set) => $this->formatExercise1RMItem($set))->toArray();
+                return $sets->map(fn (\stdClass $set): array => $this->formatExercise1RMItem($set))->toArray();
             }
         );
     }
@@ -181,7 +181,7 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.monthly_volume_comparison.{$user->id}",
             now()->addMinutes(30),
-            function () use ($user) {
+            function () use ($user): array {
                 $currentVolume = $this->getPeriodVolume($user, now()->startOfMonth());
                 $previousVolume = $this->getPeriodVolume($user, now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth());
 
@@ -189,10 +189,10 @@ class StatsService
                 $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
                 return [
-                    'current_month_volume' => (float) $currentVolume,
-                    'previous_month_volume' => (float) $previousVolume,
-                    'difference' => (float) $diff,
-                    'percentage' => (float) round($percentage, 1),
+                    'current_month_volume' => $currentVolume,
+                    'previous_month_volume' => $previousVolume,
+                    'difference' => $diff,
+                    'percentage' => round($percentage, 1),
                 ];
             }
         );
@@ -214,16 +214,16 @@ class StatsService
                     ->orderBy('measured_at', 'asc')
                     ->get();
 
-                /** @var array<int, array{date: string, weight: float}> $data */
-                $data = $measurements->map(function ($m) {
-                    return [
+                if ($measurements->isNotEmpty()) {
+                    /** @var array<int, array{date: string, weight: float}> $data */
+                    return $measurements->map(fn ($m) => [
                         'date' => Carbon::parse($m->measured_at)->format('d/m'),
                         'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
                         'weight' => (float) $m->weight,
-                    ];
-                })->toArray();
+                    ])->toArray();
+                }
 
-                return $data;
+                return [];
             }
         );
     }
@@ -274,16 +274,16 @@ class StatsService
                     ->orderBy('measured_at', 'asc')
                     ->get();
 
-                /** @var array<int, array{date: string, body_fat: float}> $data */
-                $data = $measurements->map(function ($m) {
-                    return [
+                if ($measurements->isNotEmpty()) {
+                    /** @var array<int, array{date: string, body_fat: float}> */
+                    return $measurements->map(fn ($m) => [
                         'date' => Carbon::parse($m->measured_at)->format('d/m'),
                         'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
                         'body_fat' => (float) $m->body_fat,
-                    ];
-                })->toArray();
+                    ])->toArray();
+                }
 
-                return $data;
+                return [];
             }
         );
     }
@@ -307,7 +307,7 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.weekly_volume.{$user->id}",
             now()->addMinutes(10),
-            function () use ($user) {
+            function () use ($user): array {
                 $startOfWeek = now()->startOfWeek();
                 $endOfWeek = now()->endOfWeek();
 
@@ -339,10 +339,10 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return [
-            'current_week_volume' => (float) $currentVolume,
-            'previous_week_volume' => (float) $previousVolume,
-            'difference' => (float) $diff,
-            'percentage' => (float) round($percentage, 1),
+            'current_week_volume' => $currentVolume,
+            'previous_week_volume' => $previousVolume,
+            'difference' => $diff,
+            'percentage' => round($percentage, 1),
         ];
     }
 
@@ -356,20 +356,16 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            function () use ($user, $limit): array {
-                return Workout::select(['name', 'started_at', 'ended_at'])
-                    ->where('user_id', $user->id)
-                    ->whereNotNull('ended_at')
-                    ->latest('started_at')
-                    ->take($limit)
-                    ->get()
-                    ->map(fn ($workout) => $this->formatDurationHistoryItem($workout))
-                    ->reverse()
-                    ->values()
-                    ->toArray();
-
-                return $data;
-            }
+            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
+                ->where('user_id', $user->id)
+                ->whereNotNull('ended_at')
+                ->latest('started_at')
+                ->take($limit)
+                ->get()
+                ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->reverse()
+                ->values()
+                ->toArray()
         );
     }
 
@@ -383,20 +379,16 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            function () use ($user, $limit): array {
-                return Workout::with(['workoutLines.sets'])
-                    ->where('user_id', $user->id)
-                    ->whereNotNull('ended_at')
-                    ->latest('started_at')
-                    ->take($limit)
-                    ->get()
-                    ->map(fn ($workout) => $this->formatVolumeHistoryItem($workout))
-                    ->reverse()
-                    ->values()
-                    ->toArray();
-
-                return $data;
-            }
+            fn (): array => Workout::with(['workoutLines.sets'])
+                ->where('user_id', $user->id)
+                ->whereNotNull('ended_at')
+                ->latest('started_at')
+                ->take($limit)
+                ->get()
+                ->map(fn (\App\Models\Workout $workout): array => $this->formatVolumeHistoryItem($workout))
+                ->reverse()
+                ->values()
+                ->toArray()
         );
     }
 
@@ -567,11 +559,7 @@ class StatsService
      */
     protected function formatVolumeHistoryItem(Workout $workout): array
     {
-        $volume = $workout->workoutLines->reduce(function ($carry, $line) {
-            return $carry + $line->sets->reduce(function ($carrySet, $set) {
-                return $carrySet + ($set->weight * $set->reps);
-            }, 0.0);
-        }, 0.0);
+        $volume = $workout->workoutLines->reduce(fn ($carry, $line) => $carry + $line->sets->reduce(fn ($carrySet, $set) => $carrySet + ($set->weight * $set->reps), 0.0), 0.0);
 
         return [
             'date' => $workout->started_at->format('d/m'),

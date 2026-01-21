@@ -31,7 +31,7 @@ class FetchDashboardDataAction
     public function execute(User $user): array
     {
         // Cache dashboard data for 10 minutes
-        return Cache::remember("dashboard_data_{$user->id}", 600, function () use ($user) {
+        return Cache::remember("dashboard_data_{$user->id}", 600, function () use ($user): array {
             $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
 
             $weeklyStats = $this->statsService->getWeeklyVolumeComparison($user);

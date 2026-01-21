@@ -36,16 +36,14 @@ class FetchCalendarEventsAction
             ->whereBetween('started_at', [$start, $end])
             ->with(['workoutLines.exercise'])
             ->get()
-            ->map(function ($workout) {
-                return [
-                    'id' => $workout->id,
-                    'name' => $workout->name ?? 'Séance',
-                    'date' => $workout->started_at->toDateString(),
-                    'started_at' => $workout->started_at->toIso8601String(),
-                    'exercises_count' => $workout->workoutLines->count(),
-                    'preview_exercises' => $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray(),
-                ];
-            });
+            ->map(fn ($workout) => [
+                'id' => $workout->id,
+                'name' => $workout->name ?? 'Séance',
+                'date' => $workout->started_at->toDateString(),
+                'started_at' => $workout->started_at->toIso8601String(),
+                'exercises_count' => $workout->workoutLines->count(),
+                'preview_exercises' => $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray(),
+            ]);
     }
 
     /** @return \Illuminate\Support\Collection<int, mixed> */
@@ -54,13 +52,11 @@ class FetchCalendarEventsAction
         return DailyJournal::where('user_id', $user->id)
             ->whereBetween('date', [$start, $end])
             ->get()
-            ->map(function ($journal) {
-                return [
-                    'id' => $journal->id,
-                    'date' => $journal->date->toDateString(),
-                    'mood_score' => $journal->mood_score,
-                    'has_note' => (bool) ($journal->content ?? false),
-                ];
-            });
+            ->map(fn ($journal) => [
+                'id' => $journal->id,
+                'date' => $journal->date->toDateString(),
+                'mood_score' => $journal->mood_score,
+                'has_note' => (bool) ($journal->content ?? false),
+            ]);
     }
 }

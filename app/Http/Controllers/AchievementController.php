@@ -13,7 +13,7 @@ class AchievementController extends Controller
     public function index(): \Inertia\Response
     {
         $userAchievements = $this->user()->achievements()->get()->keyBy('id');
-        $achievements = Achievement::all()->map(fn ($achievement) => $this->formatAchievement($achievement, $userAchievements));
+        $achievements = Achievement::all()->map(fn (\App\Models\Achievement $achievement): array => $this->formatAchievement($achievement, $userAchievements));
 
         return Inertia::render('Achievements/Index', [
             'achievements' => $achievements,

@@ -28,15 +28,13 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => true,
             'status' => session('status'),
-            'notificationPreferences' => $this->user()->notificationPreferences()->get()->mapWithKeys(function ($pref) {
-                return [
-                    $pref->type => [
-                        'is_enabled' => $pref->is_enabled,
-                        'is_push_enabled' => $pref->is_push_enabled,
-                        'value' => $pref->value,
-                    ],
-                ];
-            }),
+            'notificationPreferences' => $this->user()->notificationPreferences()->get()->mapWithKeys(fn ($pref) => [
+                $pref->type => [
+                    'is_enabled' => $pref->is_enabled,
+                    'is_push_enabled' => $pref->is_push_enabled,
+                    'value' => $pref->value,
+                ],
+            ]),
         ]);
     }
 

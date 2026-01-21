@@ -30,12 +30,10 @@ class ExerciseUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique('exercises')
                     ->ignore($this->exercise)
-                    ->where(function ($query) {
-                        return $query->where(function ($q): void {
-                            $q->whereNull('user_id')
-                                ->orWhere('user_id', $this->user()?->id);
-                        });
-                    }),
+                    ->where(fn ($query) => $query->where(function ($q): void {
+                        $q->whereNull('user_id')
+                            ->orWhere('user_id', $this->user()?->id);
+                    })),
             ],
             'type' => ['sometimes', 'required', Rule::in(['strength', 'cardio', 'timed'])],
             'category' => ['nullable', 'string', 'max:255'],

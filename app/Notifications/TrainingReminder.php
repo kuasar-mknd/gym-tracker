@@ -13,11 +13,6 @@ class TrainingReminder extends Notification implements ShouldQueue
     use Queueable;
 
     /**
-     * Create a new notification instance.
-     */
-    public function __construct() {}
-
-    /**
      * Get the notification's delivery channels.
      *
      * @param  \App\Models\User  $notifiable
