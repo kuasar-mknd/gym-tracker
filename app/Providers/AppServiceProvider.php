@@ -34,6 +34,18 @@ class AppServiceProvider extends ServiceProvider
             return $user instanceof \App\Models\Admin && is_string($role) && $user->hasRole($role) ? true : null;
         });
 
+        Gate::define('viewPulse', function ($user) {
+            $role = config('filament-shield.super_admin.name', 'super_admin');
+
+            // Allow if user is Admin and has super_admin role
+            if ($user instanceof \App\Models\Admin && is_string($role) && $user->hasRole($role)) {
+                return true;
+            }
+
+            // Also allow generic valid 'super_admin' check for User model if you use mixed auth
+            return is_string($role) && method_exists($user, 'hasRole') && $user->hasRole($role);
+        });
+
         Vite::prefetch(concurrency: 3);
 
         Event::listen(
