@@ -1,7 +1,7 @@
 <template>
     <Head title="Calculateur Wilks" />
 
-    <AuthenticatedLayout page-title="Wilks" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Calculateur Wilks" show-back back-route="tools.index">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
@@ -272,7 +272,7 @@ const saveScore = () => {
 }
 
 const deleteEntry = (entry) => {
-    if (confirm('Supprimer ce score ?')) {
+    if (confirm('Voulez-vous supprimer ce score ?')) {
         router.delete(route('tools.wilks.destroy', { wilksScore: entry.id }), {
             preserveScroll: true,
         })

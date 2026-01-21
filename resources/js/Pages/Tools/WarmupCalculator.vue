@@ -1,17 +1,17 @@
 <template>
     <Head title="Calculateur d'Échauffement" />
 
-    <AuthenticatedLayout page-title="Échauffement" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Calculateur d'Échauffement" show-back back-route="tools.index">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1
-                    class="font-display text-4xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                 >
                     Calculateur<br />
                     <span class="text-gradient">d'Échauffement</span>
                 </h1>
-                <p class="mt-2 text-sm font-semibold uppercase tracking-wider text-text-muted">
+                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
                     Prépare ton corps intelligemment
                 </p>
             </header>
@@ -21,30 +21,30 @@
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Poids de travail</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Poids de travail</label>
                             <div class="relative">
                                 <input
                                     type="number"
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center font-display text-3xl font-black text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
                                 />
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-text-muted"
+                                <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
                                 >
                             </div>
                         </div>
                         <div>
-                            <label class="font-display-label mb-2 block text-text-muted">Poids Barre</label>
+                            <label class="font-display-label text-text-muted mb-2 block">Poids Barre</label>
                             <div class="relative">
                                 <input
                                     type="number"
                                     v-model="form.bar_weight"
                                     placeholder="20"
-                                    class="h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center font-display text-3xl font-black text-text-main outline-none transition-all focus:border-electric-orange focus:ring-2 focus:ring-electric-orange/20"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
                                 />
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-text-muted"
+                                <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
                                 >
                             </div>
@@ -53,7 +53,7 @@
 
                     <!-- Warmup Sets -->
                     <div class="mt-6 rounded-3xl border border-slate-100 bg-slate-50 p-6">
-                        <h3 class="mb-4 font-display text-lg font-black uppercase italic text-text-main">
+                        <h3 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
                             Séries d'échauffement
                         </h3>
 
@@ -65,24 +65,24 @@
                             >
                                 <div class="flex items-center gap-4">
                                     <div
-                                        class="flex h-10 w-10 items-center justify-center rounded-full bg-electric-orange/10 font-bold text-electric-orange"
+                                        class="bg-electric-orange/10 text-electric-orange flex h-10 w-10 items-center justify-center rounded-full font-bold"
                                     >
                                         {{ index + 1 }}
                                     </div>
                                     <div>
-                                        <p class="font-bold text-text-main">
+                                        <p class="text-text-main font-bold">
                                             <span v-if="set.label">{{ set.label }}</span>
                                             <span v-else>{{ set.percent }}% du max</span>
                                         </p>
-                                        <p class="text-xs text-text-muted">{{ set.reps }} répétitions</p>
+                                        <p class="text-text-muted text-xs">{{ set.reps }} répétitions</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <p class="font-display text-2xl font-black text-text-main">
+                                    <p class="font-display text-text-main text-2xl font-black">
                                         {{ set.weight
-                                        }}<span class="ml-1 text-base font-normal text-text-muted">kg</span>
+                                        }}<span class="text-text-muted ml-1 text-base font-normal">kg</span>
                                     </p>
-                                    <p class="text-xs font-bold text-text-muted">{{ set.plateLoad }} / côté</p>
+                                    <p class="text-text-muted text-xs font-bold">{{ set.plateLoad }} / côté</p>
                                 </div>
                             </div>
                         </div>
@@ -95,10 +95,10 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="font-display text-lg font-black uppercase italic text-text-main">
+                            <h2 class="font-display text-text-main text-lg font-black uppercase italic">
                                 Configuration
                             </h2>
-                            <p class="mt-1 text-xs font-bold uppercase tracking-wider text-text-muted">
+                            <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
                                 Personnaliser les paliers
                             </p>
                         </div>
@@ -108,7 +108,7 @@
                     </div>
 
                     <div class="space-y-4">
-                        <div class="grid grid-cols-12 gap-2 text-xs font-bold uppercase tracking-wider text-text-muted">
+                        <div class="text-text-muted grid grid-cols-12 gap-2 text-xs font-bold tracking-wider uppercase">
                             <div class="col-span-3">Pourcentage</div>
                             <div class="col-span-3">Répétitions</div>
                             <div class="col-span-5">Label (optionnel)</div>
@@ -121,9 +121,9 @@
                                     <input
                                         type="number"
                                         v-model="step.percent"
-                                        class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold outline-none focus:border-electric-orange"
+                                        class="focus:border-electric-orange w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold outline-none"
                                     />
-                                    <span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-muted"
+                                    <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
                                     >
                                 </div>
@@ -132,7 +132,7 @@
                                 <input
                                     type="number"
                                     v-model="step.reps"
-                                    class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold outline-none focus:border-electric-orange"
+                                    class="focus:border-electric-orange w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold outline-none"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -140,7 +140,7 @@
                                     type="text"
                                     v-model="step.label"
                                     placeholder="ex: Barre vide"
-                                    class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-electric-orange"
+                                    class="focus:border-electric-orange w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none"
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">
@@ -160,7 +160,7 @@
                     </div>
 
                     <div class="border-t border-slate-100 pt-4">
-                        <label class="font-display-label mb-2 block text-text-muted">Arrondi (kg)</label>
+                        <label class="font-display-label text-text-muted mb-2 block">Arrondi (kg)</label>
                         <div class="flex gap-2">
                             <button
                                 v-for="inc in [0.5, 1, 2.5, 5]"
@@ -170,7 +170,7 @@
                                 :class="
                                     form.rounding_increment === inc
                                         ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                        : 'border-slate-200 text-text-muted hover:border-slate-300'
+                                        : 'text-text-muted border-slate-200 hover:border-slate-300'
                                 "
                             >
                                 {{ inc }}

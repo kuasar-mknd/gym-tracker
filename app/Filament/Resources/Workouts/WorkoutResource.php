@@ -7,7 +7,6 @@ use App\Filament\Resources\Workouts\Pages\EditWorkout;
 use App\Filament\Resources\Workouts\Pages\ListWorkouts;
 use App\Filament\Resources\Workouts\Schemas\WorkoutForm;
 use App\Filament\Resources\Workouts\Tables\WorkoutsTable;
-use App\Models\Workout;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -16,11 +15,15 @@ use Filament\Tables\Table;
 
 class WorkoutResource extends Resource
 {
-    protected static ?string $model = Workout::class;
+    protected static ?string $modelLabel = 'Séance';
+
+    protected static ?string $pluralModelLabel = 'Séances';
+
+    protected static ?string $navigationLabel = 'Séances';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendar;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'User Data';
+    protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
     public static function form(Schema $schema): Schema
     {

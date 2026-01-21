@@ -7,7 +7,6 @@ use App\Filament\Resources\Goals\Pages\EditGoal;
 use App\Filament\Resources\Goals\Pages\ListGoals;
 use App\Filament\Resources\Goals\Schemas\GoalForm;
 use App\Filament\Resources\Goals\Tables\GoalsTable;
-use App\Models\Goal;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -16,11 +15,15 @@ use Filament\Tables\Table;
 
 class GoalResource extends Resource
 {
-    protected static ?string $model = Goal::class;
+    protected static ?string $modelLabel = 'Objectif';
+
+    protected static ?string $pluralModelLabel = 'Objectifs';
+
+    protected static ?string $navigationLabel = 'Objectifs';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFlag;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'User Data';
+    protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
     public static function form(Schema $schema): Schema
     {

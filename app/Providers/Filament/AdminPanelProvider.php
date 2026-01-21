@@ -31,22 +31,31 @@ class AdminPanelProvider extends PanelProvider
             ->path('backoffice')
             ->login()
             ->profile()
+            ->brandName('GymTracker')
+            ->favicon(asset('favicon.ico'))
             ->authGuard('admin')
-            ->colors(['primary' => Color::Violet])
+            ->colors([
+                'primary' => Color::Indigo,
+                'gray' => Color::Slate,
+            ])
             ->multiFactorAuthentication([AppAuthentication::make()])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([Dashboard::class])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets($this->getWidgets())
+            ->widgets([
+                \App\Filament\Widgets\StatsOverview::class,
+                \App\Filament\Widgets\UserActivityChart::class,
+                \App\Filament\Widgets\RecentUsersTable::class,
+            ])
             ->middleware($this->getMiddleware())
             ->authMiddleware([Authenticate::class])
             ->plugins([FilamentShieldPlugin::make()])
             ->navigationItems([
-                \Filament\Navigation\NavigationItem::make('Server Pulse')
+                \Filament\Navigation\NavigationItem::make('Pulse Serveur')
                     ->url('/pulse', shouldOpenInNewTab: true)
                     ->icon('heroicon-o-presentation-chart-line')
-                    ->group('System')
+                    ->group('Système')
                     ->sort(100)
                     ->visible(fn (): bool => auth()->user()?->can('viewPulse')),
             ]);
