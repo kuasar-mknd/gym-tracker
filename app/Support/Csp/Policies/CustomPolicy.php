@@ -41,7 +41,7 @@ class CustomPolicy extends Basic
     protected function configureProduction(Policy $policy): void
     {
         $policy
-            ->addNonce(Directive::SCRIPT)
+            ->add(Directive::SCRIPT, Keyword::UNSAFE_INLINE)
             ->add(Directive::STYLE, Keyword::UNSAFE_INLINE); // Keep for now as many components might rely on it
     }
 
