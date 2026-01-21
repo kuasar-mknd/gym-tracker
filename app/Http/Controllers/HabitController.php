@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\HabitStoreRequest;
+use App\Http\Requests\HabitUpdateRequest;
 use App\Models\Habit;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -29,17 +31,9 @@ class HabitController extends Controller
         ]);
     }
 
-    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    public function store(HabitStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'color' => 'nullable|string',
-            'icon' => 'nullable|string',
-            'goal_times_per_week' => 'required|integer|min:1|max:7',
-        ]);
-
-        $data = $validated;
+        $data = $request->validated();
         if (! ($data['color'] ?? null)) {
             $data['color'] = 'bg-slate-500';
         }
@@ -52,22 +46,11 @@ class HabitController extends Controller
         return redirect()->back()->with('success', 'Habitude créée.');
     }
 
-    public function update(Request $request, Habit $habit): \Illuminate\Http\RedirectResponse
+    public function update(HabitUpdateRequest $request, Habit $habit): \Illuminate\Http\RedirectResponse
     {
-        if ($habit->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        // Authorization is handled by HabitUpdateRequest
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'color' => 'nullable|string',
-            'icon' => 'nullable|string',
-            'goal_times_per_week' => 'required|integer|min:1|max:7',
-            'archived' => 'boolean',
-        ]);
-
-        $habit->update($validated);
+        $habit->update($request->validated());
 
         return redirect()->back()->with('success', 'Habitude mise à jour.');
     }
