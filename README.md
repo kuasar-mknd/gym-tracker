@@ -58,6 +58,12 @@
 - **Calculateur de plaques** — Calcule les disques à charger sur ta barre
 - **Estimation 1RM** — Calcul de ton max théorique
 
+### ❤️ Santé & Habitudes [NOUVEAU]
+
+- **Suivi des Habitudes** — Crée et suis tes routines quotidiennes (Méditation, Créatine, Étirements...)
+- **Constantes Vitales** — Enregistre ta fréquence cardiaque et tension artérielle
+- **Composition Corporelle** — Calcul automatique du % de masse grasse (Méthode US Navy)
+
 ### 🔐 Authentification
 
 - **Email/Password** — Inscription classique sécurisée
@@ -66,9 +72,14 @@
 
 ---
 
-## 🖼️ Screenshots
+## 🖼️ Interface "Liquid Glass"
 
-> _Screenshots à venir — L'interface utilise un design "Liquid Glass" avec effets de flou, transparence et dégradés modernes._
+L'application arbore désormais un design system **Liquid Glass** complet :
+
+- **Cartes Translucides** : Effet de flou d'arrière-plan (backdrop-blur) pour une profondeur moderne.
+- **Dégradés Vibrants** : Utilisation de couleurs dynamiques pour visualiser l'intensité.
+- **Micro-interactions** : Retour visuel immédiat pour chaque action.
+- **Mode Sombre Natif** : Optimisé pour une utilisation en salle de sport.
 
 ---
 

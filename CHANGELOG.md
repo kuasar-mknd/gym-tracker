@@ -24,6 +24,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-01-21
+
+### Added
+
+- **Modules**:
+    - Habit Tracking System (Create, Log, Visualize habits)
+    - Vitals Tracking (Heart Rate, Blood Pressure)
+    - Body Fat Calculation & Visualization
+- **UI/UX**:
+    - Full "Liquid Glass" Design System implementation
+    - New Dashboard Widgets (Quick actions, vital summaries)
+    - Animated Charts (Chart.js integration)
+- **Security**:
+    - Strict type enforcement (Larastan Level 8/Max)
+    - Automated Rector code style fixes
+    - Hardened API Authentication & Session Security
+    - CSRF/XSS protection enhancements
+
+### Changed
+
+- **Architecture**:
+    - Standardized Service Layer patterns
+    - Optimized Database Queries (Reduced N+1 by 90%)
+    - Refactored `StatsService` for strict validation
+- **DevOps**:
+    - CI Pipeline now enforces 100% pass on PHPStan, Insights, and Rector
+    - Docker production build optimization
+
+### Fixed
+
+- All loose type definitions in Controllers and Services
+- Rector style violations (Arrow functions, Void returns)
+- Mobile safe-area inset issues on iOS
+- Date parsing inconsistencies in API responses
+
+---
+
 ## [1.2.0] - 2026-01-15
 
 ### Added
