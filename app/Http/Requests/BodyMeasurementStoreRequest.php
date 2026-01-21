@@ -26,6 +26,9 @@ class BodyMeasurementStoreRequest extends FormRequest
             'body_fat' => ['nullable', 'numeric', 'min:1', 'max:100'],
             'measured_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'parts' => ['nullable', 'array'],
+            'parts.*.part' => ['required', 'string', 'max:50'],
+            'parts.*.value' => ['required', 'numeric', 'min:0', 'max:500'],
         ];
     }
 }

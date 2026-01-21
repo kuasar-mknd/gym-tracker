@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Models\BodyMeasurement;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class BodyMeasurementController extends Controller
@@ -33,7 +34,19 @@ class BodyMeasurementController extends Controller
     {
         $this->authorize('create', BodyMeasurement::class);
 
-        $this->user()->bodyMeasurements()->create($request->validated());
+        DB::transaction(function () use ($request) {
+            $this->user()->bodyMeasurements()->create($request->only(['weight', 'body_fat', 'measured_at', 'notes']));
+
+            if ($request->has('parts')) {
+                foreach ($request->input('parts') as $part) {
+                    $this->user()->bodyPartMeasurements()->create([
+                        'part' => $part['part'],
+                        'value' => $part['value'],
+                        'measured_at' => $request->input('measured_at'),
+                    ]);
+                }
+            }
+        });
 
         $this->statsService->clearUserStatsCache($this->user());
 

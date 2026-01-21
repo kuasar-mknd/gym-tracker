@@ -15,4 +15,9 @@ class ToolsController extends Controller
     {
         return Inertia::render('Tools/OneRepMax');
     }
+
+    public function bodyFatCalculator(): \Inertia\Response
+    {
+        return Inertia::render('Tools/BodyFatCalculator');
+    }
 }

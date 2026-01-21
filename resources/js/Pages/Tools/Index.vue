@@ -150,6 +150,21 @@
                 </GlassCard>
             </Link>
 
+            <!-- Body Fat Calculator -->
+            <Link :href="route('tools.body-fat-calculator')" class="group">
+                <GlassCard
+                    class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
+                >
+                    <div class="flex flex-col items-center space-y-4 text-center">
+                        <div class="rounded-full bg-pink-500/20 p-4 text-pink-500">
+                             <span class="material-symbols-outlined text-3xl">accessibility_new</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-text-main">Masse Grasse</h3>
+                        <p class="text-sm text-text-muted">Estime ton taux de gras avec la méthode US Navy.</p>
+                    </div>
+                </GlassCard>
+            </Link>
+
             <!-- Water Tracker -->
             <Link :href="route('tools.water.index')" class="group">
                 <GlassCard

@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function (): void {
 
         Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['store', 'update', 'destroy']);
         Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['store', 'destroy']);
+        Route::resource('body-parts', \App\Http\Controllers\BodyPartMeasurementController::class)->only(['store', 'index']);
         Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['store', 'update', 'destroy']);
         Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['store', 'destroy']);
 
@@ -70,6 +71,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/tools', [\App\Http\Controllers\ToolsController::class, 'index'])->name('tools.index');
     Route::get('/tools/1rm', [\App\Http\Controllers\ToolsController::class, 'oneRepMax'])->name('tools.1rm');
+    Route::get('/tools/body-fat-calculator', [\App\Http\Controllers\ToolsController::class, 'bodyFatCalculator'])->name('tools.body-fat-calculator');
     Route::get('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'index'])->name('tools.wilks');
     Route::post('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'store'])->name('tools.wilks.store');
     Route::delete('/tools/wilks/{wilksScore}', [\App\Http\Controllers\WilksScoreController::class, 'destroy'])->name('tools.wilks.destroy');

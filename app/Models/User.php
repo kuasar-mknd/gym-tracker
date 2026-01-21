@@ -74,6 +74,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\BodyPartMeasurement, $this>
+     */
+    public function bodyPartMeasurements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BodyPartMeasurement::class);
+    }
+
+    /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\PersonalRecord, $this>
      */
     public function personalRecords(): \Illuminate\Database\Eloquent\Relations\HasMany
