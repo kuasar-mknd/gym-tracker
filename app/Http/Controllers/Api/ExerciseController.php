@@ -7,6 +7,7 @@ use App\Http\Requests\ExerciseUpdateRequest;
 use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Cache;
 use OpenApi\Attributes as OA;
 
 class ExerciseController extends Controller
@@ -51,6 +52,8 @@ class ExerciseController extends Controller
         $exercise->user_id = $this->user()->id;
         $exercise->save();
 
+        Cache::forget("exercises_list_{$this->user()->id}");
+
         return new ExerciseResource($exercise);
     }
 
@@ -73,6 +76,8 @@ class ExerciseController extends Controller
 
         $exercise->update($validated);
 
+        Cache::forget("exercises_list_{$this->user()->id}");
+
         return new ExerciseResource($exercise);
     }
 
@@ -84,6 +89,8 @@ class ExerciseController extends Controller
         $this->authorize('delete', $exercise);
 
         $exercise->delete();
+
+        Cache::forget("exercises_list_{$this->user()->id}");
 
         return response()->noContent();
     }
