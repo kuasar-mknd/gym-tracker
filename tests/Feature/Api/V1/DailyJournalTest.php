@@ -13,39 +13,39 @@ use function Pest\Laravel\putJson;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-describe('Guest', function () {
-    test('cannot list journals', function () {
+describe('Guest', function (): void {
+    test('cannot list journals', function (): void {
         getJson(route('api.v1.daily-journals.index'))->assertUnauthorized();
     });
 
-    test('cannot create journal', function () {
+    test('cannot create journal', function (): void {
         postJson(route('api.v1.daily-journals.store'), [])->assertUnauthorized();
     });
 
-    test('cannot view journal', function () {
+    test('cannot view journal', function (): void {
         $journal = DailyJournal::factory()->create();
         getJson(route('api.v1.daily-journals.show', $journal))->assertUnauthorized();
     });
 
-    test('cannot update journal', function () {
+    test('cannot update journal', function (): void {
         $journal = DailyJournal::factory()->create();
         putJson(route('api.v1.daily-journals.update', $journal), [])->assertUnauthorized();
     });
 
-    test('cannot delete journal', function () {
+    test('cannot delete journal', function (): void {
         $journal = DailyJournal::factory()->create();
         deleteJson(route('api.v1.daily-journals.destroy', $journal))->assertUnauthorized();
     });
 });
 
-describe('Authenticated', function () {
-    beforeEach(function () {
+describe('Authenticated', function (): void {
+    beforeEach(function (): void {
         $this->user = User::factory()->create();
         Sanctum::actingAs($this->user);
     });
 
-    describe('Index', function () {
-        test('user can list their journals', function () {
+    describe('Index', function (): void {
+        test('user can list their journals', function (): void {
             DailyJournal::factory()->count(3)->create(['user_id' => $this->user->id]);
             DailyJournal::factory()->create(['user_id' => User::factory()->create()->id]); // Other user's journal
 
@@ -62,7 +62,7 @@ describe('Authenticated', function () {
                 ]);
         });
 
-        test('journals are ordered by date desc', function () {
+        test('journals are ordered by date desc', function (): void {
             $journal1 = DailyJournal::factory()->create(['user_id' => $this->user->id, 'date' => now()->subDays(2)->format('Y-m-d')]);
             $journal2 = DailyJournal::factory()->create(['user_id' => $this->user->id, 'date' => now()->format('Y-m-d')]);
 
@@ -73,8 +73,8 @@ describe('Authenticated', function () {
         });
     });
 
-    describe('Store', function () {
-        test('user can create a journal entry', function () {
+    describe('Store', function (): void {
+        test('user can create a journal entry', function (): void {
             $data = [
                 'date' => now()->format('Y-m-d'),
                 'content' => 'Great day!',
@@ -99,13 +99,13 @@ describe('Authenticated', function () {
             ]);
         });
 
-        test('validation: date is required', function () {
+        test('validation: date is required', function (): void {
             postJson(route('api.v1.daily-journals.store'), ['content' => 'No date'])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['date']);
         });
 
-        test('validation: unique date per user', function () {
+        test('validation: unique date per user', function (): void {
             DailyJournal::factory()->create([
                 'user_id' => $this->user->id,
                 'date' => '2023-01-01',
@@ -119,7 +119,7 @@ describe('Authenticated', function () {
                 ->assertJsonValidationErrors(['date']);
         });
 
-        test('validation: numeric ranges', function () {
+        test('validation: numeric ranges', function (): void {
             $data = [
                 'date' => now()->format('Y-m-d'),
                 'mood_score' => 6, // max 5
@@ -141,8 +141,8 @@ describe('Authenticated', function () {
         });
     });
 
-    describe('Show', function () {
-        test('user can view their journal', function () {
+    describe('Show', function (): void {
+        test('user can view their journal', function (): void {
             $journal = DailyJournal::factory()->create(['user_id' => $this->user->id]);
 
             getJson(route('api.v1.daily-journals.show', $journal))
@@ -150,7 +150,7 @@ describe('Authenticated', function () {
                 ->assertJsonPath('data.id', $journal->id);
         });
 
-        test('user cannot view others journal', function () {
+        test('user cannot view others journal', function (): void {
             $otherUser = User::factory()->create();
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 
@@ -159,8 +159,8 @@ describe('Authenticated', function () {
         });
     });
 
-    describe('Update', function () {
-        test('user can update their journal', function () {
+    describe('Update', function (): void {
+        test('user can update their journal', function (): void {
             $journal = DailyJournal::factory()->create([
                 'user_id' => $this->user->id,
                 'mood_score' => 3,
@@ -176,7 +176,7 @@ describe('Authenticated', function () {
             ]);
         });
 
-        test('user cannot update others journal', function () {
+        test('user cannot update others journal', function (): void {
             $otherUser = User::factory()->create();
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 
@@ -184,7 +184,7 @@ describe('Authenticated', function () {
                 ->assertForbidden();
         });
 
-        test('validation: cannot update date to existing date', function () {
+        test('validation: cannot update date to existing date', function (): void {
             DailyJournal::factory()->create(['user_id' => $this->user->id, 'date' => '2023-01-01']);
             $journal = DailyJournal::factory()->create(['user_id' => $this->user->id, 'date' => '2023-01-02']);
 
@@ -194,8 +194,8 @@ describe('Authenticated', function () {
         });
     });
 
-    describe('Destroy', function () {
-        test('user can delete their journal', function () {
+    describe('Destroy', function (): void {
+        test('user can delete their journal', function (): void {
             $journal = DailyJournal::factory()->create(['user_id' => $this->user->id]);
 
             deleteJson(route('api.v1.daily-journals.destroy', $journal))
@@ -204,7 +204,7 @@ describe('Authenticated', function () {
             assertDatabaseMissing('daily_journals', ['id' => $journal->id]);
         });
 
-        test('user cannot delete others journal', function () {
+        test('user cannot delete others journal', function (): void {
             $otherUser = User::factory()->create();
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 

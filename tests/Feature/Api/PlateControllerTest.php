@@ -4,12 +4,12 @@ use App\Models\Plate;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->user = User::factory()->create();
     Sanctum::actingAs($this->user);
 });
 
-test('can list plates', function () {
+test('can list plates', function (): void {
     Plate::factory()->count(3)->create(['user_id' => $this->user->id]);
 
     $response = $this->getJson(route('api.v1.plates.index'));
@@ -18,7 +18,7 @@ test('can list plates', function () {
         ->assertJsonCount(3, 'data');
 });
 
-test('can create a plate', function () {
+test('can create a plate', function (): void {
     $data = [
         'weight' => 20.5,
         'quantity' => 2,
@@ -39,7 +39,7 @@ test('can create a plate', function () {
     ]);
 });
 
-test('can show a plate', function () {
+test('can show a plate', function (): void {
     $plate = Plate::factory()->create(['user_id' => $this->user->id]);
 
     $response = $this->getJson(route('api.v1.plates.show', $plate));
@@ -52,7 +52,7 @@ test('can show a plate', function () {
         ]);
 });
 
-test('can update a plate', function () {
+test('can update a plate', function (): void {
     $plate = Plate::factory()->create([
         'user_id' => $this->user->id,
         'weight' => 10,
@@ -79,7 +79,7 @@ test('can update a plate', function () {
     ]);
 });
 
-test('can delete a plate', function () {
+test('can delete a plate', function (): void {
     $plate = Plate::factory()->create(['user_id' => $this->user->id]);
 
     $response = $this->deleteJson(route('api.v1.plates.destroy', $plate));
@@ -89,7 +89,7 @@ test('can delete a plate', function () {
     $this->assertDatabaseMissing('plates', ['id' => $plate->id]);
 });
 
-test('cannot view another users plate', function () {
+test('cannot view another users plate', function (): void {
     $otherUser = User::factory()->create();
     $plate = Plate::factory()->create(['user_id' => $otherUser->id]);
 
@@ -98,7 +98,7 @@ test('cannot view another users plate', function () {
     $response->assertForbidden();
 });
 
-test('cannot update another users plate', function () {
+test('cannot update another users plate', function (): void {
     $otherUser = User::factory()->create();
     $plate = Plate::factory()->create(['user_id' => $otherUser->id]);
 
@@ -109,7 +109,7 @@ test('cannot update another users plate', function () {
     $response->assertForbidden();
 });
 
-test('cannot delete another users plate', function () {
+test('cannot delete another users plate', function (): void {
     $otherUser = User::factory()->create();
     $plate = Plate::factory()->create(['user_id' => $otherUser->id]);
 

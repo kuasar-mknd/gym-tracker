@@ -4,7 +4,7 @@ use App\Models\NotificationPreference;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 
-test('users can list their notification preferences', function () {
+test('users can list their notification preferences', function (): void {
     $user = User::factory()->create();
     NotificationPreference::factory()->count(3)->create(['user_id' => $user->id]);
 
@@ -16,7 +16,7 @@ test('users can list their notification preferences', function () {
         ->assertJsonCount(3, 'data');
 });
 
-test('users cannot see others notification preferences', function () {
+test('users cannot see others notification preferences', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     NotificationPreference::factory()->create(['user_id' => $otherUser->id]);
@@ -29,7 +29,7 @@ test('users cannot see others notification preferences', function () {
         ->assertJsonCount(0, 'data');
 });
 
-test('users can create a notification preference', function () {
+test('users can create a notification preference', function (): void {
     $user = User::factory()->create();
 
     Sanctum::actingAs($user);
@@ -51,7 +51,7 @@ test('users can create a notification preference', function () {
     ]);
 });
 
-test('users cannot create duplicate notification preference type', function () {
+test('users cannot create duplicate notification preference type', function (): void {
     $user = User::factory()->create();
     NotificationPreference::factory()->create(['user_id' => $user->id, 'type' => 'daily_reminder']);
 
@@ -66,7 +66,7 @@ test('users cannot create duplicate notification preference type', function () {
         ->assertJsonValidationErrors(['type']);
 });
 
-test('users can update their notification preference', function () {
+test('users can update their notification preference', function (): void {
     $user = User::factory()->create();
     $preference = NotificationPreference::factory()->create(['user_id' => $user->id]);
 
@@ -85,7 +85,7 @@ test('users can update their notification preference', function () {
     ]);
 });
 
-test('users cannot update others notification preference', function () {
+test('users cannot update others notification preference', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $preference = NotificationPreference::factory()->create(['user_id' => $otherUser->id]);
@@ -99,7 +99,7 @@ test('users cannot update others notification preference', function () {
     $response->assertForbidden();
 });
 
-test('users can delete their notification preference', function () {
+test('users can delete their notification preference', function (): void {
     $user = User::factory()->create();
     $preference = NotificationPreference::factory()->create(['user_id' => $user->id]);
 
@@ -112,7 +112,7 @@ test('users can delete their notification preference', function () {
     $this->assertDatabaseMissing('notification_preferences', ['id' => $preference->id]);
 });
 
-test('users cannot delete others notification preference', function () {
+test('users cannot delete others notification preference', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $preference = NotificationPreference::factory()->create(['user_id' => $otherUser->id]);

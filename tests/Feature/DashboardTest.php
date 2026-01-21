@@ -4,7 +4,7 @@ use App\Models\BodyMeasurement;
 use App\Models\User;
 use App\Models\Workout;
 
-test('dashboard displays correct workout stats', function () {
+test('dashboard displays correct workout stats', function (): void {
     $user = User::factory()->create();
 
     // Create 10 workouts from last month

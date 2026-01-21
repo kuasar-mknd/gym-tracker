@@ -4,7 +4,7 @@ use App\Models\Habit;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 
-test('user can view habits page', function () {
+test('user can view habits page', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
@@ -17,7 +17,7 @@ test('user can view habits page', function () {
         );
 });
 
-test('user can create a habit', function () {
+test('user can create a habit', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
@@ -36,7 +36,7 @@ test('user can create a habit', function () {
     ]);
 });
 
-test('user can update a habit', function () {
+test('user can update a habit', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
@@ -57,7 +57,7 @@ test('user can update a habit', function () {
     ]);
 });
 
-test('user can delete a habit', function () {
+test('user can delete a habit', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
@@ -68,7 +68,7 @@ test('user can delete a habit', function () {
     $this->assertDatabaseMissing('habits', ['id' => $habit->id]);
 });
 
-test('user can toggle a habit', function () {
+test('user can toggle a habit', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
     $date = now()->toDateString();
@@ -90,7 +90,7 @@ test('user can toggle a habit', function () {
     expect(\App\Models\HabitLog::where('habit_id', $habit->id)->whereDate('date', $date)->exists())->toBeFalse();
 });
 
-test('user cannot update other users habits', function () {
+test('user cannot update other users habits', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
@@ -103,7 +103,7 @@ test('user cannot update other users habits', function () {
         ->assertForbidden();
 });
 
-test('user cannot toggle other users habits', function () {
+test('user cannot toggle other users habits', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);

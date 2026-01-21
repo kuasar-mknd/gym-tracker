@@ -6,7 +6,7 @@ use App\Models\Workout;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 
-test('index returns list of user workouts', function () {
+test('index returns list of user workouts', function (): void {
     $user = User::factory()->create();
     $workouts = Workout::factory()->count(3)->create(['user_id' => $user->id]);
 
@@ -25,7 +25,7 @@ test('index returns list of user workouts', function () {
         ]);
 });
 
-test('index only shows authenticated user workouts', function () {
+test('index only shows authenticated user workouts', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
@@ -40,13 +40,13 @@ test('index only shows authenticated user workouts', function () {
         ->assertJsonCount(2, 'data');
 });
 
-test('unauthenticated user cannot list workouts', function () {
+test('unauthenticated user cannot list workouts', function (): void {
     $response = $this->getJson(route('api.v1.workouts.index'));
 
     $response->assertUnauthorized();
 });
 
-test('store creates new workout and dispatches job', function () {
+test('store creates new workout and dispatches job', function (): void {
     Queue::fake();
     $user = User::factory()->create();
     Sanctum::actingAs($user);
@@ -70,7 +70,7 @@ test('store creates new workout and dispatches job', function () {
     Queue::assertPushed(RecalculateUserStats::class);
 });
 
-test('store requires name', function () {
+test('store requires name', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -82,7 +82,7 @@ test('store requires name', function () {
         ->assertJsonValidationErrors(['name']);
 });
 
-test('show returns workout details', function () {
+test('show returns workout details', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     Sanctum::actingAs($user);
@@ -93,7 +93,7 @@ test('show returns workout details', function () {
         ->assertJsonFragment(['id' => $workout->id, 'name' => $workout->name]);
 });
 
-test('show returns 403 for other user workout', function () {
+test('show returns 403 for other user workout', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -105,7 +105,7 @@ test('show returns 403 for other user workout', function () {
     $response->assertForbidden();
 });
 
-test('show returns 404 for non-existent workout', function () {
+test('show returns 404 for non-existent workout', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -114,7 +114,7 @@ test('show returns 404 for non-existent workout', function () {
     $response->assertNotFound();
 });
 
-test('update modifies workout and dispatches job', function () {
+test('update modifies workout and dispatches job', function (): void {
     Queue::fake();
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -138,7 +138,7 @@ test('update modifies workout and dispatches job', function () {
     Queue::assertPushed(RecalculateUserStats::class);
 });
 
-test('update returns 403 for other user workout', function () {
+test('update returns 403 for other user workout', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -149,7 +149,7 @@ test('update returns 403 for other user workout', function () {
     $response->assertForbidden();
 });
 
-test('update validates input', function () {
+test('update validates input', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     Sanctum::actingAs($user);
@@ -163,7 +163,7 @@ test('update validates input', function () {
         ->assertJsonValidationErrors(['name']);
 });
 
-test('destroy deletes workout and dispatches job', function () {
+test('destroy deletes workout and dispatches job', function (): void {
     Queue::fake();
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -178,7 +178,7 @@ test('destroy deletes workout and dispatches job', function () {
     Queue::assertPushed(RecalculateUserStats::class);
 });
 
-test('destroy returns 403 for other user workout', function () {
+test('destroy returns 403 for other user workout', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);

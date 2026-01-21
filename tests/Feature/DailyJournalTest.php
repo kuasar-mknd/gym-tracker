@@ -12,7 +12,7 @@ use function Pest\Laravel\post;
 
 uses(RefreshDatabase::class);
 
-test('authenticated user can view daily journal index', function () {
+test('authenticated user can view daily journal index', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -24,7 +24,7 @@ test('authenticated user can view daily journal index', function () {
         );
 });
 
-test('authenticated user can create a daily journal entry', function () {
+test('authenticated user can create a daily journal entry', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -49,7 +49,7 @@ test('authenticated user can create a daily journal entry', function () {
     ]);
 });
 
-test('authenticated user can update an existing journal entry for the same date', function () {
+test('authenticated user can update an existing journal entry for the same date', function (): void {
     $user = User::factory()->create();
     $date = now()->format('Y-m-d');
 
@@ -81,7 +81,7 @@ test('authenticated user can update an existing journal entry for the same date'
     ]);
 });
 
-test('authenticated user can delete their own journal entry', function () {
+test('authenticated user can delete their own journal entry', function (): void {
     $user = User::factory()->create();
     $journal = DailyJournal::factory()->create(['user_id' => $user->id]);
 
@@ -93,7 +93,7 @@ test('authenticated user can delete their own journal entry', function () {
 });
 
 // Validation Tests
-test('validation: date is required', function () {
+test('validation: date is required', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -103,7 +103,7 @@ test('validation: date is required', function () {
         ->assertSessionHasErrors('date');
 });
 
-test('validation: content max length', function () {
+test('validation: content max length', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -114,7 +114,7 @@ test('validation: content max length', function () {
         ->assertSessionHasErrors('content');
 });
 
-test('validation: mood score range 1-5', function () {
+test('validation: mood score range 1-5', function (): void {
     $user = User::factory()->create();
     $date = now()->format('Y-m-d');
 
@@ -129,7 +129,7 @@ test('validation: mood score range 1-5', function () {
         ->assertSessionHasErrors('mood_score');
 });
 
-test('validation: sleep quality range 1-5', function () {
+test('validation: sleep quality range 1-5', function (): void {
     $user = User::factory()->create();
     $date = now()->format('Y-m-d');
 
@@ -138,7 +138,7 @@ test('validation: sleep quality range 1-5', function () {
         ->assertSessionHasErrors('sleep_quality');
 });
 
-test('validation: stress level range 1-10', function () {
+test('validation: stress level range 1-10', function (): void {
     $user = User::factory()->create();
     $date = now()->format('Y-m-d');
 
@@ -147,7 +147,7 @@ test('validation: stress level range 1-10', function () {
         ->assertSessionHasErrors('stress_level');
 });
 
-test('validation: energy level range 1-10', function () {
+test('validation: energy level range 1-10', function (): void {
     $user = User::factory()->create();
     $date = now()->format('Y-m-d');
 
@@ -156,7 +156,7 @@ test('validation: energy level range 1-10', function () {
         ->assertSessionHasErrors('energy_level');
 });
 
-test('validation: motivation level range 1-10', function () {
+test('validation: motivation level range 1-10', function (): void {
     $user = User::factory()->create();
     $date = now()->format('Y-m-d');
 
@@ -165,7 +165,7 @@ test('validation: motivation level range 1-10', function () {
         ->assertSessionHasErrors('motivation_level');
 });
 
-test('validation: nutrition score range 1-5', function () {
+test('validation: nutrition score range 1-5', function (): void {
     $user = User::factory()->create();
     $date = now()->format('Y-m-d');
 
@@ -174,7 +174,7 @@ test('validation: nutrition score range 1-5', function () {
         ->assertSessionHasErrors('nutrition_score');
 });
 
-test('validation: training intensity range 1-10', function () {
+test('validation: training intensity range 1-10', function (): void {
     $user = User::factory()->create();
     $date = now()->format('Y-m-d');
 
@@ -184,7 +184,7 @@ test('validation: training intensity range 1-10', function () {
 });
 
 // Authorization Tests
-test('unauthenticated user cannot access journal pages', function () {
+test('unauthenticated user cannot access journal pages', function (): void {
     get(route('daily-journals.index'))->assertRedirect(route('login'));
 
     post(route('daily-journals.store'), [
@@ -193,7 +193,7 @@ test('unauthenticated user cannot access journal pages', function () {
     ])->assertRedirect(route('login'));
 });
 
-test('user cannot delete another users journal entry', function () {
+test('user cannot delete another users journal entry', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $otherJournal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);

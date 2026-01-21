@@ -15,13 +15,13 @@ use App\Models\User;
 use App\Models\Workout;
 use Laravel\Dusk\Browser;
 
-beforeEach(function () {
+beforeEach(function (): void {
     // Ensure we have test data
     Exercise::factory()->count(5)->create();
 });
 
-test('login page displays correctly', function () {
-    $this->browse(function (Browser $browser) {
+test('login page displays correctly', function (): void {
+    $this->browse(function (Browser $browser): void {
         $browser->visit('/login')
             ->waitForText('BON RETOUR')
             ->assertVisible('input[type="email"]')
@@ -30,8 +30,8 @@ test('login page displays correctly', function () {
     });
 });
 
-test('register page displays correctly', function () {
-    $this->browse(function (Browser $browser) {
+test('register page displays correctly', function (): void {
+    $this->browse(function (Browser $browser): void {
         $browser->visit('/register')
             ->waitForText('BIENVENUE')
             ->assertVisible('input[autocomplete="name"]')
@@ -45,12 +45,12 @@ test('register page displays correctly', function () {
  * AUTHENTICATION FLOW
  * ================================
  */
-test('user can login and see dashboard', function () {
+test('user can login and see dashboard', function (): void {
     $user = User::factory()->create([
         'password' => bcrypt('password123'),
     ]);
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->visit('/login')
             ->type('input[type="email"]', $user->email)
             ->type('input[type="password"]', 'password123')
@@ -60,8 +60,8 @@ test('user can login and see dashboard', function () {
     });
 });
 
-test('user can register', function () {
-    $this->browse(function (Browser $browser) {
+test('user can register', function (): void {
+    $this->browse(function (Browser $browser): void {
         $browser->logout()
             ->visit('/register')
             ->type('input[name="name"]', 'Test User')
@@ -79,11 +79,11 @@ test('user can register', function () {
  * AUTHENTICATED PAGE RENDERING
  * ================================
  */
-test('dashboard page renders correctly', function () {
+test('dashboard page renders correctly', function (): void {
     $user = User::factory()->create();
     Workout::factory()->count(3)->create(['user_id' => $user->id]);
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/dashboard')
             ->assertPathIs('/dashboard')
@@ -96,11 +96,11 @@ test('dashboard page renders correctly', function () {
     });
 });
 
-test('workouts page renders correctly', function () {
+test('workouts page renders correctly', function (): void {
     $user = User::factory()->create();
     Workout::factory()->count(5)->create(['user_id' => $user->id]);
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/workouts')
             ->assertPathIs('/workouts')
@@ -110,10 +110,10 @@ test('workouts page renders correctly', function () {
     });
 });
 
-test('stats page renders correctly', function () {
+test('stats page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/stats')
             ->assertPathIs('/stats')
@@ -123,10 +123,10 @@ test('stats page renders correctly', function () {
     });
 });
 
-test('goals page renders correctly', function () {
+test('goals page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/goals')
             ->assertPathIs('/goals')
@@ -135,10 +135,10 @@ test('goals page renders correctly', function () {
     });
 });
 
-test('exercises page renders correctly', function () {
+test('exercises page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/exercises')
             ->assertPathIs('/exercises')
@@ -147,10 +147,10 @@ test('exercises page renders correctly', function () {
     });
 });
 
-test('templates page renders correctly', function () {
+test('templates page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/templates')
             ->assertPathIs('/templates')
@@ -159,10 +159,10 @@ test('templates page renders correctly', function () {
     });
 });
 
-test('body measurements page renders correctly', function () {
+test('body measurements page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/body-measurements')
             ->assertPathIs('/body-measurements')
@@ -171,10 +171,10 @@ test('body measurements page renders correctly', function () {
     });
 });
 
-test('journal page renders correctly', function () {
+test('journal page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/daily-journals')
             ->assertPathIs('/daily-journals')
@@ -183,10 +183,10 @@ test('journal page renders correctly', function () {
     });
 });
 
-test('notifications page renders correctly', function () {
+test('notifications page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/notifications')
             ->assertPathIs('/notifications')
@@ -195,10 +195,10 @@ test('notifications page renders correctly', function () {
     });
 });
 
-test('achievements page renders correctly', function () {
+test('achievements page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/achievements')
             ->assertPathIs('/achievements')
@@ -207,10 +207,10 @@ test('achievements page renders correctly', function () {
     });
 });
 
-test('profile page renders correctly', function () {
+test('profile page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/profile')
             ->assertPathIs('/profile')
@@ -219,10 +219,10 @@ test('profile page renders correctly', function () {
     });
 });
 
-test('tools page renders correctly', function () {
+test('tools page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/tools')
             ->assertPathIs('/tools')
@@ -231,10 +231,10 @@ test('tools page renders correctly', function () {
     });
 });
 
-test('plates calculator page renders correctly', function () {
+test('plates calculator page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/plates')
             ->assertPathIs('/plates')
@@ -248,12 +248,12 @@ test('plates calculator page renders correctly', function () {
  * CRITICAL USER FLOWS
  * ================================
  */
-test('user can perform full workout logging flow', function () {
+test('user can perform full workout logging flow', function (): void {
     $this->markTestSkipped('Skipping due to persistent CI timeout in workout creation flow.');
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create(['name' => 'Bench Press', 'category' => 'Pectoraux']);
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/workouts')
             // 1. Start new workout
@@ -300,10 +300,10 @@ test('user can perform full workout logging flow', function () {
     });
 });
 
-test('navigation works correctly on mobile', function () {
+test('navigation works correctly on mobile', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->resize(375, 812) // iPhone X dimensions
             ->visit('/dashboard')

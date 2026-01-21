@@ -14,20 +14,20 @@ use function Pest\Laravel\putJson;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-describe('Guest', function () {
-    test('cannot list goals', function () {
+describe('Guest', function (): void {
+    test('cannot list goals', function (): void {
         getJson(route('api.v1.goals.index'))->assertUnauthorized();
     });
 });
 
-describe('Authenticated', function () {
-    beforeEach(function () {
+describe('Authenticated', function (): void {
+    beforeEach(function (): void {
         $this->user = User::factory()->create();
         Sanctum::actingAs($this->user);
     });
 
-    describe('Index', function () {
-        test('user can list their goals', function () {
+    describe('Index', function (): void {
+        test('user can list their goals', function (): void {
             Goal::factory()->count(3)->create(['user_id' => $this->user->id]);
 
             $response = getJson(route('api.v1.goals.index'));
@@ -43,7 +43,7 @@ describe('Authenticated', function () {
                 ]);
         });
 
-        test('user can sort goals', function () {
+        test('user can sort goals', function (): void {
             $goal1 = Goal::factory()->create(['user_id' => $this->user->id, 'created_at' => now()->subDays(2)]);
             $goal2 = Goal::factory()->create(['user_id' => $this->user->id, 'created_at' => now()]);
 
@@ -56,7 +56,7 @@ describe('Authenticated', function () {
             $response->assertJsonPath('data.0.id', $goal1->id);
         });
 
-        test('user can include exercise', function () {
+        test('user can include exercise', function (): void {
             $exercise = Exercise::factory()->create();
             Goal::factory()->create([
                 'user_id' => $this->user->id,
@@ -70,7 +70,7 @@ describe('Authenticated', function () {
                 ->assertJsonPath('data.0.exercise.id', $exercise->id);
         });
 
-        test('user cannot see others goals', function () {
+        test('user cannot see others goals', function (): void {
             $otherUser = User::factory()->create();
             Goal::factory()->create(['user_id' => $otherUser->id]);
 
@@ -81,8 +81,8 @@ describe('Authenticated', function () {
         });
     });
 
-    describe('Store', function () {
-        test('user can create a goal', function () {
+    describe('Store', function (): void {
+        test('user can create a goal', function (): void {
             $exercise = Exercise::factory()->create();
 
             $data = [
@@ -106,19 +106,19 @@ describe('Authenticated', function () {
             ]);
         });
 
-        test('validation: required fields', function () {
+        test('validation: required fields', function (): void {
             postJson(route('api.v1.goals.store'), [])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['title', 'type', 'target_value']);
         });
 
-        test('validation: type must be valid', function () {
+        test('validation: type must be valid', function (): void {
             postJson(route('api.v1.goals.store'), ['type' => 'invalid'])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['type']);
         });
 
-        test('validation: exercise_id required for weight type', function () {
+        test('validation: exercise_id required for weight type', function (): void {
             postJson(route('api.v1.goals.store'), [
                 'title' => 'Bench Press',
                 'type' => 'weight',
@@ -128,7 +128,7 @@ describe('Authenticated', function () {
                 ->assertJsonValidationErrors(['exercise_id']);
         });
 
-        test('validation: measurement_type required for measurement type', function () {
+        test('validation: measurement_type required for measurement type', function (): void {
             postJson(route('api.v1.goals.store'), [
                 'title' => 'Waist',
                 'type' => 'measurement',
@@ -138,7 +138,7 @@ describe('Authenticated', function () {
                 ->assertJsonValidationErrors(['measurement_type']);
         });
 
-        test('validation: deadline must be in future', function () {
+        test('validation: deadline must be in future', function (): void {
             postJson(route('api.v1.goals.store'), [
                 'title' => 'Future Goal',
                 'type' => 'frequency',
@@ -150,8 +150,8 @@ describe('Authenticated', function () {
         });
     });
 
-    describe('Show', function () {
-        test('user can view their goal', function () {
+    describe('Show', function (): void {
+        test('user can view their goal', function (): void {
             $goal = Goal::factory()->create(['user_id' => $this->user->id]);
 
             getJson(route('api.v1.goals.show', $goal))
@@ -159,7 +159,7 @@ describe('Authenticated', function () {
                 ->assertJsonPath('data.id', $goal->id);
         });
 
-        test('user cannot view others goal', function () {
+        test('user cannot view others goal', function (): void {
             $otherUser = User::factory()->create();
             $goal = Goal::factory()->create(['user_id' => $otherUser->id]);
 
@@ -167,7 +167,7 @@ describe('Authenticated', function () {
                 ->assertForbidden();
         });
 
-        test('shows exercise if included', function () {
+        test('shows exercise if included', function (): void {
             $exercise = Exercise::factory()->create();
             $goal = Goal::factory()->create([
                 'user_id' => $this->user->id,
@@ -180,8 +180,8 @@ describe('Authenticated', function () {
         });
     });
 
-    describe('Update', function () {
-        test('user can update their goal', function () {
+    describe('Update', function (): void {
+        test('user can update their goal', function (): void {
             $goal = Goal::factory()->create(['user_id' => $this->user->id, 'title' => 'Old Title']);
 
             putJson(route('api.v1.goals.update', $goal), ['title' => 'New Title'])
@@ -191,7 +191,7 @@ describe('Authenticated', function () {
             assertDatabaseHas('goals', ['id' => $goal->id, 'title' => 'New Title']);
         });
 
-        test('user cannot update others goal', function () {
+        test('user cannot update others goal', function (): void {
             $otherUser = User::factory()->create();
             $goal = Goal::factory()->create(['user_id' => $otherUser->id]);
 
@@ -199,7 +199,7 @@ describe('Authenticated', function () {
                 ->assertForbidden();
         });
 
-        test('validation: partial update', function () {
+        test('validation: partial update', function (): void {
             $goal = Goal::factory()->create(['user_id' => $this->user->id]);
 
             putJson(route('api.v1.goals.update', $goal), ['target_value' => 200])
@@ -207,7 +207,7 @@ describe('Authenticated', function () {
                 ->assertJsonPath('data.target_value', 200);
         });
 
-        test('validation: deadline can be any date on update', function () {
+        test('validation: deadline can be any date on update', function (): void {
             $goal = Goal::factory()->create(['user_id' => $this->user->id]);
 
             putJson(route('api.v1.goals.update', $goal), ['deadline' => now()->subDay()->format('Y-m-d')])
@@ -215,8 +215,8 @@ describe('Authenticated', function () {
         });
     });
 
-    describe('Destroy', function () {
-        test('user can delete their goal', function () {
+    describe('Destroy', function (): void {
+        test('user can delete their goal', function (): void {
             $goal = Goal::factory()->create(['user_id' => $this->user->id]);
 
             deleteJson(route('api.v1.goals.destroy', $goal))
@@ -225,7 +225,7 @@ describe('Authenticated', function () {
             assertDatabaseMissing('goals', ['id' => $goal->id]);
         });
 
-        test('user cannot delete others goal', function () {
+        test('user cannot delete others goal', function (): void {
             $otherUser = User::factory()->create();
             $goal = Goal::factory()->create(['user_id' => $otherUser->id]);
 

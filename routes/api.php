@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\WorkoutTemplateController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.')->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.')->group(function (): void {
     Route::get('/user', function (Request $request) {
         return new \App\Http\Resources\UserResource($request->user());
     });

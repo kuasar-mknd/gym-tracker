@@ -10,7 +10,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
-test('authenticated user can view stats page', function () {
+test('authenticated user can view stats page', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -25,7 +25,7 @@ test('authenticated user can view stats page', function () {
         );
 });
 
-test('stats page calculates volume trend correctly', function () {
+test('stats page calculates volume trend correctly', function (): void {
     $user = User::factory()->create();
 
     // Create a workout 2 days ago
@@ -67,7 +67,7 @@ test('stats page calculates volume trend correctly', function () {
         );
 });
 
-test('stats page calculates muscle distribution correctly', function () {
+test('stats page calculates muscle distribution correctly', function (): void {
     $user = User::factory()->create();
 
     $workout = Workout::factory()->create([
@@ -114,7 +114,7 @@ test('stats page calculates muscle distribution correctly', function () {
         );
 });
 
-test('stats page calculates monthly comparison correctly', function () {
+test('stats page calculates monthly comparison correctly', function (): void {
     $user = User::factory()->create();
 
     // Current Month Workout
@@ -155,7 +155,7 @@ test('stats page calculates monthly comparison correctly', function () {
         );
 });
 
-test('can retrieve exercise progress (1RM)', function () {
+test('can retrieve exercise progress (1RM)', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
 
@@ -183,7 +183,7 @@ test('can retrieve exercise progress (1RM)', function () {
         ->assertJsonPath('progress.0.one_rep_max', fn ($val) => $val == 200);
 });
 
-test('unauthenticated user cannot access stats', function () {
+test('unauthenticated user cannot access stats', function (): void {
     get(route('stats.index'))
         ->assertRedirect(route('login'));
 
@@ -192,7 +192,7 @@ test('unauthenticated user cannot access stats', function () {
         ->assertRedirect(route('login'));
 });
 
-test('cannot view stats for non-existent exercise', function () {
+test('cannot view stats for non-existent exercise', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -200,7 +200,7 @@ test('cannot view stats for non-existent exercise', function () {
         ->assertNotFound();
 });
 
-test('stats do not include other users data', function () {
+test('stats do not include other users data', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 

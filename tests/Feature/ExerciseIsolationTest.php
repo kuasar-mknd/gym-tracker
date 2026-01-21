@@ -7,7 +7,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
 
-test('users can only see system exercises and their own custom exercises in stats', function () {
+test('users can only see system exercises and their own custom exercises in stats', function (): void {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
 
@@ -31,7 +31,7 @@ test('users can only see system exercises and their own custom exercises in stat
         );
 });
 
-test('users can only see system exercises and their own custom exercises in workout show', function () {
+test('users can only see system exercises and their own custom exercises in workout show', function (): void {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
 

@@ -28,7 +28,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->user = User::factory()->create();
 });
 
@@ -37,7 +37,7 @@ beforeEach(function () {
  * DASHBOARD PAGE
  * ================================
  */
-test('dashboard page renders with correct props', function () {
+test('dashboard page renders with correct props', function (): void {
     // Create some test data
     Workout::factory()->count(5)->create(['user_id' => $this->user->id]);
     BodyMeasurement::factory()->create(['user_id' => $this->user->id]);
@@ -61,7 +61,7 @@ test('dashboard page renders with correct props', function () {
  * WORKOUTS INDEX PAGE (PAGINATED)
  * ================================
  */
-test('workouts index page renders with paginated data structure', function () {
+test('workouts index page renders with paginated data structure', function (): void {
     // Create 25 workouts to trigger pagination
     Workout::factory()->count(25)->create(['user_id' => $this->user->id]);
 
@@ -78,7 +78,7 @@ test('workouts index page renders with paginated data structure', function () {
         );
 });
 
-test('workouts index page renders correctly when empty', function () {
+test('workouts index page renders correctly when empty', function (): void {
     actingAs($this->user)
         ->get('/workouts')
         ->assertStatus(200)
@@ -94,7 +94,7 @@ test('workouts index page renders correctly when empty', function () {
  * WORKOUTS SHOW PAGE
  * ================================
  */
-test('workout show page renders with correct props', function () {
+test('workout show page renders with correct props', function (): void {
     $workout = Workout::factory()->create(['user_id' => $this->user->id]);
     Exercise::factory()->count(3)->create();
 
@@ -118,7 +118,7 @@ test('workout show page renders with correct props', function () {
  * STATS PAGE
  * ================================
  */
-test('stats page renders without cache errors', function () {
+test('stats page renders without cache errors', function (): void {
     // This test specifically catches BadMethodCallException for cache tagging
     $workout = Workout::factory()->create([
         'user_id' => $this->user->id,
@@ -149,7 +149,7 @@ test('stats page renders without cache errors', function () {
  * GOALS PAGE
  * ================================
  */
-test('goals index page renders with correct props', function () {
+test('goals index page renders with correct props', function (): void {
     Goal::factory()->count(3)->create(['user_id' => $this->user->id]);
 
     actingAs($this->user)
@@ -167,7 +167,7 @@ test('goals index page renders with correct props', function () {
  * EXERCISES PAGE
  * ================================
  */
-test('exercises index page renders with correct props', function () {
+test('exercises index page renders with correct props', function (): void {
     Exercise::factory()->count(5)->create();
 
     actingAs($this->user)
@@ -186,7 +186,7 @@ test('exercises index page renders with correct props', function () {
  * TEMPLATES PAGE
  * ================================
  */
-test('templates index page renders with correct props', function () {
+test('templates index page renders with correct props', function (): void {
     actingAs($this->user)
         ->get('/templates')
         ->assertStatus(200)
@@ -202,7 +202,7 @@ test('templates index page renders with correct props', function () {
  * BODY MEASUREMENTS PAGE
  * ================================
  */
-test('body measurements index page renders with correct props', function () {
+test('body measurements index page renders with correct props', function (): void {
     BodyMeasurement::factory()->count(5)->create(['user_id' => $this->user->id]);
 
     actingAs($this->user)
@@ -220,7 +220,7 @@ test('body measurements index page renders with correct props', function () {
  * DAILY JOURNALS PAGE
  * ================================
  */
-test('daily journals index page renders with correct props', function () {
+test('daily journals index page renders with correct props', function (): void {
     DailyJournal::factory()->count(3)->create(['user_id' => $this->user->id]);
 
     actingAs($this->user)
@@ -238,7 +238,7 @@ test('daily journals index page renders with correct props', function () {
  * NOTIFICATIONS PAGE (PAGINATED)
  * ================================
  */
-test('notifications index page renders correctly', function () {
+test('notifications index page renders correctly', function (): void {
     actingAs($this->user)
         ->get('/notifications')
         ->assertStatus(200)
@@ -254,7 +254,7 @@ test('notifications index page renders correctly', function () {
  * ACHIEVEMENTS PAGE
  * ================================
  */
-test('achievements index page renders with correct props', function () {
+test('achievements index page renders with correct props', function (): void {
     Achievement::factory()->count(5)->create();
 
     actingAs($this->user)
@@ -272,7 +272,7 @@ test('achievements index page renders with correct props', function () {
  * PROFILE PAGE
  * ================================
  */
-test('profile edit page renders with correct props', function () {
+test('profile edit page renders with correct props', function (): void {
     actingAs($this->user)
         ->get('/profile')
         ->assertStatus(200)
@@ -288,7 +288,7 @@ test('profile edit page renders with correct props', function () {
  * TOOLS PAGE
  * ================================
  */
-test('tools index page renders correctly', function () {
+test('tools index page renders correctly', function (): void {
     actingAs($this->user)
         ->get('/tools')
         ->assertStatus(200)
@@ -298,7 +298,7 @@ test('tools index page renders correctly', function () {
         );
 });
 
-test('one rep max calculator page renders correctly', function () {
+test('one rep max calculator page renders correctly', function (): void {
     actingAs($this->user)
         ->get('/tools/1rm')
         ->assertStatus(200)
@@ -313,7 +313,7 @@ test('one rep max calculator page renders correctly', function () {
  * PLATES PAGE
  * ================================
  */
-test('plates index page renders with correct props', function () {
+test('plates index page renders with correct props', function (): void {
     Plate::factory()->count(3)->create(['user_id' => $this->user->id]);
 
     actingAs($this->user)
@@ -331,7 +331,7 @@ test('plates index page renders with correct props', function () {
  * AUTHENTICATION REDIRECTS
  * ================================
  */
-test('unauthenticated users are redirected to login for all protected pages', function ($route) {
+test('unauthenticated users are redirected to login for all protected pages', function ($route): void {
     $this->get($route)->assertRedirect('/login');
 })->with([
     '/dashboard',
@@ -354,7 +354,7 @@ test('unauthenticated users are redirected to login for all protected pages', fu
  * ROOT REDIRECT
  * ================================
  */
-test('root redirects to dashboard', function () {
+test('root redirects to dashboard', function (): void {
     $this->get('/')
         ->assertStatus(302)
         ->assertRedirect('/dashboard');
@@ -365,7 +365,7 @@ test('root redirects to dashboard', function () {
  * LOGIN/REGISTER PAGES (PUBLIC)
  * ================================
  */
-test('login page renders correctly', function () {
+test('login page renders correctly', function (): void {
     $this->get('/login')
         ->assertStatus(200)
         ->assertInertia(
@@ -374,7 +374,7 @@ test('login page renders correctly', function () {
         );
 });
 
-test('register page renders correctly', function () {
+test('register page renders correctly', function (): void {
     $this->get('/register')
         ->assertStatus(200)
         ->assertInertia(

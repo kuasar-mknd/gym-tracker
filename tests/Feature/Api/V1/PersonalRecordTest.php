@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 
 // Happy Path Tests
 
-test('user can list personal records', function () {
+test('user can list personal records', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
     PersonalRecord::factory()->count(3)->create([
@@ -28,7 +28,7 @@ test('user can list personal records', function () {
         ->assertJsonCount(3, 'data');
 });
 
-test('user can filter personal records by exercise', function () {
+test('user can filter personal records by exercise', function (): void {
     $user = User::factory()->create();
     $exercise1 = Exercise::factory()->create();
     $exercise2 = Exercise::factory()->create();
@@ -43,7 +43,7 @@ test('user can filter personal records by exercise', function () {
         ->assertJsonPath('data.0.exercise.id', $exercise1->id);
 });
 
-test('user can create a personal record', function () {
+test('user can create a personal record', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -69,7 +69,7 @@ test('user can create a personal record', function () {
     ]);
 });
 
-test('user can show a personal record', function () {
+test('user can show a personal record', function (): void {
     $user = User::factory()->create();
     $pr = PersonalRecord::factory()->create(['user_id' => $user->id]);
 
@@ -79,7 +79,7 @@ test('user can show a personal record', function () {
         ->assertJsonPath('data.id', $pr->id);
 });
 
-test('user can update a personal record', function () {
+test('user can update a personal record', function (): void {
     $user = User::factory()->create();
     $pr = PersonalRecord::factory()->create(['user_id' => $user->id, 'value' => 100]);
 
@@ -96,7 +96,7 @@ test('user can update a personal record', function () {
     ]);
 });
 
-test('user can delete a personal record', function () {
+test('user can delete a personal record', function (): void {
     $user = User::factory()->create();
     $pr = PersonalRecord::factory()->create(['user_id' => $user->id]);
 
@@ -109,7 +109,7 @@ test('user can delete a personal record', function () {
 
 // Validation Tests
 
-test('store requires mandatory fields', function () {
+test('store requires mandatory fields', function (): void {
     $user = User::factory()->create();
 
     actingAs($user, 'sanctum')
@@ -118,7 +118,7 @@ test('store requires mandatory fields', function () {
         ->assertJsonValidationErrors(['exercise_id', 'type', 'value', 'achieved_at']);
 });
 
-test('store validates exercise existence', function () {
+test('store validates exercise existence', function (): void {
     $user = User::factory()->create();
 
     actingAs($user, 'sanctum')
@@ -132,7 +132,7 @@ test('store validates exercise existence', function () {
         ->assertJsonValidationErrors(['exercise_id']);
 });
 
-test('store validates numeric value', function () {
+test('store validates numeric value', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
 
@@ -147,7 +147,7 @@ test('store validates numeric value', function () {
         ->assertJsonValidationErrors(['value']);
 });
 
-test('store validates date format', function () {
+test('store validates date format', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
 
@@ -162,7 +162,7 @@ test('store validates date format', function () {
         ->assertJsonValidationErrors(['achieved_at']);
 });
 
-test('update validates input types', function () {
+test('update validates input types', function (): void {
     $user = User::factory()->create();
     $pr = PersonalRecord::factory()->create(['user_id' => $user->id]);
 
@@ -176,7 +176,7 @@ test('update validates input types', function () {
 
 // Authorization Tests
 
-test('guest cannot access endpoints', function () {
+test('guest cannot access endpoints', function (): void {
     $pr = PersonalRecord::factory()->create();
 
     $this->getJson(route('api.v1.personal-records.index'))->assertUnauthorized();
@@ -186,7 +186,7 @@ test('guest cannot access endpoints', function () {
     $this->deleteJson(route('api.v1.personal-records.destroy', $pr))->assertUnauthorized();
 });
 
-test('user cannot view other user personal record', function () {
+test('user cannot view other user personal record', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $pr = PersonalRecord::factory()->create(['user_id' => $otherUser->id]);
@@ -196,7 +196,7 @@ test('user cannot view other user personal record', function () {
         ->assertForbidden();
 });
 
-test('user cannot update other user personal record', function () {
+test('user cannot update other user personal record', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $pr = PersonalRecord::factory()->create(['user_id' => $otherUser->id]);
@@ -208,7 +208,7 @@ test('user cannot update other user personal record', function () {
         ->assertForbidden();
 });
 
-test('user cannot delete other user personal record', function () {
+test('user cannot delete other user personal record', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $pr = PersonalRecord::factory()->create(['user_id' => $otherUser->id]);

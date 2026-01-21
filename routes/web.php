@@ -11,7 +11,7 @@ Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+Route::middleware('auth')->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
@@ -21,7 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/stats', [\App\Http\Controllers\StatsController::class, 'index'])->name('stats.index');
     Route::get('/stats/exercise/{exercise}', [\App\Http\Controllers\StatsController::class, 'exercise'])->name('stats.exercise');
-    Route::middleware('throttle:60,1')->group(function () {
+    Route::middleware('throttle:60,1')->group(function (): void {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::patch('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

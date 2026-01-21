@@ -7,11 +7,11 @@ use App\Models\WorkoutLine;
 
 use function Pest\Laravel\actingAs;
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->user = User::factory()->create();
 });
 
-it('can delete its own workout', function () {
+it('can delete its own workout', function (): void {
     $workout = Workout::factory()->create(['user_id' => $this->user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
     Set::factory()->create(['workout_line_id' => $line->id]);
@@ -24,7 +24,7 @@ it('can delete its own workout', function () {
     $this->assertDatabaseMissing('workout_lines', ['id' => $line->id]);
 });
 
-it('cannot delete someone else\'s workout', function () {
+it('cannot delete someone else\'s workout', function (): void {
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
 
@@ -35,7 +35,7 @@ it('cannot delete someone else\'s workout', function () {
     $this->assertDatabaseHas('workouts', ['id' => $workout->id]);
 });
 
-it('can update its workout date and name', function () {
+it('can update its workout date and name', function (): void {
     $workout = Workout::factory()->create(['user_id' => $this->user->id]);
     $newDate = '2025-01-01 10:00:00';
     $newName = 'New Workout Name';
@@ -54,7 +54,7 @@ it('can update its workout date and name', function () {
     ]);
 });
 
-it('cannot update someone else\'s workout', function () {
+it('cannot update someone else\'s workout', function (): void {
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
     $oldName = $workout->name;
@@ -71,7 +71,7 @@ it('cannot update someone else\'s workout', function () {
     ]);
 });
 
-it('validates workout started_at date format', function () {
+it('validates workout started_at date format', function (): void {
     $workout = Workout::factory()->create(['user_id' => $this->user->id]);
 
     actingAs($this->user)
@@ -81,7 +81,7 @@ it('validates workout started_at date format', function () {
         ->assertSessionHasErrors(['started_at']);
 });
 
-it('can update workout notes', function () {
+it('can update workout notes', function (): void {
     $workout = Workout::factory()->create(['user_id' => $this->user->id]);
     $newNotes = 'These are some updated notes.';
 

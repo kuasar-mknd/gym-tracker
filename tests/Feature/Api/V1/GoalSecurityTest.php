@@ -8,8 +8,8 @@ use function Pest\Laravel\postJson;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-describe('Goal Security', function () {
-    test('user cannot create goal with another users private exercise', function () {
+describe('Goal Security', function (): void {
+    test('user cannot create goal with another users private exercise', function (): void {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
@@ -28,7 +28,7 @@ describe('Goal Security', function () {
             ->assertJsonValidationErrors(['exercise_id']);
     });
 
-    test('user cannot create goal with another users private exercise even if they own an exercise', function () {
+    test('user cannot create goal with another users private exercise even if they own an exercise', function (): void {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 

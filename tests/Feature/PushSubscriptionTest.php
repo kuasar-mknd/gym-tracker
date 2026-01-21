@@ -8,7 +8,7 @@ use function Pest\Laravel\post;
 
 uses(RefreshDatabase::class);
 
-test('user can update push subscription', function () {
+test('user can update push subscription', function (): void {
     $user = User::factory()->create();
 
     $response = actingAs($user)->post(route('push-subscriptions.update'), [
@@ -33,7 +33,7 @@ test('user can update push subscription', function () {
     ]);
 });
 
-test('user can delete push subscription', function () {
+test('user can delete push subscription', function (): void {
     $user = User::factory()->create();
 
     // First create a subscription
@@ -58,7 +58,7 @@ test('user can delete push subscription', function () {
     ]);
 });
 
-test('update requires endpoint and keys', function () {
+test('update requires endpoint and keys', function (): void {
     $user = User::factory()->create();
 
     $response = actingAs($user)->post(route('push-subscriptions.update'), []);
@@ -66,7 +66,7 @@ test('update requires endpoint and keys', function () {
     $response->assertSessionHasErrors(['endpoint', 'keys.auth', 'keys.p256dh']);
 });
 
-test('delete requires endpoint', function () {
+test('delete requires endpoint', function (): void {
     $user = User::factory()->create();
 
     $response = actingAs($user)->post(route('push-subscriptions.destroy'), []);
@@ -74,7 +74,7 @@ test('delete requires endpoint', function () {
     $response->assertSessionHasErrors(['endpoint']);
 });
 
-test('guest cannot update push subscription', function () {
+test('guest cannot update push subscription', function (): void {
     $response = post(route('push-subscriptions.update'), [
         'endpoint' => 'https://fcm.googleapis.com/fcm/send/12345',
         'keys' => [
@@ -86,7 +86,7 @@ test('guest cannot update push subscription', function () {
     $response->assertRedirect(route('login'));
 });
 
-test('guest cannot delete push subscription', function () {
+test('guest cannot delete push subscription', function (): void {
     $response = post(route('push-subscriptions.destroy'), [
         'endpoint' => 'https://fcm.googleapis.com/fcm/send/12345',
     ]);

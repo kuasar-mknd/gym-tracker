@@ -6,10 +6,10 @@ use Laravel\Dusk\Browser;
 
 uses(DatabaseTruncation::class);
 
-test('user can manage exercises from mobile plus menu', function () {
+test('user can manage exercises from mobile plus menu', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->resize(375, 812) // Mobile view
             ->visit('/dashboard')

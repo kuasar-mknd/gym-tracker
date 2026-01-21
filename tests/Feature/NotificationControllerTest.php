@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
-test('user can view notifications page', function () {
+test('user can view notifications page', function (): void {
     $user = User::factory()->create();
 
     // Create a notification for the user using relationship
@@ -27,13 +27,13 @@ test('user can view notifications page', function () {
     );
 });
 
-test('guest cannot view notifications page', function () {
+test('guest cannot view notifications page', function (): void {
     $response = $this->get(route('notifications.index'));
 
     $response->assertRedirect(route('login'));
 });
 
-test('user can mark a notification as read', function () {
+test('user can mark a notification as read', function (): void {
     $user = User::factory()->create();
 
     $notification = $user->notifications()->create([
@@ -50,7 +50,7 @@ test('user can mark a notification as read', function () {
     expect($notification->fresh()->read_at)->not->toBeNull();
 });
 
-test('user cannot mark another users notification as read', function () {
+test('user cannot mark another users notification as read', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
@@ -68,7 +68,7 @@ test('user cannot mark another users notification as read', function () {
     expect($notification->fresh()->read_at)->toBeNull();
 });
 
-test('user can mark all notifications as read', function () {
+test('user can mark all notifications as read', function (): void {
     $user = User::factory()->create();
 
     $user->notifications()->create([
@@ -94,7 +94,7 @@ test('user can mark all notifications as read', function () {
     expect($unreadCount)->toBe(0);
 });
 
-test('marking non-existent notification as read does nothing', function () {
+test('marking non-existent notification as read does nothing', function (): void {
     $user = User::factory()->create();
     $nonExistentId = Str::uuid()->toString();
 

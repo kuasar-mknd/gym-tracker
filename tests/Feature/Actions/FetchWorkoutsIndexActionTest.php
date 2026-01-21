@@ -7,7 +7,7 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Support\Carbon;
 
-it('calculates volume history correctly', function () {
+it('calculates volume history correctly', function (): void {
     $user = User::factory()->create();
     $action = app(FetchWorkoutsIndexAction::class);
 

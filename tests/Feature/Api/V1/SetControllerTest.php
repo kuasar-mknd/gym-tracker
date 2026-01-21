@@ -11,7 +11,7 @@ use function Pest\Laravel\assertDatabaseMissing;
 
 // Happy Path Tests
 
-test('user can list their sets', function () {
+test('user can list their sets', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -30,7 +30,7 @@ test('user can list their sets', function () {
         ->assertJsonPath('data.0.id', $set->id);
 });
 
-test('user can create a set in their workout line', function () {
+test('user can create a set in their workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -56,7 +56,7 @@ test('user can create a set in their workout line', function () {
     ]);
 });
 
-test('user can show a specific set', function () {
+test('user can show a specific set', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -68,7 +68,7 @@ test('user can show a specific set', function () {
         ->assertJsonPath('data.id', $set->id);
 });
 
-test('user can update their set', function () {
+test('user can update their set', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -90,7 +90,7 @@ test('user can update their set', function () {
     ]);
 });
 
-test('user can delete their set', function () {
+test('user can delete their set', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -105,7 +105,7 @@ test('user can delete their set', function () {
 
 // Authorization Tests
 
-test('user cannot create set in another users workout line', function () {
+test('user cannot create set in another users workout line', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $otherWorkout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -122,7 +122,7 @@ test('user cannot create set in another users workout line', function () {
         ->assertForbidden();
 });
 
-test('user cannot show another users set', function () {
+test('user cannot show another users set', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $otherWorkout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -134,7 +134,7 @@ test('user cannot show another users set', function () {
         ->assertForbidden();
 });
 
-test('user cannot update another users set', function () {
+test('user cannot update another users set', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $otherWorkout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -146,7 +146,7 @@ test('user cannot update another users set', function () {
         ->assertForbidden();
 });
 
-test('user cannot delete another users set', function () {
+test('user cannot delete another users set', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $otherWorkout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -160,7 +160,7 @@ test('user cannot delete another users set', function () {
 
 // Validation Tests
 
-test('store requires workout_line_id', function () {
+test('store requires workout_line_id', function (): void {
     $user = User::factory()->create();
 
     actingAs($user, 'sanctum')
@@ -172,7 +172,7 @@ test('store requires workout_line_id', function () {
         ->assertJsonValidationErrors('workout_line_id');
 });
 
-test('store requires valid workout_line_id', function () {
+test('store requires valid workout_line_id', function (): void {
     $user = User::factory()->create();
 
     actingAs($user, 'sanctum')
@@ -184,7 +184,7 @@ test('store requires valid workout_line_id', function () {
         ->assertJsonValidationErrors('workout_line_id');
 });
 
-test('store validates numeric constraints', function () {
+test('store validates numeric constraints', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -201,7 +201,7 @@ test('store validates numeric constraints', function () {
         ->assertJsonValidationErrors(['weight', 'reps', 'duration_seconds', 'distance_km']);
 });
 
-test('store validates boolean constraints', function () {
+test('store validates boolean constraints', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -216,7 +216,7 @@ test('store validates boolean constraints', function () {
         ->assertJsonValidationErrors(['is_warmup', 'is_completed']);
 });
 
-test('update validates numeric constraints', function () {
+test('update validates numeric constraints', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);

@@ -7,7 +7,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
-test('authenticated user can view achievements page', function () {
+test('authenticated user can view achievements page', function (): void {
     $user = User::factory()->create();
 
     // Create achievements
@@ -41,12 +41,12 @@ test('authenticated user can view achievements page', function () {
         );
 });
 
-test('unauthenticated user cannot view achievements page', function () {
+test('unauthenticated user cannot view achievements page', function (): void {
     get(route('achievements.index'))
         ->assertRedirect(route('login'));
 });
 
-test('achievements list returns correct structure', function () {
+test('achievements list returns correct structure', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
 
@@ -67,7 +67,7 @@ test('achievements list returns correct structure', function () {
         );
 });
 
-test('achievements are ordered or retrieved correctly', function () {
+test('achievements are ordered or retrieved correctly', function (): void {
     // The controller currently retrieves Achievement::all(), so order might depend on DB insertion or default ID sort.
     // The controller maps them.
 

@@ -10,7 +10,7 @@ use function Pest\Laravel\assertDatabaseCount;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
 
-test('store adds a line to workout', function () {
+test('store adds a line to workout', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $exercise = Exercise::factory()->create();
@@ -28,7 +28,7 @@ test('store adds a line to workout', function () {
     ]);
 });
 
-test('store adds a line with correct order', function () {
+test('store adds a line with correct order', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $exercise1 = Exercise::factory()->create();
@@ -53,7 +53,7 @@ test('store adds a line with correct order', function () {
     ]);
 });
 
-test('store forbids adding line to another users workout', function () {
+test('store forbids adding line to another users workout', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -68,7 +68,7 @@ test('store forbids adding line to another users workout', function () {
     assertDatabaseCount('workout_lines', 0);
 });
 
-test('store requires valid exercise_id', function () {
+test('store requires valid exercise_id', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
 
@@ -81,7 +81,7 @@ test('store requires valid exercise_id', function () {
     assertDatabaseCount('workout_lines', 0);
 });
 
-test('destroy removes a workout line', function () {
+test('destroy removes a workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -93,7 +93,7 @@ test('destroy removes a workout line', function () {
     assertDatabaseMissing('workout_lines', ['id' => $line->id]);
 });
 
-test('destroy forbids removing another users workout line', function () {
+test('destroy forbids removing another users workout line', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);

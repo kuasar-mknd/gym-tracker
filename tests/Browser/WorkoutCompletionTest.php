@@ -39,7 +39,7 @@ class WorkoutCompletionTest extends DuskTestCase
             'started_at' => now()->subHour(),
         ]);
 
-        $this->browse(function (Browser $browser) use ($user, $workout) {
+        $this->browse(function (Browser $browser) use ($user, $workout): void {
             $this->manualLogin($browser, $user)
                 ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
@@ -69,7 +69,7 @@ class WorkoutCompletionTest extends DuskTestCase
             'ended_at' => now(),
         ]);
 
-        $this->browse(function (Browser $browser) use ($user, $workout) {
+        $this->browse(function (Browser $browser) use ($user, $workout): void {
             $this->manualLogin($browser, $user)
                 ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
