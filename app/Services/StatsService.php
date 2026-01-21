@@ -176,7 +176,7 @@ class StatsService
             "stats.weight_history.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchWeightHistoryData($user, $days)
-                ->map(fn ($m): array => $this->formatWeightHistoryItem($m))
+                ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
                 ->toArray()
         );
     }
@@ -669,9 +669,9 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return [
-            'current_volume' => (float) $currentVolume,
-            'previous_volume' => (float) $previousVolume,
-            'difference' => (float) $diff,
+            'current_volume' => $currentVolume,
+            'previous_volume' => $previousVolume,
+            'difference' => $diff,
             'percentage' => round($percentage, 1),
         ];
     }
