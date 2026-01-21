@@ -63,12 +63,6 @@ updates:
               patterns:
                   - 'larastan/larastan'
                   - 'nunomaduro/collision'
-      ignore:
-          # Ignore major version updates for critical packages (review manually)
-          - dependency-name: 'laravel/framework'
-            update-types: ['version-update:semver-major']
-          - dependency-name: 'php'
-            update-types: ['version-update:semver-major']
 
     # ========================================
     # JavaScript / npm Dependencies
@@ -128,10 +122,6 @@ updates:
               patterns:
                   - 'chart.js'
                   - 'vue-chartjs'
-      ignore:
-          # Ignore major version updates for critical frontend packages
-          - dependency-name: 'vue'
-            update-types: ['version-update:semver-major']
 
     # ========================================
     # GitHub Actions
