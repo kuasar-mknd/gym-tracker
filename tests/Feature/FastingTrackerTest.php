@@ -2,6 +2,9 @@
 
 use App\Models\User;
 use App\Models\FastingLog;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 test('fasting page is displayed', function () {
     $user = User::factory()->create();
