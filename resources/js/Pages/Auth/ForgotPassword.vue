@@ -22,11 +22,11 @@ const submit = () => {
         <Head title="Mot de passe oublié" />
 
         <div class="mb-6 text-center">
-            <h2 class="text-text-main text-2xl font-bold">Mot de passe oublié ?</h2>
-            <p class="text-text-muted mt-2 text-sm">Entre ton email et nous t'enverrons un lien de réinitialisation.</p>
+            <h2 class="text-2xl font-bold text-text-main">Mot de passe oublié ?</h2>
+            <p class="mt-2 text-sm text-text-muted">Entre ton email et nous t'enverrons un lien de réinitialisation.</p>
         </div>
 
-        <div v-if="status" class="bg-accent-success/20 text-accent-success mb-4 rounded-xl p-3 text-sm">
+        <div v-if="status" class="mb-4 rounded-xl bg-accent-success/20 p-3 text-sm text-accent-success">
             {{ status }}
         </div>
 

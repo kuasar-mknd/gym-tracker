@@ -121,7 +121,7 @@ const chartOptions = {
 
         <!-- Subtle decorative glow -->
         <div
-            class="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-3xl transition-all duration-700 group-hover:bg-white/20"
+            class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-3xl transition-all duration-700 group-hover:bg-white/20"
         ></div>
     </GlassCard>
 </template>

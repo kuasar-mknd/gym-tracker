@@ -137,7 +137,7 @@ const getProgressPercent = (habit) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Habitudes</h2>
+                <h2 class="text-xl font-semibold text-text-main">Habitudes</h2>
                 <GlassButton @click="openAddForm">
                     <span class="material-symbols-outlined mr-2 text-sm">add</span>
                     Ajouter
@@ -149,14 +149,14 @@ const getProgressPercent = (habit) => {
             <!-- Weekly Calendar Header -->
             <GlassCard class="overflow-hidden p-0">
                 <div class="grid grid-cols-[1fr_repeat(7,minmax(32px,1fr))] sm:grid-cols-[200px_repeat(7,1fr)]">
-                    <div class="text-text-main p-4 font-bold">Habitude</div>
+                    <div class="p-4 font-bold text-text-main">Habitude</div>
                     <div
                         v-for="day in weekDates"
                         :key="day.date"
                         class="flex flex-col items-center justify-center border-l border-slate-100 p-2 text-center"
                         :class="{ 'bg-accent-primary/5': day.is_today }"
                     >
-                        <div class="text-text-muted text-[10px] uppercase">{{ day.day_short || day.day }}</div>
+                        <div class="text-[10px] uppercase text-text-muted">{{ day.day_short || day.day }}</div>
                         <div class="text-sm font-bold" :class="day.is_today ? 'text-accent-primary' : 'text-text-main'">
                             {{ day.day_num }}
                         </div>
@@ -167,7 +167,7 @@ const getProgressPercent = (habit) => {
             <!-- Habits List -->
             <div v-if="habits.length === 0" class="py-12 text-center">
                 <div class="mb-4 text-5xl">✅</div>
-                <h3 class="text-text-main text-lg font-medium">Aucune habitude</h3>
+                <h3 class="text-lg font-medium text-text-main">Aucune habitude</h3>
                 <p class="text-text-muted">Commencez par créer une habitude à suivre.</p>
                 <GlassButton class="mt-4" @click="openAddForm">Créer ma première habitude</GlassButton>
             </div>
@@ -189,7 +189,7 @@ const getProgressPercent = (habit) => {
                                     <span class="material-symbols-outlined">{{ habit.icon }}</span>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <h3 class="text-text-main truncate font-bold">{{ habit.name }}</h3>
+                                    <h3 class="truncate font-bold text-text-main">{{ habit.name }}</h3>
                                     <div class="flex items-center gap-2">
                                         <div class="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
                                             <div
@@ -198,7 +198,7 @@ const getProgressPercent = (habit) => {
                                                 :style="{ width: getProgressPercent(habit) + '%' }"
                                             ></div>
                                         </div>
-                                        <span class="text-text-muted text-[10px]"
+                                        <span class="text-[10px] text-text-muted"
                                             >{{ getCompletionCount(habit) }}/{{ habit.goal_times_per_week }}</span
                                         >
                                     </div>
@@ -206,11 +206,11 @@ const getProgressPercent = (habit) => {
                             </div>
 
                             <!-- Actions (Absolute) -->
-                            <div class="absolute top-2 right-2 flex opacity-0 transition group-hover:opacity-100">
-                                <button @click="editHabit(habit)" class="text-text-muted hover:text-text-main p-1">
+                            <div class="absolute right-2 top-2 flex opacity-0 transition group-hover:opacity-100">
+                                <button @click="editHabit(habit)" class="p-1 text-text-muted hover:text-text-main">
                                     <span class="material-symbols-outlined text-sm">edit</span>
                                 </button>
-                                <button @click="deleteHabit(habit)" class="text-text-muted p-1 hover:text-red-500">
+                                <button @click="deleteHabit(habit)" class="p-1 text-text-muted hover:text-red-500">
                                     <span class="material-symbols-outlined text-sm">delete</span>
                                 </button>
                             </div>
@@ -243,9 +243,9 @@ const getProgressPercent = (habit) => {
         <!-- Add/Edit Modal -->
         <div v-if="showAddForm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showAddForm = false"></div>
-            <GlassCard class="animate-scale-in relative w-full max-w-lg shadow-2xl" variant="solid">
+            <GlassCard class="relative w-full max-w-lg animate-scale-in shadow-2xl" variant="solid">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-text-main text-xl font-bold">
+                    <h3 class="text-xl font-bold text-text-main">
                         {{ editingHabit ? 'Modifier' : 'Nouvelle Habitude' }}
                     </h3>
                     <button @click="showAddForm = false" class="text-text-muted hover:text-text-main">
@@ -270,7 +270,7 @@ const getProgressPercent = (habit) => {
                     />
 
                     <div>
-                        <label class="text-text-muted mb-1 block text-sm font-medium">Couleur</label>
+                        <label class="mb-1 block text-sm font-medium text-text-muted">Couleur</label>
                         <div class="flex flex-wrap gap-2">
                             <button
                                 v-for="color in colors"
@@ -280,14 +280,14 @@ const getProgressPercent = (habit) => {
                                 class="h-8 w-8 rounded-full border-2 transition"
                                 :class="[
                                     color,
-                                    form.color === color ? 'border-text-main scale-110' : 'border-transparent',
+                                    form.color === color ? 'scale-110 border-text-main' : 'border-transparent',
                                 ]"
                             ></button>
                         </div>
                     </div>
 
                     <div>
-                        <label class="text-text-muted mb-1 block text-sm font-medium">Icône</label>
+                        <label class="mb-1 block text-sm font-medium text-text-muted">Icône</label>
                         <div class="flex flex-wrap gap-2">
                             <button
                                 v-for="icon in icons"
@@ -298,7 +298,7 @@ const getProgressPercent = (habit) => {
                                 :class="[
                                     form.icon === icon
                                         ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
-                                        : 'text-text-muted border-transparent',
+                                        : 'border-transparent text-text-muted',
                                 ]"
                             >
                                 <span class="material-symbols-outlined">{{ icon }}</span>

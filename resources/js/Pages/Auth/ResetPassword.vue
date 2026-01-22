@@ -28,8 +28,8 @@ const submit = () => {
         <Head title="Réinitialiser le mot de passe" />
 
         <div class="mb-6 text-center">
-            <h2 class="text-text-main text-2xl font-bold">Nouveau mot de passe</h2>
-            <p class="text-text-muted mt-1">Choisis un nouveau mot de passe sécurisé</p>
+            <h2 class="text-2xl font-bold text-text-main">Nouveau mot de passe</h2>
+            <p class="mt-1 text-text-muted">Choisis un nouveau mot de passe sécurisé</p>
         </div>
 
         <form @submit.prevent="submit" class="space-y-4">

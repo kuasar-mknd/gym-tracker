@@ -37,30 +37,30 @@ const getCategoryLabel = (category) => {
         <template #header>
             <div class="flex items-end justify-between">
                 <div>
-                    <h1 class="text-text-main flex items-center gap-2 text-2xl font-bold">Trophées 🏆</h1>
-                    <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
+                    <h1 class="flex items-center gap-2 text-2xl font-bold text-text-main">Trophées 🏆</h1>
+                    <p class="mt-1 text-text-muted">Tes exploits et récompenses.</p>
                 </div>
                 <div class="text-right">
-                    <div class="text-accent-primary text-2xl font-bold">
+                    <div class="text-2xl font-bold text-accent-primary">
                         {{ summary.unlocked }} / {{ summary.total }}
                     </div>
-                    <div class="text-text-muted/50 text-xs tracking-wider uppercase">Débloqués</div>
+                    <div class="text-xs uppercase tracking-wider text-text-muted/50">Débloqués</div>
                 </div>
             </div>
         </template>
 
         <div class="space-y-6 pb-24">
             <!-- Categories -->
-            <div class="scrollbar-none animate-slide-up flex gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
+            <div class="scrollbar-none flex animate-slide-up gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
                 <button
                     v-for="cat in categories"
                     :key="cat.value"
                     @click="currentCategory = cat.value"
-                    class="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all"
+                    class="whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all"
                     :class="
                         currentCategory === cat.value
-                            ? 'bg-accent-primary shadow-accent-primary/20 text-white shadow-lg'
-                            : 'text-text-muted border border-slate-200 bg-white/50 hover:bg-white/80'
+                            ? 'bg-accent-primary text-white shadow-lg shadow-accent-primary/20'
+                            : 'border border-slate-200 bg-white/50 text-text-muted hover:bg-white/80'
                     "
                 >
                     {{ cat.label }}
@@ -68,7 +68,7 @@ const getCategoryLabel = (category) => {
             </div>
 
             <!-- Achievements Grid -->
-            <div class="animate-slide-up grid grid-cols-2 gap-4 sm:grid-cols-3" style="animation-delay: 0.2s">
+            <div class="grid animate-slide-up grid-cols-2 gap-4 sm:grid-cols-3" style="animation-delay: 0.2s">
                 <div v-for="achievement in filteredAchievements" :key="achievement.id" class="group relative">
                     <GlassCard
                         padding="p-4"
@@ -88,12 +88,12 @@ const getCategoryLabel = (category) => {
                         </div>
 
                         <!-- Name -->
-                        <h3 class="text-text-main mb-1 line-clamp-1 text-sm font-bold">
+                        <h3 class="mb-1 line-clamp-1 text-sm font-bold text-text-main">
                             {{ achievement.name }}
                         </h3>
 
                         <!-- Description -->
-                        <p class="text-text-muted line-clamp-2 text-[10px]">
+                        <p class="line-clamp-2 text-[10px] text-text-muted">
                             {{ achievement.description }}
                         </p>
 
@@ -101,9 +101,9 @@ const getCategoryLabel = (category) => {
                         <div
                             class="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[20px] bg-black/80 p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
-                            <span class="text-accent-primary mb-1 text-xs font-bold">{{ achievement.name }}</span>
+                            <span class="mb-1 text-xs font-bold text-accent-primary">{{ achievement.name }}</span>
                             <span class="text-[10px] leading-tight text-white/80">{{ achievement.description }}</span>
-                            <div v-if="achievement.is_unlocked" class="mt-2 text-[8px] text-white/30 italic">
+                            <div v-if="achievement.is_unlocked" class="mt-2 text-[8px] italic text-white/30">
                                 Débloqué le {{ new Date(achievement.unlocked_at).toLocaleDateString('fr-FR') }}
                             </div>
                         </div>
@@ -111,7 +111,7 @@ const getCategoryLabel = (category) => {
                         <!-- Unlocked Checkmark -->
                         <div
                             v-if="achievement.is_unlocked"
-                            class="bg-accent-success absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full shadow-lg"
+                            class="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent-success shadow-lg"
                         >
                             <svg class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path
@@ -127,7 +127,7 @@ const getCategoryLabel = (category) => {
             </div>
 
             <!-- Empty State -->
-            <div v-if="filteredAchievements.length === 0" class="text-text-muted py-12 text-center">
+            <div v-if="filteredAchievements.length === 0" class="py-12 text-center text-text-muted">
                 Aucun badge dans cette catégorie.
             </div>
         </div>

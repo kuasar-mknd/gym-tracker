@@ -139,7 +139,7 @@ const chartOptions = {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Mesures</h2>
+                <h2 class="text-xl font-semibold text-text-main">Mesures</h2>
                 <GlassButton @click="showAddForm = !showAddForm">
                     <svg
                         class="mr-2 h-4 w-4"
@@ -157,13 +157,13 @@ const chartOptions = {
 
         <div class="space-y-6">
             <!-- Quick Stats -->
-            <div class="animate-slide-up grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="grid animate-slide-up grid-cols-1 gap-3 sm:grid-cols-3">
                 <GlassCard padding="p-4">
                     <div class="text-center">
                         <div class="text-gradient text-3xl font-bold">
                             {{ latestWeight ? `${latestWeight}` : '—' }}
                         </div>
-                        <div class="text-text-muted mt-1 text-sm font-semibold">kg actuel</div>
+                        <div class="mt-1 text-sm font-semibold text-text-muted">kg actuel</div>
                     </div>
                 </GlassCard>
                 <GlassCard padding="p-4">
@@ -180,7 +180,7 @@ const chartOptions = {
                         >
                             {{ weightDiff ? `${weightDiff > 0 ? '+' : ''}${weightDiff}` : '—' }}
                         </div>
-                        <div class="text-text-muted mt-1 text-sm font-semibold">kg évolution</div>
+                        <div class="mt-1 text-sm font-semibold text-text-muted">kg évolution</div>
                     </div>
                 </GlassCard>
                 <GlassCard padding="p-4">
@@ -188,14 +188,14 @@ const chartOptions = {
                         <div class="text-3xl font-bold text-pink-600">
                             {{ latestBodyFat ? `${latestBodyFat}%` : '—' }}
                         </div>
-                        <div class="text-text-muted mt-1 text-sm font-semibold">Masse Grasse</div>
+                        <div class="mt-1 text-sm font-semibold text-text-muted">Masse Grasse</div>
                     </div>
                 </GlassCard>
             </div>
 
             <!-- Add Form (collapsible) -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold">Nouvelle entrée</h3>
+                <h3 class="mb-4 font-semibold text-text-main">Nouvelle entrée</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-3 gap-4">
                         <GlassInput
@@ -239,10 +239,10 @@ const chartOptions = {
 
             <!-- Chart -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">Évolution</h3>
+                <h3 class="mb-4 font-display text-xs font-black uppercase tracking-[0.2em] text-sky-600">Évolution</h3>
                 <div class="h-64">
                     <WeightHistoryChart v-if="weightHistory && weightHistory.length > 0" :data="weightHistory" />
-                    <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
+                    <div v-else class="flex h-full items-center justify-center font-medium text-text-muted/50">
                         Aucune donnée disponible
                     </div>
                 </div>
@@ -250,7 +250,7 @@ const chartOptions = {
 
             <!-- History -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="font-display mb-3 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">Historique</h3>
+                <h3 class="mb-3 font-display text-xs font-black uppercase tracking-[0.2em] text-sky-600">Historique</h3>
 
                 <div v-if="measurements.length === 0">
                     <GlassCard>
@@ -271,14 +271,14 @@ const chartOptions = {
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="flex items-baseline gap-2">
-                                    <span class="text-text-main text-xl font-bold">{{ measurement.weight }} kg</span>
+                                    <span class="text-xl font-bold text-text-main">{{ measurement.weight }} kg</span>
                                     <span
                                         v-if="measurement.body_fat"
                                         class="rounded-full bg-pink-50 px-2 py-0.5 text-xs font-bold text-pink-600"
                                         >{{ measurement.body_fat }}% BF</span
                                     >
                                 </div>
-                                <div class="text-text-muted text-sm font-medium">
+                                <div class="text-sm font-medium text-text-muted">
                                     {{
                                         new Date(measurement.measured_at + 'T00:00:00').toLocaleDateString('fr-FR', {
                                             weekday: 'short',
@@ -288,13 +288,13 @@ const chartOptions = {
                                         })
                                     }}
                                 </div>
-                                <div v-if="measurement.notes" class="text-text-muted/70 mt-1 text-xs italic">
+                                <div v-if="measurement.notes" class="mt-1 text-xs italic text-text-muted/70">
                                     {{ measurement.notes }}
                                 </div>
                             </div>
                             <button
                                 @click="deleteMeasurement(measurement.id)"
-                                class="text-text-muted/30 rounded-lg p-2 opacity-0 transition group-hover:opacity-100 hover:text-red-400"
+                                class="rounded-lg p-2 text-text-muted/30 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
                             >
                                 <svg
                                     class="h-5 w-5"

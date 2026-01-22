@@ -23,13 +23,13 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
 
         <div class="mb-6 text-center">
             <div class="mb-4 text-5xl">📧</div>
-            <h2 class="text-text-main text-2xl font-bold">Vérifie ton email</h2>
-            <p class="text-text-muted mt-2 text-sm">
+            <h2 class="text-2xl font-bold text-text-main">Vérifie ton email</h2>
+            <p class="mt-2 text-sm text-text-muted">
                 Merci de ton inscription ! Clique sur le lien dans l'email que nous t'avons envoyé.
             </p>
         </div>
 
-        <div v-if="verificationLinkSent" class="bg-accent-success/20 text-accent-success mb-4 rounded-xl p-3 text-sm">
+        <div v-if="verificationLinkSent" class="mb-4 rounded-xl bg-accent-success/20 p-3 text-sm text-accent-success">
             Un nouveau lien de vérification a été envoyé à ton adresse email.
         </div>
 

@@ -115,7 +115,7 @@ const formatDate = (dateStr) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Journal</h2>
+                <h2 class="text-xl font-semibold text-text-main">Journal</h2>
                 <GlassButton @click="openAddForm" aria-label="Nouvelle séance">
                     <svg
                         class="mr-2 h-4 w-4"
@@ -135,8 +135,8 @@ const formatDate = (dateStr) => {
             <!-- Stats Chart -->
             <GlassCard v-if="journals.length > 1" class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Tendances</h3>
-                    <p class="text-text-muted text-xs font-semibold">Évolution de vos métriques</p>
+                    <h3 class="font-display text-lg font-black uppercase italic text-text-main">Tendances</h3>
+                    <p class="text-xs font-semibold text-text-muted">Évolution de vos métriques</p>
                 </div>
                 <JournalChart :data="journals" />
             </GlassCard>
@@ -144,7 +144,7 @@ const formatDate = (dateStr) => {
             <!-- Add/Edit Form -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-text-main font-semibold">
+                    <h3 class="font-semibold text-text-main">
                         {{ editingJournal ? "Modifier l'entrée" : 'Nouvelle entrée' }}
                     </h3>
                     <button @click="showAddForm = false" class="text-text-muted hover:text-text-main">✕</button>
@@ -154,7 +154,7 @@ const formatDate = (dateStr) => {
                     <GlassInput v-model="form.date" type="date" label="Date" :error="form.errors.date" required />
 
                     <div>
-                        <label class="text-text-muted mb-1 block text-sm font-medium">Humeur</label>
+                        <label class="mb-1 block text-sm font-medium text-text-muted">Humeur</label>
                         <div class="flex gap-2">
                             <button
                                 v-for="mood in moods"
@@ -164,8 +164,8 @@ const formatDate = (dateStr) => {
                                 :class="[
                                     'flex-1 rounded-lg border border-slate-200 p-2 text-center text-sm transition',
                                     form.mood_score === mood.value
-                                        ? 'bg-accent-primary border-transparent text-white'
-                                        : 'text-text-muted bg-white/50 hover:bg-slate-50',
+                                        ? 'border-transparent bg-accent-primary text-white'
+                                        : 'bg-white/50 text-text-muted hover:bg-slate-50',
                                 ]"
                             >
                                 <div class="text-xl">{{ mood.label.split(' ')[0] }}</div>
@@ -240,11 +240,11 @@ const formatDate = (dateStr) => {
                     </div>
 
                     <div>
-                        <label class="text-text-muted mb-1 block text-sm font-medium">Notes</label>
+                        <label class="mb-1 block text-sm font-medium text-text-muted">Notes</label>
                         <textarea
                             v-model="form.content"
                             rows="4"
-                            class="text-text-main placeholder-text-muted/30 focus:border-accent-primary focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 backdrop-blur-md focus:ring-1 focus:outline-none"
+                            class="w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 text-text-main placeholder-text-muted/30 backdrop-blur-md focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
                             placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
                         ></textarea>
                         <div v-if="form.errors.content" class="mt-1 text-xs text-red-400">
@@ -266,7 +266,7 @@ const formatDate = (dateStr) => {
             <!-- Journal Entries List -->
             <div v-if="journals.length === 0 && !showAddForm" class="py-12 text-center">
                 <div class="mb-4 text-5xl">📓</div>
-                <h3 class="text-text-main text-lg font-medium">Votre journal est vide</h3>
+                <h3 class="text-lg font-medium text-text-main">Votre journal est vide</h3>
                 <p class="text-text-muted">Commencez par ajouter une note pour aujourd'hui.</p>
                 <GlassButton class="mt-4" @click="openAddForm">Commencer</GlassButton>
             </div>
@@ -274,7 +274,7 @@ const formatDate = (dateStr) => {
             <div v-else class="space-y-8">
                 <div v-for="(group, month) in journalsByMonth" :key="month">
                     <h3
-                        class="bg-pearl-white/80 text-text-main sticky top-0 z-10 mb-4 rounded-lg p-2 text-lg font-medium capitalize backdrop-blur-sm"
+                        class="sticky top-0 z-10 mb-4 rounded-lg bg-pearl-white/80 p-2 text-lg font-medium capitalize text-text-main backdrop-blur-sm"
                     >
                         {{ month }}
                     </h3>
@@ -291,14 +291,14 @@ const formatDate = (dateStr) => {
                                     class="flex w-full shrink-0 flex-row items-center justify-between bg-slate-50 p-4 sm:w-24 sm:flex-col sm:justify-center sm:border-r sm:border-slate-100"
                                 >
                                     <div class="text-center">
-                                        <div class="text-text-muted text-xs uppercase">
+                                        <div class="text-xs uppercase text-text-muted">
                                             {{
                                                 new Date(journal.date + 'T00:00:00').toLocaleDateString('fr-FR', {
                                                     weekday: 'short',
                                                 })
                                             }}
                                         </div>
-                                        <div class="text-text-main text-2xl font-bold">
+                                        <div class="text-2xl font-bold text-text-main">
                                             {{ new Date(journal.date + 'T00:00:00').getDate() }}
                                         </div>
                                     </div>
@@ -327,37 +327,37 @@ const formatDate = (dateStr) => {
                                             <div class="flex flex-wrap gap-2">
                                                 <span
                                                     v-if="journal.sleep_quality"
-                                                    class="inline-flex items-center rounded-md bg-indigo-400/10 px-2 py-1 text-[10px] font-medium text-indigo-400 ring-1 ring-indigo-400/30 ring-inset"
+                                                    class="inline-flex items-center rounded-md bg-indigo-400/10 px-2 py-1 text-[10px] font-medium text-indigo-400 ring-1 ring-inset ring-indigo-400/30"
                                                 >
                                                     💤 {{ journal.sleep_quality }}/5
                                                 </span>
                                                 <span
                                                     v-if="journal.stress_level"
-                                                    class="inline-flex items-center rounded-md bg-orange-400/10 px-2 py-1 text-[10px] font-medium text-orange-400 ring-1 ring-orange-400/30 ring-inset"
+                                                    class="inline-flex items-center rounded-md bg-orange-400/10 px-2 py-1 text-[10px] font-medium text-orange-400 ring-1 ring-inset ring-orange-400/30"
                                                 >
                                                     ⚡ Stress: {{ journal.stress_level }}/10
                                                 </span>
                                                 <span
                                                     v-if="journal.energy_level"
-                                                    class="inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-1 text-[10px] font-medium text-yellow-400 ring-1 ring-yellow-400/30 ring-inset"
+                                                    class="inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-1 text-[10px] font-medium text-yellow-400 ring-1 ring-inset ring-yellow-400/30"
                                                 >
                                                     🔋 Énergie: {{ journal.energy_level }}/10
                                                 </span>
                                                 <span
                                                     v-if="journal.motivation_level"
-                                                    class="inline-flex items-center rounded-md bg-pink-400/10 px-2 py-1 text-[10px] font-medium text-pink-400 ring-1 ring-pink-400/30 ring-inset"
+                                                    class="inline-flex items-center rounded-md bg-pink-400/10 px-2 py-1 text-[10px] font-medium text-pink-400 ring-1 ring-inset ring-pink-400/30"
                                                 >
                                                     🔥 Motivation: {{ journal.motivation_level }}/10
                                                 </span>
                                                 <span
                                                     v-if="journal.nutrition_score"
-                                                    class="inline-flex items-center rounded-md bg-emerald-400/10 px-2 py-1 text-[10px] font-medium text-emerald-400 ring-1 ring-emerald-400/30 ring-inset"
+                                                    class="inline-flex items-center rounded-md bg-emerald-400/10 px-2 py-1 text-[10px] font-medium text-emerald-400 ring-1 ring-inset ring-emerald-400/30"
                                                 >
                                                     🥗 Diète: {{ journal.nutrition_score }}/5
                                                 </span>
                                                 <span
                                                     v-if="journal.training_intensity"
-                                                    class="inline-flex items-center rounded-md bg-red-400/10 px-2 py-1 text-[10px] font-medium text-red-600 ring-1 ring-red-400/30 ring-inset"
+                                                    class="inline-flex items-center rounded-md bg-red-400/10 px-2 py-1 text-[10px] font-medium text-red-600 ring-1 ring-inset ring-red-400/30"
                                                 >
                                                     🏋️ Intensité: {{ journal.training_intensity }}/10
                                                 </span>
@@ -367,7 +367,7 @@ const formatDate = (dateStr) => {
                                         <div class="flex gap-1 opacity-0 transition group-hover:opacity-100">
                                             <button
                                                 @click="editJournal(journal)"
-                                                class="text-text-muted/50 hover:text-text-main rounded p-1 hover:bg-slate-100/50"
+                                                class="rounded p-1 text-text-muted/50 hover:bg-slate-100/50 hover:text-text-main"
                                             >
                                                 <svg
                                                     class="h-4 w-4"
@@ -385,7 +385,7 @@ const formatDate = (dateStr) => {
                                             </button>
                                             <button
                                                 @click="deleteJournal(journal.id)"
-                                                class="text-text-muted/50 rounded p-1 hover:bg-slate-100/50 hover:text-red-400"
+                                                class="rounded p-1 text-text-muted/50 hover:bg-slate-100/50 hover:text-red-400"
                                             >
                                                 <svg
                                                     class="h-4 w-4"
@@ -404,7 +404,7 @@ const formatDate = (dateStr) => {
                                         </div>
                                     </div>
 
-                                    <p class="text-text-main text-sm whitespace-pre-wrap">{{ journal.content }}</p>
+                                    <p class="whitespace-pre-wrap text-sm text-text-main">{{ journal.content }}</p>
                                 </div>
                             </div>
                         </GlassCard>
