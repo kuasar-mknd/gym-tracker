@@ -108,5 +108,4 @@ class SupplementController extends Controller
 
         return $results;
     }
-
 }
