@@ -242,4 +242,25 @@ class User extends Authenticatable implements MustVerifyEmail
             'last_workout_at' => 'datetime',
         ];
     }
+
+    public function getUnreadNotificationsCountCached(): int
+    {
+        return Cache::remember(
+            "user:{$this->id}:unread_notifications_count",
+            now()->addSeconds(30),
+            fn () => $this->unreadNotifications()->count()
+        );
+    }
+
+    public function getLatestAchievementCached()
+    {
+        return Cache::remember(
+            "user:{$this->id}:latest_achievement",
+            now()->addSeconds(30),
+            fn () => $this->unreadNotifications()
+                ->where('type', \App\Notifications\AchievementUnlocked::class)
+                ->latest()
+                ->first()
+        );
+    }
 }
