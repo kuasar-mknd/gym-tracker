@@ -2,8 +2,7 @@
 
 use App\Models\User;
 use App\Models\WaterLog;
-use Carbon\Carbon;
-use Inertia\Testing\AssertableInertia as Assert;
+use Inertia\Testing\AssertableInertia;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -16,19 +15,19 @@ test('water tracker index page is displayed for authenticated user', function ()
     $todayLog = WaterLog::factory()->create([
         'user_id' => $this->user->id,
         'amount' => 500,
-        'consumed_at' => Carbon::now(),
+        'consumed_at' => now(),
     ]);
 
     $response = $this->get(route('tools.water.index'));
 
-    $response->assertStatus(200);
+    $response->assertOk();
 
-    $response->assertInertia(fn (Assert $page) => $page
+    $response->assertInertia(fn (AssertableInertia $page) => $page
         ->component('Tools/WaterTracker')
         ->has('logs', 1)
         ->where('logs.0.id', $todayLog->id)
         ->where('todayTotal', 500)
-        ->has('history', 7) // 7 days history
+        ->has('history', 7)
         ->where('goal', 2500)
     );
 });
@@ -44,7 +43,7 @@ test('water tracker index redirects unauthenticated users', function (): void {
 test('user can add water log', function (): void {
     $data = [
         'amount' => 300,
-        'consumed_at' => Carbon::now()->toDateTimeString(),
+        'consumed_at' => now()->toDateTimeString(),
     ];
 
     $response = $this->post(route('tools.water.store'), $data);
@@ -59,15 +58,13 @@ test('user can add water log', function (): void {
 
 test('water log creation requires amount', function (): void {
     $response = $this->post(route('tools.water.store'), [
-        'consumed_at' => Carbon::now()->toDateTimeString(),
+        'consumed_at' => now()->toDateTimeString(),
     ]);
 
     $response->assertSessionHasErrors('amount');
 });
 
 test('water log creation requires consumed_at', function (): void {
-    // Note: The controller has fallback logic but the Request class enforces required.
-    // So we expect validation error.
     $response = $this->post(route('tools.water.store'), [
         'amount' => 500,
     ]);
@@ -97,9 +94,7 @@ test('user cannot delete another users water log', function (): void {
 
     $response = $this->delete(route('tools.water.destroy', $log));
 
-    // Controller calls abort(403) which renders an error page or JSON depending on request.
-    // But standard test assertion for forbidden is 403.
-    $response->assertStatus(403);
+    $response->assertForbidden();
 
     $this->assertDatabaseHas('water_logs', [
         'id' => $log->id,
