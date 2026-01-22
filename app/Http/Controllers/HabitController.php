@@ -13,7 +13,6 @@ class HabitController extends Controller
 {
     public function index(Request $request): \Inertia\Response
     {
-        $startOfWeek = Carbon::now()->startOfWeek();
         $endOfWeek = Carbon::now()->endOfWeek();
         // Fetch logs for history chart (last 90 days)
         $historyStart = Carbon::now()->subDays(90);
