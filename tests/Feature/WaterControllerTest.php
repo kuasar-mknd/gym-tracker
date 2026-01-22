@@ -8,13 +8,12 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
 use function Pest\Laravel\post;
-use function Pest\Laravel\travelTo;
 
 test('water tracker index page is displayed for authenticated user', function (): void {
     $user = User::factory()->create();
     actingAs($user);
 
-    travelTo(now()->startOfDay()->addHours(12));
+    $this->travelTo(now()->startOfDay()->addHours(12));
 
     $todayLog = WaterLog::factory()->create([
         'user_id' => $user->id,
@@ -48,7 +47,7 @@ test('water tracker index redirects unauthenticated users', function (): void {
 test('user can add water log', function (): void {
     $user = User::factory()->create();
     actingAs($user);
-    travelTo(now());
+    $this->travelTo(now());
 
     $data = [
         'amount' => 300,
