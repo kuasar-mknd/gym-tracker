@@ -12,10 +12,20 @@ beforeEach(function (): void {
 });
 
 test('water tracker index page is displayed for authenticated user', function (): void {
+    // Freeze time to ensure "today" is consistent between test setup and controller query
+    $this->travelTo(now()->startOfDay()->addHours(12));
+
     $todayLog = WaterLog::factory()->create([
         'user_id' => $this->user->id,
         'amount' => 500,
         'consumed_at' => now(),
+    ]);
+
+    // Create a log for yesterday to ensure it's NOT included in 'logs' but IS in 'history'
+    WaterLog::factory()->create([
+        'user_id' => $this->user->id,
+        'amount' => 300,
+        'consumed_at' => now()->subDay(),
     ]);
 
     $response = $this->get(route('tools.water.index'));
@@ -27,7 +37,7 @@ test('water tracker index page is displayed for authenticated user', function ()
         ->has('logs', 1)
         ->where('logs.0.id', $todayLog->id)
         ->where('todayTotal', 500)
-        ->has('history', 7)
+        ->has('history', 7) // 7 days of history including today
         ->where('goal', 2500)
     );
 });
@@ -41,6 +51,8 @@ test('water tracker index redirects unauthenticated users', function (): void {
 });
 
 test('user can add water log', function (): void {
+    $this->travelTo(now());
+
     $data = [
         'amount' => 300,
         'consumed_at' => now()->toDateTimeString(),
