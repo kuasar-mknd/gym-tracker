@@ -164,6 +164,21 @@
                     </div>
                 </GlassCard>
             </Link>
+
+            <!-- Fasting Tracker -->
+            <Link :href="route('fasting.index')" class="group">
+                <GlassCard
+                    class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
+                >
+                    <div class="flex flex-col items-center space-y-4 text-center">
+                        <div class="rounded-full bg-purple-500/20 p-4 text-purple-500">
+                             <span class="material-symbols-outlined text-3xl">timer</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-text-main">Suivi de Jeûne</h3>
+                        <p class="text-sm text-text-muted">Suivez vos périodes de jeûne intermittent.</p>
+                    </div>
+                </GlassCard>
+            </Link>
         </div>
     </AuthenticatedLayout>
 </template>

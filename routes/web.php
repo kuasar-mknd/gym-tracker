@@ -92,6 +92,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
     Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
     Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
+
+    Route::resource('fasting', \App\Http\Controllers\FastingController::class)->only(['index', 'store', 'update', 'destroy']);
 });
 
 // Social Login
