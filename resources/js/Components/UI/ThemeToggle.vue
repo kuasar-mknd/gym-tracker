@@ -6,7 +6,7 @@
  * Shows the current mode with an icon and label.
  */
 import { useTheme } from '@/composables/useTheme'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const { theme, isDark, toggleTheme } = useTheme()
 
@@ -23,7 +23,7 @@ const themeLabels = {
 }
 
 function handleToggle() {
-    vibrate('tap')
+    triggerHaptic('tap')
     toggleTheme()
 }
 </script>

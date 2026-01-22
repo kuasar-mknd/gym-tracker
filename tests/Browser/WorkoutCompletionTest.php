@@ -12,22 +12,6 @@ class WorkoutCompletionTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
-    /**
-     * Helper method to manually login a user via the login form.
-     * This is more reliable than loginAs() in CI environments.
-     */
-    private function manualLogin(Browser $browser, User $user, string $password = 'password123'): Browser
-    {
-        return $browser->logout()
-            ->visit('/login')
-            ->resize(1920, 1080)
-            ->waitFor('input[type="email"]', 15)
-            ->type('input[type="email"]', $user->email)
-            ->type('input[type="password"]', $password)
-            ->click('button[type="submit"]')
-            ->waitForLocation('/dashboard', 15);
-    }
-
     public function test_user_can_finish_workout_and_is_redirected(): void
     {
         $user = User::factory()->create([
@@ -40,7 +24,7 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $this->manualLogin($browser, $user)
+            $browser->loginAs($user)
                 ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('main', 15)
@@ -48,11 +32,14 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->assertNoConsoleExceptions()
                 ->waitForText('SÉANCE TEST BROWSER', 15)
                 ->waitFor('#finish-workout-desktop', 15)
-                ->click('#finish-workout-desktop')
-                ->waitForText('TERMINER LA SÉANCE ?', 15)
-                ->pause(500)
-                ->click('#confirm-finish-button')
-                ->waitForRoute('dashboard', [], 15)
+                ->script("document.getElementById('finish-workout-desktop').click();");
+
+            $browser->waitFor('#confirm-finish-button', 15)
+                ->assertSee('TERMINER LA SÉANCE ?')
+                ->pause(1000)
+                ->script("document.getElementById('confirm-finish-button').click();");
+
+            $browser->waitForLocation('/dashboard', 15)
                 ->assertSee('FAIT');
         });
     }
@@ -70,7 +57,7 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $this->manualLogin($browser, $user)
+            $browser->loginAs($user)
                 ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('main', 15)

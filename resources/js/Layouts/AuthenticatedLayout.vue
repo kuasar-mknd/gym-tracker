@@ -7,7 +7,7 @@ import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
 import NavLink from '@/Components/NavLink.vue'
 import { Link } from '@inertiajs/vue3'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 defineProps({
     pageTitle: {
@@ -144,7 +144,7 @@ const showingNavigationDropdown = ref(false)
                     v-if="showBack"
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
-                    @click="vibrate('tap')"
+                    @click="triggerHaptic('tap')"
                 >
                     <span class="material-symbols-outlined">arrow_back</span>
                 </Link>

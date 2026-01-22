@@ -21,7 +21,7 @@ import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 /**
  * Component Props
@@ -68,7 +68,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
 
     // Optimistic update: apply change immediately for instant feedback
     set.is_completed = newState
-    vibrate('tap')
+    triggerHaptic('tap')
 
     // Start timer immediately if completing
     if (newState) {
@@ -85,7 +85,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
             onError: () => {
                 // Rollback on error
                 set.is_completed = previousState
-                vibrate('error')
+                triggerHaptic('error')
             },
         },
     )
@@ -120,7 +120,7 @@ const confirmFinishWorkout = () => {
         { is_finished: true },
         {
             onSuccess: () => {
-                vibrate('success')
+                triggerHaptic('success')
                 showFinishModal.value = false
                 router.visit(route('dashboard'))
             },
@@ -268,7 +268,7 @@ const createAndAddExercise = async () => {
                     onSuccess: () => {
                         searchQuery.value = ''
                         createExerciseForm.processing = false
-                        vibrate('success')
+                        triggerHaptic('success')
                     },
                     onError: () => {
                         createExerciseForm.processing = false
@@ -342,7 +342,7 @@ const removeLine = (lineId) => {
             onError: () => {
                 // Rollback if failed
                 props.workout.workout_lines.splice(lineIndex, 0, removedLine)
-                vibrate('error')
+                triggerHaptic('error')
             },
         })
     }
@@ -412,7 +412,7 @@ const addSet = (lineId) => {
             // The page reload from Inertia will replace the temp set with the real one.
             // However, to prevent flickering or duplication if Inertia merges somewhat weirdly (though it usually replaces),
             // we strictly rely on the server response "wiping" our optimistic state by replacing props.
-            vibrate('tap')
+            triggerHaptic('tap')
         },
         onError: () => {
             // Rollback: remove the temp set
@@ -420,7 +420,7 @@ const addSet = (lineId) => {
             if (index !== -1) {
                 line.sets.splice(index, 1)
             }
-            vibrate('error')
+            triggerHaptic('error')
         },
     })
 }
@@ -453,7 +453,7 @@ const updateSet = (set, field, value) => {
             onError: () => {
                 // Rollback
                 set[field] = oldValue
-                vibrate('error')
+                triggerHaptic('error')
             },
         },
     )
@@ -465,7 +465,7 @@ const updateSet = (set, field, value) => {
  * @param {Number} setId - The ID of the set to delete.
  */
 const removeSet = (setId) => {
-    vibrate('warning')
+    triggerHaptic('warning')
 
     // Find the line & set
     let lineIndex = -1
@@ -493,7 +493,7 @@ const removeSet = (setId) => {
         onError: () => {
             // Rollback
             line.sets.splice(setIndex, 0, removedSet)
-            vibrate('error')
+            triggerHaptic('error')
         },
     })
 }
@@ -532,14 +532,14 @@ const duplicateSet = (set, lineId) => {
         },
         {
             preserveScroll: true,
-            onSuccess: () => vibrate('success'),
+            onSuccess: () => triggerHaptic('success'),
             onError: () => {
                 // Rollback
                 const index = line.sets.findIndex((s) => s.id === tempId)
                 if (index !== -1) {
                     line.sets.splice(index, 1)
                 }
-                vibrate('error')
+                triggerHaptic('error')
             },
         },
     )
@@ -898,8 +898,9 @@ const hasNoResults = computed(() => {
                     <GlassButton
                         v-if="!workout.ended_at"
                         variant="primary"
-                        class="mt-4"
                         @click="showAddExercise = true"
+                        class="px-8"
+                        data-testid="add-exercise-button"
                     >
                         Ajouter un exercice
                     </GlassButton>

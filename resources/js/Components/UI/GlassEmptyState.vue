@@ -19,6 +19,10 @@ defineProps({
         type: String,
         default: '',
     },
+    actionId: {
+        type: String,
+        default: 'empty-state-action',
+    },
     color: {
         type: String,
         default: 'orange', // orange, violet, pink, cyan
@@ -82,7 +86,7 @@ const shadowColors = {
             <!-- Action -->
             <div v-if="actionLabel || $slots.action">
                 <slot name="action">
-                    <GlassButton variant="primary" @click="$emit('action')" data-testid="empty-state-action">
+                    <GlassButton variant="primary" @click="$emit('action')" :data-testid="actionId">
                         {{ actionLabel }}
                     </GlassButton>
                 </slot>

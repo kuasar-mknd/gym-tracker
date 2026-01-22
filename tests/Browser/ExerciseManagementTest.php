@@ -29,14 +29,13 @@ test('user can manage exercises from mobile plus menu', function (): void {
             ->assertPathIs('/exercises')
 
             // 3. Add a new exercise
-            ->waitFor('[data-testid="create-exercise-button"]', 15);
-
-        $browser->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
+            ->waitForText('AUCUN EXERCICE', 15)
+            ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
         $browser->waitForText('NOUVEL EXERCICE', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
-            ->select('select', 'strength');
-        $browser->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
+            ->select('select', 'strength')
+            ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
 
         $browser->waitForText('DUSK TEST EXERCISE', 15);
 
@@ -55,6 +54,6 @@ test('user can manage exercises from mobile plus menu', function (): void {
 
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
-            ->waitForText('Aucun exercice pour l\'instant', 15);
+            ->waitForText('AUCUN EXERCICE', 15);
     });
 });

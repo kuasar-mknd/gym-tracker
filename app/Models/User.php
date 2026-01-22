@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\LogOptions;
@@ -202,6 +203,27 @@ class User extends Authenticatable implements MustVerifyEmail
             ->logOnly(['name', 'email', 'avatar', 'default_rest_time'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    public function getUnreadNotificationsCountCached(): int
+    {
+        return Cache::remember(
+            "user:{$this->id}:unread_notifications_count",
+            now()->addSeconds(30),
+            fn () => $this->unreadNotifications()->count()
+        );
+    }
+
+    public function getLatestAchievementCached(): ?\Illuminate\Notifications\DatabaseNotification
+    {
+        return Cache::remember(
+            "user:{$this->id}:latest_achievement",
+            now()->addSeconds(30),
+            fn () => $this->unreadNotifications()
+                ->where('type', \App\Notifications\AchievementUnlocked::class)
+                ->latest()
+                ->first()
+        );
     }
 
     /**

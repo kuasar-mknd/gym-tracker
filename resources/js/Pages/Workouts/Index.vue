@@ -7,7 +7,8 @@ import { defineAsyncComponent } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
 const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
@@ -44,29 +45,19 @@ const confirmDeletion = (workout) => {
 
         const removedWorkout = props.workouts.data[index]
         props.workouts.data.splice(index, 1)
-        vibrate('warning')
+        triggerHaptic('warning')
 
         deleteForm.delete(route('workouts.destroy', { workout: workout.id }), {
             preserveScroll: true,
             onError: () => {
                 // Rollback
                 props.workouts.data.splice(index, 0, removedWorkout)
-                vibrate('error')
+                triggerHaptic('error')
             },
         })
     }
 }
-</script>
-
-<script>
-import { usePullToRefresh } from '@/composables/usePullToRefresh'
-
-export default {
-    setup() {
-        const { isRefreshing, pullDistance } = usePullToRefresh()
-        return { isRefreshing, pullDistance }
-    },
-}
+const { isRefreshing, pullDistance } = usePullToRefresh()
 </script>
 
 <template>
@@ -173,11 +164,13 @@ export default {
 
         <div class="space-y-6">
             <!-- Stats Row -->
-            <div v-if="workouts.length > 0" class="animate-slide-up space-y-6">
+            <div v-if="workouts.data?.length > 0" class="animate-slide-up space-y-6">
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <GlassCard padding="p-4">
                         <div class="text-center">
-                            <div class="text-gradient text-2xl font-bold">{{ workouts.data?.length || 0 }}</div>
+                            <div class="text-gradient text-2xl font-bold">
+                                {{ workouts.meta?.total || workouts.data?.length || 0 }}
+                            </div>
                             <div class="text-text-muted mt-1 text-xs">Total séances</div>
                         </div>
                     </GlassCard>
@@ -266,6 +259,7 @@ export default {
                         description="C'est le moment de commencer ton aventure ! Clique sur le bouton pour créer ta première séance."
                         icon="💪"
                         action-label="Commencer maintenant"
+                        action-id="empty-state-start-workout"
                         @action="createWorkout"
                         color="orange"
                     />
