@@ -205,27 +205,6 @@ class User extends Authenticatable implements MustVerifyEmail
             ->dontSubmitEmptyLogs();
     }
 
-    public function getUnreadNotificationsCountCached(): int
-    {
-        return Cache::remember(
-            "user:{$this->id}:unread_notifications_count",
-            now()->addSeconds(30),
-            fn () => $this->unreadNotifications()->count()
-        );
-    }
-
-    public function getLatestAchievementCached(): ?\Illuminate\Notifications\DatabaseNotification
-    {
-        return Cache::remember(
-            "user:{$this->id}:latest_achievement",
-            now()->addSeconds(30),
-            fn () => $this->unreadNotifications()
-                ->where('type', \App\Notifications\AchievementUnlocked::class)
-                ->latest()
-                ->first()
-        );
-    }
-
     /**
      * Get the attributes that should be cast.
      *
@@ -248,7 +227,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return Cache::remember(
             "user:{$this->id}:unread_notifications_count",
             now()->addSeconds(30),
-            fn () => $this->unreadNotifications()->count()
+            fn() => $this->unreadNotifications()->count()
         );
     }
 
@@ -257,7 +236,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return Cache::remember(
             "user:{$this->id}:latest_achievement",
             now()->addSeconds(30),
-            fn () => $this->unreadNotifications()
+            fn() => $this->unreadNotifications()
                 ->where('type', \App\Notifications\AchievementUnlocked::class)
                 ->latest()
                 ->first()
