@@ -3,6 +3,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
+import { vibrate } from '@/composables/useHaptics'
 
 const form = useForm({
     name: '',
@@ -13,6 +14,8 @@ const form = useForm({
 
 const submit = () => {
     form.post(route('register'), {
+        onSuccess: () => vibrate('success'),
+        onError: () => vibrate('error'),
         onFinish: () => form.reset('password', 'password_confirmation'),
     })
 }
@@ -23,10 +26,10 @@ const submit = () => {
         <Head title="Inscription" />
 
         <div class="mb-6 text-center">
-            <h2 class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main">
+            <h2 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
                 Bienvenue ! 💪
             </h2>
-            <p class="mt-2 text-text-muted">Crée ton compte pour commencer</p>
+            <p class="text-text-muted mt-2">Crée ton compte pour commencer</p>
         </div>
 
         <form @submit.prevent="submit" class="space-y-5">
@@ -89,7 +92,7 @@ const submit = () => {
             <div class="my-6 flex items-center justify-center gap-4 text-sm">
                 <div class="h-px flex-1 bg-slate-200"></div>
                 <span
-                    class="rounded-full border border-white/50 bg-white/60 px-4 py-1 font-medium text-text-muted backdrop-blur-md"
+                    class="text-text-muted rounded-full border border-white/50 bg-white/60 px-4 py-1 font-medium backdrop-blur-md"
                 >
                     Ou s'inscrire avec
                 </span>
@@ -138,7 +141,7 @@ const submit = () => {
                 Déjà inscrit ?
                 <Link
                     :href="route('login')"
-                    class="font-bold text-electric-orange transition-colors hover:text-vivid-violet"
+                    class="text-electric-orange hover:text-vivid-violet font-bold transition-colors"
                     >Se connecter</Link
                 >
             </p>

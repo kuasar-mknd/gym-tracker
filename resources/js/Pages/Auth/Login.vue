@@ -4,6 +4,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
+import { vibrate } from '@/composables/useHaptics'
 
 defineProps({
     canResetPassword: Boolean,
@@ -18,6 +19,8 @@ const form = useForm({
 
 const submit = () => {
     form.post(route('login'), {
+        onSuccess: () => vibrate('success'),
+        onError: () => vibrate('error'),
         onFinish: () => form.reset('password'),
     })
 }
@@ -28,10 +31,10 @@ const submit = () => {
         <Head title="Connexion" />
 
         <div class="mb-6 text-center">
-            <h2 class="font-display text-2xl font-black uppercase italic tracking-tight text-text-main">
+            <h2 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
                 Bon retour ! 👋
             </h2>
-            <p class="mt-2 text-text-muted">Connecte-toi pour continuer</p>
+            <p class="text-text-muted mt-2">Connecte-toi pour continuer</p>
         </div>
 
         <div
@@ -66,13 +69,13 @@ const submit = () => {
             <div class="flex items-center justify-between">
                 <label class="flex cursor-pointer items-center">
                     <Checkbox :checked="form.remember" @update:checked="(val) => (form.remember = val)" />
-                    <span class="ml-2 text-sm font-medium text-text-muted">Se souvenir</span>
+                    <span class="text-text-muted ml-2 text-sm font-medium">Se souvenir</span>
                 </label>
 
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="text-sm font-semibold text-electric-orange transition-colors hover:text-vivid-violet"
+                    class="text-electric-orange hover:text-vivid-violet text-sm font-semibold transition-colors"
                 >
                     Mot de passe oublié ?
                 </Link>
@@ -92,7 +95,7 @@ const submit = () => {
             <div class="my-6 flex items-center justify-center gap-4 text-sm">
                 <div class="h-px flex-1 bg-slate-200"></div>
                 <span
-                    class="rounded-full border border-white/50 bg-white/60 px-4 py-1 font-medium text-text-muted backdrop-blur-md"
+                    class="text-text-muted rounded-full border border-white/50 bg-white/60 px-4 py-1 font-medium backdrop-blur-md"
                 >
                     Ou continuer avec
                 </span>
@@ -144,7 +147,7 @@ const submit = () => {
                 Pas encore de compte ?
                 <Link
                     :href="route('register')"
-                    class="font-bold text-electric-orange transition-colors hover:text-vivid-violet"
+                    class="text-electric-orange hover:text-vivid-violet font-bold transition-colors"
                     >Créer un compte</Link
                 >
             </p>

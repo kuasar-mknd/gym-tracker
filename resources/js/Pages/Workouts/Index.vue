@@ -4,6 +4,10 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
+import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { vibrate } from '@/composables/useHaptics'
 
 const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
 const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
@@ -34,10 +38,34 @@ const formatDate = (dateStr) => {
 const deleteForm = useForm({})
 const confirmDeletion = (workout) => {
     if (confirm(`Êtes-vous sûr de vouloir supprimer la séance "${workout.name || 'Séance'}" ?`)) {
+        // Optimistic UI
+        const index = props.workouts.data.findIndex((w) => w.id === workout.id)
+        if (index === -1) return
+
+        const removedWorkout = props.workouts.data[index]
+        props.workouts.data.splice(index, 1)
+        vibrate('warning')
+
         deleteForm.delete(route('workouts.destroy', { workout: workout.id }), {
             preserveScroll: true,
+            onError: () => {
+                // Rollback
+                props.workouts.data.splice(index, 0, removedWorkout)
+                vibrate('error')
+            },
         })
     }
+}
+</script>
+
+<script>
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
+
+export default {
+    setup() {
+        const { isRefreshing, pullDistance } = usePullToRefresh()
+        return { isRefreshing, pullDistance }
+    },
 }
 </script>
 
@@ -45,6 +73,38 @@ const confirmDeletion = (workout) => {
     <Head title="Mes Séances" />
 
     <AuthenticatedLayout page-title="Mes Séances">
+        <!-- Pull to Refresh Indicator -->
+        <div
+            class="pointer-events-none fixed top-0 left-0 z-50 flex w-full justify-center transition-transform duration-200 ease-out"
+            :style="{ transform: `translateY(${Math.min(pullDistance, 150)}px)` }"
+        >
+            <div
+                v-if="pullDistance > 0 || isRefreshing"
+                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90"
+            >
+                <svg
+                    v-if="isRefreshing"
+                    class="text-electric-orange h-6 w-6 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                </svg>
+                <span
+                    v-else
+                    class="material-symbols-outlined text-electric-orange transition-transform duration-200"
+                    :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
+                >
+                    arrow_downward
+                </span>
+            </div>
+        </div>
         <template #header-actions>
             <GlassButton
                 variant="primary"
@@ -181,94 +241,109 @@ const confirmDeletion = (workout) => {
             <div class="animate-slide-up" style="animation-delay: 0.2s">
                 <h3 class="text-text-main mb-3 font-semibold dark:text-white">Historique</h3>
 
-                <div v-if="!workouts.data || workouts.data.length === 0">
-                    <GlassCard>
-                        <div class="py-12 text-center">
-                            <div class="mb-3 text-5xl">💪</div>
-                            <h3 class="text-text-main text-lg font-semibold dark:text-white">Aucune séance</h3>
-                            <p class="text-text-muted mt-1">Clique sur le bouton + pour commencer</p>
-                            <GlassButton
-                                variant="primary"
-                                class="mt-4"
-                                :loading="form.processing"
-                                @click="createWorkout"
-                                data-testid="empty-state-start-workout"
-                            >
-                                Commencer maintenant
-                            </GlassButton>
+                <!-- Skeleton Loading -->
+                <div v-if="!workouts" class="space-y-3">
+                    <GlassCard v-for="i in 3" :key="i" class="p-4" padding="none">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <GlassSkeleton width="40%" height="1.5rem" />
+                                    <GlassSkeleton width="40px" height="1.2rem" />
+                                </div>
+                                <GlassSkeleton width="30%" height="0.8rem" />
+                                <div class="mt-2 flex gap-2">
+                                    <GlassSkeleton width="60px" height="1.2rem" />
+                                    <GlassSkeleton width="60px" height="1.2rem" />
+                                </div>
+                            </div>
                         </div>
                     </GlassCard>
                 </div>
 
+                <div v-else-if="!workouts.data || workouts.data.length === 0">
+                    <GlassEmptyState
+                        title="Aucune séance"
+                        description="C'est le moment de commencer ton aventure ! Clique sur le bouton pour créer ta première séance."
+                        icon="💪"
+                        action-label="Commencer maintenant"
+                        @action="createWorkout"
+                        color="orange"
+                    />
+                </div>
+
                 <div v-else class="space-y-3">
-                    <Link
+                    <SwipeableRow
                         v-for="workout in workouts.data"
                         :key="workout.id"
-                        :href="route('workouts.show', { workout: workout.id })"
-                        class="block"
+                        class="mb-3 block"
+                        :action-threshold="80"
                     >
-                        <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="text-text-main font-semibold dark:text-white">
-                                            {{ workout.name || 'Séance' }}
-                                        </h4>
-                                        <span class="glass-badge glass-badge-primary text-xs">
-                                            {{ workout.workout_lines.length }} exo
-                                        </span>
-                                    </div>
-                                    <div class="text-text-muted mt-1 text-sm">
-                                        {{ formatDate(workout.started_at) }}
-                                    </div>
+                        <template #action-right>
+                            <button
+                                @click="confirmDeletion(workout)"
+                                class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
+                            >
+                                <div class="flex flex-col items-center">
+                                    <span class="material-symbols-outlined text-2xl">delete</span>
+                                    <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
+                                </div>
+                            </button>
+                        </template>
 
-                                    <!-- Exercise preview -->
-                                    <div v-if="workout.workout_lines.length > 0" class="mt-3 flex flex-wrap gap-2">
-                                        <span
-                                            v-for="line in workout.workout_lines.slice(0, 3)"
-                                            :key="line.id"
-                                            class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/50"
+                        <Link :href="route('workouts.show', { workout: workout.id })" class="block">
+                            <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="text-text-main font-semibold dark:text-white">
+                                                {{ workout.name || 'Séance' }}
+                                            </h4>
+                                            <span class="glass-badge glass-badge-primary text-xs">
+                                                {{ workout.workout_lines.length }} exo
+                                            </span>
+                                        </div>
+                                        <div class="text-text-muted mt-1 text-sm">
+                                            {{ formatDate(workout.started_at) }}
+                                        </div>
+
+                                        <!-- Exercise preview -->
+                                        <div v-if="workout.workout_lines.length > 0" class="mt-3 flex flex-wrap gap-2">
+                                            <span
+                                                v-for="line in workout.workout_lines.slice(0, 3)"
+                                                :key="line.id"
+                                                class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/50"
+                                            >
+                                                {{ line.exercise.name }}
+                                                <span class="text-text-muted/50">• {{ line.sets.length }} séries</span>
+                                            </span>
+                                            <span
+                                                v-if="workout.workout_lines.length > 3"
+                                                class="text-text-muted/50 rounded-lg bg-white/50 px-2 py-1 text-xs"
+                                            >
+                                                +{{ workout.workout_lines.length - 3 }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <svg
+                                            class="text-text-muted/30 h-5 w-5 shrink-0"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
                                         >
-                                            {{ line.exercise.name }}
-                                            <span class="text-text-muted/50">• {{ line.sets.length }} séries</span>
-                                        </span>
-                                        <span
-                                            v-if="workout.workout_lines.length > 3"
-                                            class="text-text-muted/50 rounded-lg bg-white/50 px-2 py-1 text-xs"
-                                        >
-                                            +{{ workout.workout_lines.length - 3 }}
-                                        </span>
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-3">
-                                    <button
-                                        @click.prevent="confirmDeletion(workout)"
-                                        class="text-text-muted/30 flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-red-50 hover:text-red-500"
-                                        title="Supprimer la séance"
-                                        aria-label="Supprimer la séance"
-                                    >
-                                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true"
-                                            >delete</span
-                                        >
-                                    </button>
-                                    <svg
-                                        class="text-text-muted/30 h-5 w-5 shrink-0"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5l7 7-7 7"
-                                        />
-                                    </svg>
-                                </div>
-                            </div>
-                        </GlassCard>
-                    </Link>
+                            </GlassCard>
+                        </Link>
+                    </SwipeableRow>
                 </div>
             </div>
         </div>

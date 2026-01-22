@@ -5,6 +5,13 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent } from 'vue'
+import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { vibrate } from '@/composables/useHaptics'
+import { usePullToRefresh } from '@/composables/usePullToRefresh'
+
+const { isRefreshing, pullDistance } = usePullToRefresh()
 
 const ExerciseCategoryChart = defineAsyncComponent(() => import('@/Components/Stats/ExerciseCategoryChart.vue'))
 
@@ -18,6 +25,18 @@ const showAddForm = ref(false)
 const editingExercise = ref(null)
 const searchQuery = ref('')
 const activeCategory = ref('all')
+
+// Local state for optimistic updates
+const localExercises = ref([...props.exercises])
+
+// Update local state when props change (server sync)
+import { watch } from 'vue'
+watch(
+    () => props.exercises,
+    (newExercises) => {
+        localExercises.value = [...newExercises]
+    },
+)
 
 const form = useForm({
     name: '',
@@ -36,7 +55,9 @@ const submit = () => {
         onSuccess: () => {
             form.reset()
             showAddForm.value = false
+            vibrate('success')
         },
+        onError: () => vibrate('error'),
     })
 }
 
@@ -62,13 +83,26 @@ const updateExercise = (exercise) => {
 
 const deleteExercise = (id) => {
     if (confirm('Supprimer cet exercice ?')) {
-        router.delete(route('exercises.destroy', { exercise: id }))
+        const index = localExercises.value.findIndex((e) => e.id === id)
+        if (index === -1) return
+
+        const removed = localExercises.value[index]
+        localExercises.value.splice(index, 1)
+        vibrate('warning')
+
+        router.delete(route('exercises.destroy', { exercise: id }), {
+            preserveScroll: true,
+            onError: () => {
+                localExercises.value.splice(index, 0, removed)
+                vibrate('error')
+            },
+        })
     }
 }
 
 // Filter exercises by search and category
 const filteredExercises = computed(() => {
-    return props.exercises.filter((exercise) => {
+    return localExercises.value.filter((exercise) => {
         const matchesSearch =
             !searchQuery.value || exercise.name.toLowerCase().includes(searchQuery.value.toLowerCase())
         const matchesCategory = activeCategory.value === 'all' || exercise.category === activeCategory.value
@@ -126,6 +160,38 @@ const typeLabel = (type) => {
     <Head title="Bibliothèque" />
 
     <AuthenticatedLayout liquid-variant="subtle">
+        <!-- Pull to Refresh Indicator -->
+        <div
+            class="pointer-events-none fixed top-0 left-0 z-50 flex w-full justify-center transition-transform duration-200 ease-out"
+            :style="{ transform: `translateY(${Math.min(pullDistance, 150)}px)` }"
+        >
+            <div
+                v-if="pullDistance > 0 || isRefreshing"
+                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90"
+            >
+                <svg
+                    v-if="isRefreshing"
+                    class="text-electric-orange h-6 w-6 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                </svg>
+                <span
+                    v-else
+                    class="material-symbols-outlined text-electric-orange transition-transform duration-200"
+                    :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
+                >
+                    arrow_downward
+                </span>
+            </div>
+        </div>
         <div class="space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
@@ -157,22 +223,6 @@ const typeLabel = (type) => {
                     <span class="material-symbols-outlined mr-2">add</span>
                     Nouvel Exercice
                 </GlassButton>
-            </div>
-
-            <!-- Stats Chart -->
-            <div v-if="exercises.length > 0" class="animate-slide-up" style="animation-delay: 0.05s">
-                <GlassCard padding="p-4">
-                    <div class="mb-2 flex items-center justify-between">
-                        <h3 class="font-display text-text-main text-sm font-black tracking-wider uppercase">
-                            Répartition
-                        </h3>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <div class="flex-1">
-                            <ExerciseCategoryChart :exercises="exercises" />
-                        </div>
-                    </div>
-                </GlassCard>
             </div>
 
             <!-- Stats Chart -->
@@ -291,27 +341,49 @@ const typeLabel = (type) => {
 
             <!-- Empty State -->
             <div v-if="filteredExercises.length === 0 && !searchQuery" class="animate-slide-up">
-                <GlassCard class="py-12 text-center">
-                    <div class="mb-4 text-6xl">🏋️</div>
-                    <p class="text-text-main text-lg font-bold">Aucun exercice pour l'instant</p>
-                    <p class="text-text-muted mt-1">Commence par créer ton premier exercice</p>
-                    <GlassButton
-                        variant="primary"
-                        class="mt-6"
-                        @click="showAddForm = true"
-                        data-testid="create-exercise-button"
-                    >
-                        <span class="material-symbols-outlined mr-2">add</span>
-                        Créer le premier exercice
-                    </GlassButton>
-                </GlassCard>
+                <GlassEmptyState
+                    title="Aucun exercice"
+                    description="Ta bibliothèque est vide. Commence par créer ton premier exercice pour sculpter ton corps !"
+                    icon="🏋️"
+                    action-label="Créer le premier exercice"
+                    @action="showAddForm = true"
+                    color="green"
+                />
             </div>
 
             <!-- No Search Results -->
             <div v-else-if="filteredExercises.length === 0" class="animate-slide-up">
-                <GlassCard class="py-8 text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-3 text-6xl">search_off</span>
-                    <p class="text-text-main font-bold">Aucun résultat pour "{{ searchQuery }}"</p>
+                <GlassEmptyState
+                    :title="'Aucun résultat pour ' + searchQuery"
+                    description="Essaie avec un autre mot-clé ou crée un nouvel exercice."
+                    icon="search_off"
+                    color="violet"
+                >
+                    <template #action>
+                        <GlassButton variant="secondary" @click="searchQuery = ''"> Effacer la recherche </GlassButton>
+                    </template>
+                </GlassEmptyState>
+            </div>
+
+            <!-- Skeleton Loading -->
+            <div v-if="!exercises" class="animate-pulse space-y-4">
+                <GlassCard padding="p-4">
+                    <div class="flex gap-4">
+                        <GlassSkeleton width="60px" height="60px" borderRadius="16px" />
+                        <div class="flex-1 space-y-3 py-1">
+                            <GlassSkeleton width="70%" height="1.2rem" />
+                            <GlassSkeleton width="40%" height="0.8rem" />
+                        </div>
+                    </div>
+                </GlassCard>
+                <GlassCard padding="p-4">
+                    <div class="flex gap-4">
+                        <GlassSkeleton width="60px" height="60px" borderRadius="16px" />
+                        <div class="flex-1 space-y-3 py-1">
+                            <GlassSkeleton width="60%" height="1.2rem" />
+                            <GlassSkeleton width="50%" height="0.8rem" />
+                        </div>
+                    </div>
                 </GlassCard>
             </div>
 
@@ -329,104 +401,146 @@ const typeLabel = (type) => {
                     </div>
 
                     <div class="space-y-3">
-                        <GlassCard
+                        <SwipeableRow
                             v-for="exercise in exercisesInCat"
                             :key="exercise.id"
-                            padding="p-4"
-                            :class="[
-                                'group relative overflow-hidden transition-all duration-300',
-                                'border-l-[6px]',
-                                categoryBorderColors[category] || 'border-l-slate-300',
-                            ]"
+                            :disabled="editingExercise === exercise.id"
+                            :action-threshold="80"
+                            class="mb-3 block"
                         >
-                            <!-- View Mode -->
-                            <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
-                                <div class="flex items-center gap-4">
-                                    <div
-                                        :class="[
-                                            'flex size-14 items-center justify-center rounded-2xl',
-                                            exercise.type === 'strength'
-                                                ? 'bg-electric-orange/10 text-electric-orange'
-                                                : exercise.type === 'cardio'
-                                                  ? 'bg-neon-green/30 text-text-main'
-                                                  : 'bg-cyan-pure/10 text-cyan-pure',
-                                        ]"
-                                    >
-                                        <span class="material-symbols-outlined text-3xl">
-                                            {{ typeIcons[exercise.type] || 'fitness_center' }}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <div
-                                            class="font-display text-text-main text-lg leading-tight font-bold uppercase italic"
-                                        >
-                                            {{ exercise.name }}
-                                        </div>
-                                        <div
-                                            class="text-text-muted mt-1 text-xs font-semibold tracking-wider uppercase"
-                                        >
-                                            {{ typeLabel(exercise.type) }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div
-                                    class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+                            <template #action-left>
+                                <button
+                                    @click="startEdit(exercise)"
+                                    class="flex h-full w-full items-center justify-start bg-blue-500 pl-6 text-white"
                                 >
-                                    <button
-                                        @click="startEdit(exercise)"
-                                        class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all"
-                                        data-testid="edit-exercise-button"
-                                        aria-label="Modifier l'exercice"
-                                    >
-                                        <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                                    </button>
-                                    <button
-                                        @click="deleteExercise(exercise.id)"
-                                        class="text-text-muted flex size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500"
-                                        data-testid="delete-exercise-button"
-                                        aria-label="Supprimer l'exercice"
-                                    >
-                                        <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                                    </button>
-                                </div>
-                            </div>
+                                    <div class="flex flex-col items-center">
+                                        <span class="material-symbols-outlined text-2xl">edit</span>
+                                        <span class="text-[10px] font-bold tracking-wider uppercase">Modifier</span>
+                                    </div>
+                                </button>
+                            </template>
 
-                            <!-- Edit Mode -->
-                            <form v-else @submit.prevent="updateExercise(exercise)" class="space-y-4">
-                                <GlassInput
-                                    v-model="editForm.name"
-                                    placeholder="Nom de l'exercice"
-                                    :error="editForm.errors.name"
-                                />
-                                <div class="grid grid-cols-2 gap-3">
-                                    <select v-model="editForm.type" class="glass-input text-sm">
-                                        <option v-for="t in types" :key="t.value" :value="t.value">
-                                            {{ t.label }}
-                                        </option>
-                                    </select>
-                                    <select v-model="editForm.category" class="glass-input text-sm">
-                                        <option value="">— Aucune —</option>
-                                        <option v-for="cat in categories" :key="cat" :value="cat">
-                                            {{ cat }}
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="flex gap-2">
-                                    <GlassButton
-                                        type="submit"
-                                        variant="primary"
-                                        size="sm"
-                                        :loading="editForm.processing"
-                                        data-testid="save-exercise-button"
+                            <template #action-right>
+                                <button
+                                    @click="deleteExercise(exercise.id)"
+                                    class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
+                                >
+                                    <div class="flex flex-col items-center">
+                                        <span class="material-symbols-outlined text-2xl">delete</span>
+                                        <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
+                                    </div>
+                                </button>
+                            </template>
+
+                            <GlassCard
+                                padding="p-4"
+                                :class="[
+                                    'group relative overflow-hidden transition-all duration-300',
+                                    'border-l-[6px]',
+                                    categoryBorderColors[category] || 'border-l-slate-300',
+                                ]"
+                            >
+                                <!-- View Mode -->
+                                <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div
+                                            :class="[
+                                                'flex size-14 items-center justify-center rounded-2xl',
+                                                exercise.type === 'strength'
+                                                    ? 'bg-electric-orange/10 text-electric-orange'
+                                                    : exercise.type === 'cardio'
+                                                      ? 'bg-neon-green/30 text-text-main'
+                                                      : 'bg-cyan-pure/10 text-cyan-pure',
+                                            ]"
+                                        >
+                                            <span class="material-symbols-outlined text-3xl">
+                                                {{ typeIcons[exercise.type] || 'fitness_center' }}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <div
+                                                class="font-display text-text-main text-lg leading-tight font-bold uppercase italic"
+                                            >
+                                                {{ exercise.name }}
+                                            </div>
+                                            <div
+                                                class="text-text-muted mt-1 text-xs font-semibold tracking-wider uppercase"
+                                            >
+                                                {{ typeLabel(exercise.type) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                     >
-                                        Sauvegarder
-                                    </GlassButton>
-                                    <GlassButton type="button" variant="ghost" size="sm" @click="cancelEdit">
-                                        Annuler
-                                    </GlassButton>
+                                        <button
+                                            @click="toggleEdit(exercise)"
+                                            class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all sm:hidden"
+                                            aria-label="Options"
+                                        >
+                                            <!-- Mobile indicator for swipe capability or ellipsis -->
+                                            <span class="material-symbols-outlined text-sm opacity-50"
+                                                >drag_indicator</span
+                                            >
+                                        </button>
+
+                                        <!-- Desktop Buttons -->
+                                        <button
+                                            @click="startEdit(exercise)"
+                                            class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all sm:flex"
+                                            data-testid="edit-exercise-button"
+                                            aria-label="Modifier l'exercice"
+                                        >
+                                            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                                        </button>
+                                        <button
+                                            @click="deleteExercise(exercise.id)"
+                                            class="text-text-muted hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:flex"
+                                            data-testid="delete-exercise-button"
+                                            aria-label="Supprimer l'exercice"
+                                        >
+                                            <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                                        </button>
+                                    </div>
                                 </div>
-                            </form>
-                        </GlassCard>
+
+                                <!-- Edit Mode -->
+                                <form v-else @submit.prevent="updateExercise(exercise)" class="space-y-4">
+                                    <GlassInput
+                                        v-model="editForm.name"
+                                        placeholder="Nom de l'exercice"
+                                        :error="editForm.errors.name"
+                                    />
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <select v-model="editForm.type" class="glass-input text-sm">
+                                            <option v-for="t in types" :key="t.value" :value="t.value">
+                                                {{ t.label }}
+                                            </option>
+                                        </select>
+                                        <select v-model="editForm.category" class="glass-input text-sm">
+                                            <option value="">— Aucune —</option>
+                                            <option v-for="cat in categories" :key="cat" :value="cat">
+                                                {{ cat }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <GlassButton
+                                            type="submit"
+                                            variant="primary"
+                                            size="sm"
+                                            :loading="editForm.processing"
+                                            data-testid="save-exercise-button"
+                                        >
+                                            Sauvegarder
+                                        </GlassButton>
+                                        <GlassButton type="button" variant="ghost" size="sm" @click="cancelEdit">
+                                            Annuler
+                                        </GlassButton>
+                                    </div>
+                                </form>
+                            </GlassCard>
+                        </SwipeableRow>
                     </div>
                 </div>
             </div>

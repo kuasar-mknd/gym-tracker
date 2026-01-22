@@ -65,17 +65,17 @@ Faire de GymTracker la meilleure application mobile-first de suivi de musculatio
 
 - **🔴 Critique** :
     - [x] Dark mode sur tous les composants (actuellement seul ThemeToggle fonctionne)
-    - [ ] Fixer Modal.vue pour mode clair
-    - [ ] Keyboard avoidance pour inputs
+    - [x] Fixer Modal.vue pour mode clair
+    - [x] Keyboard avoidance pour inputs
 - **🟠 UX Incomplète** :
-    - [ ] SwipeableRow sur listes workouts/exercises
-    - [ ] Haptic feedback sur navigation et formulaires
-    - [ ] Optimistic UI pour add/delete/update sets
+    - [x] SwipeableRow sur listes workouts/exercises
+    - [x] Haptic feedback sur navigation et formulaires
+    - [x] Optimistic UI pour add/delete/update sets
 - **🟡 Améliorations** :
-    - [ ] Pull-to-refresh sur pages principales
-    - [ ] Skeleton loading (utiliser .glass-skeleton)
-    - [ ] Transitions de page (Inertia)
-    - [ ] Empty states avec illustrations
+    - [/] Pull-to-refresh sur pages principales
+    - [x] Skeleton loading (utiliser .glass-skeleton)
+    - [x] Transitions de page (Inertia)
+    - [x] Empty states avec illustrations
 
 ### v1.5 — Social & Exports
 

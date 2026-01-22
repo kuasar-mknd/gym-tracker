@@ -120,6 +120,7 @@ const confirmFinishWorkout = () => {
         { is_finished: true },
         {
             onSuccess: () => {
+                vibrate('success')
                 showFinishModal.value = false
                 router.visit(route('dashboard'))
             },
@@ -265,9 +266,9 @@ const createAndAddExercise = async () => {
                 {
                     preserveScroll: true,
                     onSuccess: () => {
-                        showAddExercise.value = false
                         searchQuery.value = ''
                         createExerciseForm.processing = false
+                        vibrate('success')
                     },
                     onError: () => {
                         createExerciseForm.processing = false
@@ -320,21 +321,32 @@ const closeModal = () => {
  *
  * @param {Number} lineId - The ID of the WorkoutLine to remove.
  */
-const removeLine = (lineId) => {
-    confirmMessage.value = 'Supprimer cet exercice de la séance ?'
-    confirmAction.value = () => {
-        router.delete(route('workout-lines.destroy', { workoutLine: lineId }), {
-            preserveScroll: true,
-        })
-        showConfirmModal.value = false
-    }
-    showConfirmModal.value = true
-}
-
-/** Closes the confirmation modal. */
 const cancelConfirm = () => {
     showConfirmModal.value = false
     confirmAction.value = null
+}
+
+const removeLine = (lineId) => {
+    confirmMessage.value = 'Supprimer cet exercice de la séance ?'
+    confirmAction.value = () => {
+        // Optimistic UI: Find and remove locally
+        const lineIndex = props.workout.workout_lines.findIndex((l) => l.id === lineId)
+        if (lineIndex === -1) return
+
+        const removedLine = props.workout.workout_lines[lineIndex]
+        props.workout.workout_lines.splice(lineIndex, 1) // Remove immediately
+        showConfirmModal.value = false
+
+        router.delete(route('workout-lines.destroy', { workoutLine: lineId }), {
+            preserveScroll: true,
+            onError: () => {
+                // Rollback if failed
+                props.workout.workout_lines.splice(lineIndex, 0, removedLine)
+                vibrate('error')
+            },
+        })
+    }
+    showConfirmModal.value = true
 }
 
 const secondsToTime = (totalSeconds) => {
@@ -380,8 +392,36 @@ const addSet = (lineId) => {
         data.duration_seconds = 0
     }
 
+    // Optimistic Add
+    const tempId = 'temp_' + Date.now()
+    const optimisticSet = {
+        id: tempId,
+        workout_line_id: lineId,
+        workout_id: props.workout.id,
+        is_completed: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...data,
+    }
+
+    line.sets.push(optimisticSet)
+
     router.post(route('sets.store', { workoutLine: lineId }), data, {
         preserveScroll: true,
+        onSuccess: () => {
+            // The page reload from Inertia will replace the temp set with the real one.
+            // However, to prevent flickering or duplication if Inertia merges somewhat weirdly (though it usually replaces),
+            // we strictly rely on the server response "wiping" our optimistic state by replacing props.
+            vibrate('tap')
+        },
+        onError: () => {
+            // Rollback: remove the temp set
+            const index = line.sets.findIndex((s) => s.id === tempId)
+            if (index !== -1) {
+                line.sets.splice(index, 1)
+            }
+            vibrate('error')
+        },
     })
 }
 
@@ -392,8 +432,31 @@ const addSet = (lineId) => {
  * @param {String} field - The field name ('weight' or 'reps').
  * @param {Number} value - The new value.
  */
+/**
+ * Updates a specific field (weight or reps) of a set.
+ *
+ * @param {Object} set - The set to update.
+ * @param {String} field - The field name ('weight' or 'reps').
+ * @param {Number} value - The new value.
+ */
 const updateSet = (set, field, value) => {
-    router.patch(route('sets.update', { set: set.id }), { [field]: value }, { preserveScroll: true, only: ['workout'] })
+    const oldValue = set[field]
+    // Optimistic Update
+    set[field] = value
+
+    router.patch(
+        route('sets.update', { set: set.id }),
+        { [field]: value },
+        {
+            preserveScroll: true,
+            only: ['workout'],
+            onError: () => {
+                // Rollback
+                set[field] = oldValue
+                vibrate('error')
+            },
+        },
+    )
 }
 
 /**
@@ -403,7 +466,36 @@ const updateSet = (set, field, value) => {
  */
 const removeSet = (setId) => {
     vibrate('warning')
-    router.delete(route('sets.destroy', { set: setId }), { preserveScroll: true })
+
+    // Find the line & set
+    let lineIndex = -1
+    let setIndex = -1
+
+    for (let i = 0; i < props.workout.workout_lines.length; i++) {
+        const line = props.workout.workout_lines[i]
+        const foundIndex = line.sets.findIndex((s) => s.id === setId)
+        if (foundIndex !== -1) {
+            lineIndex = i
+            setIndex = foundIndex
+            break
+        }
+    }
+
+    if (lineIndex === -1 || setIndex === -1) return
+
+    // Optimistic Remove
+    const line = props.workout.workout_lines[lineIndex]
+    const removedSet = line.sets[setIndex]
+    line.sets.splice(setIndex, 1)
+
+    router.delete(route('sets.destroy', { set: setId }), {
+        preserveScroll: true,
+        onError: () => {
+            // Rollback
+            line.sets.splice(setIndex, 0, removedSet)
+            vibrate('error')
+        },
+    })
 }
 
 /**
@@ -413,7 +505,23 @@ const removeSet = (setId) => {
  * @param {Number} lineId - The workout line ID.
  */
 const duplicateSet = (set, lineId) => {
-    vibrate('success')
+    const line = props.workout.workout_lines.find((l) => l.id === lineId)
+
+    // Optimistic Duplicate
+    const tempId = 'temp_dup_' + Date.now()
+    const optimisticSet = {
+        ...set,
+        id: tempId,
+        workout_line_id: lineId,
+        workout_id: props.workout.id,
+        is_completed: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    }
+
+    // Insert after the current set or at the end? Usually at the end.
+    line.sets.push(optimisticSet)
+
     router.post(
         route('sets.store', { workoutLine: lineId }),
         {
@@ -422,7 +530,18 @@ const duplicateSet = (set, lineId) => {
             distance_km: set.distance_km,
             duration_seconds: set.duration_seconds,
         },
-        { preserveScroll: true },
+        {
+            preserveScroll: true,
+            onSuccess: () => vibrate('success'),
+            onError: () => {
+                // Rollback
+                const index = line.sets.findIndex((s) => s.id === tempId)
+                if (index !== -1) {
+                    line.sets.splice(index, 1)
+                }
+                vibrate('error')
+            },
+        },
     )
 }
 

@@ -7,6 +7,7 @@ import Dropdown from '@/Components/Dropdown.vue'
 import DropdownLink from '@/Components/DropdownLink.vue'
 import NavLink from '@/Components/NavLink.vue'
 import { Link } from '@inertiajs/vue3'
+import { vibrate } from '@/composables/useHaptics'
 
 defineProps({
     pageTitle: {
@@ -143,6 +144,7 @@ const showingNavigationDropdown = ref(false)
                     v-if="showBack"
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    @click="vibrate('tap')"
                 >
                     <span class="material-symbols-outlined">arrow_back</span>
                 </Link>
@@ -184,11 +186,21 @@ const showingNavigationDropdown = ref(false)
         <!-- Page Content -->
         <main
             class="relative z-10 px-5 py-6 sm:px-6 lg:px-8"
-            :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
+            :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'sm:pb-main-safe pb-24']"
         >
-            <div class="mx-auto max-w-7xl">
-                <slot />
-            </div>
+            <Transition
+                enter-active-class="transition ease-out duration-300"
+                enter-from-class="opacity-0 translate-y-4"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-200"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-4"
+                mode="out-in"
+            >
+                <div :key="$page.url" class="mx-auto max-w-7xl">
+                    <slot />
+                </div>
+            </Transition>
         </main>
 
         <!-- Bottom Navigation (mobile only) -->

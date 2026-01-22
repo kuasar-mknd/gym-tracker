@@ -2,138 +2,109 @@
 /**
  * SwipeableRow.vue
  *
- * A touch-enabled swipeable row component that reveals actions on swipe.
- * - Swipe left: Delete action (red)
- * - Swipe right: Duplicate action (blue)
- * - Includes haptic feedback for native mobile feel
+ * A generic gesture-controlled row component.
+ * - Swipe right (positive offset): Reveals `action-left` slot
+ * - Swipe left (negative offset): Reveals `action-right` slot
+ * - Supports "snap" to keep actions visible.
  */
 import { ref, computed } from 'vue'
 import { vibrate } from '@/composables/useHaptics'
 
 const props = defineProps({
-    /** Whether the component is disabled */
-    disabled: {
-        type: Boolean,
-        default: false,
-    },
-    /** Threshold percentage to reveal action (0-1) */
-    revealThreshold: {
-        type: Number,
-        default: 0.25,
-    },
-    /** Threshold percentage to trigger action (0-1) */
-    triggerThreshold: {
-        type: Number,
-        default: 0.5,
-    },
+    disabled: { type: Boolean, default: false },
+    /** Width of the action area in pixels to snap to */
+    actionThreshold: { type: Number, default: 80 },
 })
 
-const emit = defineEmits(['delete', 'duplicate'])
+const emit = defineEmits(['click'])
 
 // State
 const offset = ref(0)
 const startX = ref(0)
 const isDragging = ref(false)
-const containerWidth = ref(300)
-const hasTriggeredHaptic = ref(false)
+const containerWidth = ref(0)
 
 // Computed
-const translateX = computed(() => `translateX(${offset.value}px)`)
+const style = computed(() => ({
+    transform: `translateX(${offset.value}px)`,
+    transition: isDragging.value ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+}))
 
-const leftActionVisible = computed(() => offset.value > containerWidth.value * props.revealThreshold)
-const rightActionVisible = computed(() => offset.value < -containerWidth.value * props.revealThreshold)
-
-const leftActionTriggered = computed(() => offset.value > containerWidth.value * props.triggerThreshold)
-const rightActionTriggered = computed(
-    () => Math.abs(offset.value) > containerWidth.value * props.triggerThreshold && offset.value < 0,
-)
-
-// Touch handlers
+// Methods
 function onTouchStart(e) {
     if (props.disabled) return
-
     const touch = e.touches[0]
     startX.value = touch.clientX - offset.value
     isDragging.value = true
-    hasTriggeredHaptic.value = false
-
-    // Get container width
     containerWidth.value = e.currentTarget.offsetWidth
 }
 
 function onTouchMove(e) {
-    if (!isDragging.value || props.disabled) return
-
+    if (!isDragging.value) return
     const touch = e.touches[0]
-    const newOffset = touch.clientX - startX.value
+    const currentX = touch.clientX
+    let newOffset = currentX - startX.value
 
-    // Limit the drag distance
-    const maxOffset = containerWidth.value * 0.6
-    offset.value = Math.max(-maxOffset, Math.min(maxOffset, newOffset))
-
-    // Haptic feedback at threshold
-    if (!hasTriggeredHaptic.value && (leftActionTriggered.value || rightActionTriggered.value)) {
-        vibrate('toggle')
-        hasTriggeredHaptic.value = true
+    // Resistance effect when over-dragging
+    if (newOffset > props.actionThreshold) {
+        newOffset = props.actionThreshold + (newOffset - props.actionThreshold) * 0.2
+    } else if (newOffset < -props.actionThreshold) {
+        newOffset = -props.actionThreshold + (newOffset + props.actionThreshold) * 0.2
     }
 
-    // Reset haptic flag if back below threshold
-    if (hasTriggeredHaptic.value && !leftActionTriggered.value && !rightActionTriggered.value) {
-        hasTriggeredHaptic.value = false
-    }
+    offset.value = newOffset
 }
 
 function onTouchEnd() {
-    if (!isDragging.value || props.disabled) return
-
     isDragging.value = false
+    const threshold = props.actionThreshold
 
-    // Check if action should be triggered
-    if (leftActionTriggered.value) {
-        vibrate('success')
-        emit('duplicate')
-    } else if (rightActionTriggered.value) {
-        vibrate('warning')
-        emit('delete')
+    // Snap logic
+    if (offset.value > threshold * 0.5) {
+        // Snap open left
+        offset.value = threshold
+        vibrate('selection')
+    } else if (offset.value < -threshold * 0.5) {
+        // Snap open right
+        offset.value = -threshold
+        vibrate('selection')
+    } else {
+        // Snap close
+        offset.value = 0
     }
+}
 
-    // Reset position with animation
+// Reset if clicked outside or programmatically
+function close() {
     offset.value = 0
 }
+
+defineExpose({ close })
 </script>
 
 <template>
-    <div class="relative overflow-hidden rounded-xl">
-        <!-- Background actions -->
-        <div class="absolute inset-0 flex">
-            <!-- Left action (Duplicate - Blue) -->
-            <div
-                class="flex flex-1 items-center justify-start bg-blue-500 pl-4 text-white transition-opacity"
-                :class="leftActionVisible ? 'opacity-100' : 'opacity-0'"
-            >
-                <span class="material-symbols-outlined text-2xl">content_copy</span>
-                <span v-if="leftActionTriggered" class="ml-2 text-sm font-bold">Dupliquer</span>
+    <div class="relative overflow-hidden rounded-xl bg-white dark:bg-slate-800">
+        <!-- Background Actions Layer -->
+        <div class="absolute inset-0 flex w-full">
+            <!-- Left Action Slot (revealed when swiping right) -->
+            <div class="flex w-1/2 items-center justify-start pl-4" v-if="$slots['action-left']">
+                <slot name="action-left" />
             </div>
 
-            <!-- Right action (Delete - Red) -->
-            <div
-                class="flex flex-1 items-center justify-end bg-red-500 pr-4 text-white transition-opacity"
-                :class="rightActionVisible ? 'opacity-100' : 'opacity-0'"
-            >
-                <span v-if="rightActionTriggered" class="mr-2 text-sm font-bold">Supprimer</span>
-                <span class="material-symbols-outlined text-2xl">delete</span>
+            <!-- Right Action Slot (revealed when swiping left) -->
+            <div class="ml-auto flex w-1/2 items-center justify-end pr-4" v-if="$slots['action-right']">
+                <slot name="action-right" />
             </div>
         </div>
 
-        <!-- Swipeable content -->
+        <!-- Foreground Content Layer -->
         <div
-            class="relative z-10 touch-pan-y"
-            :class="{ 'transition-transform duration-200 ease-out': !isDragging }"
-            :style="{ transform: translateX }"
+            class="relative z-10 touch-pan-y bg-white dark:bg-slate-800"
+            :style="style"
             @touchstart="onTouchStart"
             @touchmove="onTouchMove"
             @touchend="onTouchEnd"
-            @touchcancel="onTouchEnd"
+            @click="$emit('click')"
         >
             <slot />
         </div>
