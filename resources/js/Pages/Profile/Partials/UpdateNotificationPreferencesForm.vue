@@ -86,8 +86,8 @@ const updatePreferences = () => {
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-medium text-text-main">Préférences de Notification</h2>
-            <p class="mt-1 text-sm text-text-muted">Choisis comment tu souhaites être informé de tes progrès.</p>
+            <h2 class="text-text-main text-lg font-medium">Préférences de Notification</h2>
+            <p class="text-text-muted mt-1 text-sm">Choisis comment tu souhaites être informé de tes progrès.</p>
         </header>
 
         <form @submit.prevent="updatePreferences" class="mt-6 space-y-6">
@@ -95,12 +95,12 @@ const updatePreferences = () => {
                 <!-- Web Push Banner -->
                 <div
                     v-if="pushSupported && pushPermission !== 'granted'"
-                    class="mb-6 rounded-xl border border-accent-primary/20 bg-accent-primary/10 p-4"
+                    class="border-accent-primary/20 bg-accent-primary/10 mb-6 rounded-xl border p-4"
                 >
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <h4 class="text-sm font-semibold text-text-main">Activer les notifications Push</h4>
-                            <p class="text-xs text-text-muted">
+                            <h4 class="text-text-main text-sm font-semibold">Activer les notifications Push</h4>
+                            <p class="text-text-muted text-xs">
                                 Recevez des alertes en temps réel sur votre appareil, même quand l'application est
                                 fermée.
                             </p>
@@ -109,7 +109,7 @@ const updatePreferences = () => {
                     </div>
                 </div>
 
-                <div v-else-if="!pushSupported" class="mb-6 text-xs italic text-text-muted/50">
+                <div v-else-if="!pushSupported" class="text-text-muted/50 mb-6 text-xs italic">
                     Les notifications push ne sont pas supportées par votre navigateur.
                 </div>
 
@@ -117,13 +117,13 @@ const updatePreferences = () => {
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h4 class="text-sm font-medium text-text-main">Records Personnels (PR)</h4>
-                            <p class="text-xs text-text-muted">Être notifié quand vous battez un record.</p>
+                            <h4 class="text-text-main text-sm font-medium">Records Personnels (PR)</h4>
+                            <p class="text-text-muted text-xs">Être notifié quand vous battez un record.</p>
                         </div>
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" v-model="form.preferences.personal_record" class="peer sr-only" />
                             <div
-                                class="peer h-6 w-11 rounded-full bg-white/10 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-accent-primary peer-checked:after:translate-x-full"
+                                class="peer peer-checked:bg-accent-primary h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
                             ></div>
                         </label>
                     </div>
@@ -133,9 +133,9 @@ const updatePreferences = () => {
                             type="checkbox"
                             v-model="form.push_preferences.personal_record"
                             id="push_pr"
-                            class="rounded border-white/10 bg-white/5 text-accent-primary focus:ring-accent-primary"
+                            class="text-accent-primary focus:ring-accent-primary rounded border-white/10 bg-white/5"
                         />
-                        <label for="push_pr" class="text-xs text-text-muted">Envoyer aussi en Push</label>
+                        <label for="push_pr" class="text-text-muted text-xs">Envoyer aussi en Push</label>
                     </div>
                 </div>
 
@@ -143,15 +143,15 @@ const updatePreferences = () => {
                 <div class="space-y-4">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h4 class="text-sm font-medium text-text-main">Rappels d'Entraînement</h4>
-                            <p class="text-xs text-text-muted">
+                            <h4 class="text-text-main text-sm font-medium">Rappels d'Entraînement</h4>
+                            <p class="text-text-muted text-xs">
                                 Rappels automatiques après quelques jours d'inactivité.
                             </p>
                         </div>
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" v-model="form.preferences.training_reminder" class="peer sr-only" />
                             <div
-                                class="peer h-6 w-11 rounded-full bg-white/10 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-accent-primary peer-checked:after:translate-x-full"
+                                class="peer peer-checked:bg-accent-primary h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
                             ></div>
                         </label>
                     </div>
@@ -161,9 +161,9 @@ const updatePreferences = () => {
                             type="checkbox"
                             v-model="form.push_preferences.training_reminder"
                             id="push_reminder"
-                            class="rounded border-white/10 bg-white/5 text-accent-primary focus:ring-accent-primary"
+                            class="text-accent-primary focus:ring-accent-primary rounded border-white/10 bg-white/5"
                         />
-                        <label for="push_reminder" class="text-xs text-text-muted">Envoyer aussi en Push</label>
+                        <label for="push_reminder" class="text-text-muted text-xs">Envoyer aussi en Push</label>
                     </div>
 
                     <Transition

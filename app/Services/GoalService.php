@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Goal;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Service for managing user goals and tracking progress.
@@ -24,9 +26,71 @@ class GoalService
      */
     public function syncGoals(User $user): void
     {
-        $user->goals()->whereNull('completed_at')->each(function (Goal $goal): void {
+        $goals = $user->goals()->whereNull('completed_at')->get();
+
+        if ($goals->isEmpty()) {
+            return;
+        }
+
+        $this->syncFrequencyGoals($user, $goals->where('type', 'frequency'));
+        $this->syncMeasurementGoals($user, $goals->where('type', 'measurement'));
+        $this->syncExerciseGoals($user, $goals->whereIn('type', ['weight', 'volume']));
+    }
+
+    /**
+     * Sync frequency goals by fetching workout count once.
+     */
+    protected function syncFrequencyGoals(User $user, Collection $goals): void
+    {
+        if ($goals->isEmpty()) {
+            return;
+        }
+
+        $count = $user->workouts()->count();
+
+        foreach ($goals as $goal) {
+            $goal->update(['current_value' => $count]);
+            $this->checkCompletion($goal);
+        }
+    }
+
+    /**
+     * Sync measurement goals by fetching latest body measurement once.
+     */
+    protected function syncMeasurementGoals(User $user, Collection $goals): void
+    {
+        if ($goals->isEmpty()) {
+            return;
+        }
+
+        $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
+
+        foreach ($goals as $goal) {
+            if (!$goal->measurement_type || !$latestMeasurement) {
+                continue;
+            }
+
+            $val = $goal->measurement_type === 'weight'
+                ? $latestMeasurement->weight
+                : ($latestMeasurement->{$goal->measurement_type} ?? null);
+
+            if (is_numeric($val)) {
+                $goal->update(['current_value' => (float) $val]);
+                $this->checkCompletion($goal);
+            }
+        }
+    }
+
+    /**
+     * Sync exercise-based goals (weight, volume).
+     * Currently still iterates, but we could optimize further by grouping by exercise.
+     * For now, we rely on the new indexes to make these queries fast.
+     */
+    protected function syncExerciseGoals(User $user, Collection $goals): void
+    {
+        foreach ($goals as $goal) {
             $this->updateGoalProgress($goal);
-        });
+        }
     }
 
     /**
