@@ -29,10 +29,14 @@ class HandleInertiaRequests extends Middleware
             ],
             'is_testing' => app()->environment('testing'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
-            'ziggy' => fn (): array => [
-                ...(new Ziggy)->toArray(),
-                'location' => $request->url(),
-            ],
+            'ziggy' => function () use ($request): array {
+                $ziggy = new Ziggy;
+
+                return [
+                    ...$ziggy->toArray(),
+                    'location' => $request->url(),
+                ];
+            },
         ];
     }
 
