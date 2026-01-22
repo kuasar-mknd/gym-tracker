@@ -36,7 +36,7 @@ test('water tracker index page is displayed for authenticated user', function ()
         ->component('Tools/WaterTracker')
         ->has('logs', 1)
         ->where('logs.0.id', $todayLog->id)
-        ->where('todayTotal', 500)
+        ->where('todayTotal', 500) // Controller sums amount, ensure it matches int
         ->has('history', 7) // 7 days of history including today
         ->where('goal', 2500)
     );
