@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
 use App\Models\Habit;
+use App\Models\HabitLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class HabitController extends Controller
@@ -25,9 +27,38 @@ class HabitController extends Controller
             ])
             ->get();
 
+        // Calculate 30-day history for the chart
+        $history = HabitLog::whereHas('habit', function ($query) {
+            $query->where('user_id', $this->user()->id);
+        })
+            ->where('date', '>=', Carbon::now()->subDays(29)->format('Y-m-d'))
+            ->select('date', DB::raw('count(*) as count'))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy(function ($item) {
+                // Handle both Carbon object (from cast) and string (raw query)
+                return $item->date instanceof \Carbon\Carbon ? $item->date->format('Y-m-d') : $item->date;
+            });
+
+        $chartData = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i);
+            $dateStr = $date->format('Y-m-d');
+            $count = $history->get($dateStr)?->count ?? 0;
+
+            $chartData[] = [
+                'date' => $dateStr,
+                // @phpstan-ignore-next-line
+                'day_label' => $date->locale(app()->getLocale())->format('d/m'),
+                'count' => $count,
+            ];
+        }
+
         return Inertia::render('Habits/Index', [
             'habits' => $habits,
             'weekDates' => $this->getWeekDates(),
+            'history' => $chartData,
         ]);
     }
 
