@@ -205,23 +205,6 @@ class User extends Authenticatable implements MustVerifyEmail
             ->dontSubmitEmptyLogs();
     }
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'default_rest_time' => 'integer',
-            'current_streak' => 'integer',
-            'longest_streak' => 'integer',
-            'last_workout_at' => 'datetime',
-        ];
-    }
-
     public function getUnreadNotificationsCountCached(): int
     {
         return Cache::remember(
@@ -241,5 +224,22 @@ class User extends Authenticatable implements MustVerifyEmail
                 ->latest()
                 ->first()
         );
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'default_rest_time' => 'integer',
+            'current_streak' => 'integer',
+            'longest_streak' => 'integer',
+            'last_workout_at' => 'datetime',
+        ];
     }
 }
