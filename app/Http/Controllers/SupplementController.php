@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Supplement;
 use App\Actions\Supplements\FetchSupplementUsageHistoryAction;
+use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
 use Illuminate\Http\Request;
