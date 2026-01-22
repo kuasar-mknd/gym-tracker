@@ -33,16 +33,16 @@ return new class extends Migration
 
             // Explicit index for workout_line_id
             // Check for explicit and standard FK index
-             if (! Schema::hasIndex('sets', 'sets_workout_line_id_index') && ! Schema::hasIndex('sets', 'sets_workout_line_id_foreign')) {
+            if (! Schema::hasIndex('sets', 'sets_workout_line_id_index') && ! Schema::hasIndex('sets', 'sets_workout_line_id_foreign')) {
                 $table->index('workout_line_id', 'sets_workout_line_id_index');
             }
         });
 
         Schema::table('workout_lines', function (Blueprint $table) {
-             if (! Schema::hasIndex('workout_lines', 'workout_lines_exercise_id_index') && ! Schema::hasIndex('workout_lines', 'workout_lines_exercise_id_foreign')) {
+            if (! Schema::hasIndex('workout_lines', 'workout_lines_exercise_id_index') && ! Schema::hasIndex('workout_lines', 'workout_lines_exercise_id_foreign')) {
                 $table->index('exercise_id', 'workout_lines_exercise_id_index');
             }
-             if (! Schema::hasIndex('workout_lines', 'workout_lines_workout_id_index') && ! Schema::hasIndex('workout_lines', 'workout_lines_workout_id_foreign')) {
+            if (! Schema::hasIndex('workout_lines', 'workout_lines_workout_id_index') && ! Schema::hasIndex('workout_lines', 'workout_lines_workout_id_foreign')) {
                 $table->index('workout_id', 'workout_lines_workout_id_index');
             }
         });
