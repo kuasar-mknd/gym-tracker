@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class WorkoutLineStoreRequest extends FormRequest
 {
@@ -22,7 +23,13 @@ class WorkoutLineStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'exercise_id' => ['required', 'exists:exercises,id'],
+            'exercise_id' => [
+                'required',
+                Rule::exists('exercises', 'id')->where(function ($query) {
+                    $query->whereNull('user_id')
+                        ->orWhere('user_id', $this->user()?->id);
+                }),
+            ],
         ];
     }
 }

@@ -22,3 +22,8 @@
 **Vulnerability:** Users could create Personal Records linked to Workouts and Sets belonging to other users because validation only checked for ID existence (`exists:workouts,id`) without verifying ownership.
 **Learning:** Standard `exists` validation confirms a record is in the database but ignores ownership. This allows linking to private resources of others, polluting data relationships.
 **Prevention:** Always scope `exists` checks to `user_id` when validating relationships to user-owned resources: `Rule::exists('table')->where('user_id', $this->user()->id)`.
+
+## 2026-07-27 - IDOR via Unscoped Workout Line Exercise
+**Vulnerability:** `WorkoutLineStoreRequest` allowed users to add exercises to their workout by ID without checking if they owned the exercise. This allowed malicious users to reference private exercises of other users.
+**Learning:** `exists:table,id` is insufficient for resources that can be private/owned. Hybrid resources (System + User Private) require complex validation logic.
+**Prevention:** Use `Rule::exists('exercises', 'id')->where(...)` with a closure that checks for `user_id = auth()->id() OR user_id IS NULL`.
