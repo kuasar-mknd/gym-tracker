@@ -5,7 +5,7 @@
  * Usage: <button v-press>Click me</button>
  * Options: <button v-press="{ scale: 0.95, haptic: true }">Click me</button>
  */
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const defaultOptions = {
     scale: 0.95,
@@ -27,7 +27,7 @@ export const vPress = {
         const handlePressStart = () => {
             el.style.transform = `scale(${options.scale})`
             if (options.haptic) {
-                vibrate('tap')
+                triggerHaptic('tap')
             }
         }
 

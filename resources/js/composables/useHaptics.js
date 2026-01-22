@@ -31,7 +31,7 @@ export function isHapticsSupported() {
  * @param {HapticType} type - The type of haptic pattern to play
  * @returns {boolean} - Whether the vibration was triggered
  */
-export function vibrate(type = 'tap') {
+export function triggerHaptic(type = 'tap') {
     if (!isHapticsSupported()) {
         return false
     }
@@ -57,8 +57,14 @@ export function stopVibration() {
 export function useHaptics() {
     return {
         isSupported: isHapticsSupported(),
-        vibrate,
+        triggerHaptic,
         stopVibration,
         patterns,
     }
+}
+export default {
+    triggerHaptic,
+    stopVibration,
+    isHapticsSupported,
+    patterns,
 }

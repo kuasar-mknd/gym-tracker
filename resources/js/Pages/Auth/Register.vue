@@ -3,7 +3,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const form = useForm({
     name: '',
@@ -14,8 +14,8 @@ const form = useForm({
 
 const submit = () => {
     form.post(route('register'), {
-        onSuccess: () => vibrate('success'),
-        onError: () => vibrate('error'),
+        onSuccess: () => triggerHaptic('success'),
+        onError: () => triggerHaptic('error'),
         onFinish: () => form.reset('password', 'password_confirmation'),
     })
 }

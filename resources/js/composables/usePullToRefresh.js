@@ -1,6 +1,6 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { router } from '@inertiajs/vue3'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 export function usePullToRefresh(options = {}) {
     const {
@@ -63,7 +63,7 @@ export function usePullToRefresh(options = {}) {
         if (pullDistance.value > threshold) {
             isRefreshing.value = true
             pullDistance.value = threshold // Snap to threshold
-            vibrate('time') // Haptic feedback on trigger
+            triggerHaptic('time') // Haptic feedback on trigger
 
             try {
                 await onRefresh()

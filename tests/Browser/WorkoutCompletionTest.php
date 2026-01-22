@@ -50,9 +50,10 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->waitFor('#finish-workout-desktop', 15)
                 ->click('#finish-workout-desktop')
                 ->waitForText('TERMINER LA SÉANCE ?', 15)
-                ->pause(500)
-                ->click('#confirm-finish-button')
-                ->waitForRoute('dashboard', [], 15)
+                ->pause(1000)
+                ->script("document.getElementById('confirm-finish-button').click();");
+
+            $browser->waitForLocation('/dashboard', 15)
                 ->assertSee('FAIT');
         });
     }

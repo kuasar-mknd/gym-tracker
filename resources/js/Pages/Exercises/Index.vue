@@ -8,7 +8,7 @@ import { ref, computed, defineAsyncComponent } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const { isRefreshing, pullDistance } = usePullToRefresh()
@@ -55,9 +55,9 @@ const submit = () => {
         onSuccess: () => {
             form.reset()
             showAddForm.value = false
-            vibrate('success')
+            triggerHaptic('success')
         },
-        onError: () => vibrate('error'),
+        onError: () => triggerHaptic('error'),
     })
 }
 
@@ -88,13 +88,13 @@ const deleteExercise = (id) => {
 
         const removed = localExercises.value[index]
         localExercises.value.splice(index, 1)
-        vibrate('warning')
+        triggerHaptic('warning')
 
         router.delete(route('exercises.destroy', { exercise: id }), {
             preserveScroll: true,
             onError: () => {
                 localExercises.value.splice(index, 0, removed)
-                vibrate('error')
+                triggerHaptic('error')
             },
         })
     }
@@ -342,12 +342,13 @@ const typeLabel = (type) => {
             <!-- Empty State -->
             <div v-if="filteredExercises.length === 0 && !searchQuery" class="animate-slide-up">
                 <GlassEmptyState
-                    title="Aucun exercice"
+                    title="Aucun exercice pour l'instant"
                     description="Ta bibliothèque est vide. Commence par créer ton premier exercice pour sculpter ton corps !"
                     icon="🏋️"
                     action-label="Créer le premier exercice"
                     @action="showAddForm = true"
                     color="green"
+                    action-id="create-exercise-button"
                 />
             </div>
 
@@ -412,6 +413,7 @@ const typeLabel = (type) => {
                                 <button
                                     @click="startEdit(exercise)"
                                     class="flex h-full w-full items-center justify-start bg-blue-500 pl-6 text-white"
+                                    data-testid="edit-exercise-button-mobile"
                                 >
                                     <div class="flex flex-col items-center">
                                         <span class="material-symbols-outlined text-2xl">edit</span>
@@ -424,6 +426,7 @@ const typeLabel = (type) => {
                                 <button
                                     @click="deleteExercise(exercise.id)"
                                     class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
+                                    data-testid="delete-exercise-button-mobile"
                                 >
                                     <div class="flex flex-col items-center">
                                         <span class="material-symbols-outlined text-2xl">delete</span>

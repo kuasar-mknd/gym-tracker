@@ -1,7 +1,7 @@
 <script setup>
 import { Link, usePage, router } from '@inertiajs/vue3'
 import { computed } from 'vue'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const page = usePage()
 
@@ -14,7 +14,7 @@ const navItems = [
 ]
 
 const createWorkout = () => {
-    vibrate('toggle')
+    triggerHaptic('toggle')
     router.post(route('workouts.store'))
 }
 
@@ -44,7 +44,7 @@ const isActiveRoute = (itemRoute) => {
                 :class="['glass-nav-item group', { active: isActiveRoute(item.route) }]"
                 :aria-label="item.name"
                 :aria-current="isActiveRoute(item.route) ? 'page' : undefined"
-                @click="vibrate('tap')"
+                @click="triggerHaptic('tap')"
             >
                 <span
                     class="material-symbols-outlined text-[28px] transition-all group-hover:drop-shadow-[0_0_8px_rgba(255,85,0,0.5)]"

@@ -8,7 +8,7 @@
  * - Supports "snap" to keep actions visible.
  */
 import { ref, computed } from 'vue'
-import { vibrate } from '@/composables/useHaptics'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const props = defineProps({
     disabled: { type: Boolean, default: false },
@@ -63,11 +63,11 @@ function onTouchEnd() {
     if (offset.value > threshold * 0.5) {
         // Snap open left
         offset.value = threshold
-        vibrate('selection')
+        triggerHaptic('selection')
     } else if (offset.value < -threshold * 0.5) {
         // Snap open right
         offset.value = -threshold
-        vibrate('selection')
+        triggerHaptic('selection')
     } else {
         // Snap close
         offset.value = 0
