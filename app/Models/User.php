@@ -252,7 +252,7 @@ class User extends Authenticatable implements MustVerifyEmail
         );
     }
 
-    public function getLatestAchievementCached()
+    public function getLatestAchievementCached(): ?\Illuminate\Notifications\DatabaseNotification
     {
         return Cache::remember(
             "user:{$this->id}:latest_achievement",
