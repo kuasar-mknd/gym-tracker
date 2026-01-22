@@ -47,7 +47,7 @@ class FastingController extends Controller
 
         $user->fastingLogs()->create(array_merge(
             $request->validated(),
-            ['start_time' => $request->validated('start_time', now())]
+            ['start_time' => $request->validated('start_time') ?? now()]
         ));
 
         return redirect()->back()->with('success', 'Jeûne commencé !');
@@ -61,7 +61,10 @@ class FastingController extends Controller
 
         $data = $request->validated();
 
-        if (isset($data['end_time']) && $fasting->start_time->gt($data['end_time'])) {
+        $startTime = isset($data['start_time']) ? \Carbon\Carbon::parse($data['start_time']) : $fasting->start_time;
+        $endTime = isset($data['end_time']) ? \Carbon\Carbon::parse($data['end_time']) : $fasting->end_time;
+
+        if ($endTime && $startTime->gt($endTime)) {
             return redirect()->back()->with('error', 'La fin du jeûne ne peut pas être antérieure au début.');
         }
 

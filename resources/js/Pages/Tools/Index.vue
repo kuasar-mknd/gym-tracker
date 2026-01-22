@@ -157,10 +157,10 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-cyan-500/20 p-4 text-cyan-500">
-                             <span class="material-symbols-outlined text-3xl">water_drop</span>
+                            <span class="material-symbols-outlined text-3xl">water_drop</span>
                         </div>
-                        <h3 class="text-xl font-bold text-text-main">Water Tracker</h3>
-                        <p class="text-sm text-text-muted">Track your daily water intake and stay hydrated.</p>
+                        <h3 class="text-text-main text-xl font-bold">Water Tracker</h3>
+                        <p class="text-text-muted text-sm">Track your daily water intake and stay hydrated.</p>
                     </div>
                 </GlassCard>
             </Link>
@@ -172,10 +172,10 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-purple-500/20 p-4 text-purple-500">
-                             <span class="material-symbols-outlined text-3xl">timer</span>
+                            <span class="material-symbols-outlined text-3xl">timer</span>
                         </div>
-                        <h3 class="text-xl font-bold text-text-main">Suivi de Jeûne</h3>
-                        <p class="text-sm text-text-muted">Suivez vos périodes de jeûne intermittent.</p>
+                        <h3 class="text-text-main text-xl font-bold">Suivi de Jeûne</h3>
+                        <p class="text-text-muted text-sm">Suivez vos périodes de jeûne intermittent.</p>
                     </div>
                 </GlassCard>
             </Link>

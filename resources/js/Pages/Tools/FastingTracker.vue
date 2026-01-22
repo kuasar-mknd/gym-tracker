@@ -51,7 +51,7 @@
                             <span class="text-text-main text-4xl font-bold tracking-tight">
                                 {{ formattedElapsedTime }}
                             </span>
-                            <span class="text-text-muted text-sm mt-1">
+                            <span class="text-text-muted mt-1 text-sm">
                                 Objectif: {{ activeFast.target_duration_hours }}h
                             </span>
                         </div>
@@ -72,9 +72,7 @@
                         </div>
                     </div>
 
-                    <GlassButton @click="endFast" variant="danger" class="w-full">
-                        Terminer le jeûne
-                    </GlassButton>
+                    <GlassButton @click="endFast" variant="danger" class="w-full"> Terminer le jeûne </GlassButton>
                 </div>
 
                 <div v-else class="flex flex-col items-center space-y-6">
@@ -91,12 +89,15 @@
                                 <button
                                     v-for="option in fastingOptions"
                                     :key="option.value"
-                                    @click="form.target_duration_hours = option.value; form.method = option.label"
+                                    @click="
+                                        form.target_duration_hours = option.value
+                                        form.method = option.label
+                                    "
                                     :class="[
                                         'rounded-xl border p-3 text-center text-sm transition-all',
                                         form.target_duration_hours === option.value
                                             ? 'border-electric-orange bg-electric-orange/10 text-electric-orange font-semibold'
-                                            : 'border-slate-200 bg-white/50 hover:bg-white text-text-muted'
+                                            : 'text-text-muted border-slate-200 bg-white/50 hover:bg-white',
                                     ]"
                                 >
                                     {{ option.label }}
@@ -105,20 +106,15 @@
                         </div>
 
                         <div v-if="form.method === 'Custom'" class="space-y-2">
-                             <label class="text-text-muted text-sm font-medium">Heures</label>
-                             <GlassInput
-                                type="number"
-                                v-model="form.target_duration_hours"
-                                min="1"
-                                max="168"
-                             />
+                            <label class="text-text-muted text-sm font-medium">Heures</label>
+                            <GlassInput type="number" v-model="form.target_duration_hours" min="1" max="168" />
                         </div>
                     </div>
 
                     <GlassButton
                         @click="startFast"
                         :disabled="form.processing"
-                        class="w-full bg-electric-orange text-white"
+                        class="bg-electric-orange w-full text-white"
                     >
                         Démarrer
                     </GlassButton>
@@ -126,13 +122,16 @@
             </GlassCard>
 
             <!-- History -->
-            <GlassCard class="flex flex-col h-full">
+            <GlassCard class="flex h-full flex-col">
                 <div class="flex items-center justify-between border-b border-slate-100 p-6">
                     <h3 class="text-text-main text-lg font-bold">Historique récent</h3>
                 </div>
 
                 <div class="flex-1 overflow-auto p-6">
-                    <div v-if="history.length === 0" class="flex h-full flex-col items-center justify-center text-center text-text-muted">
+                    <div
+                        v-if="history.length === 0"
+                        class="text-text-muted flex h-full flex-col items-center justify-center text-center"
+                    >
                         <span class="material-symbols-outlined mb-2 text-3xl opacity-50">history</span>
                         <p>Aucun historique de jeûne.</p>
                     </div>
@@ -155,13 +154,17 @@
                             <div class="flex items-center gap-2">
                                 <span
                                     class="rounded-full px-2 py-1 text-xs font-medium"
-                                    :class="reachedTarget(log) ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'"
+                                    :class="
+                                        reachedTarget(log)
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-orange-100 text-orange-700'
+                                    "
                                 >
                                     {{ reachedTarget(log) ? 'Objectif atteint' : 'Incomplet' }}
                                 </span>
                                 <button
                                     @click="deleteLog(log)"
-                                    class="text-text-muted hover:text-red-500 transition-colors"
+                                    class="text-text-muted transition-colors hover:text-red-500"
                                 >
                                     <span class="material-symbols-outlined text-lg">delete</span>
                                 </button>
@@ -241,14 +244,17 @@ const dashOffset = computed(() => {
     if (!props.activeFast) return 283
     const targetMs = props.activeFast.target_duration_hours * 3600 * 1000
     const progress = Math.min(1, elapsedTimeMs.value / targetMs)
-    return 283 - (283 * progress)
+    return 283 - 283 * progress
 })
 
 // Helpers
 const formatDate = (dateString) => {
     if (!dateString) return ''
     return new Date(dateString).toLocaleString('fr-FR', {
-        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     })
 }
 
@@ -256,7 +262,10 @@ const formatEstimatedEnd = (startString, hours) => {
     const start = new Date(startString)
     const end = new Date(start.getTime() + hours * 3600 * 1000)
     return end.toLocaleString('fr-FR', {
-        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     })
 }
 

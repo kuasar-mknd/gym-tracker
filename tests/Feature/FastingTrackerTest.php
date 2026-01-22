@@ -21,6 +21,7 @@ test('user can start a fast', function () {
         ->post(route('fasting.store'), [
             'target_duration_hours' => 16,
             'method' => '16:8',
+            'start_time' => null,
         ]);
 
     $response->assertRedirect();
