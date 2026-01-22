@@ -1,35 +1,42 @@
 <?php
 
+namespace Tests\Feature;
+
 use App\Models\User;
 use App\Models\WaterLog;
-use Inertia\Testing\AssertableInertia as Assert;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+use Tests\TestCase;
 
-use function Pest\Laravel\actingAs;
-use function Pest\Laravel\delete;
-use function Pest\Laravel\get;
-use function Pest\Laravel\post;
+class WaterControllerTest extends TestCase
+{
+    use RefreshDatabase;
 
-test('water tracker index page is displayed for authenticated user', function (): void {
-    $user = User::factory()->create();
-    actingAs($user);
+    public function test_water_tracker_index_is_displayed_for_authenticated_user(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
 
-    $this->travelTo(now()->startOfDay()->addHours(12));
+        // Freeze time to noon to avoid day-boundary issues
+        $this->travelTo(now()->startOfDay()->addHours(12));
 
-    $todayLog = WaterLog::factory()->create([
-        'user_id' => $user->id,
-        'amount' => 500,
-        'consumed_at' => now(),
-    ]);
+        $todayLog = WaterLog::factory()->create([
+            'user_id' => $user->id,
+            'amount' => 500,
+            'consumed_at' => now(),
+        ]);
 
-    WaterLog::factory()->create([
-        'user_id' => $user->id,
-        'amount' => 300,
-        'consumed_at' => now()->subDay(),
-    ]);
+        WaterLog::factory()->create([
+            'user_id' => $user->id,
+            'amount' => 300,
+            'consumed_at' => now()->subDay(),
+        ]);
 
-    get(route('tools.water.index'))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+        $response = $this->get(route('tools.water.index'));
+
+        $response->assertOk();
+
+        $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('Tools/WaterTracker')
             ->has('logs', 1)
             ->where('logs.0.id', $todayLog->id)
@@ -37,81 +44,95 @@ test('water tracker index page is displayed for authenticated user', function ()
             ->has('history', 7)
             ->where('goal', 2500)
         );
-});
+    }
 
-test('water tracker index redirects unauthenticated users', function (): void {
-    get(route('tools.water.index'))
-        ->assertRedirect(route('login'));
-});
+    public function test_water_tracker_index_redirects_unauthenticated_users(): void
+    {
+        $response = $this->get(route('tools.water.index'));
 
-test('user can add water log', function (): void {
-    $user = User::factory()->create();
-    actingAs($user);
-    $this->travelTo(now());
+        $response->assertRedirect(route('login'));
+    }
 
-    $data = [
-        'amount' => 300,
-        'consumed_at' => now()->toDateTimeString(),
-    ];
+    public function test_user_can_add_water_log(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
 
-    post(route('tools.water.store'), $data)
-        ->assertRedirect();
+        $this->travelTo(now());
 
-    $this->assertDatabaseHas('water_logs', [
-        'user_id' => $user->id,
-        'amount' => 300,
-    ]);
-});
+        $data = [
+            'amount' => 300,
+            'consumed_at' => now()->toDateTimeString(),
+        ];
 
-test('water log creation requires amount', function (): void {
-    $user = User::factory()->create();
-    actingAs($user);
+        $response = $this->post(route('tools.water.store'), $data);
 
-    post(route('tools.water.store'), [
-        'consumed_at' => now()->toDateTimeString(),
-    ])
-    ->assertSessionHasErrors('amount');
-});
+        $response->assertRedirect();
 
-test('water log creation requires consumed_at', function (): void {
-    $user = User::factory()->create();
-    actingAs($user);
+        $this->assertDatabaseHas('water_logs', [
+            'user_id' => $user->id,
+            'amount' => 300,
+        ]);
+    }
 
-    post(route('tools.water.store'), [
-        'amount' => 500,
-    ])
-    ->assertSessionHasErrors('consumed_at');
-});
+    public function test_water_log_creation_requires_amount(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
 
-test('user can delete their own water log', function (): void {
-    $user = User::factory()->create();
-    actingAs($user);
+        $response = $this->post(route('tools.water.store'), [
+            'consumed_at' => now()->toDateTimeString(),
+        ]);
 
-    $log = WaterLog::factory()->create([
-        'user_id' => $user->id,
-    ]);
+        $response->assertSessionHasErrors('amount');
+    }
 
-    delete(route('tools.water.destroy', $log))
-        ->assertRedirect();
+    public function test_water_log_creation_requires_consumed_at(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
 
-    $this->assertDatabaseMissing('water_logs', [
-        'id' => $log->id,
-    ]);
-});
+        $response = $this->post(route('tools.water.store'), [
+            'amount' => 500,
+        ]);
 
-test('user cannot delete another users water log', function (): void {
-    $user = User::factory()->create();
-    actingAs($user);
+        $response->assertSessionHasErrors('consumed_at');
+    }
 
-    $otherUser = User::factory()->create();
-    $log = WaterLog::factory()->create([
-        'user_id' => $otherUser->id,
-    ]);
+    public function test_user_can_delete_their_own_water_log(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
 
-    delete(route('tools.water.destroy', $log))
-        ->assertForbidden();
+        $log = WaterLog::factory()->create([
+            'user_id' => $user->id,
+        ]);
 
-    $this->assertDatabaseHas('water_logs', [
-        'id' => $log->id,
-    ]);
-});
+        $response = $this->delete(route('tools.water.destroy', $log));
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseMissing('water_logs', [
+            'id' => $log->id,
+        ]);
+    }
+
+    public function test_user_cannot_delete_another_users_water_log(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $otherUser = User::factory()->create();
+        $log = WaterLog::factory()->create([
+            'user_id' => $otherUser->id,
+        ]);
+
+        $response = $this->delete(route('tools.water.destroy', $log));
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('water_logs', [
+            'id' => $log->id,
+        ]);
+    }
+}
