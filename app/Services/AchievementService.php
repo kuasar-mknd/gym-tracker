@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class AchievementService
 {
@@ -18,13 +19,16 @@ class AchievementService
         // NITRO FIX: Pre-load unlocked IDs to avoid N+1 query in loop
         $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
 
+        // NITRO FIX: Pre-load user stats to avoid N+1 query in loop
+        $stats = $this->preloadUserStats($user);
+
         foreach ($achievements as $achievement) {
             // Skip if already unlocked - memory check, no query
             if (in_array($achievement->id, $unlockedAchievementIds)) {
                 continue;
             }
 
-            if ($this->checkAchievement($user, $achievement)) {
+            if ($this->checkAchievement($user, $achievement, $stats)) {
                 $user->achievements()->attach($achievement->id, [
                     'achieved_at' => now(),
                 ]);
@@ -34,19 +38,82 @@ class AchievementService
         }
     }
 
-    protected function checkAchievement(User $user, Achievement $achievement): bool
+    /**
+     * Preload all necessary user statistics for achievement checks.
+     *
+     * @return array{
+     *   count: int,
+     *   max_weight: float,
+     *   total_volume: float,
+     *   workout_dates: array<int, string>
+     * }
+     */
+    protected function preloadUserStats(User $user): array
+    {
+        // 1. Workout Count
+        $workoutCount = $user->workouts()->count();
+
+        // 2. Max Weight (join sets)
+        /** @var float|int|null $maxWeight */
+        $maxWeight = $user->workouts()
+            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->max('sets.weight');
+
+        // 3. Total Volume
+        /** @var float|int $totalVolume */
+        $totalVolume = $user->workouts()
+            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->sum(DB::raw('sets.weight * sets.reps'));
+
+        // 4. Workout Dates (for streak) - Fetch last 365 days to be safe for most streaks
+        // If an achievement requires > 365 days, this logic would need adjustment,
+        // but for performance 365 is a reasonable buffer.
+        /** @var array<int, string> $workoutDates */
+        $workoutDates = $user->workouts()
+            ->where('started_at', '>=', now()->subDays(365))
+            ->latest('started_at')
+            ->pluck('started_at')
+            ->map(function (mixed $date): string {
+                /** @var string|null $d */
+                $d = $date;
+                return Carbon::parse($d ?? now())->format('Y-m-d');
+            })
+            ->unique()
+            ->values()
+            ->toArray();
+
+        return [
+            'count' => $workoutCount,
+            'max_weight' => (float) ($maxWeight ?? 0),
+            'total_volume' => (float) $totalVolume,
+            'workout_dates' => $workoutDates,
+        ];
+    }
+
+    /**
+     * @param array{
+     *   count: int,
+     *   max_weight: float,
+     *   total_volume: float,
+     *   workout_dates: array<int, string>
+     * } $stats
+     */
+    protected function checkAchievement(User $user, Achievement $achievement, array $stats): bool
     {
         return match ($achievement->type) {
-            'count' => $user->workouts()->count() >= $achievement->threshold,
-            'weight_record' => $this->checkWeightRecord($user, $achievement->threshold),
-            'volume_total' => $this->checkTotalVolume($user, $achievement->threshold),
-            'streak' => $this->checkStreak($user, $achievement->threshold),
+            'count' => $stats['count'] >= $achievement->threshold,
+            'weight_record' => $stats['max_weight'] >= $achievement->threshold,
+            'volume_total' => $stats['total_volume'] >= $achievement->threshold,
+            'streak' => $this->checkStreakInMemory($stats['workout_dates'], $achievement->threshold),
             default => false,
         };
     }
 
     protected function checkWeightRecord(User $user, float $threshold): bool
     {
+        // Deprecated in favor of preloaded stats, but kept for direct calls if any
         return $user->workouts()
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
@@ -56,6 +123,7 @@ class AchievementService
 
     protected function checkTotalVolume(User $user, float $threshold): bool
     {
+         // Deprecated in favor of preloaded stats
         $totalVolume = $user->workouts()
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
@@ -67,8 +135,21 @@ class AchievementService
 
     protected function checkStreak(User $user, float $threshold): bool
     {
+         // Deprecated in favor of preloaded stats
         $workoutDates = $this->getUniqueWorkoutDates($user, (int) $threshold);
 
+        if (count($workoutDates) < (int) $threshold) {
+            return false;
+        }
+
+        return $this->calculateMaxStreak($workoutDates) >= (int) $threshold;
+    }
+
+    /**
+     * @param array<int, string> $workoutDates
+     */
+    protected function checkStreakInMemory(array $workoutDates, float $threshold): bool
+    {
         if (count($workoutDates) < (int) $threshold) {
             return false;
         }
@@ -88,7 +169,7 @@ class AchievementService
             ->pluck('started_at');
 
         /** @var array<int, string> $result */
-        $result = $dates->map(fn (string $date): string => \Illuminate\Support\Carbon::parse($date)->format('Y-m-d'))
+        $result = $dates->map(fn (string $date): string => Carbon::parse($date)->format('Y-m-d'))
             ->unique()
             ->values()
             ->toArray();
@@ -105,9 +186,13 @@ class AchievementService
         $maxStreak = 1;
         $count = count($dates);
 
+        if ($count === 0) {
+            return 0;
+        }
+
         for ($i = 0; $i < $count - 1; $i++) {
-            $current = \Carbon\Carbon::parse($dates[$i]);
-            $next = \Carbon\Carbon::parse($dates[$i + 1]);
+            $current = Carbon::parse($dates[$i]);
+            $next = Carbon::parse($dates[$i + 1]);
 
             if (abs((int) $current->diffInDays($next, false)) === 1) {
                 $currentStreak++;
