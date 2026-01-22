@@ -2,9 +2,9 @@
 
 use App\Models\User;
 use App\Models\WaterLog;
-use Inertia\Testing\AssertableInertia;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();
@@ -12,7 +12,6 @@ beforeEach(function (): void {
 });
 
 test('water tracker index page is displayed for authenticated user', function (): void {
-    // Freeze time to ensure "today" is consistent between test setup and controller query
     $this->travelTo(now()->startOfDay()->addHours(12));
 
     $todayLog = WaterLog::factory()->create([
@@ -21,7 +20,6 @@ test('water tracker index page is displayed for authenticated user', function ()
         'consumed_at' => now(),
     ]);
 
-    // Create a log for yesterday to ensure it's NOT included in 'logs' but IS in 'history'
     WaterLog::factory()->create([
         'user_id' => $this->user->id,
         'amount' => 300,
@@ -32,12 +30,12 @@ test('water tracker index page is displayed for authenticated user', function ()
 
     $response->assertOk();
 
-    $response->assertInertia(fn (AssertableInertia $page) => $page
+    $response->assertInertia(fn ($page) => $page
         ->component('Tools/WaterTracker')
         ->has('logs', 1)
         ->where('logs.0.id', $todayLog->id)
-        ->where('todayTotal', 500) // Controller sums amount, ensure it matches int
-        ->has('history', 7) // 7 days of history including today
+        ->where('todayTotal', fn ($val) => (int) $val === 500)
+        ->has('history', 7)
         ->where('goal', 2500)
     );
 });
