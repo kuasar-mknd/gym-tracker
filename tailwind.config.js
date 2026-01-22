@@ -29,11 +29,11 @@ export default {
                 'cyan-pure': '#00E5FF',
                 'magenta-pure': '#F5009B',
                 'lime-pure': '#C0EB00',
-                'pearl-white': '#F8FAFF',
-                'surface-glass': 'rgba(255, 255, 255, 0.65)',
-                'glass-border': 'rgba(255, 255, 255, 0.8)',
-                'text-main': '#0F172A',
-                'text-muted': '#64748B',
+                'pearl-white': 'var(--pearl-white)',
+                'surface-glass': 'var(--glass-bg)',
+                'glass-border': 'var(--glass-border)',
+                'text-main': 'var(--text-main)',
+                'text-muted': 'var(--text-muted)',
 
                 // Category/Muscle accent colors
                 'plate-red': '#EF4444',

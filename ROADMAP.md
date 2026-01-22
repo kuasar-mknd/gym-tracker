@@ -64,7 +64,7 @@ Faire de GymTracker la meilleure application mobile-first de suivi de musculatio
 ### v1.4.1 — UX Polish & Dark Mode (Prioritaire)
 
 - **🔴 Critique** :
-    - [ ] Dark mode sur tous les composants (actuellement seul ThemeToggle fonctionne)
+    - [x] Dark mode sur tous les composants (actuellement seul ThemeToggle fonctionne)
     - [ ] Fixer Modal.vue pour mode clair
     - [ ] Keyboard avoidance pour inputs
 - **🟠 UX Incomplète** :
