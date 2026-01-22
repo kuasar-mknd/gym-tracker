@@ -15,12 +15,14 @@ class HabitController extends Controller
     {
         $startOfWeek = Carbon::now()->startOfWeek();
         $endOfWeek = Carbon::now()->endOfWeek();
+        // Fetch logs for history chart (last 90 days)
+        $historyStart = Carbon::now()->subDays(90);
 
         $habits = $this->user()->habits()
             ->where('archived', false)
             ->with([
-                'logs' => function ($query) use ($startOfWeek, $endOfWeek): void {
-                    $query->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')]);
+                'logs' => function ($query) use ($historyStart, $endOfWeek): void {
+                    $query->whereBetween('date', [$historyStart->format('Y-m-d'), $endOfWeek->format('Y-m-d')]);
                 },
             ])
             ->get();
