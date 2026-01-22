@@ -46,6 +46,12 @@ return new class extends Migration
                 $table->index('workout_id', 'workout_lines_workout_id_index');
             }
         });
+
+        Schema::table('body_measurements', function (Blueprint $table) {
+            if (! Schema::hasIndex('body_measurements', 'body_measurements_weight_index')) {
+                $table->index('weight', 'body_measurements_weight_index');
+            }
+        });
     }
 
     /**
@@ -80,6 +86,12 @@ return new class extends Migration
             }
             if (Schema::hasIndex('workout_lines', 'workout_lines_workout_id_index')) {
                 $table->dropIndex('workout_lines_workout_id_index');
+            }
+        });
+
+        Schema::table('body_measurements', function (Blueprint $table) {
+            if (Schema::hasIndex('body_measurements', 'body_measurements_weight_index')) {
+                $table->dropIndex('body_measurements_weight_index');
             }
         });
     }
