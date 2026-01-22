@@ -3,8 +3,10 @@
 use App\Models\User;
 use App\Models\WaterLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+use Tests\TestCase;
 
-uses(RefreshDatabase::class);
+uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();
@@ -30,7 +32,7 @@ test('water tracker index page is displayed for authenticated user', function ()
 
     $response->assertOk();
 
-    $response->assertInertia(fn ($page) => $page
+    $response->assertInertia(fn (AssertableInertia $page) => $page
         ->component('Tools/WaterTracker')
         ->has('logs', 1)
         ->where('logs.0.id', $todayLog->id)
