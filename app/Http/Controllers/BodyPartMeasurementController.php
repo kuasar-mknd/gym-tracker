@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\BodyMeasurements\FetchBodyPartMeasurementsAction;
 use App\Http\Requests\BodyPartMeasurementStoreRequest;
 use App\Models\BodyPartMeasurement;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -12,30 +13,12 @@ class BodyPartMeasurementController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index(): \Inertia\Response
+    public function index(FetchBodyPartMeasurementsAction $action): \Inertia\Response
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Group by part, get latest for card display
-        $latestMeasurements = $user->bodyPartMeasurements()
-            ->orderBy('measured_at', 'desc')
-            ->get()
-            ->groupBy('part')
-            ->map(function ($group): array {
-                /** @var \App\Models\BodyPartMeasurement $latest */
-                $latest = $group->first();
-                /** @var \App\Models\BodyPartMeasurement|null $previous */
-                $previous = $group->skip(1)->first();
-
-                return [
-                    'part' => $latest->part,
-                    'current' => $latest->value,
-                    'unit' => $latest->unit,
-                    'date' => \Illuminate\Support\Carbon::parse($latest->measured_at)->format('Y-m-d'),
-                    'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
-                ];
-            })->values();
+        $latestMeasurements = $action->execute($user);
 
         return Inertia::render('Measurements/Parts/Index', [
             'latestMeasurements' => $latestMeasurements,
