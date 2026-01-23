@@ -157,10 +157,27 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-cyan-500/20 p-4 text-cyan-500">
-                             <span class="material-symbols-outlined text-3xl">water_drop</span>
+                            <span class="material-symbols-outlined text-3xl">water_drop</span>
                         </div>
-                        <h3 class="text-xl font-bold text-text-main">Water Tracker</h3>
-                        <p class="text-sm text-text-muted">Track your daily water intake and stay hydrated.</p>
+                        <h3 class="text-text-main text-xl font-bold">Water Tracker</h3>
+                        <p class="text-text-muted text-sm">Track your daily water intake and stay hydrated.</p>
+                    </div>
+                </GlassCard>
+            </Link>
+
+            <!-- Sleep Tracker -->
+            <Link :href="route('tools.sleep.index')" class="group">
+                <GlassCard
+                    class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
+                >
+                    <div class="flex flex-col items-center space-y-4 text-center">
+                        <div class="rounded-full bg-indigo-500/20 p-4 text-indigo-500">
+                            <span class="material-symbols-outlined text-3xl">bedtime</span>
+                        </div>
+                        <h3 class="text-text-main text-xl font-bold">Sleep Tracker</h3>
+                        <p class="text-text-muted text-sm">
+                            Monitor your sleep quality and duration for better recovery.
+                        </p>
                     </div>
                 </GlassCard>
             </Link>
