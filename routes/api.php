@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\Api\BodyMeasurementController;
 use App\Http\Controllers\Api\ExerciseController;
 use App\Http\Controllers\Api\GoalController;

@@ -6,7 +6,11 @@ return [
     'preset' => 'laravel',
     'ide' => 'vscode',
     'exclude' => [
-        // Exclude specific files if necessary
+        '_ide_helper.php',
+        '_ide_helper_models.php',
+        'bootstrap/cache',
+        'storage',
+        'public',
     ],
     'add' => [
         // Add specific insights

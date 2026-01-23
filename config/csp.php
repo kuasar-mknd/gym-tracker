@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 // use Spatie\Csp\Directive;
 // use Spatie\Csp\Keyword;
 
