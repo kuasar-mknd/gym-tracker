@@ -29,6 +29,7 @@ return [
         \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenTraits::class,
         \SlevomatCodingStandard\Sniffs\Classes\SuperfluousExceptionNamingSniff::class,
         \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenNormalClasses::class,
+        \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenFinalClasses::class,
     ],
     'config' => [
         \SlevomatCodingStandard\Sniffs\TypeHints\PropertyTypeHintSniff::class => [
