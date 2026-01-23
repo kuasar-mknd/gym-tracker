@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions;
 
 use App\Models\User;
@@ -7,7 +9,7 @@ use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Support\Facades\DB;
 
-class CreateWorkoutTemplateFromWorkoutAction
+final class CreateWorkoutTemplateFromWorkoutAction
 {
     /**
      * Create a new workout template from an existing workout.

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions;
 
 use App\Exceptions\SocialAuthException;
@@ -7,7 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
-class HandleSocialCallbackAction
+final class HandleSocialCallbackAction
 {
     public function __construct(
         protected ResolveSocialUserAction $resolver

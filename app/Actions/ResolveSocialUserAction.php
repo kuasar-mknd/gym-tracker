@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions;
 
 use App\Models\User;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialUser;
 
-class ResolveSocialUserAction
+final class ResolveSocialUserAction
 {
     /**
      * Resolve the user from the social provider.

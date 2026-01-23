@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\Plate;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;

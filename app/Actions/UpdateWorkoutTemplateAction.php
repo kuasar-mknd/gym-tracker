@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions;
 
 use App\Models\WorkoutTemplate;
 use Illuminate\Support\Facades\DB;
 
-class UpdateWorkoutTemplateAction
+final class UpdateWorkoutTemplateAction
 {
     /**
      * Update a workout template with exercises and sets.

@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
 use App\Models\User;
 use App\Models\WorkoutLine;
 
-class WorkoutLinePolicy
+final class WorkoutLinePolicy
 {
     /**
      * Determine whether the user can view any models.

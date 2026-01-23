@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
 use App\Models\BodyMeasurement;
 use App\Models\User;
 
-class BodyMeasurementPolicy
+final class BodyMeasurementPolicy
 {
     /**
      * Determine whether the user can view any models.

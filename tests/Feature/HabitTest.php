@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\Habit;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;

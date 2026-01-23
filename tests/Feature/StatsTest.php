@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;

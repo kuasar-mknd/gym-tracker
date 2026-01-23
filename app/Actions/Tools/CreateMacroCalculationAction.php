@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions\Tools;
 
 use App\Models\MacroCalculation;
 use App\Models\User;
 
-class CreateMacroCalculationAction
+final class CreateMacroCalculationAction
 {
     private const MULTIPLIERS = [
         'sedentary' => 1.2,

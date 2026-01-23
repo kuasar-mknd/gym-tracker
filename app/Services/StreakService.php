@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Carbon;
 
-class StreakService
+final class StreakService
 {
     /**
      * Update user streak based on the latest workout.

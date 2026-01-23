@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Goal;
@@ -12,7 +14,7 @@ use App\Models\User;
  * (workouts, measurements) and determining if a goal has been achieved.
  * It handles different types of goals: weight (strength), frequency, volume, and body measurements.
  */
-class GoalService
+final class GoalService
 {
     /**
      * Synchronize all active goals for a user.

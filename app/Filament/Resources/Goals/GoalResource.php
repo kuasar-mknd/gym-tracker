@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\Goals;
 
 use App\Filament\Resources\Goals\Pages\CreateGoal;

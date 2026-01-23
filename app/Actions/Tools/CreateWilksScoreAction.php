@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions\Tools;
 
 use App\Models\User;
 use App\Models\WilksScore;
 
-class CreateWilksScoreAction
+final class CreateWilksScoreAction
 {
     /**
      * @param  array{body_weight: float, lifted_weight: float, gender: string, unit: string}  $data

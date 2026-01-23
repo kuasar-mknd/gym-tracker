@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Notifications;
 
 use App\Models\Achievement;
@@ -9,7 +11,7 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-class AchievementUnlocked extends Notification implements ShouldQueue
+final class AchievementUnlocked extends Notification implements ShouldQueue
 {
     use Queueable;
 

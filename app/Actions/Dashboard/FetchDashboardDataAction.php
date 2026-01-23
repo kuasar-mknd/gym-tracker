@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Actions\Dashboard;
 
 use App\Models\User;
 use App\Services\StatsService;
 use Illuminate\Support\Facades\Cache;
 
-class FetchDashboardDataAction
+final class FetchDashboardDataAction
 {
     public function __construct(
         protected StatsService $statsService

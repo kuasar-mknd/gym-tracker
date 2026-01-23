@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
 use App\Models\Plate;
 use App\Models\User;
 
-class PlatePolicy
+final class PlatePolicy
 {
     /**
      * Determine whether the user can view any models.

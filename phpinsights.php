@@ -20,6 +20,11 @@ return [
         \PHP_CodeSniffer\Standards\Generic\Sniffs\Formatting\SpaceAfterNotSniff::class,
         // Also remove ObjectCalisthenics if it's too strict
         // \ObjectCalisthenics\Sniffs\Files\ClassTraitAndInterfaceLengthSniff::class,
+
+        // Allow common Laravel patterns
+        \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenTraits::class,
+        \SlevomatCodingStandard\Sniffs\Classes\SuperfluousExceptionNamingSniff::class,
+        \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenNormalClasses::class,
     ],
     'config' => [
         \SlevomatCodingStandard\Sniffs\TypeHints\PropertyTypeHintSniff::class => [
