@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateWarmupPreferenceRequest;
 use App\Models\WarmupPreference;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class WarmupController extends Controller
@@ -26,20 +26,11 @@ class WarmupController extends Controller
         ]);
     }
 
-    public function update(Request $request): \Illuminate\Http\RedirectResponse
+    public function update(UpdateWarmupPreferenceRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $validated = $request->validate([
-            'bar_weight' => ['required', 'numeric', 'min:0'],
-            'rounding_increment' => ['required', 'numeric', 'min:0'],
-            'steps' => ['required', 'array'],
-            'steps.*.percent' => ['required', 'numeric', 'min:0', 'max:100'],
-            'steps.*.reps' => ['required', 'integer', 'min:1'],
-            'steps.*.label' => ['nullable', 'string', 'max:50'],
-        ]);
-
         $this->user()->warmupPreference()->updateOrCreate(
             ['user_id' => $this->user()->id],
-            $validated
+            $request->validated()
         );
 
         return redirect()->back()->with('success', 'Préférences de récupération sauvegardées.');
