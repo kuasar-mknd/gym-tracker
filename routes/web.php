@@ -92,6 +92,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
     Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
     Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
+
+    Route::get('/tools/sleep', [\App\Http\Controllers\SleepController::class, 'index'])->name('tools.sleep.index');
+    Route::post('/tools/sleep', [\App\Http\Controllers\SleepController::class, 'store'])->name('tools.sleep.store');
+    Route::delete('/tools/sleep/{sleepLog}', [\App\Http\Controllers\SleepController::class, 'destroy'])->name('tools.sleep.destroy');
 });
 
 // Social Login
