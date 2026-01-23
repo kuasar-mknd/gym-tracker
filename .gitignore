@@ -34,3 +34,7 @@ _ide_helper_models.php
 frankenphp
 
 *.txt
+/lang/vendor
+/resources/views/vendor
+/storage/app/GymTracker
+/public/css/filament-spatie-backup
