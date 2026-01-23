@@ -37,7 +37,7 @@ class BodyMeasurementController extends Controller
 
         $this->user()->bodyMeasurements()->create($request->validated());
 
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearBodyMeasurementStats($this->user());
 
         return redirect()->back();
     }
@@ -49,7 +49,7 @@ class BodyMeasurementController extends Controller
         $user = $this->user();
         $bodyMeasurement->delete();
 
-        $this->statsService->clearUserStatsCache($user);
+        $this->statsService->clearBodyMeasurementStats($user);
 
         return redirect()->back();
     }

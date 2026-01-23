@@ -46,7 +46,7 @@ class SetsController extends Controller
 
         $set = $workoutLine->sets()->create($request->validated());
         $this->prService->syncSetPRs($set);
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return back();
     }
@@ -69,7 +69,7 @@ class SetsController extends Controller
 
         $set->update($request->validated());
         $this->prService->syncSetPRs($set);
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return back();
     }
@@ -91,7 +91,7 @@ class SetsController extends Controller
 
         $user = $this->user();
         $set->delete();
-        $this->statsService->clearUserStatsCache($user);
+        $this->statsService->clearWorkoutRelatedStats($user);
 
         return back();
     }

@@ -344,17 +344,24 @@ final class StatsService
 
     public function clearUserStatsCache(User $user): void
     {
-        // Clear all possible period variations
+        $this->clearWorkoutRelatedStats($user);
+        $this->clearBodyMeasurementStats($user);
+    }
+
+    /**
+     * Clear only workout-related statistics cache.
+     * This avoids clearing weight/body fat history when only workout data changes.
+     */
+    public function clearWorkoutRelatedStats(User $user): void
+    {
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.daily_volume.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
-            \Illuminate\Support\Facades\Cache::forget("stats.weight_history.{$user->id}.{$days}");
-            \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
 
-        // Clear dashboard-specific cache
+        // Clear dashboard-specific cache (contains both workout and weight data)
         \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
 
         // Clear duration and volume history caches
@@ -363,7 +370,25 @@ final class StatsService
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
 
-        // Note: Individual exercise 1RM progress is not cleared here as it's exercise-specific
+        // Clear weekly volume and monthly comparison (previously missed)
+        \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
+        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
+    }
+
+    /**
+     * Clear only body measurement statistics cache.
+     * This avoids clearing workout history when only weight/body fat data changes.
+     */
+    public function clearBodyMeasurementStats(User $user): void
+    {
+        $periods = [7, 30, 90, 365];
+        foreach ($periods as $days) {
+            \Illuminate\Support\Facades\Cache::forget("stats.weight_history.{$user->id}.{$days}");
+            \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
+        }
+
+        // Clear dashboard-specific cache (contains both workout and weight data)
+        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
     }
 
     protected function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
