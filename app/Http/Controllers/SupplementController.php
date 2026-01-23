@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SupplementStoreRequest;
+use App\Http\Requests\SupplementUpdateRequest;
 use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
@@ -24,34 +26,24 @@ class SupplementController extends Controller
         ]);
     }
 
-    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    public function store(SupplementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'brand' => ['nullable', 'string', 'max:255'],
-            'dosage' => ['nullable', 'string', 'max:255'],
-            'servings_remaining' => ['required', 'integer', 'min:0'],
-            'low_stock_threshold' => ['required', 'integer', 'min:0'],
-        ]);
+        /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $validated */
+        $validated = $request->validated();
 
         Supplement::create(array_merge($validated, ['user_id' => $this->user()->id]));
 
         return redirect()->back()->with('success', 'Complément ajouté.');
     }
 
-    public function update(Request $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
+    public function update(SupplementUpdateRequest $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
         if ($supplement->user_id !== $this->user()->id) {
             abort(403);
         }
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'brand' => ['nullable', 'string', 'max:255'],
-            'dosage' => ['nullable', 'string', 'max:255'],
-            'servings_remaining' => ['required', 'integer', 'min:0'],
-            'low_stock_threshold' => ['required', 'integer', 'min:0'],
-        ]);
+        /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $validated */
+        $validated = $request->validated();
 
         $supplement->update($validated);
 
