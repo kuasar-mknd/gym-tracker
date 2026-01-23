@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Services\StatsService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 final class FetchWorkoutsIndexAction
@@ -22,9 +23,17 @@ final class FetchWorkoutsIndexAction
      *
      * @return array{
      *     workouts: \Illuminate\Pagination\LengthAwarePaginator,
-     *     monthlyFrequency: \Illuminate\Support\Collection,
-     *     durationHistory: array<int, array{date: string, duration: int, name: string}>,
-     *     volumeHistory: array<int, array{date: string, volume: float, name: string}>
+     *     monthlyFrequency: Collection,
+     *     durationHistory: array<int, array{
+     *         date: string,
+     *         duration: int,
+     *         name: string
+     *     }>,
+     *     volumeHistory: array<int, array{
+     *         date: string,
+     *         volume: float,
+     *         name: string
+     *     }>
      * }
      */
     public function execute(User $user): array
@@ -32,23 +41,36 @@ final class FetchWorkoutsIndexAction
         return [
             'workouts' => $this->getWorkouts($user),
             'monthlyFrequency' => $this->getMonthlyFrequency($user),
-            'durationHistory' => $this->statsService->getDurationHistory($user, 20),
-            'volumeHistory' => $this->statsService->getVolumeHistory($user, 20),
+            'durationHistory' => $this->statsService->getDurationHistory(
+                $user,
+                20
+            ),
+            'volumeHistory' => $this->statsService->getVolumeHistory(
+                $user,
+                20
+            ),
         ];
     }
 
-    protected function getMonthlyFrequency(User $user): \Illuminate\Support\Collection
-    {
+    protected function getMonthlyFrequency(
+        User $user
+    ): Collection {
         return Cache::remember(
             "stats.monthly_frequency.{$user->id}",
             now()->addHour(),
-            fn (): \Illuminate\Support\Collection => $this->calculateMonthlyFrequency($user)
+            fn (): Collection => $this->calculateMonthlyFrequency($user)
         );
     }
 
-    /** @return \Illuminate\Support\Collection<int, array{month: string, count: int}> */
-    private function calculateMonthlyFrequency(User $user): \Illuminate\Support\Collection
-    {
+    /**
+     * @return Collection<
+     *     int,
+     *     array{month: string, count: int}
+     * >
+     */
+    private function calculateMonthlyFrequency(
+        User $user
+    ): Collection {
         $startDate = now()->subMonths(5)->startOfMonth();
 
         // 1. Fetch Data (Simple Query)
@@ -65,7 +87,8 @@ final class FetchWorkoutsIndexAction
             fn (object $row): string => substr((string) $row->started_at, 0, 7)
         )
             ->map(fn ($rows, string $month): array => [
-                'month' => ($date = Carbon::createFromFormat('Y-m', $month)) instanceof Carbon
+                'month' => ($date = Carbon::createFromFormat('Y-m', $month))
+                    instanceof Carbon
                     ? $date->format('M')
                     : '',
                 'count' => count($rows),
@@ -73,8 +96,9 @@ final class FetchWorkoutsIndexAction
     }
 
     /** @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout> */
-    private function getWorkouts(User $user): \Illuminate\Pagination\LengthAwarePaginator
-    {
+    private function getWorkouts(
+        User $user
+    ): \Illuminate\Pagination\LengthAwarePaginator {
         return Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
             ->where('user_id', $user->id)
             ->latest('started_at')

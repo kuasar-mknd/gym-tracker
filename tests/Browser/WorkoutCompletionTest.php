@@ -26,9 +26,9 @@ class WorkoutCompletionTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($user, $workout): void {
             $browser->loginAs($user)
                 ->resize(1920, 1080)
-                ->visit('/workouts/' . $workout->id)
+                ->visit('/workouts/'.$workout->id)
                 ->waitFor('main', 15)
-                ->assertPathIs('/workouts/' . $workout->id)
+                ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
                 ->waitForText('SÉANCE TEST BROWSER', 15)
                 ->waitFor('#finish-workout-desktop', 15)
@@ -58,7 +58,7 @@ class WorkoutCompletionTest extends DuskTestCase
         $this->browse(function (Browser $browser) use ($user, $workout): void {
             $browser->loginAs($user)
                 ->resize(1920, 1080)
-                ->visit('/workouts/' . $workout->id)
+                ->visit('/workouts/'.$workout->id)
                 ->waitFor('main', 15)
                 ->assertNoConsoleExceptions()
                 ->waitForText('IMMUTABLE WORKOUT', 15)

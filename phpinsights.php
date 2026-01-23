@@ -22,6 +22,10 @@ return [
         // \ObjectCalisthenics\Sniffs\Files\ClassTraitAndInterfaceLengthSniff::class,
     ],
     'config' => [
-        // Configure specific insights
+        \SlevomatCodingStandard\Sniffs\TypeHints\PropertyTypeHintSniff::class => [
+            'exclude' => [
+                'app/Models/User.php',
+            ],
+        ],
     ],
 ];
