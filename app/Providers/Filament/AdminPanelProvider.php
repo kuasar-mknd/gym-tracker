@@ -18,6 +18,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -41,7 +42,10 @@ class AdminPanelProvider extends PanelProvider
             ->widgets($this->getWidgets())
             ->middleware($this->getMiddleware())
             ->authMiddleware([Authenticate::class])
-            ->plugins([FilamentShieldPlugin::make()])
+            ->plugins([
+                FilamentShieldPlugin::make(),
+                FilamentSpatieLaravelBackupPlugin::make(),
+            ])
             ->navigationItems($this->getNavigationItems());
     }
 

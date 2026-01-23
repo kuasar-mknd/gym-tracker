@@ -24,8 +24,10 @@
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.10.1",
+        "shuvroroy/filament-spatie-laravel-backup": "dev-main",
         "socialiteproviders/apple": "^5.7",
         "spatie/laravel-activitylog": "^4.0",
+        "spatie/laravel-backup": "^9.0",
         "spatie/laravel-csp": "^3.21",
         "spatie/laravel-query-builder": "^6.4",
         "tightenco/ziggy": "^2.0"
