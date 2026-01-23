@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers\Filament;
 
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -20,9 +22,28 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 
-class AdminPanelProvider extends PanelProvider
+final class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
+    {
+        return $this->configurePanel($panel)
+            ->discoverResources(
+                in: app_path('Filament/Resources'),
+                for: 'App\Filament\Resources'
+            )
+            ->discoverPages(
+                in: app_path('Filament/Pages'),
+                for: 'App\Filament\Pages'
+            )
+            ->pages([Dashboard::class])
+            ->widgets($this->getWidgets())
+            ->middleware($this->getMiddleware())
+            ->authMiddleware([Authenticate::class])
+            ->plugins($this->getPlugins())
+            ->navigationItems($this->getNavigationItems());
+    }
+
+    private function configurePanel(Panel $panel): Panel
     {
         return $panel
             ->id('admin')
@@ -34,19 +55,16 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(asset('favicon.ico'))
             ->authGuard('admin')
             ->colors($this->getPanelColors())
-            ->multiFactorAuthentication([AppAuthentication::make()])
-            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
-            ->pages([Dashboard::class])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets($this->getWidgets())
-            ->middleware($this->getMiddleware())
-            ->authMiddleware([Authenticate::class])
-            ->plugins([
-                FilamentShieldPlugin::make(),
-                FilamentSpatieLaravelBackupPlugin::make(),
-            ])
-            ->navigationItems($this->getNavigationItems());
+            ->multiFactorAuthentication([AppAuthentication::make()]);
+    }
+
+    /** @return array<int, \Filament\Contracts\Plugin> */
+    private function getPlugins(): array
+    {
+        return [
+            FilamentShieldPlugin::make(),
+            FilamentSpatieLaravelBackupPlugin::make(),
+        ];
     }
 
     /**

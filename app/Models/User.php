@@ -1,11 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\DatabaseNotification as Notification;
+use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
@@ -22,21 +29,26 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int $current_streak
  * @property int $longest_streak
  * @property \Illuminate\Support\Carbon|null $last_workout_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout> $workouts
- * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
- * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $unreadNotifications
+ * @property-read Collection<Workout> $workouts
+ * @property-read NotifColl<Notification> $notifications
+ * @property-read NotifColl<Notification> $unreadNotifications
  */
-class User extends Authenticatable implements MustVerifyEmail
+final class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasPushSubscriptions, LogsActivity, Notifiable;
+    use HasApiTokens;
+
+    use HasFactory;
+    use HasPushSubscriptions;
+    use LogsActivity;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
-    protected $fillable = [
+    protected array $fillable = [
         'name',
         'email',
         'password',
@@ -50,33 +62,31 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
      * @var list<string>
      */
-    protected $hidden = [
+    protected array $hidden = [
         'password',
         'remember_token',
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Workout, $this>
+     * @return HasMany<int, Workout>
      */
-    public function workouts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function workouts(): HasMany
     {
         return $this->hasMany(Workout::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\BodyMeasurement, $this>
+     * @return HasMany<int, BodyMeasurement>
      */
-    public function bodyMeasurements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function bodyMeasurements(): HasMany
     {
         return $this->hasMany(BodyMeasurement::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\BodyPartMeasurement, $this>
+     * @return HasMany<int, BodyPartMeasurement>
      */
     public function bodyPartMeasurements(): HasMany
     {
@@ -84,57 +94,57 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\PersonalRecord, $this>
+     * @return HasMany<int, PersonalRecord>
      */
-    public function personalRecords(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function personalRecords(): HasMany
     {
         return $this->hasMany(PersonalRecord::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\DailyJournal, $this>
+     * @return HasMany<int, DailyJournal>
      */
-    public function dailyJournals(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function dailyJournals(): HasMany
     {
         return $this->hasMany(DailyJournal::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Plate, $this>
+     * @return HasMany<int, Plate>
      */
-    public function plates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function plates(): HasMany
     {
         return $this->hasMany(Plate::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WilksScore, $this>
+     * @return HasMany<int, WilksScore>
      */
-    public function wilksScores(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function wilksScores(): HasMany
     {
         return $this->hasMany(WilksScore::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\NotificationPreference, $this>
+     * @return HasMany<int, NotificationPreference>
      */
-    public function notificationPreferences(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function notificationPreferences(): HasMany
     {
         return $this->hasMany(NotificationPreference::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Goal, $this>
+     * @return HasMany<int, Goal>
      */
-    public function goals(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function goals(): HasMany
     {
         return $this->hasMany(Goal::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\App\Models\Achievement, $this>
+     * @return BelongsToMany<int, Achievement>
      */
-    public function achievements(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function achievements(): BelongsToMany
     {
         return $this->belongsToMany(Achievement::class, 'user_achievements')
             ->withPivot('achieved_at')
@@ -150,33 +160,33 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutTemplate, $this>
+     * @return HasMany<int, WorkoutTemplate>
      */
-    public function workoutTemplates(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function workoutTemplates(): HasMany
     {
         return $this->hasMany(WorkoutTemplate::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\MacroCalculation, $this>
+     * @return HasMany<int, MacroCalculation>
      */
-    public function macroCalculations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function macroCalculations(): HasMany
     {
         return $this->hasMany(MacroCalculation::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Habit, $this>
+     * @return HasMany<int, Habit>
      */
-    public function habits(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function habits(): HasMany
     {
         return $this->hasMany(Habit::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WaterLog, $this>
+     * @return HasMany<int, WaterLog>
      */
-    public function waterLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function waterLogs(): HasMany
     {
         return $this->hasMany(WaterLog::class);
     }
@@ -190,9 +200,9 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne<\App\Models\WarmupPreference, $this>
+     * @return HasOne<int, WarmupPreference>
      */
-    public function warmupPreference(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function warmupPreference(): HasOne
     {
         return $this->hasOne(WarmupPreference::class);
     }
@@ -203,6 +213,27 @@ class User extends Authenticatable implements MustVerifyEmail
             ->logOnly(['name', 'email', 'avatar', 'default_rest_time'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    public function getUnreadNotificationsCountCached(): int
+    {
+        return Cache::remember(
+            "user:{$this->id}:unread_notifications_count",
+            now()->addSeconds(30),
+            fn () => $this->unreadNotifications()->count()
+        );
+    }
+
+    public function getLatestAchievementCached(): ?Notification
+    {
+        return Cache::remember(
+            "user:{$this->id}:latest_achievement",
+            now()->addSeconds(30),
+            fn () => $this->unreadNotifications()
+                ->where('type', \App\Notifications\AchievementUnlocked::class)
+                ->latest()
+                ->first()
+        );
     }
 
     /**
@@ -220,26 +251,5 @@ class User extends Authenticatable implements MustVerifyEmail
             'longest_streak' => 'integer',
             'last_workout_at' => 'datetime',
         ];
-    }
-
-    public function getUnreadNotificationsCountCached(): int
-    {
-        return Cache::remember(
-            "user:{$this->id}:unread_notifications_count",
-            now()->addSeconds(30),
-            fn() => $this->unreadNotifications()->count()
-        );
-    }
-
-    public function getLatestAchievementCached(): ?\Illuminate\Notifications\DatabaseNotification
-    {
-        return Cache::remember(
-            "user:{$this->id}:latest_achievement",
-            now()->addSeconds(30),
-            fn() => $this->unreadNotifications()
-                ->where('type', \App\Notifications\AchievementUnlocked::class)
-                ->latest()
-                ->first()
-        );
     }
 }
