@@ -8,6 +8,7 @@ use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -36,6 +37,8 @@ class SupplementController extends Controller
 
         Supplement::create(array_merge($validated, ['user_id' => $this->user()->id]));
 
+        $this->clearCache($this->user());
+
         return redirect()->back()->with('success', 'Complément ajouté.');
     }
 
@@ -55,6 +58,8 @@ class SupplementController extends Controller
 
         $supplement->update($validated);
 
+        $this->clearCache($this->user());
+
         return redirect()->back()->with('success', 'Complément mis à jour.');
     }
 
@@ -65,6 +70,8 @@ class SupplementController extends Controller
         }
 
         $supplement->delete();
+
+        $this->clearCache($this->user());
 
         return redirect()->back()->with('success', 'Complément supprimé.');
     }
@@ -87,6 +94,8 @@ class SupplementController extends Controller
             $supplement->decrement('servings_remaining');
         }
 
+        $this->clearCache($this->user());
+
         return redirect()->back()->with('success', 'Consommation enregistrée.');
     }
 
@@ -95,40 +104,51 @@ class SupplementController extends Controller
      */
     protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, mixed> $results */
-        $results = Supplement::forUser($user->id)
-            ->with(['latestLog'])
-            ->get()
-            ->map(fn (Supplement $supplement): array => [
-                'id' => (int) $supplement->id,
-                'name' => (string) $supplement->name,
-                'icon' => 'heroicon-o-beaker',
-                'current_log' => (float) ($supplement->latestLog->quantity ?? 0.0),
-                'unit' => 'servings',
-                'daily_goal' => null,
-            ]);
+        return Cache::remember("supplements.list.{$user->id}", 3600, function () use ($user) {
+            /** @var \Illuminate\Support\Collection<int, mixed> $results */
+            $results = Supplement::forUser($user->id)
+                ->with(['latestLog'])
+                ->get()
+                ->map(fn (Supplement $supplement): array => [
+                    'id' => (int) $supplement->id,
+                    'name' => (string) $supplement->name,
+                    'icon' => 'heroicon-o-beaker',
+                    'current_log' => (float) ($supplement->latestLog->quantity ?? 0.0),
+                    'unit' => 'servings',
+                    'daily_goal' => null,
+                ]);
 
-        return $results;
+            return $results;
+        });
     }
 
     /** @return array<int, array{date: string, count: float}> */
     private function getUsageHistory(User $user): array
     {
         $days = 30;
-        $usageHistoryRaw = SupplementLog::where('user_id', $user->id)
-            ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
-            ->select(
-                DB::raw('DATE(consumed_at) as date'),
-                DB::raw('SUM(quantity) as count')
-            )
-            ->groupBy('date')
-            ->get()
-            ->pluck('count', 'date');
 
-        /** @var \Illuminate\Support\Collection<string, float> $results */
-        $results = $usageHistoryRaw;
+        return Cache::remember("supplements.history.{$user->id}", 3600, function () use ($user, $days) {
+            $usageHistoryRaw = SupplementLog::where('user_id', $user->id)
+                ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
+                ->select(
+                    DB::raw('DATE(consumed_at) as date'),
+                    DB::raw('SUM(quantity) as count')
+                )
+                ->groupBy('date')
+                ->get()
+                ->pluck('count', 'date');
 
-        return $this->fillUsageHistory($results, $days);
+            /** @var \Illuminate\Support\Collection<string, float> $results */
+            $results = $usageHistoryRaw;
+
+            return $this->fillUsageHistory($results, $days);
+        });
+    }
+
+    private function clearCache(User $user): void
+    {
+        Cache::forget("supplements.list.{$user->id}");
+        Cache::forget("supplements.history.{$user->id}");
     }
 
     /**
