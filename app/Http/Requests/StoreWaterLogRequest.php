@@ -25,7 +25,7 @@ class StoreWaterLogRequest extends FormRequest
     {
         return [
             'amount' => ['required', 'integer', 'min:1'],
-            'consumed_at' => ['required', 'date'],
+            'consumed_at' => ['nullable', 'date'],
         ];
     }
 }
