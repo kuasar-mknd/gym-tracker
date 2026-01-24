@@ -8,10 +8,26 @@ use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Service for managing user achievements and gamification logic.
+ *
+ * This service handles the synchronization and unlocking of achievements based on
+ * various criteria such as workout counts, volume thresholds, weight records, and streaks.
+ * It is optimized to prevent N+1 queries during bulk synchronization.
+ */
 final class AchievementService
 {
     /**
      * Synchronize all achievements for a user.
+     *
+     * Iterates through all available achievements and checks if the user
+     * has unlocked them. If unlocked, it attaches the achievement to the user
+     * and sends a notification.
+     *
+     * Optimization: Pre-loads the user's already unlocked achievements to avoid
+     * querying the pivot table for every check.
+     *
+     * @param  User  $user  The user to synchronize achievements for.
      */
     public function syncAchievements(User $user): void
     {
@@ -36,6 +52,15 @@ final class AchievementService
         }
     }
 
+    /**
+     * Check if a specific achievement condition is met.
+     *
+     * Delegates the check to specific methods based on the achievement type.
+     *
+     * @param  User  $user  The user to check.
+     * @param  Achievement  $achievement  The achievement to validate.
+     * @return bool True if the achievement conditions are met.
+     */
     protected function checkAchievement(User $user, Achievement $achievement): bool
     {
         return match ($achievement->type) {
@@ -47,6 +72,13 @@ final class AchievementService
         };
     }
 
+    /**
+     * Check if the user has lifted a weight >= threshold in any workout.
+     *
+     * @param  User  $user  The user to check.
+     * @param  float  $threshold  The weight threshold in kg.
+     * @return bool
+     */
     protected function checkWeightRecord(User $user, float $threshold): bool
     {
         return $user->workouts()
@@ -56,6 +88,15 @@ final class AchievementService
             ->exists();
     }
 
+    /**
+     * Check if the user's total volume (all time) meets the threshold.
+     *
+     * Calculates volume as sum(weight * reps) across all sets.
+     *
+     * @param  User  $user  The user to check.
+     * @param  float  $threshold  The volume threshold.
+     * @return bool
+     */
     protected function checkTotalVolume(User $user, float $threshold): bool
     {
         $totalVolume = $user->workouts()
@@ -67,6 +108,13 @@ final class AchievementService
         return $totalVolume >= $threshold;
     }
 
+    /**
+     * Check if the user has a workout streak >= threshold.
+     *
+     * @param  User  $user  The user to check.
+     * @param  float  $threshold  The number of consecutive days required.
+     * @return bool
+     */
     protected function checkStreak(User $user, float $threshold): bool
     {
         $workoutDates = $this->getUniqueWorkoutDates($user, (int) $threshold);
@@ -79,7 +127,14 @@ final class AchievementService
     }
 
     /**
-     * @return array<int, string>
+     * Retrieve unique workout dates for the user within a lookback period.
+     *
+     * The lookback period is calculated as the threshold + 30 days buffer
+     * to ensure we have enough history to detect the streak.
+     *
+     * @param  User  $user  The user to retrieve dates for.
+     * @param  int  $days  The minimum number of days required (used for optimization).
+     * @return array<int, string> List of unique dates in Y-m-d format.
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
@@ -99,7 +154,12 @@ final class AchievementService
     }
 
     /**
-     * @param  array<int, string>  $dates
+     * Calculate the maximum streak of consecutive days from a list of dates.
+     *
+     * Iterates through the sorted dates and counts consecutive days.
+     *
+     * @param  array<int, string>  $dates  List of dates (Y-m-d).
+     * @return int The maximum streak found.
      */
     private function calculateMaxStreak(array $dates): int
     {
