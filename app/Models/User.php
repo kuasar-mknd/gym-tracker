@@ -218,7 +218,7 @@ final class User extends Authenticatable implements MustVerifyEmail
 
     public function getUnreadNotificationsCountCached(): int
     {
-        return Cache::remember(
+        return (int) Cache::remember(
             "user:{$this->id}:unread_notifications_count",
             now()->addSeconds(30),
             fn () => $this->unreadNotifications()->count()
