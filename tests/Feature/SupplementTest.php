@@ -83,4 +83,30 @@ class SupplementTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_user_can_update_supplement(): void
+    {
+        $user = User::factory()->create();
+        $supplement = Supplement::create([
+            'user_id' => $user->id,
+            'name' => 'Whey',
+            'servings_remaining' => 10,
+            'low_stock_threshold' => 5,
+        ]);
+
+        $response = $this->actingAs($user)->put(route('supplements.update', $supplement), [
+            'name' => 'Updated Whey',
+            'brand' => 'New Brand',
+            'dosage' => '30g',
+            'servings_remaining' => 20,
+            'low_stock_threshold' => 5,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('supplements', [
+            'id' => $supplement->id,
+            'name' => 'Updated Whey',
+            'servings_remaining' => 20,
+        ]);
+    }
 }
