@@ -20,11 +20,11 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('sets', SetController::class);
     Route::apiResource('personal-records', \App\Http\Controllers\Api\PersonalRecordController::class);
     Route::apiResource('body-measurements', BodyMeasurementController::class);
+    Route::apiResource('body-part-measurements', \App\Http\Controllers\Api\BodyPartMeasurementController::class);
     Route::apiResource('goals', GoalController::class);
     Route::apiResource('workout-templates', WorkoutTemplateController::class);
     Route::apiResource('daily-journals', \App\Http\Controllers\Api\DailyJournalController::class);
     Route::apiResource('notification-preferences', \App\Http\Controllers\Api\NotificationPreferenceController::class);
-    Route::apiResource('plates', \App\Http\Controllers\Api\PlateController::class);
     Route::apiResource('habits', \App\Http\Controllers\Api\HabitController::class);
     Route::apiResource('habit-logs', \App\Http\Controllers\Api\HabitLogController::class);
     Route::apiResource('supplements', \App\Http\Controllers\Api\SupplementController::class);
