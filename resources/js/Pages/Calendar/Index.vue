@@ -134,16 +134,16 @@ const formatDateFull = (dateStr) => {
         <div class="space-y-6">
             <!-- Calendar Navigation -->
             <div class="flex items-center justify-between">
-                <GlassButton @click="changeMonth(-1)" class="px-3!">
-                    <span class="material-symbols-outlined">chevron_left</span>
+                <GlassButton @click="changeMonth(-1)" class="px-3!" aria-label="Mois précédent">
+                    <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
                 </GlassButton>
 
                 <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic">
                     {{ currentMonthName }} <span class="text-electric-orange">{{ currentYear }}</span>
                 </h2>
 
-                <GlassButton @click="changeMonth(1)" class="px-3!">
-                    <span class="material-symbols-outlined">chevron_right</span>
+                <GlassButton @click="changeMonth(1)" class="px-3!" aria-label="Mois suivant">
+                    <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
                 </GlassButton>
             </div>
 
