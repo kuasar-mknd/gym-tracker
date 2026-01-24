@@ -22,8 +22,8 @@ final class FetchWorkoutsIndexAction
      * Fetch workouts and related statistics for the index page.
      *
      * @return array{
-     *     workouts: \Illuminate\Pagination\LengthAwarePaginator,
-     *     monthlyFrequency: Collection,
+     *     workouts: \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>,
+     *     monthlyFrequency: Collection<int, array{month: string, count: int}>,
      *     durationHistory: array<int, array{
      *         date: string,
      *         duration: int,
@@ -52,9 +52,13 @@ final class FetchWorkoutsIndexAction
         ];
     }
 
+    /**
+     * @return Collection<int, array{month: string, count: int}>
+     */
     protected function getMonthlyFrequency(
         User $user
     ): Collection {
+        /** @var Collection<int, array{month: string, count: int}> */
         return Cache::remember(
             "stats.monthly_frequency.{$user->id}",
             now()->addHour(),

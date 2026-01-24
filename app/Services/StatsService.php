@@ -194,7 +194,9 @@ final class StatsService
      */
     public function getLatestBodyMetrics(User $user): array
     {
+        /** @var \App\Models\BodyMeasurement|null $latest */
         $latest = $user->bodyMeasurements()->latest('measured_at')->first();
+        /** @var \App\Models\BodyMeasurement|null $previous */
         $previous = $user->bodyMeasurements()
             ->where('id', '!=', $latest?->id)
             ->latest('measured_at')
@@ -610,9 +612,9 @@ final class StatsService
     /**
      * Fetch weight history.
      *
-     * @return \Illuminate\Support\Collection<int, \App\Models\BodyMeasurement>
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\BodyMeasurement>
      */
-    protected function fetchWeightHistoryData(User $user, int $days): \Illuminate\Support\Collection
+    protected function fetchWeightHistoryData(User $user, int $days): \Illuminate\Database\Eloquent\Collection
     {
         return $user->bodyMeasurements()
             ->where('measured_at', '>=', now()->subDays($days))
@@ -623,9 +625,9 @@ final class StatsService
     /**
      * Fetch body fat history.
      *
-     * @return \Illuminate\Support\Collection<int, \App\Models\BodyMeasurement>
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\BodyMeasurement>
      */
-    protected function fetchBodyFatHistoryData(User $user, int $days): \Illuminate\Support\Collection
+    protected function fetchBodyFatHistoryData(User $user, int $days): \Illuminate\Database\Eloquent\Collection
     {
         return $user->bodyMeasurements()
             ->where('measured_at', '>=', now()->subDays($days))

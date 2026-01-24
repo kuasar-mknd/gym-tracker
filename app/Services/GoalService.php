@@ -26,9 +26,10 @@ final class GoalService
      */
     public function syncGoals(User $user): void
     {
-        $user->goals()->whereNull('completed_at')->each(function (Goal $goal): void {
+        $goals = $user->goals()->whereNull('completed_at')->get();
+        foreach ($goals as $goal) {
             $this->updateGoalProgress($goal);
-        });
+        }
     }
 
     /**

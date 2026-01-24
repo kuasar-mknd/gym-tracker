@@ -29,16 +29,17 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int $current_streak
  * @property int $longest_streak
  * @property \Illuminate\Support\Carbon|null $last_workout_at
- * @property-read Collection<Workout> $workouts
- * @property-read NotifColl<Notification> $notifications
- * @property-read NotifColl<Notification> $unreadNotifications
+ * @property-read Collection<int, Workout> $workouts
+ * @property-read NotifColl<int, Notification> $notifications
+ * @property-read NotifColl<int, Notification> $unreadNotifications
  */
 final class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens;
 
+    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
+
     use HasPushSubscriptions;
     use LogsActivity;
     use Notifiable;
@@ -70,7 +71,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * @return HasMany<int, Workout>
+     * @return HasMany<Workout, $this>
      */
     public function workouts(): HasMany
     {
@@ -78,7 +79,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, BodyMeasurement>
+     * @return HasMany<BodyMeasurement, $this>
      */
     public function bodyMeasurements(): HasMany
     {
@@ -86,7 +87,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, BodyPartMeasurement>
+     * @return HasMany<BodyPartMeasurement, $this>
      */
     public function bodyPartMeasurements(): HasMany
     {
@@ -94,7 +95,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, PersonalRecord>
+     * @return HasMany<PersonalRecord, $this>
      */
     public function personalRecords(): HasMany
     {
@@ -102,7 +103,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, DailyJournal>
+     * @return HasMany<DailyJournal, $this>
      */
     public function dailyJournals(): HasMany
     {
@@ -110,7 +111,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, Plate>
+     * @return HasMany<Plate, $this>
      */
     public function plates(): HasMany
     {
@@ -118,7 +119,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, WilksScore>
+     * @return HasMany<WilksScore, $this>
      */
     public function wilksScores(): HasMany
     {
@@ -126,7 +127,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, NotificationPreference>
+     * @return HasMany<NotificationPreference, $this>
      */
     public function notificationPreferences(): HasMany
     {
@@ -134,7 +135,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, Goal>
+     * @return HasMany<Goal, $this>
      */
     public function goals(): HasMany
     {
@@ -142,7 +143,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return BelongsToMany<int, Achievement>
+     * @return BelongsToMany<Achievement, $this>
      */
     public function achievements(): BelongsToMany
     {
@@ -160,7 +161,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, WorkoutTemplate>
+     * @return HasMany<WorkoutTemplate, $this>
      */
     public function workoutTemplates(): HasMany
     {
@@ -168,7 +169,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, MacroCalculation>
+     * @return HasMany<MacroCalculation, $this>
      */
     public function macroCalculations(): HasMany
     {
@@ -176,7 +177,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, Habit>
+     * @return HasMany<Habit, $this>
      */
     public function habits(): HasMany
     {
@@ -184,7 +185,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasMany<int, WaterLog>
+     * @return HasMany<WaterLog, $this>
      */
     public function waterLogs(): HasMany
     {
@@ -200,7 +201,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return HasOne<int, WarmupPreference>
+     * @return HasOne<WarmupPreference, $this>
      */
     public function warmupPreference(): HasOne
     {

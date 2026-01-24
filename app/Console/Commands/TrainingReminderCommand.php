@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Notifications\TrainingReminder;
 use Carbon\Carbon;
@@ -34,6 +35,7 @@ class TrainingReminderCommand extends Command
 
         $count = 0;
         User::all()->each(function (User $user) use (&$count): void {
+            /** @var NotificationPreference|null $preference */
             $preference = $user->notificationPreferences()
                 ->where('type', 'training_reminder')
                 ->first();
