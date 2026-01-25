@@ -63,8 +63,11 @@ Route::middleware('auth')->group(function (): void {
 
         Route::post('/supplements/{supplement}/consume', [\App\Http\Controllers\SupplementController::class, 'consume'])->name('supplements.consume');
         Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['store', 'update', 'destroy']);
+
+        Route::resource('injuries', \App\Http\Controllers\InjuryController::class)->only(['store', 'update', 'destroy']);
     });
 
+    Route::resource('injuries', \App\Http\Controllers\InjuryController::class)->only(['index']);
     Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['index']);
     Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
     Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index', 'show']);

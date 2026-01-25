@@ -192,6 +192,14 @@ final class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(WaterLog::class);
     }
 
+    /**
+     * @return HasMany<Injury, $this>
+     */
+    public function injuries(): HasMany
+    {
+        return $this->hasMany(Injury::class);
+    }
+
     public function isPushEnabled(string $type): bool
     {
         return (bool) $this->notificationPreferences()
