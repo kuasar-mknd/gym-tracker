@@ -21,25 +21,25 @@
                 <div class="space-y-6">
                     <!-- Unit Selection -->
                     <div class="flex justify-center">
-                        <div class="inline-flex rounded-lg bg-slate-100 p-1">
+                        <div class="inline-flex rounded-xl border border-white/20 bg-white/10 p-1 backdrop-blur-md">
                             <button
                                 @click="form.unit = 'kg'"
-                                class="rounded-md px-4 py-1 text-sm font-bold transition-all"
+                                class="rounded-lg px-4 py-1 text-sm font-bold transition-all duration-300"
                                 :class="
                                     form.unit === 'kg'
-                                        ? 'text-text-main bg-white shadow-sm'
-                                        : 'text-text-muted hover:text-text-main'
+                                        ? 'text-text-main bg-white/20 shadow-sm'
+                                        : 'text-text-muted hover:text-text-main hover:bg-white/10'
                                 "
                             >
                                 KG
                             </button>
                             <button
                                 @click="form.unit = 'lbs'"
-                                class="rounded-md px-4 py-1 text-sm font-bold transition-all"
+                                class="rounded-lg px-4 py-1 text-sm font-bold transition-all duration-300"
                                 :class="
                                     form.unit === 'lbs'
-                                        ? 'text-text-main bg-white shadow-sm'
-                                        : 'text-text-muted hover:text-text-main'
+                                        ? 'text-text-main bg-white/20 shadow-sm'
+                                        : 'text-text-muted hover:text-text-main hover:bg-white/10'
                                 "
                             >
                                 LBS
@@ -54,22 +54,22 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <button
                                     @click="form.gender = 'male'"
-                                    class="flex h-16 items-center justify-center rounded-2xl border-2 transition-all"
+                                    class="flex h-16 items-center justify-center rounded-2xl border transition-all duration-300 active:scale-95"
                                     :class="
                                         form.gender === 'male'
-                                            ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                            : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
+                                            ? 'border-electric-orange bg-electric-orange/10 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.2)]'
+                                            : 'text-text-muted border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10'
                                     "
                                 >
                                     <span class="font-display text-lg font-black uppercase">Homme</span>
                                 </button>
                                 <button
                                     @click="form.gender = 'female'"
-                                    class="flex h-16 items-center justify-center rounded-2xl border-2 transition-all"
+                                    class="flex h-16 items-center justify-center rounded-2xl border transition-all duration-300 active:scale-95"
                                     :class="
                                         form.gender === 'female'
-                                            ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
-                                            : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
+                                            ? 'border-hot-pink bg-hot-pink/10 text-hot-pink shadow-[0_0_15px_rgba(255,0,128,0.2)]'
+                                            : 'text-text-muted border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10'
                                     "
                                 >
                                     <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -87,7 +87,7 @@
                                         v-model="form.body_weight"
                                         placeholder="80"
                                         step="0.1"
-                                        class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
+                                        class="font-display text-text-main focus:ring-electric-orange/20 h-14 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-xl font-bold backdrop-blur-md transition-all duration-300 outline-none focus:border-white/40 focus:bg-white/20 focus:ring-2"
                                     />
                                     <span
                                         class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold uppercase"
@@ -103,7 +103,7 @@
                                         v-model="form.lifted_weight"
                                         placeholder="400"
                                         step="0.5"
-                                        class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
+                                        class="font-display text-text-main focus:ring-electric-orange/20 h-14 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-xl font-bold backdrop-blur-md transition-all duration-300 outline-none focus:border-white/40 focus:bg-white/20 focus:ring-2"
                                     />
                                     <span
                                         class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold uppercase"
@@ -116,7 +116,7 @@
 
                     <!-- Result -->
                     <div
-                        class="mt-6 flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 p-8 text-center"
+                        class="mt-6 flex flex-col items-center justify-center rounded-3xl border border-white/20 bg-white/5 p-8 text-center backdrop-blur-md transition-all duration-300 hover:bg-white/10"
                     >
                         <p class="text-text-muted text-sm font-bold tracking-wider uppercase">Ton Score Wilks</p>
                         <div
@@ -156,11 +156,11 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group relative flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 transition-all hover:border-slate-200 hover:shadow-sm"
+                            class="group relative flex items-center justify-between rounded-2xl border border-white/20 bg-white/5 p-4 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/10 hover:shadow-lg"
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="text-text-main flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-xl font-bold"
+                                    class="text-text-main flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-xl font-bold backdrop-blur-sm"
                                 >
                                     {{ parseFloat(entry.score).toFixed(0) }}
                                 </div>
@@ -177,7 +177,7 @@
 
                             <button
                                 @click="deleteEntry(entry)"
-                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all duration-200 hover:scale-110 hover:bg-red-500/10 hover:text-red-500 active:scale-95"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>
