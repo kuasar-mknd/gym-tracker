@@ -331,13 +331,25 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::with(['workoutLines.sets'])
-                ->where('user_id', $user->id)
-                ->whereNotNull('ended_at')
-                ->latest('started_at')
-                ->take($limit)
+            fn (): array => DB::table('workouts')
+                ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->where('workouts.user_id', $user->id)
+                ->whereNotNull('workouts.ended_at')
+                ->select(
+                    'workouts.started_at',
+                    'workouts.name',
+                    DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+                )
+                ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
+                ->orderByDesc('workouts.started_at')
+                ->limit($limit)
                 ->get()
-                ->map(fn (\App\Models\Workout $workout): array => $this->formatVolumeHistoryItem($workout))
+                ->map(fn ($row) => [
+                    'date' => Carbon::parse($row->started_at)->format('d/m'),
+                    'volume' => (float) $row->volume,
+                    'name' => (string) $row->name,
+                ])
                 ->reverse()
                 ->values()
                 ->toArray()
@@ -500,22 +512,6 @@ final class StatsService
         return [
             'date' => $workout->started_at->format('d/m'),
             'duration' => (int) ($workout->ended_at ? $workout->ended_at->diffInMinutes($workout->started_at) : 0),
-            'name' => (string) $workout->name,
-        ];
-    }
-
-    /**
-     * Format workout for volume history.
-     *
-     * @return array{date: string, volume: float, name: string}
-     */
-    protected function formatVolumeHistoryItem(Workout $workout): array
-    {
-        $volume = $workout->workoutLines->reduce(fn ($carry, $line): int|float => $carry + $line->sets->reduce(fn ($carrySet, $set): int|float => $carrySet + ($set->weight * $set->reps), 0.0), 0.0);
-
-        return [
-            'date' => $workout->started_at->format('d/m'),
-            'volume' => (float) $volume,
             'name' => (string) $workout->name,
         ];
     }
