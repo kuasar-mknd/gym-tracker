@@ -147,10 +147,10 @@ const chartOptions = computed(() => {
                 :key="metric.value"
                 @click="selectedMetric = metric.value"
                 :class="[
-                    'rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all',
+                    'rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-all',
                     selectedMetric === metric.value
                         ? 'scale-105 text-white shadow-lg'
-                        : 'bg-white/50 text-text-muted hover:bg-white/80 hover:text-text-main',
+                        : 'text-text-muted hover:text-text-main bg-white/50 hover:bg-white/80',
                 ]"
                 :style="selectedMetric === metric.value ? { backgroundColor: metric.color } : {}"
             >
@@ -161,7 +161,7 @@ const chartOptions = computed(() => {
         <!-- Chart -->
         <div class="h-64 w-full">
             <Line v-if="data.length > 0" :data="chartData" :options="chartOptions" />
-            <div v-else class="flex h-full items-center justify-center text-text-muted">
+            <div v-else class="text-text-muted flex h-full items-center justify-center">
                 Pas assez de données pour afficher le graphique
             </div>
         </div>
