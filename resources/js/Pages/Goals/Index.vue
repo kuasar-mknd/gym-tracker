@@ -5,7 +5,9 @@ import GoalCard from '@/Components/Goals/GoalCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import { ref, watch } from 'vue'
+import { ref, watch, defineAsyncComponent } from 'vue'
+
+const GoalTypeChart = defineAsyncComponent(() => import('@/Components/Stats/GoalTypeChart.vue'))
 
 const props = defineProps({
     goals: Array,
@@ -54,6 +56,23 @@ watch(
 const activeGoals = computed(() => props.goals.filter((g) => !g.completed_at))
 const completedGoals = computed(() => props.goals.filter((g) => g.completed_at))
 
+const goalDistribution = computed(() => {
+    const types = {
+        weight: { label: 'Force', count: 0 },
+        frequency: { label: 'Fréquence', count: 0 },
+        volume: { label: 'Volume', count: 0 },
+        measurement: { label: 'Mesure', count: 0 },
+    }
+
+    props.goals.forEach((goal) => {
+        if (types[goal.type]) {
+            types[goal.type].count++
+        }
+    })
+
+    return Object.values(types).filter((t) => t.count > 0)
+})
+
 import { computed } from 'vue'
 </script>
 
@@ -75,6 +94,17 @@ import { computed } from 'vue'
 
         <div class="py-12">
             <div class="mx-auto max-w-7xl space-y-8 sm:px-6 lg:px-8">
+                <!-- Stats Section -->
+                <div v-if="goalDistribution.length > 0" class="animate-slide-up">
+                    <GlassCard>
+                        <div class="mb-4">
+                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Répartition</h3>
+                            <p class="text-text-muted text-xs font-semibold">Type d'objectifs</p>
+                        </div>
+                        <GoalTypeChart :data="goalDistribution" />
+                    </GlassCard>
+                </div>
+
                 <!-- Create Form -->
                 <Transition
                     enter-active-class="transition duration-300 ease-out"
