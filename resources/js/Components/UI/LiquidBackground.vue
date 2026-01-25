@@ -18,14 +18,14 @@ defineProps({
         <!-- Cyan / Magenta for analytics -->
         <template v-else-if="variant === 'cyan-magenta'">
             <div
-                class="absolute left-[-10%] top-[-10%] h-[600px] w-[600px] animate-pulse-glow blur-[100px] filter"
+                class="animate-pulse-glow absolute top-[-10%] left-[-10%] h-[600px] w-[600px] blur-[100px] filter"
                 style="
                     background: radial-gradient(circle, rgba(0, 229, 255, 0.2) 0%, transparent 70%);
                     animation-duration: 4s;
                 "
             ></div>
             <div
-                class="absolute bottom-[10%] right-[-10%] h-[600px] w-[600px] animate-pulse-glow blur-[100px] filter"
+                class="animate-pulse-glow absolute right-[-10%] bottom-[10%] h-[600px] w-[600px] blur-[100px] filter"
                 style="
                     background: radial-gradient(circle, rgba(245, 0, 155, 0.15) 0%, transparent 70%);
                     animation-duration: 6s;
@@ -36,7 +36,7 @@ defineProps({
         <!-- Subtle for content-heavy pages -->
         <template v-else-if="variant === 'subtle'">
             <div
-                class="absolute right-[-5%] top-[-5%] h-[400px] w-[400px] blur-[120px] filter"
+                class="absolute top-[-5%] right-[-5%] h-[400px] w-[400px] blur-[120px] filter"
                 style="background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)"
             ></div>
             <div
