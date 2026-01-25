@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/habits/{habit}/toggle', [\App\Http\Controllers\HabitController::class, 'toggle'])->name('habits.toggle');
         Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['store', 'update', 'destroy']);
 
+        Route::get('/exercises/{exercise}', [\App\Http\Controllers\ExerciseController::class, 'show'])->name('exercises.show');
         Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['store', 'update', 'destroy']);
         Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['store', 'destroy']);
 

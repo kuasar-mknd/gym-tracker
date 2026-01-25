@@ -34,8 +34,8 @@ const updatePassword = () => {
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-semibold text-text-main">Mot de passe</h2>
-            <p class="mt-1 text-sm text-text-muted">
+            <h2 class="text-text-main text-lg font-semibold">Mot de passe</h2>
+            <p class="text-text-muted mt-1 text-sm">
                 Utilise un mot de passe long et unique pour sécuriser ton compte.
             </p>
         </header>
@@ -76,7 +76,7 @@ const updatePassword = () => {
                     leave-active-class="transition ease-in-out"
                     leave-to-class="opacity-0"
                 >
-                    <p v-if="form.recentlySuccessful" class="text-sm text-accent-success">Enregistré ✓</p>
+                    <p v-if="form.recentlySuccessful" class="text-accent-success text-sm">Enregistré ✓</p>
                 </Transition>
             </div>
         </form>

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
+use App\Services\StatsService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -15,6 +16,8 @@ use Inertia\Inertia;
 class ExerciseController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(protected StatsService $statsService) {}
 
     public function index(): \Inertia\Response
     {
@@ -33,6 +36,22 @@ class ExerciseController extends Controller
                 ['value' => 'cardio', 'label' => 'Cardio (distance)'],
                 ['value' => 'timed', 'label' => 'Temps'],
             ],
+        ]);
+    }
+
+    public function show(Exercise $exercise): \Inertia\Response
+    {
+        $this->authorize('view', $exercise);
+
+        /** @var \App\Models\User $user */
+        $user = $this->user();
+
+        // Get 1 year of history
+        $progress = $this->statsService->getExercise1RMProgress($user, $exercise->id, 365);
+
+        return Inertia::render('Exercises/Show', [
+            'exercise' => $exercise,
+            'progress' => $progress,
         ]);
     }
 
