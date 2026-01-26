@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function (): void {
 
         Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['store', 'update', 'destroy']);
         Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['store', 'destroy']);
+        Route::resource('injuries', \App\Http\Controllers\InjuryController::class)->except(['create', 'edit', 'show']);
 
         Route::post('/supplements/{supplement}/consume', [\App\Http\Controllers\SupplementController::class, 'consume'])->name('supplements.consume');
         Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['store', 'update', 'destroy']);
