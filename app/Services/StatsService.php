@@ -381,6 +381,7 @@ final class StatsService
             $query->where('workouts.started_at', '>=', $start);
         }
 
+        // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
         return (float) $query->sum(DB::raw('sets.weight * sets.reps'));
     }
 
@@ -397,6 +398,7 @@ final class StatsService
             ->where('workouts.user_id', $user->id)
             ->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])
             ->select(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
                 DB::raw('DATE(workouts.started_at) as date'),
                 DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
             )
@@ -536,6 +538,7 @@ final class StatsService
                 'workouts.id',
                 'workouts.started_at',
                 'workouts.name',
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
                 DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
             )
             ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
@@ -557,6 +560,7 @@ final class StatsService
             ->where('workouts.user_id', $user->id)
             ->whereBetween('workouts.started_at', [$start, now()->endOfDay()])
             ->select(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
                 DB::raw('DATE(workouts.started_at) as date'),
                 DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
             )
@@ -580,6 +584,7 @@ final class StatsService
             ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
             ->where('workouts.user_id', $user->id)
             ->where('workouts.started_at', '>=', now()->subDays($days))
+            // SECURITY: Static selectRaw - safe. DO NOT concatenate user input here.
             ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
             ->groupBy('exercises.category')
             ->get();
@@ -601,6 +606,7 @@ final class StatsService
             ->where('workouts.user_id', $user->id)
             ->where('workout_lines.exercise_id', $exerciseId)
             ->where('workouts.started_at', '>=', now()->subDays($days))
+            // SECURITY: Static selectRaw - safe. DO NOT concatenate user input here.
             ->selectRaw('workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
             ->groupBy('workouts.started_at')
             ->orderBy('workouts.started_at')
