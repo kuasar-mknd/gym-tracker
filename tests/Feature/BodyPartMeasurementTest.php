@@ -4,13 +4,39 @@ declare(strict_types=1);
 
 use App\Models\BodyPartMeasurement;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('body parts index page is displayed', function (): void {
     $user = User::factory()->create();
 
+    // Create two measurements for the same part to test diff calculation
+    BodyPartMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'part' => 'Chest',
+        'value' => 100.00,
+        'measured_at' => now()->subDay(),
+    ]);
+
+    BodyPartMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'part' => 'Chest',
+        'value' => 105.00,
+        'measured_at' => now(),
+    ]);
+
     $response = $this->actingAs($user)->get(route('body-parts.index'));
 
-    $response->assertOk();
+    $response->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Measurements/Parts/Index')
+            ->has('latestMeasurements', 1, fn (Assert $json) => $json
+                ->where('part', 'Chest')
+                ->where('current', '105.00')
+                ->where('diff', 5)
+                ->etc()
+            )
+            ->has('commonParts')
+        );
 });
 
 test('can add body part measurement', function (): void {
