@@ -1,18 +1,18 @@
 <template>
-    <Head title="Water Tracker" />
+    <Head title="Suivi Hydratation" />
 
-    <AuthenticatedLayout page-title="Water Tracker" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Suivi Hydratation" show-back back-route="tools.index">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1
                     class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                 >
-                    Water<br />
-                    <span class="text-gradient from-blue-400 to-cyan-500">Tracker</span>
+                    Suivi<br />
+                    <span class="text-gradient from-blue-400 to-cyan-500">Hydratation</span>
                 </h1>
                 <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                    Stay Hydrated
+                    Reste Hydraté
                 </p>
             </header>
 
@@ -73,6 +73,7 @@
                         <button
                             @click="addWater(250)"
                             :disabled="form.processing"
+                            aria-label="Ajouter 250ml"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">local_drink</span>
@@ -81,6 +82,7 @@
                         <button
                             @click="addWater(500)"
                             :disabled="form.processing"
+                            aria-label="Ajouter 500ml"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_drop</span>
@@ -89,6 +91,7 @@
                         <button
                             @click="addWater(1000)"
                             :disabled="form.processing"
+                            aria-label="Ajouter 1L"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_bottle</span>
@@ -102,7 +105,7 @@
                             <input
                                 type="number"
                                 v-model="customAmount"
-                                placeholder="Custom amount"
+                                placeholder="Quantité personnalisée"
                                 class="font-display text-text-main focus:border-blue-500 focus:ring-blue-500/20 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 font-bold transition-all outline-none focus:ring-2"
                             />
                             <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 text-xs font-bold">ML</span>
@@ -123,11 +126,11 @@
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <!-- Today's Logs -->
                 <GlassCard class="animate-slide-up h-full" style="animation-delay: 0.1s">
-                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Today's Logs</h2>
+                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Journal du jour</h2>
 
                     <div v-if="logs.length === 0" class="py-8 text-center">
                          <span class="material-symbols-outlined mb-2 text-4xl text-slate-200">water_drop</span>
-                        <p class="text-text-muted text-sm font-medium">No water tracked today.</p>
+                        <p class="text-text-muted text-sm font-medium">Aucune consommation aujourd'hui.</p>
                     </div>
 
                     <div v-else class="max-h-[300px] space-y-3 overflow-y-auto pr-2">
@@ -149,6 +152,7 @@
                             </div>
                             <button
                                 @click="deleteLog(log)"
+                                :aria-label="'Supprimer l\'entrée de ' + log.amount + ' ml'"
                                 class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
@@ -159,7 +163,7 @@
 
                 <!-- Weekly History -->
                 <GlassCard class="animate-slide-up h-full" style="animation-delay: 0.15s">
-                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Last 7 Days</h2>
+                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">7 derniers jours</h2>
 
                     <div class="flex h-[300px] items-end justify-between gap-2 pt-4">
                         <div
@@ -248,7 +252,7 @@ const addWater = (amount) => {
 }
 
 const deleteLog = (log) => {
-    if (confirm('Remove this log?')) {
+    if (confirm('Supprimer cette entrée ?')) {
         router.delete(route('tools.water.destroy', { waterLog: log.id }), {
             preserveScroll: true,
         })
