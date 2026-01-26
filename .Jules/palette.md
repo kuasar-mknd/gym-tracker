@@ -13,3 +13,7 @@
 ## 2026-05-23 - Visual Regression with Transparent Glass Overlays
 **Learning:** Applying transparent/glassy backgrounds (`bg-white/60`) to elements positioned over borders (like dividers) causes the underlying border to show through the text, looking like a strikethrough.
 **Action:** When using glass effects on overlay elements, restructure the layout (e.g., using flexbox with side lines) to ensure the background behind the transparent element is clear, rather than relying on opacity masking.
+
+## 2026-06-15 - Duplicate Labels in Variant-Based Components
+**Learning:** Components that render different layouts based on a `variant` prop (like `GlassInput`) may accidentally render the label multiple times if the label logic is not conditional on the variant, causing confusion for screen readers.
+**Action:** When implementing variant-based components, explicitly check if the label is handled inside the variant block and suppress the default label rendering to avoid duplication.
