@@ -94,6 +94,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
     Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
     Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
+
+    Route::get('/tools/interval-timer', [\App\Http\Controllers\TimerController::class, 'index'])->name('tools.interval-timer');
+    Route::post('/tools/interval-timer', [\App\Http\Controllers\TimerController::class, 'store'])->name('tools.interval-timer.store');
+    Route::delete('/tools/interval-timer/{timerPreset}', [\App\Http\Controllers\TimerController::class, 'destroy'])->name('tools.interval-timer.destroy');
 });
 
 // Social Login
