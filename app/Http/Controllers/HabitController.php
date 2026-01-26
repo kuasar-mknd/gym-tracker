@@ -9,6 +9,7 @@ use App\Http\Requests\HabitUpdateRequest;
 use App\Models\Habit;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class HabitController extends Controller
@@ -27,9 +28,40 @@ class HabitController extends Controller
             ])
             ->get();
 
+        // Calculate consistency history (last 30 days)
+        $history = DB::table('habit_logs')
+            ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
+            ->where('habits.user_id', $this->user()->id)
+            ->where('habit_logs.date', '>=', now()->subDays(30)->format('Y-m-d'))
+            ->select(DB::raw('DATE(habit_logs.date) as date'), DB::raw('count(*) as count'))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'date' => Carbon::parse($item->date)->format('d/m'),
+                    'full_date' => $item->date,
+                    'count' => (int) $item->count,
+                ];
+            });
+
+        // Fill missing days
+        $filledHistory = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $dateStr = $date->format('Y-m-d');
+            $found = $history->firstWhere('full_date', $dateStr);
+
+            $filledHistory[] = [
+                'date' => $date->format('d/m'),
+                'count' => $found ? $found['count'] : 0,
+            ];
+        }
+
         return Inertia::render('Habits/Index', [
             'habits' => $habits,
             'weekDates' => $this->getWeekDates(),
+            'history' => $filledHistory,
         ]);
     }
 
