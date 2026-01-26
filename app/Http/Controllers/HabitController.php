@@ -74,13 +74,13 @@ class HabitController extends Controller
             abort(403);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'date' => 'required|date',
         ]);
 
-        $date = $request->date;
+        $date = $validated['date'];
 
-        $dateInput = $request->date;
+        $dateInput = $validated['date'];
         if (! is_string($dateInput)) {
             throw new \UnexpectedValueException('Date must be a string');
         }
