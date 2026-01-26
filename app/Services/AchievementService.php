@@ -8,10 +8,24 @@ use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Service for managing user achievements.
+ *
+ * This service handles the logic for checking and unlocking achievements
+ * based on user activity such as workouts, weight records, volume totals, and streaks.
+ */
 final class AchievementService
 {
     /**
      * Synchronize all achievements for a user.
+     *
+     * Iterates through all available achievements and checks if the user has met the criteria
+     * for any locked achievements. Unlocked achievements are recorded in the database,
+     * and a notification is sent to the user.
+     *
+     * Optimization: Pre-loads already unlocked achievement IDs to avoid N+1 queries.
+     *
+     * @param  User  $user  The user to synchronize achievements for.
      */
     public function syncAchievements(User $user): void
     {
@@ -36,6 +50,15 @@ final class AchievementService
         }
     }
 
+    /**
+     * Check if a specific achievement criteria is met.
+     *
+     * Dispatches the check to the appropriate method based on the achievement type.
+     *
+     * @param  User  $user  The user to check.
+     * @param  Achievement  $achievement  The achievement to validate.
+     * @return bool True if the achievement criteria is met, false otherwise.
+     */
     protected function checkAchievement(User $user, Achievement $achievement): bool
     {
         return match ($achievement->type) {
@@ -47,6 +70,15 @@ final class AchievementService
         };
     }
 
+    /**
+     * Check if the user has lifted a specific weight.
+     *
+     * Verifies if any set in any workout meets or exceeds the weight threshold.
+     *
+     * @param  User  $user  The user to check.
+     * @param  float  $threshold  The weight threshold to meet.
+     * @return bool True if the user has lifted >= threshold.
+     */
     protected function checkWeightRecord(User $user, float $threshold): bool
     {
         return $user->workouts()
@@ -56,6 +88,16 @@ final class AchievementService
             ->exists();
     }
 
+    /**
+     * Check if the user has reached a total volume threshold.
+     *
+     * Calculates the total volume (weight * reps) across all sets and checks if it exceeds the threshold.
+     * Note: This implementation sums volume across ALL workouts, which might be intended for "lifetime volume" achievements.
+     *
+     * @param  User  $user  The user to check.
+     * @param  float  $threshold  The volume threshold.
+     * @return bool True if total volume >= threshold.
+     */
     protected function checkTotalVolume(User $user, float $threshold): bool
     {
         $totalVolume = $user->workouts()
@@ -67,6 +109,15 @@ final class AchievementService
         return $totalVolume >= $threshold;
     }
 
+    /**
+     * Check if the user has maintained a workout streak.
+     *
+     * Calculates the maximum consecutive days the user has worked out.
+     *
+     * @param  User  $user  The user to check.
+     * @param  float  $threshold  The streak length (days) required.
+     * @return bool True if max streak >= threshold.
+     */
     protected function checkStreak(User $user, float $threshold): bool
     {
         $workoutDates = $this->getUniqueWorkoutDates($user, (int) $threshold);
@@ -79,7 +130,14 @@ final class AchievementService
     }
 
     /**
-     * @return array<int, string>
+     * Get unique workout dates for the user.
+     *
+     * Retrieves workout dates looking back (threshold + 30) days to ensure we catch enough history
+     * for the streak calculation.
+     *
+     * @param  User  $user  The user to retrieve dates for.
+     * @param  int  $days  The number of days related to the streak threshold.
+     * @return array<int, string> Array of unique dates (Y-m-d).
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
@@ -99,7 +157,12 @@ final class AchievementService
     }
 
     /**
-     * @param  array<int, string>  $dates
+     * Calculate the maximum streak from a list of dates.
+     *
+     * Iterates through the sorted dates to find the longest sequence of consecutive days.
+     *
+     * @param  array<int, string>  $dates  List of unique dates (Y-m-d).
+     * @return int The maximum streak length found.
      */
     private function calculateMaxStreak(array $dates): int
     {
