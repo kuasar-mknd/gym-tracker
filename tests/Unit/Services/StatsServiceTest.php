@@ -156,4 +156,47 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(100, $comparison['difference']);
         $this->assertEquals(25.0, $comparison['percentage']);
     }
+
+    public function test_can_calculate_volume_history(): void
+    {
+        $user = User::factory()->create();
+
+        // Workout 1: Yesterday
+        $workout1 = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDay(),
+            'ended_at' => now()->subDay()->addHour(),
+            'name' => 'Workout Yesterday',
+        ]);
+        $line1 = WorkoutLine::factory()->create(['workout_id' => $workout1->id]);
+        Set::factory()->create(['workout_line_id' => $line1->id, 'weight' => 100, 'reps' => 10]); // 1000
+
+        // Workout 2: Today
+        $workout2 = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now(),
+            'ended_at' => now()->addHour(),
+            'name' => 'Workout Today',
+        ]);
+        $line2 = WorkoutLine::factory()->create(['workout_id' => $workout2->id]);
+        Set::factory()->create(['workout_line_id' => $line2->id, 'weight' => 50, 'reps' => 10]); // 500
+
+        // Workout 3: Unfinished (should be ignored)
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->addHour(),
+            'ended_at' => null,
+        ]);
+
+        $history = $this->statsService->getVolumeHistory($user, 20);
+
+        // Expected order: Oldest to Newest
+        $this->assertCount(2, $history);
+
+        $this->assertEquals('Workout Yesterday', $history[0]['name']);
+        $this->assertEquals(1000, $history[0]['volume']);
+
+        $this->assertEquals('Workout Today', $history[1]['name']);
+        $this->assertEquals(500, $history[1]['volume']);
+    }
 }

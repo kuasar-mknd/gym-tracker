@@ -331,16 +331,41 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::with(['workoutLines.sets'])
-                ->where('user_id', $user->id)
-                ->whereNotNull('ended_at')
-                ->latest('started_at')
-                ->take($limit)
-                ->get()
-                ->map(fn (\App\Models\Workout $workout): array => $this->formatVolumeHistoryItem($workout))
-                ->reverse()
-                ->values()
-                ->toArray()
+            function () use ($user, $limit): array {
+                // 1. Get IDs of the latest workouts first (to limit correctly)
+                $workoutIds = DB::table('workouts')
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->orderByDesc('started_at')
+                    ->limit($limit)
+                    ->pluck('id');
+
+                if ($workoutIds->isEmpty()) {
+                    return [];
+                }
+
+                // 2. Fetch volume data for these workouts
+                return DB::table('workouts')
+                    ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                    ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                    ->whereIn('workouts.id', $workoutIds)
+                    ->select(
+                        'workouts.started_at',
+                        'workouts.name',
+                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+                    )
+                    ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
+                    ->orderByDesc('workouts.started_at')
+                    ->get()
+                    ->map(fn (object $row): array => [
+                        'date' => Carbon::parse($row->started_at)->format('d/m'),
+                        'volume' => (float) $row->volume,
+                        'name' => (string) $row->name,
+                    ])
+                    ->reverse()
+                    ->values()
+                    ->toArray();
+            }
         );
     }
 
