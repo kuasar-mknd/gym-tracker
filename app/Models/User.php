@@ -208,6 +208,14 @@ final class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(WarmupPreference::class);
     }
 
+    /**
+     * @return HasMany<TimerPreset, $this>
+     */
+    public function timerPresets(): HasMany
+    {
+        return $this->hasMany(TimerPreset::class);
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
