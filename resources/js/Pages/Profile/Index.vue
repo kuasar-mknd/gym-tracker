@@ -61,6 +61,14 @@ const menuGroups = [
                 color: 'text-hot-pink',
                 bgColor: 'bg-pink-100/50',
             },
+            {
+                name: 'Blessures',
+                icon: 'healing',
+                route: 'injuries.index',
+                description: 'Suivi blessures & réhab',
+                color: 'text-red-500',
+                bgColor: 'bg-red-100/50',
+            },
         ],
     },
     {
