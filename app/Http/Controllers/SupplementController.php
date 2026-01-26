@@ -118,6 +118,7 @@ class SupplementController extends Controller
         $usageHistoryRaw = SupplementLog::where('user_id', $user->id)
             ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
             ->select(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
                 DB::raw('DATE(consumed_at) as date'),
                 DB::raw('SUM(quantity) as count')
             )
