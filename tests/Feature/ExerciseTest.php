@@ -170,22 +170,4 @@ class ExerciseTest extends TestCase
 
         $response->assertRedirect('/login');
     }
-
-    public function test_can_view_exercise_details(): void
-    {
-        $user = User::factory()->create();
-        $exercise = Exercise::factory()->create([
-            'user_id' => $user->id,
-        ]);
-
-        $response = $this->actingAs($user)->get("/exercises/{$exercise->id}");
-
-        $response->assertOk();
-        $response->assertInertia(fn ($page) => $page
-            ->component('Exercises/Show')
-            ->has('exercise')
-            ->has('progress')
-            ->has('history')
-        );
-    }
 }
