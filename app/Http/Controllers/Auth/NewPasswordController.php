@@ -36,13 +36,14 @@ class NewPasswordController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'token' => 'required',
             'email' => 'required|email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password_confirmation' => 'required',
         ]);
 
-        $status = $this->resetPassword($request);
+        $status = $this->resetPassword($validated);
 
         if ($status === Password::PASSWORD_RESET) {
             return redirect()->route('login')->with('status', __($status));
@@ -53,15 +54,15 @@ class NewPasswordController extends Controller
         ]);
     }
 
-    private function resetPassword(Request $request): string
+    /**
+     * @param array<string, mixed> $credentials
+     */
+    private function resetPassword(array $credentials): string
     {
         /** @var string $status */
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (\App\Models\User $user) use ($request): void {
-                /** @var string $password */
-                $password = $request->password;
-
+            $credentials,
+            function (\App\Models\User $user, string $password): void {
                 $user->forceFill([
                     'password' => Hash::make($password),
                     'remember_token' => Str::random(60),
