@@ -156,4 +156,39 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(100, $comparison['difference']);
         $this->assertEquals(25.0, $comparison['percentage']);
     }
+
+    public function test_can_retrieve_duration_history(): void
+    {
+        $user = User::factory()->create();
+
+        // Workout 1: 60 minutes
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(2)->hour(10)->minute(0),
+            'ended_at' => now()->subDays(2)->hour(11)->minute(0),
+        ]);
+
+        // Workout 2: 90 minutes
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDay()->hour(10)->minute(0),
+            'ended_at' => now()->subDay()->hour(11)->minute(30),
+        ]);
+
+        // Workout 3: 45 minutes, ended_at before started_at (should be handled as absolute)
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->hour(10)->minute(45),
+            'ended_at' => now()->hour(10)->minute(0),
+        ]);
+
+        $history = $this->statsService->getDurationHistory($user);
+
+        $this->assertCount(3, $history);
+
+        // Check order (oldest first due to reverse())
+        $this->assertEquals(60, $history[0]['duration']);
+        $this->assertEquals(90, $history[1]['duration']);
+        $this->assertEquals(45, $history[2]['duration']); // Should be absolute difference
+    }
 }
