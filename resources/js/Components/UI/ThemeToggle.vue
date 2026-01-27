@@ -31,22 +31,28 @@ function handleToggle() {
 <template>
     <button
         @click="handleToggle"
-        class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition-all hover:bg-slate-50 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+        class="group flex w-full items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-left backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] active:scale-95"
     >
         <div
-            class="flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
+            class="flex h-10 w-10 items-center justify-center rounded-xl backdrop-blur-sm transition-colors duration-300"
             :class="[isDark ? 'bg-violet-500/20 text-violet-400' : 'bg-orange-500/20 text-orange-500']"
         >
             <span class="material-symbols-outlined text-2xl">
                 {{ themeIcons[theme] }}
             </span>
         </div>
-        <div class="text-left">
-            <div class="text-text-main text-sm font-bold dark:text-white">Thème</div>
-            <div class="text-text-muted text-xs dark:text-slate-400">
+        <div class="flex-1">
+            <div class="font-display text-text-main text-sm font-black tracking-wide uppercase dark:text-white">
+                Thème
+            </div>
+            <div class="text-text-muted text-xs font-medium dark:text-slate-400">
                 {{ themeLabels[theme] }}
             </div>
         </div>
-        <span class="material-symbols-outlined text-text-muted ml-auto dark:text-slate-400"> chevron_right </span>
+        <span
+            class="material-symbols-outlined text-text-muted transition-transform duration-300 group-hover:translate-x-1 dark:text-slate-400"
+        >
+            chevron_right
+        </span>
     </button>
 </template>
