@@ -346,14 +346,18 @@ final class StatsService
 
     public function clearUserStatsCache(User $user): void
     {
-        // Clear all possible period variations
+        $this->clearWorkoutRelatedStats($user);
+        $this->clearBodyMeasurementStats($user);
+    }
+
+    public function clearWorkoutRelatedStats(User $user): void
+    {
+        // Clear all possible period variations for workout stats
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.daily_volume.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
-            \Illuminate\Support\Facades\Cache::forget("stats.weight_history.{$user->id}.{$days}");
-            \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
 
         // Clear dashboard-specific cache
@@ -365,7 +369,22 @@ final class StatsService
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
 
-        // Note: Individual exercise 1RM progress is not cleared here as it's exercise-specific
+        // Clear other workout-related caches
+        \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
+        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
+    }
+
+    public function clearBodyMeasurementStats(User $user): void
+    {
+        // Clear all possible period variations for body stats
+        $periods = [7, 30, 90, 365];
+        foreach ($periods as $days) {
+            \Illuminate\Support\Facades\Cache::forget("stats.weight_history.{$user->id}.{$days}");
+            \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
+        }
+
+        // Clear dashboard-specific cache (dashboard often shows latest weight/metrics)
+        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
     }
 
     protected function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
