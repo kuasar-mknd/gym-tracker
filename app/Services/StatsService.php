@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  *
  * It utilizes caching (via Redis/Cache facade) to optimize performance for expensive database queries.
  */
-final class StatsService
+class StatsService
 {
     /**
      * Get volume trend (total weight lifted) per workout over time.
@@ -30,6 +30,7 @@ final class StatsService
      *
      * @param  User  $user  The user to retrieve stats for.
      * @param  int  $days  Number of days to look back (default: 30).
+     *
      * @return array<int, array{
      *     date: string,
      *     full_date: string,
@@ -51,13 +52,10 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
-            function () use ($user, $days): array {
-                $results = $this->fetchVolumeTrendData($user, $days);
-
-                return $results->map(fn (\stdClass $row): array => $this->formatVolumeTrendItem($row))
-                    ->values()
-                    ->toArray();
-            }
+            fn (): array => $this->fetchVolumeTrendData($user, $days)
+                ->map(fn (\stdClass $row): array => $this->formatVolumeTrendItem($row))
+                ->values()
+                ->toArray()
         );
     }
 
@@ -87,6 +85,7 @@ final class StatsService
      *
      * @param  User  $user  The user to retrieve stats for.
      * @param  int  $days  Number of days to look back (default: 30).
+     *
      * @return array<int, \stdClass>
      *
      * @example
@@ -114,6 +113,7 @@ final class StatsService
      * @param  User  $user  The user to retrieve stats for.
      * @param  int  $exerciseId  The ID of the exercise to analyze.
      * @param  int  $days  Number of days to look back (default: 90).
+     *
      * @return array<int, array{
      *     date: string,
      *     full_date: string,
@@ -138,6 +138,7 @@ final class StatsService
      * and returns the percentage difference.
      *
      * @param  User  $user  The user to retrieve stats for.
+     *
      * @return array{
      *     current_month_volume: float,
      *     previous_month_volume: float,
@@ -224,14 +225,9 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            function () use ($user, $days): array {
-                /** @var array<int, array{date: string, body_fat: float}> $results */
-                $results = $this->fetchBodyFatHistoryData($user, $days)
-                    ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
-                    ->toArray();
-
-                return $results;
-            }
+            fn (): array => $this->fetchBodyFatHistoryData($user, $days)
+                ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+                ->toArray()
         );
     }
 
@@ -242,6 +238,7 @@ final class StatsService
      * with volume summed up. Fills missing days with 0.
      *
      * @param  User  $user  The user to retrieve stats for.
+     *
      * @return array<int, array{
      *     date: string,
      *     day_label: string,
@@ -268,6 +265,7 @@ final class StatsService
      * Get volume comparison between current week and previous week.
      *
      * @param  User  $user  The user to retrieve stats for.
+     *
      * @return array{
      *     current_week_volume: float,
      *     previous_week_volume: float,
@@ -303,21 +301,16 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            function () use ($user, $limit): array {
-                /** @var array<int, array{date: string, duration: int, name: string}> $results */
-                $results = Workout::select(['name', 'started_at', 'ended_at'])
-                    ->where('user_id', $user->id)
-                    ->whereNotNull('ended_at')
-                    ->latest('started_at')
-                    ->take($limit)
-                    ->get()
-                    ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
-                    ->reverse()
-                    ->values()
-                    ->toArray();
-
-                return $results;
-            }
+            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
+                ->where('user_id', $user->id)
+                ->whereNotNull('ended_at')
+                ->latest('started_at')
+                ->take($limit)
+                ->get()
+                ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->reverse()
+                ->values()
+                ->toArray()
         );
     }
 
@@ -409,6 +402,7 @@ final class StatsService
      * Fill missing days with zero volume.
      *
      * @param  \Illuminate\Support\Collection<string, float>  $results
+     *
      * @return array<int, array{date: string, day_name: string, volume: float}>
      */
     protected function fillDailyTrend(Carbon $start, int $days, \Illuminate\Support\Collection $results): array
@@ -433,6 +427,7 @@ final class StatsService
      * Fill missing days in weekly trend with zero volume.
      *
      * @param  \Illuminate\Support\Collection<string, \stdClass>  $workouts
+     *
      * @return array<int, array{date: string, day_label: string, volume: float}>
      */
     protected function fillWeeklyTrend(Carbon $startOfWeek, \Illuminate\Support\Collection $workouts): array
@@ -499,7 +494,7 @@ final class StatsService
     {
         return [
             'date' => $workout->started_at->format('d/m'),
-            'duration' => (int) ($workout->ended_at ? $workout->ended_at->diffInMinutes($workout->started_at) : 0),
+            'duration' => (int) ($workout->ended_at ? $workout->ended_at->diffInMinutes($workout->started_at, true) : 0),
             'name' => (string) $workout->name,
         ];
     }
@@ -550,8 +545,8 @@ final class StatsService
      */
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<string, float> $results */
-        $results = DB::table('workouts')
+        /** @phpstan-var \Illuminate\Support\Collection<string, float> */
+        return DB::table('workouts')
             ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $user->id)
@@ -562,8 +557,6 @@ final class StatsService
             )
             ->groupBy('date')
             ->pluck('volume', 'date');
-
-        return $results;
     }
 
     /**
@@ -573,8 +566,7 @@ final class StatsService
      */
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
-        $results = DB::table('sets')
+        return DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
@@ -583,8 +575,6 @@ final class StatsService
             ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
             ->groupBy('exercises.category')
             ->get();
-
-        return $results;
     }
 
     /**
@@ -594,8 +584,7 @@ final class StatsService
      */
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
-        $results = DB::table('sets')
+        return DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
@@ -605,8 +594,6 @@ final class StatsService
             ->groupBy('workouts.started_at')
             ->orderBy('workouts.started_at')
             ->get();
-
-        return $results;
     }
 
     /**

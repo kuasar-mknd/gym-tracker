@@ -7,6 +7,7 @@ import axios from 'axios'
 
 const MuscleDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/MuscleDistributionChart.vue'))
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
+const DurationHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/DurationHistoryChart.vue'))
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
@@ -17,6 +18,7 @@ const props = defineProps({
     monthlyComparison: Object,
     weightHistory: Array,
     bodyFatHistory: Array,
+    durationHistory: Array,
     exercises: Array,
     latestWeight: Number,
     weightChange: Number,
@@ -75,10 +77,10 @@ watch(selectedExercise, (newVal) => {
     <AuthenticatedLayout liquid-variant="cyan-magenta">
         <div class="space-y-6">
             <!-- Header -->
-            <header class="flex animate-fade-in items-start justify-between">
+            <header class="animate-fade-in flex items-start justify-between">
                 <div>
                     <h1
-                        class="font-display text-4xl font-black uppercase italic leading-none tracking-tighter text-text-main"
+                        class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                     >
                         Mon<br />
                         <span class="text-gradient-cyan-magenta">Évolution</span>
@@ -86,13 +88,13 @@ watch(selectedExercise, (newVal) => {
                 </div>
 
                 <!-- Period Selector -->
-                <div class="flex rounded-xl border border-glass-border bg-white/50 p-1 shadow-sm backdrop-blur-sm">
+                <div class="border-glass-border flex rounded-xl border bg-white/50 p-1 shadow-sm backdrop-blur-sm">
                     <button
                         v-for="period in periods"
                         :key="period.value"
                         @click="handlePeriodChange(period.value)"
                         :class="[
-                            'rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all',
+                            'rounded-lg px-3 py-1.5 text-[10px] font-black tracking-wider uppercase transition-all',
                             currentPeriod === period.value
                                 ? 'bg-cyan-pure text-text-main shadow-sm'
                                 : 'text-text-muted hover:text-text-main',
@@ -104,15 +106,15 @@ watch(selectedExercise, (newVal) => {
             </header>
 
             <!-- Weight Evolution Card -->
-            <GlassCard class="relative animate-slide-up overflow-hidden" style="animation-delay: 0.05s">
+            <GlassCard class="animate-slide-up relative overflow-hidden" style="animation-delay: 0.05s">
                 <div class="mb-4 flex items-start justify-between">
                     <div>
-                        <h3 class="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-sky-600">
+                        <h3 class="mb-1 text-[10px] font-black tracking-[0.2em] text-sky-600 uppercase">
                             Poids Corporel
                         </h3>
-                        <p class="font-display text-5xl font-black tracking-tighter text-text-main">
+                        <p class="font-display text-text-main text-5xl font-black tracking-tighter">
                             {{ latestWeight || '—' }}
-                            <span class="text-lg text-text-muted">kg</span>
+                            <span class="text-text-muted text-lg">kg</span>
                         </p>
                     </div>
                     <div
@@ -133,13 +135,13 @@ watch(selectedExercise, (newVal) => {
                 <div class="relative -mx-2 h-40 w-full">
                     <WeightHistoryChart v-if="props.weightHistory?.length > 0" :data="props.weightHistory" />
                     <div v-else class="flex h-full items-center justify-center text-center">
-                        <p class="text-sm italic text-text-muted/50">Pas encore de données de poids</p>
+                        <p class="text-text-muted/50 text-sm italic">Pas encore de données de poids</p>
                     </div>
                 </div>
 
                 <Link
                     :href="route('body-measurements.index')"
-                    class="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-600 transition-all hover:gap-3"
+                    class="mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider text-sky-600 uppercase transition-all hover:gap-3"
                 >
                     Voir tout l'historique
                     <span class="material-symbols-outlined text-base">arrow_forward</span>
@@ -147,20 +149,20 @@ watch(selectedExercise, (newVal) => {
             </GlassCard>
 
             <!-- Body Metrics Grid -->
-            <div class="grid animate-slide-up grid-cols-2 gap-4" style="animation-delay: 0.1s">
+            <div class="animate-slide-up grid grid-cols-2 gap-4" style="animation-delay: 0.1s">
                 <!-- Body Fat -->
                 <GlassCard padding="p-5">
                     <div class="flex items-start justify-between">
                         <div>
-                            <h4 class="mb-1 text-[10px] font-black uppercase tracking-[0.15em] text-pink-600">
+                            <h4 class="mb-1 text-[10px] font-black tracking-[0.15em] text-pink-600 uppercase">
                                 Masse Grasse
                             </h4>
-                            <p class="font-display text-3xl font-black text-text-main">
+                            <p class="font-display text-text-main text-3xl font-black">
                                 {{ bodyFat || '—' }}
-                                <span class="text-sm text-text-muted">%</span>
+                                <span class="text-text-muted text-sm">%</span>
                             </p>
                         </div>
-                        <div class="flex size-12 items-center justify-center rounded-xl bg-magenta-pure/10">
+                        <div class="bg-magenta-pure/10 flex size-12 items-center justify-center rounded-xl">
                             <span class="material-symbols-outlined text-2xl text-pink-600">water_drop</span>
                         </div>
                     </div>
@@ -169,7 +171,7 @@ watch(selectedExercise, (newVal) => {
                     <div class="mt-4 h-32 w-full">
                         <BodyFatChart v-if="props.bodyFatHistory?.length > 0" :data="props.bodyFatHistory" />
                         <div v-else class="flex h-full items-center justify-center">
-                            <p class="text-[10px] italic text-text-muted/30">Pas de données historiques</p>
+                            <p class="text-text-muted/30 text-[10px] italic">Pas de données historiques</p>
                         </div>
                     </div>
                 </GlassCard>
@@ -178,12 +180,12 @@ watch(selectedExercise, (newVal) => {
                 <GlassCard padding="p-5">
                     <div class="flex items-start justify-between">
                         <div>
-                            <h4 class="mb-1 text-[10px] font-black uppercase tracking-[0.15em] text-violet-600">
+                            <h4 class="mb-1 text-[10px] font-black tracking-[0.15em] text-violet-600 uppercase">
                                 Volume Mois
                             </h4>
-                            <p class="font-display text-3xl font-black text-text-main">
+                            <p class="font-display text-text-main text-3xl font-black">
                                 {{ Math.round(monthlyComparison?.current_month_volume || 0).toLocaleString() }}
-                                <span class="text-sm text-text-muted">kg</span>
+                                <span class="text-text-muted text-sm">kg</span>
                             </p>
                         </div>
                         <div
@@ -208,10 +210,10 @@ watch(selectedExercise, (newVal) => {
             <GlassCard class="animate-slide-up" style="animation-delay: 0.15s">
                 <div class="mb-4 flex items-center justify-between">
                     <div>
-                        <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                             Évolution du Volume
                         </h3>
-                        <p class="text-xs font-semibold text-text-muted">
+                        <p class="text-text-muted text-xs font-semibold">
                             {{
                                 currentPeriod === '7j'
                                     ? '7'
@@ -225,10 +227,10 @@ watch(selectedExercise, (newVal) => {
                         </p>
                     </div>
                     <div class="text-right">
-                        <div class="text-xs font-black uppercase tracking-wider text-text-muted">Total</div>
-                        <div class="font-display text-2xl font-black text-electric-orange">
+                        <div class="text-text-muted text-xs font-black tracking-wider uppercase">Total</div>
+                        <div class="font-display text-electric-orange text-2xl font-black">
                             {{ totalVolume.toLocaleString() }}
-                            <span class="text-sm text-text-muted">kg</span>
+                            <span class="text-text-muted text-sm">kg</span>
                         </div>
                     </div>
                 </div>
@@ -236,34 +238,53 @@ watch(selectedExercise, (newVal) => {
                     <VolumeTrendChart :data="volumeTrend" />
                 </div>
                 <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">bar_chart</span>
-                    <p class="text-sm text-text-muted">Pas encore de données de volume</p>
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                    <p class="text-text-muted text-sm">Pas encore de données de volume</p>
+                </div>
+            </GlassCard>
+
+            <!-- Duration History Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
+                <div class="mb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                            Durée des Séances
+                        </h3>
+                        <p class="text-text-muted text-xs font-semibold">Historique des 30 dernières séances</p>
+                    </div>
+                </div>
+                <div v-if="durationHistory && durationHistory.length > 0" class="h-48">
+                    <DurationHistoryChart :data="durationHistory" />
+                </div>
+                <div v-else class="flex h-48 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">timer_off</span>
+                    <p class="text-text-muted text-sm">Pas encore de données de durée</p>
                 </div>
             </GlassCard>
 
             <!-- Muscle Distribution & Exercise Progress -->
-            <div class="grid animate-slide-up grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.2s">
+            <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.2s">
                 <!-- Muscle Distribution -->
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-lg font-black uppercase italic text-text-main">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                             Répartition Musculaire
                         </h3>
-                        <p class="text-xs font-semibold text-text-muted">Volume par groupe musculaire</p>
+                        <p class="text-text-muted text-xs font-semibold">Volume par groupe musculaire</p>
                     </div>
                     <div v-if="muscleDistribution && muscleDistribution.length > 0" class="h-52">
                         <MuscleDistributionChart :data="muscleDistribution" />
                     </div>
                     <div v-else class="flex h-52 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">pie_chart</span>
-                        <p class="text-sm text-text-muted">Données de répartition indisponibles</p>
+                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">pie_chart</span>
+                        <p class="text-text-muted text-sm">Données de répartition indisponibles</p>
                     </div>
                 </GlassCard>
 
                 <!-- Exercise Progress (1RM) -->
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-lg font-black uppercase italic text-text-main">Progression 1RM</h3>
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression 1RM</h3>
                         <div class="mt-3">
                             <select v-model="selectedExercise" class="glass-input w-full">
                                 <option :value="null" disabled>Sélectionner un exercice</option>
@@ -276,7 +297,7 @@ watch(selectedExercise, (newVal) => {
 
                     <div v-if="loadingExercise" class="flex h-48 items-center justify-center">
                         <div
-                            class="h-8 w-8 animate-spin rounded-full border-2 border-electric-orange border-t-transparent"
+                            class="border-electric-orange h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
                         ></div>
                     </div>
                     <div v-else-if="selectedExercise && exerciseProgressData.length > 0" class="h-48">
@@ -286,41 +307,41 @@ watch(selectedExercise, (newVal) => {
                         v-else-if="selectedExercise"
                         class="flex h-48 flex-col items-center justify-center text-center"
                     >
-                        <span class="material-symbols-outlined mb-2 text-4xl text-text-muted/30">trending_up</span>
-                        <p class="text-sm text-text-muted">Pas assez de données pour cet exercice</p>
+                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-4xl">trending_up</span>
+                        <p class="text-text-muted text-sm">Pas assez de données pour cet exercice</p>
                     </div>
                     <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined mb-2 text-4xl text-text-muted/30">fitness_center</span>
-                        <p class="text-sm text-text-muted">Choisis un exercice pour voir ton évolution</p>
+                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-4xl">fitness_center</span>
+                        <p class="text-text-muted text-sm">Choisis un exercice pour voir ton évolution</p>
                     </div>
                 </GlassCard>
             </div>
 
             <!-- Summary Stats -->
-            <div class="grid animate-slide-up grid-cols-4 gap-3" style="animation-delay: 0.25s">
+            <div class="animate-slide-up grid grid-cols-4 gap-3" style="animation-delay: 0.25s">
                 <GlassCard padding="p-4" class="text-center">
-                    <div class="text-[10px] font-black uppercase tracking-wider text-text-muted">Séances</div>
-                    <div class="mt-1 font-display text-2xl font-black text-text-main">
+                    <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
+                    <div class="font-display text-text-main mt-1 text-2xl font-black">
                         {{ volumeTrend?.length || 0 }}
                     </div>
                 </GlassCard>
                 <GlassCard padding="p-4" class="text-center">
-                    <div class="text-[10px] font-black uppercase tracking-wider text-text-muted">Muscles</div>
-                    <div class="mt-1 font-display text-2xl font-black text-text-main">
+                    <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
+                    <div class="font-display text-text-main mt-1 text-2xl font-black">
                         {{ muscleDistribution?.length || 0 }}
                     </div>
                 </GlassCard>
                 <GlassCard padding="p-4" class="text-center">
-                    <div class="text-[10px] font-black uppercase tracking-wider text-text-muted">Exercices</div>
-                    <div class="mt-1 font-display text-2xl font-black text-text-main">
+                    <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Exercices</div>
+                    <div class="font-display text-text-main mt-1 text-2xl font-black">
                         {{ exercises?.length || 0 }}
                     </div>
                 </GlassCard>
                 <GlassCard padding="p-4" class="text-center">
-                    <div class="text-[10px] font-black uppercase tracking-wider text-text-muted">vs Mois -1</div>
+                    <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
                     <div
                         :class="[
-                            'mt-1 font-display text-2xl font-black',
+                            'font-display mt-1 text-2xl font-black',
                             (monthlyComparison?.percentage || 0) >= 0 ? 'text-emerald-500' : 'text-red-500',
                         ]"
                     >
