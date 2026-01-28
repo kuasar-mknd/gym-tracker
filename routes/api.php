@@ -29,6 +29,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('habit-logs', \App\Http\Controllers\Api\HabitLogController::class);
     Route::apiResource('supplements', \App\Http\Controllers\Api\SupplementController::class);
     Route::apiResource('water-logs', \App\Http\Controllers\Api\WaterLogController::class);
+    Route::apiResource('body-part-measurements', \App\Http\Controllers\Api\BodyPartMeasurementController::class);
 
     Route::get('/status', fn () => response()->json(['status' => 'ok']));
 });
