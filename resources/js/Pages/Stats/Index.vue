@@ -7,12 +7,14 @@ import axios from 'axios'
 
 const MuscleDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/MuscleDistributionChart.vue'))
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
+const MonthlyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/MonthlyVolumeChart.vue'))
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
 
 const props = defineProps({
     volumeTrend: Array,
+    monthlyVolumeHistory: Array,
     muscleDistribution: Array,
     monthlyComparison: Object,
     weightHistory: Array,
@@ -238,6 +240,23 @@ watch(selectedExercise, (newVal) => {
                 <div v-else class="flex h-48 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">bar_chart</span>
                     <p class="text-sm text-text-muted">Pas encore de données de volume</p>
+                </div>
+            </GlassCard>
+
+            <!-- Monthly Volume Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
+                <div class="mb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-display text-lg font-black uppercase italic text-text-main">Volume Mensuel</h3>
+                        <p class="text-xs font-semibold text-text-muted">12 derniers mois</p>
+                    </div>
+                </div>
+                <div v-if="monthlyVolumeHistory && monthlyVolumeHistory.length > 0" class="h-64">
+                    <MonthlyVolumeChart :data="monthlyVolumeHistory" />
+                </div>
+                <div v-else class="flex h-64 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined mb-2 text-5xl text-text-muted/30">calendar_month</span>
+                    <p class="text-sm text-text-muted">Pas encore de données mensuelles</p>
                 </div>
             </GlassCard>
 
