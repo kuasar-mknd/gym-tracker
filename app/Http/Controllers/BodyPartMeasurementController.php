@@ -20,22 +20,28 @@ class BodyPartMeasurementController extends Controller
         $user = Auth::user();
 
         // Group by part, get latest for card display
-        $latestMeasurements = $user->bodyPartMeasurements()
-            ->orderBy('measured_at', 'desc')
+        $latestMeasurements = \App\Models\BodyPartMeasurement::query()
+            ->fromSub(function ($query) use ($user) {
+                $query->from((new \App\Models\BodyPartMeasurement)->getTable())
+                    ->select('*')
+                    ->selectRaw('ROW_NUMBER() OVER (PARTITION BY part ORDER BY measured_at DESC) as rn')
+                    ->where('user_id', $user->id);
+            }, 'ranked_measurements')
+            ->where('rn', '<=', 2)
             ->get()
             ->groupBy('part')
             ->map(function ($group): array {
                 /** @var \App\Models\BodyPartMeasurement $latest */
-                $latest = $group->first();
+                $latest = $group->firstWhere('rn', 1);
                 /** @var \App\Models\BodyPartMeasurement|null $previous */
-                $previous = $group->skip(1)->first();
+                $previous = $group->firstWhere('rn', 2);
 
                 return [
                     'part' => $latest->part,
                     'current' => $latest->value,
                     'unit' => $latest->unit,
                     'date' => \Illuminate\Support\Carbon::parse($latest->measured_at)->format('Y-m-d'),
-                    'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
+                    'diff' => $previous ? round((float) $latest->value - (float) $previous->value, 2) : 0,
                 ];
             })->values();
 
