@@ -22,6 +22,13 @@ class SupplementTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function test_guest_cannot_view_supplements_page(): void
+    {
+        $response = $this->get(route('supplements.index'));
+
+        $response->assertRedirect(route('login'));
+    }
+
     public function test_user_can_create_supplement(): void
     {
         $user = User::factory()->create();
