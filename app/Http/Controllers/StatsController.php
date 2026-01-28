@@ -27,6 +27,7 @@ class StatsController extends Controller
 
         return Inertia::render('Stats/Index', [
             'volumeTrend' => $this->statsService->getVolumeTrend($user, $days),
+            'monthlyVolumeHistory' => $this->statsService->getMonthlyVolumeHistory($user, 12),
             'muscleDistribution' => $this->statsService->getMuscleDistribution($user, $days),
             'monthlyComparison' => $this->statsService->getMonthlyVolumeComparison($user),
             'weightHistory' => $weightHistory,

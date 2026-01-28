@@ -226,3 +226,23 @@ test('stats do not include other users data', function (): void {
             ->where('volumeTrend', []) // Should be empty for this user
         );
 });
+
+test('stats page includes monthly volume history', function (): void {
+    $user = User::factory()->create();
+
+    // Workout 1 month ago
+    $w1 = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subMonth()]);
+    $l1 = WorkoutLine::factory()->create(['workout_id' => $w1->id]);
+    Set::factory()->create(['workout_line_id' => $l1->id, 'weight' => 100, 'reps' => 10]);
+
+    actingAs($user)
+        ->get(route('stats.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('monthlyVolumeHistory')
+            ->where('monthlyVolumeHistory', function ($history) {
+                // Check if we have entries and if they look correct
+                return count($history) === 12; // default 12 months
+            })
+        );
+});

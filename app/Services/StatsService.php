@@ -168,6 +168,57 @@ final class StatsService
     }
 
     /**
+     * Get monthly volume history for the last X months.
+     *
+     * @return array<int, array{date: string, full_date: string, volume: float}>
+     */
+    public function getMonthlyVolumeHistory(User $user, int $months = 12): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.monthly_volume_history.{$user->id}.{$months}",
+            now()->addMinutes(30),
+            function () use ($user, $months): array {
+                // Get start date (start of month, X months ago)
+                $start = now()->subMonths($months - 1)->startOfMonth();
+
+                // Fetch data grouped by Year-Month
+                $dateFormat = DB::connection()->getDriverName() === 'sqlite'
+                    ? "strftime('%Y-%m', workouts.started_at)"
+                    : "DATE_FORMAT(workouts.started_at, '%Y-%m')";
+
+                /** @var \Illuminate\Support\Collection<string, float> $results */
+                $results = DB::table('workouts')
+                    ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                    ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                    ->where('workouts.user_id', $user->id)
+                    ->where('workouts.started_at', '>=', $start)
+                    ->select(
+                        DB::raw("$dateFormat as month_key"),
+                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+                    )
+                    ->groupBy('month_key')
+                    ->pluck('volume', 'month_key');
+
+                // Fill gaps
+                $data = [];
+                for ($i = 0; $i < $months; $i++) {
+                    $date = $start->copy()->addMonths($i);
+                    $key = $date->format('Y-m');
+                    $volume = $results[$key] ?? 0.0;
+
+                    $data[] = [
+                        'date' => ucfirst($date->translatedFormat('M Y')), // e.g., "Jan 2024"
+                        'full_date' => $key,
+                        'volume' => (float) $volume,
+                    ];
+                }
+
+                return $data;
+            }
+        );
+    }
+
+    /**
      * Get weight history for the last X days.
      *
      * @return array<int, array{date: string, weight: float}>
@@ -364,6 +415,9 @@ final class StatsService
         \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
+
+        // Clear monthly volume history
+        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.12");
 
         // Note: Individual exercise 1RM progress is not cleared here as it's exercise-specific
     }
