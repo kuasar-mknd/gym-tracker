@@ -19,10 +19,20 @@ class BodyPartMeasurementController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Optimized query to get top 2 measurements per part
+        $tableName = (new BodyPartMeasurement)->getTable();
+        $measurements = BodyPartMeasurement::fromQuery("
+            WITH RankedMeasurements AS (
+                SELECT *,
+                       ROW_NUMBER() OVER (PARTITION BY part ORDER BY measured_at DESC) as rn
+                FROM {$tableName}
+                WHERE user_id = ?
+            )
+            SELECT * FROM RankedMeasurements WHERE rn <= 2
+        ", [$user->id]);
+
         // Group by part, get latest for card display
-        $latestMeasurements = $user->bodyPartMeasurements()
-            ->orderBy('measured_at', 'desc')
-            ->get()
+        $latestMeasurements = $measurements
             ->groupBy('part')
             ->map(function ($group): array {
                 /** @var \App\Models\BodyPartMeasurement $latest */
