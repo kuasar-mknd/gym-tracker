@@ -69,7 +69,7 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
     Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index', 'show']);
     Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->only(['index', 'show']);
-    Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index']);
+    Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index', 'show']);
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
 
     Route::get('/body-metrics', [\App\Http\Controllers\BodyPartMeasurementController::class, 'index'])->name('body-parts.index');

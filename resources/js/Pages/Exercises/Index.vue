@@ -445,7 +445,10 @@ const typeLabel = (type) => {
                             >
                                 <!-- View Mode -->
                                 <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
-                                    <div class="flex items-center gap-4">
+                                    <div
+                                        class="flex cursor-pointer items-center gap-4"
+                                        @click="router.visit(route('exercises.show', { exercise: exercise.id }))"
+                                    >
                                         <div
                                             :class="[
                                                 'flex size-14 items-center justify-center rounded-2xl',
@@ -462,7 +465,7 @@ const typeLabel = (type) => {
                                         </div>
                                         <div>
                                             <div
-                                                class="font-display text-text-main text-lg leading-tight font-bold uppercase italic"
+                                                class="font-display text-text-main text-lg leading-tight font-bold uppercase italic hover:underline"
                                             >
                                                 {{ exercise.name }}
                                             </div>
