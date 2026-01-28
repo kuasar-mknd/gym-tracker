@@ -40,8 +40,17 @@ class WorkoutsController extends Controller
         $this->authorize('viewAny', Workout::class);
 
         $data = $fetchWorkouts->execute($this->user());
+        $userId = $this->user()->id;
 
-        return Inertia::render('Workouts/Index', $data);
+        return Inertia::render('Workouts/Index', [
+            ...$data,
+            'exercises' => Inertia::defer(fn () => Cache::remember(
+                "exercises_list_{$userId}",
+                3600,
+                // Cache invalidation is handled in ExerciseController::store/update/destroy
+                fn () => Exercise::forUser($userId)->orderBy('name')->get()
+            )),
+        ]);
     }
 
     /**
