@@ -22,3 +22,8 @@
 **Vulnerability:** Users could create Personal Records linked to Workouts and Sets belonging to other users because validation only checked for ID existence (`exists:workouts,id`) without verifying ownership.
 **Learning:** Standard `exists` validation confirms a record is in the database but ignores ownership. This allows linking to private resources of others, polluting data relationships.
 **Prevention:** Always scope `exists` checks to `user_id` when validating relationships to user-owned resources: `Rule::exists('table')->where('user_id', $this->user()->id)`.
+
+## 2026-06-25 - Missing Rate Limiting on Public Auth Routes
+**Vulnerability:** The `register` and `forgot-password` POST routes in `routes/auth.php` lacked rate limiting middleware, exposing the application to account creation spam and email flooding attacks.
+**Learning:** Default Laravel authentication routes (especially from starter kits like Breeze) may not enforce rate limiting on `register` or `forgot-password` by default, focusing primarily on `login`. DoS and Spam vectors are often overlooked in default configs.
+**Prevention:** Explicitly apply `middleware('throttle:6,1')` (or strict custom limiters) to ALL public `POST` authentication endpoints in `routes/auth.php`.
