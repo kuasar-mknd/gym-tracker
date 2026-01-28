@@ -13,3 +13,7 @@
 ## 2026-05-23 - Visual Regression with Transparent Glass Overlays
 **Learning:** Applying transparent/glassy backgrounds (`bg-white/60`) to elements positioned over borders (like dividers) causes the underlying border to show through the text, looking like a strikethrough.
 **Action:** When using glass effects on overlay elements, restructure the layout (e.g., using flexbox with side lines) to ensure the background behind the transparent element is clear, rather than relying on opacity masking.
+
+## 2026-02-14 - Inconsistent Localization
+**Learning:** Some parts of the application (e.g., `Measurements/Parts`) are hardcoded in English while others (e.g., `Measurements/Index`) are in French, creating a fragmented experience.
+**Action:** When adding accessibility labels, always match the localized language of the specific file/component being modified to ensure consistency for screen readers.
