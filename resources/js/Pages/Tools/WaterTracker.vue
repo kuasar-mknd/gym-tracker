@@ -160,32 +160,7 @@
                 <!-- Weekly History -->
                 <GlassCard class="animate-slide-up h-full" style="animation-delay: 0.15s">
                     <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Last 7 Days</h2>
-
-                    <div class="flex h-[300px] items-end justify-between gap-2 pt-4">
-                        <div
-                            v-for="day in history"
-                            :key="day.date"
-                            class="group relative flex flex-1 flex-col items-center justify-end"
-                        >
-                            <!-- Tooltip -->
-                            <div class="absolute -top-10 opacity-0 transition-opacity group-hover:opacity-100 bg-slate-800 text-white text-xs rounded px-2 py-1 mb-2 whitespace-nowrap z-10">
-                                {{ day.total }} ml
-                            </div>
-
-                            <!-- Bar -->
-                            <div
-                                class="w-full rounded-t-lg bg-slate-100 transition-all duration-500 group-hover:bg-blue-100 relative overflow-hidden"
-                                :style="{ height: `${Math.min((day.total / goal) * 100, 100)}%` }"
-                            >
-                                <div class="absolute bottom-0 left-0 right-0 top-0 bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors"></div>
-                                <!-- Fill based on goal cap? Actually visual height is mostly useful relative to goal -->
-                            </div>
-
-                            <span class="text-text-muted mt-2 text-xs font-bold uppercase truncate w-full text-center">
-                                {{ day.day_name.substring(0, 3) }}
-                            </span>
-                        </div>
-                    </div>
+                    <WaterIntakeChart :data="history" :goal="goal" />
                 </GlassCard>
             </div>
         </div>
@@ -193,11 +168,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+
+const WaterIntakeChart = defineAsyncComponent(() => import('@/Components/Stats/WaterIntakeChart.vue'))
 
 const props = defineProps({
     logs: {
