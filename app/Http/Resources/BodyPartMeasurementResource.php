@@ -24,8 +24,8 @@ class BodyPartMeasurementResource extends JsonResource
             'unit' => $this->unit,
             'measured_at' => $this->measured_at->format('Y-m-d'),
             'notes' => $this->notes,
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }
