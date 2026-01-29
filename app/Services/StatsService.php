@@ -501,7 +501,7 @@ final class StatsService
     {
         return [
             'date' => $workout->started_at->format('d/m'),
-            'duration' => (int) ($workout->ended_at ? $workout->ended_at->diffInMinutes($workout->started_at) : 0),
+            'duration' => (int) ($workout->ended_at ? abs($workout->ended_at->diffInMinutes($workout->started_at)) : 0),
             'name' => (string) $workout->name,
         ];
     }

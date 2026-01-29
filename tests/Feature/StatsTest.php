@@ -226,3 +226,24 @@ test('stats do not include other users data', function (): void {
             ->where('volumeTrend', []) // Should be empty for this user
         );
 });
+
+test('stats page provides duration history', function (): void {
+    $user = User::factory()->create();
+
+    // Create a workout with duration
+    $workout = Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => now()->subHours(2),
+        'ended_at' => now()->subHour(), // 60 minutes duration
+    ]);
+
+    actingAs($user)
+        ->get(route('stats.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->component('Stats/Index')
+            ->has('durationHistory')
+            ->where('durationHistory.0.duration', 60)
+            ->where('durationHistory.0.name', $workout->name)
+        );
+});
