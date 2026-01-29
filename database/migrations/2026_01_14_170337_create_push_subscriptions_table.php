@@ -16,9 +16,9 @@ return new class extends Migration
         /** @var string|null $connection */
         $connection = config('webpush.database_connection');
         /** @var string $table */
-        $table = config('webpush.table_name');
+        $table = config('webpush.table_name', 'push_subscriptions');
 
-        Schema::connection($connection)->create($table, function (Blueprint $table) {
+        Schema::create($table, function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->morphs('subscribable', 'push_subscriptions_subscribable_morph_idx');
             $table->string('endpoint', 500)->unique();
@@ -37,8 +37,8 @@ return new class extends Migration
         /** @var string|null $connection */
         $connection = config('webpush.database_connection');
         /** @var string $table */
-        $table = config('webpush.table_name');
+        $table = config('webpush.table_name', 'push_subscriptions');
 
-        Schema::connection($connection)->dropIfExists($table);
+        Schema::dropIfExists($table);
     }
 };
