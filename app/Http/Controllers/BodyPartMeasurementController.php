@@ -8,21 +8,20 @@ use App\Actions\Measurements\FetchBodyPartMeasurementsIndexAction;
 use App\Http\Requests\BodyPartMeasurementStoreRequest;
 use App\Models\BodyPartMeasurement;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class BodyPartMeasurementController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index(Request $request, FetchBodyPartMeasurementsIndexAction $action): \Inertia\Response
+    public function index(FetchBodyPartMeasurementsIndexAction $action): \Inertia\Response
     {
-        return Inertia::render('Measurements/Parts/Index', $action->execute($request->user()));
+        return Inertia::render('Measurements/Parts/Index', $action->execute($this->user()));
     }
 
-    public function show(Request $request, string $part): \Illuminate\Http\RedirectResponse|\Inertia\Response
+    public function show(string $part): \Illuminate\Http\RedirectResponse|\Inertia\Response
     {
-        $history = $request->user()->bodyPartMeasurements()
+        $history = $this->user()->bodyPartMeasurements()
             ->where('part', $part)
             ->orderBy('measured_at', 'asc')
             ->get();
@@ -39,7 +38,7 @@ class BodyPartMeasurementController extends Controller
 
     public function store(BodyPartMeasurementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $request->user()->bodyPartMeasurements()->create($request->validated());
+        $this->user()->bodyPartMeasurements()->create($request->validated());
 
         return redirect()->back()->with('success', 'Measurement added.');
     }

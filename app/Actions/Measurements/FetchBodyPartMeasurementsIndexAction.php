@@ -7,11 +7,12 @@ namespace App\Actions\Measurements;
 use App\Models\BodyPartMeasurement;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class FetchBodyPartMeasurementsIndexAction
 {
     /**
-     * @return array{latestMeasurements: \Illuminate\Support\Collection, commonParts: array<int, string>}
+     * @return array{latestMeasurements: Collection<int, array{part: string, current: mixed, unit: string, date: string, diff: float|int}>, commonParts: array<int, string>}
      */
     public function execute(User $user): array
     {
