@@ -14,8 +14,9 @@ class SupplementUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        /** @var \App\Models\Supplement $supplement */
+        /** @var \App\Models\Supplement|null $supplement */
         $supplement = $this->route('supplement');
+
         return $supplement && $supplement->user_id === Auth::id();
     }
 
