@@ -11,7 +11,7 @@ use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 
-test('index returns a list of supplements for the authenticated user', function () {
+test('index returns a list of supplements for the authenticated user', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
@@ -38,7 +38,7 @@ test('index returns a list of supplements for the authenticated user', function 
         ]);
 });
 
-test('store creates a new supplement', function () {
+test('store creates a new supplement', function (): void {
     $user = User::factory()->create();
 
     $data = [
@@ -61,7 +61,7 @@ test('store creates a new supplement', function () {
     ]);
 });
 
-test('show returns the correct supplement', function () {
+test('show returns the correct supplement', function (): void {
     $user = User::factory()->create();
     $supplement = Supplement::factory()->create(['user_id' => $user->id]);
 
@@ -74,7 +74,7 @@ test('show returns the correct supplement', function () {
         ]);
 });
 
-test('update modifies an existing supplement', function () {
+test('update modifies an existing supplement', function (): void {
     $user = User::factory()->create();
     $supplement = Supplement::factory()->create(['user_id' => $user->id]);
 
@@ -98,7 +98,7 @@ test('update modifies an existing supplement', function () {
     ]);
 });
 
-test('destroy removes a supplement', function () {
+test('destroy removes a supplement', function (): void {
     $user = User::factory()->create();
     $supplement = Supplement::factory()->create(['user_id' => $user->id]);
 
@@ -109,7 +109,7 @@ test('destroy removes a supplement', function () {
     assertDatabaseMissing('supplements', ['id' => $supplement->id]);
 });
 
-test('store requires valid data', function () {
+test('store requires valid data', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -126,7 +126,7 @@ test('store requires valid data', function () {
         ->assertJsonValidationErrors(['name', 'servings_remaining']);
 });
 
-test('update requires valid data', function () {
+test('update requires valid data', function (): void {
     $user = User::factory()->create();
     $supplement = Supplement::factory()->create(['user_id' => $user->id]);
 
@@ -138,7 +138,7 @@ test('update requires valid data', function () {
         ->assertJsonValidationErrors(['name']);
 });
 
-test('user cannot access another users supplement', function () {
+test('user cannot access another users supplement', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $supplement = Supplement::factory()->create(['user_id' => $otherUser->id]);
@@ -148,7 +148,7 @@ test('user cannot access another users supplement', function () {
         ->assertStatus(403);
 });
 
-test('user cannot update another users supplement', function () {
+test('user cannot update another users supplement', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $supplement = Supplement::factory()->create(['user_id' => $otherUser->id]);
@@ -162,7 +162,7 @@ test('user cannot update another users supplement', function () {
         ->assertStatus(403);
 });
 
-test('user cannot delete another users supplement', function () {
+test('user cannot delete another users supplement', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $supplement = Supplement::factory()->create(['user_id' => $otherUser->id]);
@@ -174,7 +174,7 @@ test('user cannot delete another users supplement', function () {
     assertDatabaseHas('supplements', ['id' => $supplement->id]);
 });
 
-test('unauthenticated users cannot access supplements', function () {
+test('unauthenticated users cannot access supplements', function (): void {
     getJson(route('api.v1.supplements.index'))->assertStatus(401);
     postJson(route('api.v1.supplements.store'), [])->assertStatus(401);
 });
