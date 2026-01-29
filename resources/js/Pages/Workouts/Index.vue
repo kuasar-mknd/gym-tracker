@@ -312,7 +312,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                                 class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/50"
                                             >
                                                 {{ line.exercise.name }}
-                                                <span class="text-text-muted/50">• {{ line.sets.length }} séries</span>
+                                                <span class="text-text-muted/50">• {{ line.sets_count }} séries</span>
                                             </span>
                                             <span
                                                 v-if="workout.workout_lines.length > 3"

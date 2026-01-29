@@ -103,7 +103,9 @@ final class FetchWorkoutsIndexAction
     private function getWorkouts(
         User $user
     ): \Illuminate\Pagination\LengthAwarePaginator {
-        return Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
+        return Workout::with(['workoutLines' => function ($query) {
+            $query->with('exercise')->withCount('sets');
+        }])
             ->where('user_id', $user->id)
             ->latest('started_at')
             ->paginate(20);
