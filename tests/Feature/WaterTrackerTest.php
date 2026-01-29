@@ -28,7 +28,7 @@ test('can view water tracker page', function (): void {
 
     get(route('tools.water.index'))
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Tools/WaterTracker')
             ->has('logs', 1)
             ->has('todayTotal')
