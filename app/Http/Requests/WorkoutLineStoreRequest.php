@@ -27,8 +27,8 @@ class WorkoutLineStoreRequest extends FormRequest
         return [
             'exercise_id' => [
                 'required',
-                Rule::exists('exercises', 'id')->where(function ($query) {
-                    $query->where(function ($q) {
+                Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
                         $q->whereNull('user_id')
                             ->orWhere('user_id', $this->user()?->id);
                     });
