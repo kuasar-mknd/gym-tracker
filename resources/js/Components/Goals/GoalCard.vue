@@ -56,7 +56,7 @@ const progressBarColor = computed(() => {
 </script>
 
 <template>
-    <GlassCard class="group relative overflow-hidden">
+    <GlassCard class="group relative overflow-hidden" :hover="true">
         <!-- Completion Badge -->
         <div
             v-if="isCompleted"
@@ -67,7 +67,7 @@ const progressBarColor = computed(() => {
 
         <div class="mb-4 flex items-start justify-between">
             <div class="flex items-center gap-3">
-                <div class="rounded-xl border border-slate-100 bg-slate-50 p-2 text-2xl">
+                <div class="rounded-2xl border border-white/20 bg-white/10 p-2 text-2xl backdrop-blur-md">
                     {{ typeIcon }}
                 </div>
                 <div>
@@ -88,7 +88,7 @@ const progressBarColor = computed(() => {
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
-                <div class="h-2 w-full overflow-hidden rounded-full border border-slate-100 bg-slate-100">
+                <div class="h-2 w-full overflow-hidden rounded-full border border-white/10 bg-white/5">
                     <div
                         class="relative h-full transition-all duration-1000 ease-out"
                         :class="progressBarColor"
@@ -101,13 +101,17 @@ const progressBarColor = computed(() => {
 
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-4">
-                <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+                <div
+                    class="rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur-md transition-transform duration-300 hover:scale-105"
+                >
                     <p class="text-text-muted/50 text-[10px] font-bold tracking-tight uppercase">Actuel</p>
                     <p class="text-text-main text-sm font-semibold">
                         {{ goal.current_value }} <span class="text-text-muted text-[10px]">{{ goal.unit }}</span>
                     </p>
                 </div>
-                <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+                <div
+                    class="rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur-md transition-transform duration-300 hover:scale-105"
+                >
                     <p class="text-text-muted/50 text-[10px] font-bold tracking-tight uppercase">Cible</p>
                     <p class="text-text-main text-sm font-semibold">
                         {{ goal.target_value }} <span class="text-text-muted text-[10px]">{{ goal.unit }}</span>
