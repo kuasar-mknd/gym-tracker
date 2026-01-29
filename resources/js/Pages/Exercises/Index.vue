@@ -1,4 +1,11 @@
 <script setup>
+/**
+ * Exercises Index Page
+ *
+ * Displays the user's exercise library, categorized and searchable.
+ * Supports creating, editing, and deleting exercises with optimistic UI updates
+ * and haptic feedback. It uses a "Liquid Glass" design aesthetic.
+ */
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
@@ -16,8 +23,11 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 const ExerciseCategoryChart = defineAsyncComponent(() => import('@/Components/Stats/ExerciseCategoryChart.vue'))
 
 const props = defineProps({
+    /** Array of all exercises belonging to the user. */
     exercises: Array,
+    /** List of available exercise categories (e.g., 'Pectoraux', 'Dos'). */
     categories: Array,
+    /** List of available exercise types (e.g., 'strength', 'cardio'). */
     types: Array,
 })
 
@@ -26,10 +36,10 @@ const editingExercise = ref(null)
 const searchQuery = ref('')
 const activeCategory = ref('all')
 
-// Local state for optimistic updates
+// Local state for optimistic updates to ensure immediate UI feedback before server confirmation
 const localExercises = ref([...props.exercises])
 
-// Update local state when props change (server sync)
+// Sync local state when the server returns updated props (e.g., after a successful partial reload)
 import { watch } from 'vue'
 watch(
     () => props.exercises,
@@ -50,6 +60,10 @@ const editForm = useForm({
     category: '',
 })
 
+/**
+ * Submit the create exercise form.
+ * Triggers haptic feedback on success or error.
+ */
 const submit = () => {
     form.post(route('exercises.store'), {
         onSuccess: () => {
@@ -81,6 +95,10 @@ const updateExercise = (exercise) => {
     })
 }
 
+/**
+ * Optimistically delete an exercise.
+ * Removes it from the local list immediately and restores it if the server request fails.
+ */
 const deleteExercise = (id) => {
     if (confirm('Supprimer cet exercice ?')) {
         const index = localExercises.value.findIndex((e) => e.id === id)
@@ -93,6 +111,7 @@ const deleteExercise = (id) => {
         router.delete(route('exercises.destroy', { exercise: id }), {
             preserveScroll: true,
             onError: () => {
+                // Rollback if server fails
                 localExercises.value.splice(index, 0, removed)
                 triggerHaptic('error')
             },
@@ -100,7 +119,7 @@ const deleteExercise = (id) => {
     }
 }
 
-// Filter exercises by search and category
+// Filter exercises based on the search query and selected category
 const filteredExercises = computed(() => {
     return localExercises.value.filter((exercise) => {
         const matchesSearch =
@@ -110,6 +129,7 @@ const filteredExercises = computed(() => {
     })
 })
 
+// Group filtered exercises by category for display
 const groupedExercises = computed(() => {
     const groups = {}
     filteredExercises.value.forEach((exercise) => {
