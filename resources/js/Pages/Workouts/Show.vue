@@ -699,8 +699,6 @@ const hasNoResults = computed(() => {
                         v-for="(set, index) in line.sets"
                         :key="set.id"
                         :disabled="!!workout.ended_at || set.is_completed"
-                        @delete="removeSet(set.id)"
-                        @duplicate="duplicateSet(set, line.id)"
                     >
                         <div
                             class="flex items-center gap-3 rounded-2xl border border-white bg-white/80 p-4 shadow-sm transition-all"
@@ -831,6 +829,16 @@ const hasNoResults = computed(() => {
                                     <span class="text-text-muted text-xs font-bold uppercase">reps</span>
                                 </div>
                             </template>
+
+                            <!-- Duplicate Set -->
+                            <button
+                                v-if="!workout.ended_at"
+                                @click="duplicateSet(set, line.id)"
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-300 transition-all hover:bg-blue-50 hover:text-blue-500"
+                                aria-label="Dupliquer la série"
+                            >
+                                <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+                            </button>
 
                             <!-- Delete Set -->
                             <button
