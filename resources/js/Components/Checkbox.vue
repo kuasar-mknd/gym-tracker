@@ -1,5 +1,9 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, useAttrs } from 'vue'
+
+defineOptions({
+    inheritAttrs: false,
+})
 
 const emit = defineEmits(['update:checked'])
 
@@ -11,6 +15,20 @@ const props = defineProps({
     value: {
         default: null,
     },
+})
+
+const attrs = useAttrs()
+
+const rootAttrs = computed(() => {
+    return {
+        class: attrs.class,
+        style: attrs.style,
+    }
+})
+
+const inputAttrs = computed(() => {
+    const { class: _, style: __, ...rest } = attrs
+    return rest
 })
 
 const proxyChecked = computed({
@@ -25,11 +43,12 @@ const proxyChecked = computed({
 </script>
 
 <template>
-    <div class="relative flex items-center justify-center">
+    <div class="relative flex items-center justify-center" v-bind="rootAttrs">
         <input
             type="checkbox"
             :value="value"
             v-model="proxyChecked"
+            v-bind="inputAttrs"
             class="peer checked:from-electric-orange checked:to-hot-pink focus:ring-electric-orange/30 h-5 w-5 appearance-none rounded-lg border border-slate-300 bg-white shadow-sm transition-all checked:border-transparent checked:bg-linear-to-br hover:scale-105 focus:ring-2 focus:ring-offset-0"
         />
         <svg
