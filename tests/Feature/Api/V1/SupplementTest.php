@@ -8,10 +8,8 @@ use App\Models\User;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
-use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
-use function Pest\Laravel\putJson;
 
 test('index returns a list of supplements for the authenticated user', function () {
     $user = User::factory()->create();

@@ -14,7 +14,9 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 class Supplement extends Model
 {
+    /** @use HasFactory<\Database\Factories\SupplementFactory> */
     use HasFactory;
+
     use LogsActivity;
 
     protected $fillable = [

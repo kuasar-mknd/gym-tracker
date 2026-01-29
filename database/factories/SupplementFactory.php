@@ -31,7 +31,7 @@ class SupplementFactory extends Factory
             'user_id' => User::factory(),
             'name' => $this->faker->word(),
             'brand' => $this->faker->company(),
-            'dosage' => $this->faker->randomNumber(2) . 'mg',
+            'dosage' => $this->faker->randomNumber(2).'mg',
             'servings_remaining' => $this->faker->numberBetween(10, 100),
             'low_stock_threshold' => $this->faker->numberBetween(1, 10),
         ];
