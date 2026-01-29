@@ -12,7 +12,7 @@ class WebRoutesSecurityTest extends TestCase
     /**
      * Test that guest users are redirected to login when accessing protected resources.
      */
-    public function test_guest_cannot_access_protected_routes()
+    public function test_guest_cannot_access_protected_routes(): void
     {
         $routes = [
             route('supplements.index'),
@@ -33,7 +33,7 @@ class WebRoutesSecurityTest extends TestCase
         }
     }
 
-    public function test_authenticated_user_can_access_protected_routes()
+    public function test_authenticated_user_can_access_protected_routes(): void
     {
         // Mock manifest to avoid Inertia errors if build is missing
         $this->instance('vite.manifest', []);
