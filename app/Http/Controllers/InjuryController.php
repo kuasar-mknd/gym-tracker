@@ -41,7 +41,7 @@ class InjuryController extends Controller
 
     public function update(InjuryUpdateRequest $request, Injury $injury): \Illuminate\Http\RedirectResponse
     {
-        if ($injury->user_id !== $request->user()->id) {
+        if ($injury->user_id !== Auth::id()) {
             abort(403);
         }
 
