@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Carbon;
 
 /** @mixin \App\Models\BodyPartMeasurement */
 class BodyPartMeasurementResource extends JsonResource
@@ -23,7 +24,7 @@ class BodyPartMeasurementResource extends JsonResource
             'part' => $this->part,
             'value' => $this->value,
             'unit' => $this->unit,
-            'measured_at' => $this->measured_at->format('Y-m-d'),
+            'measured_at' => Carbon::parse($this->measured_at)->format('Y-m-d'),
             'notes' => $this->notes,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

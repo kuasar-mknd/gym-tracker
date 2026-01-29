@@ -85,7 +85,7 @@ class BodyPartMeasurementTest extends TestCase
         $measurement = BodyPartMeasurement::factory()->create([
             'user_id' => $user->id,
             'value' => 30.0,
-            'unit' => 'cm'
+            'unit' => 'cm',
         ]);
 
         $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/body-part-measurements/{$measurement->id}", [

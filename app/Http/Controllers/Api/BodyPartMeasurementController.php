@@ -19,7 +19,10 @@ class BodyPartMeasurementController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $measurements = $request->user()->bodyPartMeasurements()
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $measurements = $user->bodyPartMeasurements()
             ->orderByDesc('measured_at')
             ->paginate();
 
@@ -31,7 +34,10 @@ class BodyPartMeasurementController extends Controller
      */
     public function store(BodyPartMeasurementStoreRequest $request): BodyPartMeasurementResource
     {
-        $measurement = $request->user()->bodyPartMeasurements()->create($request->validated());
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $measurement = $user->bodyPartMeasurements()->create($request->validated());
 
         return new BodyPartMeasurementResource($measurement);
     }
