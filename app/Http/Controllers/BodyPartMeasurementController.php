@@ -20,7 +20,7 @@ class BodyPartMeasurementController extends Controller
         $user = Auth::user();
 
         // Group by part, get latest for card display
-        $latestMeasurements = BodyPartMeasurement::fromQuery("
+        $latestMeasurements = BodyPartMeasurement::fromQuery(<<<'SQL'
             WITH RankedMeasurements AS (
                 SELECT *,
                        ROW_NUMBER() OVER (PARTITION BY part ORDER BY measured_at DESC) as rn
@@ -28,7 +28,7 @@ class BodyPartMeasurementController extends Controller
                 WHERE user_id = ?
             )
             SELECT * FROM RankedMeasurements WHERE rn <= 2
-        ", [$user->id])
+        SQL, [$user->id])
             ->groupBy('part')
             ->map(function ($group): array {
                 /** @var \App\Models\BodyPartMeasurement $latest */
