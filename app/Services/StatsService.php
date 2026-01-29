@@ -194,13 +194,16 @@ final class StatsService
      */
     public function getLatestBodyMetrics(User $user): array
     {
-        /** @var \App\Models\BodyMeasurement|null $latest */
-        $latest = $user->bodyMeasurements()->latest('measured_at')->first();
-        /** @var \App\Models\BodyMeasurement|null $previous */
-        $previous = $user->bodyMeasurements()
-            ->where('id', '!=', $latest?->id)
+        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\BodyMeasurement> $measurements */
+        $measurements = $user->bodyMeasurements()
             ->latest('measured_at')
-            ->first();
+            ->take(2)
+            ->get();
+
+        /** @var \App\Models\BodyMeasurement|null $latest */
+        $latest = $measurements->first();
+        /** @var \App\Models\BodyMeasurement|null $previous */
+        $previous = $measurements->skip(1)->first();
 
         $weightChange = 0;
         if ($latest && $previous) {
