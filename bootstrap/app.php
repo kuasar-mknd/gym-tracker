@@ -20,11 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
-        $middleware->append(\Spatie\Csp\AddCspHeaders::class);
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            \Spatie\Csp\AddCspHeaders::class,
         ]);
 
         //
