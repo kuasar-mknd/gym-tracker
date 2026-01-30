@@ -143,17 +143,19 @@ final class AchievementService
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
-        /** @var \Illuminate\Support\Collection<int, string> $dates */
         $dates = $user->workouts()
             ->where('started_at', '>=', now()->subDays($days + 30))
             ->latest('started_at')
             ->pluck('started_at');
 
-        /** @var array<int, string> $result */
-        return $dates->map(fn (string $date): string => \Illuminate\Support\Carbon::parse($date)->format('Y-m-d'))
+        return $dates->map(function (mixed $date): string {
+            $dateStr = is_string($date) ? $date : (is_numeric($date) ? (string) $date : '');
+
+            return \Illuminate\Support\Carbon::parse($dateStr)->format('Y-m-d');
+        })
             ->unique()
             ->values()
-            ->toArray();
+            ->all();
     }
 
     /**

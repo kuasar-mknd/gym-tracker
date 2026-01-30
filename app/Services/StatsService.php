@@ -580,19 +580,18 @@ final class StatsService
      */
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<string, float> $results */
         return DB::table('workouts')
             ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $user->id)
             ->whereBetween('workouts.started_at', [$start, now()->endOfDay()])
             ->select(
-                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
                 DB::raw('DATE(workouts.started_at) as date'),
                 DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
             )
             ->groupBy('date')
-            ->pluck('volume', 'date');
+            ->pluck('volume', 'date')
+            ->map(fn (mixed $value): float => is_numeric($value) ? (float) $value : 0.0);
     }
 
     /**
@@ -602,7 +601,6 @@ final class StatsService
      */
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
         return DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
@@ -622,7 +620,6 @@ final class StatsService
      */
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
         return DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
