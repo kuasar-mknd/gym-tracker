@@ -46,6 +46,7 @@ test('authenticated users can see dashboard', function (): void {
 });
 
 test('profile page works', function (): void {
+    // Test profile page
     $user = User::factory()->create();
 
     $this->browse(function (Browser $browser) use ($user): void {
