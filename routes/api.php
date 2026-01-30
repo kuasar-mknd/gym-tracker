@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\BodyMeasurementController;
+use App\Http\Controllers\Api\BodyPartMeasurementController;
 use App\Http\Controllers\Api\ExerciseController;
 use App\Http\Controllers\Api\GoalController;
 use App\Http\Controllers\Api\SetController;
@@ -20,6 +21,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('sets', SetController::class);
     Route::apiResource('personal-records', \App\Http\Controllers\Api\PersonalRecordController::class);
     Route::apiResource('body-measurements', BodyMeasurementController::class);
+    Route::apiResource('body-part-measurements', BodyPartMeasurementController::class);
     Route::apiResource('goals', GoalController::class);
     Route::apiResource('workout-templates', WorkoutTemplateController::class);
     Route::apiResource('daily-journals', \App\Http\Controllers\Api\DailyJournalController::class);
