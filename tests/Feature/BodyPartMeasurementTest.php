@@ -76,7 +76,7 @@ test('show page displays history for a part', function (): void {
     $response->assertOk();
 });
 
-test('index page correctly calculates latest and diff for parts', function (): void {
+test('index page correctly calculates latest and diff for parts', function () {
     $user = User::factory()->create();
 
     // Chest: 3 measurements

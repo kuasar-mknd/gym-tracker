@@ -497,11 +497,14 @@ const typeLabel = (type) => {
                                         class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                     >
                                         <button
-                                            @click="startEdit(exercise)"
+                                            @click="toggleEdit(exercise)"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all sm:hidden"
-                                            :aria-label="`Modifier ${exercise.name}`"
+                                            aria-label="Options"
                                         >
-                                            <span class="material-symbols-outlined text-sm opacity-50">edit</span>
+                                            <!-- Mobile indicator for swipe capability or ellipsis -->
+                                            <span class="material-symbols-outlined text-sm opacity-50"
+                                                >drag_indicator</span
+                                            >
                                         </button>
 
                                         <!-- Desktop Buttons -->
@@ -509,7 +512,7 @@ const typeLabel = (type) => {
                                             @click="startEdit(exercise)"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all sm:flex"
                                             data-testid="edit-exercise-button"
-                                            :aria-label="`Modifier ${exercise.name}`"
+                                            aria-label="Modifier l'exercice"
                                         >
                                             <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                                         </button>
@@ -517,7 +520,7 @@ const typeLabel = (type) => {
                                             @click="deleteExercise(exercise.id)"
                                             class="text-text-muted hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:flex"
                                             data-testid="delete-exercise-button"
-                                            :aria-label="`Supprimer ${exercise.name}`"
+                                            aria-label="Supprimer l'exercice"
                                         >
                                             <span class="material-symbols-outlined" aria-hidden="true">delete</span>
                                         </button>

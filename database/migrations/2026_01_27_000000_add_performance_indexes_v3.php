@@ -13,29 +13,23 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        try {
-            Schema::table('water_logs', function (Blueprint $table): void {
+        Schema::table('water_logs', function (Blueprint $table) {
+            if (! Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
                 $table->index(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index already exists
-        }
+            }
+        });
 
-        try {
-            Schema::table('supplement_logs', function (Blueprint $table): void {
+        Schema::table('supplement_logs', function (Blueprint $table) {
+            if (! Schema::hasIndex('supplement_logs', 'supplement_logs_user_id_consumed_at_index')) {
                 $table->index(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index already exists
-        }
+            }
+        });
 
-        try {
-            Schema::table('body_part_measurements', function (Blueprint $table): void {
+        Schema::table('body_part_measurements', function (Blueprint $table) {
+            if (! Schema::hasIndex('body_part_measurements', 'body_part_measurements_user_id_measured_at_index')) {
                 $table->index(['user_id', 'measured_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index already exists
-        }
+            }
+        });
     }
 
     /**
@@ -43,28 +37,16 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        try {
-            Schema::table('water_logs', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
+        Schema::table('water_logs', function (Blueprint $table) {
+            $table->dropIndex(['user_id', 'consumed_at']);
+        });
 
-        try {
-            Schema::table('supplement_logs', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
+        Schema::table('supplement_logs', function (Blueprint $table) {
+            $table->dropIndex(['user_id', 'consumed_at']);
+        });
 
-        try {
-            Schema::table('body_part_measurements', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'measured_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
+        Schema::table('body_part_measurements', function (Blueprint $table) {
+            $table->dropIndex(['user_id', 'measured_at']);
+        });
     }
 };

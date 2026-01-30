@@ -13,13 +13,13 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        try {
-            Schema::table('water_logs', function (Blueprint $table): void {
+        Schema::table('water_logs', function (Blueprint $table) {
+            // Composite index for fetching and sorting by consumed_at (history/charts)
+            // This also covers queries filtering only by user_id
+            if (! Schema::hasIndex('water_logs', ['user_id', 'consumed_at'])) {
                 $table->index(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index already exists
-        }
+            }
+        });
     }
 
     /**
