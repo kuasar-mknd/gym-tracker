@@ -12,7 +12,8 @@ final class FetchDashboardDataAction
 {
     public function __construct(
         protected StatsService $statsService
-    ) {}
+    ) {
+    }
 
     /**
      * Fetch dashboard data for the given user.
