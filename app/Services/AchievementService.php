@@ -33,7 +33,7 @@ final class AchievementService
     {
         $achievements = Achievement::all();
         $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
-        $lockedAchievements = $achievements->reject(fn ($a) => in_array($a->id, $unlockedAchievementIds));
+        $lockedAchievements = $achievements->reject(fn ($a): bool => in_array($a->id, $unlockedAchievementIds));
 
         if ($lockedAchievements->isEmpty()) {
             return;
@@ -89,7 +89,7 @@ final class AchievementService
             $maxThreshold = $lockedAchievements->where('type', 'streak')->max('threshold');
             $maxStreakThreshold = is_numeric($maxThreshold) ? (int) $maxThreshold : 0;
             $workoutDates = $this->getUniqueWorkoutDates($user, $maxStreakThreshold);
-            $stats['streak'] = (int) $this->calculateMaxStreak($workoutDates);
+            $stats['streak'] = $this->calculateMaxStreak($workoutDates);
         }
 
         return $stats;
