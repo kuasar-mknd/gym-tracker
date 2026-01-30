@@ -9,7 +9,6 @@ use App\Models\Exercise;
 use App\Models\Goal;
 use App\Services\GoalService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class GoalController extends Controller
