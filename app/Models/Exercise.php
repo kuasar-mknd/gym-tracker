@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -55,6 +57,28 @@ class Exercise extends Model
     public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $userId));
+    }
+
+    /**
+     * Get exercises for the user, cached for 1 hour.
+     *
+     * @return Collection<int, Exercise>
+     */
+    public static function getCachedForUser(int $userId): Collection
+    {
+        return Cache::remember(
+            "exercises_list_{$userId}",
+            3600,
+            fn () => self::forUser($userId)->orderBy('name')->get()
+        );
+    }
+
+    /**
+     * Clear the exercises cache for the user.
+     */
+    public static function clearCacheForUser(int $userId): void
+    {
+        Cache::forget("exercises_list_{$userId}");
     }
 
     public function getActivitylogOptions(): LogOptions

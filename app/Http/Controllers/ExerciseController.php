@@ -36,10 +36,13 @@ class ExerciseController extends Controller
     {
         $this->authorize('viewAny', Exercise::class);
 
-        $exercises = Exercise::forUser($this->user()->id)
-            ->orderBy('category')
-            ->orderBy('name')
-            ->get();
+        // NITRO FIX: Cache exercises list for 1 hour
+        $exercises = Exercise::getCachedForUser($this->user()->id)
+            ->sortBy([
+                ['category', 'asc'],
+                ['name', 'asc'],
+            ])
+            ->values();
 
         return Inertia::render('Exercises/Index', [
             'exercises' => $exercises,
@@ -72,7 +75,7 @@ class ExerciseController extends Controller
         $exercise->save();
 
         // NITRO FIX: Invalidate exercises cache
-        Cache::forget('exercises_list_'.$this->user()->id);
+        Exercise::clearCacheForUser($this->user()->id);
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
         if ($request->wantsJson() || $request->header('X-Quick-Create')) {
@@ -100,7 +103,7 @@ class ExerciseController extends Controller
         $exercise->update($request->validated());
 
         // NITRO FIX: Invalidate exercises cache
-        Cache::forget('exercises_list_'.Auth::id());
+        Exercise::clearCacheForUser($this->user()->id);
 
         return redirect()->back();
     }
@@ -129,7 +132,7 @@ class ExerciseController extends Controller
         $exercise->delete();
 
         // NITRO FIX: Invalidate exercises cache
-        Cache::forget('exercises_list_'.Auth::id());
+        Exercise::clearCacheForUser($this->user()->id);
 
         return redirect()->back();
     }

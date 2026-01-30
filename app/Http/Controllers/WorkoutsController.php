@@ -46,12 +46,7 @@ class WorkoutsController extends Controller
 
         return Inertia::render('Workouts/Index', [
             ...$data,
-            'exercises' => Inertia::defer(fn () => Cache::remember(
-                "exercises_list_{$userId}",
-                3600,
-                // Cache invalidation is handled in ExerciseController::store/update/destroy
-                fn () => Exercise::forUser($userId)->orderBy('name')->get()
-            )),
+            'exercises' => Inertia::defer(fn () => Exercise::getCachedForUser($userId)),
         ]);
     }
 
@@ -73,11 +68,10 @@ class WorkoutsController extends Controller
         // NITRO FIX: Cache exercises list for 1 hour
         // Security: Filter exercises by user to prevent information disclosure
         $userId = $this->user()->id;
-        $exercises = Cache::remember("exercises_list_{$userId}", 3600, fn () => Exercise::forUser($userId)->orderBy('name')->get());
 
         return Inertia::render('Workouts/Show', [
             'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),
-            'exercises' => $exercises,
+            'exercises' => Inertia::defer(fn () => Exercise::getCachedForUser($userId)),
             'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
             'types' => [
                 ['value' => 'strength', 'label' => 'Force'],

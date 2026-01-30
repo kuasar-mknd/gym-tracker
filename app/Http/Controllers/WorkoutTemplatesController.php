@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\CreateWorkoutFromTemplateAction;
 use App\Actions\CreateWorkoutTemplateAction;
 use App\Actions\CreateWorkoutTemplateFromWorkoutAction;
+use App\Models\Exercise;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -58,9 +59,7 @@ class WorkoutTemplatesController extends Controller
         $userId = $this->user()->id;
 
         return Inertia::render('Workouts/Templates/Create', [
-            'exercises' => Cache::remember('exercises_list_'.$userId, 3600, fn () => \App\Models\Exercise::forUser($userId)
-                ->orderBy('name')
-                ->get()),
+            'exercises' => Exercise::getCachedForUser($userId),
         ]);
     }
 
