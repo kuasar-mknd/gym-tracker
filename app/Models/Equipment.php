@@ -28,6 +28,7 @@ class Equipment extends Model
 {
     /** @use HasFactory<\Database\Factories\EquipmentFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     protected $fillable = [
