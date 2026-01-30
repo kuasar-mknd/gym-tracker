@@ -39,7 +39,7 @@ class Exercise extends Model
     public function invalidateCache(): void
     {
         if ($this->user_id) {
-            Cache::forget('exercises_list_' . $this->user_id);
+            Cache::forget('exercises_list_'.$this->user_id);
         }
     }
 
