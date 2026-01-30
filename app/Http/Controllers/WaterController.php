@@ -69,6 +69,7 @@ class WaterController extends Controller
             $date = Carbon::now()->subDays($i);
             $dateString = $date->format('Y-m-d');
 
+            /** @var float|int $dayTotal */
             $dayTotal = $historyLogs->filter(function (WaterLog $log) use ($dateString): bool {
                 /** @var \Carbon\Carbon $consumedAt */
                 $consumedAt = $log->consumed_at;
@@ -76,7 +77,6 @@ class WaterController extends Controller
                 return $consumedAt->format('Y-m-d') === $dateString;
             })->sum('amount');
 
-            /** @var float|int $dayTotal */
             $dayTotalValue = (float) $dayTotal;
 
             $history[] = [

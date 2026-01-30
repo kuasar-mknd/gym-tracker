@@ -30,7 +30,7 @@ class AchievementController extends Controller
      * @param  \Illuminate\Database\Eloquent\Collection<int, \App\Models\Achievement>  $userAchievements
      * @return array<string, mixed>
      */
-    private function formatAchievement(Achievement $achievement, $userAchievements): array
+    private function formatAchievement(Achievement $achievement, \Illuminate\Database\Eloquent\Collection $userAchievements): array
     {
         $userAchievement = $userAchievements->get($achievement->id);
 

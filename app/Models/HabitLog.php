@@ -37,10 +37,9 @@ class HabitLog extends Model
 
     /**
      * @param  \Illuminate\Database\Eloquent\Builder<$this>  $query
-     * @param  array<int, mixed>|mixed  $dates
      * @return \Illuminate\Database\Eloquent\Builder<$this>
      */
-    public function scopeWhereDateBetween(Builder $query, ...$dates): Builder
+    public function scopeWhereDateBetween(Builder $query, mixed ...$dates): Builder
     {
         // Spatie QueryBuilder passes arguments as an array if they come from a single filter parameter,
         // or as individual arguments if configured that way.

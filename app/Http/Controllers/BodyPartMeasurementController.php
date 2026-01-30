@@ -82,7 +82,7 @@ class BodyPartMeasurementController extends Controller
 
         return $measurements
             ->groupBy('part')
-            ->map(fn ($group): array => $this->formatLatestMeasurement($group))
+            ->map(fn (\Illuminate\Support\Collection $group): array => $this->formatLatestMeasurement($group))
             ->values();
     }
 
@@ -90,7 +90,7 @@ class BodyPartMeasurementController extends Controller
      * Format a group of measurements for display.
      *
      * @param  \Illuminate\Support\Collection<int, \App\Models\BodyPartMeasurement>  $group
-     * @return array{part: string, current: float|int, unit: string|null, date: string, diff: float|int}
+     * @return array{part: string, current: float, unit: string, date: string, diff: float}
      */
     private function formatLatestMeasurement(\Illuminate\Support\Collection $group): array
     {
@@ -100,11 +100,11 @@ class BodyPartMeasurementController extends Controller
         $previous = $group->skip(1)->first();
 
         return [
-            'part' => $latest->part,
-            'current' => $latest->value,
-            'unit' => $latest->unit,
+            'part' => (string) $latest->part,
+            'current' => (float) $latest->value,
+            'unit' => (string) ($latest->unit ?? ''),
             'date' => \Illuminate\Support\Carbon::parse($latest->measured_at)->format('Y-m-d'),
-            'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
+            'diff' => $previous ? (float) round($latest->value - $previous->value, 2) : 0.0,
         ];
     }
 

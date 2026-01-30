@@ -14,7 +14,7 @@ class FetchSupplementsIndexAction
 {
     /**
      * @return array{
-     *     supplements: Collection<int, mixed>,
+     *     supplements: \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: null}>,
      *     usageHistory: array<int, array{date: string, count: float}>
      * }
      */
@@ -29,7 +29,7 @@ class FetchSupplementsIndexAction
     /**
      * Retrieve supplements with their latest log status.
      *
-     * @return Collection<int, mixed>
+     * @return \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: null}>
      */
     private function getSupplementsWithLatestLog(User $user): Collection
     {
