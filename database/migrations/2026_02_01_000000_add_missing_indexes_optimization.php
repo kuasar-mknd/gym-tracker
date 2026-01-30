@@ -51,36 +51,36 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        Schema::table('workout_lines', function (Blueprint $table) {
-            // Ensure the FK index exists before dropping the composite one
-            if (! Schema::hasIndex('workout_lines', ['workout_id'])) {
-                $table->index('workout_id');
-            }
-            $table->dropIndex(['workout_id', 'order']);
-        });
+        try {
+            Schema::table('workout_lines', function (Blueprint $table): void {
+                $table->dropIndex(['workout_id', 'order']);
+            });
+        } catch (\Throwable $e) {
+            // Index doesn't exist or is needed by FK
+        }
 
-        Schema::table('workout_template_lines', function (Blueprint $table) {
-            // Ensure the FK index exists before dropping the composite one
-            if (! Schema::hasIndex('workout_template_lines', ['workout_template_id'])) {
-                $table->index('workout_template_id');
-            }
-            $table->dropIndex(['workout_template_id', 'order']);
-        });
+        try {
+            Schema::table('workout_template_lines', function (Blueprint $table): void {
+                $table->dropIndex(['workout_template_id', 'order']);
+            });
+        } catch (\Throwable $e) {
+            // Index doesn't exist or is needed by FK
+        }
 
-        Schema::table('workout_template_sets', function (Blueprint $table) {
-            // Ensure the FK index exists before dropping the composite one
-            if (! Schema::hasIndex('workout_template_sets', ['workout_template_line_id'])) {
-                $table->index('workout_template_line_id');
-            }
-            $table->dropIndex(['workout_template_line_id', 'order']);
-        });
+        try {
+            Schema::table('workout_template_sets', function (Blueprint $table): void {
+                $table->dropIndex(['workout_template_line_id', 'order']);
+            });
+        } catch (\Throwable $e) {
+            // Index doesn't exist or is needed by FK
+        }
 
-        Schema::table('exercises', function (Blueprint $table) {
-            // Ensure the FK index exists before dropping the composite one
-            if (! Schema::hasIndex('exercises', ['user_id'])) {
-                $table->index('user_id');
-            }
-            $table->dropIndex(['user_id', 'name']);
-        });
+        try {
+            Schema::table('exercises', function (Blueprint $table): void {
+                $table->dropIndex(['user_id', 'name']);
+            });
+        } catch (\Throwable $e) {
+            // Index doesn't exist or is needed by FK
+        }
     }
 };

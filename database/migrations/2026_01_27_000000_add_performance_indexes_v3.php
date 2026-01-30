@@ -43,16 +43,28 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        Schema::table('water_logs', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'consumed_at']);
-        });
+        try {
+            Schema::table('water_logs', function (Blueprint $table): void {
+                $table->dropIndex(['user_id', 'consumed_at']);
+            });
+        } catch (\Throwable $e) {
+            // Index doesn't exist or is needed by FK
+        }
 
-        Schema::table('supplement_logs', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'consumed_at']);
-        });
+        try {
+            Schema::table('supplement_logs', function (Blueprint $table): void {
+                $table->dropIndex(['user_id', 'consumed_at']);
+            });
+        } catch (\Throwable $e) {
+            // Index doesn't exist or is needed by FK
+        }
 
-        Schema::table('body_part_measurements', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'measured_at']);
-        });
+        try {
+            Schema::table('body_part_measurements', function (Blueprint $table): void {
+                $table->dropIndex(['user_id', 'measured_at']);
+            });
+        } catch (\Throwable $e) {
+            // Index doesn't exist or is needed by FK
+        }
     }
 };
