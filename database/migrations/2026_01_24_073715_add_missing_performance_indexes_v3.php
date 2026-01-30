@@ -34,6 +34,7 @@ return new class extends Migration
                 $table->dropIndex(['user_id', 'consumed_at']);
             });
         } catch (\Throwable $e) {
+            //
         }
 
         try {
@@ -41,6 +42,7 @@ return new class extends Migration
                 $table->dropIndex(['user_id', 'consumed_at']);
             });
         } catch (\Throwable $e) {
+            //
         }
     }
 };
