@@ -149,9 +149,11 @@ final class AchievementService
             ->pluck('started_at');
 
         return $dates->map(function (mixed $date): string {
-            $dateStr = is_string($date) ? $date : (is_numeric($date) ? (string) $date : '');
+            if ($date instanceof \DateTimeInterface) {
+                return $date->format('Y-m-d');
+            }
 
-            return \Illuminate\Support\Carbon::parse($dateStr)->format('Y-m-d');
+            return \Illuminate\Support\Carbon::parse(is_string($date) ? $date : '')->format('Y-m-d');
         })
             ->unique()
             ->values()
