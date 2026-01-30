@@ -18,7 +18,7 @@ test('water tracker page is displayed for authenticated user', function (): void
     $response = $this->actingAs($user)->get(route('tools.water.index'));
 
     $response->assertStatus(200);
-    $response->assertInertia(fn (AssertableInertia $page) => $page
+    $response->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
         ->component('Tools/WaterTracker')
         ->has('logs', 3)
         ->has('todayTotal')
