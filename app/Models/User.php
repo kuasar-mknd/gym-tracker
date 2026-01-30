@@ -119,6 +119,14 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * @return HasMany<Equipment, $this>
+     */
+    public function equipment(): HasMany
+    {
+        return $this->hasMany(Equipment::class);
+    }
+
+    /**
      * @return HasMany<WilksScore, $this>
      */
     public function wilksScores(): HasMany

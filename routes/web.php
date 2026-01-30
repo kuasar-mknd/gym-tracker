@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/body-metrics/{part}', [\App\Http\Controllers\BodyPartMeasurementController::class, 'show'])->name('body-parts.show');
 
     Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['index']);
+    Route::resource('equipment', \App\Http\Controllers\EquipmentController::class)->only(['index']);
     Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['index']);
 
     Route::get('/tools', [\App\Http\Controllers\ToolsController::class, 'index'])->name('tools.index');
@@ -80,6 +81,7 @@ Route::middleware('auth')->group(function (): void {
         Route::delete('/body-metrics/{bodyPartMeasurement}', [\App\Http\Controllers\BodyPartMeasurementController::class, 'destroy'])->name('body-parts.destroy');
 
         Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['store', 'update', 'destroy']);
+        Route::resource('equipment', \App\Http\Controllers\EquipmentController::class)->only(['store', 'update', 'destroy']);
         Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['store', 'destroy']);
 
         Route::post('/supplements/{supplement}/consume', [\App\Http\Controllers\SupplementController::class, 'consume'])->name('supplements.consume');
