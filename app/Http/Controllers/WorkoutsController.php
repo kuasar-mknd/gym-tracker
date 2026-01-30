@@ -71,7 +71,7 @@ class WorkoutsController extends Controller
 
         return Inertia::render('Workouts/Show', [
             'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),
-            'exercises' => Inertia::defer(fn () => Exercise::getCachedForUser($userId)),
+            'exercises' => Exercise::getCachedForUser($userId),
             'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
             'types' => [
                 ['value' => 'strength', 'label' => 'Force'],

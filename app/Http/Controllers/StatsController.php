@@ -6,7 +6,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Exercise;
 use App\Services\StatsService;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class StatsController extends Controller
