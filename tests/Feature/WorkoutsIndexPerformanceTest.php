@@ -21,7 +21,7 @@ class WorkoutsIndexPerformanceTest extends TestCase
         $this->actingAs($user)
             ->get('/workouts')
             ->assertStatus(200)
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn (Assert $page): Assert => $page
                 ->component('Workouts/Index')
                 ->missing('exercises')
             );
