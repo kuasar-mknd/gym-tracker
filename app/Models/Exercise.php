@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -28,6 +29,19 @@ class Exercise extends Model
     use HasFactory, LogsActivity;
 
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
+
+    protected static function booted(): void
+    {
+        static::saved(fn (Exercise $exercise) => $exercise->invalidateCache());
+        static::deleted(fn (Exercise $exercise) => $exercise->invalidateCache());
+    }
+
+    public function invalidateCache(): void
+    {
+        if ($this->user_id) {
+            Cache::forget('exercises_list_' . $this->user_id);
+        }
+    }
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutLine, $this>

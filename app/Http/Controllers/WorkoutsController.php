@@ -49,7 +49,7 @@ class WorkoutsController extends Controller
             'exercises' => Inertia::defer(fn () => Cache::remember(
                 "exercises_list_{$userId}",
                 3600,
-                // Cache invalidation is handled in ExerciseController::store/update/destroy
+                // Cache invalidation is handled in Exercise model events
                 fn () => Exercise::forUser($userId)->orderBy('name')->get()
             )),
         ]);
