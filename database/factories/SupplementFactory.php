@@ -29,7 +29,7 @@ class SupplementFactory extends Factory
         return [
             'name' => $this->faker->word(),
             'brand' => $this->faker->company(),
-            'dosage' => $this->faker->numberBetween(1, 100) . 'mg',
+            'dosage' => $this->faker->numberBetween(1, 100).'mg',
             'servings_remaining' => $this->faker->numberBetween(10, 100),
             'low_stock_threshold' => $this->faker->numberBetween(1, 10),
             'user_id' => \App\Models\User::factory(),

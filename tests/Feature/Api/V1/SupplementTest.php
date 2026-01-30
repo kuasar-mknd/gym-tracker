@@ -8,10 +8,8 @@ use App\Models\User;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
-use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
-use function Pest\Laravel\putJson;
 
 test('users can list their supplements', function (): void {
     $user = User::factory()->create();
@@ -116,7 +114,7 @@ test('users cannot update others supplements', function (): void {
         ->putJson(route('api.v1.supplements.update', $supplement), [
             'name' => 'Hacked',
             'servings_remaining' => 10,
-            'low_stock_threshold' => 5
+            'low_stock_threshold' => 5,
         ])
         ->assertForbidden();
 });

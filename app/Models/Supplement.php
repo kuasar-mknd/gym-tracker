@@ -12,12 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
-/**
- * @use HasFactory<\Database\Factories\SupplementFactory>
- */
 class Supplement extends Model
 {
+    /** @use HasFactory<\Database\Factories\SupplementFactory> */
     use HasFactory;
+
     use LogsActivity;
 
     protected $fillable = [
