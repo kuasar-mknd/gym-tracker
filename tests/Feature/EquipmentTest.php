@@ -16,7 +16,7 @@ class EquipmentTest extends TestCase
     public function test_user_can_view_equipment_page(): void
     {
         $user = User::factory()->create();
-        $equipment = Equipment::factory()->create(['user_id' => $user->id]);
+        Equipment::factory()->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user)->get(route('equipment.index'));
 

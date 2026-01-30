@@ -35,7 +35,7 @@ class EquipmentFactory extends Factory
 
         return [
             'user_id' => User::factory(),
-            'name' => $this->faker->word . ' ' . $suffix,
+            'name' => $this->faker->word.' '.$suffix,
             'type' => $type,
             'brand' => $this->faker->company,
             'model' => $this->faker->word,
