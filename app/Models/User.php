@@ -32,6 +32,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property-read Collection<int, Workout> $workouts
  * @property-read NotifColl<int, Notification> $notifications
  * @property-read NotifColl<int, Notification> $unreadNotifications
+ * @property-read Collection<int, Equipment> $equipment
  */
 final class User extends Authenticatable implements MustVerifyEmail
 {
@@ -190,6 +191,14 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function waterLogs(): HasMany
     {
         return $this->hasMany(WaterLog::class);
+    }
+
+    /**
+     * @return HasMany<Equipment, $this>
+     */
+    public function equipment(): HasMany
+    {
+        return $this->hasMany(Equipment::class);
     }
 
     public function isPushEnabled(string $type): bool
