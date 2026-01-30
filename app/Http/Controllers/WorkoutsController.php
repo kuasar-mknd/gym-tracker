@@ -45,7 +45,7 @@ class WorkoutsController extends Controller
 
         return Inertia::render('Workouts/Index', [
             ...$data,
-            'exercises' => Inertia::defer(fn () => Exercise::getCachedForUser($userId)),
+            'exercises' => Inertia::defer(fn (): \Illuminate\Database\Eloquent\Collection => Exercise::getCachedForUser($userId)),
         ]);
     }
 
