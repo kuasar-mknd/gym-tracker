@@ -75,13 +75,13 @@ class Exercise extends Model
     {
         static::saved(function (Exercise $exercise): void {
             if ($exercise->user_id) {
-                Cache::forget('exercises_list_' . $exercise->user_id);
+                Cache::forget('exercises_list_'.$exercise->user_id);
             }
         });
 
         static::deleted(function (Exercise $exercise): void {
             if ($exercise->user_id) {
-                Cache::forget('exercises_list_' . $exercise->user_id);
+                Cache::forget('exercises_list_'.$exercise->user_id);
             }
         });
     }
