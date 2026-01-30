@@ -10,17 +10,17 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->user = User::factory()->create();
     $this->otherUser = User::factory()->create();
 });
 
-test('index: unauthenticated user cannot list personal records', function () {
+test('index: unauthenticated user cannot list personal records', function (): void {
     $response = $this->getJson(route('api.v1.personal-records.index'));
     $response->assertUnauthorized();
 });
 
-test('index: authenticated user can list own personal records', function () {
+test('index: authenticated user can list own personal records', function (): void {
     $exercise = Exercise::factory()->create();
     PersonalRecord::factory()->create([
         'user_id' => $this->user->id,
@@ -43,7 +43,7 @@ test('index: authenticated user can list own personal records', function () {
         ->assertJsonPath('data.0.value', '100.00');
 });
 
-test('index: can filter personal records by exercise_id', function () {
+test('index: can filter personal records by exercise_id', function (): void {
     $exercise1 = Exercise::factory()->create();
     $exercise2 = Exercise::factory()->create();
 
@@ -65,12 +65,12 @@ test('index: can filter personal records by exercise_id', function () {
         ->assertJsonPath('data.0.exercise_id', $exercise1->id);
 });
 
-test('store: unauthenticated user cannot create personal record', function () {
+test('store: unauthenticated user cannot create personal record', function (): void {
     $response = $this->postJson(route('api.v1.personal-records.store'), []);
     $response->assertUnauthorized();
 });
 
-test('store: authenticated user can create personal record', function () {
+test('store: authenticated user can create personal record', function (): void {
     $exercise = Exercise::factory()->create();
     $data = [
         'exercise_id' => $exercise->id,
@@ -92,7 +92,7 @@ test('store: authenticated user can create personal record', function () {
     ]);
 });
 
-test('store: validates required fields', function () {
+test('store: validates required fields', function (): void {
     $response = $this->actingAs($this->user)
         ->postJson(route('api.v1.personal-records.store'), []);
 
@@ -100,7 +100,7 @@ test('store: validates required fields', function () {
         ->assertJsonValidationErrors(['exercise_id', 'type', 'value', 'achieved_at']);
 });
 
-test('store: validates exercise existence', function () {
+test('store: validates exercise existence', function (): void {
     $response = $this->actingAs($this->user)
         ->postJson(route('api.v1.personal-records.store'), [
             'exercise_id' => 99999,
@@ -113,7 +113,7 @@ test('store: validates exercise existence', function () {
         ->assertJsonValidationErrors(['exercise_id']);
 });
 
-test('store: validates workout ownership', function () {
+test('store: validates workout ownership', function (): void {
     $exercise = Exercise::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $this->otherUser->id]);
 
@@ -130,13 +130,13 @@ test('store: validates workout ownership', function () {
         ->assertJsonValidationErrors(['workout_id']);
 });
 
-test('show: unauthenticated user cannot view personal record', function () {
+test('show: unauthenticated user cannot view personal record', function (): void {
     $pr = PersonalRecord::factory()->create();
     $response = $this->getJson(route('api.v1.personal-records.show', $pr));
     $response->assertUnauthorized();
 });
 
-test('show: authenticated user can view own personal record', function () {
+test('show: authenticated user can view own personal record', function (): void {
     $exercise = Exercise::factory()->create();
     $pr = PersonalRecord::factory()->create([
         'user_id' => $this->user->id,
@@ -152,7 +152,7 @@ test('show: authenticated user can view own personal record', function () {
         ->assertJsonPath('data.value', '100.00');
 });
 
-test('show: authenticated user cannot view other users personal record', function () {
+test('show: authenticated user cannot view other users personal record', function (): void {
     $pr = PersonalRecord::factory()->create([
         'user_id' => $this->otherUser->id,
     ]);
@@ -163,13 +163,13 @@ test('show: authenticated user cannot view other users personal record', functio
     $response->assertForbidden();
 });
 
-test('update: unauthenticated user cannot update personal record', function () {
+test('update: unauthenticated user cannot update personal record', function (): void {
     $pr = PersonalRecord::factory()->create();
     $response = $this->putJson(route('api.v1.personal-records.update', $pr), []);
     $response->assertUnauthorized();
 });
 
-test('update: authenticated user can update own personal record', function () {
+test('update: authenticated user can update own personal record', function (): void {
     $pr = PersonalRecord::factory()->create([
         'user_id' => $this->user->id,
         'value' => 100,
@@ -189,7 +189,7 @@ test('update: authenticated user can update own personal record', function () {
     ]);
 });
 
-test('update: authenticated user cannot update other users personal record', function () {
+test('update: authenticated user cannot update other users personal record', function (): void {
     $pr = PersonalRecord::factory()->create([
         'user_id' => $this->otherUser->id,
     ]);
@@ -202,7 +202,7 @@ test('update: authenticated user cannot update other users personal record', fun
     $response->assertForbidden();
 });
 
-test('update: validates fields', function () {
+test('update: validates fields', function (): void {
     $pr = PersonalRecord::factory()->create([
         'user_id' => $this->user->id,
     ]);
@@ -216,13 +216,13 @@ test('update: validates fields', function () {
         ->assertJsonValidationErrors(['exercise_id']);
 });
 
-test('destroy: unauthenticated user cannot delete personal record', function () {
+test('destroy: unauthenticated user cannot delete personal record', function (): void {
     $pr = PersonalRecord::factory()->create();
     $response = $this->deleteJson(route('api.v1.personal-records.destroy', $pr));
     $response->assertUnauthorized();
 });
 
-test('destroy: authenticated user can delete own personal record', function () {
+test('destroy: authenticated user can delete own personal record', function (): void {
     $pr = PersonalRecord::factory()->create([
         'user_id' => $this->user->id,
     ]);
@@ -234,7 +234,7 @@ test('destroy: authenticated user can delete own personal record', function () {
     $this->assertDatabaseMissing('personal_records', ['id' => $pr->id]);
 });
 
-test('destroy: authenticated user cannot delete other users personal record', function () {
+test('destroy: authenticated user cannot delete other users personal record', function (): void {
     $pr = PersonalRecord::factory()->create([
         'user_id' => $this->otherUser->id,
     ]);
