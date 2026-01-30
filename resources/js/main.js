@@ -23,7 +23,8 @@ createInertiaApp({
 
         Sentry.init({
             app,
-            dsn: import.meta.env.VITE_SENTRY_DSN_PUBLIC,
+            dsn: window.SENTRY_CONFIG?.dsn || import.meta.env.VITE_SENTRY_DSN_PUBLIC,
+            environment: window.SENTRY_CONFIG?.environment || import.meta.env.MODE,
             integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
             tracesSampleRate: 1.0,
             replaysSessionSampleRate: 0.1,
