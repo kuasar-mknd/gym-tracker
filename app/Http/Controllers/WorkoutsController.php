@@ -25,7 +25,9 @@ class WorkoutsController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(protected \App\Services\StatsService $statsService) {}
+    public function __construct(protected \App\Services\StatsService $statsService)
+    {
+    }
 
     /**
      * Display a listing of the user's workouts.

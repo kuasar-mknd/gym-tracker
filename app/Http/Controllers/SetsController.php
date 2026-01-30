@@ -25,7 +25,8 @@ class SetsController extends Controller
     public function __construct(
         protected \App\Services\PersonalRecordService $prService,
         protected \App\Services\StatsService $statsService
-    ) {}
+    ) {
+    }
 
     /**
      * Store a newly created set in storage.

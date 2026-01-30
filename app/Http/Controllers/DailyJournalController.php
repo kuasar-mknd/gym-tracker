@@ -45,7 +45,7 @@ class DailyJournalController extends Controller
         $date = \Illuminate\Support\Carbon::parse($dateInput);
         $dateString = $date->format('Y-m-d');
 
-        $journal = $this->user()->dailyJournals()->where('date', $dateString)->first() ?? new DailyJournal;
+        $journal = $this->user()->dailyJournals()->where('date', $dateString)->first() ?? new DailyJournal();
 
         if (! $journal->exists) {
             $journal->user_id = $this->user()->id;

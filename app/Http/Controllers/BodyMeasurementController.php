@@ -13,7 +13,9 @@ class BodyMeasurementController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(protected \App\Services\StatsService $statsService) {}
+    public function __construct(protected \App\Services\StatsService $statsService)
+    {
+    }
 
     public function index(): \Inertia\Response
     {
