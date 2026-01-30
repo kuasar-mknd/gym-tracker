@@ -16,7 +16,7 @@ class StatsServiceCacheTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->statsService = new StatsService;
+        $this->statsService = new StatsService();
     }
 
     public function test_clear_workout_related_stats_clears_correct_keys(): void
@@ -39,6 +39,7 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
+        Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
 
         // Expectation: Body measurement keys are NOT cleared
         // We can't easily assert "never" for specific keys while allowing others with a partial mock on Facade easily
@@ -95,6 +96,7 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
+        Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
 
         $this->statsService->clearUserStatsCache($user);
     }
