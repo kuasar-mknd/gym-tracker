@@ -31,9 +31,7 @@ class StoreSupplementLogRequest extends FormRequest
             'supplement_id' => [
                 'required',
                 'integer',
-                Rule::exists('supplements', 'id')->where(function ($query) use ($user) {
-                    return $query->where('user_id', $user?->id);
-                }),
+                Rule::exists('supplements', 'id')->where(fn ($query) => $query->where('user_id', $user?->id)),
             ],
             'quantity' => ['required', 'integer', 'min:1'],
             'consumed_at' => ['required', 'date'],
