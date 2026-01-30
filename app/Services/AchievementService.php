@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Achievement;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,60 +25,24 @@ final class AchievementService
      * has met the criteria to unlock them. If eligible, the achievement
      * is attached to the user and a notification is sent.
      *
-     * Includes optimization to avoid N+1 queries by pre-loading unlocked achievements.
+     * Includes optimization to avoid N+1 queries by pre-loading statistics.
      *
      * @param  User  $user  The user to synchronize achievements for.
      */
     public function syncAchievements(User $user): void
     {
         $achievements = Achievement::all();
-
-        // NITRO FIX: Pre-load unlocked IDs to avoid N+1 query in loop
         $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
-
         $lockedAchievements = $achievements->reject(fn ($a) => in_array($a->id, $unlockedAchievementIds));
 
         if ($lockedAchievements->isEmpty()) {
             return;
         }
 
-        $types = $lockedAchievements->pluck('type')->unique();
-        $stats = [];
-
-        if ($types->contains('count')) {
-            $stats['count'] = $user->workouts()->count();
-        }
-
-        if ($types->contains('weight_record')) {
-            $stats['weight_record'] = $user->workouts()
-                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                ->max('sets.weight') ?? 0;
-        }
-
-        if ($types->contains('volume_total')) {
-            $stats['volume_total'] = (float) $user->workouts()
-                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                ->sum(DB::raw('sets.weight * sets.reps'));
-        }
-
-        if ($types->contains('streak')) {
-            $maxStreakThreshold = (int) $lockedAchievements->where('type', 'streak')->max('threshold');
-            $workoutDates = $this->getUniqueWorkoutDates($user, $maxStreakThreshold);
-            $stats['streak'] = $this->calculateMaxStreak($workoutDates);
-        }
+        $stats = $this->calculateUserStats($user, $lockedAchievements);
 
         foreach ($lockedAchievements as $achievement) {
-            $isEligible = match ($achievement->type) {
-                'count' => ($stats['count'] ?? 0) >= $achievement->threshold,
-                'weight_record' => ($stats['weight_record'] ?? 0) >= $achievement->threshold,
-                'volume_total' => ($stats['volume_total'] ?? 0) >= $achievement->threshold,
-                'streak' => ($stats['streak'] ?? 0) >= $achievement->threshold,
-                default => false,
-            };
-
-            if ($isEligible) {
+            if ($this->checkAchievement($user, $achievement, $stats)) {
                 $user->achievements()->attach($achievement->id, [
                     'achieved_at' => now(),
                 ]);
@@ -88,20 +53,65 @@ final class AchievementService
     }
 
     /**
+     * Calculate user statistics needed for locked achievements.
+     *
+     * @param  Collection<int, Achievement>  $lockedAchievements
+     * @return array<string, float|int>
+     */
+    private function calculateUserStats(User $user, Collection $lockedAchievements): array
+    {
+        $types = $lockedAchievements->pluck('type')->unique();
+        $stats = [];
+
+        if ($types->contains('count')) {
+            $stats['count'] = (int) $user->workouts()->count();
+        }
+
+        if ($types->contains('weight_record')) {
+            /** @var float|int|null $maxWeight */
+            $maxWeight = $user->workouts()
+                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->max('sets.weight');
+            $stats['weight_record'] = (float) ($maxWeight ?? 0);
+        }
+
+        if ($types->contains('volume_total')) {
+            /** @var float|int|null $totalVolume */
+            $totalVolume = $user->workouts()
+                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->sum(DB::raw('sets.weight * sets.reps'));
+            $stats['volume_total'] = (float) ($totalVolume ?? 0);
+        }
+
+        if ($types->contains('streak')) {
+            $maxThreshold = $lockedAchievements->where('type', 'streak')->max('threshold');
+            $maxStreakThreshold = is_numeric($maxThreshold) ? (int) $maxThreshold : 0;
+            $workoutDates = $this->getUniqueWorkoutDates($user, $maxStreakThreshold);
+            $stats['streak'] = (int) $this->calculateMaxStreak($workoutDates);
+        }
+
+        return $stats;
+    }
+
+    /**
      * Check if a user meets the requirements for a specific achievement.
      *
-     * Delegates the check to specific methods based on the achievement type:
-     * - count: Total number of workouts.
-     * - weight_record: Maximum weight lifted in a single set.
-     * - volume_total: Cumulative volume lifted across all workouts.
-     * - streak: Consecutive days of workouts.
+     * Delegates the check to specific methods based on the achievement type.
+     * If $stats are provided, they are used to avoid redundant queries.
      *
      * @param  User  $user  The user to check.
      * @param  Achievement  $achievement  The achievement to verify.
+     * @param  array<string, float|int>  $stats  Optional pre-calculated statistics.
      * @return bool True if the user meets the criteria, false otherwise.
      */
-    protected function checkAchievement(User $user, Achievement $achievement): bool
+    protected function checkAchievement(User $user, Achievement $achievement, array $stats = []): bool
     {
+        if (isset($stats[$achievement->type])) {
+            return $stats[$achievement->type] >= $achievement->threshold;
+        }
+
         return match ($achievement->type) {
             'count' => $user->workouts()->count() >= $achievement->threshold,
             'weight_record' => $this->checkWeightRecord($user, $achievement->threshold),
@@ -210,6 +220,10 @@ final class AchievementService
         $currentStreak = 1;
         $maxStreak = 1;
         $count = count($dates);
+
+        if ($count === 0) {
+            return 0;
+        }
 
         for ($i = 0; $i < $count - 1; $i++) {
             $current = \Carbon\Carbon::parse($dates[$i]);
