@@ -13,12 +13,6 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        Schema::table('water_logs', function (Blueprint $table) {
-            if (! Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
-                $table->index(['user_id', 'consumed_at']);
-            }
-        });
-
         Schema::table('supplement_logs', function (Blueprint $table) {
             if (! Schema::hasIndex('supplement_logs', 'supplement_logs_user_id_consumed_at_index')) {
                 $table->index(['user_id', 'consumed_at']);
@@ -37,10 +31,6 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        Schema::table('water_logs', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'consumed_at']);
-        });
-
         Schema::table('supplement_logs', function (Blueprint $table) {
             $table->dropIndex(['user_id', 'consumed_at']);
         });
