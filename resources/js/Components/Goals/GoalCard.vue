@@ -1,5 +1,4 @@
 <script setup>
-import GlassCard from '@/Components/UI/GlassCard.vue'
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -43,20 +42,22 @@ const typeLabel = computed(() => {
 })
 
 const statusColor = computed(() => {
-    if (isCompleted.value) return 'text-green-400'
-    if (progress.value > 75) return 'text-blue-400'
-    if (progress.value > 25) return 'text-accent-primary'
-    return 'text-text-muted'
+    if (isCompleted.value) return 'text-green-500 dark:text-green-400'
+    if (progress.value > 75) return 'text-blue-500 dark:text-blue-400'
+    if (progress.value > 25) return 'text-orange-500 dark:text-orange-400'
+    return 'text-gray-500 dark:text-white/60'
 })
 
 const progressBarColor = computed(() => {
     if (isCompleted.value) return 'bg-green-500'
-    return 'bg-accent-primary'
+    return 'bg-electric-orange'
 })
 </script>
 
 <template>
-    <GlassCard class="group relative overflow-hidden">
+    <div
+        class="group relative overflow-hidden rounded-3xl border border-white/40 bg-white/60 p-5 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/80 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
+    >
         <!-- Completion Badge -->
         <div
             v-if="isCompleted"
@@ -67,12 +68,17 @@ const progressBarColor = computed(() => {
 
         <div class="mb-4 flex items-start justify-between">
             <div class="flex items-center gap-3">
-                <div class="rounded-xl border border-slate-100 bg-slate-50 p-2 text-2xl">
+                <div
+                    class="rounded-xl border border-white/20 bg-white/40 p-2 text-2xl dark:border-white/10 dark:bg-white/5"
+                >
                     {{ typeIcon }}
                 </div>
                 <div>
-                    <h4 class="text-text-main line-clamp-1 font-bold">{{ goal.title }}</h4>
-                    <span class="text-text-muted text-xs font-medium tracking-wider uppercase">{{ typeLabel }}</span>
+                    <h4 class="line-clamp-1 font-bold text-gray-900 dark:text-white">{{ goal.title }}</h4>
+                    <span
+                        class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-white/60"
+                        >{{ typeLabel }}</span
+                    >
                 </div>
             </div>
 
@@ -84,11 +90,15 @@ const progressBarColor = computed(() => {
         <div class="space-y-4">
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
-                <div class="text-text-muted/50 flex justify-between text-[10px] font-bold tracking-widest uppercase">
+                <div
+                    class="flex justify-between text-[10px] font-bold tracking-widest text-gray-400 uppercase dark:text-white/40"
+                >
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
-                <div class="h-2 w-full overflow-hidden rounded-full border border-slate-100 bg-slate-100">
+                <div
+                    class="h-2 w-full overflow-hidden rounded-full border border-white/20 bg-white/40 dark:border-white/10 dark:bg-white/5"
+                >
                     <div
                         class="relative h-full transition-all duration-1000 ease-out"
                         :class="progressBarColor"
@@ -101,23 +111,40 @@ const progressBarColor = computed(() => {
 
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-4">
-                <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
-                    <p class="text-text-muted/50 text-[10px] font-bold tracking-tight uppercase">Actuel</p>
-                    <p class="text-text-main text-sm font-semibold">
-                        {{ goal.current_value }} <span class="text-text-muted text-[10px]">{{ goal.unit }}</span>
+                <div
+                    class="rounded-lg border border-white/20 bg-white/40 p-2 dark:border-white/10 dark:bg-white/5"
+                >
+                    <p
+                        class="text-[10px] font-bold tracking-tight text-gray-400 uppercase dark:text-white/40"
+                    >
+                        Actuel
+                    </p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                        {{ goal.current_value }}
+                        <span class="text-[10px] text-gray-500 dark:text-white/60">{{ goal.unit }}</span>
                     </p>
                 </div>
-                <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
-                    <p class="text-text-muted/50 text-[10px] font-bold tracking-tight uppercase">Cible</p>
-                    <p class="text-text-main text-sm font-semibold">
-                        {{ goal.target_value }} <span class="text-text-muted text-[10px]">{{ goal.unit }}</span>
+                <div
+                    class="rounded-lg border border-white/20 bg-white/40 p-2 dark:border-white/10 dark:bg-white/5"
+                >
+                    <p
+                        class="text-[10px] font-bold tracking-tight text-gray-400 uppercase dark:text-white/40"
+                    >
+                        Cible
+                    </p>
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                        {{ goal.target_value }}
+                        <span class="text-[10px] text-gray-500 dark:text-white/60">{{ goal.unit }}</span>
                     </p>
                 </div>
             </div>
 
-            <div v-if="goal.deadline" class="text-text-muted flex items-center gap-1.5 pt-2 text-[10px] italic">
+            <div
+                v-if="goal.deadline"
+                class="flex items-center gap-1.5 pt-2 text-[10px] italic text-gray-400 dark:text-white/40"
+            >
                 <span>⏱️ Échéance : {{ new Date(goal.deadline).toLocaleDateString() }}</span>
             </div>
         </div>
-    </GlassCard>
+    </div>
 </template>
