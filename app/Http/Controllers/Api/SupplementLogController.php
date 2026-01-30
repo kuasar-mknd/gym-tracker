@@ -25,8 +25,8 @@ class SupplementLogController extends Controller
             ->allowedFilters(['supplement_id'])
             ->allowedSorts(['consumed_at', 'created_at'])
             ->allowedIncludes(['supplement'])
-            ->where('user_id', $request->user()->id)
-            ->paginate($request->get('per_page', 15));
+            ->where('user_id', $this->user()->id)
+            ->paginate((int) $request->get('per_page', 15));
 
         return SupplementLogResource::collection($logs);
     }
@@ -38,7 +38,7 @@ class SupplementLogController extends Controller
     {
         $this->authorize('create', SupplementLog::class);
 
-        $log = $request->user()->supplementLogs()->create($request->validated());
+        $log = $this->user()->supplementLogs()->create($request->validated());
 
         return new SupplementLogResource($log);
     }

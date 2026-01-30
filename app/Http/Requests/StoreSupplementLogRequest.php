@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -22,12 +24,15 @@ class StoreSupplementLogRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var \App\Models\User|null $user */
+        $user = $this->user();
+
         return [
             'supplement_id' => [
                 'required',
                 'integer',
-                Rule::exists('supplements', 'id')->where(function ($query) {
-                    return $query->where('user_id', $this->user()->id);
+                Rule::exists('supplements', 'id')->where(function ($query) use ($user) {
+                    return $query->where('user_id', $user?->id);
                 }),
             ],
             'quantity' => ['required', 'integer', 'min:1'],

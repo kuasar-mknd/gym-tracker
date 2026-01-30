@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,7 +14,13 @@ class UpdateSupplementLogRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('supplement_log'));
+        $user = $this->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return $user->can('update', $this->route('supplement_log'));
     }
 
     /**
@@ -22,12 +30,15 @@ class UpdateSupplementLogRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var \App\Models\User|null $user */
+        $user = $this->user();
+
         return [
             'supplement_id' => [
                 'sometimes',
                 'integer',
-                Rule::exists('supplements', 'id')->where(function ($query) {
-                    return $query->where('user_id', $this->user()->id);
+                Rule::exists('supplements', 'id')->where(function ($query) use ($user) {
+                    return $query->where('user_id', $user?->id);
                 }),
             ],
             'quantity' => ['sometimes', 'integer', 'min:1'],
