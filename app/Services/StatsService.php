@@ -369,6 +369,10 @@ final class StatsService
                 ];
 
                 foreach ($workouts as $workout) {
+                    if (! $workout->ended_at) {
+                        continue;
+                    }
+
                     $minutes = abs($workout->ended_at->diffInMinutes($workout->started_at));
 
                     if ($minutes < 30) {
