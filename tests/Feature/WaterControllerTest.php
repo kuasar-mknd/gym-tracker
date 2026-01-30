@@ -8,13 +8,13 @@ use Inertia\Testing\AssertableInertia as Assert;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
-test('authenticated user can view water tracker', function () {
+test('authenticated user can view water tracker', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
         ->get(route('tools.water.index'))
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): Assert => $page
             ->component('Tools/WaterTracker')
             ->has('logs')
             ->has('todayTotal')
@@ -23,12 +23,12 @@ test('authenticated user can view water tracker', function () {
         );
 });
 
-test('unauthenticated user cannot view water tracker', function () {
+test('unauthenticated user cannot view water tracker', function (): void {
     get(route('tools.water.index'))
         ->assertRedirect(route('login'));
 });
 
-test('authenticated user can store water log', function () {
+test('authenticated user can store water log', function (): void {
     $user = User::factory()->create();
     $data = [
         'amount' => 500,
@@ -45,7 +45,7 @@ test('authenticated user can store water log', function () {
     ]);
 });
 
-test('store water log requires validation', function () {
+test('store water log requires validation', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -53,7 +53,7 @@ test('store water log requires validation', function () {
         ->assertSessionHasErrors(['amount', 'consumed_at']);
 });
 
-test('store water log requires positive amount', function () {
+test('store water log requires positive amount', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -64,7 +64,7 @@ test('store water log requires positive amount', function () {
         ->assertSessionHasErrors(['amount']);
 });
 
-test('authenticated user can delete their own water log', function () {
+test('authenticated user can delete their own water log', function (): void {
     $user = User::factory()->create();
     $log = WaterLog::factory()->create([
         'user_id' => $user->id,
@@ -79,7 +79,7 @@ test('authenticated user can delete their own water log', function () {
     ]);
 });
 
-test('user cannot delete other users water log', function () {
+test('user cannot delete other users water log', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $log = WaterLog::factory()->create([
@@ -95,7 +95,7 @@ test('user cannot delete other users water log', function () {
     ]);
 });
 
-test('index shows correct today total', function () {
+test('index shows correct today total', function (): void {
     $user = User::factory()->create();
 
     // Create logs for today
@@ -119,7 +119,7 @@ test('index shows correct today total', function () {
 
     actingAs($user)
         ->get(route('tools.water.index'))
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): Assert => $page
             ->where('todayTotal', 500)
             ->has('logs', 2)
         );

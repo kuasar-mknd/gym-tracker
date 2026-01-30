@@ -6,7 +6,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class() extends Migration
 {
     /**
      * Run the migrations.
@@ -27,13 +27,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('water_logs', function (Blueprint $table) {
-            // Use try/catch or just dropIndex which might throw if not exists
-            try {
+        try {
+            Schema::table('water_logs', function (Blueprint $table) {
                 $table->dropIndex(['user_id', 'consumed_at']);
-            } catch (\Throwable $e) {
-                // Ignore if index doesn't exist
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Ignore if index doesn't exist or is needed by FK
+        }
     }
 };
