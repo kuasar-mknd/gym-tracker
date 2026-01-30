@@ -66,6 +66,6 @@ class StatsController extends Controller
     /** @return \Illuminate\Database\Eloquent\Collection<int, Exercise> */
     private function getFilteredExercises(int $userId): \Illuminate\Database\Eloquent\Collection
     {
-        return Cache::remember("exercises_list_{$userId}", 3600, fn () => Exercise::forUser($userId)->orderBy('name')->get());
+        return Exercise::getCachedForUser($userId);
     }
 }

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -63,5 +65,38 @@ class Exercise extends Model
             ->logOnly(['name', 'type', 'category', 'default_rest_time'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    /**
+     * Centralized method to get the user's exercises list with caching.
+     *
+     * @return Collection<int, Exercise>
+     */
+    public static function getCachedForUser(int $userId): Collection
+    {
+        return Cache::remember(
+            "exercises_list_{$userId}",
+            3600,
+            fn () => self::forUser($userId)
+                ->orderBy('category')
+                ->orderBy('name')
+                ->get()
+        );
+    }
+
+    /**
+     * Clear the exercise list cache for the owner of this exercise.
+     */
+    public function invalidateCache(): void
+    {
+        if ($this->user_id) {
+            Cache::forget("exercises_list_{$this->user_id}");
+        }
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn (Exercise $exercise) => $exercise->invalidateCache());
+        static::deleted(fn (Exercise $exercise) => $exercise->invalidateCache());
     }
 }
