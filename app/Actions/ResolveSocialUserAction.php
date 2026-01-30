@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialUser;
 
-final class ResolveSocialUserAction
+class ResolveSocialUserAction
 {
     /**
      * Resolve the user from the social provider.
