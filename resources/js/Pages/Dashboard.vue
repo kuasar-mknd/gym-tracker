@@ -6,6 +6,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
+const DurationDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/DurationDistributionChart.vue'))
 
 /**
  * Dashboard - Command Center
@@ -22,6 +23,7 @@ const props = defineProps({
     volumeChange: { type: Number, default: 0 },
     weeklyVolumeTrend: { type: Array, default: () => [] },
     volumeTrend: { type: Array, default: () => [] },
+    durationDistribution: { type: Array, default: () => [] },
 })
 
 const form = useForm({})
@@ -140,52 +142,78 @@ const colorForWorkout = (index) => {
                 </Link>
             </section>
 
-            <!-- Weekly Volume Chart Card -->
-            <section
-                class="glass-panel-light animate-slide-up relative overflow-hidden rounded-3xl p-6"
-                style="animation-delay: 0.15s"
-            >
-                <div class="relative z-10 mb-6 flex items-start justify-between">
-                    <div>
-                        <h3 class="text-electric-orange mb-1 text-[10px] font-black tracking-[0.2em] uppercase">
-                            Aperçu
-                        </h3>
-                        <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
-                            Volume Hebdo
-                        </p>
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <!-- Weekly Volume Chart Card -->
+                <section
+                    class="glass-panel-light animate-slide-up relative overflow-hidden rounded-3xl p-6"
+                    style="animation-delay: 0.15s"
+                >
+                    <div class="relative z-10 mb-6 flex items-start justify-between">
+                        <div>
+                            <h3 class="text-electric-orange mb-1 text-[10px] font-black tracking-[0.2em] uppercase">
+                                Aperçu
+                            </h3>
+                            <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                                Volume Hebdo
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <p
+                                class="from-electric-orange to-vivid-violet font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
+                            >
+                                {{ weeklyVolume?.toLocaleString() || thisWeekCount * 1000 }}
+                            </p>
+                            <p
+                                v-if="volumeChange !== 0"
+                                :class="[
+                                    'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
+                                    volumeChange > 0 ? 'text-emerald-600' : 'text-red-500',
+                                ]"
+                            >
+                                <span class="material-symbols-outlined text-sm font-bold">
+                                    {{ volumeChange > 0 ? 'trending_up' : 'trending_down' }}
+                                </span>
+                                {{ volumeChange > 0 ? '+' : '' }}{{ volumeChange }}% vs sem. passée
+                            </p>
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <p
-                            class="from-electric-orange to-vivid-violet font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
-                        >
-                            {{ weeklyVolume?.toLocaleString() || thisWeekCount * 1000 }}
-                        </p>
-                        <p
-                            v-if="volumeChange !== 0"
-                            :class="[
-                                'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
-                                volumeChange > 0 ? 'text-emerald-600' : 'text-red-500',
-                            ]"
-                        >
-                            <span class="material-symbols-outlined text-sm font-bold">
-                                {{ volumeChange > 0 ? 'trending_up' : 'trending_down' }}
-                            </span>
-                            {{ volumeChange > 0 ? '+' : '' }}{{ volumeChange }}% vs sem. passée
-                        </p>
-                    </div>
-                </div>
 
-                <!-- Weekly Volume Chart -->
-                <div class="relative -mx-2 mt-2 h-48 w-auto">
-                    <WeeklyVolumeChart
-                        v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0"
-                        :data="weeklyVolumeTrend"
-                    />
-                    <div v-else class="text-text-muted flex h-full items-center justify-center">
-                        <p class="text-sm">Pas de données cette semaine</p>
+                    <!-- Weekly Volume Chart -->
+                    <div class="relative -mx-2 mt-2 h-48 w-auto">
+                        <WeeklyVolumeChart
+                            v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0"
+                            :data="weeklyVolumeTrend"
+                        />
+                        <div v-else class="text-text-muted flex h-full items-center justify-center">
+                            <p class="text-sm">Pas de données cette semaine</p>
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+
+                <!-- Duration Distribution Chart -->
+                <section
+                    class="glass-panel-light animate-slide-up relative overflow-hidden rounded-3xl p-6"
+                    style="animation-delay: 0.17s"
+                >
+                    <div class="relative z-10 mb-6">
+                        <h3 class="text-cyan-pure mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Répartition</h3>
+                        <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                            Durée Séances
+                        </p>
+                    </div>
+
+                    <!-- Duration Chart -->
+                    <div class="relative -mx-2 mt-2 h-48 w-auto">
+                        <DurationDistributionChart
+                            v-if="durationDistribution && durationDistribution.some(d => d.count > 0)"
+                            :data="durationDistribution"
+                        />
+                        <div v-else class="text-text-muted flex h-full items-center justify-center">
+                            <p class="text-sm">Pas assez de données (90j)</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
 
             <!-- Recent Activity -->
             <section class="animate-slide-up" style="animation-delay: 0.2s">

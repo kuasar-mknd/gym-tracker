@@ -344,6 +344,54 @@ final class StatsService
         );
     }
 
+    /**
+     * Get workout duration distribution (buckets) for the last X days.
+     *
+     * @return array<int, array{label: string, count: int}>
+     */
+    public function getDurationDistribution(User $user, int $days = 90): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.duration_distribution.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $days): array {
+                $workouts = Workout::select(['started_at', 'ended_at'])
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->where('started_at', '>=', now()->subDays($days))
+                    ->get();
+
+                $buckets = [
+                    '< 30 min' => 0,
+                    '30-60 min' => 0,
+                    '60-90 min' => 0,
+                    '90+ min' => 0,
+                ];
+
+                foreach ($workouts as $workout) {
+                    $minutes = abs($workout->ended_at->diffInMinutes($workout->started_at));
+
+                    if ($minutes < 30) {
+                        $buckets['< 30 min']++;
+                    } elseif ($minutes < 60) {
+                        $buckets['30-60 min']++;
+                    } elseif ($minutes < 90) {
+                        $buckets['60-90 min']++;
+                    } else {
+                        $buckets['90+ min']++;
+                    }
+                }
+
+                $result = [];
+                foreach ($buckets as $label => $count) {
+                    $result[] = ['label' => $label, 'count' => $count];
+                }
+
+                return $result;
+            }
+        );
+    }
+
     public function clearUserStatsCache(User $user): void
     {
         $this->clearWorkoutRelatedStats($user);
@@ -375,6 +423,7 @@ final class StatsService
         // Clear weekly volume and monthly comparison (previously missed)
         \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
         \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
     }
 
     /**
