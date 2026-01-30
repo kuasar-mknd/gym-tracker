@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-final class PersonalRecordAchieved extends Notification implements ShouldQueue
+class PersonalRecordAchieved extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -26,8 +26,9 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        /** @var \App\Models\User $_notifiable */
-        if ($_notifiable->isPushEnabled('personal_record')) {
+        /** @var \App\Models\User $user */
+        $user = $_notifiable;
+        if ($user->isPushEnabled('personal_record')) {
             $channels[] = WebPushChannel::class;
         }
 

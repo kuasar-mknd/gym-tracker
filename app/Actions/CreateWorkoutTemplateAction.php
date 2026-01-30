@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\WorkoutTemplate;
 use Illuminate\Support\Facades\DB;
 
-final class CreateWorkoutTemplateAction
+class CreateWorkoutTemplateAction
 {
     /**
      * Create a new workout template with exercises and sets.

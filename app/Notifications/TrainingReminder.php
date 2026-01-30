@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-final class TrainingReminder extends Notification implements ShouldQueue
+class TrainingReminder extends Notification implements ShouldQueue
 {
     use Queueable;
 

@@ -19,38 +19,8 @@ class BodyPartMeasurementController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Optimized query: fetch only latest 2 measurements per part
-        // Uses Window Function to avoid N+1 and loading full history
-        $table = (new BodyPartMeasurement())->getTable();
-        $measurements = BodyPartMeasurement::fromQuery("
-            SELECT * FROM (
-                SELECT *, ROW_NUMBER() OVER (PARTITION BY part ORDER BY measured_at DESC) as rn
-                FROM {$table}
-                WHERE user_id = ?
-            ) as ranked
-            WHERE rn <= 2
-        ", [$user->id]);
-
-        // Group by part, get latest for card display
-        $latestMeasurements = $measurements
-            ->groupBy('part')
-            ->map(function ($group): array {
-                /** @var \App\Models\BodyPartMeasurement $latest */
-                $latest = $group->first();
-                /** @var \App\Models\BodyPartMeasurement|null $previous */
-                $previous = $group->skip(1)->first();
-
-                return [
-                    'part' => $latest->part,
-                    'current' => $latest->value,
-                    'unit' => $latest->unit,
-                    'date' => \Illuminate\Support\Carbon::parse($latest->measured_at)->format('Y-m-d'),
-                    'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
-                ];
-            })->values();
-
         return Inertia::render('Measurements/Parts/Index', [
-            'latestMeasurements' => $latestMeasurements,
+            'latestMeasurements' => $this->getLatestMeasurements($user),
             'commonParts' => $this->getCommonParts(),
         ]);
     }
@@ -91,6 +61,51 @@ class BodyPartMeasurementController extends Controller
         $bodyPartMeasurement->delete();
 
         return redirect()->back()->with('success', 'Measurement deleted.');
+    }
+
+    /**
+     * Get the latest measurements for all body parts.
+     *
+     * @return \Illuminate\Support\Collection<int, array{part: string, current: float, unit: string, date: string, diff: float}>
+     */
+    private function getLatestMeasurements(\App\Models\User $user): \Illuminate\Support\Collection
+    {
+        $table = (new BodyPartMeasurement())->getTable();
+        $measurements = BodyPartMeasurement::fromQuery("
+            SELECT * FROM (
+                SELECT *, ROW_NUMBER() OVER (PARTITION BY part ORDER BY measured_at DESC) as rn
+                FROM {$table}
+                WHERE user_id = ?
+            ) as ranked
+            WHERE rn <= 2
+        ", [$user->id]);
+
+        return $measurements
+            ->groupBy('part')
+            ->map(fn ($group): array => $this->formatLatestMeasurement($group))
+            ->values();
+    }
+
+    /**
+     * Format a group of measurements for display.
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\BodyPartMeasurement>  $group
+     * @return array{part: string, current: float|int, unit: string|null, date: string, diff: float|int}
+     */
+    private function formatLatestMeasurement(\Illuminate\Support\Collection $group): array
+    {
+        /** @var \App\Models\BodyPartMeasurement $latest */
+        $latest = $group->first();
+        /** @var \App\Models\BodyPartMeasurement|null $previous */
+        $previous = $group->skip(1)->first();
+
+        return [
+            'part' => $latest->part,
+            'current' => $latest->value,
+            'unit' => $latest->unit,
+            'date' => \Illuminate\Support\Carbon::parse($latest->measured_at)->format('Y-m-d'),
+            'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
+        ];
     }
 
     /**

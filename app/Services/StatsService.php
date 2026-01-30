@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  *
  * It utilizes caching (via Redis/Cache facade) to optimize performance for expensive database queries.
  */
-final class StatsService
+class StatsService
 {
     /**
      * Get volume trend (total weight lifted) per workout over time.

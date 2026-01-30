@@ -33,7 +33,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property-read NotifColl<int, Notification> $notifications
  * @property-read NotifColl<int, Notification> $unreadNotifications
  */
-final class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
 

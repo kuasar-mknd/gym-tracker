@@ -14,7 +14,7 @@ use App\Models\User;
  * (workouts, measurements) and determining if a goal has been achieved.
  * It handles different types of goals: weight (strength), frequency, volume, and body measurements.
  */
-final class GoalService
+class GoalService
 {
     /**
      * Synchronize all active goals for a user.

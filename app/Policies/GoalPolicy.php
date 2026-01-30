@@ -8,7 +8,7 @@ use App\Models\Goal;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
-final class GoalPolicy
+class GoalPolicy
 {
     use HandlesAuthorization;
 

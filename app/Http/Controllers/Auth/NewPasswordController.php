@@ -60,7 +60,7 @@ class NewPasswordController extends Controller
     private function resetPassword(array $credentials): string
     {
         /** @var string $status */
-        $status = Password::reset(
+        return Password::reset(
             $credentials,
             function (\App\Models\User $user) use ($credentials): void {
                 /** @var string $password */
@@ -74,7 +74,5 @@ class NewPasswordController extends Controller
                 event(new PasswordReset($user));
             }
         );
-
-        return $status;
     }
 }

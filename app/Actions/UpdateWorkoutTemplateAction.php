@@ -7,7 +7,7 @@ namespace App\Actions;
 use App\Models\WorkoutTemplate;
 use Illuminate\Support\Facades\DB;
 
-final class UpdateWorkoutTemplateAction
+class UpdateWorkoutTemplateAction
 {
     /**
      * Update a workout template with exercises and sets.
