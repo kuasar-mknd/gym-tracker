@@ -159,10 +159,10 @@ test('achievements page works', function (): void {
     });
 });
 
-test('profile page renders correctly', function () {
+test('profile page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/profile')
             ->assertPathIs('/profile')
@@ -171,10 +171,10 @@ test('profile page renders correctly', function () {
     });
 });
 
-test('tools page renders correctly', function () {
+test('tools page renders correctly', function (): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user) {
+    $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
             ->visit('/tools')
             ->assertPathIs('/tools')
@@ -183,7 +183,7 @@ test('tools page renders correctly', function () {
     });
 });
 
-test('plates calculator page renders correctly', function () {
+test('plates calculator page renders correctly', function (): void {
     $user = User::factory()->create();
 
     $this->browse(function (Browser $browser) use ($user): void {
