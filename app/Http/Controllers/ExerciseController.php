@@ -9,7 +9,6 @@ use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 /**

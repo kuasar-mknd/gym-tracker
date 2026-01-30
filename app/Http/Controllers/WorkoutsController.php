@@ -11,7 +11,6 @@ use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 /**
@@ -46,7 +45,7 @@ class WorkoutsController extends Controller
 
         return Inertia::render('Workouts/Index', [
             ...$data,
-            'exercises' => Inertia::defer(fn () => Exercise::getCachedForUser($userId)),
+            'exercises' => Inertia::defer(fn (): \Illuminate\Database\Eloquent\Collection => Exercise::getCachedForUser($userId)),
         ]);
     }
 

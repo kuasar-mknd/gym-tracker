@@ -11,7 +11,6 @@ use App\Models\Exercise;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 /**
