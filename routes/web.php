@@ -94,6 +94,11 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
     Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
     Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
+
+    Route::get('/tools/fasting', [\App\Http\Controllers\FastingController::class, 'index'])->name('tools.fasting.index');
+    Route::post('/tools/fasting', [\App\Http\Controllers\FastingController::class, 'store'])->name('tools.fasting.store');
+    Route::post('/tools/fasting/{fast}', [\App\Http\Controllers\FastingController::class, 'update'])->name('tools.fasting.update');
+    Route::delete('/tools/fasting/{fast}', [\App\Http\Controllers\FastingController::class, 'destroy'])->name('tools.fasting.destroy');
 });
 
 // Social Login
