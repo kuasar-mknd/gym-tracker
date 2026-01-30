@@ -47,17 +47,6 @@ test('authenticated users can see dashboard', function (): void {
     });
 });
 
-test('profile page works', function (): void {
-    $user = User::factory()->create();
-
-    $this->browse(function (Browser $browser) use ($user): void {
-        $browser->loginAs($user)
-            ->visit('/profile')
-            ->assertPathIs('/profile')
-            ->assertNoConsoleExceptions();
-    });
-});
-
 test('workouts page renders correctly', function (): void {
     $user = User::factory()->create();
 
@@ -100,18 +89,6 @@ test('calendar page works', function (): void {
         $browser->loginAs($user)
             ->visit('/calendar')
             ->assertPathIs('/calendar')
-            ->assertNoConsoleExceptions();
-    });
-});
-
-test('tools page works', function (): void {
-    $user = User::factory()->create();
-
-    $this->browse(function (Browser $browser) use ($user): void {
-        $browser->loginAs($user)
-            ->visit('/tools')
-            ->assertPathIs('/tools')
-            ->assertSee('OUTILS')
             ->assertNoConsoleExceptions();
     });
 });
@@ -182,7 +159,31 @@ test('achievements page works', function (): void {
     });
 });
 
-test('plates calculator page works', function (): void {
+test('profile page renders correctly', function () {
+    $user = User::factory()->create();
+
+    $this->browse(function (Browser $browser) use ($user) {
+        $browser->loginAs($user)
+            ->visit('/profile')
+            ->assertPathIs('/profile')
+            ->waitFor('main', 10)
+            ->assertNoConsoleExceptions();
+    });
+});
+
+test('tools page renders correctly', function () {
+    $user = User::factory()->create();
+
+    $this->browse(function (Browser $browser) use ($user) {
+        $browser->loginAs($user)
+            ->visit('/tools')
+            ->assertPathIs('/tools')
+            ->waitForText('Outils')
+            ->assertNoConsoleExceptions();
+    });
+});
+
+test('plates calculator page renders correctly', function () {
     $user = User::factory()->create();
 
     $this->browse(function (Browser $browser) use ($user): void {
