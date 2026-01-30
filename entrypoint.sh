@@ -5,7 +5,7 @@ set -e
 MAX_TRIES=600
 TRIES=0
 
-until php -r "try { new PDO(\"mysql:host=\" . getenv(\"DB_HOST\") . \";port=\" . getenv(\"DB_PORT\"), getenv(\"DB_USERNAME\"), getenv(\"DB_PASSWORD\"), [PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false]); exit(0); } catch (Exception \$e) { echo 'Waiting for DB: ' . \$e->getMessage() . PHP_EOL; exit(1); }"; do
+until php -r "try { new PDO(\"mysql:host=\" . getenv(\"DB_HOST\") . \";port=\" . getenv(\"DB_PORT\"), getenv(\"DB_USERNAME\"), getenv(\"DB_PASSWORD\"), [1013 => false]); exit(0); } catch (Exception \$e) { echo 'Waiting for DB: ' . \$e->getMessage() . PHP_EOL; exit(1); }"; do
     TRIES=$((TRIES+1))
     if [ $TRIES -ge $MAX_TRIES ]; then
         echo "Error: Database did not become available in time."

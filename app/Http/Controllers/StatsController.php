@@ -11,7 +11,9 @@ use Inertia\Inertia;
 
 class StatsController extends Controller
 {
-    public function __construct(protected StatsService $statsService) {}
+    public function __construct(protected StatsService $statsService)
+    {
+    }
 
     /**
      * Display the main statistics dashboard.

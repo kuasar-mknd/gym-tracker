@@ -22,7 +22,7 @@ class StatsServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->statsService = new StatsService;
+        $this->statsService = new StatsService();
     }
 
     public function test_can_calculate_volume_trend(): void
