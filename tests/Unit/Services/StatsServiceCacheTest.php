@@ -16,7 +16,7 @@ class StatsServiceCacheTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->statsService = new StatsService;
+        $this->statsService = new StatsService();
     }
 
     public function test_clear_workout_related_stats_clears_correct_keys(): void
