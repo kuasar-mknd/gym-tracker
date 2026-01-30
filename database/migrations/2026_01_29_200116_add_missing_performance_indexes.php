@@ -11,13 +11,21 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        Schema::table('water_logs', function (Blueprint $table) {
-            $table->index(['user_id', 'consumed_at']);
-        });
+        try {
+            Schema::table('water_logs', function (Blueprint $table): void {
+                $table->index(['user_id', 'consumed_at']);
+            });
+        } catch (\Throwable $e) {
+            // Index already exists, ignore
+        }
 
-        Schema::table('supplement_logs', function (Blueprint $table) {
-            $table->index(['user_id', 'consumed_at']);
-        });
+        try {
+            Schema::table('supplement_logs', function (Blueprint $table): void {
+                $table->index(['user_id', 'consumed_at']);
+            });
+        } catch (\Throwable $e) {
+            // Index already exists, ignore
+        }
     }
 
     /**

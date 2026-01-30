@@ -13,23 +13,29 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        Schema::table('water_logs', function (Blueprint $table) {
-            if (! Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+        try {
+            Schema::table('water_logs', function (Blueprint $table): void {
                 $table->index(['user_id', 'consumed_at']);
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Index already exists
+        }
 
-        Schema::table('supplement_logs', function (Blueprint $table) {
-            if (! Schema::hasIndex('supplement_logs', 'supplement_logs_user_id_consumed_at_index')) {
+        try {
+            Schema::table('supplement_logs', function (Blueprint $table): void {
                 $table->index(['user_id', 'consumed_at']);
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Index already exists
+        }
 
-        Schema::table('body_part_measurements', function (Blueprint $table) {
-            if (! Schema::hasIndex('body_part_measurements', 'body_part_measurements_user_id_measured_at_index')) {
+        try {
+            Schema::table('body_part_measurements', function (Blueprint $table): void {
                 $table->index(['user_id', 'measured_at']);
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Index already exists
+        }
     }
 
     /**
