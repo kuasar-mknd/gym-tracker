@@ -7,7 +7,7 @@ namespace App\Policies;
 use App\Models\User;
 use App\Models\WorkoutTemplate;
 
-final class WorkoutTemplatePolicy
+class WorkoutTemplatePolicy
 {
     /**
      * Determine whether the user can view any models.

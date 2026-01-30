@@ -88,4 +88,24 @@ class Exercise extends Model
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
+
+    /**
+     * The "booted" method of the model.
+     *
+     * Handles automatic cache invalidation for the 'exercises_list_{userId}' key.
+     */
+    protected static function booted(): void
+    {
+        static::saved(function (Exercise $exercise): void {
+            if ($exercise->user_id) {
+                Cache::forget('exercises_list_'.$exercise->user_id);
+            }
+        });
+
+        static::deleted(function (Exercise $exercise): void {
+            if ($exercise->user_id) {
+                Cache::forget('exercises_list_'.$exercise->user_id);
+            }
+        });
+    }
 }

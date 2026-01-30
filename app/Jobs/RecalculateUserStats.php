@@ -7,7 +7,7 @@ namespace App\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-final class RecalculateUserStats implements ShouldQueue
+class RecalculateUserStats implements ShouldQueue
 {
     use Queueable;
 

@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
@@ -30,6 +31,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Enforce strict model behavior in non-production environments
+        // This prevents N+1 queries (preventLazyLoading) and Mass Assignment vulnerabilities (preventSilentlyDiscardingAttributes).
+        // We do NOT enable preventAccessingMissingAttributes to avoid breaking existing tests/logic that rely on lenient attribute access.
+        Model::preventLazyLoading(! $this->app->isProduction());
+        Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
+
         $this->configureGates();
         $this->configureVite();
         $this->configureSocialite();

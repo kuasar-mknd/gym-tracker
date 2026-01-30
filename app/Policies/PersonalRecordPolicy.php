@@ -7,7 +7,7 @@ namespace App\Policies;
 use App\Models\PersonalRecord;
 use App\Models\User;
 
-final class PersonalRecordPolicy
+class PersonalRecordPolicy
 {
     /**
      * Determine whether the user can view any models.

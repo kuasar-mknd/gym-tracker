@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Exceptions\SocialAuthException;
+use App\Exceptions\SocialAuth;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 
-final class HandleSocialCallbackAction
+class HandleSocialCallbackAction
 {
     public function __construct(
         protected ResolveSocialUserAction $resolver
@@ -19,14 +19,14 @@ final class HandleSocialCallbackAction
     /**
      * Handle the social auth callback logic.
      *
-     * @throws SocialAuthException
+     * @throws SocialAuth
      */
     public function execute(string $provider): User
     {
         try {
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Exception) {
-            throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($provider));
+            throw new SocialAuth('Erreur lors de la connexion avec '.ucfirst($provider));
         }
 
         // Security check: Ensure email is verified by the provider
@@ -45,7 +45,7 @@ final class HandleSocialCallbackAction
                     'email' => $socialUser->getEmail(),
                 ]);
             } else {
-                throw new SocialAuthException('Votre email n\'est pas vérifié par '.ucfirst($provider));
+                throw new SocialAuth('Votre email n\'est pas vérifié par '.ucfirst($provider));
             }
         }
 

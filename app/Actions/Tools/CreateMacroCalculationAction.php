@@ -7,7 +7,7 @@ namespace App\Actions\Tools;
 use App\Models\MacroCalculation;
 use App\Models\User;
 
-final class CreateMacroCalculationAction
+class CreateMacroCalculationAction
 {
     private const MULTIPLIERS = [
         'sedentary' => 1.2,
@@ -27,7 +27,6 @@ final class CreateMacroCalculationAction
         // Store multiplier instead of label
         $data['activity_level'] = self::MULTIPLIERS[$data['activity_level']];
 
-        /** @var MacroCalculation */
         return $user->macroCalculations()->create(array_merge($data, $results));
     }
 
