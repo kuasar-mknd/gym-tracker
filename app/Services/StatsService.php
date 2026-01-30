@@ -581,7 +581,7 @@ final class StatsService
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
         /** @var \Illuminate\Support\Collection<string, float> $results */
-        return DB::table('workouts')
+        $results = DB::table('workouts')
             ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $user->id)
@@ -593,6 +593,8 @@ final class StatsService
             )
             ->groupBy('date')
             ->pluck('volume', 'date');
+
+        return $results;
     }
 
     /**
@@ -603,7 +605,7 @@ final class StatsService
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
         /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
-        return DB::table('sets')
+        $results = DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
@@ -613,6 +615,8 @@ final class StatsService
             ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
             ->groupBy('exercises.category')
             ->get();
+
+        return $results;
     }
 
     /**
@@ -623,7 +627,7 @@ final class StatsService
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
         /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
-        return DB::table('sets')
+        $results = DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
@@ -634,6 +638,8 @@ final class StatsService
             ->groupBy('workouts.started_at')
             ->orderBy('workouts.started_at')
             ->get();
+
+        return $results;
     }
 
     /**
