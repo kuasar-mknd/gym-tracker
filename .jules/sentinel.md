@@ -27,3 +27,8 @@
 **Vulnerability:** Users could create Personal Records linked to Workouts and Sets belonging to other users because validation only checked for ID existence (`exists:workouts,id`) without verifying ownership.
 **Learning:** Standard `exists` validation confirms a record is in the database but ignores ownership. This allows linking to private resources of others, polluting data relationships.
 **Prevention:** Always scope `exists` checks to `user_id` when validating relationships to user-owned resources: `Rule::exists('table')->where('user_id', $this->user()->id)`.
+
+## 2026-08-20 - Scoping Exists Validation for Hybrid Resources
+**Vulnerability:** In `WorkoutLineStoreRequest`, `exercise_id` validation was unscoped (`exists:exercises,id`), allowing users to link private exercises from other users. The fix required handling both system exercises (null `user_id`) and user-owned exercises.
+**Learning:** When resources can be both system-owned and user-owned, simple `where` or `whereNull` checks are insufficient. You must explicitly handle the "System OR Owner" logic.
+**Prevention:** Use nested closures to group the OR condition: `$query->where(fn($q) => $q->whereNull('user_id')->orWhere('user_id', $this->user()->id))`.
