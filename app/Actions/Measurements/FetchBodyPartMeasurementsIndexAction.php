@@ -60,7 +60,7 @@ final class FetchBodyPartMeasurementsIndexAction
                 'current' => $latest->value,
                 'unit' => $latest->unit,
                 'date' => Carbon::parse($latest->measured_at)->format('Y-m-d'),
-                'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
+                'diff' => $previous ? (float) round($latest->value - $previous->value, 2) : 0.0,
             ];
         })->values();
     }
