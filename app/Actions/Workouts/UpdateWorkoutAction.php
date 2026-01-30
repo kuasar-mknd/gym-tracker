@@ -28,7 +28,7 @@ final class UpdateWorkoutAction
 
         $workout->save();
 
-        $this->statsService->clearUserStatsCache($workout->user);
+        $this->statsService->clearWorkoutRelatedStats($workout->user);
 
         return $workout;
     }

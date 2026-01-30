@@ -107,7 +107,7 @@ class WorkoutsController extends Controller
         $workout->user_id = $this->user()->id;
         $workout->save();
 
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return redirect()->route('workouts.show', $workout);
     }
@@ -133,7 +133,7 @@ class WorkoutsController extends Controller
 
         $workout->delete();
 
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return redirect()->route('workouts.index');
     }
