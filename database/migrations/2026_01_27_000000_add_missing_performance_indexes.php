@@ -21,8 +21,12 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::table('water_logs', function (Blueprint $table) {
             $table->dropIndex(['user_id', 'consumed_at']);
         });
+
+        Schema::enableForeignKeyConstraints();
     }
 };
