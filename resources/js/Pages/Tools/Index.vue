@@ -26,6 +26,7 @@
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
+                                aria-hidden="true"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -56,6 +57,7 @@
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
+                                aria-hidden="true"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -86,6 +88,7 @@
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
+                                aria-hidden="true"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -110,7 +113,9 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-emerald-500/20 p-4 text-emerald-500">
-                            <span class="material-symbols-outlined text-3xl">local_fire_department</span>
+                            <span class="material-symbols-outlined text-3xl" aria-hidden="true"
+                                >local_fire_department</span
+                            >
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Calculateur de Macros</h3>
                         <p class="text-text-muted text-sm">
@@ -133,6 +138,7 @@
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
+                                aria-hidden="true"
                             >
                                 <path
                                     stroke-linecap="round"
@@ -157,10 +163,10 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-cyan-500/20 p-4 text-cyan-500">
-                            <span class="material-symbols-outlined text-3xl">water_drop</span>
+                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">water_drop</span>
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Water Tracker</h3>
-                        <p class="text-text-muted text-sm">Track your daily water intake and stay hydrated.</p>
+                        <h3 class="text-text-main text-xl font-bold">Suivi Hydratation</h3>
+                        <p class="text-text-muted text-sm">Suis ta consommation d'eau quotidienne et reste hydraté.</p>
                     </div>
                 </GlassCard>
             </Link>
