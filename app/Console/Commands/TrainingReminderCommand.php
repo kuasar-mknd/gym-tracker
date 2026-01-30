@@ -14,15 +14,11 @@ class TrainingReminderCommand extends Command
 {
     /**
      * The name and signature of the console command.
-     *
-     * @var string
      */
     protected $signature = 'app:remind-training';
 
     /**
      * The console command description.
-     *
-     * @var string
      */
     protected $description = 'Send training reminders to users based on their custom inactivity threshold.';
 

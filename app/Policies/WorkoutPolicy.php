@@ -8,7 +8,7 @@ use App\Models\Workout;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
-final class WorkoutPolicy
+class WorkoutPolicy
 {
     use HandlesAuthorization;
 
