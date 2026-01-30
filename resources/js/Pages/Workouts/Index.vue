@@ -218,7 +218,16 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <!-- Available Exercises -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
                 <h3 class="text-text-main mb-3 font-semibold dark:text-white">Exercices disponibles</h3>
-                <div class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
+
+                <!-- Loading State -->
+                <div v-if="!exercises" class="flex gap-2 overflow-x-hidden pb-2">
+                    <div v-for="i in 5" :key="i" class="shrink-0">
+                        <GlassSkeleton width="120px" height="60px" class="rounded-xl" />
+                    </div>
+                </div>
+
+                <!-- Data State -->
+                <div v-else class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
                     <div
                         v-for="exercise in exercises"
                         :key="exercise.id"
