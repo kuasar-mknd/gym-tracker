@@ -9,18 +9,27 @@ use Carbon\Carbon;
 class FetchWaterTrackerDataAction
 {
     /**
-     * @return array{logs: \Illuminate\Database\Eloquent\Collection, todayTotal: float, history: array, goal: int}
+     * @return array{
+     *     logs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\WaterLog>,
+     *     todayTotal: float,
+     *     history: array<int, array{date: string, day_name: string, total: float}>,
+     *     goal: int
+     * }
      */
     public function execute(User $user): array
     {
+        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\WaterLog> $todayLogs */
         $todayLogs = $user->waterLogs()
             ->whereDate('consumed_at', Carbon::today())
             ->orderByDesc('consumed_at')
             ->get();
 
+        /** @var int|float $sum */
+        $sum = $todayLogs->sum('amount');
+
         return [
             'logs' => $todayLogs,
-            'todayTotal' => (float) $todayLogs->sum('amount'),
+            'todayTotal' => (float) $sum,
             'history' => $this->getWaterHistory($user),
             'goal' => 2500, // Hardcoded goal for now
         ];
@@ -30,6 +39,7 @@ class FetchWaterTrackerDataAction
     private function getWaterHistory(User $user): array
     {
         $startDate = Carbon::now()->subDays(6)->startOfDay();
+        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\WaterLog> $historyLogs */
         $historyLogs = $user->waterLogs()
             ->where('consumed_at', '>=', $startDate)
             ->get();
