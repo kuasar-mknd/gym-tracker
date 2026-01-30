@@ -87,6 +87,7 @@ class StatsService
      *
      * @param  User  $user  The user to retrieve stats for.
      * @param  int  $days  Number of days to look back (default: 30).
+     *
      * @return array<int, \stdClass>
      *
      * @example
@@ -240,6 +241,7 @@ class StatsService
      * with volume summed up. Fills missing days with 0.
      *
      * @param  User  $user  The user to retrieve stats for.
+     *
      * @return array<int, array{
      *     date: string,
      *     day_label: string,
@@ -429,6 +431,7 @@ class StatsService
      * Fill missing days with zero volume.
      *
      * @param  \Illuminate\Support\Collection<string, float>  $results
+     *
      * @return array<int, array{date: string, day_name: string, volume: float}>
      */
     protected function fillDailyTrend(Carbon $start, int $days, \Illuminate\Support\Collection $results): array
@@ -453,6 +456,7 @@ class StatsService
      * Fill missing days in weekly trend with zero volume.
      *
      * @param  \Illuminate\Support\Collection<string, \stdClass>  $workouts
+     *
      * @return array<int, array{date: string, day_label: string, volume: float}>
      */
     protected function fillWeeklyTrend(Carbon $startOfWeek, \Illuminate\Support\Collection $workouts): array

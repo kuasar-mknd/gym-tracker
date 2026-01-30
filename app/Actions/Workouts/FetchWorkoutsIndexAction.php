@@ -93,7 +93,7 @@ class FetchWorkoutsIndexAction
                     instanceof Carbon
                     ? $date->format('M')
                     : '',
-                'count' => (int) count($rows),
+                'count' => count($rows),
             ])->values();
     }
 
