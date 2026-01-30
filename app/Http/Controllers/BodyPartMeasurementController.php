@@ -35,7 +35,7 @@ class BodyPartMeasurementController extends Controller
                     'current' => $latest->value,
                     'unit' => $latest->unit,
                     'date' => \Illuminate\Support\Carbon::parse($latest->measured_at)->format('Y-m-d'),
-                    'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
+                    'diff' => $previous ? round((float) $latest->value - (float) $previous->value, 2) : 0,
                 ];
             })->values();
 
