@@ -1,5 +1,6 @@
 <script setup>
 import { computed, useAttrs, getCurrentInstance } from 'vue'
+import InputError from '@/Components/InputError.vue'
 
 const props = defineProps({
     modelValue: {
@@ -157,8 +158,6 @@ const isRequired = computed(() => {
             </button>
         </div>
 
-        <p v-if="error" :id="errorId" class="mt-2 text-sm font-medium text-red-600">
-            {{ error }}
-        </p>
+        <InputError :message="error" :id="errorId" />
     </div>
 </template>
