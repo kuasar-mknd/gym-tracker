@@ -13,13 +13,7 @@ class HabitUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        /** @var \App\Models\Habit|null $habit */
-        $habit = $this->route('habit');
-
-        /** @var \App\Models\User|null $user */
-        $user = $this->user();
-
-        return $habit && $user && $user->id === $habit->user_id;
+        return $this->user()?->can('update', $this->route('habit')) ?? false;
     }
 
     /**
@@ -30,11 +24,11 @@ class HabitUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'color' => ['nullable', 'string'],
-            'icon' => ['nullable', 'string'],
-            'goal_times_per_week' => ['required', 'integer', 'min:1', 'max:7'],
+            'color' => ['nullable', 'string', 'max:7', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
+            'icon' => ['nullable', 'string', 'max:255'],
+            'goal_times_per_week' => ['sometimes', 'integer', 'min:1', 'max:7'],
             'archived' => ['boolean'],
         ];
     }

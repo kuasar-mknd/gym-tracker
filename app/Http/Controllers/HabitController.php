@@ -51,7 +51,6 @@ class HabitController extends Controller
     public function update(HabitUpdateRequest $request, Habit $habit): \Illuminate\Http\RedirectResponse
     {
         // Authorization is handled by HabitUpdateRequest
-
         $habit->update($request->validated());
 
         return redirect()->back()->with('success', 'Habitude mise à jour.');

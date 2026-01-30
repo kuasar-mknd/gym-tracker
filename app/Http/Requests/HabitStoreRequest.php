@@ -26,9 +26,10 @@ class HabitStoreRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'color' => ['nullable', 'string'],
-            'icon' => ['nullable', 'string'],
+            'color' => ['nullable', 'string', 'max:7', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
+            'icon' => ['nullable', 'string', 'max:255'],
             'goal_times_per_week' => ['required', 'integer', 'min:1', 'max:7'],
+            'archived' => ['boolean'],
         ];
     }
 }
