@@ -47,6 +47,7 @@ test('authenticated users can see dashboard', function (): void {
     });
 });
 
+// Profile Page Test
 test('profile page works', function (): void {
     $user = User::factory()->create();
 
