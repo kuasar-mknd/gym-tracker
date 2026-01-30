@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -21,12 +23,15 @@ class SupplementLogController extends Controller
     {
         $this->authorize('viewAny', SupplementLog::class);
 
+        /** @var int $perPage */
+        $perPage = $request->input('per_page', 15);
+
         $logs = QueryBuilder::for(SupplementLog::class)
             ->allowedFilters(['supplement_id'])
             ->allowedSorts(['consumed_at', 'created_at'])
             ->allowedIncludes(['supplement'])
             ->where('user_id', $this->user()->id)
-            ->paginate((int) $request->get('per_page', 15));
+            ->paginate($perPage);
 
         return SupplementLogResource::collection($logs);
     }
