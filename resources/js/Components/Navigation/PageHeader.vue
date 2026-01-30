@@ -24,11 +24,11 @@ defineProps({
                 <Link
                     v-if="showBack && backRoute"
                     :href="backRoute.startsWith('http') || backRoute.startsWith('/') ? backRoute : route(backRoute)"
-                    class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-text-muted shadow-sm transition-colors hover:text-electric-orange"
+                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
                 >
                     <span class="material-symbols-outlined">arrow_back</span>
                 </Link>
-                <h1 class="font-display text-xl font-black uppercase italic tracking-tight text-text-main">
+                <h1 class="font-display text-text-main text-xl font-black tracking-tight uppercase italic">
                     {{ title }}
                 </h1>
             </div>

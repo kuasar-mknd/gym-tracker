@@ -48,7 +48,7 @@ class PersonalRecordController extends Controller
 
         $validated = $request->validated();
 
-        $personalRecord = new PersonalRecord;
+        $personalRecord = new PersonalRecord();
         $personalRecord->fill($validated);
 
         /** @var int|string $userId */
