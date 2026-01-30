@@ -60,6 +60,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'current_streak',
         'longest_streak',
         'last_workout_at',
+        'email_verified_at',
     ];
 
     /**

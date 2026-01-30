@@ -32,10 +32,11 @@ class ResolveSocialUserAction
         }
 
         // Create new user
+        // We use create() because all fields are in $fillable in User model
         return User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
             'email' => $socialUser->getEmail(),
-            'password' => bcrypt(Str::random(16)), // Random password since auth is handled by provider
+            'password' => Str::random(16), // Random password, hashed by model cast
             'provider' => $provider,
             'provider_id' => $socialUser->getId(),
             'avatar' => $socialUser->getAvatar(),
