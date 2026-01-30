@@ -208,6 +208,14 @@ final class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(WarmupPreference::class);
     }
 
+    /**
+     * @return HasMany<Injury, $this>
+     */
+    public function injuries(): HasMany
+    {
+        return $this->hasMany(Injury::class);
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

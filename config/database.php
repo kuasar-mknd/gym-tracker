@@ -61,8 +61,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                \Pdo\Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-                \Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT => filter_var(env('DB_SSL_VERIFY', true), FILTER_VALIDATE_BOOLEAN),
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ], fn ($value): bool => ! is_null($value)) : [],
         ],
 
@@ -82,8 +81,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                \Pdo\Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-                \Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT => env('DB_SSL_VERIFY', true),
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ], fn ($value): bool => ! is_null($value)) : [],
         ],
 
