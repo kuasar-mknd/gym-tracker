@@ -29,7 +29,7 @@ class BodyPartMeasurementController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         // Implicitly authorized as we only fetch auth user's data
-        $measurements = $request->user()
+        $measurements = $this->user()
             ->bodyPartMeasurements()
             ->orderBy('measured_at', 'desc')
             ->paginate(20);
@@ -53,7 +53,7 @@ class BodyPartMeasurementController extends Controller
     public function store(BodyPartMeasurementStoreRequest $request): BodyPartMeasurementResource
     {
         // Policy 'create' returns true, validation handles logic
-        $measurement = $request->user()->bodyPartMeasurements()->create($request->validated());
+        $measurement = $this->user()->bodyPartMeasurements()->create($request->validated());
 
         return new BodyPartMeasurementResource($measurement);
     }

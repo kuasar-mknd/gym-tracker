@@ -24,7 +24,7 @@ class BodyPartMeasurementResource extends JsonResource
             'part' => $this->part,
             'value' => $this->value,
             'unit' => $this->unit,
-            'measured_at' => $this->measured_at->format('Y-m-d'),
+            'measured_at' => \Illuminate\Support\Carbon::parse($this->measured_at)->format('Y-m-d'),
             'notes' => $this->notes,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
