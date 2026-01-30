@@ -104,7 +104,7 @@ class SupplementController extends Controller
      */
     protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
     {
-        return Cache::remember("supplements.list.{$user->id}", 3600, function () use ($user) {
+        return Cache::remember("supplements.list.{$user->id}", 3600, function () use ($user): \Illuminate\Support\Collection {
             /** @var \Illuminate\Support\Collection<int, mixed> $results */
             $results = Supplement::forUser($user->id)
                 ->with(['latestLog'])
@@ -127,7 +127,7 @@ class SupplementController extends Controller
     {
         $days = 30;
 
-        return Cache::remember("supplements.history.{$user->id}", 3600, function () use ($user, $days) {
+        return Cache::remember("supplements.history.{$user->id}", 3600, function () use ($user, $days): array {
             $usageHistoryRaw = SupplementLog::where('user_id', $user->id)
                 ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
                 ->select(
