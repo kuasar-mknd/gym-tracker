@@ -96,7 +96,7 @@ class SupplementController extends Controller
     protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
     {
         /** @var \Illuminate\Support\Collection<int, mixed> $results */
-        $results = Supplement::forUser($user->id)
+        return Supplement::forUser($user->id)
             ->with(['latestLog'])
             ->get()
             ->map(fn (Supplement $supplement): array => [
@@ -107,8 +107,6 @@ class SupplementController extends Controller
                 'unit' => 'servings',
                 'daily_goal' => null,
             ]);
-
-        return $results;
     }
 
     /** @return array<int, array{date: string, count: float}> */

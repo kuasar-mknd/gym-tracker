@@ -284,8 +284,7 @@ final class StatsService
             $user,
             now()->startOfWeek(),
             now()->subWeek()->startOfWeek(),
-            now()->subWeek()->endOfWeek(),
-            'week'
+            now()->subWeek()->endOfWeek()
         );
 
         return [
@@ -557,7 +556,7 @@ final class StatsService
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
         /** @var \Illuminate\Support\Collection<string, float> $results */
-        $results = DB::table('workouts')
+        return DB::table('workouts')
             ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $user->id)
@@ -569,8 +568,6 @@ final class StatsService
             )
             ->groupBy('date')
             ->pluck('volume', 'date');
-
-        return $results;
     }
 
     /**
@@ -581,7 +578,7 @@ final class StatsService
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
         /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
-        $results = DB::table('sets')
+        return DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
@@ -591,8 +588,6 @@ final class StatsService
             ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
             ->groupBy('exercises.category')
             ->get();
-
-        return $results;
     }
 
     /**
@@ -603,7 +598,7 @@ final class StatsService
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
         /** @var \Illuminate\Support\Collection<int, \stdClass> $results */
-        $results = DB::table('sets')
+        return DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
@@ -614,8 +609,6 @@ final class StatsService
             ->groupBy('workouts.started_at')
             ->orderBy('workouts.started_at')
             ->get();
-
-        return $results;
     }
 
     /**
@@ -683,7 +676,7 @@ final class StatsService
      *     percentage: float
      * }
      */
-    protected function calculatePeriodComparison(User $user, Carbon $currentStart, Carbon $prevStart, ?Carbon $prevEnd = null, string $type = 'month'): array
+    protected function calculatePeriodComparison(User $user, Carbon $currentStart, Carbon $prevStart, ?Carbon $prevEnd = null): array
     {
         $currentVolume = $this->getPeriodVolume($user, $currentStart);
         $previousVolume = $this->getPeriodVolume($user, $prevStart, $prevEnd);

@@ -20,7 +20,20 @@ class BodyPartMeasurementController extends Controller
         $user = Auth::user();
 
         // Group by part, get latest for card display
-        $latestMeasurements = BodyPartMeasurement::fromQuery(<<<'SQL'
+        $latestMeasurements = $this->getLatestMeasurements($user);
+
+        return Inertia::render('Measurements/Parts/Index', [
+            'latestMeasurements' => $latestMeasurements,
+            'commonParts' => $this->getCommonParts(),
+        ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{part: string, current: float, unit: string, date: string, diff: float}>
+     */
+    private function getLatestMeasurements(\App\Models\User $user): \Illuminate\Support\Collection
+    {
+        return BodyPartMeasurement::fromQuery(<<<'SQL'
             WITH RankedMeasurements AS (
                 SELECT *,
                        ROW_NUMBER() OVER (PARTITION BY part ORDER BY measured_at DESC) as rn
@@ -44,11 +57,6 @@ class BodyPartMeasurementController extends Controller
                     'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
                 ];
             })->values();
-
-        return Inertia::render('Measurements/Parts/Index', [
-            'latestMeasurements' => $latestMeasurements,
-            'commonParts' => $this->getCommonParts(),
-        ]);
     }
 
     public function show(string $part): \Illuminate\Http\RedirectResponse|\Inertia\Response
