@@ -143,7 +143,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return BelongsToMany<Achievement, $this>
+     * @return BelongsToMany<Achievement, $this, \Illuminate\Database\Eloquent\Relations\Pivot, 'pivot'>
      */
     public function achievements(): BelongsToMany
     {

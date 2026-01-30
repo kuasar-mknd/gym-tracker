@@ -21,8 +21,12 @@ class DailyJournalController extends Controller
     {
         $this->authorize('viewAny', DailyJournal::class);
 
+        $validated = $request->validate([
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
         /** @var int $perPage */
-        $perPage = $request->get('per_page', 15);
+        $perPage = $validated['per_page'] ?? 15;
 
         $journals = $this->user()->dailyJournals()
             ->orderBy('date', 'desc')

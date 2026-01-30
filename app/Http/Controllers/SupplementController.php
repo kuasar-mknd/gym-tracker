@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SupplementStoreRequest;
+use App\Http\Requests\SupplementUpdateRequest;
 use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
@@ -11,8 +13,23 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
+/**
+ * Controller for managing User Supplements.
+ *
+ * This controller handles the CRUD operations for supplements and tracks their usage.
+ * It manages inventory (servings remaining) and logs consumption history.
+ */
 class SupplementController extends Controller
 {
+    /**
+     * Display a listing of the user's supplements and usage history.
+     *
+     * Retrieves all supplements for the authenticated user, including their latest
+     * consumption log to determine if they've been taken today. Also retrieves
+     * the last 30 days of usage history for the visualization chart.
+     *
+     * @return \Inertia\Response The Inertia response rendering the Supplements/Index page.
+     */
     public function index(): \Inertia\Response
     {
         /** @var User $user */
@@ -24,40 +41,58 @@ class SupplementController extends Controller
         ]);
     }
 
-    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    /**
+     * Store a newly created supplement in storage.
+     *
+     * Validates the input and creates a new supplement record for the authenticated user.
+     *
+     * @param  \App\Http\Requests\SupplementStoreRequest  $request  The incoming HTTP request containing supplement details.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
+     */
+    public function store(SupplementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'brand' => ['nullable', 'string', 'max:255'],
-            'dosage' => ['nullable', 'string', 'max:255'],
-            'servings_remaining' => ['required', 'integer', 'min:0'],
-            'low_stock_threshold' => ['required', 'integer', 'min:0'],
-        ]);
+        /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $validated */
+        $validated = $request->validated();
 
         Supplement::create(array_merge($validated, ['user_id' => $this->user()->id]));
 
         return redirect()->back()->with('success', 'Complément ajouté.');
     }
 
-    public function update(Request $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
+    /**
+     * Update the specified supplement in storage.
+     *
+     * Updates the details of an existing supplement. Ensures the user owns the supplement
+     * before applying changes.
+     *
+     * @param  \App\Http\Requests\SupplementUpdateRequest  $request  The incoming HTTP request with updated details.
+     * @param  \App\Models\Supplement  $supplement  The supplement to update.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
+     */
+    public function update(SupplementUpdateRequest $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
-        if ($supplement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        // Auth check is handled by the SupplementUpdateRequest
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'brand' => ['nullable', 'string', 'max:255'],
-            'dosage' => ['nullable', 'string', 'max:255'],
-            'servings_remaining' => ['required', 'integer', 'min:0'],
-            'low_stock_threshold' => ['required', 'integer', 'min:0'],
-        ]);
+        /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $validated */
+        $validated = $request->validated();
 
         $supplement->update($validated);
 
         return redirect()->back()->with('success', 'Complément mis à jour.');
     }
 
+    /**
+     * Remove the specified supplement from storage.
+     *
+     * Permanently deletes a supplement record. Ensures the user owns the supplement.
+     *
+     * @param  \App\Models\Supplement  $supplement  The supplement to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
+     */
     public function destroy(Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
         if ($supplement->user_id !== $this->user()->id) {
@@ -69,6 +104,18 @@ class SupplementController extends Controller
         return redirect()->back()->with('success', 'Complément supprimé.');
     }
 
+    /**
+     * Record a consumption event for a supplement.
+     *
+     * Creates a log entry for the consumption and decrements the inventory count.
+     * Prevents the inventory from going below zero.
+     *
+     * @param  \Illuminate\Http\Request  $request  The HTTP request.
+     * @param  \App\Models\Supplement  $supplement  The supplement consumed.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
+     */
     public function consume(Request $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
         if ($supplement->user_id !== $this->user()->id) {
@@ -91,7 +138,13 @@ class SupplementController extends Controller
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, mixed>
+     * Retrieve supplements with their latest log status.
+     *
+     * Fetches all supplements for the user and attaches the latest consumption log.
+     * Transforms the data for the frontend, including an icon and unit.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \Illuminate\Support\Collection<int, mixed> A collection of formatted supplement data.
      */
     protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
     {
@@ -111,7 +164,14 @@ class SupplementController extends Controller
         return $results;
     }
 
-    /** @return array<int, array{date: string, count: float}> */
+    /**
+     * Get the supplement usage history for the last 30 days.
+     *
+     * Aggregates the total number of supplements consumed per day.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array<int, array{date: string, count: float}> An array of daily usage counts.
+     */
     private function getUsageHistory(User $user): array
     {
         $days = 30;
@@ -132,8 +192,14 @@ class SupplementController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, float>  $usageHistoryRaw
-     * @return array<int, array{date: string, count: float}>
+     * Fill missing dates in the usage history with zero values.
+     *
+     * Iterates through the last $days to ensure every date has an entry,
+     * using 0 for days with no recorded consumption.
+     *
+     * @param  \Illuminate\Support\Collection<string, float>  $usageHistoryRaw  The raw aggregated data keyed by date.
+     * @param  int  $days  The number of days to look back.
+     * @return array<int, array{date: string, count: float}> The complete history array with formatted dates.
      */
     private function fillUsageHistory(\Illuminate\Support\Collection $usageHistoryRaw, int $days): array
     {
