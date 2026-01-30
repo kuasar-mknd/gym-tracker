@@ -35,13 +35,49 @@ final class AchievementService
         // NITRO FIX: Pre-load unlocked IDs to avoid N+1 query in loop
         $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
 
-        foreach ($achievements as $achievement) {
-            // Skip if already unlocked - memory check, no query
-            if (in_array($achievement->id, $unlockedAchievementIds)) {
-                continue;
-            }
+        $lockedAchievements = $achievements->reject(fn ($a) => in_array($a->id, $unlockedAchievementIds));
 
-            if ($this->checkAchievement($user, $achievement)) {
+        if ($lockedAchievements->isEmpty()) {
+            return;
+        }
+
+        $types = $lockedAchievements->pluck('type')->unique();
+        $stats = [];
+
+        if ($types->contains('count')) {
+            $stats['count'] = $user->workouts()->count();
+        }
+
+        if ($types->contains('weight_record')) {
+            $stats['weight_record'] = $user->workouts()
+                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->max('sets.weight') ?? 0;
+        }
+
+        if ($types->contains('volume_total')) {
+            $stats['volume_total'] = (float) $user->workouts()
+                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->sum(DB::raw('sets.weight * sets.reps'));
+        }
+
+        if ($types->contains('streak')) {
+            $maxStreakThreshold = (int) $lockedAchievements->where('type', 'streak')->max('threshold');
+            $workoutDates = $this->getUniqueWorkoutDates($user, $maxStreakThreshold);
+            $stats['streak'] = $this->calculateMaxStreak($workoutDates);
+        }
+
+        foreach ($lockedAchievements as $achievement) {
+            $isEligible = match ($achievement->type) {
+                'count' => ($stats['count'] ?? 0) >= $achievement->threshold,
+                'weight_record' => ($stats['weight_record'] ?? 0) >= $achievement->threshold,
+                'volume_total' => ($stats['volume_total'] ?? 0) >= $achievement->threshold,
+                'streak' => ($stats['streak'] ?? 0) >= $achievement->threshold,
+                default => false,
+            };
+
+            if ($isEligible) {
                 $user->achievements()->attach($achievement->id, [
                     'achieved_at' => now(),
                 ]);
