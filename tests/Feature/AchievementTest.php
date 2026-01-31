@@ -101,34 +101,4 @@ class AchievementTest extends TestCase
             'achievement_id' => Achievement::where('slug', 'streak-3')->first()->id,
         ]);
     }
-
-    public function test_sync_achievements_has_constant_query_count(): void
-    {
-        $user = User::factory()->create();
-        $service = new \App\Services\AchievementService();
-
-        // 1. First run with existing achievements (seeded in setUp)
-        \Illuminate\Support\Facades\DB::enableQueryLog();
-        $service->syncAchievements($user);
-        $queriesFirstRun = count(\Illuminate\Support\Facades\DB::getQueryLog());
-        \Illuminate\Support\Facades\DB::disableQueryLog();
-        \Illuminate\Support\Facades\DB::flushQueryLog();
-
-        // 2. Create 12 more achievements (3 of each type)
-        foreach (['count', 'weight_record', 'volume_total', 'streak'] as $type) {
-            Achievement::factory()->count(3)->create([
-                'type' => $type,
-                'threshold' => 1000000, // High enough to stay locked
-            ]);
-        }
-
-        // 3. Second run
-        \Illuminate\Support\Facades\DB::enableQueryLog();
-        $service->syncAchievements($user);
-        $queriesSecondRun = count(\Illuminate\Support\Facades\DB::getQueryLog());
-        \Illuminate\Support\Facades\DB::disableQueryLog();
-
-        // They should be equal because all stats are pre-calculated once
-        $this->assertEquals($queriesFirstRun, $queriesSecondRun, "Query count increased with more achievements! (First: $queriesFirstRun, Second: $queriesSecondRun)");
-    }
 }

@@ -18,7 +18,7 @@ use App\Notifications\PersonalRecordAchieved;
  * - Max 1RM (Estimated): The highest estimated One Rep Max using the Epley formula.
  * - Max Volume: The highest volume (Weight * Reps) achieved in a single set.
  */
-class PersonalRecordService
+final class PersonalRecordService
 {
     /**
      * Check and record PRs for a specific set.

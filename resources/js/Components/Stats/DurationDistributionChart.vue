@@ -22,9 +22,9 @@ const bucketColors = {
 
 const chartData = computed(() => {
     // Expecting data to be [{ label: '< 30 min', count: 5 }, ...]
-    const labels = props.data.map(item => item.label)
-    const counts = props.data.map(item => item.count)
-    const backgroundColor = labels.map(label => bucketColors[label] || '#64748B')
+    const labels = props.data.map((item) => item.label)
+    const counts = props.data.map((item) => item.count)
+    const backgroundColor = labels.map((label) => bucketColors[label] || '#64748B')
 
     return {
         labels: labels,

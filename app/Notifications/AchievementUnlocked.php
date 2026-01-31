@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-class AchievementUnlocked extends Notification implements ShouldQueue
+final class AchievementUnlocked extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -26,16 +26,18 @@ class AchievementUnlocked extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        /** @var \App\Models\User $user */
-        $user = $_notifiable;
-        if ($user->isPushEnabled('achievement')) {
+        /** @var \App\Models\User $_notifiable */
+        if ($_notifiable->isPushEnabled('achievement')) {
             $channels[] = WebPushChannel::class;
         }
 
         return $channels;
     }
 
-    public function toWebPush(object $_notifiable, mixed $_notification): WebPushMessage
+    /**
+     * @param  mixed  $_notification
+     */
+    public function toWebPush(object $_notifiable, $_notification): WebPushMessage
     {
         return (new WebPushMessage())
             ->title('Succès Déverrouillé ! 🏆')
