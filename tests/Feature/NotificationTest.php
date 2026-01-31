@@ -41,7 +41,7 @@ class NotificationTest extends TestCase
             'reps' => 10,
         ]);
 
-        (new PersonalRecordService)->syncSetPRs($set);
+        (new PersonalRecordService())->syncSetPRs($set);
 
         Notification::assertSentTo($user, PersonalRecordAchieved::class);
     }
@@ -66,7 +66,7 @@ class NotificationTest extends TestCase
             'reps' => 10,
         ]);
 
-        (new PersonalRecordService)->syncSetPRs($set);
+        (new PersonalRecordService())->syncSetPRs($set);
 
         Notification::assertNotSentTo($user, PersonalRecordAchieved::class);
     }

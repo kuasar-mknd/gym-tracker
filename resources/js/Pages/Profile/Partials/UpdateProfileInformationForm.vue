@@ -23,8 +23,8 @@ const submit = () => {
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-semibold text-text-main">Informations du profil</h2>
-            <p class="mt-1 text-sm text-text-muted">Modifie tes informations de compte et ton adresse email.</p>
+            <h2 class="text-text-main text-lg font-semibold">Informations du profil</h2>
+            <p class="text-text-muted mt-1 text-sm">Modifie tes informations de compte et ton adresse email.</p>
         </header>
 
         <form @submit.prevent="submit" class="mt-6 space-y-4">
@@ -46,8 +46,8 @@ const submit = () => {
                 required
             />
 
-            <div v-if="mustVerifyEmail && user.email_verified_at === null" class="rounded-xl bg-accent-warning/20 p-3">
-                <p class="text-sm text-accent-warning">
+            <div v-if="mustVerifyEmail && user.email_verified_at === null" class="bg-accent-warning/20 rounded-xl p-3">
+                <p class="text-accent-warning text-sm">
                     Ton adresse email n'est pas vérifiée.
                     <Link
                         :href="route('verification.send')"
@@ -59,7 +59,7 @@ const submit = () => {
                     </Link>
                 </p>
 
-                <p v-if="status === 'verification-link-sent'" class="mt-2 text-sm text-accent-success">
+                <p v-if="status === 'verification-link-sent'" class="text-accent-success mt-2 text-sm">
                     Un nouveau lien a été envoyé.
                 </p>
             </div>
@@ -73,7 +73,7 @@ const submit = () => {
                     leave-active-class="transition ease-in-out"
                     leave-to-class="opacity-0"
                 >
-                    <p v-if="form.recentlySuccessful" class="text-sm text-accent-success">Enregistré ✓</p>
+                    <p v-if="form.recentlySuccessful" class="text-accent-success text-sm">Enregistré ✓</p>
                 </Transition>
             </div>
         </form>
