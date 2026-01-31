@@ -68,6 +68,7 @@ const shadowColors = {
                     v-else-if="icon"
                     class="material-symbols-outlined text-4xl"
                     :class="`text-${color === 'orange' ? 'electric-orange' : color === 'violet' ? 'vivid-violet' : color === 'pink' ? 'hot-pink' : color === 'green' ? 'neon-green' : 'cyan-pure'}`"
+                    aria-hidden="true"
                 >
                     {{ icon }}
                 </span>
