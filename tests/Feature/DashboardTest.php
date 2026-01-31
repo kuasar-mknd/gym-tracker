@@ -39,5 +39,6 @@ test('dashboard displays correct workout stats', function (): void {
             ->where('thisWeekCount', 3)
             ->where('latestWeight', '75.50')
             ->has('recentWorkouts', 5)
+            ->has('durationDistribution')
         );
 });

@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class StoreHabitRequest extends FormRequest
+class StoreSupplementLogRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,13 +24,17 @@ class StoreHabitRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var \App\Models\User|null $user */
+        $user = $this->user();
+
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'color' => ['nullable', 'string', 'max:7', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
-            'icon' => ['nullable', 'string', 'max:255'],
-            'goal_times_per_week' => ['required', 'integer', 'min:1', 'max:7'],
-            'archived' => ['boolean'],
+            'supplement_id' => [
+                'required',
+                'integer',
+                Rule::exists('supplements', 'id')->where(fn ($query) => $query->where('user_id', $user?->id)),
+            ],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'consumed_at' => ['required', 'date'],
         ];
     }
 }

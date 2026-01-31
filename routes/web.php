@@ -21,6 +21,29 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/stats', [\App\Http\Controllers\StatsController::class, 'index'])->name('stats.index');
     Route::get('/stats/exercise/{exercise}', [\App\Http\Controllers\StatsController::class, 'exercise'])->name('stats.exercise');
+
+    Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['index']);
+    Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
+    Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index', 'show']);
+    Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->only(['index', 'show']);
+    Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index', 'show']);
+    Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
+
+    Route::get('/body-metrics', [\App\Http\Controllers\BodyPartMeasurementController::class, 'index'])->name('body-parts.index');
+    Route::get('/body-metrics/{part}', [\App\Http\Controllers\BodyPartMeasurementController::class, 'show'])->name('body-parts.show');
+
+    Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['index']);
+    Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['index']);
+
+    Route::get('/tools', [\App\Http\Controllers\ToolsController::class, 'index'])->name('tools.index');
+    Route::get('/tools/1rm', [\App\Http\Controllers\ToolsController::class, 'oneRepMax'])->name('tools.1rm');
+    Route::get('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'index'])->name('tools.wilks');
+    Route::get('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'index'])->name('tools.macro-calculator');
+    Route::get('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'index'])->name('tools.warmup');
+    Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
+    Route::get('/tools/interval-timer', [\App\Http\Controllers\IntervalTimerController::class, 'index'])->name('tools.interval-timer.index');
+    Route::get('/tools/fasting', [\App\Http\Controllers\FastingController::class, 'index'])->name('tools.fasting.index');
+
     Route::middleware('throttle:60,1')->group(function (): void {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::patch('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences.update');
@@ -64,37 +87,26 @@ Route::middleware('auth')->group(function (): void {
 
         Route::post('/supplements/{supplement}/consume', [\App\Http\Controllers\SupplementController::class, 'consume'])->name('supplements.consume');
         Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['store', 'update', 'destroy']);
+
+        Route::post('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'store'])->name('tools.wilks.store');
+        Route::delete('/tools/wilks/{wilksScore}', [\App\Http\Controllers\WilksScoreController::class, 'destroy'])->name('tools.wilks.destroy');
+
+        Route::post('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'store'])->name('tools.macro-calculator.store');
+        Route::delete('/tools/macro-calculator/{macroCalculation}', [\App\Http\Controllers\MacroCalculatorController::class, 'destroy'])->name('tools.macro-calculator.destroy');
+
+        Route::post('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'update'])->name('tools.warmup.update');
+
+        Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
+        Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
+
+        Route::post('/tools/interval-timer', [\App\Http\Controllers\IntervalTimerController::class, 'store'])->name('tools.interval-timer.store');
+        Route::patch('/tools/interval-timer/{intervalTimer}', [\App\Http\Controllers\IntervalTimerController::class, 'update'])->name('tools.interval-timer.update');
+        Route::delete('/tools/interval-timer/{intervalTimer}', [\App\Http\Controllers\IntervalTimerController::class, 'destroy'])->name('tools.interval-timer.destroy');
+
+        Route::post('/tools/fasting', [\App\Http\Controllers\FastingController::class, 'store'])->name('tools.fasting.store');
+        Route::patch('/tools/fasting/{fast}', [\App\Http\Controllers\FastingController::class, 'update'])->name('tools.fasting.update');
+        Route::delete('/tools/fasting/{fast}', [\App\Http\Controllers\FastingController::class, 'destroy'])->name('tools.fasting.destroy');
     });
-
-    Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['index']);
-    Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
-    Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index', 'show']);
-    Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->only(['index', 'show']);
-    Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index']);
-    Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
-
-    Route::get('/body-metrics', [\App\Http\Controllers\BodyPartMeasurementController::class, 'index'])->name('body-parts.index');
-    Route::get('/body-metrics/{part}', [\App\Http\Controllers\BodyPartMeasurementController::class, 'show'])->name('body-parts.show');
-
-    Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['index']);
-    Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['index']);
-
-    Route::get('/tools', [\App\Http\Controllers\ToolsController::class, 'index'])->name('tools.index');
-    Route::get('/tools/1rm', [\App\Http\Controllers\ToolsController::class, 'oneRepMax'])->name('tools.1rm');
-    Route::get('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'index'])->name('tools.wilks');
-    Route::post('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'store'])->name('tools.wilks.store');
-    Route::delete('/tools/wilks/{wilksScore}', [\App\Http\Controllers\WilksScoreController::class, 'destroy'])->name('tools.wilks.destroy');
-
-    Route::get('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'index'])->name('tools.macro-calculator');
-    Route::post('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'store'])->name('tools.macro-calculator.store');
-    Route::delete('/tools/macro-calculator/{macroCalculation}', [\App\Http\Controllers\MacroCalculatorController::class, 'destroy'])->name('tools.macro-calculator.destroy');
-
-    Route::get('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'index'])->name('tools.warmup');
-    Route::post('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'update'])->name('tools.warmup.update');
-
-    Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
-    Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
-    Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
 });
 
 // Social Login

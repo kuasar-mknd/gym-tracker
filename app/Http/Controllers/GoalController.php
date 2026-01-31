@@ -9,14 +9,15 @@ use App\Models\Exercise;
 use App\Models\Goal;
 use App\Services\GoalService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class GoalController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(protected GoalService $goalService) {}
+    public function __construct(protected GoalService $goalService)
+    {
+    }
 
     public function index(): \Inertia\Response
     {
@@ -26,7 +27,7 @@ class GoalController extends Controller
                 ->latest()
                 ->get()
                 ->append(['progress', 'unit']),
-            'exercises' => Cache::remember('exercises_list_'.$this->user()->id, 3600, fn () => Exercise::forUser($this->user()->id)->orderBy('name')->get()),
+            'exercises' => Exercise::getCachedForUser($this->user()->id),
             'measurementTypes' => [
                 ['value' => 'weight', 'label' => 'Poids de corps'],
                 ['value' => 'waist', 'label' => 'Tour de taille'],
@@ -46,7 +47,7 @@ class GoalController extends Controller
             $data['start_value'] = 0;
         }
 
-        $goal = new Goal;
+        $goal = new Goal();
         $goal->fill($data);
         $goal->user_id = $this->user()->id;
         $goal->save();

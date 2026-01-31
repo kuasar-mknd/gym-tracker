@@ -143,7 +143,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @return BelongsToMany<Achievement, $this>
+     * @return BelongsToMany<Achievement, $this, \Illuminate\Database\Eloquent\Relations\Pivot, 'pivot'>
      */
     public function achievements(): BelongsToMany
     {
@@ -190,6 +190,30 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function waterLogs(): HasMany
     {
         return $this->hasMany(WaterLog::class);
+    }
+
+    /**
+     * @return HasMany<IntervalTimer, $this>
+     */
+    public function intervalTimers(): HasMany
+    {
+        return $this->hasMany(IntervalTimer::class);
+    }
+
+    /**
+     * @return HasMany<Fast, $this>
+     */
+    public function fasts(): HasMany
+    {
+        return $this->hasMany(Fast::class);
+    }
+
+    /**
+     * @return HasMany<SupplementLog, $this>
+     */
+    public function supplementLogs(): HasMany
+    {
+        return $this->hasMany(SupplementLog::class);
     }
 
     public function isPushEnabled(string $type): bool

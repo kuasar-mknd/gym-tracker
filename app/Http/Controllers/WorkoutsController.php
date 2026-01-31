@@ -11,7 +11,6 @@ use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 /**
@@ -25,7 +24,9 @@ class WorkoutsController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(protected \App\Services\StatsService $statsService) {}
+    public function __construct(protected \App\Services\StatsService $statsService)
+    {
+    }
 
     /**
      * Display a listing of the user's workouts.
@@ -40,8 +41,12 @@ class WorkoutsController extends Controller
         $this->authorize('viewAny', Workout::class);
 
         $data = $fetchWorkouts->execute($this->user());
+        $userId = $this->user()->id;
 
-        return Inertia::render('Workouts/Index', $data);
+        return Inertia::render('Workouts/Index', [
+            ...$data,
+            'exercises' => Inertia::defer(fn (): \Illuminate\Database\Eloquent\Collection => Exercise::getCachedForUser($userId)),
+        ]);
     }
 
     /**
@@ -59,10 +64,7 @@ class WorkoutsController extends Controller
     {
         $this->authorize('view', $workout);
 
-        // NITRO FIX: Cache exercises list for 1 hour
-        // Security: Filter exercises by user to prevent information disclosure
-        $userId = $this->user()->id;
-        $exercises = Cache::remember("exercises_list_{$userId}", 3600, fn () => Exercise::forUser($userId)->orderBy('name')->get());
+        $exercises = Exercise::getCachedForUser($this->user()->id);
 
         return Inertia::render('Workouts/Show', [
             'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),
@@ -96,7 +98,7 @@ class WorkoutsController extends Controller
         $workout->user_id = $this->user()->id;
         $workout->save();
 
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return redirect()->route('workouts.show', $workout);
     }
@@ -122,7 +124,7 @@ class WorkoutsController extends Controller
 
         $workout->delete();
 
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return redirect()->route('workouts.index');
     }

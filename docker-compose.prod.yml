@@ -23,6 +23,10 @@ services:
             CACHE_STORE: redis
             QUEUE_CONNECTION: redis
             DB_SSL_VERIFY: 'false'
+            SENTRY_DSN: ${SENTRY_DSN}
+            SENTRY_TRACES_SAMPLE_RATE: 1.0
+            SENTRY_PROFILES_SAMPLE_RATE: 1.0
+            SENTRY_SEND_DEFAULT_PII: 'true'
             FRANKENPHP_WAIT_FOR_WORKER: '60s'
         networks:
             - frontend
@@ -77,6 +81,10 @@ services:
             CACHE_STORE: redis
             QUEUE_CONNECTION: redis
             DB_SSL_VERIFY: 'false'
+            SENTRY_DSN: ${SENTRY_DSN}
+            SENTRY_TRACES_SAMPLE_RATE: 1.0
+            SENTRY_PROFILES_SAMPLE_RATE: 1.0
+            SENTRY_SEND_DEFAULT_PII: 'true'
         networks:
             - backend
         depends_on:

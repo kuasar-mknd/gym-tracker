@@ -7,6 +7,7 @@ import axios from 'axios'
 
 const MuscleDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/MuscleDistributionChart.vue'))
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
+const DurationHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/DurationHistoryChart.vue'))
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
@@ -17,6 +18,7 @@ const props = defineProps({
     monthlyComparison: Object,
     weightHistory: Array,
     bodyFatHistory: Array,
+    durationHistory: Array,
     exercises: Array,
     latestWeight: Number,
     weightChange: Number,
@@ -238,6 +240,25 @@ watch(selectedExercise, (newVal) => {
                 <div v-else class="flex h-48 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
                     <p class="text-text-muted text-sm">Pas encore de données de volume</p>
+                </div>
+            </GlassCard>
+
+            <!-- Duration History Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
+                <div class="mb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                            Durée des Séances
+                        </h3>
+                        <p class="text-text-muted text-xs font-semibold">Historique des 30 dernières séances</p>
+                    </div>
+                </div>
+                <div v-if="durationHistory && durationHistory.length > 0" class="h-48">
+                    <DurationHistoryChart :data="durationHistory" />
+                </div>
+                <div v-else class="flex h-48 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">timer_off</span>
+                    <p class="text-text-muted text-sm">Pas encore de données de durée</p>
                 </div>
             </GlassCard>
 
