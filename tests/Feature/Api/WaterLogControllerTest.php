@@ -3,10 +3,11 @@
 use App\Models\User;
 use App\Models\WaterLog;
 use Laravel\Sanctum\Sanctum;
+
+use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
 
 test('authenticated user can list water logs', function (): void {
     $user = User::factory()->create();
