@@ -193,6 +193,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(WaterLog::class);
     }
 
+    /**
+     * @return HasMany<IntervalTimer, $this>
+     */
+    public function intervalTimers(): HasMany
+    {
+        return $this->hasMany(IntervalTimer::class);
+    }
+
     public function isPushEnabled(string $type): bool
     {
         return (bool) $this->notificationPreferences()
