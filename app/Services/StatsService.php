@@ -413,7 +413,7 @@ class StatsService
                 $data = $this->fetchMonthlyVolumeHistoryData($user, $months);
 
                 // Group by month YYYY-MM
-                $grouped = $data->groupBy(fn ($row) => Carbon::parse($row->started_at)->format('Y-m'));
+                $grouped = $data->groupBy(fn ($row): string => Carbon::parse($row->started_at)->format('Y-m'));
 
                 // Fill last X months (including current)
                 $result = [];

@@ -41,13 +41,13 @@ class ExerciseController extends Controller
             ->get()
             ->sortByDesc('workout.started_at')
             ->values()
-            ->map(fn ($line) => [
+            ->map(fn ($line): array => [
                 'id' => $line->id,
                 'workout_id' => $line->workout->id,
                 'workout_name' => $line->workout->name,
                 'date' => $line->workout->started_at->format('Y-m-d'),
                 'formatted_date' => $line->workout->started_at->format('d/m/Y'),
-                'sets' => $line->sets->map(fn ($set) => [
+                'sets' => $line->sets->map(fn ($set): array => [
                     'weight' => $set->weight,
                     'reps' => $set->reps,
                     '1rm' => $set->weight * (1 + $set->reps / 30),
