@@ -96,6 +96,8 @@ class Exercise extends Model
 
     protected static function booted(): void
     {
+        parent::booted();
+
         static::saved(fn (Exercise $exercise) => $exercise->invalidateCache());
         static::deleted(fn (Exercise $exercise) => $exercise->invalidateCache());
     }
