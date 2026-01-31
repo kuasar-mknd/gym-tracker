@@ -6,8 +6,27 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
+/**
+ * Habits/Index Page
+ *
+ * This component displays the user's habits list and a weekly calendar view.
+ * It allows users to:
+ * - View their active habits and progress.
+ * - Create new habits.
+ * - Edit existing habits.
+ * - Delete habits.
+ * - Toggle habit completion for specific days in the current week.
+ */
 const props = defineProps({
+    /**
+     * List of user's active habits with their logs for the current week.
+     * @type {Array<{id: number, name: string, description: string|null, color: string, icon: string, goal_times_per_week: number, logs: Array}>}
+     */
     habits: Array,
+    /**
+     * Array of date objects representing the current week.
+     * @type {Array<{date: string, day: string, day_name: string, day_short: string, day_num: number, is_today: boolean}>}
+     */
     weekDates: Array,
 })
 
@@ -59,12 +78,22 @@ const colors = [
     'bg-rose-500',
 ]
 
+/**
+ * Opens the modal to create a new habit.
+ * Resets the form and editing state.
+ */
 const openAddForm = () => {
     form.reset()
     editingHabit.value = null
     showAddForm.value = true
 }
 
+/**
+ * Opens the modal to edit an existing habit.
+ * Populates the form with the habit's data.
+ *
+ * @param {Object} habit - The habit object to edit.
+ */
 const editHabit = (habit) => {
     editingHabit.value = habit
     form.name = habit.name
@@ -75,6 +104,10 @@ const editHabit = (habit) => {
     showAddForm.value = true
 }
 
+/**
+ * Submits the form to create or update a habit.
+ * Handles both store (POST) and update (PUT) requests.
+ */
 const submit = () => {
     if (editingHabit.value) {
         form.put(route('habits.update', editingHabit.value.id), {
@@ -90,12 +123,24 @@ const submit = () => {
     }
 }
 
+/**
+ * Deletes a habit after confirmation.
+ *
+ * @param {Object} habit - The habit to delete.
+ */
 const deleteHabit = (habit) => {
     if (confirm('Voulez-vous vraiment supprimer cette habitude ?')) {
         router.delete(route('habits.destroy', habit.id))
     }
 }
 
+/**
+ * Toggles the completion status of a habit for a specific date.
+ * Sends a POST request to the server.
+ *
+ * @param {Object} habit - The habit to toggle.
+ * @param {string} date - The date to toggle (YYYY-MM-DD).
+ */
 const toggleHabit = (habit, date) => {
     router.post(
         route('habits.toggle', habit.id),
@@ -110,14 +155,33 @@ const toggleHabit = (habit, date) => {
     )
 }
 
+/**
+ * Checks if a habit is completed on a specific date.
+ *
+ * @param {Object} habit - The habit object.
+ * @param {string} date - The date to check.
+ * @returns {boolean} True if a log exists for the date.
+ */
 const isCompleted = (habit, date) => {
     return habit.logs.some((log) => log.date === date)
 }
 
+/**
+ * Gets the number of times a habit has been completed in the current week.
+ *
+ * @param {Object} habit - The habit object.
+ * @returns {number} The completion count.
+ */
 const getCompletionCount = (habit) => {
     return habit.logs.length
 }
 
+/**
+ * Calculates the completion progress percentage for the week.
+ *
+ * @param {Object} habit - The habit object.
+ * @returns {number} The progress percentage (0-100).
+ */
 const getProgressPercent = (habit) => {
     const count = getCompletionCount(habit)
     const goal = habit.goal_times_per_week
