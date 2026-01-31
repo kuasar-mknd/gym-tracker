@@ -50,7 +50,7 @@ class TrainingReminderCommand extends Command
                 if (! $lastWorkout || $lastWorkout->started_at->lt($threshold)) {
                     // Only notify if we haven't notified them recently to avoid daily spam?
                     // For now, simplicity: if they are beyond threshold, notify.
-                    $user->notify(new TrainingReminder);
+                    $user->notify(new TrainingReminder());
                     $count++;
                 }
             }

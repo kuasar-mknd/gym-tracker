@@ -12,7 +12,8 @@ final class FetchDashboardDataAction
 {
     public function __construct(
         protected StatsService $statsService
-    ) {}
+    ) {
+    }
 
     /**
      * Fetch dashboard data for the given user.
@@ -27,7 +28,8 @@ final class FetchDashboardDataAction
      *     weeklyVolume: float,
      *     volumeChange: float|int,
      *     weeklyVolumeTrend: array<int, array{date: string, day_label: string, volume: float}>,
-     *     volumeTrend: array<int, array{date: string, day_name: string, volume: float}>
+     *     volumeTrend: array<int, array{date: string, day_name: string, volume: float}>,
+     *     durationDistribution: array<int, array{label: string, count: int}>
      * }
      */
     public function execute(User $user): array
@@ -39,6 +41,7 @@ final class FetchDashboardDataAction
             $weeklyStats = $this->statsService->getWeeklyVolumeComparison($user);
             $weeklyTrend = $this->statsService->getWeeklyVolumeTrend($user);
             $volumeTrend = $this->statsService->getDailyVolumeTrend($user, 7);
+            $durationDistribution = $this->statsService->getDurationDistribution($user);
 
             return [
                 'workoutsCount' => $user->workouts()->count(),
@@ -51,6 +54,7 @@ final class FetchDashboardDataAction
                 'volumeChange' => $weeklyStats['percentage'],
                 'weeklyVolumeTrend' => $weeklyTrend,
                 'volumeTrend' => $volumeTrend,
+                'durationDistribution' => $durationDistribution,
             ];
         });
     }

@@ -15,22 +15,19 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct(public PersonalRecord $personalRecord) {}
+    public function __construct(public PersonalRecord $personalRecord)
+    {
+    }
 
     /**
-     * Get the notification's delivery channels.
-     *
-     * @param  \App\Models\User  $notifiable
      * @return array<int, string>
      */
-    public function via(object $notifiable): array
+    public function via(object $_notifiable): array
     {
         $channels = ['database'];
 
-        if ($notifiable->isPushEnabled('personal_record')) {
+        /** @var \App\Models\User $_notifiable */
+        if ($_notifiable->isPushEnabled('personal_record')) {
             $channels[] = WebPushChannel::class;
         }
 
@@ -38,26 +35,22 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     }
 
     /**
-     * @param  \App\Models\User  $notifiable
-     * @param  mixed  $notification
+     * @param  mixed  $_notification
      */
-    public function toWebPush(object $notifiable, $notification): WebPushMessage
+    public function toWebPush(object $_notifiable, $_notification): WebPushMessage
     {
-        return (new WebPushMessage)
+        return (new WebPushMessage())
             ->title('Nouveau Record ! 🏆')
             ->icon('/logo.svg')
             /** @phpstan-ignore-next-line */
-            ->body((string) ($this->toArray($notifiable)['message'] ?? ''))
+            ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
             ->action('Voir mes stats', url('/stats'));
     }
 
     /**
-     * Get the array representation of the notification.
-     *
-     * @param  \App\Models\User  $notifiable
-     * @return array<string, mixed>
+     * @return array<string, \Illuminate\Support\Carbon|int|string|bool|float|array<int, mixed>|null>
      */
-    public function toArray(object $notifiable): array
+    public function toArray(object $_notifiable): array
     {
         $typeLabel = match ($this->personalRecord->type) {
             'max_weight' => 'Poids Maximum',
