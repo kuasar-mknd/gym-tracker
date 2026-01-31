@@ -144,6 +144,10 @@
                 <div class="space-y-5">
                     <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
 
+                    <div v-if="history.length > 0" class="mb-6">
+                        <WilksScoreChart :data="history" />
+                    </div>
+
                     <div v-if="history.length === 0" class="py-12 text-center">
                         <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">history</span>
                         <p class="text-text-muted font-medium">Aucun historique.</p>
@@ -190,11 +194,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+
+const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
 
 const props = defineProps({
     history: {
