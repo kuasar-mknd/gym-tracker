@@ -6,7 +6,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Exercise;
 use App\Services\StatsService;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class StatsController extends Controller
@@ -66,6 +65,6 @@ class StatsController extends Controller
     /** @return \Illuminate\Database\Eloquent\Collection<int, Exercise> */
     private function getFilteredExercises(int $userId): \Illuminate\Database\Eloquent\Collection
     {
-        return Cache::remember("exercises_list_{$userId}", 3600, fn () => Exercise::forUser($userId)->orderBy('name')->get());
+        return Exercise::getCachedForUser($userId);
     }
 }

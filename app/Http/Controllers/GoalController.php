@@ -9,7 +9,6 @@ use App\Models\Exercise;
 use App\Models\Goal;
 use App\Services\GoalService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class GoalController extends Controller
@@ -28,7 +27,7 @@ class GoalController extends Controller
                 ->latest()
                 ->get()
                 ->append(['progress', 'unit']),
-            'exercises' => Cache::remember('exercises_list_'.$this->user()->id, 3600, fn () => Exercise::forUser($this->user()->id)->orderBy('name')->get()),
+            'exercises' => Exercise::getCachedForUser($this->user()->id),
             'measurementTypes' => [
                 ['value' => 'weight', 'label' => 'Poids de corps'],
                 ['value' => 'waist', 'label' => 'Tour de taille'],
