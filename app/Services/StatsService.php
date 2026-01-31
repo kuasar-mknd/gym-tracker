@@ -333,31 +333,29 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            function () use ($user, $limit): array {
-                return DB::table('workouts')
-                    ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                    ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                    ->where('workouts.user_id', $user->id)
-                    ->whereNotNull('workouts.ended_at')
-                    ->select([
-                        'workouts.id',
-                        'workouts.started_at',
-                        'workouts.name',
-                        DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'),
-                    ])
-                    ->groupBy(['workouts.id', 'workouts.started_at', 'workouts.name'])
-                    ->orderBy('workouts.started_at', 'desc')
-                    ->limit($limit)
-                    ->get()
-                    ->map(fn (object $row): array => [
-                        'date' => Carbon::parse($row->started_at)->format('d/m'),
-                        'volume' => (float) $row->volume,
-                        'name' => (string) $row->name,
-                    ])
-                    ->reverse()
-                    ->values()
-                    ->toArray();
-            }
+            fn(): array => DB::table('workouts')
+                ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->where('workouts.user_id', $user->id)
+                ->whereNotNull('workouts.ended_at')
+                ->select([
+                    'workouts.id',
+                    'workouts.started_at',
+                    'workouts.name',
+                    DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'),
+                ])
+                ->groupBy(['workouts.id', 'workouts.started_at', 'workouts.name'])
+                ->orderBy('workouts.started_at', 'desc')
+                ->limit($limit)
+                ->get()
+                ->map(fn (object $row): array => [
+                    'date' => Carbon::parse($row->started_at)->format('d/m'),
+                    'volume' => (float) $row->volume,
+                    'name' => (string) $row->name,
+                ])
+                ->reverse()
+                ->values()
+                ->toArray()
         );
     }
 
