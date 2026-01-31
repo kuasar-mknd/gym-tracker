@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MacroCalculation extends Model
 {
+    /** @use HasFactory<\Database\Factories\MacroCalculationFactory> */
     use HasFactory;
 
     protected $fillable = [

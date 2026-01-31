@@ -32,8 +32,8 @@ class MacroCalculationResource extends JsonResource
             'protein' => $this->protein,
             'fat' => $this->fat,
             'carbs' => $this->carbs,
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }

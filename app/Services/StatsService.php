@@ -429,7 +429,8 @@ class StatsService
                     $monthData = $grouped->get($key);
 
                     if ($monthData) {
-                        $volume = (float) $monthData->sum('volume');
+                        $sum = $monthData->sum('volume');
+                        $volume = is_numeric($sum) ? floatval($sum) : 0.0;
                     }
 
                     $result[] = [
@@ -692,7 +693,7 @@ class StatsService
             ->groupBy('date')
             ->pluck('volume', 'date')
             ->map(function (mixed $value): float {
-                return is_numeric($value) ? (float) $value : 0.0;
+                return is_numeric($value) ? floatval($value) : 0.0;
             });
     }
 
@@ -809,7 +810,7 @@ class StatsService
         return [
             'date' => Carbon::parse($m->measured_at)->format('d/m'),
             'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
-            'body_fat' => is_numeric($m->body_fat) ? floatval($m->body_fat) : 0.0,
+            'body_fat' => (float) $m->body_fat,
         ];
     }
 
