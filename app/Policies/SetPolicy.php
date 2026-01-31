@@ -7,7 +7,7 @@ namespace App\Policies;
 use App\Models\Set;
 use App\Models\User;
 
-class SetPolicy
+final class SetPolicy
 {
     /**
      * Determine whether the user can view any models.

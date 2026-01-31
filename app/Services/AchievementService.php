@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * based on user activity (workouts, volume, records, streaks).
  * It calculates eligibility for various achievement types and unlocks them if criteria are met.
  */
-class AchievementService
+final class AchievementService
 {
     /**
      * Synchronize all achievements for a user.

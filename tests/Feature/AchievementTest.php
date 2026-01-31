@@ -30,7 +30,7 @@ class AchievementTest extends TestCase
         $user = User::factory()->create();
 
         // Perform first workout
-        $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+        $user->workouts()->create(['started_at' => now(), 'completed_at' => now()]);
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,
