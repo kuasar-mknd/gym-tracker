@@ -31,10 +31,11 @@ test('user can manage exercises from mobile plus menu', function (): void {
             ->assertPathIs('/exercises')
 
             // 3. Add a new exercise
-            ->waitForText('AUCUN EXERCICE', 15)
+            ->resize(1280, 800)
+            ->waitForText("Aucun exercice pour l'instant", 15)
             ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
-        $browser->waitForText('NOUVEL EXERCICE', 15)
+        $browser->waitForText('Nouvel exercice', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->select('select', 'strength')
             ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
@@ -44,7 +45,7 @@ test('user can manage exercises from mobile plus menu', function (): void {
         // 4. Edit the exercise
         $browser->script("document.querySelector('[data-testid=\"edit-exercise-button\"]').click();");
 
-        $browser->waitForText('SAUVEGARDER', 15)
+        $browser->waitForText('Sauvegarder', 15)
             ->type('input[value="Dusk Test Exercise"]', 'Dusk Test Exercise Updated');
 
         $browser->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
@@ -56,6 +57,6 @@ test('user can manage exercises from mobile plus menu', function (): void {
 
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
-            ->waitForText('AUCUN EXERCICE', 15);
+            ->waitForText("Aucun exercice pour l'instant", 15);
     });
 });

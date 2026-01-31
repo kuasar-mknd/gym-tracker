@@ -31,8 +31,8 @@ class WorkoutTemplateUpdateRequest extends FormRequest
             'exercises.*.id' => [
                 'required',
                 'integer',
-                Rule::exists('exercises', 'id')->where(function ($query) {
-                    $query->where(function ($q) {
+                Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
                         $q->where('user_id', $this->user()?->id)
                             ->orWhereNull('user_id');
                     });

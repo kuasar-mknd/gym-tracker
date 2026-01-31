@@ -74,8 +74,7 @@ test('can update a macro calculation', function (): void {
         'gender' => 'female',
         'age' => 25,
         'height' => 165,
-        'weight' => 60,
-        'activity_level' => 'active', // 'active' is not in list? wait 'extra'?
+        'weight' => 60, // 'active' is not in list? wait 'extra'?
         // 'sedentary,light,moderate,very,extra'
         'activity_level' => 'very',
         'goal' => 'maintain',

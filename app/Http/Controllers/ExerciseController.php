@@ -31,33 +31,29 @@ class ExerciseController extends Controller
 
         // Fetch history
         $history = $exercise->workoutLines()
-            ->with(['workout' => function ($query) {
+            ->with(['workout' => function ($query): void {
                 $query->select('id', 'name', 'started_at', 'ended_at');
             }, 'sets'])
-            ->whereHas('workout', function ($query) {
+            ->whereHas('workout', function ($query): void {
                 $query->where('user_id', $this->user()->id)
                     ->whereNotNull('ended_at');
             })
             ->get()
             ->sortByDesc('workout.started_at')
             ->values()
-            ->map(function ($line) {
-                return [
-                    'id' => $line->id,
-                    'workout_id' => $line->workout->id,
-                    'workout_name' => $line->workout->name,
-                    'date' => $line->workout->started_at->format('Y-m-d'),
-                    'formatted_date' => $line->workout->started_at->format('d/m/Y'),
-                    'sets' => $line->sets->map(function ($set) {
-                        return [
-                            'weight' => $set->weight,
-                            'reps' => $set->reps,
-                            '1rm' => $set->weight * (1 + $set->reps / 30),
-                        ];
-                    }),
-                    'best_1rm' => $line->sets->max(fn ($set) => $set->weight * (1 + $set->reps / 30)),
-                ];
-            });
+            ->map(fn ($line) => [
+                'id' => $line->id,
+                'workout_id' => $line->workout->id,
+                'workout_name' => $line->workout->name,
+                'date' => $line->workout->started_at->format('Y-m-d'),
+                'formatted_date' => $line->workout->started_at->format('d/m/Y'),
+                'sets' => $line->sets->map(fn ($set) => [
+                    'weight' => $set->weight,
+                    'reps' => $set->reps,
+                    '1rm' => $set->weight * (1 + $set->reps / 30),
+                ]),
+                'best_1rm' => $line->sets->max(fn ($set): int|float => $set->weight * (1 + $set->reps / 30)),
+            ]);
 
         return Inertia::render('Exercises/Show', [
             'exercise' => $exercise,

@@ -413,9 +413,7 @@ class StatsService
                 $data = $this->fetchMonthlyVolumeHistoryData($user, $months);
 
                 // Group by month YYYY-MM
-                $grouped = $data->groupBy(function ($row) {
-                    return Carbon::parse($row->started_at)->format('Y-m');
-                });
+                $grouped = $data->groupBy(fn ($row) => Carbon::parse($row->started_at)->format('Y-m'));
 
                 // Fill last X months (including current)
                 $result = [];
@@ -692,9 +690,7 @@ class StatsService
             )
             ->groupBy('date')
             ->pluck('volume', 'date')
-            ->map(function (mixed $value): float {
-                return is_numeric($value) ? floatval($value) : 0.0;
-            });
+            ->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
     }
 
     /**
