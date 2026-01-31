@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Services\StatsService;
 use Illuminate\Support\Facades\Cache;
 
-final class FetchDashboardDataAction
+class FetchDashboardDataAction
 {
     public function __construct(
         protected StatsService $statsService

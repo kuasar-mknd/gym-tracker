@@ -7,7 +7,7 @@ namespace App\Policies;
 use App\Models\DailyJournal;
 use App\Models\User;
 
-final class DailyJournalPolicy
+class DailyJournalPolicy
 {
     /**
      * Determine whether the user can view any models.

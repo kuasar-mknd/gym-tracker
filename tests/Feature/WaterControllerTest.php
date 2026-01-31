@@ -14,12 +14,13 @@ test('authenticated user can view water tracker', function (): void {
     actingAs($user)
         ->get(route('tools.water.index'))
         ->assertStatus(200)
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-            ->component('Tools/WaterTracker')
-            ->has('logs')
-            ->has('todayTotal')
-            ->has('history')
-            ->has('goal')
+        ->assertInertia(
+            fn (Assert $page): Assert => $page
+                ->component('Tools/WaterTracker')
+                ->has('logs')
+                ->has('todayTotal')
+                ->has('history')
+                ->has('goal')
         );
 });
 
@@ -119,8 +120,9 @@ test('index shows correct today total', function (): void {
 
     actingAs($user)
         ->get(route('tools.water.index'))
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-            ->where('todayTotal', 500)
-            ->has('logs', 2)
+        ->assertInertia(
+            fn (Assert $page): Assert => $page
+                ->where('todayTotal', 500)
+                ->has('logs', 2)
         );
 });

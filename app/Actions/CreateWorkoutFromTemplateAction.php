@@ -9,7 +9,7 @@ use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Support\Facades\DB;
 
-final class CreateWorkoutFromTemplateAction
+class CreateWorkoutFromTemplateAction
 {
     /**
      * Create a new workout from an existing template.

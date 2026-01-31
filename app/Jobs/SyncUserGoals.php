@@ -7,7 +7,7 @@ namespace App\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-final class SyncUserGoals implements ShouldQueue
+class SyncUserGoals implements ShouldQueue
 {
     use Queueable;
 
