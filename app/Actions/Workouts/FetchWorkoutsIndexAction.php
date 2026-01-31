@@ -33,6 +33,10 @@ final class FetchWorkoutsIndexAction
      *         date: string,
      *         volume: float,
      *         name: string
+     *     }>,
+     *     monthlyVolume: array<int, array{
+     *         month: string,
+     *         volume: float
      *     }>
      * }
      */
@@ -49,6 +53,10 @@ final class FetchWorkoutsIndexAction
                 $user,
                 20
             ),
+            'monthlyVolume' => $this->statsService->getMonthlyVolumeHistory(
+                $user,
+                6
+            ),
         ];
     }
 
@@ -58,12 +66,14 @@ final class FetchWorkoutsIndexAction
     protected function getMonthlyFrequency(
         User $user
     ): Collection {
-        /** @var Collection<int, array{month: string, count: int}> */
-        return Cache::remember(
+        /** @var Collection<int, array{month: string, count: int}> $frequency */
+        $frequency = Cache::remember(
             "stats.monthly_frequency.{$user->id}",
             now()->addHour(),
             fn (): Collection => $this->calculateMonthlyFrequency($user)
         );
+
+        return $frequency;
     }
 
     /**
@@ -103,7 +113,11 @@ final class FetchWorkoutsIndexAction
     private function getWorkouts(
         User $user
     ): \Illuminate\Pagination\LengthAwarePaginator {
-        return Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
+        return Workout::with([
+            'workoutLines' => function ($query): void {
+                $query->with('exercise')->withCount('sets');
+            },
+        ])
             ->where('user_id', $user->id)
             ->latest('started_at')
             ->paginate(20);

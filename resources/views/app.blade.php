@@ -26,6 +26,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet">
 
+    <!-- Sentry Runtime Config -->
+    <script nonce="{{ Vite::cspNonce() }}">
+        window.SENTRY_CONFIG = {
+            dsn: '{{ config('sentry.dsn') }}',
+            environment: '{{ app()->environment() }}'
+        };
+    </script>
+
     <!-- Scripts -->
     @routes(nonce: Vite::cspNonce())
     @vite(['resources/js/main.js', "resources/js/Pages/{$page['component']}.vue"])

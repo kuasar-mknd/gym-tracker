@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Tools\FetchWaterHistoryAction;
 use App\Http\Requests\StoreWaterLogRequest;
 use App\Models\User;
 use App\Models\WaterLog;
@@ -14,7 +15,7 @@ use Inertia\Response;
 
 class WaterController extends Controller
 {
-    public function index(): Response
+    public function index(FetchWaterHistoryAction $fetchWaterHistory): Response
     {
         /** @var User $user */
         $user = $this->user();
@@ -27,7 +28,7 @@ class WaterController extends Controller
         return Inertia::render('Tools/WaterTracker', [
             'logs' => $todayLogs,
             'todayTotal' => $todayLogs->sum('amount'),
-            'history' => $this->getWaterHistory($user),
+            'history' => $fetchWaterHistory->execute($user),
             'goal' => 2500, // Hardcoded goal for now
         ]);
     }
@@ -54,37 +55,5 @@ class WaterController extends Controller
         $waterLog->delete();
 
         return redirect()->back();
-    }
-
-    /** @return array<int, array{date: string, day_name: string, total: float}> */
-    private function getWaterHistory(User $user): array
-    {
-        $startDate = Carbon::now()->subDays(6)->startOfDay();
-        $historyLogs = $user->waterLogs()
-            ->where('consumed_at', '>=', $startDate)
-            ->get();
-
-        $history = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $dateString = $date->format('Y-m-d');
-
-            $dayTotal = $historyLogs->filter(function (WaterLog $log) use ($dateString): bool {
-                /** @var \Carbon\Carbon $consumedAt */
-                $consumedAt = $log->consumed_at;
-
-                return $consumedAt->format('Y-m-d') === $dateString;
-            })->sum('amount');
-            /** @var float|int $dayTotal */
-            $dayTotalValue = (float) $dayTotal;
-
-            $history[] = [
-                'date' => $dateString,
-                'day_name' => $date->dayName,
-                'total' => $dayTotalValue,
-            ];
-        }
-
-        return $history;
     }
 }

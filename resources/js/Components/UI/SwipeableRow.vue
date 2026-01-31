@@ -6,6 +6,10 @@
  * - Swipe right (positive offset): Reveals `action-left` slot
  * - Swipe left (negative offset): Reveals `action-right` slot
  * - Supports "snap" to keep actions visible.
+ *
+ * Refactored for "Liquid Glass" aesthetic:
+ * - Transparent backgrounds to allow GlassCard slots to shine.
+ * - Dynamic opacity for actions to prevent bleed-through.
  */
 import { ref, computed } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
@@ -28,6 +32,12 @@ const containerWidth = ref(0)
 const style = computed(() => ({
     transform: `translateX(${offset.value}px)`,
     transition: isDragging.value ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+}))
+
+// Opacity for the actions layer to prevent them from showing through semi-transparent glass
+const actionStyle = computed(() => ({
+    opacity: Math.min(1, Math.abs(offset.value) / 20),
+    transition: isDragging.value ? 'none' : 'opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
 }))
 
 // Methods
@@ -83,9 +93,9 @@ defineExpose({ close })
 </script>
 
 <template>
-    <div class="relative overflow-hidden rounded-xl bg-white dark:bg-slate-800">
+    <div class="relative overflow-hidden rounded-3xl">
         <!-- Background Actions Layer -->
-        <div class="absolute inset-0 flex w-full">
+        <div class="absolute inset-0 flex w-full" :style="actionStyle">
             <!-- Left Action Slot (revealed when swiping right) -->
             <div class="flex w-1/2 items-center justify-start pl-4" v-if="$slots['action-left']">
                 <slot name="action-left" />
@@ -99,7 +109,7 @@ defineExpose({ close })
 
         <!-- Foreground Content Layer -->
         <div
-            class="relative z-10 touch-pan-y bg-white dark:bg-slate-800"
+            class="relative z-10 touch-pan-y rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-transform active:scale-[0.99]"
             :style="style"
             @touchstart="onTouchStart"
             @touchmove="onTouchMove"

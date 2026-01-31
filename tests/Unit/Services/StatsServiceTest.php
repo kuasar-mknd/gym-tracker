@@ -22,7 +22,7 @@ class StatsServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->statsService = new StatsService;
+        $this->statsService = new StatsService();
     }
 
     public function test_can_calculate_volume_trend(): void
@@ -155,5 +155,74 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(400, $comparison['previous_week_volume']);
         $this->assertEquals(100, $comparison['difference']);
         $this->assertEquals(25.0, $comparison['percentage']);
+    }
+
+    public function test_can_get_volume_history(): void
+    {
+        $user = User::factory()->create();
+
+        // Workout 1: 100kg * 10 reps = 1000
+        $workout1 = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(2),
+            'ended_at' => now()->subDays(2)->addHour(),
+            'name' => 'Workout 1',
+        ]);
+        $line1 = WorkoutLine::factory()->create(['workout_id' => $workout1->id]);
+        Set::factory()->create(['workout_line_id' => $line1->id, 'weight' => 100, 'reps' => 10]);
+
+        // Workout 2: 50kg * 10 reps = 500
+        $workout2 = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDay(),
+            'ended_at' => now()->subDay()->addHour(),
+            'name' => 'Workout 2',
+        ]);
+        $line2 = WorkoutLine::factory()->create(['workout_id' => $workout2->id]);
+        Set::factory()->create(['workout_line_id' => $line2->id, 'weight' => 50, 'reps' => 10]);
+
+        $history = $this->statsService->getVolumeHistory($user);
+
+        $this->assertCount(2, $history);
+        // History is returned oldest first (reversed latest)
+        $this->assertEquals('Workout 1', $history[0]['name']);
+        $this->assertEquals(1000, $history[0]['volume']);
+        $this->assertEquals('Workout 2', $history[1]['name']);
+        $this->assertEquals(500, $history[1]['volume']);
+    }
+
+    public function test_can_retrieve_duration_history(): void
+    {
+        $user = User::factory()->create();
+
+        // Workout 1: 60 minutes
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(2)->hour(10)->minute(0),
+            'ended_at' => now()->subDays(2)->hour(11)->minute(0),
+        ]);
+
+        // Workout 2: 90 minutes
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDay()->hour(10)->minute(0),
+            'ended_at' => now()->subDay()->hour(11)->minute(30),
+        ]);
+
+        // Workout 3: 45 minutes, ended_at before started_at (should be handled as absolute)
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->hour(10)->minute(45),
+            'ended_at' => now()->hour(10)->minute(0),
+        ]);
+
+        $history = $this->statsService->getDurationHistory($user);
+
+        $this->assertCount(3, $history);
+
+        // Check order (oldest first due to reverse())
+        $this->assertEquals(60, $history[0]['duration']);
+        $this->assertEquals(90, $history[1]['duration']);
+        $this->assertEquals(45, $history[2]['duration']); // Should be absolute difference
     }
 }

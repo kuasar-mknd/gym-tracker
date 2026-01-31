@@ -1,19 +1,17 @@
 <template>
-    <Head title="Water Tracker" />
+    <Head title="Suivi Hydratation" />
 
-    <AuthenticatedLayout page-title="Water Tracker" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Suivi Hydratation" show-back back-route="tools.index">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1
                     class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                 >
-                    Water<br />
-                    <span class="text-gradient from-blue-400 to-cyan-500">Tracker</span>
+                    Suivi<br />
+                    <span class="text-gradient from-blue-400 to-cyan-500">Hydratation</span>
                 </h1>
-                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                    Stay Hydrated
-                </p>
+                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">Reste Hydraté</p>
             </header>
 
             <!-- Main Tracker Section -->
@@ -56,15 +54,11 @@
 
                         <!-- Center Text -->
                         <div class="absolute flex flex-col items-center text-center">
-                            <span class="font-display text-5xl font-black italic tracking-tighter text-text-main">
+                            <span class="font-display text-text-main text-5xl font-black tracking-tighter italic">
                                 {{ todayTotal }}
                             </span>
-                            <span class="text-text-muted text-sm font-bold uppercase">
-                                / {{ goal }} ml
-                            </span>
-                            <span class="text-blue-500 mt-2 text-sm font-bold">
-                                {{ percentage }}%
-                            </span>
+                            <span class="text-text-muted text-sm font-bold uppercase"> / {{ goal }} ml </span>
+                            <span class="mt-2 text-sm font-bold text-blue-500"> {{ percentage }}% </span>
                         </div>
                     </div>
 
@@ -73,6 +67,7 @@
                         <button
                             @click="addWater(250)"
                             :disabled="form.processing"
+                            aria-label="Ajouter 250ml"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">local_drink</span>
@@ -81,6 +76,7 @@
                         <button
                             @click="addWater(500)"
                             :disabled="form.processing"
+                            aria-label="Ajouter 500ml"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_drop</span>
@@ -89,6 +85,7 @@
                         <button
                             @click="addWater(1000)"
                             :disabled="form.processing"
+                            aria-label="Ajouter 1L"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_bottle</span>
@@ -98,14 +95,16 @@
 
                     <!-- Custom Input -->
                     <div class="flex w-full items-center gap-2">
-                         <div class="relative grow">
+                        <div class="relative grow">
                             <input
                                 type="number"
                                 v-model="customAmount"
-                                placeholder="Custom amount"
-                                class="font-display text-text-main focus:border-blue-500 focus:ring-blue-500/20 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 font-bold transition-all outline-none focus:ring-2"
+                                placeholder="Quantité personnalisée"
+                                class="font-display text-text-main h-12 w-full rounded-xl border border-slate-200 bg-white px-4 font-bold transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                             />
-                            <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 text-xs font-bold">ML</span>
+                            <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 text-xs font-bold"
+                                >ML</span
+                            >
                         </div>
                         <GlassButton
                             @click="addWater(customAmount)"
@@ -119,15 +118,17 @@
                 </div>
             </GlassCard>
 
-             <!-- History Section -->
+            <!-- History Section -->
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <!-- Today's Logs -->
                 <GlassCard class="animate-slide-up h-full" style="animation-delay: 0.1s">
-                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Today's Logs</h2>
+                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
+                        Journal du jour
+                    </h2>
 
                     <div v-if="logs.length === 0" class="py-8 text-center">
-                         <span class="material-symbols-outlined mb-2 text-4xl text-slate-200">water_drop</span>
-                        <p class="text-text-muted text-sm font-medium">No water tracked today.</p>
+                        <span class="material-symbols-outlined mb-2 text-4xl text-slate-200">water_drop</span>
+                        <p class="text-text-muted text-sm font-medium">Aucune consommation aujourd'hui.</p>
                     </div>
 
                     <div v-else class="max-h-[300px] space-y-3 overflow-y-auto pr-2">
@@ -137,18 +138,26 @@
                             class="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-3 transition-all hover:border-slate-200"
                         >
                             <div class="flex items-center gap-3">
-                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-500">
+                                <div
+                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-500"
+                                >
                                     <span class="material-symbols-outlined text-xl">water_drop</span>
                                 </div>
                                 <div>
                                     <p class="text-text-main font-bold">{{ log.amount }} ml</p>
                                     <p class="text-text-muted text-xs">
-                                        {{ new Date(log.consumed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                                        {{
+                                            new Date(log.consumed_at).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })
+                                        }}
                                     </p>
                                 </div>
                             </div>
                             <button
                                 @click="deleteLog(log)"
+                                :aria-label="'Supprimer l\'entrée de ' + log.amount + ' ml'"
                                 class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
@@ -159,7 +168,9 @@
 
                 <!-- Weekly History -->
                 <GlassCard class="animate-slide-up h-full" style="animation-delay: 0.15s">
-                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Last 7 Days</h2>
+                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
+                        7 derniers jours
+                    </h2>
 
                     <div class="flex h-[300px] items-end justify-between gap-2 pt-4">
                         <div
@@ -168,20 +179,24 @@
                             class="group relative flex flex-1 flex-col items-center justify-end"
                         >
                             <!-- Tooltip -->
-                            <div class="absolute -top-10 opacity-0 transition-opacity group-hover:opacity-100 bg-slate-800 text-white text-xs rounded px-2 py-1 mb-2 whitespace-nowrap z-10">
+                            <div
+                                class="absolute -top-10 z-10 mb-2 rounded bg-slate-800 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover:opacity-100"
+                            >
                                 {{ day.total }} ml
                             </div>
 
                             <!-- Bar -->
                             <div
-                                class="w-full rounded-t-lg bg-slate-100 transition-all duration-500 group-hover:bg-blue-100 relative overflow-hidden"
+                                class="relative w-full overflow-hidden rounded-t-lg bg-slate-100 transition-all duration-500 group-hover:bg-blue-100"
                                 :style="{ height: `${Math.min((day.total / goal) * 100, 100)}%` }"
                             >
-                                <div class="absolute bottom-0 left-0 right-0 top-0 bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors"></div>
+                                <div
+                                    class="absolute top-0 right-0 bottom-0 left-0 bg-blue-500/20 transition-colors group-hover:bg-blue-500/30"
+                                ></div>
                                 <!-- Fill based on goal cap? Actually visual height is mostly useful relative to goal -->
                             </div>
 
-                            <span class="text-text-muted mt-2 text-xs font-bold uppercase truncate w-full text-center">
+                            <span class="text-text-muted mt-2 w-full truncate text-center text-xs font-bold uppercase">
                                 {{ day.day_name.substring(0, 3) }}
                             </span>
                         </div>
@@ -248,7 +263,7 @@ const addWater = (amount) => {
 }
 
 const deleteLog = (log) => {
-    if (confirm('Remove this log?')) {
+    if (confirm('Supprimer cette entrée ?')) {
         router.delete(route('tools.water.destroy', { waterLog: log.id }), {
             preserveScroll: true,
         })
@@ -258,6 +273,6 @@ const deleteLog = (log) => {
 
 <style scoped>
 .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r;
+    @apply bg-gradient-to-r bg-clip-text text-transparent;
 }
 </style>

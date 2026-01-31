@@ -13,7 +13,9 @@ class BodyMeasurementController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(protected \App\Services\StatsService $statsService) {}
+    public function __construct(protected \App\Services\StatsService $statsService)
+    {
+    }
 
     public function index(): \Inertia\Response
     {
@@ -37,7 +39,7 @@ class BodyMeasurementController extends Controller
 
         $this->user()->bodyMeasurements()->create($request->validated());
 
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearBodyMeasurementStats($this->user());
 
         return redirect()->back();
     }
@@ -49,7 +51,7 @@ class BodyMeasurementController extends Controller
         $user = $this->user();
         $bodyMeasurement->delete();
 
-        $this->statsService->clearUserStatsCache($user);
+        $this->statsService->clearBodyMeasurementStats($user);
 
         return redirect()->back();
     }
