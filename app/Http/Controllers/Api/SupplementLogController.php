@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\Api\StoreSupplementLogRequest;
 use App\Http\Requests\Api\UpdateSupplementLogRequest;
 use App\Http\Resources\SupplementLogResource;
-use App\Models\Supplement;
 use App\Models\SupplementLog;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\AllowedFilter;
