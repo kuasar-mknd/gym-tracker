@@ -5,6 +5,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent } from 'vue'
+const HabitHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HabitHistoryChart.vue'))
 
 const HabitConsistencyChart = defineAsyncComponent(() => import('@/Components/Stats/HabitConsistencyChart.vue'))
 
@@ -31,6 +32,7 @@ const props = defineProps({
      */
     weekDates: Array,
     consistencyData: Array,
+    history: Array,
 })
 
 const showAddForm = ref(false)
@@ -220,6 +222,19 @@ const getProgressPercent = (habit) => {
                     <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
                 </div>
                 <HabitConsistencyChart :data="consistencyData" />
+            </GlassCard>
+
+            <!-- Stats Chart -->
+            <GlassCard
+                v-if="history && history.some((d) => d.count > 0)"
+                class="animate-slide-up"
+                style="animation-delay: 0.1s"
+            >
+                <div class="mb-4">
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Constance</h3>
+                    <p class="text-text-muted text-xs font-semibold">Habitudes complétées (30 jours)</p>
+                </div>
+                <HabitHistoryChart :data="history" />
             </GlassCard>
 
             <!-- Weekly Calendar Header -->

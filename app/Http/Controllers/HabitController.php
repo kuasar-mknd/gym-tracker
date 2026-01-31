@@ -56,11 +56,24 @@ class HabitController extends Controller
             ->pluck('count', 'date');
 
         $consistencyData = [];
+        $history = []; // For Bar Chart
+
         for ($i = 29; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $dateObj = Carbon::now()->subDays($i);
+            $dateStr = $dateObj->format('Y-m-d');
+            $count = $consistencyStats[$dateStr] ?? 0;
+
+            // For Line Chart (consistencyData)
             $consistencyData[] = [
-                'date' => $date,
-                'count' => $consistencyStats[$date] ?? 0,
+                'date' => $dateStr,
+                'count' => $count,
+            ];
+
+            // For Bar Chart (history)
+            $history[] = [
+                'date' => $dateObj->format('d/m'),
+                'full_date' => $dateStr,
+                'count' => $count,
             ];
         }
 
@@ -68,6 +81,7 @@ class HabitController extends Controller
             'habits' => $habits,
             'weekDates' => $this->getWeekDates(),
             'consistencyData' => $consistencyData,
+            'history' => $history,
         ]);
     }
 
