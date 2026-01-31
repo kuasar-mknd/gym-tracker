@@ -200,6 +200,14 @@ final class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(IntervalTimer::class);
     }
 
+    /**
+     * @return HasMany<Fast, $this>
+     */
+    public function fasts(): HasMany
+    {
+        return $this->hasMany(Fast::class);
+    }
+
     public function isPushEnabled(string $type): bool
     {
         return (bool) $this->notificationPreferences()
