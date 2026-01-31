@@ -48,9 +48,9 @@ const chartOptions = {
                 color: '#64748B',
                 font: { size: 10, weight: 'bold' },
                 callback: (value) => {
-                    if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
-                    return value;
-                }
+                    if (value >= 1000) return (value / 1000).toFixed(0) + 'k'
+                    return value
+                },
             },
         },
         x: {
