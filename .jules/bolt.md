@@ -9,3 +9,7 @@
 ## 2026-01-27 - BodyPartMeasurement Index Optimization
 **Learning:** Laravel's `groupBy` on a collection preserves the original keys, which can cause unexpected behavior if you assume keys are re-indexed (0, 1, ...). However, `skip(1)->first()` is robust against this. Also, `json_decode` in tests converts `5.0` to `5`, causing strict `toBe(5.0)` assertions to fail.
 **Action:** Use `values()` after `groupBy` if you need re-indexed keys, or use methods like `skip()` that don't rely on keys. Use `toEqual()` for numeric assertions in JSON responses.
+
+## 2026-01-31 - Dashboard Data Fetching Optimization
+**Learning:** Eager loading the entire `workoutLines` collection for the dashboard's "Recent Activity" was unnecessary since only the count of lines was needed for the icon logic. This caused redundant model hydration and larger JSON payloads/cache entries.
+**Action:** Use `withCount('workoutLines')` to fetch only the integer count. Additionally, align database query limits (`limit(3)`, `take(2)`) with the actual number of items displayed in the frontend to further reduce waste.
