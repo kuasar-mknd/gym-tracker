@@ -22,7 +22,8 @@ class SetController extends Controller
     public function __construct(
         protected PersonalRecordService $prService,
         protected StatsService $statsService
-    ) {}
+    ) {
+    }
 
     /**
      * Display a listing of the resource.
