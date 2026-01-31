@@ -13,7 +13,6 @@ class FetchWaterHistoryAction
     /**
      * Get the water consumption history for the last 7 days.
      *
-     * @param  \App\Models\User  $user
      * @return array<int, array{date: string, day_name: string, total: float}>
      */
     public function execute(User $user): array
