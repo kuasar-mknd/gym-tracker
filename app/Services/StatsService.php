@@ -416,14 +416,17 @@ class StatsService
                     $key = $date->format('Y-m');
                     $monthLabel = $date->translatedFormat('M'); // Jan, Fév... (depends on locale)
 
-                    $volume = 0;
-                    if ($grouped->has($key)) {
-                        $volume = $grouped->get($key)->sum('volume');
+                    $volume = 0.0;
+                    /** @var \Illuminate\Support\Collection<int, \stdClass>|null $monthData */
+                    $monthData = $grouped->get($key);
+
+                    if ($monthData) {
+                        $volume = (float) $monthData->sum('volume');
                     }
 
                     $result[] = [
                         'month' => $monthLabel,
-                        'volume' => (float) $volume,
+                        'volume' => $volume,
                     ];
                 }
 
