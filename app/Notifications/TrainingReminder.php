@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-class TrainingReminder extends Notification implements ShouldQueue
+final class TrainingReminder extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -34,7 +34,10 @@ class TrainingReminder extends Notification implements ShouldQueue
         return $channels;
     }
 
-    public function toWebPush(User $_notifiable, mixed $_notification): WebPushMessage
+    /**
+     * @param  mixed  $_notification
+     */
+    public function toWebPush(User $_notifiable, $_notification): WebPushMessage
     {
         return (new WebPushMessage())
             ->title('Prêt pour ta séance ? 💪')

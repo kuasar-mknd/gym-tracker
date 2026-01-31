@@ -21,7 +21,7 @@ class WorkoutTest extends TestCase
 
         $workout = Workout::factory()->create(['user_id' => $user->id]);
         $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id, 'order' => 1]);
-        $line->sets()->create(['weight' => 100, 'reps' => 5]);
+        $line->sets()->create(['weight' => 100, 'reps' => 5, 'order' => 1]);
 
         $response = $this->actingAs($user, 'sanctum')
             ->getJson('/api/v1/workouts?include=workoutLines.exercise,workoutLines.sets');
@@ -103,7 +103,7 @@ class WorkoutTest extends TestCase
         $exercise = Exercise::factory()->create(['name' => 'Bench Press']);
         $workout = Workout::factory()->create(['user_id' => $user->id]);
         $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id, 'order' => 1]);
-        $line->sets()->create(['weight' => 100, 'reps' => 5]);
+        $line->sets()->create(['weight' => 100, 'reps' => 5, 'order' => 1]);
 
         $response = $this->actingAs($user, 'sanctum')->getJson("/api/v1/workouts/{$workout->id}");
 

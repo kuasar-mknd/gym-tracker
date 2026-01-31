@@ -19,14 +19,14 @@ class StreakTest extends TestCase
 
         // Day 1
         $d1 = Carbon::parse('2023-01-01 12:00:00');
-        $user->workouts()->create(['started_at' => $d1, 'ended_at' => $d1->copy()->addHour()]);
+        $user->workouts()->create(['started_at' => $d1, 'completed_at' => $d1->copy()->addHour()]);
 
         $this->assertEquals(1, $user->fresh()->current_streak);
         $this->assertEquals(1, $user->fresh()->longest_streak);
 
         // Day 2
         $d2 = Carbon::parse('2023-01-02 12:00:00');
-        $user->workouts()->create(['started_at' => $d2, 'ended_at' => $d2->copy()->addHour()]);
+        $user->workouts()->create(['started_at' => $d2, 'completed_at' => $d2->copy()->addHour()]);
 
         $this->assertEquals(2, $user->fresh()->current_streak);
         $this->assertEquals(2, $user->fresh()->longest_streak);
@@ -37,13 +37,13 @@ class StreakTest extends TestCase
         $user = User::factory()->create();
 
         $d1 = Carbon::parse('2023-01-01 10:00:00');
-        $user->workouts()->create(['started_at' => $d1, 'ended_at' => $d1->copy()->addHour()]);
+        $user->workouts()->create(['started_at' => $d1, 'completed_at' => $d1->copy()->addHour()]);
 
         $this->assertEquals(1, $user->fresh()->current_streak);
 
         // Later same day
         $d1_later = Carbon::parse('2023-01-01 18:00:00');
-        $user->workouts()->create(['started_at' => $d1_later, 'ended_at' => $d1_later->copy()->addHour()]);
+        $user->workouts()->create(['started_at' => $d1_later, 'completed_at' => $d1_later->copy()->addHour()]);
 
         $this->assertEquals(1, $user->fresh()->current_streak);
     }
