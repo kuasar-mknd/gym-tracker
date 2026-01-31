@@ -411,6 +411,50 @@ final class StatsService
         );
     }
 
+    /**
+     * Get monthly volume history for the last X months.
+     *
+     * @return array<int, array{month: string, volume: float}>
+     */
+    public function getMonthlyVolumeHistory(User $user, int $months = 6): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.monthly_volume_history.{$user->id}.{$months}",
+            now()->addMinutes(30),
+            function () use ($user, $months): array {
+                $data = $this->fetchMonthlyVolumeHistoryData($user, $months);
+
+                // Group by month YYYY-MM
+                $grouped = $data->groupBy(function ($row) {
+                    return Carbon::parse($row->started_at)->format('Y-m');
+                });
+
+                // Fill last X months (including current)
+                $result = [];
+                for ($i = $months - 1; $i >= 0; $i--) {
+                    $date = now()->subMonths($i);
+                    $key = $date->format('Y-m');
+                    $monthLabel = $date->translatedFormat('M'); // Jan, Fév... (depends on locale)
+
+                    $volume = 0.0;
+                    /** @var \Illuminate\Support\Collection<int, \stdClass>|null $monthData */
+                    $monthData = $grouped->get($key);
+
+                    if ($monthData) {
+                        $volume = (float) $monthData->sum('volume');
+                    }
+
+                    $result[] = [
+                        'month' => $monthLabel,
+                        'volume' => $volume,
+                    ];
+                }
+
+                return $result;
+            }
+        );
+    }
+
     public function clearUserStatsCache(User $user): void
     {
         $this->clearWorkoutRelatedStats($user);
@@ -443,6 +487,7 @@ final class StatsService
         \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
         \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
         \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
+        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
     }
 
     /**
@@ -642,6 +687,29 @@ final class StatsService
             ->groupBy('date')
             ->pluck('volume', 'date')
             ->map(fn (mixed $value): float => is_numeric($value) ? (float) $value : 0.0);
+    }
+
+    /**
+     * Fetch monthly volume history data from DB.
+     *
+     * @return \Illuminate\Support\Collection<int, \stdClass>
+     */
+    protected function fetchMonthlyVolumeHistoryData(User $user, int $months): \Illuminate\Support\Collection
+    {
+        $startDate = now()->subMonths($months - 1)->startOfMonth();
+
+        // Fetch raw data per workout to aggregate in PHP (Database agnostic)
+        return DB::table('workouts')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->where('workouts.started_at', '>=', $startDate)
+            ->select(
+                'workouts.started_at',
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('workouts.id', 'workouts.started_at')
+            ->get();
     }
 
     /**

@@ -33,6 +33,10 @@ final class FetchWorkoutsIndexAction
      *         date: string,
      *         volume: float,
      *         name: string
+     *     }>,
+     *     monthlyVolume: array<int, array{
+     *         month: string,
+     *         volume: float
      *     }>
      * }
      */
@@ -48,6 +52,10 @@ final class FetchWorkoutsIndexAction
             'volumeHistory' => $this->statsService->getVolumeHistory(
                 $user,
                 20
+            ),
+            'monthlyVolume' => $this->statsService->getMonthlyVolumeHistory(
+                $user,
+                6
             ),
         ];
     }
