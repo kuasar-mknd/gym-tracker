@@ -805,7 +805,7 @@ final class StatsService
         return [
             'date' => Carbon::parse($m->measured_at)->format('d/m'),
             'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
-            'body_fat' => (float) $m->body_fat,
+            'body_fat' => is_numeric($m->body_fat) ? floatval($m->body_fat) : 0.0,
         ];
     }
 
