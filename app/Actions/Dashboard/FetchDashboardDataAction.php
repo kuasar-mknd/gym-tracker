@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Services\StatsService;
 use Illuminate\Support\Facades\Cache;
 
-class FetchDashboardDataAction
+final class FetchDashboardDataAction
 {
     public function __construct(
         protected StatsService $statsService
@@ -28,7 +28,8 @@ class FetchDashboardDataAction
      *     weeklyVolume: float,
      *     volumeChange: float|int,
      *     weeklyVolumeTrend: array<int, array{date: string, day_label: string, volume: float}>,
-     *     volumeTrend: array<int, array{date: string, day_name: string, volume: float}>
+     *     volumeTrend: array<int, array{date: string, day_name: string, volume: float}>,
+     *     durationDistribution: array<int, array{label: string, count: int}>
      * }
      */
     public function execute(User $user): array
@@ -40,6 +41,7 @@ class FetchDashboardDataAction
             $weeklyStats = $this->statsService->getWeeklyVolumeComparison($user);
             $weeklyTrend = $this->statsService->getWeeklyVolumeTrend($user);
             $volumeTrend = $this->statsService->getDailyVolumeTrend($user, 7);
+            $durationDistribution = $this->statsService->getDurationDistribution($user);
 
             return [
                 'workoutsCount' => $user->workouts()->count(),
@@ -52,6 +54,7 @@ class FetchDashboardDataAction
                 'volumeChange' => $weeklyStats['percentage'],
                 'weeklyVolumeTrend' => $weeklyTrend,
                 'volumeTrend' => $volumeTrend,
+                'durationDistribution' => $durationDistribution,
             ];
         });
     }

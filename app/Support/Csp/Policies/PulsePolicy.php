@@ -7,13 +7,12 @@ namespace App\Support\Csp\Policies;
 use Spatie\Csp\Directive;
 use Spatie\Csp\Keyword;
 use Spatie\Csp\Policy;
-use Spatie\Csp\Presets\Basic;
 
-class PulsePolicy extends Basic
+class PulsePolicy extends Policy
 {
-    public function configure(Policy $policy): void
+    public function configure(): void
     {
-        $policy
+        $this
             ->add(Directive::BASE, Keyword::SELF)
             ->add(Directive::CONNECT, Keyword::SELF)
             ->add(Directive::DEFAULT, Keyword::SELF)

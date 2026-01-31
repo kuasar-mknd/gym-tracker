@@ -30,8 +30,6 @@ return [
         \SlevomatCodingStandard\Sniffs\Classes\SuperfluousExceptionNamingSniff::class,
         \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenNormalClasses::class,
         \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenFinalClasses::class,
-        \SlevomatCodingStandard\Sniffs\ControlStructures\UselessVariableSniff::class,
-        \SlevomatCodingStandard\Sniffs\Commenting\InlineDocCommentDeclarationSniff::class,
     ],
     'config' => [
         \SlevomatCodingStandard\Sniffs\TypeHints\PropertyTypeHintSniff::class => [

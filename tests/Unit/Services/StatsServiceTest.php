@@ -156,4 +156,50 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(100, $comparison['difference']);
         $this->assertEquals(25.0, $comparison['percentage']);
     }
+
+    public function test_can_get_volume_history(): void
+    {
+        $user = User::factory()->create();
+
+        // Create 3 workouts
+        for ($i = 0; $i < 3; $i++) {
+            $workout = Workout::factory()->create([
+                'user_id' => $user->id,
+                'started_at' => now()->subDays($i),
+                'ended_at' => now()->subDays($i)->addHour(),
+                'name' => 'Workout '.$i,
+            ]);
+            $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+            Set::factory()->create([
+                'workout_line_id' => $line->id,
+                'weight' => 10,
+                'reps' => 10,
+            ]); // Volume = 100
+        }
+
+        // Create an unfinished workout (should be ignored)
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->addHour(),
+            'ended_at' => null,
+            'name' => 'Unfinished',
+        ]);
+
+        $history = $this->statsService->getVolumeHistory($user, 2);
+
+        // Should return 2 items (limit)
+        $this->assertCount(2, $history);
+
+        // The method returns items in chronological order (oldest to newest)
+        // after fetching the most recent ones.
+
+        // Fetched: Workout 0 (newest), Workout 1.
+        // Reversed: Workout 1, Workout 0.
+
+        $this->assertEquals('Workout 1', $history[0]['name']);
+        $this->assertEquals(100, $history[0]['volume']);
+
+        $this->assertEquals('Workout 0', $history[1]['name']);
+        $this->assertEquals(100, $history[1]['volume']);
+    }
 }
