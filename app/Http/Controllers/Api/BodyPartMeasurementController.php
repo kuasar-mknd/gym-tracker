@@ -51,39 +51,39 @@ class BodyPartMeasurementController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(BodyPartMeasurement $bodyPartMeasurement): BodyPartMeasurementResource
+    public function show(BodyPartMeasurement $body_part_measurement): BodyPartMeasurementResource
     {
-        if ($bodyPartMeasurement->user_id !== $this->user()->id) {
+        if ($body_part_measurement->user_id !== $this->user()->id) {
             abort(403);
         }
 
-        return new BodyPartMeasurementResource($bodyPartMeasurement);
+        return new BodyPartMeasurementResource($body_part_measurement);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(BodyPartMeasurementUpdateRequest $request, BodyPartMeasurement $bodyPartMeasurement): BodyPartMeasurementResource
+    public function update(BodyPartMeasurementUpdateRequest $request, BodyPartMeasurement $body_part_measurement): BodyPartMeasurementResource
     {
-        if ($bodyPartMeasurement->user_id !== $this->user()->id) {
+        if ($body_part_measurement->user_id !== $this->user()->id) {
             abort(403);
         }
 
-        $bodyPartMeasurement->update($request->validated());
+        $body_part_measurement->update($request->validated());
 
-        return new BodyPartMeasurementResource($bodyPartMeasurement);
+        return new BodyPartMeasurementResource($body_part_measurement);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(BodyPartMeasurement $bodyPartMeasurement): Response
+    public function destroy(BodyPartMeasurement $body_part_measurement): Response
     {
-        if ($bodyPartMeasurement->user_id !== $this->user()->id) {
+        if ($body_part_measurement->user_id !== $this->user()->id) {
             abort(403);
         }
 
-        $bodyPartMeasurement->delete();
+        $body_part_measurement->delete();
 
         return response()->noContent();
     }
