@@ -54,9 +54,6 @@ test('users can create a supplement log', function (): void {
         'supplement_id' => $supplement->id,
         'quantity' => 1,
     ]);
-
-    // Check servings decrement
-    expect($supplement->fresh()->servings_remaining)->toBe(9);
 });
 
 test('users can update a supplement log', function (): void {

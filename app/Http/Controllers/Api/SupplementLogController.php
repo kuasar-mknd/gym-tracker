@@ -36,7 +36,7 @@ class SupplementLogController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreSupplementLogRequest $request): SupplementLogResource
+    public function store(StoreSupplementLogRequest $request): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validated();
 
@@ -49,14 +49,9 @@ class SupplementLogController extends Controller
 
         $log->save();
 
-        // Decrement servings
-        /** @var Supplement|null $supplement */
-        $supplement = Supplement::find($validated['supplement_id']);
-        if ($supplement !== null && $supplement->servings_remaining > 0) {
-            $supplement->decrement('servings_remaining');
-        }
-
-        return new SupplementLogResource($log);
+        return (new SupplementLogResource($log))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
     }
 
     /**
