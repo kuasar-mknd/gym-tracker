@@ -33,14 +33,19 @@ class ResolveSocialUserAction
 
         // Create new user
         // We use create() because all fields are in $fillable in User model
-        return User::create([
+        $user = User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
             'email' => $socialUser->getEmail(),
             'password' => Str::random(16), // Random password, hashed by model cast
             'provider' => $provider,
             'provider_id' => $socialUser->getId(),
             'avatar' => $socialUser->getAvatar(),
-            'email_verified_at' => now(), // Assume email is verified by provider
         ]);
+
+        $user->forceFill([
+            'email_verified_at' => now(), // Assume email is verified by provider
+        ])->save();
+
+        return $user;
     }
 }
