@@ -18,7 +18,7 @@ class IntervalTimerController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('Tools/IntervalTimer', [
-            'timers' => $request->user()->intervalTimers()->latest()->get(),
+            'timers' => $this->user()->intervalTimers()->latest()->get(),
         ]);
     }
 
@@ -35,7 +35,7 @@ class IntervalTimerController extends Controller
             'warmup_seconds' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $request->user()->intervalTimers()->create($validated);
+        $this->user()->intervalTimers()->create($validated);
 
         return redirect()->route('tools.interval-timer.index')
             ->with('success', 'Timer created successfully.');
@@ -46,7 +46,7 @@ class IntervalTimerController extends Controller
      */
     public function update(Request $request, IntervalTimer $intervalTimer): RedirectResponse
     {
-        if ($intervalTimer->user_id !== $request->user()->id) {
+        if ($intervalTimer->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -69,7 +69,7 @@ class IntervalTimerController extends Controller
      */
     public function destroy(Request $request, IntervalTimer $intervalTimer): RedirectResponse
     {
-        if ($intervalTimer->user_id !== $request->user()->id) {
+        if ($intervalTimer->user_id !== $this->user()->id) {
             abort(403);
         }
 
