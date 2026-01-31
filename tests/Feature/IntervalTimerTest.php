@@ -3,7 +3,7 @@
 use App\Models\IntervalTimer;
 use App\Models\User;
 
-test('user can view interval timer page', function () {
+test('user can view interval timer page', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route('tools.interval-timer.index'));
@@ -11,7 +11,7 @@ test('user can view interval timer page', function () {
     $response->assertStatus(200);
 });
 
-test('user can create interval timer', function () {
+test('user can create interval timer', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('tools.interval-timer.store'), [
@@ -33,7 +33,7 @@ test('user can create interval timer', function () {
     ]);
 });
 
-test('user can update interval timer', function () {
+test('user can update interval timer', function (): void {
     $user = User::factory()->create();
     $timer = IntervalTimer::create([
         'user_id' => $user->id,
@@ -60,7 +60,7 @@ test('user can update interval timer', function () {
     ]);
 });
 
-test('user can delete interval timer', function () {
+test('user can delete interval timer', function (): void {
     $user = User::factory()->create();
     $timer = IntervalTimer::create([
         'user_id' => $user->id,
@@ -79,7 +79,7 @@ test('user can delete interval timer', function () {
     ]);
 });
 
-test('user cannot update others timer', function () {
+test('user cannot update others timer', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $timer = IntervalTimer::create([
