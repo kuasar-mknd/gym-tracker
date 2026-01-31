@@ -39,6 +39,8 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
+        Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
+        Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_history.{$user->id}.6");
 
         // Expectation: Body measurement keys are NOT cleared
         // We can't easily assert "never" for specific keys while allowing others with a partial mock on Facade easily
@@ -95,6 +97,8 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
+        Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
+        Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_history.{$user->id}.6");
 
         $this->statsService->clearUserStatsCache($user);
     }

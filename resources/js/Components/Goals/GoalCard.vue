@@ -105,7 +105,7 @@ const progressBarColor = computed(() => {
                             :style="{ width: progress + '%' }"
                         >
                             <div
-                                class="bg-linear-to-r absolute inset-0 animate-pulse from-transparent to-white/40"
+                                class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent to-white/40"
                             ></div>
                         </div>
                     </div>
@@ -113,17 +113,13 @@ const progressBarColor = computed(() => {
 
                 <!-- Stats -->
                 <div class="grid grid-cols-2 gap-4">
-                    <div
-                        class="rounded-lg border border-white/10 bg-white/5 p-2 transition-colors hover:bg-white/10"
-                    >
+                    <div class="rounded-lg border border-white/10 bg-white/5 p-2 transition-colors hover:bg-white/10">
                         <p class="text-[10px] font-bold tracking-tight text-white/60 uppercase">Actuel</p>
                         <p class="text-sm font-semibold text-white">
                             {{ goal.current_value }} <span class="text-[10px] text-white/80">{{ goal.unit }}</span>
                         </p>
                     </div>
-                    <div
-                        class="rounded-lg border border-white/10 bg-white/5 p-2 transition-colors hover:bg-white/10"
-                    >
+                    <div class="rounded-lg border border-white/10 bg-white/5 p-2 transition-colors hover:bg-white/10">
                         <p class="text-[10px] font-bold tracking-tight text-white/60 uppercase">Cible</p>
                         <p class="text-sm font-semibold text-white">
                             {{ goal.target_value }} <span class="text-[10px] text-white/80">{{ goal.unit }}</span>
@@ -131,7 +127,7 @@ const progressBarColor = computed(() => {
                     </div>
                 </div>
 
-                <div v-if="goal.deadline" class="flex items-center gap-1.5 pt-2 text-[10px] italic text-white/80">
+                <div v-if="goal.deadline" class="flex items-center gap-1.5 pt-2 text-[10px] text-white/80 italic">
                     <span>⏱️ Échéance : {{ new Date(goal.deadline).toLocaleDateString() }}</span>
                 </div>
             </div>

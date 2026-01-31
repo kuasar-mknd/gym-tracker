@@ -7,7 +7,7 @@ namespace App\Policies;
 use App\Models\BodyPartMeasurement;
 use App\Models\User;
 
-class BodyPartMeasurementPolicy
+final class BodyPartMeasurementPolicy
 {
     public function viewAny(): bool
     {

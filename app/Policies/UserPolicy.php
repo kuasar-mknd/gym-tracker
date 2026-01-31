@@ -7,7 +7,7 @@ namespace App\Policies;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
-class UserPolicy
+final class UserPolicy
 {
     use HandlesAuthorization;
 

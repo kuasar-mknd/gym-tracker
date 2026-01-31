@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
-class FetchWorkoutsIndexAction
+final class FetchWorkoutsIndexAction
 {
     public function __construct(protected StatsService $statsService)
     {
@@ -33,6 +33,10 @@ class FetchWorkoutsIndexAction
      *         date: string,
      *         volume: float,
      *         name: string
+     *     }>,
+     *     monthlyVolume: array<int, array{
+     *         month: string,
+     *         volume: float
      *     }>
      * }
      */
@@ -49,19 +53,27 @@ class FetchWorkoutsIndexAction
                 $user,
                 20
             ),
+            'monthlyVolume' => $this->statsService->getMonthlyVolumeHistory(
+                $user,
+                6
+            ),
         ];
     }
 
     /**
      * @return Collection<int, array{month: string, count: int}>
      */
-    protected function getMonthlyFrequency(User $user): Collection
-    {
-        return Cache::remember(
+    protected function getMonthlyFrequency(
+        User $user
+    ): Collection {
+        /** @var Collection<int, array{month: string, count: int}> $frequency */
+        $frequency = Cache::remember(
             "stats.monthly_frequency.{$user->id}",
             now()->addHour(),
             fn (): Collection => $this->calculateMonthlyFrequency($user)
         );
+
+        return $frequency;
     }
 
     /**

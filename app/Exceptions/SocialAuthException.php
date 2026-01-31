@@ -6,6 +6,6 @@ namespace App\Exceptions;
 
 use Exception;
 
-class SocialAuth extends Exception
+class SocialAuthException extends Exception
 {
 }

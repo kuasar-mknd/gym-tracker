@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  *
  * It utilizes caching (via Redis/Cache facade) to optimize performance for expensive database queries.
  */
-class StatsService
+final class StatsService
 {
     /**
      * Get volume trend (total weight lifted) per workout over time.
@@ -87,7 +87,6 @@ class StatsService
      *
      * @param  User  $user  The user to retrieve stats for.
      * @param  int  $days  Number of days to look back (default: 30).
-     *
      * @return array<int, \stdClass>
      *
      * @example
@@ -228,9 +227,14 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $this->fetchBodyFatHistoryData($user, $days)
-                ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
-                ->toArray()
+            function () use ($user, $days): array {
+                /** @var array<int, array{date: string, body_fat: float}> $results */
+                $results = $this->fetchBodyFatHistoryData($user, $days)
+                    ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+                    ->toArray();
+
+                return $results;
+            }
         );
     }
 
@@ -241,7 +245,6 @@ class StatsService
      * with volume summed up. Fills missing days with 0.
      *
      * @param  User  $user  The user to retrieve stats for.
-     *
      * @return array<int, array{
      *     date: string,
      *     day_label: string,
@@ -268,7 +271,6 @@ class StatsService
      * Get volume comparison between current week and previous week.
      *
      * @param  User  $user  The user to retrieve stats for.
-     *
      * @return array{
      *     current_week_volume: float,
      *     previous_week_volume: float,
@@ -303,16 +305,21 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
-                ->where('user_id', $user->id)
-                ->whereNotNull('ended_at')
-                ->latest('started_at')
-                ->take($limit)
-                ->get()
-                ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
-                ->reverse()
-                ->values()
-                ->toArray()
+            function () use ($user, $limit): array {
+                /** @var array<int, array{date: string, duration: int, name: string}> $results */
+                $results = Workout::select(['name', 'started_at', 'ended_at'])
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->latest('started_at')
+                    ->take($limit)
+                    ->get()
+                    ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                    ->reverse()
+                    ->values()
+                    ->toArray();
+
+                return $results;
+            }
         );
     }
 
@@ -326,16 +333,125 @@ class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::with(['workoutLines.sets'])
-                ->where('user_id', $user->id)
-                ->whereNotNull('ended_at')
-                ->latest('started_at')
-                ->take($limit)
+            fn (): array => DB::table('workouts')
+                ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->where('workouts.user_id', $user->id)
+                ->whereNotNull('workouts.ended_at')
+                ->select([
+                    'workouts.id',
+                    'workouts.started_at',
+                    'workouts.name',
+                    DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'),
+                ])
+                ->groupBy(['workouts.id', 'workouts.started_at', 'workouts.name'])
+                ->orderBy('workouts.started_at', 'desc')
+                ->limit($limit)
                 ->get()
-                ->map(fn (\App\Models\Workout $workout): array => $this->formatVolumeHistoryItem($workout))
+                ->map(fn (object $row): array => [
+                    'date' => Carbon::parse($row->started_at)->format('d/m'),
+                    'volume' => (float) $row->volume,
+                    'name' => (string) $row->name,
+                ])
                 ->reverse()
                 ->values()
                 ->toArray()
+        );
+    }
+
+    /**
+     * Get workout duration distribution (buckets) for the last X days.
+     *
+     * @return array<int, array{label: string, count: int}>
+     */
+    public function getDurationDistribution(User $user, int $days = 90): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.duration_distribution.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $days): array {
+                $workouts = Workout::select(['started_at', 'ended_at'])
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->where('started_at', '>=', now()->subDays($days))
+                    ->get();
+
+                $buckets = [
+                    '< 30 min' => 0,
+                    '30-60 min' => 0,
+                    '60-90 min' => 0,
+                    '90+ min' => 0,
+                ];
+
+                foreach ($workouts as $workout) {
+                    if (! $workout->ended_at) {
+                        continue;
+                    }
+
+                    $minutes = abs($workout->ended_at->diffInMinutes($workout->started_at));
+
+                    if ($minutes < 30) {
+                        $buckets['< 30 min']++;
+                    } elseif ($minutes < 60) {
+                        $buckets['30-60 min']++;
+                    } elseif ($minutes < 90) {
+                        $buckets['60-90 min']++;
+                    } else {
+                        $buckets['90+ min']++;
+                    }
+                }
+
+                $result = [];
+                foreach ($buckets as $label => $count) {
+                    $result[] = ['label' => $label, 'count' => $count];
+                }
+
+                return $result;
+            }
+        );
+    }
+
+    /**
+     * Get monthly volume history for the last X months.
+     *
+     * @return array<int, array{month: string, volume: float}>
+     */
+    public function getMonthlyVolumeHistory(User $user, int $months = 6): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.monthly_volume_history.{$user->id}.{$months}",
+            now()->addMinutes(30),
+            function () use ($user, $months): array {
+                $data = $this->fetchMonthlyVolumeHistoryData($user, $months);
+
+                // Group by month YYYY-MM
+                $grouped = $data->groupBy(function ($row) {
+                    return Carbon::parse($row->started_at)->format('Y-m');
+                });
+
+                // Fill last X months (including current)
+                $result = [];
+                for ($i = $months - 1; $i >= 0; $i--) {
+                    $date = now()->subMonths($i);
+                    $key = $date->format('Y-m');
+                    $monthLabel = $date->translatedFormat('M'); // Jan, Fév... (depends on locale)
+
+                    $volume = 0.0;
+                    /** @var \Illuminate\Support\Collection<int, \stdClass>|null $monthData */
+                    $monthData = $grouped->get($key);
+
+                    if ($monthData) {
+                        $volume = (float) $monthData->sum('volume');
+                    }
+
+                    $result[] = [
+                        'month' => $monthLabel,
+                        'volume' => $volume,
+                    ];
+                }
+
+                return $result;
+            }
         );
     }
 
@@ -370,6 +486,8 @@ class StatsService
         // Clear weekly volume and monthly comparison (previously missed)
         \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
         \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
+        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
     }
 
     /**
@@ -431,7 +549,6 @@ class StatsService
      * Fill missing days with zero volume.
      *
      * @param  \Illuminate\Support\Collection<string, float>  $results
-     *
      * @return array<int, array{date: string, day_name: string, volume: float}>
      */
     protected function fillDailyTrend(Carbon $start, int $days, \Illuminate\Support\Collection $results): array
@@ -456,7 +573,6 @@ class StatsService
      * Fill missing days in weekly trend with zero volume.
      *
      * @param  \Illuminate\Support\Collection<string, \stdClass>  $workouts
-     *
      * @return array<int, array{date: string, day_label: string, volume: float}>
      */
     protected function fillWeeklyTrend(Carbon $startOfWeek, \Illuminate\Support\Collection $workouts): array
@@ -529,22 +645,6 @@ class StatsService
     }
 
     /**
-     * Format workout for volume history.
-     *
-     * @return array{date: string, volume: float, name: string}
-     */
-    protected function formatVolumeHistoryItem(Workout $workout): array
-    {
-        $volume = $workout->workoutLines->reduce(fn ($carry, $line): int|float => $carry + $line->sets->reduce(fn ($carrySet, $set): int|float => $carrySet + ($set->weight * $set->reps), 0.0), 0.0);
-
-        return [
-            'date' => $workout->started_at->format('d/m'),
-            'volume' => (float) $volume,
-            'name' => (string) $workout->name,
-        ];
-    }
-
-    /**
      * Fetch volume trend data from DB.
      *
      * @return \Illuminate\Support\Collection<int, \stdClass>
@@ -587,6 +687,29 @@ class StatsService
             ->groupBy('date')
             ->pluck('volume', 'date')
             ->map(fn (mixed $value): float => is_numeric($value) ? (float) $value : 0.0);
+    }
+
+    /**
+     * Fetch monthly volume history data from DB.
+     *
+     * @return \Illuminate\Support\Collection<int, \stdClass>
+     */
+    protected function fetchMonthlyVolumeHistoryData(User $user, int $months): \Illuminate\Support\Collection
+    {
+        $startDate = now()->subMonths($months - 1)->startOfMonth();
+
+        // Fetch raw data per workout to aggregate in PHP (Database agnostic)
+        return DB::table('workouts')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->where('workouts.started_at', '>=', $startDate)
+            ->select(
+                'workouts.started_at',
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('workouts.id', 'workouts.started_at')
+            ->get();
     }
 
     /**
