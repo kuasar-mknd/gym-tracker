@@ -20,7 +20,7 @@ class MacroCalculationController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $calculations = $request->user()->macroCalculations()
+        $calculations = $this->user()->macroCalculations()
             ->orderByDesc('created_at')
             ->paginate(20);
 
@@ -41,7 +41,7 @@ class MacroCalculationController extends Controller
             'goal' => ['required', 'string', 'in:cut,maintain,bulk'],
         ]);
 
-        $calculation = $action->execute($request->user(), $validated);
+        $calculation = $action->execute($this->user(), $validated);
 
         return new MacroCalculationResource($calculation);
     }
