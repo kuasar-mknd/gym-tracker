@@ -259,31 +259,46 @@ const formattedTime = computed(() => {
 // Visuals
 const phaseColor = computed(() => {
     switch (phase.value) {
-        case 'warmup': return 'text-blue-400'
-        case 'work': return 'text-electric-orange'
-        case 'rest': return 'text-emerald-400'
-        case 'finished': return 'text-text-main'
-        default: return 'text-text-main'
+        case 'warmup':
+            return 'text-blue-400'
+        case 'work':
+            return 'text-electric-orange'
+        case 'rest':
+            return 'text-emerald-400'
+        case 'finished':
+            return 'text-text-main'
+        default:
+            return 'text-text-main'
     }
 })
 
 const phaseBg = computed(() => {
     switch (phase.value) {
-        case 'warmup': return 'bg-blue-500/10 border-blue-500/20'
-        case 'work': return 'bg-electric-orange/10 border-electric-orange/20'
-        case 'rest': return 'bg-emerald-500/10 border-emerald-500/20'
-        case 'finished': return 'bg-white/10 border-white/20'
-        default: return 'bg-white/5 border-white/10'
+        case 'warmup':
+            return 'bg-blue-500/10 border-blue-500/20'
+        case 'work':
+            return 'bg-electric-orange/10 border-electric-orange/20'
+        case 'rest':
+            return 'bg-emerald-500/10 border-emerald-500/20'
+        case 'finished':
+            return 'bg-white/10 border-white/20'
+        default:
+            return 'bg-white/5 border-white/10'
     }
 })
 
 const phaseLabel = computed(() => {
     switch (phase.value) {
-        case 'warmup': return 'ÉCHAUFFEMENT'
-        case 'work': return 'TRAVAIL'
-        case 'rest': return 'REPOS'
-        case 'finished': return 'TERMINÉ'
-        default: return 'PRÊT'
+        case 'warmup':
+            return 'ÉCHAUFFEMENT'
+        case 'work':
+            return 'TRAVAIL'
+        case 'rest':
+            return 'REPOS'
+        case 'finished':
+            return 'TERMINÉ'
+        default:
+            return 'PRÊT'
     }
 })
 
@@ -304,20 +319,20 @@ onUnmounted(() => {
 
     <AuthenticatedLayout page-title="Minuteur d'Intervalle" show-back back-route="tools.index">
         <template #header-actions>
-           <!-- Mobile actions -->
+            <!-- Mobile actions -->
         </template>
 
         <div class="space-y-6">
             <!-- Tabs -->
-            <div class="flex p-1 space-x-1 rounded-xl glass-panel-light">
+            <div class="glass-panel-light flex space-x-1 rounded-xl p-1">
                 <button
                     v-for="tab in ['timer', 'config']"
                     :key="tab"
                     @click="activeTab = tab"
-                    class="w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-all duration-200"
+                    class="w-full rounded-lg py-2.5 text-sm leading-5 font-medium transition-all duration-200"
                     :class="[
                         activeTab === tab
-                            ? 'bg-white text-text-main shadow'
+                            ? 'text-text-main bg-white shadow'
                             : 'text-text-muted hover:bg-white/[0.12] hover:text-white',
                     ]"
                 >
@@ -327,25 +342,28 @@ onUnmounted(() => {
 
             <!-- Timer Tab -->
             <div v-if="activeTab === 'timer'" class="space-y-6">
-               <GlassCard
-                    class="flex flex-col items-center justify-center py-12 px-4 transition-colors duration-500 border-2"
+                <GlassCard
+                    class="flex flex-col items-center justify-center border-2 px-4 py-12 transition-colors duration-500"
                     :class="phaseBg"
-               >
-                    <div class="text-sm font-black tracking-[0.2em] uppercase mb-4" :class="phaseColor">
+                >
+                    <div class="mb-4 text-sm font-black tracking-[0.2em] uppercase" :class="phaseColor">
                         {{ phaseLabel }}
                     </div>
 
-                    <div class="text-[6rem] leading-none font-black font-display tabular-nums tracking-tighter" :class="phaseColor">
+                    <div
+                        class="font-display text-[6rem] leading-none font-black tracking-tighter tabular-nums"
+                        :class="phaseColor"
+                    >
                         {{ formattedTime }}
                     </div>
 
-                    <div class="mt-8 flex items-center gap-2 text-text-muted">
+                    <div class="text-text-muted mt-8 flex items-center gap-2">
                         <span class="material-symbols-outlined text-sm">repeat</span>
                         <span class="font-bold">{{ currentRound }}</span>
                         <span class="text-xs">/ {{ timerConfig.rounds }}</span>
                     </div>
 
-                    <div class="mt-2 text-xs text-text-muted">
+                    <div class="text-text-muted mt-2 text-xs">
                         {{ timerConfig.name }}
                     </div>
 
@@ -353,7 +371,7 @@ onUnmounted(() => {
                     <div class="mt-12 flex gap-4">
                         <button
                             @click="toggleTimer"
-                            class="flex h-16 w-16 items-center justify-center rounded-full bg-white text-text-main shadow-lg transition-transform hover:scale-110 active:scale-95"
+                            class="text-text-main flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg transition-transform hover:scale-110 active:scale-95"
                         >
                             <span class="material-symbols-outlined text-3xl">
                                 {{ status === 'running' ? 'pause' : 'play_arrow' }}
@@ -362,35 +380,35 @@ onUnmounted(() => {
 
                         <button
                             @click="resetRunner"
-                            class="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 border border-white/20 text-white shadow-lg transition-transform hover:scale-110 active:scale-95 backdrop-blur-md"
+                            class="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-lg backdrop-blur-md transition-transform hover:scale-110 active:scale-95"
                         >
                             <span class="material-symbols-outlined text-3xl">restart_alt</span>
                         </button>
                     </div>
-               </GlassCard>
+                </GlassCard>
 
-               <!-- Legend/Info -->
-               <div class="grid grid-cols-3 gap-4 text-center">
+                <!-- Legend/Info -->
+                <div class="grid grid-cols-3 gap-4 text-center">
                     <div class="glass-panel p-3">
-                        <div class="text-xs text-text-muted uppercase tracking-wider">Travail</div>
-                        <div class="font-bold text-xl text-electric-orange">{{ timerConfig.work }}s</div>
+                        <div class="text-text-muted text-xs tracking-wider uppercase">Travail</div>
+                        <div class="text-electric-orange text-xl font-bold">{{ timerConfig.work }}s</div>
                     </div>
                     <div class="glass-panel p-3">
-                        <div class="text-xs text-text-muted uppercase tracking-wider">Repos</div>
-                        <div class="font-bold text-xl text-emerald-400">{{ timerConfig.rest }}s</div>
+                        <div class="text-text-muted text-xs tracking-wider uppercase">Repos</div>
+                        <div class="text-xl font-bold text-emerald-400">{{ timerConfig.rest }}s</div>
                     </div>
                     <div class="glass-panel p-3">
-                        <div class="text-xs text-text-muted uppercase tracking-wider">Échauff.</div>
-                        <div class="font-bold text-xl text-blue-400">{{ timerConfig.warmup }}s</div>
+                        <div class="text-text-muted text-xs tracking-wider uppercase">Échauff.</div>
+                        <div class="text-xl font-bold text-blue-400">{{ timerConfig.warmup }}s</div>
                     </div>
-               </div>
+                </div>
             </div>
 
             <!-- Config/Presets Tab -->
             <div v-else class="space-y-6">
                 <!-- Form -->
                 <GlassCard class="p-6">
-                    <h3 class="text-lg font-bold text-text-main mb-4">
+                    <h3 class="text-text-main mb-4 text-lg font-bold">
                         {{ isEditing ? 'Modifier le minuteur' : 'Nouveau minuteur' }}
                     </h3>
                     <form @submit.prevent="submitForm" class="space-y-4">
@@ -433,21 +451,11 @@ onUnmounted(() => {
                             />
                         </div>
 
-                        <div class="flex gap-2 justify-end mt-4">
-                             <GlassButton
-                                v-if="!isEditing"
-                                type="button"
-                                variant="secondary"
-                                @click="previewFromForm"
-                            >
+                        <div class="mt-4 flex justify-end gap-2">
+                            <GlassButton v-if="!isEditing" type="button" variant="secondary" @click="previewFromForm">
                                 Lancer
                             </GlassButton>
-                            <GlassButton
-                                v-if="isEditing"
-                                type="button"
-                                variant="secondary"
-                                @click="resetForm"
-                            >
+                            <GlassButton v-if="isEditing" type="button" variant="secondary" @click="resetForm">
                                 Annuler
                             </GlassButton>
                             <GlassButton type="submit" :loading="form.processing">
@@ -459,38 +467,40 @@ onUnmounted(() => {
 
                 <!-- List of Timers -->
                 <div class="space-y-4">
-                    <h3 class="text-lg font-bold text-text-main px-2">Mes Minuteurs</h3>
-                    <div v-if="timers.length === 0" class="text-center text-text-muted py-8">
+                    <h3 class="text-text-main px-2 text-lg font-bold">Mes Minuteurs</h3>
+                    <div v-if="timers.length === 0" class="text-text-muted py-8 text-center">
                         Aucun minuteur enregistré.
                     </div>
                     <GlassCard
                         v-for="timer in timers"
                         :key="timer.id"
-                        class="p-4 flex items-center justify-between group relative overflow-hidden"
+                        class="group relative flex items-center justify-between overflow-hidden p-4"
                     >
                         <div class="relative z-10 cursor-pointer" @click="loadTimer(timer)">
-                            <h4 class="font-bold text-text-main group-hover:text-electric-orange transition-colors">{{ timer.name }}</h4>
-                            <p class="text-xs text-text-muted">
+                            <h4 class="text-text-main group-hover:text-electric-orange font-bold transition-colors">
+                                {{ timer.name }}
+                            </h4>
+                            <p class="text-text-muted text-xs">
                                 {{ timer.rounds }}x {{ timer.work_seconds }}s Travail / {{ timer.rest_seconds }}s Repos
                             </p>
                         </div>
-                        <div class="flex items-center gap-2 relative z-10">
-                             <button
+                        <div class="relative z-10 flex items-center gap-2">
+                            <button
                                 @click="loadTimer(timer)"
-                                class="p-2 text-text-muted hover:text-electric-orange transition-colors"
+                                class="text-text-muted hover:text-electric-orange p-2 transition-colors"
                                 title="Charger & Lancer"
                             >
                                 <span class="material-symbols-outlined">play_circle</span>
                             </button>
                             <button
                                 @click="editTimer(timer)"
-                                class="p-2 text-text-muted hover:text-blue-500 transition-colors"
+                                class="text-text-muted p-2 transition-colors hover:text-blue-500"
                             >
                                 <span class="material-symbols-outlined">edit</span>
                             </button>
                             <button
                                 @click="deleteTimer(timer)"
-                                class="p-2 text-text-muted hover:text-red-500 transition-colors"
+                                class="text-text-muted p-2 transition-colors hover:text-red-500"
                             >
                                 <span class="material-symbols-outlined">delete</span>
                             </button>

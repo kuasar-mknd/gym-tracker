@@ -181,7 +181,9 @@
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">timer</span>
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Minuteur d'Intervalle</h3>
-                        <p class="text-text-muted text-sm">Créez et lancez vos propres minuteurs pour vos entraînements HIIT ou Tabata.</p>
+                        <p class="text-text-muted text-sm">
+                            Créez et lancez vos propres minuteurs pour vos entraînements HIIT ou Tabata.
+                        </p>
                     </div>
                 </GlassCard>
             </Link>
