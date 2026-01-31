@@ -30,8 +30,12 @@ return new class() extends Migration
     {
         if (Schema::hasTable('water_logs')) {
             Schema::table('water_logs', function (Blueprint $table) {
-                if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
-                    $table->dropIndex('water_logs_user_id_consumed_at_index');
+                try {
+                    if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+                        $table->dropIndex('water_logs_user_id_consumed_at_index');
+                    }
+                } catch (\Throwable $e) {
+                    // Index might be used by a foreign key constraint
                 }
             });
         }

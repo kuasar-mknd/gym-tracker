@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Fast extends Model
 {
+    /** @use HasFactory<\Database\Factories\FastFactory> */
     use HasFactory;
 
     protected $fillable = [
