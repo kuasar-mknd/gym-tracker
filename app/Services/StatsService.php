@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  *
  * It utilizes caching (via Redis/Cache facade) to optimize performance for expensive database queries.
  */
-final class StatsService
+class StatsService
 {
     /**
      * Get volume trend (total weight lifted) per workout over time.
@@ -51,13 +51,10 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
-            function () use ($user, $days): array {
-                $results = $this->fetchVolumeTrendData($user, $days);
-
-                return $results->map(fn (\stdClass $row): array => $this->formatVolumeTrendItem($row))
-                    ->values()
-                    ->toArray();
-            }
+            fn (): array => $this->fetchVolumeTrendData($user, $days)
+                ->map(fn (\stdClass $row): array => $this->formatVolumeTrendItem($row))
+                ->values()
+                ->toArray()
         );
     }
 
@@ -227,14 +224,9 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            function () use ($user, $days): array {
-                /** @var array<int, array{date: string, body_fat: float}> $results */
-                $results = $this->fetchBodyFatHistoryData($user, $days)
-                    ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
-                    ->toArray();
-
-                return $results;
-            }
+            fn (): array => $this->fetchBodyFatHistoryData($user, $days)
+                ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+                ->toArray()
         );
     }
 
@@ -305,21 +297,16 @@ final class StatsService
         return \Illuminate\Support\Facades\Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            function () use ($user, $limit): array {
-                /** @var array<int, array{date: string, duration: int, name: string}> $results */
-                $results = Workout::select(['name', 'started_at', 'ended_at'])
-                    ->where('user_id', $user->id)
-                    ->whereNotNull('ended_at')
-                    ->latest('started_at')
-                    ->take($limit)
-                    ->get()
-                    ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
-                    ->reverse()
-                    ->values()
-                    ->toArray();
-
-                return $results;
-            }
+            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
+                ->where('user_id', $user->id)
+                ->whereNotNull('ended_at')
+                ->latest('started_at')
+                ->take($limit)
+                ->get()
+                ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->reverse()
+                ->values()
+                ->toArray()
         );
     }
 
@@ -640,7 +627,23 @@ final class StatsService
     {
         return [
             'date' => $workout->started_at->format('d/m'),
-            'duration' => (int) ($workout->ended_at ? abs($workout->ended_at->diffInMinutes($workout->started_at)) : 0),
+            'duration' => (int) ($workout->ended_at ? $workout->ended_at->diffInMinutes($workout->started_at, true) : 0),
+            'name' => (string) $workout->name,
+        ];
+    }
+
+    /**
+     * Format workout for volume history.
+     *
+     * @return array{date: string, volume: float, name: string}
+     */
+    protected function formatVolumeHistoryItem(Workout $workout): array
+    {
+        $volume = $workout->workoutLines->reduce(fn ($carry, $line): int|float => $carry + $line->sets->reduce(fn ($carrySet, $set): int|float => $carrySet + ($set->weight * $set->reps), 0.0), 0.0);
+
+        return [
+            'date' => $workout->started_at->format('d/m'),
+            'volume' => (float) $volume,
             'name' => (string) $workout->name,
         ];
     }
@@ -676,6 +679,7 @@ final class StatsService
      */
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
+
         return DB::table('workouts')
             ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')

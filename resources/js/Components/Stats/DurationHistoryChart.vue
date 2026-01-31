@@ -24,12 +24,12 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, '#06b6d4') // Cyan
-                    gradient.addColorStop(1, '#3b82f6') // Blue
+                    gradient.addColorStop(0, '#06b6d4') // Cyan-500
+                    gradient.addColorStop(1, '#3b82f6') // Blue-500
                     return gradient
                 },
                 borderRadius: 6,
-                hoverBackgroundColor: '#0ea5e9', // Sky Blue
+                hoverBackgroundColor: '#0ea5e9', // Sky-500
             },
         ],
     }
@@ -71,6 +71,15 @@ const chartOptions = {
             cornerRadius: 12,
             borderWidth: 1,
             borderColor: 'rgba(0, 0, 0, 0.05)',
+            borderColor: 'rgba(0, 0, 0, 0.05)',
+            callbacks: {
+                label: function (context) {
+                    return context.parsed.y + ' min'
+                },
+                afterLabel: function (context) {
+                    return props.data[context.dataIndex]?.name || ''
+                },
+            },
         },
     },
 }

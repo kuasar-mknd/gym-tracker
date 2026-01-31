@@ -244,16 +244,20 @@ watch(selectedExercise, (newVal) => {
             </GlassCard>
 
             <!-- Duration History Chart -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.17s">
-                <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Durée des Séances</h3>
-                    <p class="text-text-muted text-xs font-semibold">Historique récent (min)</p>
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
+                <div class="mb-4 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                            Durée des Séances
+                        </h3>
+                        <p class="text-text-muted text-xs font-semibold">Historique des 30 dernières séances</p>
+                    </div>
                 </div>
                 <div v-if="durationHistory && durationHistory.length > 0" class="h-48">
                     <DurationHistoryChart :data="durationHistory" />
                 </div>
                 <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">timer</span>
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">timer_off</span>
                     <p class="text-text-muted text-sm">Pas encore de données de durée</p>
                 </div>
             </GlassCard>
