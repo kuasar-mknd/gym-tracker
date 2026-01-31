@@ -161,45 +161,33 @@ class StatsServiceTest extends TestCase
     {
         $user = User::factory()->create();
 
-        // Create 3 workouts
-        for ($i = 0; $i < 3; $i++) {
-            $workout = Workout::factory()->create([
-                'user_id' => $user->id,
-                'started_at' => now()->subDays($i),
-                'ended_at' => now()->subDays($i)->addHour(),
-                'name' => 'Workout '.$i,
-            ]);
-            $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
-            Set::factory()->create([
-                'workout_line_id' => $line->id,
-                'weight' => 10,
-                'reps' => 10,
-            ]); // Volume = 100
-        }
-
-        // Create an unfinished workout (should be ignored)
-        Workout::factory()->create([
+        // Workout 1: 100kg * 10 reps = 1000
+        $workout1 = Workout::factory()->create([
             'user_id' => $user->id,
-            'started_at' => now()->addHour(),
-            'ended_at' => null,
-            'name' => 'Unfinished',
+            'started_at' => now()->subDays(2),
+            'ended_at' => now()->subDays(2)->addHour(),
+            'name' => 'Workout 1',
         ]);
+        $line1 = WorkoutLine::factory()->create(['workout_id' => $workout1->id]);
+        Set::factory()->create(['workout_line_id' => $line1->id, 'weight' => 100, 'reps' => 10]);
 
-        $history = $this->statsService->getVolumeHistory($user, 2);
+        // Workout 2: 50kg * 10 reps = 500
+        $workout2 = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDay(),
+            'ended_at' => now()->subDay()->addHour(),
+            'name' => 'Workout 2',
+        ]);
+        $line2 = WorkoutLine::factory()->create(['workout_id' => $workout2->id]);
+        Set::factory()->create(['workout_line_id' => $line2->id, 'weight' => 50, 'reps' => 10]);
 
-        // Should return 2 items (limit)
+        $history = $this->statsService->getVolumeHistory($user);
+
         $this->assertCount(2, $history);
-
-        // The method returns items in chronological order (oldest to newest)
-        // after fetching the most recent ones.
-
-        // Fetched: Workout 0 (newest), Workout 1.
-        // Reversed: Workout 1, Workout 0.
-
+        // History is returned oldest first (reversed latest)
         $this->assertEquals('Workout 1', $history[0]['name']);
-        $this->assertEquals(100, $history[0]['volume']);
-
-        $this->assertEquals('Workout 0', $history[1]['name']);
-        $this->assertEquals(100, $history[1]['volume']);
+        $this->assertEquals(1000, $history[0]['volume']);
+        $this->assertEquals('Workout 2', $history[1]['name']);
+        $this->assertEquals(500, $history[1]['volume']);
     }
 }

@@ -338,14 +338,15 @@ final class StatsService
                 ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
                 ->where('workouts.user_id', $user->id)
                 ->whereNotNull('workouts.ended_at')
-                ->select([
+                ->select(
                     'workouts.id',
                     'workouts.started_at',
                     'workouts.name',
-                    DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'),
-                ])
-                ->groupBy(['workouts.id', 'workouts.started_at', 'workouts.name'])
-                ->orderBy('workouts.started_at', 'desc')
+                    // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                    DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+                )
+                ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
+                ->orderByDesc('workouts.started_at')
                 ->limit($limit)
                 ->get()
                 ->map(fn (object $row): array => [
