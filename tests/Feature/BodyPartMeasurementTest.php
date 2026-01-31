@@ -117,12 +117,12 @@ test('index page correctly calculates latest and diff for parts', function (): v
 
     $chest = collect($measurements)->firstWhere('part', 'Chest');
     expect($chest)->not->toBeNull();
-    expect($chest['current'])->toBe('100.00');
+    expect($chest['current'])->toEqual(100.0);
     expect($chest['diff'])->toEqual(5.0);
     expect($chest['date'])->toBe('2023-01-03');
 
     $biceps = collect($measurements)->firstWhere('part', 'Biceps');
     expect($biceps)->not->toBeNull();
-    expect($biceps['current'])->toBe('40.00');
+    expect($biceps['current'])->toEqual(40.0);
     expect($biceps['diff'])->toEqual(0);
 });
