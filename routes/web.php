@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'index'])->name('tools.macro-calculator');
     Route::get('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'index'])->name('tools.warmup');
     Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
+    Route::get('/tools/fasting', [\App\Http\Controllers\FastingController::class, 'index'])->name('tools.fasting.index');
 
     Route::middleware('throttle:60,1')->group(function (): void {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -95,6 +96,10 @@ Route::middleware('auth')->group(function (): void {
 
         Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
         Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
+
+        Route::post('/tools/fasting', [\App\Http\Controllers\FastingController::class, 'store'])->name('tools.fasting.store');
+        Route::patch('/tools/fasting/{fast}', [\App\Http\Controllers\FastingController::class, 'update'])->name('tools.fasting.update');
+        Route::delete('/tools/fasting/{fast}', [\App\Http\Controllers\FastingController::class, 'destroy'])->name('tools.fasting.destroy');
     });
 });
 
