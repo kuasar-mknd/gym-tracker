@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialUser;
 
-class ResolveSocialUserAction
+final class ResolveSocialUserAction
 {
     /**
      * Resolve the user from the social provider.
@@ -36,7 +36,7 @@ class ResolveSocialUserAction
         $user = User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
             'email' => $socialUser->getEmail(),
-            'password' => Str::random(16), // Random password, hashed by model cast
+            'password' => bcrypt(Str::random(16)), // Random password since auth is handled by provider
             'provider' => $provider,
             'provider_id' => $socialUser->getId(),
             'avatar' => $socialUser->getAvatar(),
