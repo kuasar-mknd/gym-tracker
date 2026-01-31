@@ -44,7 +44,9 @@ class SetController extends Controller
         /** @var \App\Models\WorkoutLine $workoutLine */
         $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
 
-        $set = $workoutLine->sets()->create($validated);
+        $set = $workoutLine->sets()->create(
+            collect($validated)->except('workout_line_id')->toArray()
+        );
 
         return new SetResource($set);
     }
