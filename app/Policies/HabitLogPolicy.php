@@ -7,7 +7,7 @@ namespace App\Policies;
 use App\Models\HabitLog;
 use App\Models\User;
 
-final class HabitLogPolicy
+class HabitLogPolicy
 {
     /**
      * Determine whether the user can view any models.

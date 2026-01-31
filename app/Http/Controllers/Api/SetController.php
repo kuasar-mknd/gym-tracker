@@ -11,6 +11,7 @@ use App\Models\Set;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class SetController extends Controller
@@ -44,7 +45,7 @@ class SetController extends Controller
         /** @var \App\Models\WorkoutLine $workoutLine */
         $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
 
-        $set = $workoutLine->sets()->create($validated);
+        $set = $workoutLine->sets()->create(Arr::except($validated, ['workout_line_id']));
 
         return new SetResource($set);
     }
