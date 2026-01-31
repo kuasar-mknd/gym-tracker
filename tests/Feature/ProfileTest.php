@@ -98,4 +98,35 @@ class ProfileTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_notification_preferences_can_be_updated(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->patch('/profile/preferences', [
+                'preferences' => [
+                    'daily_reminder' => true,
+                ],
+                'push_preferences' => [
+                    'daily_reminder' => true,
+                ],
+                'values' => [
+                    'daily_reminder' => 10,
+                ],
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile/edit');
+
+        $this->assertDatabaseHas('notification_preferences', [
+            'user_id' => $user->id,
+            'type' => 'daily_reminder',
+            'is_enabled' => true,
+            'is_push_enabled' => true,
+            'value' => 10,
+        ]);
+    }
 }

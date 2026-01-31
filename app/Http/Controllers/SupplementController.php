@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Supplements\FetchSupplementsIndexAction;
 use App\Http\Requests\SupplementStoreRequest;
 use App\Http\Requests\SupplementUpdateRequest;
 use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 /**
@@ -30,15 +30,12 @@ class SupplementController extends Controller
      *
      * @return \Inertia\Response The Inertia response rendering the Supplements/Index page.
      */
-    public function index(): \Inertia\Response
+    public function index(FetchSupplementsIndexAction $fetchSupplementsIndexAction): \Inertia\Response
     {
         /** @var User $user */
         $user = $this->user();
 
-        return Inertia::render('Supplements/Index', [
-            'supplements' => $this->getSupplementsWithLatestLog($user),
-            'usageHistory' => $this->getUsageHistory($user),
-        ]);
+        return Inertia::render('Supplements/Index', $fetchSupplementsIndexAction->execute($user));
     }
 
     /**
@@ -135,88 +132,5 @@ class SupplementController extends Controller
         }
 
         return redirect()->back()->with('success', 'Consommation enregistrée.');
-    }
-
-    /**
-     * Retrieve supplements with their latest log status.
-     *
-     * Fetches all supplements for the user and attaches the latest consumption log.
-     * Transforms the data for the frontend, including an icon and unit.
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return \Illuminate\Support\Collection<int, mixed> A collection of formatted supplement data.
-     */
-    protected function getSupplementsWithLatestLog(User $user): \Illuminate\Support\Collection
-    {
-        /** @var \Illuminate\Support\Collection<int, mixed> $results */
-        $results = Supplement::forUser($user->id)
-            ->with(['latestLog'])
-            ->get()
-            ->map(fn (Supplement $supplement): array => [
-                'id' => (int) $supplement->id,
-                'name' => (string) $supplement->name,
-                'icon' => 'heroicon-o-beaker',
-                'current_log' => (float) ($supplement->latestLog->quantity ?? 0.0),
-                'unit' => 'servings',
-                'daily_goal' => null,
-            ]);
-
-        return $results;
-    }
-
-    /**
-     * Get the supplement usage history for the last 30 days.
-     *
-     * Aggregates the total number of supplements consumed per day.
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return array<int, array{date: string, count: float}> An array of daily usage counts.
-     */
-    private function getUsageHistory(User $user): array
-    {
-        $days = 30;
-        $usageHistoryRaw = SupplementLog::where('user_id', $user->id)
-            ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
-            ->select(
-                DB::raw('DATE(consumed_at) as date'),
-                DB::raw('SUM(quantity) as count')
-            )
-            ->groupBy('date')
-            ->get()
-            ->pluck('count', 'date');
-
-        /** @var \Illuminate\Support\Collection<string, float> $results */
-        $results = $usageHistoryRaw;
-
-        return $this->fillUsageHistory($results, $days);
-    }
-
-    /**
-     * Fill missing dates in the usage history with zero values.
-     *
-     * Iterates through the last $days to ensure every date has an entry,
-     * using 0 for days with no recorded consumption.
-     *
-     * @param  \Illuminate\Support\Collection<string, float>  $usageHistoryRaw  The raw aggregated data keyed by date.
-     * @param  int  $days  The number of days to look back.
-     * @return array<int, array{date: string, count: float}> The complete history array with formatted dates.
-     */
-    private function fillUsageHistory(\Illuminate\Support\Collection $usageHistoryRaw, int $days): array
-    {
-        $history = [];
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $carbonDate = now()->subDays($i);
-            $dateKey = $carbonDate->format('Y-m-d');
-            $dateString = $carbonDate->format('d/m');
-
-            $rawTotal = $usageHistoryRaw[$dateKey] ?? 0.0;
-
-            $history[] = [
-                'date' => $dateString,
-                'count' => (float) $rawTotal,
-            ];
-        }
-
-        return $history;
     }
 }

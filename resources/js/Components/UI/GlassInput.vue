@@ -1,5 +1,6 @@
 <script setup>
 import { computed, useAttrs, getCurrentInstance } from 'vue'
+import InputError from '@/Components/InputError.vue'
 
 const props = defineProps({
     modelValue: {
@@ -50,12 +51,34 @@ const sizeClasses = {
     lg: 'min-h-[56px] text-lg rounded-2xl',
     fat: 'text-[4.5rem] leading-none rounded-[2rem] p-5',
 }
+
+// Clear button logic
+const hasClearButton = computed(() => {
+    return ['text', 'search', 'email', 'url', 'tel'].includes(props.type)
+})
+
+const showClearButton = computed(() => {
+    return (
+        hasClearButton.value &&
+        props.modelValue &&
+        String(props.modelValue).length > 0 &&
+        !attrs.disabled &&
+        !attrs.readonly
+    )
+})
+
+const isRequired = computed(() => {
+    // Check for 'required' in attrs (Vue treats presence as empty string usually, or true if bound)
+    return 'required' in attrs && attrs.required !== false
+})
 </script>
 
 <template>
     <div class="w-full">
-        <label v-if="label" :for="inputId" class="font-display-label text-text-muted mb-2 block">
+        <!-- Main Label (Hidden for 'fat' variant to avoid duplication) -->
+        <label v-if="label && variant !== 'fat'" :for="inputId" class="font-display-label text-text-muted mb-2 block">
             {{ label }}
+            <span v-if="isRequired" class="ml-0.5 text-red-500" aria-hidden="true">*</span>
         </label>
 
         <!-- Fat numeric input for workout logging -->
@@ -102,7 +125,7 @@ const sizeClasses = {
         </div>
 
         <!-- Standard input -->
-        <template v-else>
+        <div v-else class="relative">
             <input
                 :id="inputId"
                 :type="type"
@@ -116,13 +139,25 @@ const sizeClasses = {
                     sizeClasses[size],
                     {
                         'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
+                        'pr-10': hasClearButton, // Add padding for clear button
                     },
                 ]"
                 v-bind="$attrs"
             />
-            <p v-if="error" :id="errorId" class="mt-2 text-sm font-medium text-red-600">
-                {{ error }}
-            </p>
-        </template>
+
+            <!-- Clear Button -->
+            <button
+                v-if="showClearButton"
+                type="button"
+                @click="$emit('update:modelValue', '')"
+                class="text-text-muted hover:text-text-main absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors"
+                aria-label="Effacer le texte"
+                tabindex="-1"
+            >
+                <span class="material-symbols-outlined text-lg leading-none">cancel</span>
+            </button>
+        </div>
+
+        <InputError :message="error" :id="errorId" />
     </div>
 </template>

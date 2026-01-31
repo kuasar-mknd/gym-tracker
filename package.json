@@ -21,7 +21,7 @@
         "@tailwindcss/vite": "^4.1.18",
         "@vitejs/plugin-vue": "^6.0.3",
         "autoprefixer": "^10.4.12",
-        "axios": "^1.11.0",
+        "axios": "^1.13.4",
         "concurrently": "^9.0.1",
         "husky": "^9.1.7",
         "laravel-vite-plugin": "^2.0.0",
@@ -44,6 +44,6 @@
         "ziggy-js": "^2.6.0"
     },
     "optionalDependencies": {
-        "@rollup/rollup-linux-arm64-gnu": "^4.55.3"
+        "@rollup/rollup-linux-arm64-gnu": "^4.57.0"
     }
 }
