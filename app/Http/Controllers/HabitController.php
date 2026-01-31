@@ -10,6 +10,7 @@ use App\Http\Requests\ToggleHabitRequest;
 use App\Models\Habit;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 /**
@@ -44,9 +45,29 @@ class HabitController extends Controller
             ])
             ->get();
 
+        // Calculate consistency for the last 30 days
+        $past30Days = Carbon::now()->subDays(29)->startOfDay();
+        $consistencyStats = DB::table('habit_logs')
+            ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
+            ->where('habits.user_id', $this->user()->id)
+            ->where('habit_logs.date', '>=', $past30Days)
+            ->groupBy('habit_logs.date')
+            ->selectRaw('DATE(habit_logs.date) as date, COUNT(*) as count')
+            ->pluck('count', 'date');
+
+        $consistencyData = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $consistencyData[] = [
+                'date' => $date,
+                'count' => $consistencyStats[$date] ?? 0,
+            ];
+        }
+
         return Inertia::render('Habits/Index', [
             'habits' => $habits,
             'weekDates' => $this->getWeekDates(),
+            'consistencyData' => $consistencyData,
         ]);
     }
 
