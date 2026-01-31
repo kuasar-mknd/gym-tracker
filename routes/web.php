@@ -41,6 +41,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tools/macro-calculator', [\App\Http\Controllers\MacroCalculatorController::class, 'index'])->name('tools.macro-calculator');
     Route::get('/tools/warmup', [\App\Http\Controllers\WarmupController::class, 'index'])->name('tools.warmup');
     Route::get('/tools/water', [\App\Http\Controllers\WaterController::class, 'index'])->name('tools.water.index');
+    Route::get('/tools/interval-timer', [\App\Http\Controllers\IntervalTimerController::class, 'index'])->name('tools.interval-timer.index');
 
     Route::middleware('throttle:60,1')->group(function (): void {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -95,6 +96,10 @@ Route::middleware('auth')->group(function (): void {
 
         Route::post('/tools/water', [\App\Http\Controllers\WaterController::class, 'store'])->name('tools.water.store');
         Route::delete('/tools/water/{waterLog}', [\App\Http\Controllers\WaterController::class, 'destroy'])->name('tools.water.destroy');
+
+        Route::post('/tools/interval-timer', [\App\Http\Controllers\IntervalTimerController::class, 'store'])->name('tools.interval-timer.store');
+        Route::patch('/tools/interval-timer/{intervalTimer}', [\App\Http\Controllers\IntervalTimerController::class, 'update'])->name('tools.interval-timer.update');
+        Route::delete('/tools/interval-timer/{intervalTimer}', [\App\Http\Controllers\IntervalTimerController::class, 'destroy'])->name('tools.interval-timer.destroy');
     });
 });
 
