@@ -9,6 +9,8 @@ use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
 use App\Models\WorkoutLine;
+use App\Services\PersonalRecordService;
+use App\Services\StatsService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -16,6 +18,11 @@ use Spatie\QueryBuilder\QueryBuilder;
 class SetController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(
+        protected PersonalRecordService $prService,
+        protected StatsService $statsService
+    ) {}
 
     /**
      * Display a listing of the resource.
@@ -48,6 +55,9 @@ class SetController extends Controller
             collect($validated)->except('workout_line_id')->toArray()
         );
 
+        $this->prService->syncSetPRs($set);
+        $this->statsService->clearWorkoutRelatedStats($this->user());
+
         return new SetResource($set);
     }
 
@@ -70,6 +80,9 @@ class SetController extends Controller
 
         $set->update($request->validated());
 
+        $this->prService->syncSetPRs($set);
+        $this->statsService->clearWorkoutRelatedStats($this->user());
+
         return new SetResource($set);
     }
 
@@ -80,7 +93,10 @@ class SetController extends Controller
     {
         $this->authorize('delete', $set);
 
+        $user = $this->user();
         $set->delete();
+
+        $this->statsService->clearWorkoutRelatedStats($user);
 
         return response()->noContent();
     }
