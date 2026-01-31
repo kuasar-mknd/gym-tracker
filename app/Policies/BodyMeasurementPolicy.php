@@ -7,7 +7,7 @@ namespace App\Policies;
 use App\Models\BodyMeasurement;
 use App\Models\User;
 
-final class BodyMeasurementPolicy
+class BodyMeasurementPolicy
 {
     /**
      * Determine whether the user can view any models.
