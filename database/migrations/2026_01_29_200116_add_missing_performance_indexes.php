@@ -46,6 +46,8 @@ return new class() extends Migration
         } catch (\Throwable $e) {
             // Ignore constraint violation during rollback if MySQL refuses to drop it
             // because it's actively using it for the FK.
+            // This is expected in environments where the original index might have been
+            // replaced by this composite index.
         }
 
         try {

@@ -686,7 +686,9 @@ final class StatsService
             )
             ->groupBy('date')
             ->pluck('volume', 'date')
-            ->map(fn (mixed $value): float => is_numeric($value) ? (float) $value : 0.0);
+            ->map(function (mixed $value): float {
+                return is_numeric($value) ? (float) $value : 0.0;
+            });
     }
 
     /**

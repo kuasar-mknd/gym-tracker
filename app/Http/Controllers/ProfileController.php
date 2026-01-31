@@ -62,6 +62,13 @@ class ProfileController extends Controller
      */
     public function updatePreferences(UpdateProfilePreferencesRequest $request): RedirectResponse
     {
+        /**
+         * @var array{
+         *     preferences: array<string, bool>,
+         *     push_preferences?: array<string, bool>,
+         *     values?: array<string, mixed>
+         * } $validated
+         */
         $validated = $request->validated();
 
         foreach ($validated['preferences'] as $type => $isEnabled) {
