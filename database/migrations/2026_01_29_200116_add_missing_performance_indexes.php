@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -11,20 +13,13 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        try {
-            Schema::table('water_logs', function (Blueprint $table): void {
-                $table->index(['user_id', 'consumed_at']);
+        // Fix: Check if table exists before adding index to avoid errors in tests/CI
+        if (Schema::hasTable('water_logs')) {
+            Schema::table('water_logs', function (Blueprint $table) {
+                if (! Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+                    $table->index(['user_id', 'consumed_at'], 'water_logs_user_id_consumed_at_index');
+                }
             });
-        } catch (\Throwable $e) {
-            // Index already exists, ignore
-        }
-
-        try {
-            Schema::table('supplement_logs', function (Blueprint $table): void {
-                $table->index(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index already exists, ignore
         }
     }
 
@@ -33,27 +28,12 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        // Indexes are typically dropped automatically when the table is dropped,
-        // and these tables might be rolled back completely.
-        // However, if we rollback just this migration, we need to be careful
-        // about Foreign Key constraints in MySQL that might have latched onto
-        // this new index instead of the original 'user_id' index.
-
-        try {
+        if (Schema::hasTable('water_logs')) {
             Schema::table('water_logs', function (Blueprint $table) {
-                $table->dropIndex(['user_id', 'consumed_at']);
+                if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+                    $table->dropIndex('water_logs_user_id_consumed_at_index');
+                }
             });
-        } catch (\Throwable $e) {
-            // Ignore constraint violation during rollback if MySQL refuses to drop it
-            // because it's actively using it for the FK.
-        }
-
-        try {
-            Schema::table('supplement_logs', function (Blueprint $table) {
-                $table->dropIndex(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Ignore constraint violation
         }
     }
 };

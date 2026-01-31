@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
+use App\Http\Requests\ToggleHabitRequest;
 use App\Models\Habit;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -67,15 +68,9 @@ class HabitController extends Controller
         return redirect()->back()->with('success', 'Habitude supprimée.');
     }
 
-    public function toggle(Request $request, Habit $habit): \Illuminate\Http\RedirectResponse
+    public function toggle(ToggleHabitRequest $request, Habit $habit): \Illuminate\Http\RedirectResponse
     {
-        if ($habit->user_id !== $this->user()->id) {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'date' => 'required|date',
-        ]);
+        $validated = $request->validated();
 
         /** @var string $date */
         $date = $validated['date'];
