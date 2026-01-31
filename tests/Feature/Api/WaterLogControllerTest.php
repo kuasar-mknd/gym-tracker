@@ -8,7 +8,7 @@ use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 use function Pest\Laravel\deleteJson;
 
-test('authenticated user can list water logs', function () {
+test('authenticated user can list water logs', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -23,7 +23,7 @@ test('authenticated user can list water logs', function () {
         ->assertJsonCount(3, 'data');
 });
 
-test('authenticated user can create water log', function () {
+test('authenticated user can create water log', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -43,7 +43,7 @@ test('authenticated user can create water log', function () {
     ]);
 });
 
-test('create water log validation', function () {
+test('create water log validation', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -69,7 +69,7 @@ test('create water log validation', function () {
         ->assertJsonValidationErrors(['amount']);
 });
 
-test('authenticated user can show their water log', function () {
+test('authenticated user can show their water log', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -81,7 +81,7 @@ test('authenticated user can show their water log', function () {
         ->assertJsonFragment(['id' => $log->id]);
 });
 
-test('authenticated user cannot show other users water log', function () {
+test('authenticated user cannot show other users water log', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -93,13 +93,13 @@ test('authenticated user cannot show other users water log', function () {
     $response->assertForbidden();
 });
 
-test('authenticated user can update their water log', function () {
+test('authenticated user can update their water log', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
     $log = WaterLog::factory()->create([
         'user_id' => $user->id,
-        'amount' => 200
+        'amount' => 200,
     ]);
 
     $data = [
@@ -117,7 +117,7 @@ test('authenticated user can update their water log', function () {
     ]);
 });
 
-test('authenticated user cannot update other users water log', function () {
+test('authenticated user cannot update other users water log', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -133,7 +133,7 @@ test('authenticated user cannot update other users water log', function () {
     $response->assertForbidden();
 });
 
-test('update water log validation', function () {
+test('update water log validation', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -147,7 +147,7 @@ test('update water log validation', function () {
         ->assertJsonValidationErrors(['amount']);
 });
 
-test('authenticated user can delete their water log', function () {
+test('authenticated user can delete their water log', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -160,7 +160,7 @@ test('authenticated user can delete their water log', function () {
     $this->assertDatabaseMissing('water_logs', ['id' => $log->id]);
 });
 
-test('authenticated user cannot delete other users water log', function () {
+test('authenticated user cannot delete other users water log', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
