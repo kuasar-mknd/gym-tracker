@@ -1,5 +1,6 @@
 <script setup>
-import { computed, useAttrs, getCurrentInstance, ref } from 'vue'
+import { computed, useAttrs, getCurrentInstance } from 'vue'
+import InputError from '@/Components/InputError.vue'
 
 const props = defineProps({
     modelValue: {
@@ -70,14 +71,6 @@ const isRequired = computed(() => {
     // Check for 'required' in attrs (Vue treats presence as empty string usually, or true if bound)
     return 'required' in attrs && attrs.required !== false
 })
-
-// Password toggle logic
-const isPassword = computed(() => props.type === 'password')
-const showPassword = ref(false)
-const inputType = computed(() => {
-    if (isPassword.value && showPassword.value) return 'text'
-    return props.type
-})
 </script>
 
 <template>
@@ -135,7 +128,7 @@ const inputType = computed(() => {
         <div v-else class="relative">
             <input
                 :id="inputId"
-                :type="inputType"
+                :type="type"
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
                 @focus="selectOnFocus ? $event.target.select() : null"
@@ -146,24 +139,11 @@ const inputType = computed(() => {
                     sizeClasses[size],
                     {
                         'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
-                        'pr-10': hasClearButton || isPassword, // Add padding for clear button or password toggle
+                        'pr-10': hasClearButton, // Add padding for clear button
                     },
                 ]"
                 v-bind="$attrs"
             />
-
-            <!-- Password Toggle -->
-            <button
-                v-if="isPassword"
-                type="button"
-                @click="showPassword = !showPassword"
-                class="text-text-muted hover:text-text-main focus:ring-electric-orange/50 absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors focus:ring-2 focus:outline-none"
-                :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-            >
-                <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">
-                    {{ showPassword ? 'visibility_off' : 'visibility' }}
-                </span>
-            </button>
 
             <!-- Clear Button -->
             <button
@@ -178,8 +158,6 @@ const inputType = computed(() => {
             </button>
         </div>
 
-        <p v-if="error" :id="errorId" class="mt-2 text-sm font-medium text-red-600">
-            {{ error }}
-        </p>
+        <InputError :message="error" :id="errorId" />
     </div>
 </template>
