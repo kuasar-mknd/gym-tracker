@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Carbon;
 
-class FetchCalendarEventsAction
+final class FetchCalendarEventsAction
 {
     /**
      * Fetch calendar events (workouts and journals) for a given user and month.

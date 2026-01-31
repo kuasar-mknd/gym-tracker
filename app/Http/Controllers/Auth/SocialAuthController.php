@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Actions\HandleSocialCallbackAction;
-use App\Exceptions\SocialAuth;
+use App\Exceptions\SocialAuthException;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -27,7 +27,7 @@ class SocialAuthController extends Controller
     {
         try {
             $user = $action->execute($provider);
-        } catch (SocialAuth $e) {
+        } catch (SocialAuthException $e) {
             return redirect()->route('login')->with('status', $e->getMessage());
         }
 
