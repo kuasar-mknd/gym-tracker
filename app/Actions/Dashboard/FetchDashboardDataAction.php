@@ -80,7 +80,6 @@ class FetchDashboardDataAction
     private function getActiveGoals(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->goals()
-            ->with('exercise')
             ->whereNull('completed_at')
             ->latest()
             ->take(3)
@@ -92,7 +91,7 @@ class FetchDashboardDataAction
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->workouts()
-            ->with('workoutLines.exercise', 'workoutLines.sets')
+            ->with('workoutLines')
             ->latest('started_at')
             ->limit(5)
             ->get();
