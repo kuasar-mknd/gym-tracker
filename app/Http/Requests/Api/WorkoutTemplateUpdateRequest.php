@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class WorkoutTemplateUpdateRequest extends FormRequest
 {
@@ -27,7 +28,16 @@ class WorkoutTemplateUpdateRequest extends FormRequest
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'exercises' => 'nullable|array',
-            'exercises.*.id' => 'required|integer|exists:exercises,id',
+            'exercises.*.id' => [
+                'required',
+                'integer',
+                Rule::exists('exercises', 'id')->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->where('user_id', $this->user()?->id)
+                            ->orWhereNull('user_id');
+                    });
+                }),
+            ],
             'exercises.*.sets' => 'nullable|array',
             'exercises.*.sets.*.reps' => 'nullable|integer',
             'exercises.*.sets.*.weight' => 'nullable|numeric',
