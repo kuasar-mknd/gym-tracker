@@ -139,6 +139,15 @@
                 </div>
             </GlassCard>
 
+            <!-- Chart Section -->
+            <GlassCard v-if="history.length > 0" class="animate-slide-up" style="animation-delay: 0.08s">
+                <div class="mb-4">
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression</h3>
+                    <p class="text-text-muted text-xs font-semibold">Évolution du score</p>
+                </div>
+                <WilksHistoryChart :data="[...history].reverse()" />
+            </GlassCard>
+
             <!-- History Section -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
                 <div class="space-y-5">
@@ -201,6 +210,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
+const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))
 
 const props = defineProps({
     history: {
