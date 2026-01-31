@@ -13,7 +13,8 @@ final class HandleSocialCallbackAction
 {
     public function __construct(
         protected ResolveSocialUserAction $resolver
-    ) {}
+    ) {
+    }
 
     /**
      * Handle the social auth callback logic.

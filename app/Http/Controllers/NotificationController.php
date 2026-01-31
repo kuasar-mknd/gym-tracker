@@ -35,7 +35,7 @@ class NotificationController extends Controller
      */
     public function markAllAsRead(Request $request): \Illuminate\Http\RedirectResponse
     {
-        $this->user()->unreadNotifications->markAsRead();
+        $this->user()->unreadNotifications()->update(['read_at' => now()]);
 
         return back();
     }

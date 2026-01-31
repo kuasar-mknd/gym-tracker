@@ -4,51 +4,25 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Measurements\FetchBodyPartMeasurementsIndexAction;
 use App\Http\Requests\BodyPartMeasurementStoreRequest;
 use App\Models\BodyPartMeasurement;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class BodyPartMeasurementController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index(): \Inertia\Response
+    public function index(FetchBodyPartMeasurementsIndexAction $action): \Inertia\Response
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        // Group by part, get latest for card display
-        $latestMeasurements = $user->bodyPartMeasurements()
-            ->orderBy('measured_at', 'desc')
-            ->get()
-            ->groupBy('part')
-            ->map(function ($group): array {
-                /** @var \App\Models\BodyPartMeasurement $latest */
-                $latest = $group->first();
-                /** @var \App\Models\BodyPartMeasurement|null $previous */
-                $previous = $group->skip(1)->first();
-
-                return [
-                    'part' => $latest->part,
-                    'current' => $latest->value,
-                    'unit' => $latest->unit,
-                    'date' => \Illuminate\Support\Carbon::parse($latest->measured_at)->format('Y-m-d'),
-                    'diff' => $previous ? round($latest->value - $previous->value, 2) : 0,
-                ];
-            })->values();
-
-        return Inertia::render('Measurements/Parts/Index', [
-            'latestMeasurements' => $latestMeasurements,
-            'commonParts' => $this->getCommonParts(),
-        ]);
+        return Inertia::render('Measurements/Parts/Index', $action->execute($this->user()));
     }
 
     public function show(string $part): \Illuminate\Http\RedirectResponse|\Inertia\Response
     {
         /** @var \App\Models\User $user */
-        $user = Auth::user();
+        $user = $this->user();
 
         $history = $user->bodyPartMeasurements()
             ->where('part', $part)
@@ -81,27 +55,5 @@ class BodyPartMeasurementController extends Controller
         $bodyPartMeasurement->delete();
 
         return redirect()->back()->with('success', 'Measurement deleted.');
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function getCommonParts(): array
-    {
-        return [
-            'Neck',
-            'Shoulders',
-            'Chest',
-            'Biceps L',
-            'Biceps R',
-            'Forearm L',
-            'Forearm R',
-            'Waist',
-            'Hips',
-            'Thigh L',
-            'Thigh R',
-            'Calf L',
-            'Calf R',
-        ];
     }
 }

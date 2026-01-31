@@ -11,6 +11,7 @@ import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
+const MonthlyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/MonthlyVolumeChart.vue'))
 const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
 const VolumePerWorkoutChart = defineAsyncComponent(() => import('@/Components/Stats/VolumePerWorkoutChart.vue'))
 
@@ -18,6 +19,7 @@ const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     exercises: Array,
     monthlyFrequency: Array,
+    monthlyVolume: Array,
     durationHistory: Array,
     volumeHistory: Array,
 })
@@ -195,6 +197,15 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <WorkoutsPerMonthChart :data="monthlyFrequency" />
                     </GlassCard>
 
+                    <!-- Monthly Volume Chart -->
+                    <GlassCard v-if="monthlyVolume && monthlyVolume.length > 0">
+                        <div class="mb-4">
+                            <h3 class="text-text-main text-lg font-bold dark:text-white">Volume Mensuel</h3>
+                            <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
+                        </div>
+                        <MonthlyVolumeChart :data="monthlyVolume" />
+                    </GlassCard>
+
                     <!-- Duration Chart -->
                     <GlassCard v-if="durationHistory && durationHistory.length > 0">
                         <div class="mb-4">
@@ -205,7 +216,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </GlassCard>
 
                     <!-- Volume per Workout Chart -->
-                    <GlassCard v-if="volumeHistory && volumeHistory.length > 0" class="lg:col-span-2">
+                    <GlassCard v-if="volumeHistory && volumeHistory.length > 0">
                         <div class="mb-4">
                             <h3 class="text-text-main text-lg font-bold dark:text-white">Volume par Séance</h3>
                             <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
@@ -218,7 +229,16 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <!-- Available Exercises -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
                 <h3 class="text-text-main mb-3 font-semibold dark:text-white">Exercices disponibles</h3>
-                <div class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
+
+                <!-- Loading State -->
+                <div v-if="!exercises" class="flex gap-2 overflow-x-hidden pb-2">
+                    <div v-for="i in 5" :key="i" class="shrink-0">
+                        <GlassSkeleton width="120px" height="60px" class="rounded-xl" />
+                    </div>
+                </div>
+
+                <!-- Data State -->
+                <div v-else class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
                     <div
                         v-for="exercise in exercises"
                         :key="exercise.id"
@@ -312,7 +332,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                                 class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/50"
                                             >
                                                 {{ line.exercise.name }}
-                                                <span class="text-text-muted/50">• {{ line.sets.length }} séries</span>
+                                                <span class="text-text-muted/50">• {{ line.sets_count }} séries</span>
                                             </span>
                                             <span
                                                 v-if="workout.workout_lines.length > 3"

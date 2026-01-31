@@ -14,13 +14,13 @@ test('users can only see system exercises and their own custom exercises in stat
     $userB = User::factory()->create();
 
     // System Exercise
-    $systemExercise = Exercise::factory()->create(['name' => 'System Exercise', 'user_id' => null]);
+    $systemExercise = Exercise::factory()->create(['name' => 'System Exercise', 'user_id' => null, 'category' => 'A']);
 
     // User A Custom Exercise
-    $userAExercise = Exercise::factory()->create(['name' => 'User A Exercise', 'user_id' => $userA->id]);
+    $userAExercise = Exercise::factory()->create(['name' => 'User A Exercise', 'user_id' => $userA->id, 'category' => 'A']);
 
     // User B Custom Exercise
-    $userBExercise = Exercise::factory()->create(['name' => 'User B Exercise', 'user_id' => $userB->id]);
+    $userBExercise = Exercise::factory()->create(['name' => 'User B Exercise', 'user_id' => $userB->id, 'category' => 'A']);
 
     actingAs($userA)
         ->get(route('stats.index'))
@@ -40,13 +40,13 @@ test('users can only see system exercises and their own custom exercises in work
     $workout = Workout::factory()->create(['user_id' => $userA->id]);
 
     // System Exercise
-    $systemExercise = Exercise::factory()->create(['name' => 'System Exercise', 'user_id' => null]);
+    $systemExercise = Exercise::factory()->create(['name' => 'System Exercise', 'user_id' => null, 'category' => 'A']);
 
     // User A Custom Exercise
-    $userAExercise = Exercise::factory()->create(['name' => 'User A Exercise', 'user_id' => $userA->id]);
+    $userAExercise = Exercise::factory()->create(['name' => 'User A Exercise', 'user_id' => $userA->id, 'category' => 'A']);
 
     // User B Custom Exercise
-    $userBExercise = Exercise::factory()->create(['name' => 'User B Exercise', 'user_id' => $userB->id]);
+    $userBExercise = Exercise::factory()->create(['name' => 'User B Exercise', 'user_id' => $userB->id, 'category' => 'A']);
 
     actingAs($userA)
         ->get(route('workouts.show', $workout))

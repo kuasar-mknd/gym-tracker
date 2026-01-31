@@ -4,11 +4,33 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 
+const HabitConsistencyChart = defineAsyncComponent(() => import('@/Components/Stats/HabitConsistencyChart.vue'))
+
+/**
+ * Habits/Index Page
+ *
+ * This component displays the user's habits list and a weekly calendar view.
+ * It allows users to:
+ * - View their active habits and progress.
+ * - Create new habits.
+ * - Edit existing habits.
+ * - Delete habits.
+ * - Toggle habit completion for specific days in the current week.
+ */
 const props = defineProps({
+    /**
+     * List of user's active habits with their logs for the current week.
+     * @type {Array<{id: number, name: string, description: string|null, color: string, icon: string, goal_times_per_week: number, logs: Array}>}
+     */
     habits: Array,
+    /**
+     * Array of date objects representing the current week.
+     * @type {Array<{date: string, day: string, day_name: string, day_short: string, day_num: number, is_today: boolean}>}
+     */
     weekDates: Array,
+    consistencyData: Array,
 })
 
 const showAddForm = ref(false)
@@ -59,12 +81,22 @@ const colors = [
     'bg-rose-500',
 ]
 
+/**
+ * Opens the modal to create a new habit.
+ * Resets the form and editing state.
+ */
 const openAddForm = () => {
     form.reset()
     editingHabit.value = null
     showAddForm.value = true
 }
 
+/**
+ * Opens the modal to edit an existing habit.
+ * Populates the form with the habit's data.
+ *
+ * @param {Object} habit - The habit object to edit.
+ */
 const editHabit = (habit) => {
     editingHabit.value = habit
     form.name = habit.name
@@ -75,6 +107,10 @@ const editHabit = (habit) => {
     showAddForm.value = true
 }
 
+/**
+ * Submits the form to create or update a habit.
+ * Handles both store (POST) and update (PUT) requests.
+ */
 const submit = () => {
     if (editingHabit.value) {
         form.put(route('habits.update', editingHabit.value.id), {
@@ -90,12 +126,24 @@ const submit = () => {
     }
 }
 
+/**
+ * Deletes a habit after confirmation.
+ *
+ * @param {Object} habit - The habit to delete.
+ */
 const deleteHabit = (habit) => {
     if (confirm('Voulez-vous vraiment supprimer cette habitude ?')) {
         router.delete(route('habits.destroy', habit.id))
     }
 }
 
+/**
+ * Toggles the completion status of a habit for a specific date.
+ * Sends a POST request to the server.
+ *
+ * @param {Object} habit - The habit to toggle.
+ * @param {string} date - The date to toggle (YYYY-MM-DD).
+ */
 const toggleHabit = (habit, date) => {
     router.post(
         route('habits.toggle', habit.id),
@@ -110,14 +158,33 @@ const toggleHabit = (habit, date) => {
     )
 }
 
+/**
+ * Checks if a habit is completed on a specific date.
+ *
+ * @param {Object} habit - The habit object.
+ * @param {string} date - The date to check.
+ * @returns {boolean} True if a log exists for the date.
+ */
 const isCompleted = (habit, date) => {
     return habit.logs.some((log) => log.date === date)
 }
 
+/**
+ * Gets the number of times a habit has been completed in the current week.
+ *
+ * @param {Object} habit - The habit object.
+ * @returns {number} The completion count.
+ */
 const getCompletionCount = (habit) => {
     return habit.logs.length
 }
 
+/**
+ * Calculates the completion progress percentage for the week.
+ *
+ * @param {Object} habit - The habit object.
+ * @returns {number} The progress percentage (0-100).
+ */
 const getProgressPercent = (habit) => {
     const count = getCompletionCount(habit)
     const goal = habit.goal_times_per_week
@@ -137,7 +204,7 @@ const getProgressPercent = (habit) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-text-main">Habitudes</h2>
+                <h2 class="text-text-main text-xl font-semibold">Habitudes</h2>
                 <GlassButton @click="openAddForm">
                     <span class="material-symbols-outlined mr-2 text-sm">add</span>
                     Ajouter
@@ -146,17 +213,26 @@ const getProgressPercent = (habit) => {
         </template>
 
         <div class="space-y-6">
+            <!-- Consistency Chart -->
+            <GlassCard v-if="consistencyData && consistencyData.some((d) => d.count > 0)" class="animate-slide-up">
+                <div class="mb-4">
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Régularité</h3>
+                    <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
+                </div>
+                <HabitConsistencyChart :data="consistencyData" />
+            </GlassCard>
+
             <!-- Weekly Calendar Header -->
             <GlassCard class="overflow-hidden p-0">
                 <div class="grid grid-cols-[1fr_repeat(7,minmax(32px,1fr))] sm:grid-cols-[200px_repeat(7,1fr)]">
-                    <div class="p-4 font-bold text-text-main">Habitude</div>
+                    <div class="text-text-main p-4 font-bold">Habitude</div>
                     <div
                         v-for="day in weekDates"
                         :key="day.date"
                         class="flex flex-col items-center justify-center border-l border-slate-100 p-2 text-center"
                         :class="{ 'bg-accent-primary/5': day.is_today }"
                     >
-                        <div class="text-[10px] uppercase text-text-muted">{{ day.day_short || day.day }}</div>
+                        <div class="text-text-muted text-[10px] uppercase">{{ day.day_short || day.day }}</div>
                         <div class="text-sm font-bold" :class="day.is_today ? 'text-accent-primary' : 'text-text-main'">
                             {{ day.day_num }}
                         </div>
@@ -167,7 +243,7 @@ const getProgressPercent = (habit) => {
             <!-- Habits List -->
             <div v-if="habits.length === 0" class="py-12 text-center">
                 <div class="mb-4 text-5xl">✅</div>
-                <h3 class="text-lg font-medium text-text-main">Aucune habitude</h3>
+                <h3 class="text-text-main text-lg font-medium">Aucune habitude</h3>
                 <p class="text-text-muted">Commencez par créer une habitude à suivre.</p>
                 <GlassButton class="mt-4" @click="openAddForm">Créer ma première habitude</GlassButton>
             </div>
@@ -189,7 +265,7 @@ const getProgressPercent = (habit) => {
                                     <span class="material-symbols-outlined">{{ habit.icon }}</span>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <h3 class="truncate font-bold text-text-main">{{ habit.name }}</h3>
+                                    <h3 class="text-text-main truncate font-bold">{{ habit.name }}</h3>
                                     <div class="flex items-center gap-2">
                                         <div class="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
                                             <div
@@ -198,7 +274,7 @@ const getProgressPercent = (habit) => {
                                                 :style="{ width: getProgressPercent(habit) + '%' }"
                                             ></div>
                                         </div>
-                                        <span class="text-[10px] text-text-muted"
+                                        <span class="text-text-muted text-[10px]"
                                             >{{ getCompletionCount(habit) }}/{{ habit.goal_times_per_week }}</span
                                         >
                                     </div>
@@ -206,11 +282,11 @@ const getProgressPercent = (habit) => {
                             </div>
 
                             <!-- Actions (Absolute) -->
-                            <div class="absolute right-2 top-2 flex opacity-0 transition group-hover:opacity-100">
-                                <button @click="editHabit(habit)" class="p-1 text-text-muted hover:text-text-main">
+                            <div class="absolute top-2 right-2 flex opacity-0 transition group-hover:opacity-100">
+                                <button @click="editHabit(habit)" class="text-text-muted hover:text-text-main p-1">
                                     <span class="material-symbols-outlined text-sm">edit</span>
                                 </button>
-                                <button @click="deleteHabit(habit)" class="p-1 text-text-muted hover:text-red-500">
+                                <button @click="deleteHabit(habit)" class="text-text-muted p-1 hover:text-red-500">
                                     <span class="material-symbols-outlined text-sm">delete</span>
                                 </button>
                             </div>
@@ -243,9 +319,9 @@ const getProgressPercent = (habit) => {
         <!-- Add/Edit Modal -->
         <div v-if="showAddForm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showAddForm = false"></div>
-            <GlassCard class="relative w-full max-w-lg animate-scale-in shadow-2xl" variant="solid">
+            <GlassCard class="animate-scale-in relative w-full max-w-lg shadow-2xl" variant="solid">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-xl font-bold text-text-main">
+                    <h3 class="text-text-main text-xl font-bold">
                         {{ editingHabit ? 'Modifier' : 'Nouvelle Habitude' }}
                     </h3>
                     <button @click="showAddForm = false" class="text-text-muted hover:text-text-main">
@@ -270,7 +346,7 @@ const getProgressPercent = (habit) => {
                     />
 
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-text-muted">Couleur</label>
+                        <label class="text-text-muted mb-1 block text-sm font-medium">Couleur</label>
                         <div class="flex flex-wrap gap-2">
                             <button
                                 v-for="color in colors"
@@ -280,14 +356,14 @@ const getProgressPercent = (habit) => {
                                 class="h-8 w-8 rounded-full border-2 transition"
                                 :class="[
                                     color,
-                                    form.color === color ? 'scale-110 border-text-main' : 'border-transparent',
+                                    form.color === color ? 'border-text-main scale-110' : 'border-transparent',
                                 ]"
                             ></button>
                         </div>
                     </div>
 
                     <div>
-                        <label class="mb-1 block text-sm font-medium text-text-muted">Icône</label>
+                        <label class="text-text-muted mb-1 block text-sm font-medium">Icône</label>
                         <div class="flex flex-wrap gap-2">
                             <button
                                 v-for="icon in icons"
@@ -298,7 +374,7 @@ const getProgressPercent = (habit) => {
                                 :class="[
                                     form.icon === icon
                                         ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
-                                        : 'border-transparent text-text-muted',
+                                        : 'text-text-muted border-transparent',
                                 ]"
                             >
                                 <span class="material-symbols-outlined">{{ icon }}</span>
