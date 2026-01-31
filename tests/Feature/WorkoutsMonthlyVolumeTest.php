@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use App\Models\Set;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
