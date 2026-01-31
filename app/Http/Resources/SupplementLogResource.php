@@ -7,7 +7,9 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\SupplementLog */
+/**
+ * @mixin \App\Models\SupplementLog
+ */
 class SupplementLogResource extends JsonResource
 {
     /**

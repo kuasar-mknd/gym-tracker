@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Api\StoreSupplementLogRequest;
-use App\Http\Requests\Api\UpdateSupplementLogRequest;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreSupplementLogRequest;
+use App\Http\Requests\UpdateSupplementLogRequest;
 use App\Http\Resources\SupplementLogResource;
 use App\Models\SupplementLog;
-use Illuminate\Http\Response;
-use Spatie\QueryBuilder\AllowedFilter;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class SupplementLogController extends Controller
@@ -17,17 +19,19 @@ class SupplementLogController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', SupplementLog::class);
+
+        /** @var int $perPage */
+        $perPage = $request->input('per_page', 15);
+
         $logs = QueryBuilder::for(SupplementLog::class)
-            ->allowedFilters([
-                AllowedFilter::exact('supplement_id'),
-            ])
+            ->allowedFilters(['supplement_id'])
             ->allowedSorts(['consumed_at', 'created_at'])
-            ->defaultSort('-consumed_at')
+            ->allowedIncludes(['supplement'])
             ->where('user_id', $this->user()->id)
-            ->with(['supplement'])
-            ->paginate();
+            ->paginate($perPage);
 
         return SupplementLogResource::collection($logs);
     }
@@ -35,22 +39,13 @@ class SupplementLogController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreSupplementLogRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreSupplementLogRequest $request): SupplementLogResource
     {
-        $validated = $request->validated();
+        $this->authorize('create', SupplementLog::class);
 
-        $log = new SupplementLog($validated);
-        $log->user_id = $this->user()->id;
+        $log = $this->user()->supplementLogs()->create($request->validated());
 
-        if (! isset($validated['consumed_at'])) {
-            $log->consumed_at = now();
-        }
-
-        $log->save();
-
-        return (new SupplementLogResource($log))
-            ->response()
-            ->setStatusCode(Response::HTTP_CREATED);
+        return new SupplementLogResource($log);
     }
 
     /**
@@ -58,11 +53,7 @@ class SupplementLogController extends Controller
      */
     public function show(SupplementLog $supplementLog): SupplementLogResource
     {
-        if ($supplementLog->user_id !== $this->user()->id) {
-            abort(403);
-        }
-
-        $supplementLog->load('supplement');
+        $this->authorize('view', $supplementLog);
 
         return new SupplementLogResource($supplementLog);
     }
@@ -72,9 +63,7 @@ class SupplementLogController extends Controller
      */
     public function update(UpdateSupplementLogRequest $request, SupplementLog $supplementLog): SupplementLogResource
     {
-        if ($supplementLog->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('update', $supplementLog);
 
         $supplementLog->update($request->validated());
 
@@ -84,14 +73,12 @@ class SupplementLogController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(SupplementLog $supplementLog): Response
+    public function destroy(SupplementLog $supplementLog): JsonResponse
     {
-        if ($supplementLog->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $supplementLog);
 
         $supplementLog->delete();
 
-        return response()->noContent();
+        return response()->json(null, 204);
     }
 }

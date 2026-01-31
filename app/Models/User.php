@@ -208,6 +208,14 @@ final class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Fast::class);
     }
 
+    /**
+     * @return HasMany<SupplementLog, $this>
+     */
+    public function supplementLogs(): HasMany
+    {
+        return $this->hasMany(SupplementLog::class);
+    }
+
     public function isPushEnabled(string $type): bool
     {
         return (bool) $this->notificationPreferences()
