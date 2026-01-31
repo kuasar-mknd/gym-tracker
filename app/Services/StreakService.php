@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Carbon;
 
-final class StreakService
+class StreakService
 {
     /**
      * Update user streak based on the latest workout.

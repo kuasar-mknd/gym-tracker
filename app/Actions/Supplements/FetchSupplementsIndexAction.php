@@ -10,11 +10,11 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-final class FetchSupplementsIndexAction
+class FetchSupplementsIndexAction
 {
     /**
      * @return array{
-     *     supplements: Collection<int, mixed>,
+     *     supplements: \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: null}>,
      *     usageHistory: array<int, array{date: string, count: float}>
      * }
      */
@@ -29,12 +29,11 @@ final class FetchSupplementsIndexAction
     /**
      * Retrieve supplements with their latest log status.
      *
-     * @return Collection<int, mixed>
+     * @return \Illuminate\Support\Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: null}>
      */
     private function getSupplementsWithLatestLog(User $user): Collection
     {
-        /** @var Collection<int, mixed> $results */
-        $results = Supplement::forUser($user->id)
+        return Supplement::forUser($user->id)
             ->with(['latestLog'])
             ->get()
             ->map(fn (Supplement $supplement): array => [
@@ -45,8 +44,6 @@ final class FetchSupplementsIndexAction
                 'unit' => 'servings',
                 'daily_goal' => null,
             ]);
-
-        return $results;
     }
 
     /**

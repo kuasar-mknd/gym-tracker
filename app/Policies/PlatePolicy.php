@@ -7,7 +7,7 @@ namespace App\Policies;
 use App\Models\Plate;
 use App\Models\User;
 
-final class PlatePolicy
+class PlatePolicy
 {
     /**
      * Determine whether the user can view any models.

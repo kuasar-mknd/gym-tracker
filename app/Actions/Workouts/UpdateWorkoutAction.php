@@ -7,7 +7,7 @@ namespace App\Actions\Workouts;
 use App\Models\Workout;
 use App\Services\StatsService;
 
-final class UpdateWorkoutAction
+class UpdateWorkoutAction
 {
     public function __construct(protected StatsService $statsService)
     {

@@ -7,7 +7,7 @@ namespace App\Actions\Tools;
 use App\Models\User;
 use App\Models\WilksScore;
 
-final class CreateWilksScoreAction
+class CreateWilksScoreAction
 {
     /**
      * @param  array{body_weight: float, lifted_weight: float, gender: string, unit: string}  $data
@@ -25,7 +25,6 @@ final class CreateWilksScoreAction
 
         $score = $this->calculateWilks($bwKg, $liftedKg, $gender);
 
-        /** @var WilksScore */
         return $user->wilksScores()->create([
             'body_weight' => $bw,
             'lifted_weight' => $lifted,

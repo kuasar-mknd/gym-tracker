@@ -8,7 +8,7 @@ use App\Models\Supplement;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
-final class SupplementPolicy
+class SupplementPolicy
 {
     use HandlesAuthorization;
 
