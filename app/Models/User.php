@@ -33,7 +33,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property-read NotifColl<int, Notification> $notifications
  * @property-read NotifColl<int, Notification> $unreadNotifications
  */
-class User extends Authenticatable implements MustVerifyEmail
+final class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
 
@@ -60,7 +60,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'current_streak',
         'longest_streak',
         'last_workout_at',
-        'email_verified_at',
     ];
 
     /**
@@ -191,6 +190,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function waterLogs(): HasMany
     {
         return $this->hasMany(WaterLog::class);
+    }
+
+    /**
+     * @return HasMany<IntervalTimer, $this>
+     */
+    public function intervalTimers(): HasMany
+    {
+        return $this->hasMany(IntervalTimer::class);
     }
 
     public function isPushEnabled(string $type): bool

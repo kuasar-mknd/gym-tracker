@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 /**
  * Sentry Laravel SDK configuration file.
  *
@@ -10,7 +8,7 @@ declare(strict_types=1);
 return [
 
     // @see https://docs.sentry.io/product/sentry-basics/dsn-explainer/
-    'dsn' => env('APP_ENV') === 'production' ? env('SENTRY_LARAVEL_DSN', env('SENTRY_DSN')) : null,
+    'dsn' => env('SENTRY_LARAVEL_DSN', env('SENTRY_DSN')),
 
     // @see https://spotlightjs.com/
     // 'spotlight' => env('SENTRY_SPOTLIGHT', false),

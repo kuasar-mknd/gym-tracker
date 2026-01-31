@@ -11,6 +11,7 @@ import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
+const MonthlyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/MonthlyVolumeChart.vue'))
 const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
 const VolumePerWorkoutChart = defineAsyncComponent(() => import('@/Components/Stats/VolumePerWorkoutChart.vue'))
 
@@ -18,6 +19,7 @@ const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     exercises: Array,
     monthlyFrequency: Array,
+    monthlyVolume: Array,
     durationHistory: Array,
     volumeHistory: Array,
 })
@@ -195,6 +197,15 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <WorkoutsPerMonthChart :data="monthlyFrequency" />
                     </GlassCard>
 
+                    <!-- Monthly Volume Chart -->
+                    <GlassCard v-if="monthlyVolume && monthlyVolume.length > 0">
+                        <div class="mb-4">
+                            <h3 class="text-text-main text-lg font-bold dark:text-white">Volume Mensuel</h3>
+                            <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
+                        </div>
+                        <MonthlyVolumeChart :data="monthlyVolume" />
+                    </GlassCard>
+
                     <!-- Duration Chart -->
                     <GlassCard v-if="durationHistory && durationHistory.length > 0">
                         <div class="mb-4">
@@ -205,7 +216,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </GlassCard>
 
                     <!-- Volume per Workout Chart -->
-                    <GlassCard v-if="volumeHistory && volumeHistory.length > 0" class="lg:col-span-2">
+                    <GlassCard v-if="volumeHistory && volumeHistory.length > 0">
                         <div class="mb-4">
                             <h3 class="text-text-main text-lg font-bold dark:text-white">Volume par Séance</h3>
                             <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>

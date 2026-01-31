@@ -170,6 +170,23 @@
                     </div>
                 </GlassCard>
             </Link>
+
+            <!-- Interval Timer -->
+            <Link :href="route('tools.interval-timer.index')" class="group">
+                <GlassCard
+                    class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
+                >
+                    <div class="flex flex-col items-center space-y-4 text-center">
+                        <div class="rounded-full bg-purple-500/20 p-4 text-purple-500">
+                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">timer</span>
+                        </div>
+                        <h3 class="text-text-main text-xl font-bold">Minuteur d'Intervalle</h3>
+                        <p class="text-text-muted text-sm">
+                            Créez et lancez vos propres minuteurs pour vos entraînements HIIT ou Tabata.
+                        </p>
+                    </div>
+                </GlassCard>
+            </Link>
         </div>
     </AuthenticatedLayout>
 </template>
