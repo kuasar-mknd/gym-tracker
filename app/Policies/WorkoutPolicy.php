@@ -8,7 +8,7 @@ use App\Models\Workout;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
-final class WorkoutPolicy
+class WorkoutPolicy
 {
     use HandlesAuthorization;
 
@@ -57,12 +57,12 @@ final class WorkoutPolicy
         return $authUser->can('Delete:Workout');
     }
 
-    public function restore(AuthUser $authUser, Workout $workout): bool
+    public function restore(AuthUser $authUser): bool
     {
         return $authUser->can('Restore:Workout');
     }
 
-    public function forceDelete(AuthUser $authUser, Workout $workout): bool
+    public function forceDelete(AuthUser $authUser): bool
     {
         return $authUser->can('ForceDelete:Workout');
     }
@@ -77,7 +77,7 @@ final class WorkoutPolicy
         return $authUser->can('RestoreAny:Workout');
     }
 
-    public function replicate(AuthUser $authUser, Workout $workout): bool
+    public function replicate(AuthUser $authUser): bool
     {
         return $authUser->can('Replicate:Workout');
     }

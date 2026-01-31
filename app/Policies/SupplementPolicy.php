@@ -8,7 +8,7 @@ use App\Models\Supplement;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
-final class SupplementPolicy
+class SupplementPolicy
 {
     use HandlesAuthorization;
 
@@ -57,12 +57,12 @@ final class SupplementPolicy
         return $authUser->can('Delete:Supplement');
     }
 
-    public function restore(AuthUser $authUser, Supplement $supplement): bool
+    public function restore(AuthUser $authUser): bool
     {
         return $authUser->can('Restore:Supplement');
     }
 
-    public function forceDelete(AuthUser $authUser, Supplement $supplement): bool
+    public function forceDelete(AuthUser $authUser): bool
     {
         return $authUser->can('ForceDelete:Supplement');
     }
@@ -77,7 +77,7 @@ final class SupplementPolicy
         return $authUser->can('RestoreAny:Supplement');
     }
 
-    public function replicate(AuthUser $authUser, Supplement $supplement): bool
+    public function replicate(AuthUser $authUser): bool
     {
         return $authUser->can('Replicate:Supplement');
     }

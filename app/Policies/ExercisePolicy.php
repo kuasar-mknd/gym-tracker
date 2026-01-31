@@ -8,7 +8,7 @@ use App\Models\Exercise;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
-final class ExercisePolicy
+class ExercisePolicy
 {
     use HandlesAuthorization;
 
@@ -57,12 +57,12 @@ final class ExercisePolicy
         return $authUser->can('Delete:Exercise');
     }
 
-    public function restore(AuthUser $authUser, Exercise $exercise): bool
+    public function restore(AuthUser $authUser): bool
     {
         return $authUser->can('Restore:Exercise');
     }
 
-    public function forceDelete(AuthUser $authUser, Exercise $exercise): bool
+    public function forceDelete(AuthUser $authUser): bool
     {
         return $authUser->can('ForceDelete:Exercise');
     }
@@ -77,7 +77,7 @@ final class ExercisePolicy
         return $authUser->can('RestoreAny:Exercise');
     }
 
-    public function replicate(AuthUser $authUser, Exercise $exercise): bool
+    public function replicate(AuthUser $authUser): bool
     {
         return $authUser->can('Replicate:Exercise');
     }

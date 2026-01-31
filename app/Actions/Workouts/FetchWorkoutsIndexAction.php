@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
-final class FetchWorkoutsIndexAction
+class FetchWorkoutsIndexAction
 {
     public function __construct(protected StatsService $statsService)
     {
@@ -22,8 +22,8 @@ final class FetchWorkoutsIndexAction
      * Fetch workouts and related statistics for the index page.
      *
      * @return array{
-     *     workouts: \Illuminate\Pagination\LengthAwarePaginator,
-     *     monthlyFrequency: Collection,
+     *     workouts: \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>,
+     *     monthlyFrequency: Collection<int, array{month: string, count: int}>,
      *     durationHistory: array<int, array{
      *         date: string,
      *         duration: int,
@@ -52,9 +52,11 @@ final class FetchWorkoutsIndexAction
         ];
     }
 
-    protected function getMonthlyFrequency(
-        User $user
-    ): Collection {
+    /**
+     * @return Collection<int, array{month: string, count: int}>
+     */
+    protected function getMonthlyFrequency(User $user): Collection
+    {
         return Cache::remember(
             "stats.monthly_frequency.{$user->id}",
             now()->addHour(),
@@ -99,7 +101,11 @@ final class FetchWorkoutsIndexAction
     private function getWorkouts(
         User $user
     ): \Illuminate\Pagination\LengthAwarePaginator {
-        return Workout::with(['workoutLines.exercise', 'workoutLines.sets'])
+        return Workout::with([
+            'workoutLines' => function ($query): void {
+                $query->with('exercise')->withCount('sets');
+            },
+        ])
             ->where('user_id', $user->id)
             ->latest('started_at')
             ->paginate(20);

@@ -4,59 +4,55 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-final class TrainingReminder extends Notification implements ShouldQueue
+class TrainingReminder extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    public function __construct(public ?string $message = null)
+    {
+        $this->message ??= "C'est le moment de s'entraîner ! 💪";
+    }
+
     /**
-     * Get the notification's delivery channels.
-     *
-     * @param  \App\Models\User  $notifiable
      * @return array<int, string>
      */
-    public function via(object $notifiable): array
+    public function via(User $_notifiable): array
     {
         $channels = ['database'];
 
-        if ($notifiable->isPushEnabled('training_reminder')) {
+        if ($_notifiable->isPushEnabled('training_reminder')) {
             $channels[] = WebPushChannel::class;
         }
 
         return $channels;
     }
 
-    /**
-     * @param  \App\Models\User  $notifiable
-     * @param  mixed  $notification
-     */
-    public function toWebPush(object $notifiable, $notification): WebPushMessage
+    public function toWebPush(User $_notifiable, mixed $_notification): WebPushMessage
     {
-        return (new WebPushMessage)
-            ->title("C'est l'heure de bouger ! 🏋️‍♂️")
+        return (new WebPushMessage())
+            ->title('Prêt pour ta séance ? 💪')
             ->icon('/logo.svg')
-            /** @phpstan-ignore-next-line */
-            ->body((string) ($this->toArray($notifiable)['message'] ?? ''))
-            ->action("M'entraîner maintenant", url('/workouts/active'));
+            ->body($this->message ?? '')
+            ->action('Ouvrir Gym Tracker', url('/'));
     }
 
     /**
-     * Get the array representation of the notification.
-     *
-     * @param  \App\Models\User  $notifiable
-     * @return array<string, mixed>
+     * @return array<string, \Illuminate\Support\Carbon|int|string|bool|float|array<int, mixed>|null>
      */
-    public function toArray(object $notifiable): array
+    public function toArray(User $_notifiable): array
     {
         return [
             'type' => 'training_reminder',
-            'title' => 'Prêt pour une séance ? 🏋️',
-            'message' => "Ça fait quelques jours que tu n'as pas enregistré d'entraînement. Prêt à reprendre aujourd'hui ?",
+            'title' => 'Rappel d\'entraînement',
+            'message' => $this->message,
+            'sent_at' => now(),
         ];
     }
 }

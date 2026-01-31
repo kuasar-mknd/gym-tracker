@@ -9,6 +9,7 @@ import { createInertiaApp } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, h } from 'vue'
 import { ZiggyVue } from 'ziggy-js'
+import * as Sentry from '@sentry/vue'
 
 const appName = import.meta.env.VITE_APP_NAME || 'GymTracker'
 
@@ -19,6 +20,18 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
+
+        if (import.meta.env.PROD) {
+            Sentry.init({
+                app,
+                dsn: window.SENTRY_CONFIG?.dsn || import.meta.env.VITE_SENTRY_DSN_PUBLIC,
+                environment: window.SENTRY_CONFIG?.environment || import.meta.env.MODE,
+                integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+                tracesSampleRate: 1.0,
+                replaysSessionSampleRate: 0.1,
+                replaysOnErrorSampleRate: 1.0,
+            })
+        }
 
         // Register custom directives
         import('./directives/vPress').then((m) => {

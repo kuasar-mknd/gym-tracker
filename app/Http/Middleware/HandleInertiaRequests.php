@@ -12,8 +12,6 @@ class HandleInertiaRequests extends Middleware
 {
     /**
      * The root template that is loaded on the first page visit.
-     *
-     * @var string
      */
     protected $rootView = 'app';
 
@@ -32,7 +30,7 @@ class HandleInertiaRequests extends Middleware
             'is_testing' => app()->environment('testing'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             'ziggy' => function () use ($request): array {
-                $ziggy = new Ziggy;
+                $ziggy = new Ziggy();
 
                 return [
                     ...$ziggy->toArray(),

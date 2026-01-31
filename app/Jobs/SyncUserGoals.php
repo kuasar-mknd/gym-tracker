@@ -7,14 +7,16 @@ namespace App\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-final class SyncUserGoals implements ShouldQueue
+class SyncUserGoals implements ShouldQueue
 {
     use Queueable;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(public \App\Models\User $user) {}
+    public function __construct(public \App\Models\User $user)
+    {
+    }
 
     /**
      * Execute the job.

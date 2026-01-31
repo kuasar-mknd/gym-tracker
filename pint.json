@@ -1,0 +1,11 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "new_with_braces": {
+            "named_class": true,
+            "anonymous_class": true
+        },
+        "single_line_empty_body": false,
+        "phpdoc_separation": false
+    }
+}

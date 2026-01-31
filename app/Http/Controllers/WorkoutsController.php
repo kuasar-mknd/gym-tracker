@@ -25,7 +25,9 @@ class WorkoutsController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(protected \App\Services\StatsService $statsService) {}
+    public function __construct(protected \App\Services\StatsService $statsService)
+    {
+    }
 
     /**
      * Display a listing of the user's workouts.
@@ -40,8 +42,17 @@ class WorkoutsController extends Controller
         $this->authorize('viewAny', Workout::class);
 
         $data = $fetchWorkouts->execute($this->user());
+        $userId = $this->user()->id;
 
-        return Inertia::render('Workouts/Index', $data);
+        return Inertia::render('Workouts/Index', [
+            ...$data,
+            'exercises' => Inertia::defer(fn () => Cache::remember(
+                "exercises_list_{$userId}",
+                3600,
+                // Cache invalidation is handled automatically by the Exercise model
+                fn () => Exercise::forUser($userId)->orderBy('name')->get()
+            )),
+        ]);
     }
 
     /**
@@ -96,7 +107,7 @@ class WorkoutsController extends Controller
         $workout->user_id = $this->user()->id;
         $workout->save();
 
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return redirect()->route('workouts.show', $workout);
     }
@@ -122,7 +133,7 @@ class WorkoutsController extends Controller
 
         $workout->delete();
 
-        $this->statsService->clearUserStatsCache($this->user());
+        $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return redirect()->route('workouts.index');
     }

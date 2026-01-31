@@ -5,18 +5,18 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Calendar\FetchCalendarEventsAction;
-use Illuminate\Http\Request;
+use App\Http\Requests\CalendarIndexRequest;
 use Inertia\Inertia;
 
 class CalendarController extends Controller
 {
-    public function index(Request $request, FetchCalendarEventsAction $fetchCalendarEvents): \Inertia\Response
+    public function index(CalendarIndexRequest $request, FetchCalendarEventsAction $fetchCalendarEvents): \Inertia\Response
     {
-        $yearInput = $request->input('year');
-        $monthInput = $request->input('month');
+        /** @var array{year?: int|string|null, month?: int|string|null} $validated */
+        $validated = $request->validated();
 
-        $year = is_numeric($yearInput) ? (int) $yearInput : now()->year;
-        $month = is_numeric($monthInput) ? (int) $monthInput : now()->month;
+        $year = isset($validated['year']) ? (int) $validated['year'] : now()->year;
+        $month = isset($validated['month']) ? (int) $validated['month'] : now()->month;
 
         $data = $fetchCalendarEvents->execute($this->user(), $year, $month);
 

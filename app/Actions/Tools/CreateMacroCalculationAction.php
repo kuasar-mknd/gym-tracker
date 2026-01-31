@@ -7,7 +7,7 @@ namespace App\Actions\Tools;
 use App\Models\MacroCalculation;
 use App\Models\User;
 
-final class CreateMacroCalculationAction
+class CreateMacroCalculationAction
 {
     private const MULTIPLIERS = [
         'sedentary' => 1.2,

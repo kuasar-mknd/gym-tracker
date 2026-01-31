@@ -83,6 +83,21 @@ test('store requires valid exercise_id', function (): void {
     assertDatabaseCount('workout_lines', 0);
 });
 
+test('store forbids adding another users private exercise', function (): void {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $user->id]);
+    $privateExercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
+
+    actingAs($user)
+        ->post(route('workout-lines.store', $workout), [
+            'exercise_id' => $privateExercise->id,
+        ])
+        ->assertSessionHasErrors('exercise_id');
+
+    assertDatabaseCount('workout_lines', 0);
+});
+
 test('destroy removes a workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);

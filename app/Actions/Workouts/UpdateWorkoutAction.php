@@ -7,9 +7,11 @@ namespace App\Actions\Workouts;
 use App\Models\Workout;
 use App\Services\StatsService;
 
-final class UpdateWorkoutAction
+class UpdateWorkoutAction
 {
-    public function __construct(protected StatsService $statsService) {}
+    public function __construct(protected StatsService $statsService)
+    {
+    }
 
     /**
      * Update the given workout with new data.
@@ -26,7 +28,7 @@ final class UpdateWorkoutAction
 
         $workout->save();
 
-        $this->statsService->clearUserStatsCache($workout->user);
+        $this->statsService->clearWorkoutRelatedStats($workout->user);
 
         return $workout;
     }

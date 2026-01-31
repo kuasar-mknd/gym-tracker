@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Models\Achievement;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
-final class AchievementPolicy
+class AchievementPolicy
 {
     use HandlesAuthorization;
 
@@ -21,7 +20,7 @@ final class AchievementPolicy
         return $authUser->can('ViewAny:Achievement');
     }
 
-    public function view(AuthUser $authUser, Achievement $achievement): bool
+    public function view(AuthUser $authUser): bool
     {
         if ($authUser instanceof \App\Models\User) {
             return true;
@@ -35,7 +34,7 @@ final class AchievementPolicy
         return $authUser->can('Create:Achievement');
     }
 
-    public function update(AuthUser $authUser, Achievement $achievement): bool
+    public function update(AuthUser $authUser): bool
     {
         if ($authUser instanceof \App\Models\User) {
             return false;
@@ -44,7 +43,7 @@ final class AchievementPolicy
         return $authUser->can('Update:Achievement');
     }
 
-    public function delete(AuthUser $authUser, Achievement $achievement): bool
+    public function delete(AuthUser $authUser): bool
     {
         if ($authUser instanceof \App\Models\User) {
             return false;
@@ -53,12 +52,12 @@ final class AchievementPolicy
         return $authUser->can('Delete:Achievement');
     }
 
-    public function restore(AuthUser $authUser, Achievement $achievement): bool
+    public function restore(AuthUser $authUser): bool
     {
         return $authUser->can('Restore:Achievement');
     }
 
-    public function forceDelete(AuthUser $authUser, Achievement $achievement): bool
+    public function forceDelete(AuthUser $authUser): bool
     {
         return $authUser->can('ForceDelete:Achievement');
     }
@@ -73,7 +72,7 @@ final class AchievementPolicy
         return $authUser->can('RestoreAny:Achievement');
     }
 
-    public function replicate(AuthUser $authUser, Achievement $achievement): bool
+    public function replicate(AuthUser $authUser): bool
     {
         return $authUser->can('Replicate:Achievement');
     }

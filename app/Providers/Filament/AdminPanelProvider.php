@@ -22,7 +22,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 
-final class AdminPanelProvider extends PanelProvider
+class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
@@ -101,7 +101,7 @@ final class AdminPanelProvider extends PanelProvider
     {
         return [
             \Filament\Navigation\NavigationItem::make('Pulse Serveur')
-                ->url('/pulse', shouldOpenInNewTab: true)
+                ->url('/backoffice/pulse', shouldOpenInNewTab: true)
                 ->icon('heroicon-o-presentation-chart-line')
                 ->group('Système')
                 ->sort(100)

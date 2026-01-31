@@ -11,61 +11,51 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-final class AchievementUnlocked extends Notification implements ShouldQueue
+class AchievementUnlocked extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new notification instance.
-     */
-    public function __construct(public Achievement $achievement) {}
+    public function __construct(public Achievement $achievement)
+    {
+    }
 
     /**
-     * Get the notification's delivery channels.
-     *
-     * @param  \App\Models\User  $notifiable
      * @return array<int, string>
      */
-    public function via(object $notifiable): array
+    public function via(object $_notifiable): array
     {
         $channels = ['database'];
 
-        if ($notifiable->isNotificationEnabled('achievements') && $notifiable->routeNotificationFor('webpush')) {
+        /** @var \App\Models\User $user */
+        $user = $_notifiable;
+        if ($user->isPushEnabled('achievement')) {
             $channels[] = WebPushChannel::class;
         }
 
         return $channels;
     }
 
-    /**
-     * Get the array representation of the notification.
-     *
-     * @param  \App\Models\User  $notifiable
-     * @return array<string, mixed>
-     */
-    public function toArray(object $notifiable): array
+    public function toWebPush(object $_notifiable, mixed $_notification): WebPushMessage
     {
-        return [
-            'achievement_id' => $this->achievement->id,
-            'slug' => $this->achievement->slug,
-            'name' => $this->achievement->name,
-            'icon' => $this->achievement->icon,
-            'message' => "Nouveau badge débloqué : {$this->achievement->name} !",
-        ];
+        return (new WebPushMessage())
+            ->title('Succès Déverrouillé ! 🏆')
+            ->icon('/logo.svg')
+            /** @phpstan-ignore-next-line */
+            ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
+            ->action('Voir mes succès', url('/achievements'));
     }
 
     /**
-     * Get the Web Push representation of the notification.
-     *
-     * @param  \App\Models\User  $notifiable
-     * @param  mixed  $notification
+     * @return array<string, \Illuminate\Support\Carbon|int|string|bool|float|array<int, mixed>|null>
      */
-    public function toWebPush(object $notifiable, $notification): WebPushMessage
+    public function toArray(object $_notifiable): array
     {
-        return (new WebPushMessage)
-            ->title('🏆 Badge Débloqué !')
-            ->icon('/icons/icon-192x192.png')
-            ->body("Félicitations ! Tu as gagné le badge : {$this->achievement->name}")
-            ->action('Voir mes badges', 'view_achievements');
+        return [
+            'type' => 'achievement',
+            'title' => 'Succès Déverrouillé ! 🏆',
+            'message' => "Félicitations ! Tu as déverrouillé le succès : {$this->achievement->name}.",
+            'achievement_id' => $this->achievement->id,
+            'achieved_at' => now(),
+        ];
     }
 }

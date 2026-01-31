@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Notifications\TrainingReminder;
 use Carbon\Carbon;
@@ -13,15 +14,11 @@ class TrainingReminderCommand extends Command
 {
     /**
      * The name and signature of the console command.
-     *
-     * @var string
      */
     protected $signature = 'app:remind-training';
 
     /**
      * The console command description.
-     *
-     * @var string
      */
     protected $description = 'Send training reminders to users based on their custom inactivity threshold.';
 
@@ -34,6 +31,7 @@ class TrainingReminderCommand extends Command
 
         $count = 0;
         User::all()->each(function (User $user) use (&$count): void {
+            /** @var NotificationPreference|null $preference */
             $preference = $user->notificationPreferences()
                 ->where('type', 'training_reminder')
                 ->first();
@@ -48,7 +46,7 @@ class TrainingReminderCommand extends Command
                 if (! $lastWorkout || $lastWorkout->started_at->lt($threshold)) {
                     // Only notify if we haven't notified them recently to avoid daily spam?
                     // For now, simplicity: if they are beyond threshold, notify.
-                    $user->notify(new TrainingReminder);
+                    $user->notify(new TrainingReminder());
                     $count++;
                 }
             }

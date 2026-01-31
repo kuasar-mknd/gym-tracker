@@ -6,7 +6,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreHabitRequest extends FormRequest
+class UpdateWarmupPreferenceRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,12 +24,12 @@ class StoreHabitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:1000'],
-            'color' => ['nullable', 'string', 'max:7', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
-            'icon' => ['nullable', 'string', 'max:255'],
-            'goal_times_per_week' => ['required', 'integer', 'min:1', 'max:7'],
-            'archived' => ['boolean'],
+            'bar_weight' => ['required', 'numeric', 'min:0'],
+            'rounding_increment' => ['required', 'numeric', 'min:0'],
+            'steps' => ['required', 'array'],
+            'steps.*.percent' => ['required', 'numeric', 'min:0', 'max:100'],
+            'steps.*.reps' => ['required', 'integer', 'min:1'],
+            'steps.*.label' => ['nullable', 'string', 'max:50'],
         ];
     }
 }
