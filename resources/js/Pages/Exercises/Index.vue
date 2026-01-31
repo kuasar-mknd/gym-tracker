@@ -10,7 +10,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { Head, useForm, router, Link } from '@inertiajs/vue3'
+import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
@@ -465,10 +465,7 @@ const typeLabel = (type) => {
                             >
                                 <!-- View Mode -->
                                 <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
-                                    <Link
-                                        :href="route('exercises.show', exercise.id)"
-                                        class="flex flex-1 items-center gap-4"
-                                    >
+                                    <div class="flex items-center gap-4">
                                         <div
                                             :class="[
                                                 'flex size-14 items-center justify-center rounded-2xl',
@@ -495,7 +492,7 @@ const typeLabel = (type) => {
                                                 {{ typeLabel(exercise.type) }}
                                             </div>
                                         </div>
-                                    </Link>
+                                    </div>
                                     <div
                                         class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                     >
