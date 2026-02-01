@@ -3,11 +3,20 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
+import VolumeTrendChart from '@/Components/Stats/VolumeTrendChart.vue'
+import { computed } from 'vue'
 
 const props = defineProps({
     exercise: Object,
     progress: Array,
     history: Array,
+})
+
+const volumeHistory = computed(() => {
+    return [...props.history].reverse().map((session) => ({
+        date: session.formatted_date,
+        volume: session.sets.reduce((sum, set) => sum + set.weight * set.reps, 0),
+    }))
 })
 </script>
 
@@ -47,6 +56,21 @@ const props = defineProps({
                 </div>
                 <div v-else class="flex h-64 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">show_chart</span>
+                    <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
+                </div>
+            </GlassCard>
+
+            <!-- Volume Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
+                <div class="mb-4">
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume par séance</h3>
+                    <p class="text-text-muted text-xs font-semibold">Tonnage total (kg)</p>
+                </div>
+                <div v-if="volumeHistory.length > 0" class="h-64">
+                    <VolumeTrendChart :data="volumeHistory" />
+                </div>
+                <div v-else class="flex h-64 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
                     <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                 </div>
             </GlassCard>
