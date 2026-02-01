@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Habits\FetchHabitsIndexAction;
 use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
 use App\Http\Requests\ToggleHabitRequest;
-use App\Actions\Habits\FetchHabitsIndexAction;
 use App\Models\Habit;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -129,5 +129,4 @@ class HabitController extends Controller
 
         return redirect()->back();
     }
-
 }
