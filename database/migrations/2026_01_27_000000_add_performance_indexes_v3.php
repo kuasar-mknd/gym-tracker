@@ -43,28 +43,7 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        try {
-            Schema::table('water_logs', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
-
-        try {
-            Schema::table('supplement_logs', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
-
-        try {
-            Schema::table('body_part_measurements', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'measured_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
+        // We skip dropping these indexes because they may be required by foreign key constraints (Error 1553)
+        // in some environments. Since these are optimization indexes, leaving them is safe.
     }
 };
