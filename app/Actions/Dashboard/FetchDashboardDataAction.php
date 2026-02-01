@@ -91,7 +91,7 @@ final class FetchDashboardDataAction
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->workouts()
-            ->with('workoutLines')
+            ->withCount('workoutLines')
             ->latest('started_at')
             ->limit(5)
             ->get();

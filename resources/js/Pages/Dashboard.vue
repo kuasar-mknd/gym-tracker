@@ -257,7 +257,7 @@ const colorForWorkout = (index) => {
                                 ]"
                             >
                                 <span class="material-symbols-outlined">
-                                    {{ workout.workout_lines?.length > 3 ? 'timer' : 'fitness_center' }}
+                                    {{ (workout.workout_lines_count || 0) > 3 ? 'timer' : 'fitness_center' }}
                                 </span>
                             </div>
                             <div>
