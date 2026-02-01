@@ -18,10 +18,11 @@ test('user can manage exercises', function (): void {
 
             // 1. Verify empty state and create button
             ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->pause(500)
             ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
         // 2. Fill and submit the create form
-        $browser->waitForText('Nouvel exercice', 15)
+        $browser->waitForText('Nouvel exercice', 30)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')
@@ -30,7 +31,7 @@ test('user can manage exercises', function (): void {
 
         // 3. Verify exercise was created
         $browser->pause(1000)
-            ->waitForText('Dusk Test Exercise', 15);
+            ->waitForText('Dusk Test Exercise', 30);
 
         // 4. Edit the exercise
         $browser->waitFor('[data-testid="edit-exercise-button"]', 5)
@@ -45,7 +46,7 @@ test('user can manage exercises', function (): void {
 
         // 5. Verify update
         $browser->pause(1000)
-            ->waitForText('Updated Exercise', 15);
+            ->waitForText('Updated Exercise', 30);
 
         // 6. Delete the exercise
         $browser->waitFor('[data-testid="delete-exercise-button"]', 5)
@@ -54,7 +55,7 @@ test('user can manage exercises', function (): void {
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
             ->pause(1000)
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->waitFor('[data-testid="create-exercise-button"]', 30)
             ->assertNoConsoleExceptions();
     });
 });

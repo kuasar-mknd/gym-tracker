@@ -27,6 +27,7 @@ test('users can register', function (): void {
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
+            ->pause(500)
             ->press('Créer mon compte')
             ->waitForLocation('/verify-email', 30)
             ->assertPathIs('/verify-email');
