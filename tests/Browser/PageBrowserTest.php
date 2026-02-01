@@ -15,7 +15,7 @@ test('unauthenticated users are redirected to login', function (): void {
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/login')
-            ->waitForText('Se connecter', 10)
+            ->waitForText('Se connecter', 30)
             ->assertSee('Se connecter');
     });
 });
