@@ -2,6 +2,10 @@
 import { computed, useAttrs, getCurrentInstance } from 'vue'
 import InputError from '@/Components/InputError.vue'
 
+defineOptions({
+    inheritAttrs: false,
+})
+
 const props = defineProps({
     modelValue: {
         type: [String, Number],
