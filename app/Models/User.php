@@ -53,13 +53,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
-        'provider',
-        'provider_id',
-        'avatar',
         'default_rest_time',
-        'current_streak',
-        'longest_streak',
-        'last_workout_at',
     ];
 
     /**
