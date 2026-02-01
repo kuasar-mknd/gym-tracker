@@ -37,28 +37,28 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        Schema::table('interval_timers', function (Blueprint $table): void {
-            try {
+        try {
+            Schema::table('interval_timers', function (Blueprint $table): void {
                 $table->dropIndex(['user_id', 'created_at']);
-            } catch (\Throwable $e) {
-                // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
+        }
 
-        Schema::table('workout_templates', function (Blueprint $table): void {
-            try {
+        try {
+            Schema::table('workout_templates', function (Blueprint $table): void {
                 $table->dropIndex(['user_id', 'created_at']);
-            } catch (\Throwable $e) {
-                // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
+        }
 
-        Schema::table('goals', function (Blueprint $table): void {
-            try {
+        try {
+            Schema::table('goals', function (Blueprint $table): void {
                 $table->dropIndex(['user_id', 'created_at']);
-            } catch (\Throwable $e) {
-                // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
+        }
     }
 };
