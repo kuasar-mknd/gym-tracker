@@ -12,7 +12,15 @@ use Illuminate\Support\Collection;
 class FetchExerciseHistoryAction
 {
     /**
-     * @return Collection<int, array>
+     * @return Collection<int, array{
+     *   id: int,
+     *   workout_id: int,
+     *   workout_name: string|null,
+     *   date: string,
+     *   formatted_date: string,
+     *   sets: Collection<int, array{weight: float|null, reps: int|null, '1rm': float|int}>,
+     *   best_1rm: mixed
+     * }>
      */
     public function execute(User $user, Exercise $exercise): Collection
     {
