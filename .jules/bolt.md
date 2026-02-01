@@ -13,3 +13,7 @@
 ## 2026-01-31 - Dashboard Data Fetching Optimization
 **Learning:** Eager loading the entire `workoutLines` collection for the dashboard's "Recent Activity" was unnecessary since only the count of lines was needed for the icon logic. This caused redundant model hydration and larger JSON payloads/cache entries.
 **Action:** Use `withCount('workoutLines')` to fetch only the integer count. Additionally, align database query limits (`limit(3)`, `take(2)`) with the actual number of items displayed in the frontend to further reduce waste.
+
+## 2025-05-15 - [Inertia Hydration Bottleneck & CI Stability]
+**Learning:** Eager loading full collections (e.g., `with('workoutLines')`) just to check counts or presence in Inertia.js components is a massive hydration bottleneck. It inflates the JSON payload and server-side memory usage. Additionally, class-based Dusk tests in this repo do NOT inherit global Pest traits and must explicitly include `DatabaseMigrations`.
+**Action:** Use `withCount()` for summary views and always verify that class-based tests have necessary traits for CI database initialization.

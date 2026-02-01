@@ -13,25 +13,17 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        // Ensure table exists before trying to add index
-        if (! Schema::hasTable('water_logs')) {
-            return;
-        }
-
-        // Use more robust check for index existence
-        $conn = Schema::getConnection();
-        $schemaBuilder = $conn->getSchemaBuilder();
-        $indexName = 'water_logs_user_id_consumed_at_index';
-
+        // Use standard Schema facade checks for idempotency.
+        // Outer try-catch ensures that even if hasIndex fails on some DB versions,
+        // the migration process doesn't block.
         try {
-            if (! $schemaBuilder->hasIndex('water_logs', $indexName)) {
-                Schema::table('water_logs', function (Blueprint $table) use ($indexName) {
-                    $table->index(['user_id', 'consumed_at'], $indexName);
+            if (Schema::hasTable('water_logs') && ! Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+                Schema::table('water_logs', function (Blueprint $table) {
+                    $table->index(['user_id', 'consumed_at'], 'water_logs_user_id_consumed_at_index');
                 });
             }
         } catch (\Throwable $e) {
-            // Silently ignore errors during index creation (e.g., already exists or FK conflict)
-            // This ensures migrations continue even if optimization fails.
+            // Optimization failed, but don't block migrations
         }
     }
 
