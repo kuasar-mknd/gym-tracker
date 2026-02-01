@@ -13,12 +13,22 @@ return new class() extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('water_logs')) {
+            return;
+        }
+
+        $conn = Schema::getConnection();
+        $schemaBuilder = $conn->getSchemaBuilder();
+        $indexName = 'water_logs_user_id_consumed_at_index';
+
         try {
-            Schema::table('water_logs', function (Blueprint $table): void {
-                $table->index(['user_id', 'consumed_at']);
-            });
+            if (! $schemaBuilder->hasIndex('water_logs', $indexName)) {
+                Schema::table('water_logs', function (Blueprint $table) use ($indexName): void {
+                    $table->index(['user_id', 'consumed_at'], $indexName);
+                });
+            }
         } catch (\Throwable $e) {
-            // Index already exists
+            // Silently ignore
         }
     }
 
