@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\IntervalTimer;
 use App\Http\Requests\StoreIntervalTimerRequest;
 use App\Http\Requests\UpdateIntervalTimerRequest;
+use App\Models\IntervalTimer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
