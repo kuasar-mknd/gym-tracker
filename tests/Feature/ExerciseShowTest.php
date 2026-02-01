@@ -50,7 +50,7 @@ class ExerciseShowTest extends TestCase
 
         $response->assertOk();
 
-        $response->assertInertia(fn (Assert $page) => $page
+        $response->assertInertia(fn (Assert $page): Assert => $page
             ->component('Exercises/Show')
             ->has('history', 1)
             ->where('history.0.volume', 1000)
