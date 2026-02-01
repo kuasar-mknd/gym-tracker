@@ -17,6 +17,7 @@ class UpdateWorkoutActionTest extends TestCase
     use RefreshDatabase;
 
     protected StatsService $statsService;
+
     protected UpdateWorkoutAction $action;
 
     protected function setUp(): void
@@ -31,7 +32,7 @@ class UpdateWorkoutActionTest extends TestCase
         $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDay()]);
 
-        $this->statsService->shouldReceive('clearWorkoutRelatedStats')->once()->with(Mockery::on(fn($arg) => $arg->id === $user->id));
+        $this->statsService->shouldReceive('clearWorkoutRelatedStats')->once()->with(Mockery::on(fn ($arg): bool => $arg->id === $user->id));
         $this->statsService->shouldReceive('clearDashboardCache')->never();
 
         $this->action->execute($workout, ['started_at' => now()->toDateTimeString()]);
@@ -43,8 +44,8 @@ class UpdateWorkoutActionTest extends TestCase
         $workout = Workout::factory()->create(['user_id' => $user->id, 'name' => 'Old Name']);
 
         $this->statsService->shouldReceive('clearWorkoutRelatedStats')->never();
-        $this->statsService->shouldReceive('clearDashboardCache')->once()->with(Mockery::on(fn($arg) => $arg->id === $user->id));
-        $this->statsService->shouldReceive('clearWorkoutNameDependentStats')->once()->with(Mockery::on(fn($arg) => $arg->id === $user->id));
+        $this->statsService->shouldReceive('clearDashboardCache')->once()->with(Mockery::on(fn ($arg): bool => $arg->id === $user->id));
+        $this->statsService->shouldReceive('clearWorkoutNameDependentStats')->once()->with(Mockery::on(fn ($arg): bool => $arg->id === $user->id));
         $this->statsService->shouldReceive('clearWorkoutDurationDependentStats')->never();
 
         $this->action->execute($workout, ['name' => 'New Name']);
@@ -56,7 +57,7 @@ class UpdateWorkoutActionTest extends TestCase
         $workout = Workout::factory()->create(['user_id' => $user->id, 'notes' => 'Old Notes']);
 
         $this->statsService->shouldReceive('clearWorkoutRelatedStats')->never();
-        $this->statsService->shouldReceive('clearDashboardCache')->once()->with(Mockery::on(fn($arg) => $arg->id === $user->id));
+        $this->statsService->shouldReceive('clearDashboardCache')->once()->with(Mockery::on(fn ($arg): bool => $arg->id === $user->id));
         $this->statsService->shouldReceive('clearWorkoutNameDependentStats')->never();
         $this->statsService->shouldReceive('clearWorkoutDurationDependentStats')->never();
 
@@ -69,9 +70,9 @@ class UpdateWorkoutActionTest extends TestCase
         $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
         $this->statsService->shouldReceive('clearWorkoutRelatedStats')->never();
-        $this->statsService->shouldReceive('clearDashboardCache')->once()->with(Mockery::on(fn($arg) => $arg->id === $user->id));
+        $this->statsService->shouldReceive('clearDashboardCache')->once()->with(Mockery::on(fn ($arg): bool => $arg->id === $user->id));
         $this->statsService->shouldReceive('clearWorkoutNameDependentStats')->never();
-        $this->statsService->shouldReceive('clearWorkoutDurationDependentStats')->once()->with(Mockery::on(fn($arg) => $arg->id === $user->id));
+        $this->statsService->shouldReceive('clearWorkoutDurationDependentStats')->once()->with(Mockery::on(fn ($arg): bool => $arg->id === $user->id));
 
         $this->action->execute($workout, ['is_finished' => true]);
     }
