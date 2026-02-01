@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Services;
 
 use App\Models\BodyMeasurement;
-use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\StatsService;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 
