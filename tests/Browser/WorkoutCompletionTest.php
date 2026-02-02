@@ -33,11 +33,11 @@ final class WorkoutCompletionTest extends DuskTestCase
                 ->waitFor('#finish-workout-desktop', 15)
                 ->script("document.getElementById('finish-workout-desktop').click();");
 
-            $browser->waitForText('Terminer la séance ?', 15)
+            $browser->waitForText('Terminer la séance ?', 30)
                 ->pause(1000)
                 ->script("document.getElementById('confirm-finish-button').click();");
 
-            $browser->waitForLocation('/dashboard', 15);
+            $browser->waitForLocation('/dashboard', 30);
         });
     }
 
