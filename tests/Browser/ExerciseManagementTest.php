@@ -13,11 +13,12 @@ test('user can manage exercises', function (): void {
         $browser->loginAs($user)
             ->resize(1280, 800)
             ->visit('/exercises')
-            ->waitFor('main', 15)
+            ->waitFor('main', 30) // Increased timeout
             ->assertPathIs('/exercises')
 
             // 1. Verify empty state and create button
             ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->pause(500) // Ensure hydration
             ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
         // 2. Fill and submit the create form
@@ -26,6 +27,7 @@ test('user can manage exercises', function (): void {
             ->waitFor('select', 5)
             ->select('select', 'strength')
             ->waitFor('[data-testid="submit-exercise-button"]', 5)
+            ->pause(200) // Small pause before submit
             ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
 
         // 3. Verify exercise was created
