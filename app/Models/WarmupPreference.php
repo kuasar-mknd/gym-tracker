@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WarmupPreference extends Model
 {
+    /** @use HasFactory<\Database\Factories\WarmupPreferenceFactory> */
     use HasFactory;
 
     protected $fillable = [
