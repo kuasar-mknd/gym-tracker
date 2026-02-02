@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreFastRequest;
+use App\Http\Requests\UpdateFastRequest;
 use App\Models\Fast;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,14 +35,8 @@ class FastingController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreFastRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'start_time' => ['required', 'date'],
-            'target_duration_minutes' => ['required', 'integer', 'min:1'],
-            'type' => ['required', 'string'],
-        ]);
-
         $user = $this->user();
 
         // Check if there is already an active fast
@@ -49,27 +45,16 @@ class FastingController extends Controller
         }
 
         $user->fasts()->create([
-            'start_time' => $validated['start_time'],
-            'target_duration_minutes' => $validated['target_duration_minutes'],
-            'type' => $validated['type'],
+            ...$request->validated(),
             'status' => 'active',
         ]);
 
         return back()->with('success', 'Fast started successfully.');
     }
 
-    public function update(Request $request, Fast $fast): RedirectResponse
+    public function update(UpdateFastRequest $request, Fast $fast): RedirectResponse
     {
-        if ($fast->user_id !== $this->user()->id) {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'end_time' => ['nullable', 'date'],
-            'status' => ['required', 'string', 'in:active,completed,broken'],
-        ]);
-
-        $fast->update($validated);
+        $fast->update($request->validated());
 
         return back()->with('success', 'Fast updated successfully.');
     }
