@@ -14,9 +14,10 @@ class UpdateFastRequest extends FormRequest
     public function authorize(): bool
     {
         $fast = $this->route('fast');
+
         return $this->user() instanceof \App\Models\User &&
-               $fast instanceof \App\Models\Fast &&
-               $this->user()->id === $fast->user_id;
+            $fast instanceof \App\Models\Fast &&
+            $this->user()->id === $fast->user_id;
     }
 
     /**

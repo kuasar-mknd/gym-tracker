@@ -35,7 +35,7 @@ class StoreFastRequest extends FormRequest
      */
     public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
-        $validator->after(function ($validator) {
+        $validator->after(function ($validator): void {
             /** @var \App\Models\User $user */
             $user = $this->user();
             if ($user->fasts()->where('status', 'active')->exists()) {
