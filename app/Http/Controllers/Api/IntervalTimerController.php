@@ -19,7 +19,10 @@ class IntervalTimerController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $timers = $request->user()->intervalTimers()->latest()->get();
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $timers = $user->intervalTimers()->latest()->get();
 
         return IntervalTimerResource::collection($timers);
     }
@@ -44,7 +47,10 @@ class IntervalTimerController extends Controller
      */
     public function show(Request $request, IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        if ($intervalTimer->user_id !== $request->user()->id) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        if ($intervalTimer->user_id !== $user->id) {
             abort(403);
         }
 
@@ -56,7 +62,10 @@ class IntervalTimerController extends Controller
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        if ($intervalTimer->user_id !== $request->user()->id) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        if ($intervalTimer->user_id !== $user->id) {
             abort(403);
         }
 
@@ -70,7 +79,10 @@ class IntervalTimerController extends Controller
      */
     public function destroy(Request $request, IntervalTimer $intervalTimer): Response
     {
-        if ($intervalTimer->user_id !== $request->user()->id) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        if ($intervalTimer->user_id !== $user->id) {
             abort(403);
         }
 
