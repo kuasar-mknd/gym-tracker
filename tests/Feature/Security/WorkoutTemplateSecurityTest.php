@@ -24,7 +24,7 @@ class WorkoutTemplateSecurityTest extends TestCase
         ]);
 
         // System exercise to ensure OR condition logic is tested
-        $systemExercise = Exercise::factory()->create([
+        Exercise::factory()->create([
             'user_id' => null,
             'name' => 'System Exercise',
         ]);
