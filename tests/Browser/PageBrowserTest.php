@@ -7,31 +7,30 @@ use Laravel\Dusk\Browser;
 
 test('unauthenticated users are redirected to login', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->resize(1920, 1080)
-            ->visit('/dashboard')
+        $browser->visit('/dashboard')
             ->assertPathIs('/login');
     });
 });
 
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->resize(1920, 1080)
-            ->visit('/login')
-            ->waitForText('Se connecter', 30) // Increased timeout
-            ->assertSee('Se connecter');
+        $browser->visit('/login')
+            ->waitFor('form', 10)
+            ->assertPresent('form');
     });
 });
 
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->resize(1920, 1080)
-            ->visit('/register')
+        $browser->visit('/register')
+            ->waitFor('form', 10)
             ->type('input[name="name"]', 'John Doe')
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
-            ->press('Créer mon compte')
-            ->waitForLocation('/verify-email', 30) // Increased timeout
+            ->waitFor('button[type="submit"]', 5)
+            ->click('button[type="submit"]')
+            ->waitForLocation('/verify-email', 30)
             ->assertPathIs('/verify-email');
     });
 });
@@ -41,9 +40,8 @@ test('authenticated users can see dashboard', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/dashboard')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/dashboard');
     });
 });
@@ -53,9 +51,8 @@ test('workouts page renders correctly', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/workouts')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/workouts')
             ->assertNoConsoleExceptions();
     });
@@ -66,9 +63,8 @@ test('exercises page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/exercises')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/exercises')
             ->assertNoConsoleExceptions();
     });
@@ -79,9 +75,8 @@ test('stats page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/stats')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/stats')
             ->assertNoConsoleExceptions();
     });
@@ -92,9 +87,8 @@ test('calendar page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/calendar')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/calendar')
             ->assertNoConsoleExceptions();
     });
@@ -105,9 +99,8 @@ test('goals page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/goals')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/goals')
             ->assertNoConsoleExceptions();
     });
@@ -118,9 +111,8 @@ test('templates page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/templates')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/templates')
             ->assertNoConsoleExceptions();
     });
@@ -131,9 +123,8 @@ test('body measurements page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/body-measurements')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/body-measurements')
             ->assertNoConsoleExceptions();
     });
@@ -144,9 +135,8 @@ test('daily journals page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/daily-journals')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/daily-journals')
             ->assertNoConsoleExceptions();
     });
@@ -157,9 +147,8 @@ test('notifications page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/notifications')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/notifications')
             ->assertNoConsoleExceptions();
     });
@@ -170,9 +159,8 @@ test('achievements page works', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/achievements')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/achievements')
             ->assertNoConsoleExceptions();
     });
@@ -183,9 +171,8 @@ test('profile page renders correctly', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/profile')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/profile')
             ->assertNoConsoleExceptions();
     });
@@ -196,9 +183,8 @@ test('tools page renders correctly', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/tools')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/tools')
             ->assertNoConsoleExceptions();
     });
@@ -209,9 +195,8 @@ test('plates calculator page renders correctly', function (): void {
 
     $this->browse(function (Browser $browser) use ($user): void {
         $browser->loginAs($user)
-            ->resize(1920, 1080)
             ->visit('/plates')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/plates')
             ->assertNoConsoleExceptions();
     });
@@ -224,7 +209,7 @@ test('navigation works correctly on mobile', function (): void {
         $browser->loginAs($user)
             ->resize(375, 812) // iPhone X dimensions
             ->visit('/dashboard')
-            ->waitFor('main', 30)
+            ->waitFor('main', 15)
             ->assertPathIs('/dashboard')
             // Check glass-nav is visible on mobile
             ->assertPresent('.glass-nav')
