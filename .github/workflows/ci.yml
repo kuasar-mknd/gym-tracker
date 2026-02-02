@@ -15,10 +15,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v3
 
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v3
               with:
                   node-version: 20
                   cache: 'npm'
@@ -30,7 +30,7 @@ jobs:
               run: npm run build
 
             - name: Upload Build Artifacts
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v3
               with:
                   name: build-assets
                   path: public/build
@@ -40,10 +40,10 @@ jobs:
         needs: frontend-build
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v3
 
             - name: Download Build Artifacts
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v3
               with:
                   name: build-assets
                   path: public/build
@@ -62,7 +62,7 @@ jobs:
                   echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
             - name: Cache Composer dependencies
-              uses: actions/cache@v4
+              uses: actions/cache@v3
               with:
                   path: ${{ steps.composer-cache.outputs.dir }}
                   key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -104,10 +104,10 @@ jobs:
                 options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v3
 
             - name: Download Build Artifacts
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v3
               with:
                   name: build-assets
                   path: public/build
@@ -126,7 +126,7 @@ jobs:
                   echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
             - name: Cache Composer dependencies
-              uses: actions/cache@v4
+              uses: actions/cache@v3
               with:
                   path: ${{ steps.composer-cache.outputs.dir }}
                   key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -196,14 +196,14 @@ jobs:
 
             - name: Upload Test Screenshots
               if: failure()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v3
               with:
                   name: dusk-screenshots
                   path: tests/Browser/screenshots
 
             - name: Upload Test Logs
               if: failure()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v3
               with:
                   name: dusk-logs
                   path: tests/Browser/logs
@@ -212,7 +212,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v3
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -228,7 +228,7 @@ jobs:
                   echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
             - name: Cache Composer dependencies
-              uses: actions/cache@v4
+              uses: actions/cache@v3
               with:
                   path: ${{ steps.composer-cache.outputs.dir }}
                   key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -246,7 +246,7 @@ jobs:
         needs: laravel-tests
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v3
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -262,7 +262,7 @@ jobs:
                   echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
             - name: Cache Composer dependencies
-              uses: actions/cache@v4
+              uses: actions/cache@v3
               with:
                   path: ${{ steps.composer-cache.outputs.dir }}
                   key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -297,7 +297,7 @@ jobs:
             IMAGE_NAME: ${{ github.repository }}
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v3
 
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v3
