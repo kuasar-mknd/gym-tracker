@@ -2,7 +2,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
-import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
+import { defineAsyncComponent } from 'vue'
+
+const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 
 const props = defineProps({
     exercise: Object,
