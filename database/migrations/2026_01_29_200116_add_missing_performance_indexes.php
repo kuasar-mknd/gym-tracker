@@ -28,8 +28,17 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        // Intentionally left empty to avoid Foreign Key Constraint Error (1553) in CI (MySQL 8.4+).
-        // The index 'water_logs_user_id_consumed_at_index' might be used by the foreign key on 'user_id'.
-        // Dropping it causes rollback failures during tests.
+        if (Schema::hasTable('water_logs') && Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+            try {
+                Schema::table('water_logs', function (Blueprint $table): void {
+                    $table->dropIndex('water_logs_user_id_consumed_at_index');
+                });
+            } catch (\Throwable $e) {
+                // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
+                if (! str_contains($e->getMessage(), '1553')) {
+                    throw $e;
+                }
+            }
+        }
     }
 };
