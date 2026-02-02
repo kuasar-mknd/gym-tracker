@@ -2,13 +2,18 @@
 
 declare(strict_types=1);
 
+namespace Tests\Browser;
+
 use App\Models\User;
 use App\Models\Workout;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 final class WorkoutCompletionTest extends DuskTestCase
 {
+    use DatabaseMigrations;
+
     public function test_user_can_finish_workout_and_is_redirected(): void
     {
         $user = User::factory()->create([
