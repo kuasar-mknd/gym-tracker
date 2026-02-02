@@ -16,7 +16,6 @@ const patterns = {
     error: [100, 50, 100, 50, 100],
     warning: [30, 20, 30],
     timer: [200, 100, 200],
-    selection: [10],
 }
 
 /**
@@ -38,13 +37,7 @@ export function triggerHaptic(type = 'tap') {
     }
 
     const pattern = patterns[type] || patterns.tap
-
-    // Avoid throwing errors in environments where vibration is blocked (like some test runners or inactive frames)
-    try {
-        return navigator.vibrate(pattern)
-    } catch (e) {
-        return false
-    }
+    return navigator.vibrate(pattern)
 }
 
 /**
