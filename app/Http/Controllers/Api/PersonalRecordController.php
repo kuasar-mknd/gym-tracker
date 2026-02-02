@@ -10,6 +10,7 @@ use App\Http\Requests\PersonalRecordUpdateRequest;
 use App\Http\Resources\PersonalRecordResource;
 use App\Models\PersonalRecord;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -25,7 +26,15 @@ class PersonalRecordController extends Controller
         $this->authorize('viewAny', PersonalRecord::class);
 
         $validated = $request->validate([
-            'exercise_id' => 'nullable|integer|exists:exercises,id',
+            'exercise_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('exercises', 'id')->where(function ($query) {
+                    $query->where(function ($q) {
+                        $q->whereNull('user_id')->orWhere('user_id', $this->user()?->id);
+                    });
+                }),
+            ],
         ]);
 
         $query = PersonalRecord::query()->where('user_id', $this->user()->getAuthIdentifier());
