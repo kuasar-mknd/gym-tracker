@@ -45,6 +45,6 @@
         "ziggy-js": "^2.6.0"
     },
     "optionalDependencies": {
-        "@rollup/rollup-linux-arm64-gnu": "^4.57.0"
+        "@rollup/rollup-linux-arm64-gnu": "^4.57.1"
     }
 }
