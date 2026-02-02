@@ -28,8 +28,17 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        // We do not drop the index in down() because it might be used by the foreign key constraint
-        // (MySQL error 1553), causing rollback issues in CI/testing environments.
-        // Since this is a performance index, leaving it is safer than crashing the migration rollback.
+        if (Schema::hasTable('water_logs') && Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+            try {
+                Schema::table('water_logs', function (Blueprint $table): void {
+                    $table->dropIndex('water_logs_user_id_consumed_at_index');
+                });
+            } catch (\Throwable $e) {
+                // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
+                if (! str_contains($e->getMessage(), '1553')) {
+                    throw $e;
+                }
+            }
+        }
     }
 };
