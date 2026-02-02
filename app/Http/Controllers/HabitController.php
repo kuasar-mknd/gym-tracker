@@ -129,5 +129,4 @@ class HabitController extends Controller
 
         return redirect()->back();
     }
-
 }

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class FetchHabitsIndexAction
 {
     /**
-     * @return array{habits: \Illuminate\Database\Eloquent\Collection, weekDates: array<int, array<string, mixed>>, consistencyData: array<int, array<string, mixed>>, history: array<int, array<string, mixed>>}
+     * @return array{habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>, weekDates: array<int, array<string, mixed>>, consistencyData: array<int, array<string, mixed>>, history: array<int, array<string, mixed>>}
      */
     public function execute(User $user): array
     {
