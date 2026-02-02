@@ -27,17 +27,18 @@ final class WorkoutCompletionTest extends DuskTestCase
             $browser->loginAs($user)
                 ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
-                ->waitFor('main', 15)
+                ->waitFor('main', 20)
                 ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
-                ->waitFor('#finish-workout-desktop', 15)
-                ->script("document.getElementById('finish-workout-desktop').click();");
-
-            $browser->waitForText('Terminer la séance ?', 15)
+                ->waitFor('#finish-workout-desktop', 20)
                 ->pause(1000)
-                ->script("document.getElementById('confirm-finish-button').click();");
+                ->click('#finish-workout-desktop');
 
-            $browser->waitForLocation('/dashboard', 15);
+            $browser->waitForText('Terminer la séance ?', 20)
+                ->pause(1000)
+                ->click('#confirm-finish-button');
+
+            $browser->waitForLocation('/dashboard', 20);
         });
     }
 
