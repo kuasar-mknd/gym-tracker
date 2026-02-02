@@ -8,7 +8,6 @@ use App\Http\Requests\StoreFastRequest;
 use App\Http\Requests\UpdateFastRequest;
 use App\Models\Fast;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 

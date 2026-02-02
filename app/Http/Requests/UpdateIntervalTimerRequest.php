@@ -14,8 +14,13 @@ class UpdateIntervalTimerRequest extends FormRequest
     public function authorize(): bool
     {
         $intervalTimer = $this->route('intervalTimer');
+        $user = $this->user();
 
-        return $intervalTimer && $this->user()->id === $intervalTimer->user_id;
+        if (! $user instanceof \App\Models\User || ! $intervalTimer instanceof \App\Models\IntervalTimer) {
+            return false;
+        }
+
+        return $user->id === $intervalTimer->user_id;
     }
 
     /**
