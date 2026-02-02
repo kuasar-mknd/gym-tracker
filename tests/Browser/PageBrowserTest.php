@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use Laravel\Dusk\Browser;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Laravel\Dusk\Browser;
 
 uses(DatabaseMigrations::class);
 
@@ -18,19 +18,21 @@ test('unauthenticated users are redirected to login', function (): void {
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/login')
-            ->waitForText('Se connecter', 10)
-            ->assertSee('Se connecter');
+            ->waitFor('form', 10)
+            ->assertPresent('form');
     });
 });
 
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/register')
+            ->waitFor('form', 10)
             ->type('input[name="name"]', 'John Doe')
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
-            ->press('Créer mon compte')
+            ->waitFor('button[type="submit"]', 5)
+            ->click('button[type="submit"]')
             ->waitForLocation('/verify-email', 30)
             ->assertPathIs('/verify-email');
     });

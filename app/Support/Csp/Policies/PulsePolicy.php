@@ -7,12 +7,13 @@ namespace App\Support\Csp\Policies;
 use Spatie\Csp\Directive;
 use Spatie\Csp\Keyword;
 use Spatie\Csp\Policy;
+use Spatie\Csp\Preset;
 
-class PulsePolicy extends Policy
+class PulsePolicy implements Preset
 {
-    public function configure(): void
+    public function configure(Policy $policy): void
     {
-        $this
+        $policy
             ->add(Directive::BASE, Keyword::SELF)
             ->add(Directive::CONNECT, Keyword::SELF)
             ->add(Directive::DEFAULT, Keyword::SELF)
@@ -30,6 +31,8 @@ class PulsePolicy extends Policy
             ->add(Directive::FONT, 'https://fonts.bunny.net')
             ->add(Directive::STYLE, 'https://fonts.bunny.net')
             ->add(Directive::IMG, 'data:')
-            ->add(Directive::IMG, 'https:');
+            ->add(Directive::IMG, 'https:')
+            ->addNonce(Directive::SCRIPT)
+            ->addNonce(Directive::STYLE);
     }
 }
