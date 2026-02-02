@@ -28,37 +28,16 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('water_logs')) {
-            // To safely drop an index that might be used by a Foreign Key (MySQL 1553),
-            // we must temporarily drop the FK, then the index, then restore the FK.
-
-            // 1. Drop Foreign Key
+        if (Schema::hasTable('water_logs') && Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
             try {
-                Schema::table('water_logs', function (Blueprint $table) {
-                    $table->dropForeign(['user_id']);
+                Schema::table('water_logs', function (Blueprint $table): void {
+                    $table->dropIndex('water_logs_user_id_consumed_at_index');
                 });
             } catch (\Throwable $e) {
-                // Ignore if FK doesn't exist
-            }
-
-            // 2. Drop Index
-            try {
-                Schema::table('water_logs', function (Blueprint $table) {
-                    if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
-                        $table->dropIndex('water_logs_user_id_consumed_at_index');
-                    }
-                });
-            } catch (\Throwable $e) {
-                // Ignore if index doesn't exist
-            }
-
-            // 3. Restore Foreign Key
-            try {
-                Schema::table('water_logs', function (Blueprint $table) {
-                    $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
-                });
-            } catch (\Throwable $e) {
-                // Ignore if FK already exists
+                // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
+                if (! str_contains($e->getMessage(), '1553')) {
+                    throw $e;
+                }
             }
         }
     }
