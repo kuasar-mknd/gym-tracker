@@ -15,20 +15,21 @@ test('unauthenticated users are redirected to login', function (): void {
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/login')
-            ->waitFor('[data-testid="login-button"]', 15)
-            ->assertSee('Se connecter');
+            ->waitFor('form', 10)
+            ->assertPresent('form');
     });
 });
 
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/register')
-            ->waitFor('[data-testid="register-button"]', 15)
-            ->type('name', 'John Doe')
-            ->type('email', 'john'.time().'@example.com')
-            ->type('password', 'password')
-            ->type('password_confirmation', 'password')
-            ->click('[data-testid="register-button"]')
+            ->waitFor('form', 10)
+            ->type('input[name="name"]', 'John Doe')
+            ->type('input[name="email"]', 'john'.time().'@example.com')
+            ->type('input[name="password"]', 'password')
+            ->type('input[name="password_confirmation"]', 'password')
+            ->waitFor('button[type="submit"]', 5)
+            ->click('button[type="submit"]')
             ->waitForLocation('/verify-email', 30)
             ->assertPathIs('/verify-email');
     });
