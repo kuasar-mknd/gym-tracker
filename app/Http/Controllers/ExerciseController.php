@@ -31,9 +31,12 @@ class ExerciseController extends Controller
 
         // Fetch history
         $history = $exercise->workoutLines()
-            ->with(['workout' => function ($query): void {
-                $query->select('id', 'name', 'started_at', 'ended_at');
-            }, 'sets'])
+            ->with([
+                'workout' => function ($query): void {
+                    $query->select('id', 'name', 'started_at', 'ended_at');
+                },
+                'sets',
+            ])
             ->whereHas('workout', function ($query): void {
                 $query->where('user_id', $this->user()->id)
                     ->whereNotNull('ended_at');
