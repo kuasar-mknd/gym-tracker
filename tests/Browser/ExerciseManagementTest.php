@@ -14,9 +14,9 @@ test('user can manage exercises', function (): void {
             ->resize(1280, 800)
             ->visit('/exercises')
             ->waitFor('main', 15)
-            ->assertPathIs('/exercises')
+            ->assertPathIs('/exercises');
 
-            // 1. Verify empty state and create button
+        // 1. Verify empty state and create button
         $browser->waitFor('[data-testid="create-exercise-button"]', 30)
             ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
