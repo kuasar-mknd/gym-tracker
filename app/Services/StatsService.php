@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\DB;
  * - Period-over-period comparisons
  *
  * It utilizes caching (via Redis/Cache facade) to optimize performance for expensive database queries.
+ *
+ * PERFORMANCE NOTE:
+ * Heavy volume aggregations (SUM(weight * reps)) rely on a composite index on the `sets` table:
+ * ['workout_line_id', 'weight', 'reps']. This allows for Index Only Scans.
  */
 class StatsService
 {
@@ -664,6 +668,7 @@ class StatsService
                 'workouts.started_at',
                 'workouts.name',
                 // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                // OPTIMIZATION: Uses covering index ['workout_line_id', 'weight', 'reps'] on sets table.
                 DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
             )
             ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
