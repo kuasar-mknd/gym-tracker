@@ -494,7 +494,7 @@ const typeLabel = (type) => {
                                         </div>
                                     </div>
                                     <div
-                                        class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+                                        class="dusk-visible flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                     >
                                         <button
                                             @click="startEdit(exercise)"
