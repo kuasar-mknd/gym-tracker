@@ -17,8 +17,8 @@ test('user can manage exercises', function (): void {
             ->assertPathIs('/exercises')
 
             // 1. Verify empty state and create button
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
-            ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
+            ->waitFor('[data-testid="create-exercise-desktop"]', 15)
+            ->script("document.querySelector('[data-testid=\"create-exercise-desktop\"]').click();");
 
         // 2. Fill and submit the create form
         $browser->waitForText('Nouvel exercice', 15)
