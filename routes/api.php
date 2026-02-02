@@ -34,6 +34,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('supplement-logs', \App\Http\Controllers\Api\SupplementLogController::class);
     Route::apiResource('water-logs', \App\Http\Controllers\Api\WaterLogController::class);
     Route::apiResource('macro-calculations', \App\Http\Controllers\Api\MacroCalculationController::class);
+    Route::apiResource('interval-timers', \App\Http\Controllers\Api\IntervalTimerController::class);
 
     Route::get('/status', fn () => response()->json(['status' => 'ok']));
 });
