@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Laravel\Dusk\Browser;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
+
+uses(DatabaseMigrations::class);
 
 test('unauthenticated users are redirected to login', function (): void {
     $this->browse(function (Browser $browser): void {
