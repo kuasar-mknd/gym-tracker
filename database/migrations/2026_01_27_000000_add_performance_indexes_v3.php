@@ -43,19 +43,31 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        // Intentionally empty to avoid FK constraint errors during rollback
         try {
-            Schema::table('supplement_logs', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'consumed_at']);
-            });
+            if (Schema::hasTable('water_logs')) {
+                Schema::table('water_logs', function (Blueprint $table): void {
+                    $table->dropIndex(['user_id', 'consumed_at']);
+                });
+            }
+        } catch (\Throwable $e) {
+            // Index doesn't exist or is needed by FK
+        }
+        try {
+            if (Schema::hasTable('supplement_logs')) {
+                Schema::table('supplement_logs', function (Blueprint $table): void {
+                    $table->dropIndex(['user_id', 'consumed_at']);
+                });
+            }
         } catch (\Throwable $e) {
             // Index doesn't exist or is needed by FK
         }
 
         try {
-            Schema::table('body_part_measurements', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'measured_at']);
-            });
+            if (Schema::hasTable('body_part_measurements')) {
+                Schema::table('body_part_measurements', function (Blueprint $table): void {
+                    $table->dropIndex(['user_id', 'measured_at']);
+                });
+            }
         } catch (\Throwable $e) {
             // Index doesn't exist or is needed by FK
         }

@@ -147,7 +147,7 @@ test('authorization prevents pr update on other users line', function (): void {
         'reps' => 10,
     ];
 
-    postJson(route('api.v1.sets.store'), $data)->assertForbidden();
+    postJson(route('api.v1.sets.store'), $data)->assertUnprocessable();
 
     assertDatabaseMissing('personal_records', [
         'exercise_id' => $exercise->id,
