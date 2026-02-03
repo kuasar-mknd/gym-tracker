@@ -14,7 +14,7 @@ test('unauthenticated users are redirected to login', function (): void {
 
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->logout()
+        $browser->deleteAllCookies()
             ->visit('/login')
             ->waitFor('input[name="email"]', 30) // Wait for input instead of text for stability
             ->assertSee('Se connecter');
@@ -23,7 +23,7 @@ test('users can see login page', function (): void {
 
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->logout()
+        $browser->deleteAllCookies()
             ->visit('/register')
             ->waitFor('input[name="name"]', 30) // Ensure form is loaded
             ->type('input[name="name"]', 'John Doe')
