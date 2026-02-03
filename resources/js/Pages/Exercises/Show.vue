@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
+import ExerciseVolumeChart from '@/Components/Stats/ExerciseVolumeChart.vue'
 
 const props = defineProps({
     exercise: Object,
@@ -51,8 +52,11 @@ const props = defineProps({
                 </div>
             </GlassCard>
 
+            <!-- Volume Chart -->
+            <ExerciseVolumeChart :history="history" style="animation-delay: 0.1s" />
+
             <!-- History List -->
-            <div class="animate-slide-up" style="animation-delay: 0.1s">
+            <div class="animate-slide-up" style="animation-delay: 0.2s">
                 <h3 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Historique</h3>
 
                 <div v-if="history.length === 0" class="py-8 text-center">
