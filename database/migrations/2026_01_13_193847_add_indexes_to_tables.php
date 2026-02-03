@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class() extends Migration
@@ -34,22 +33,38 @@ return new class() extends Migration
     public function down(): void
     {
         try {
-            DB::statement('DROP INDEX workouts_user_id_index ON workouts');
+            if (Schema::hasTable('workouts')) {
+                Schema::table('workouts', function (Blueprint $table) {
+                    $table->dropIndex(['user_id']);
+                });
+            }
         } catch (\Throwable $e) {
         }
 
         try {
-            DB::statement('DROP INDEX workout_lines_workout_id_index ON workout_lines');
+            if (Schema::hasTable('workout_lines')) {
+                Schema::table('workout_lines', function (Blueprint $table) {
+                    $table->dropIndex(['workout_id']);
+                });
+            }
         } catch (\Throwable $e) {
         }
 
         try {
-            DB::statement('DROP INDEX workout_lines_exercise_id_index ON workout_lines');
+            if (Schema::hasTable('workout_lines')) {
+                Schema::table('workout_lines', function (Blueprint $table) {
+                    $table->dropIndex(['exercise_id']);
+                });
+            }
         } catch (\Throwable $e) {
         }
 
         try {
-            DB::statement('DROP INDEX sets_workout_line_id_index ON sets');
+            if (Schema::hasTable('sets')) {
+                Schema::table('sets', function (Blueprint $table) {
+                    $table->dropIndex(['workout_line_id']);
+                });
+            }
         } catch (\Throwable $e) {
         }
     }
