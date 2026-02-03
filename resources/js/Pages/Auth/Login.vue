@@ -53,7 +53,6 @@ const submit = () => {
                 placeholder="ton@email.com"
                 :error="form.errors.email"
                 autocomplete="username"
-                name="email"
                 required
                 autofocus
             />
@@ -66,7 +65,6 @@ const submit = () => {
                 placeholder="••••••••"
                 :error="form.errors.password"
                 autocomplete="current-password"
-                name="password"
                 required
             />
 
