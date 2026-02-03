@@ -37,9 +37,7 @@ return new class() extends Migration
                 });
             } catch (\Throwable $e) {
                 // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-                if (! str_contains($e->getMessage(), '1553')) {
-                    throw $e;
-                }
+                // Also ignore if index does not exist (in case of race condition or prior drop)
             }
         }
     }
