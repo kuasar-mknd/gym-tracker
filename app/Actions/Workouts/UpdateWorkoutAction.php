@@ -28,21 +28,7 @@ final class UpdateWorkoutAction
 
         $workout->save();
 
-        if ($workout->wasChanged('started_at')) {
-            $this->statsService->clearWorkoutRelatedStats($workout->user);
-        } else {
-            if ($workout->wasChanged(['name', 'notes', 'ended_at'])) {
-                $this->statsService->clearDashboardCache($workout->user);
-            }
-
-            if ($workout->wasChanged('name')) {
-                $this->statsService->clearWorkoutNameDependentStats($workout->user);
-            }
-
-            if ($workout->wasChanged('ended_at')) {
-                $this->statsService->clearWorkoutDurationDependentStats($workout->user);
-            }
-        }
+        $this->statsService->clearWorkoutRelatedStats($workout->user);
 
         return $workout;
     }

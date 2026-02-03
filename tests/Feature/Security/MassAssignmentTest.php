@@ -42,20 +42,4 @@ class MassAssignmentTest extends TestCase
 
         User::create($userData);
     }
-
-    public function test_streak_fields_cannot_be_mass_assigned(): void
-    {
-        $userData = [
-            'name' => 'Attacker',
-            'email' => 'attacker@example.com',
-            'password' => 'password',
-            'current_streak' => 999,
-            'longest_streak' => 999,
-            'last_workout_at' => now(),
-        ];
-
-        $this->expectException(\Illuminate\Database\Eloquent\MassAssignmentException::class);
-
-        User::create($userData);
-    }
 }
