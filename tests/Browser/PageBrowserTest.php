@@ -14,6 +14,7 @@ test('unauthenticated users are redirected to login', function (): void {
 
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
+        $browser->logout();
         $browser->visit('/login')
             ->waitForText('Se connecter', 30) // Increased timeout
             ->assertSee('Se connecter');
@@ -22,6 +23,7 @@ test('users can see login page', function (): void {
 
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
+        $browser->logout();
         $browser->visit('/register')
             ->waitFor('input[name="name"]', 30) // Ensure form is loaded
             ->type('input[name="name"]', 'John Doe')
