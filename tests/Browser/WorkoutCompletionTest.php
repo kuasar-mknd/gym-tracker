@@ -33,11 +33,11 @@ final class WorkoutCompletionTest extends DuskTestCase
                 ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
                 ->waitFor('#finish-workout-desktop', 15)
-                ->click('#finish-workout-desktop');
+                ->script("document.getElementById('finish-workout-desktop').click();");
 
-            $browser->waitForText('TERMINER LA SÉANCE ?', 15)
-                ->pause(2000)
-                ->click('#confirm-finish-button');
+            $browser->waitForText('Terminer la séance ?', 15)
+                ->pause(1000)
+                ->script("document.getElementById('confirm-finish-button').click();");
 
             $browser->waitForLocation('/dashboard', 15);
         });

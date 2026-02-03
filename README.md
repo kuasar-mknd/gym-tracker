@@ -308,5 +308,3 @@ Ce projet est sous licence [MIT](LICENSE).
   <br />
   <a href="https://github.com/kuasar-mknd/gym-tracker">⭐ Star ce repo si tu aimes !</a>
 </p>
-
-<!-- CI Retry Trigger: 2026-02-02 -->

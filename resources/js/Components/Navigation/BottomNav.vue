@@ -33,9 +33,7 @@ const isActiveRoute = (itemRoute) => {
             <!-- Center FAB -->
             <div v-if="item.isFab" class="relative">
                 <button @click="createWorkout" class="glass-nav-fab" :aria-label="item.name">
-                    <span class="material-symbols-outlined text-4xl font-black" aria-hidden="true">{{
-                        item.icon
-                    }}</span>
+                    <span class="material-symbols-outlined text-4xl font-black">{{ item.icon }}</span>
                 </button>
             </div>
 
@@ -51,7 +49,6 @@ const isActiveRoute = (itemRoute) => {
                 <span
                     class="material-symbols-outlined text-[28px] transition-all group-hover:drop-shadow-[0_0_8px_rgba(255,85,0,0.5)]"
                     :style="{ fontVariationSettings: isActiveRoute(item.route) ? `'FILL' 1` : `'FILL' 0` }"
-                    aria-hidden="true"
                 >
                     {{ item.icon }}
                 </span>

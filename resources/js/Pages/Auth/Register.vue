@@ -84,7 +84,6 @@ const submit = () => {
                 class="w-full"
                 :loading="form.processing"
                 :disabled="form.processing"
-                data-testid="register-button"
             >
                 Créer mon compte
             </GlassButton>
