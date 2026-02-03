@@ -52,7 +52,6 @@ class ExerciseController extends Controller
                     'reps' => $set->reps,
                     '1rm' => $set->weight * (1 + $set->reps / 30),
                 ]),
-                'volume' => $line->sets->sum(fn ($set): int|float => $set->weight * $set->reps),
                 'best_1rm' => $line->sets->max(fn ($set): int|float => $set->weight * (1 + $set->reps / 30)),
             ]);
 

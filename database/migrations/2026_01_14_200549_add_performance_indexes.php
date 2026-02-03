@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class() extends Migration
@@ -44,47 +45,27 @@ return new class() extends Migration
     public function down(): void
     {
         try {
-            if (Schema::hasTable('body_measurements')) {
-                Schema::table('body_measurements', function (Blueprint $table) {
-                    $table->dropIndex(['user_id']);
-                });
-            }
+            DB::statement('DROP INDEX body_measurements_user_id_index ON body_measurements');
         } catch (\Throwable $e) {
         }
 
         try {
-            if (Schema::hasTable('goals')) {
-                Schema::table('goals', function (Blueprint $table) {
-                    $table->dropIndex(['user_id']);
-                });
-            }
+            DB::statement('DROP INDEX goals_user_id_index ON goals');
         } catch (\Throwable $e) {
         }
 
         try {
-            if (Schema::hasTable('goals')) {
-                Schema::table('goals', function (Blueprint $table) {
-                    $table->dropIndex(['exercise_id']);
-                });
-            }
+            DB::statement('DROP INDEX goals_exercise_id_index ON goals');
         } catch (\Throwable $e) {
         }
 
         try {
-            if (Schema::hasTable('personal_records')) {
-                Schema::table('personal_records', function (Blueprint $table) {
-                    $table->dropIndex(['workout_id']);
-                });
-            }
+            DB::statement('DROP INDEX personal_records_workout_id_index ON personal_records');
         } catch (\Throwable $e) {
         }
 
         try {
-            if (Schema::hasTable('personal_records')) {
-                Schema::table('personal_records', function (Blueprint $table) {
-                    $table->dropIndex(['set_id']);
-                });
-            }
+            DB::statement('DROP INDEX personal_records_set_id_index ON personal_records');
         } catch (\Throwable $e) {
         }
     }

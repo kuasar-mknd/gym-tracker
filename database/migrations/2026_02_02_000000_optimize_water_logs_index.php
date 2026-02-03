@@ -14,13 +14,11 @@ return new class() extends Migration
     public function up(): void
     {
         try {
-            if (Schema::hasTable('water_logs') && ! Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
-                Schema::table('water_logs', function (Blueprint $table): void {
-                    $table->index(['user_id', 'consumed_at'], 'water_logs_user_id_consumed_at_index');
-                });
-            }
+            Schema::table('water_logs', function (Blueprint $table): void {
+                $table->index(['user_id', 'consumed_at']);
+            });
         } catch (\Throwable $e) {
-            // Silently ignore
+            // Index already exists
         }
     }
 
@@ -30,11 +28,9 @@ return new class() extends Migration
     public function down(): void
     {
         try {
-            if (Schema::hasTable('water_logs')) {
-                Schema::table('water_logs', function (Blueprint $table) {
-                    $table->dropIndex(['user_id', 'consumed_at']);
-                });
-            }
+            Schema::table('water_logs', function (Blueprint $table) {
+                $table->dropIndex(['user_id', 'consumed_at']);
+            });
         } catch (\Throwable $e) {
             // Ignore if index doesn't exist or is needed by FK
         }

@@ -21,27 +21,28 @@ final class ResolveSocialUserAction
         if ($existingUser) {
             // Update provider info if not set (linking account)
             if (! $existingUser->provider_id) {
-                $existingUser->forceFill([
+                $existingUser->update([
                     'provider' => $provider,
                     'provider_id' => $socialUser->getId(),
                     'avatar' => $socialUser->getAvatar(),
-                ])->save();
+                ]);
             }
 
             return $existingUser;
         }
 
         // Create new user
-        $user = new User([
+        // We use create() because all fields are in $fillable in User model
+        $user = User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
             'email' => $socialUser->getEmail(),
             'password' => bcrypt(Str::random(16)), // Random password since auth is handled by provider
-        ]);
-
-        $user->forceFill([
             'provider' => $provider,
             'provider_id' => $socialUser->getId(),
             'avatar' => $socialUser->getAvatar(),
+        ]);
+
+        $user->forceFill([
             'email_verified_at' => now(), // Assume email is verified by provider
         ])->save();
 
