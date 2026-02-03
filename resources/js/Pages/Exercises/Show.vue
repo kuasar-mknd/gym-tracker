@@ -2,10 +2,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
-import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
 import { defineAsyncComponent } from 'vue'
 
-const ExerciseVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/ExerciseVolumeChart.vue'))
+const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 
 const props = defineProps({
     exercise: Object,
@@ -50,21 +49,6 @@ const props = defineProps({
                 </div>
                 <div v-else class="flex h-64 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">show_chart</span>
-                    <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                </div>
-            </GlassCard>
-
-            <!-- Volume Chart -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
-                <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume par Séance</h3>
-                    <p class="text-text-muted text-xs font-semibold">Tonnage total (poids × reps)</p>
-                </div>
-                <div v-if="history.length > 0" class="h-64">
-                    <ExerciseVolumeChart :history="history" />
-                </div>
-                <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
                     <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                 </div>
             </GlassCard>
