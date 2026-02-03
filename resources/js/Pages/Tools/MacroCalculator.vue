@@ -25,22 +25,22 @@
                         <div class="grid grid-cols-2 gap-3">
                             <button
                                 @click="form.gender = 'male'"
-                                class="flex h-16 items-center justify-center rounded-2xl border transition-all backdrop-blur-md"
+                                class="flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all"
                                 :class="
                                     form.gender === 'male'
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
-                                        : 'text-text-muted border-white/20 bg-white/10 hover:bg-white/20 hover:border-white/30 hover:text-text-main'
+                                        : 'text-text-muted border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Homme</span>
                             </button>
                             <button
                                 @click="form.gender = 'female'"
-                                class="flex h-16 items-center justify-center rounded-2xl border transition-all backdrop-blur-md"
+                                class="flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all"
                                 :class="
                                     form.gender === 'female'
-                                        ? 'border-hot-pink bg-hot-pink/20 text-hot-pink shadow-[0_0_15px_rgba(236,72,153,0.3)]'
-                                        : 'text-text-muted border-white/20 bg-white/10 hover:bg-white/20 hover:border-white/30 hover:text-text-main'
+                                        ? 'border-hot-pink bg-hot-pink/20 text-hot-pink shadow-[0_0_15px_rgba(255,105,180,0.3)]'
+                                        : 'text-text-muted border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -50,49 +50,32 @@
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <!-- Age -->
-                        <GlassInput
-                            type="number"
-                            v-model="form.age"
-                            label="Age"
-                            placeholder="25"
-                            size="lg"
-                        />
+                        <GlassInput v-model="form.age" type="number" label="Age" placeholder="25" size="lg" />
                         <!-- Height -->
                         <GlassInput
-                            type="number"
                             v-model="form.height"
+                            type="number"
                             label="Taille (cm)"
                             placeholder="175"
                             size="lg"
                         />
                         <!-- Weight -->
-                        <GlassInput
-                            type="number"
-                            v-model="form.weight"
-                            label="Poids (kg)"
-                            placeholder="70"
-                            size="lg"
-                        />
+                        <GlassInput v-model="form.weight" type="number" label="Poids (kg)" placeholder="70" size="lg" />
                     </div>
 
                     <!-- Activity Level -->
                     <div>
                         <label class="font-display-label text-text-muted mb-2 block">Niveau d'activité</label>
-                        <div class="relative">
-                            <select
-                                v-model="form.activity_level"
-                                class="font-display text-text-main focus:border-electric-orange focus:bg-white/20 focus:ring-electric-orange/20 h-[56px] w-full appearance-none rounded-2xl border border-white/20 bg-white/10 px-4 text-lg backdrop-blur-md transition-all outline-none focus:ring-2"
-                            >
-                                <option value="sedentary" class="bg-white text-text-main dark:bg-slate-900 dark:text-white">Sédentaire (peu ou pas d'exercice)</option>
-                                <option value="light" class="bg-white text-text-main dark:bg-slate-900 dark:text-white">Légèrement actif (1-3 jours/semaine)</option>
-                                <option value="moderate" class="bg-white text-text-main dark:bg-slate-900 dark:text-white">Modérément actif (3-5 jours/semaine)</option>
-                                <option value="very" class="bg-white text-text-main dark:bg-slate-900 dark:text-white">Très actif (6-7 jours/semaine)</option>
-                                <option value="extra" class="bg-white text-text-main dark:bg-slate-900 dark:text-white">Extrêmement actif (travail physique)</option>
-                            </select>
-                            <div class="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-text-muted">
-                                <span class="material-symbols-outlined">expand_more</span>
-                            </div>
-                        </div>
+                        <select
+                            v-model="form.activity_level"
+                            class="glass-input h-14 w-full rounded-2xl px-4 text-lg font-bold transition-all outline-none focus:ring-2"
+                        >
+                            <option value="sedentary">Sédentaire (peu ou pas d'exercice)</option>
+                            <option value="light">Légèrement actif (1-3 jours/semaine)</option>
+                            <option value="moderate">Modérément actif (3-5 jours/semaine)</option>
+                            <option value="very">Très actif (6-7 jours/semaine)</option>
+                            <option value="extra">Extrêmement actif (travail physique)</option>
+                        </select>
                     </div>
 
                     <!-- Goal -->
@@ -103,11 +86,11 @@
                                 v-for="goalOption in ['cut', 'maintain', 'bulk']"
                                 :key="goalOption"
                                 @click="form.goal = goalOption"
-                                class="flex h-12 items-center justify-center rounded-xl border transition-all backdrop-blur-md"
+                                class="flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all"
                                 :class="
                                     form.goal === goalOption
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
-                                        : 'text-text-muted border-white/20 bg-white/10 hover:bg-white/20 hover:border-white/30 hover:text-text-main'
+                                        : 'text-text-muted border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
                                 "
                             >
                                 <span class="font-display font-bold uppercase">{{
@@ -192,7 +175,7 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group relative flex flex-col justify-between rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md transition-all hover:bg-white/10 hover:shadow-lg sm:flex-row sm:items-center"
+                            class="group relative flex flex-col justify-between rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md transition-all hover:border-white/20 hover:bg-white/10 sm:flex-row sm:items-center"
                         >
                             <div class="flex items-center gap-4">
                                 <div
@@ -219,7 +202,7 @@
 
                             <button
                                 @click="deleteEntry(entry)"
-                                class="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-red-500/20 hover:text-red-500 sm:static"
+                                class="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-500 sm:static"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>
