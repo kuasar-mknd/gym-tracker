@@ -454,11 +454,30 @@ class StatsService
      */
     public function clearWorkoutRelatedStats(User $user): void
     {
+        $this->clearWorkoutMetadataStats($user);
+
+        $periods = [7, 30, 90, 365];
+        foreach ($periods as $days) {
+            \Illuminate\Support\Facades\Cache::forget("stats.daily_volume.{$user->id}.{$days}");
+            \Illuminate\Support\Facades\Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
+        }
+
+        // Clear weekly volume and monthly comparison (previously missed)
+        \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
+        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
+        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
+    }
+
+    /**
+     * Clear only cache related to workout metadata (names, notes).
+     * Does NOT clear heavy aggregation stats (muscle dist, daily volume, etc).
+     */
+    public function clearWorkoutMetadataStats(User $user): void
+    {
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
-            \Illuminate\Support\Facades\Cache::forget("stats.daily_volume.{$user->id}.{$days}");
-            \Illuminate\Support\Facades\Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
         }
 
         // Clear dashboard-specific cache (contains both workout and weight data)
@@ -469,12 +488,6 @@ class StatsService
         \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
-
-        // Clear weekly volume and monthly comparison (previously missed)
-        \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
-        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
-        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
     }
 
     /**
