@@ -454,59 +454,27 @@ class StatsService
      */
     public function clearWorkoutRelatedStats(User $user): void
     {
-        // Granular clearing calls
-        $this->clearDashboardCache($user);
-        $this->clearWorkoutNameDependentStats($user);
-        $this->clearWorkoutDurationDependentStats($user);
-
-        // Clear remaining aggregates not covered by above
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
+            \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.daily_volume.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
         }
 
+        // Clear dashboard-specific cache (contains both workout and weight data)
+        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
+
+        // Clear duration and volume history caches
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.20");
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
+        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
+        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
+
+        // Clear weekly volume and monthly comparison (previously missed)
         \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
         \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
-        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
-    }
-
-    /**
-     * Clear dashboard specific cache.
-     */
-    public function clearDashboardCache(User $user): void
-    {
-        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
-    }
-
-    /**
-     * Clear stats that depend on the workout name.
-     * Includes: Volume Trend, Volume History, Duration History.
-     */
-    public function clearWorkoutNameDependentStats(User $user): void
-    {
-        $periods = [7, 30, 90, 365];
-        foreach ($periods as $days) {
-            \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
-        }
-
-        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
-        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.20");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
-    }
-
-    /**
-     * Clear stats that depend on workout duration (ended_at).
-     * Includes: Duration History, Volume History (checks ended_at), Duration Distribution.
-     */
-    public function clearWorkoutDurationDependentStats(User $user): void
-    {
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.20");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
-        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
-        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
         \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
+        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
     }
 
     /**
@@ -521,7 +489,8 @@ class StatsService
             \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
 
-        $this->clearDashboardCache($user);
+        // Clear dashboard-specific cache (contains both workout and weight data)
+        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
     }
 
     protected function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
