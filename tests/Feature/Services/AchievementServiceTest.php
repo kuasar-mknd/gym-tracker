@@ -44,7 +44,7 @@ test('it awards count achievement', function (): void {
     Notification::assertSentTo(
         $user,
         \App\Notifications\AchievementUnlocked::class,
-        fn ($notification) => $notification->achievement->id === $achievement->id
+        fn ($notification): bool => $notification->achievement->id === $achievement->id
     );
 });
 
