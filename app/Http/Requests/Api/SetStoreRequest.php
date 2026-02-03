@@ -28,8 +28,11 @@ class SetStoreRequest extends FormRequest
             'workout_line_id' => [
                 'required',
                 Rule::exists('workout_lines', 'id')->where(function ($query) {
-                    $query->whereIn('workout_id', function ($q) {
-                        $q->select('id')->from('workouts')->where('user_id', $this->user()->id);
+                    /** @var \App\Models\User $user */
+                    $user = $this->user();
+
+                    $query->whereIn('workout_id', function ($q) use ($user) {
+                        $q->select('id')->from('workouts')->where('user_id', $user->id);
                     });
                 }),
             ],

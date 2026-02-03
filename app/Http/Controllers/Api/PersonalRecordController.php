@@ -30,8 +30,11 @@ class PersonalRecordController extends Controller
                 'nullable',
                 'integer',
                 Rule::exists('exercises', 'id')->where(function ($query) {
-                    $query->where(function ($q) {
-                        $q->whereNull('user_id')->orWhere('user_id', $this->user()->id);
+                    /** @var \App\Models\User $user */
+                    $user = $this->user();
+
+                    $query->where(function ($q) use ($user) {
+                        $q->whereNull('user_id')->orWhere('user_id', $user->id);
                     });
                 }),
             ],
