@@ -31,11 +31,9 @@ class HabitController extends Controller
      * @param  \App\Actions\Habits\FetchHabitsIndexAction  $fetchHabitsIndex  Action to fetch habits data.
      * @return \Inertia\Response The Inertia response rendering the Habits/Index page.
      */
-    public function index(Request $request, FetchHabitsIndexAction $fetchHabitsIndex): \Inertia\Response
+    public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
     {
-        $data = $fetchHabitsIndex->execute($this->user());
-
-        return Inertia::render('Habits/Index', $data);
+        return Inertia::render('Habits/Index', $fetchHabits->execute($this->user()));
     }
 
     /**
