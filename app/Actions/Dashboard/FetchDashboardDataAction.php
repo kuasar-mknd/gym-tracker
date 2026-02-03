@@ -72,7 +72,7 @@ final class FetchDashboardDataAction
         return $user->personalRecords()
             ->with('exercise')
             ->latest('achieved_at')
-            ->take(5)
+            ->take(2)
             ->get();
     }
 
@@ -82,7 +82,7 @@ final class FetchDashboardDataAction
         return $user->goals()
             ->whereNull('completed_at')
             ->latest()
-            ->take(3)
+            ->take(2)
             ->get()
             ->append(['progress', 'unit']);
     }
@@ -91,9 +91,11 @@ final class FetchDashboardDataAction
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->workouts()
-            ->with('workoutLines')
+            // Bolt: Optimization - use withCount instead of with to avoid over-fetching related records.
+            // Dashboard only needs the count for the icon logic.
+            ->withCount('workoutLines')
             ->latest('started_at')
-            ->limit(5)
+            ->limit(3)
             ->get();
     }
 }
