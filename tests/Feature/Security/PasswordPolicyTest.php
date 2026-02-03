@@ -12,7 +12,7 @@ class PasswordPolicyTest extends TestCase
     public function test_password_defaults_are_configured_correctly_for_testing(): void
     {
         // By default, testing environment should only require min:8
-        $rules = Password::defaults();
+        Password::defaults();
 
         // We can't easily inspect the internal state of the Password rule object directly
         // without reflection or resolving it, but we can test validation behavior.
@@ -39,8 +39,6 @@ class PasswordPolicyTest extends TestCase
         // Skip if we can't mock the environment easily in a way that affects the AppServiceProvider boot
         // Because AppServiceProvider::boot() runs before the test starts.
         // However, we can manually check the logic we intend to put in AppServiceProvider.
-
-        $isProduction = false;
 
         $rule = Password::min(8);
         $productionRule = $rule->mixedCase()->numbers()->symbols()->uncompromised();
