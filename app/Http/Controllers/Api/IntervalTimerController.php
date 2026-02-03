@@ -38,7 +38,7 @@ class IntervalTimerController extends Controller
      */
     public function show(IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        if ($intervalTimer->user_id !== $this->user()->id) {
+        if ($intervalTimer->user_id != $this->user()->id) {
             abort(403);
         }
 
@@ -50,7 +50,7 @@ class IntervalTimerController extends Controller
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        if ($intervalTimer->user_id !== $this->user()->id) {
+        if ($intervalTimer->user_id != $this->user()->id) {
             abort(403);
         }
 
@@ -64,7 +64,7 @@ class IntervalTimerController extends Controller
      */
     public function destroy(IntervalTimer $intervalTimer): JsonResponse
     {
-        if ($intervalTimer->user_id !== $this->user()->id) {
+        if ($intervalTimer->user_id != $this->user()->id) {
             abort(403);
         }
 
