@@ -82,8 +82,13 @@ const showingNavigationDropdown = ref(false)
                         <Link
                             :href="route('notifications.index')"
                             class="text-text-muted hover:text-electric-orange relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-700"
+                            :aria-label="
+                                $page.props.auth.user.unread_notifications_count > 0
+                                    ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
+                                    : 'Notifications'
+                            "
                         >
-                            <span class="material-symbols-outlined text-[22px]">notifications</span>
+                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">notifications</span>
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
                                 class="bg-electric-orange shadow-glow-orange absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black text-white"
@@ -106,7 +111,9 @@ const showingNavigationDropdown = ref(false)
                                             {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                                         </div>
                                         {{ $page.props.auth.user.name }}
-                                        <span class="material-symbols-outlined text-text-muted text-lg"
+                                        <span
+                                            class="material-symbols-outlined text-text-muted text-lg"
+                                            aria-hidden="true"
                                             >expand_more</span
                                         >
                                     </button>
@@ -145,8 +152,9 @@ const showingNavigationDropdown = ref(false)
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
                     @click="triggerHaptic('tap')"
+                    aria-label="Retour"
                 >
-                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
                 <h1
                     v-if="pageTitle"
@@ -160,8 +168,13 @@ const showingNavigationDropdown = ref(false)
                 <Link
                     :href="route('notifications.index')"
                     class="text-text-muted relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all active:scale-95 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
+                    :aria-label="
+                        $page.props.auth.user.unread_notifications_count > 0
+                            ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
+                            : 'Notifications'
+                    "
                 >
-                    <span class="material-symbols-outlined text-[22px]">notifications</span>
+                    <span class="material-symbols-outlined text-[22px]" aria-hidden="true">notifications</span>
                     <span
                         v-if="$page.props.auth.user.unread_notifications_count > 0"
                         class="bg-electric-orange absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black text-white"
