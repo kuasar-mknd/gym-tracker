@@ -29,18 +29,20 @@ return new class() extends Migration
     public function down(): void
     {
         if (Schema::hasTable('water_logs')) {
-            Schema::table('water_logs', function (Blueprint $table) {
-                if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
-                    try {
+            try {
+                Schema::table('water_logs', function (Blueprint $table) {
+                    if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
                         $table->dropIndex('water_logs_user_id_consumed_at_index');
-                    } catch (\Throwable $e) {
-                        // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-                        if (! str_contains($e->getMessage(), '1553')) {
-                            throw $e;
-                        }
                     }
+                });
+            } catch (\Throwable $e) {
+                // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
+                // This happens in CI when rolling back if the index is used by a foreign key constraint
+                // that hasn't been dropped yet (or won't be dropped).
+                if (! str_contains($e->getMessage(), '1553')) {
+                    throw $e;
                 }
-            });
+            }
         }
     }
 };
