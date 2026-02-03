@@ -21,9 +21,10 @@ test('user can manage exercises', function (): void {
             ->click('[data-testid="create-exercise-button"]');
 
         // 2. Fill and submit the create form
-        $browser->waitForText('Nouvel exercice', 15)
+        $browser->waitFor('input[placeholder="Ex: Développé couché"]', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
+            ->pause(500) // Wait for listeners
             ->select('select', 'strength')
             ->waitFor('[data-testid="submit-exercise-button"]', 5)
             ->click('[data-testid="submit-exercise-button"]');
