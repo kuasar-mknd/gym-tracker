@@ -15,14 +15,14 @@ return new class() extends Migration
     {
         Schema::table('body_measurements', function (Blueprint $table) {
             // Index for stats history queries (filtering by user and sorting by date)
-            if (! Schema::hasIndex('body_measurements', ['user_id', 'measured_at'])) {
+            if (! Schema::hasIndex('body_measurements', 'body_measurements_user_id_measured_at_index')) {
                 $table->index(['user_id', 'measured_at']);
             }
         });
 
         Schema::table('personal_records', function (Blueprint $table) {
             // Index for dashboard recent PRs (filtering by user and sorting by date)
-            if (! Schema::hasIndex('personal_records', ['user_id', 'achieved_at'])) {
+            if (! Schema::hasIndex('personal_records', 'personal_records_user_id_achieved_at_index')) {
                 $table->index(['user_id', 'achieved_at']);
             }
         });
@@ -34,11 +34,19 @@ return new class() extends Migration
     public function down(): void
     {
         Schema::table('body_measurements', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'measured_at']);
+            try {
+                $table->dropIndex(['user_id', 'measured_at']);
+            } catch (\Throwable $e) {
+                // Ignore MySQL 1553 error (foreign key constraint) during rollback
+            }
         });
 
         Schema::table('personal_records', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'achieved_at']);
+            try {
+                $table->dropIndex(['user_id', 'achieved_at']);
+            } catch (\Throwable $e) {
+                // Ignore MySQL 1553 error
+            }
         });
     }
 };
