@@ -3,7 +3,7 @@
 use App\Models\User;
 use App\Models\WilksScore;
 
-test('authenticated user can list their wilks scores', function () {
+test('authenticated user can list their wilks scores', function (): void {
     $user = User::factory()->create();
     WilksScore::factory()->count(3)->create(['user_id' => $user->id]);
 
@@ -17,7 +17,7 @@ test('authenticated user can list their wilks scores', function () {
         ->assertJsonCount(3, 'data');
 });
 
-test('authenticated user can create a wilks score', function () {
+test('authenticated user can create a wilks score', function (): void {
     $user = User::factory()->create();
 
     $data = [
@@ -48,7 +48,7 @@ test('authenticated user can create a wilks score', function () {
     ]);
 });
 
-test('authenticated user can view their wilks score', function () {
+test('authenticated user can view their wilks score', function (): void {
     $user = User::factory()->create();
     $score = WilksScore::factory()->create(['user_id' => $user->id]);
 
@@ -59,7 +59,7 @@ test('authenticated user can view their wilks score', function () {
         ->assertJsonPath('data.id', $score->id);
 });
 
-test('authenticated user cannot view others wilks score', function () {
+test('authenticated user cannot view others wilks score', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $score = WilksScore::factory()->create(['user_id' => $otherUser->id]);
@@ -70,7 +70,7 @@ test('authenticated user cannot view others wilks score', function () {
     $response->assertStatus(403);
 });
 
-test('authenticated user can update their wilks score', function () {
+test('authenticated user can update their wilks score', function (): void {
     $user = User::factory()->create();
     $score = WilksScore::factory()->create(['user_id' => $user->id]);
 
@@ -89,7 +89,7 @@ test('authenticated user can update their wilks score', function () {
         ->assertJsonPath('data.lifted_weight', 110);
 });
 
-test('authenticated user can delete their wilks score', function () {
+test('authenticated user can delete their wilks score', function (): void {
     $user = User::factory()->create();
     $score = WilksScore::factory()->create(['user_id' => $user->id]);
 

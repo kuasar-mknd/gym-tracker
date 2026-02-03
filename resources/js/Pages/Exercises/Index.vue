@@ -312,7 +312,12 @@ const typeLabel = (type) => {
 
             <!-- Add Form Modal -->
             <GlassCard v-if="showAddForm" class="animate-scale-in" variant="solid">
-                <h3 class="font-display text-text-main mb-5 text-xl font-black uppercase">Nouvel exercice</h3>
+                <h3
+                    class="font-display text-text-main mb-5 text-xl font-black uppercase"
+                    data-testid="create-exercise-modal-title"
+                >
+                    Nouvel exercice
+                </h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <GlassInput
                         v-model="form.name"
