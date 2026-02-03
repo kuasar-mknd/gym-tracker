@@ -29,11 +29,11 @@ class PersonalRecordController extends Controller
             'exercise_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('exercises', 'id')->where(function ($query) {
+                Rule::exists('exercises', 'id')->where(function ($query): void {
                     /** @var \App\Models\User $user */
                     $user = $this->user();
 
-                    $query->where(function ($q) use ($user) {
+                    $query->where(function ($q) use ($user): void {
                         $q->whereNull('user_id')->orWhere('user_id', $user->id);
                     });
                 }),
