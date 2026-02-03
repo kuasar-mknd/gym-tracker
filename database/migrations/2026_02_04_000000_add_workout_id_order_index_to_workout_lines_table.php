@@ -26,12 +26,12 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        try {
-            Schema::table('workout_lines', function (Blueprint $table) {
+        Schema::table('workout_lines', function (Blueprint $table) {
+            try {
                 $table->dropIndex(['workout_id', 'order']);
-            });
-        } catch (\Throwable $e) {
-            // Index might not exist
-        }
+            } catch (\Throwable $e) {
+                // Index might not exist
+            }
+        });
     }
 };

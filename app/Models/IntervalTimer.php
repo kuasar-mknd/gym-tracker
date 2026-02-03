@@ -9,18 +9,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * @property int $id
- * @property int $user_id
- * @property string $name
- * @property int $work_seconds
- * @property int $rest_seconds
- * @property int $rounds
- * @property int $warmup_seconds
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read User $user
- */
 class IntervalTimer extends Model
 {
     /** @use HasFactory<IntervalTimerFactory> */
@@ -35,14 +23,6 @@ class IntervalTimer extends Model
         'warmup_seconds',
     ];
 
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     protected function casts(): array
     {
         return [
@@ -51,5 +31,13 @@ class IntervalTimer extends Model
             'rounds' => 'integer',
             'warmup_seconds' => 'integer',
         ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }
