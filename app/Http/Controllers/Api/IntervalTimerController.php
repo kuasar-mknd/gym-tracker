@@ -8,23 +8,19 @@ use App\Http\Requests\StoreIntervalTimerRequest;
 use App\Http\Requests\UpdateIntervalTimerRequest;
 use App\Http\Resources\IntervalTimerResource;
 use App\Models\IntervalTimer;
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 
 class IntervalTimerController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(): AnonymousResourceCollection
     {
-        /** @var \App\Models\User $user */
-        $user = $request->user();
-
-        $timers = $user->intervalTimers()->latest()->get();
-
-        return IntervalTimerResource::collection($timers);
+        return IntervalTimerResource::collection(
+            $this->user()->intervalTimers()->latest()->get()
+        );
     }
 
     /**
@@ -32,25 +28,17 @@ class IntervalTimerController extends Controller
      */
     public function store(StoreIntervalTimerRequest $request): IntervalTimerResource
     {
-        $data = $request->validated();
+        $intervalTimer = $this->user()->intervalTimers()->create($request->validated());
 
-        /** @var \App\Models\User $user */
-        $user = $request->user();
-
-        $timer = $user->intervalTimers()->create($data);
-
-        return new IntervalTimerResource($timer);
+        return new IntervalTimerResource($intervalTimer);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Request $request, IntervalTimer $intervalTimer): IntervalTimerResource
+    public function show(IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        /** @var \App\Models\User $user */
-        $user = $request->user();
-
-        if ($intervalTimer->user_id !== $user->id) {
+        if ($intervalTimer->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -62,10 +50,7 @@ class IntervalTimerController extends Controller
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        /** @var \App\Models\User $user */
-        $user = $request->user();
-
-        if ($intervalTimer->user_id !== $user->id) {
+        if ($intervalTimer->user_id !== $this->user()->id) {
             abort(403);
         }
 
@@ -77,17 +62,14 @@ class IntervalTimerController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, IntervalTimer $intervalTimer): Response
+    public function destroy(IntervalTimer $intervalTimer): JsonResponse
     {
-        /** @var \App\Models\User $user */
-        $user = $request->user();
-
-        if ($intervalTimer->user_id !== $user->id) {
+        if ($intervalTimer->user_id !== $this->user()->id) {
             abort(403);
         }
 
         $intervalTimer->delete();
 
-        return response()->noContent();
+        return response()->json(null, 204);
     }
 }
