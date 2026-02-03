@@ -35,6 +35,14 @@ class IntervalTimer extends Model
         'warmup_seconds',
     ];
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     protected function casts(): array
     {
         return [
@@ -43,13 +51,5 @@ class IntervalTimer extends Model
             'rounds' => 'integer',
             'warmup_seconds' => 'integer',
         ];
-    }
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }
