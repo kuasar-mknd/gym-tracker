@@ -37,6 +37,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
 
     Route::apiResource('macro-calculations', \App\Http\Controllers\Api\MacroCalculationController::class);
     Route::apiResource('interval-timers', \App\Http\Controllers\Api\IntervalTimerController::class);
+    Route::apiResource('wilks-scores', \App\Http\Controllers\Api\WilksScoreController::class)
+        ->parameters(['wilks-scores' => 'wilksScore']);
 
     Route::get('/status', fn () => response()->json(['status' => 'ok']));
 });

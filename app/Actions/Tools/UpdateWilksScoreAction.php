@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace App\Actions\Tools;
 
 use App\Actions\Tools\Concerns\CalculatesWilksScore;
-use App\Models\User;
 use App\Models\WilksScore;
 
-final class CreateWilksScoreAction
+final class UpdateWilksScoreAction
 {
     use CalculatesWilksScore;
 
     /**
      * @param  array{body_weight: float, lifted_weight: float, gender: string, unit: string}  $data
      */
-    public function execute(User $user, array $data): WilksScore
+    public function execute(WilksScore $wilksScore, array $data): WilksScore
     {
         $bw = $data['body_weight'];
         $lifted = $data['lifted_weight'];
@@ -28,13 +27,14 @@ final class CreateWilksScoreAction
 
         $score = $this->calculateWilks($bwKg, $liftedKg, $gender);
 
-        /** @var WilksScore */
-        return $user->wilksScores()->create([
+        $wilksScore->update([
             'body_weight' => $bw,
             'lifted_weight' => $lifted,
             'gender' => $gender,
             'unit' => $unit,
             'score' => $score,
         ]);
+
+        return $wilksScore;
     }
 }
