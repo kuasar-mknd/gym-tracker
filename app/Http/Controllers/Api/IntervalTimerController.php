@@ -38,7 +38,7 @@ class IntervalTimerController extends Controller
      */
     public function show(IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        if ($intervalTimer->user_id != $this->user()->id) {
+        if ((int) $intervalTimer->user_id !== (int) $this->user()->id) {
             abort(403);
         }
 
@@ -50,8 +50,9 @@ class IntervalTimerController extends Controller
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        if ($intervalTimer->user_id != $this->user()->id) {
-            abort(403);
+        if ((int) $intervalTimer->user_id !== (int) $this->user()->id) {
+            // Debug info in message to diagnose CI failure
+            abort(403, "Forbidden: Timer User ID {$intervalTimer->user_id} !== Auth User ID {$this->user()->id}");
         }
 
         $intervalTimer->update($request->validated());
@@ -64,7 +65,7 @@ class IntervalTimerController extends Controller
      */
     public function destroy(IntervalTimer $intervalTimer): JsonResponse
     {
-        if ($intervalTimer->user_id != $this->user()->id) {
+        if ((int) $intervalTimer->user_id !== (int) $this->user()->id) {
             abort(403);
         }
 
