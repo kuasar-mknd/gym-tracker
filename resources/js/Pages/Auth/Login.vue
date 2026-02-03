@@ -48,6 +48,7 @@ const submit = () => {
             <GlassInput
                 v-model="form.email"
                 type="email"
+                name="email"
                 label="Email"
                 placeholder="ton@email.com"
                 :error="form.errors.email"
@@ -59,6 +60,7 @@ const submit = () => {
             <GlassInput
                 v-model="form.password"
                 type="password"
+                name="password"
                 label="Mot de passe"
                 placeholder="••••••••"
                 :error="form.errors.password"

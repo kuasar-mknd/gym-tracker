@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\IntervalTimer;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateIntervalTimerRequest extends FormRequest
@@ -13,7 +14,11 @@ class UpdateIntervalTimerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $intervalTimer = $this->route('intervalTimer');
+
+        return $this->user() &&
+            $intervalTimer instanceof IntervalTimer &&
+            $intervalTimer->user_id === $this->user()->id;
     }
 
     /**
