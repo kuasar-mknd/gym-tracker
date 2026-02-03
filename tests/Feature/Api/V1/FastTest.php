@@ -2,152 +2,175 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Api\V1;
-
 use App\Models\Fast;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Laravel\Sanctum\Sanctum;
 
-class FastTest extends TestCase
-{
-    use RefreshDatabase;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\deleteJson;
+use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
 
-    public function test_can_list_fasts(): void
-    {
-        $user = User::factory()->create();
-        Fast::factory()->count(3)->create(['user_id' => $user->id]);
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->getJson('/api/v1/fasts');
+describe('Guest', function (): void {
+    test('cannot list fasts', function (): void {
+        getJson(route('api.v1.fasts.index'))->assertUnauthorized();
+    });
+});
 
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                'data' => [
-                    '*' => [
-                        'id',
-                        'user_id',
-                        'start_time',
-                        'end_time',
-                        'target_duration_minutes',
-                        'type',
-                        'status',
+describe('Authenticated', function (): void {
+    beforeEach(function (): void {
+        $this->user = User::factory()->create();
+        Sanctum::actingAs($this->user);
+    });
+
+    describe('Index', function (): void {
+        test('user can list their fasts', function (): void {
+            Fast::factory()->count(3)->create(['user_id' => $this->user->id]);
+
+            $response = getJson(route('api.v1.fasts.index'));
+
+            $response->assertOk()
+                ->assertJsonCount(3, 'data')
+                ->assertJsonStructure([
+                    'data' => [
+                        '*' => ['id', 'start_time', 'target_duration_minutes', 'type', 'status'],
                     ],
-                ],
-                'meta',
-            ])
-            ->assertJsonCount(3, 'data');
-    }
+                    'links',
+                    'meta',
+                ]);
+        });
 
-    public function test_can_create_fast(): void
-    {
-        $user = User::factory()->create();
+        test('user cannot see others fasts', function (): void {
+            $otherUser = User::factory()->create();
+            Fast::factory()->create(['user_id' => $otherUser->id]);
 
-        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/fasts', [
-            'start_time' => now()->toIso8601String(),
-            'target_duration_minutes' => 16 * 60,
-            'type' => 'intermittent',
-        ]);
+            $response = getJson(route('api.v1.fasts.index'));
 
-        $response->assertCreated()
-            ->assertJsonPath('data.status', 'active');
+            $response->assertOk()
+                ->assertJsonCount(0, 'data');
+        });
+    });
 
-        $this->assertDatabaseHas('fasts', [
-            'user_id' => $user->id,
-            'type' => 'intermittent',
-            'status' => 'active',
-        ]);
-    }
+    describe('Store', function (): void {
+        test('user can create a fast', function (): void {
+            $data = [
+                'start_time' => now()->toDateTimeString(),
+                'target_duration_minutes' => 16 * 60,
+                'type' => '16:8',
+            ];
 
-    public function test_cannot_create_fast_if_one_active(): void
-    {
-        $user = User::factory()->create();
-        Fast::factory()->create(['user_id' => $user->id, 'status' => 'active']);
+            $response = postJson(route('api.v1.fasts.store'), $data);
 
-        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/fasts', [
-            'start_time' => now()->toIso8601String(),
-            'target_duration_minutes' => 16 * 60,
-            'type' => 'intermittent',
-        ]);
+            $response->assertCreated()
+                ->assertJsonPath('data.type', '16:8')
+                ->assertJsonPath('data.target_duration_minutes', 16 * 60)
+                ->assertJsonPath('data.status', 'active'); // Default status
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors('base');
-    }
+            assertDatabaseHas('fasts', [
+                'user_id' => $this->user->id,
+                'type' => '16:8',
+            ]);
+        });
 
-    public function test_can_show_fast(): void
-    {
-        $user = User::factory()->create();
-        $fast = Fast::factory()->create(['user_id' => $user->id]);
+        test('user cannot create a fast if one is already active', function (): void {
+            Fast::factory()->create(['user_id' => $this->user->id, 'status' => 'active']);
 
-        $response = $this->actingAs($user, 'sanctum')->getJson("/api/v1/fasts/{$fast->id}");
+            $data = [
+                'start_time' => now()->toDateTimeString(),
+                'target_duration_minutes' => 16 * 60,
+                'type' => '16:8',
+            ];
 
-        $response->assertOk()
-            ->assertJsonPath('data.id', $fast->id);
-    }
+            postJson(route('api.v1.fasts.store'), $data)
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['base']);
+        });
 
-    public function test_cannot_show_other_users_fast(): void
-    {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
+        test('validation: required fields', function (): void {
+            postJson(route('api.v1.fasts.store'), [])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['start_time', 'target_duration_minutes', 'type']);
+        });
+    });
 
-        $response = $this->actingAs($user, 'sanctum')->getJson("/api/v1/fasts/{$fast->id}");
+    describe('Show', function (): void {
+        test('user can view their fast', function (): void {
+            $fast = Fast::factory()->create(['user_id' => $this->user->id]);
 
-        $response->assertForbidden();
-    }
+            getJson(route('api.v1.fasts.show', $fast))
+                ->assertOk()
+                ->assertJsonPath('data.id', $fast->id);
+        });
 
-    public function test_can_update_fast(): void
-    {
-        $user = User::factory()->create();
-        $fast = Fast::factory()->create(['user_id' => $user->id, 'status' => 'active']);
+        test('user cannot view others fast', function (): void {
+            $otherUser = User::factory()->create();
+            $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
 
-        $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/fasts/{$fast->id}", [
-            'status' => 'completed',
-            'end_time' => now()->toIso8601String(),
-        ]);
+            getJson(route('api.v1.fasts.show', $fast))
+                ->assertForbidden();
+        });
+    });
 
-        $response->assertOk()
-            ->assertJsonPath('data.status', 'completed');
+    describe('Update', function (): void {
+        test('user can update their fast', function (): void {
+            $fast = Fast::factory()->create(['user_id' => $this->user->id, 'status' => 'active']);
 
-        $this->assertDatabaseHas('fasts', [
-            'id' => $fast->id,
-            'status' => 'completed',
-        ]);
-    }
+            putJson(route('api.v1.fasts.update', $fast), ['status' => 'completed'])
+                ->assertOk()
+                ->assertJsonPath('data.status', 'completed');
 
-    public function test_cannot_update_other_users_fast(): void
-    {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
+            assertDatabaseHas('fasts', ['id' => $fast->id, 'status' => 'completed']);
+        });
 
-        $response = $this->actingAs($user, 'sanctum')->putJson("/api/v1/fasts/{$fast->id}", [
-            'status' => 'completed',
-        ]);
+        test('user can update fast details', function (): void {
+            $fast = Fast::factory()->create(['user_id' => $this->user->id, 'target_duration_minutes' => 60]);
 
-        $response->assertForbidden();
-    }
+            putJson(route('api.v1.fasts.update', $fast), ['target_duration_minutes' => 90])
+                ->assertOk()
+                ->assertJsonPath('data.target_duration_minutes', 90);
 
-    public function test_can_delete_fast(): void
-    {
-        $user = User::factory()->create();
-        $fast = Fast::factory()->create(['user_id' => $user->id]);
+            assertDatabaseHas('fasts', ['id' => $fast->id, 'target_duration_minutes' => 90]);
+        });
 
-        $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/fasts/{$fast->id}");
+        test('user cannot update others fast', function (): void {
+            $otherUser = User::factory()->create();
+            $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
 
-        $response->assertNoContent();
-        $this->assertDatabaseMissing('fasts', ['id' => $fast->id]);
-    }
+            putJson(route('api.v1.fasts.update', $fast), ['status' => 'completed'])
+                ->assertForbidden();
+        });
 
-    public function test_cannot_delete_other_users_fast(): void
-    {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
+        test('validation: status must be valid', function (): void {
+            $fast = Fast::factory()->create(['user_id' => $this->user->id]);
 
-        $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/fasts/{$fast->id}");
+            putJson(route('api.v1.fasts.update', $fast), ['status' => 'invalid_status'])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['status']);
+        });
+    });
 
-        $response->assertForbidden();
-        $this->assertDatabaseHas('fasts', ['id' => $fast->id]);
-    }
-}
+    describe('Destroy', function (): void {
+        test('user can delete their fast', function (): void {
+            $fast = Fast::factory()->create(['user_id' => $this->user->id]);
+
+            deleteJson(route('api.v1.fasts.destroy', $fast))
+                ->assertNoContent();
+
+            assertDatabaseMissing('fasts', ['id' => $fast->id]);
+        });
+
+        test('user cannot delete others fast', function (): void {
+            $otherUser = User::factory()->create();
+            $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
+
+            deleteJson(route('api.v1.fasts.destroy', $fast))
+                ->assertForbidden();
+
+            assertDatabaseHas('fasts', ['id' => $fast->id]);
+        });
+    });
+});

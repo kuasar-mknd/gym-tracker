@@ -13,11 +13,7 @@ class UpdateFastRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $fast = $this->route('fast');
-
-        return $this->user() instanceof \App\Models\User &&
-            $fast instanceof \App\Models\Fast &&
-            $this->user()->id === $fast->user_id;
+        return true;
     }
 
     /**
@@ -28,7 +24,10 @@ class UpdateFastRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'start_time' => ['sometimes', 'date'],
             'end_time' => ['nullable', 'date'],
+            'target_duration_minutes' => ['sometimes', 'integer', 'min:1'],
+            'type' => ['sometimes', 'string'],
             'status' => ['sometimes', 'required', 'string', 'in:active,completed,broken'],
         ];
     }
