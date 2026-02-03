@@ -91,8 +91,6 @@ final class FetchDashboardDataAction
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->workouts()
-            // Bolt: Optimization - use withCount instead of with to avoid over-fetching related records.
-            // Dashboard only needs the count for the icon logic.
             ->withCount('workoutLines')
             ->latest('started_at')
             ->limit(3)
