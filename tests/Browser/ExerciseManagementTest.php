@@ -18,10 +18,11 @@ test('user can manage exercises', function (): void {
 
             // 1. Verify empty state and create button
             ->waitFor('[data-testid="create-exercise-button"]', 15)
-            ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
+            ->click('[data-testid="create-exercise-button"]');
 
         // 2. Fill and submit the create form
-        $browser->waitForText('Nouvel exercice', 15)
+        $browser->waitFor('input[placeholder="Ex: Développé couché"]', 15)
+            ->waitForText('Nouvel exercice', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')
