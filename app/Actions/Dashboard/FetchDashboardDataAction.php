@@ -72,7 +72,7 @@ final class FetchDashboardDataAction
         return $user->personalRecords()
             ->with('exercise')
             ->latest('achieved_at')
-            ->take(2)
+            ->take(5)
             ->get();
     }
 
@@ -82,7 +82,7 @@ final class FetchDashboardDataAction
         return $user->goals()
             ->whereNull('completed_at')
             ->latest()
-            ->take(2)
+            ->take(3)
             ->get()
             ->append(['progress', 'unit']);
     }
@@ -91,9 +91,9 @@ final class FetchDashboardDataAction
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->workouts()
-            ->withCount('workoutLines')
+            ->with('workoutLines')
             ->latest('started_at')
-            ->limit(3)
+            ->limit(5)
             ->get();
     }
 }

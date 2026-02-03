@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\StoreFastRequest;
-use App\Http\Requests\Api\UpdateFastRequest;
+use App\Http\Requests\StoreFastRequest;
+use App\Http\Requests\UpdateFastRequest;
 use App\Http\Resources\FastResource;
 use App\Models\Fast;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -38,10 +38,7 @@ class FastController extends Controller
         $validated = $request->validated();
 
         /** @var Fast $fast */
-        $fast = $this->user()->fasts()->create(array_merge(
-            $validated,
-            ['status' => 'active']
-        ));
+        $fast = $this->user()->fasts()->create($validated);
 
         $fast->refresh();
 

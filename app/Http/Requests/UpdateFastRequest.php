@@ -6,7 +6,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreIntervalTimerRequest extends FormRequest
+class UpdateFastRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,11 +24,11 @@ class StoreIntervalTimerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'work_seconds' => ['required', 'integer', 'min:1'],
-            'rest_seconds' => ['required', 'integer', 'min:0'],
-            'rounds' => ['required', 'integer', 'min:1'],
-            'warmup_seconds' => ['nullable', 'integer', 'min:0'],
+            'start_time' => ['sometimes', 'date'],
+            'target_duration_minutes' => ['sometimes', 'integer', 'min:1'],
+            'type' => ['sometimes', 'string'],
+            'end_time' => ['nullable', 'date'],
+            'status' => ['sometimes', 'string', 'in:active,completed,broken'],
         ];
     }
 }
