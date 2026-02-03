@@ -33,20 +33,20 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        Schema::table('body_measurements', function (Blueprint $table) {
-            try {
+        try {
+            Schema::table('body_measurements', function (Blueprint $table) {
                 $table->dropIndex(['user_id', 'measured_at']);
-            } catch (\Throwable $e) {
-                // Ignore MySQL 1553 error (foreign key constraint) during rollback
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Ignore MySQL 1553 error (foreign key constraint) during rollback
+        }
 
-        Schema::table('personal_records', function (Blueprint $table) {
-            try {
+        try {
+            Schema::table('personal_records', function (Blueprint $table) {
                 $table->dropIndex(['user_id', 'achieved_at']);
-            } catch (\Throwable $e) {
-                // Ignore MySQL 1553 error
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Ignore MySQL 1553 error
+        }
     }
 };
