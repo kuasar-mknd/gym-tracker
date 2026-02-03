@@ -39,7 +39,7 @@ test('authenticated user can create a wilks score', function () {
                 'gender',
                 'unit',
                 'score',
-            ]
+            ],
         ]);
 
     $this->assertDatabaseHas('wilks_scores', [
