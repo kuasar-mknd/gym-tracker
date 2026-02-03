@@ -32,3 +32,8 @@
 **Vulnerability:** In `WorkoutLineStoreRequest`, `exercise_id` validation was unscoped (`exists:exercises,id`), allowing users to link private exercises from other users. The fix required handling both system exercises (null `user_id`) and user-owned exercises.
 **Learning:** When resources can be both system-owned and user-owned, simple `where` or `whereNull` checks are insufficient. You must explicitly handle the "System OR Owner" logic.
 **Prevention:** Use nested closures to group the OR condition: `$query->where(fn($q) => $q->whereNull('user_id')->orWhere('user_id', $this->user()->id))`.
+
+## 2027-02-04 - Explicit Nesting in Rule::exists Logic
+**Vulnerability:** In `StoreWorkoutTemplateRequest`, the access control logic relied on implicit operator precedence in `Rule::exists` queries. While framework protections might mitigate direct exploitation, relying on implicit behavior for critical security checks is brittle.
+**Learning:** Explicitly nesting `OR` conditions within closures ensures the intended SQL logic (`(A OR B) AND C`) is always generated, regardless of underlying query builder implementations.
+**Prevention:** Always wrap `OR` logic in a closure when combining with other conditions in validation rules: `$query->where(function ($q) { $q->where(...)->orWhere(...); })`.
