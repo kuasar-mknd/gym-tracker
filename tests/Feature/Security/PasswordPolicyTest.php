@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Security;
 
-use Illuminate\Support\Facades\App;
 use Illuminate\Validation\Rules\Password;
 use Tests\TestCase;
 
