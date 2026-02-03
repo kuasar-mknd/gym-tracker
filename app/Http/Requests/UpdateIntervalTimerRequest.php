@@ -17,8 +17,8 @@ class UpdateIntervalTimerRequest extends FormRequest
         $intervalTimer = $this->route('intervalTimer');
 
         return $this->user() &&
-               $intervalTimer instanceof IntervalTimer &&
-               $intervalTimer->user_id === $this->user()->id;
+            $intervalTimer instanceof IntervalTimer &&
+            $intervalTimer->user_id === $this->user()->id;
     }
 
     /**
