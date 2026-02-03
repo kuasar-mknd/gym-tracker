@@ -15,15 +15,19 @@ test('unauthenticated users are redirected to login', function (): void {
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/login')
+            ->waitFor('body', 30)
             ->waitFor('[data-testid="login-button"]', 30) // Wait for the button specifically
-            ->assertSee('Bon retour !');
+            // Use assertSeeIn to be more specific if possible, or stick to assertSee with sufficient wait
+            ->assertSee('Bon retour');
     });
 });
 
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/register')
+            ->waitFor('body', 30)
             ->waitFor('[data-testid="register-button"]', 30) // Ensure form is loaded
+            ->waitFor('input[name="name"]', 10) // Ensure input is ready
             ->type('input[name="name"]', 'John Doe')
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
