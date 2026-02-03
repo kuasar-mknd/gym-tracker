@@ -10,9 +10,9 @@ use App\Http\Requests\PersonalRecordUpdateRequest;
 use App\Http\Resources\PersonalRecordResource;
 use App\Models\PersonalRecord;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 class PersonalRecordController extends Controller
 {
@@ -31,7 +31,7 @@ class PersonalRecordController extends Controller
                 'integer',
                 Rule::exists('exercises', 'id')->where(function ($query) {
                     $query->where(function ($q) {
-                        $q->whereNull('user_id')->orWhere('user_id', $this->user()?->id);
+                        $q->whereNull('user_id')->orWhere('user_id', $this->user()->id);
                     });
                 }),
             ],

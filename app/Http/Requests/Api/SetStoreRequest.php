@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\Models\WorkoutLine;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,7 +29,7 @@ class SetStoreRequest extends FormRequest
                 'required',
                 Rule::exists('workout_lines', 'id')->where(function ($query) {
                     $query->whereIn('workout_id', function ($q) {
-                        $q->select('id')->from('workouts')->where('user_id', $this->user()?->id);
+                        $q->select('id')->from('workouts')->where('user_id', $this->user()->id);
                     });
                 }),
             ],

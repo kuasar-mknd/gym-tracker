@@ -21,7 +21,7 @@ test('user cannot probe other users exercise ids', function (): void {
     $exerciseOfUser2 = Exercise::factory()->create(['user_id' => $user2->id]);
 
     actingAs($user1, 'sanctum')
-        ->getJson('/api/v1/personal-records?exercise_id=' . $exerciseOfUser2->id)
+        ->getJson('/api/v1/personal-records?exercise_id='.$exerciseOfUser2->id)
         ->assertUnprocessable()
         ->assertJsonValidationErrors('exercise_id');
 
