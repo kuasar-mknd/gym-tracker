@@ -1,3 +1,10 @@
+<!--
+  OneRepMaxChart.vue - 1RM Progression Chart
+
+  A line chart component using Chart.js to visualize the evolution
+  of the user's Estimated One Rep Max (1RM) for a specific exercise.
+  It renders a smooth line with a gradient fill under the curve.
+-->
 <script setup>
 import { Line } from 'vue-chartjs'
 import {
@@ -15,6 +22,13 @@ import { computed } from 'vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
+/**
+ * Component Props
+ *
+ * @property {Array} data - The dataset for the chart.
+ * @property {string} data[].date - The X-axis label (date).
+ * @property {number} data[].one_rep_max - The Y-axis value (estimated 1RM in kg).
+ */
 const props = defineProps({
     data: {
         type: Array,
