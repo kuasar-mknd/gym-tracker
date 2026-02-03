@@ -14,21 +14,23 @@ test('unauthenticated users are redirected to login', function (): void {
 
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->visit('/login')
-            ->waitForText('Se connecter', 30) // Increased timeout
+        $browser->logout()
+            ->visit('/login')
+            ->waitFor('input[name="email"]', 30) // Wait for input instead of text for stability
             ->assertSee('Se connecter');
     });
 });
 
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->visit('/register')
+        $browser->logout()
+            ->visit('/register')
             ->waitFor('input[name="name"]', 30) // Ensure form is loaded
             ->type('input[name="name"]', 'John Doe')
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
-            ->press('Créer mon compte')
+            ->click('[data-testid="register-button"]')
             ->waitForLocation('/verify-email', 60) // Increased timeout for heavy operation
             ->assertPathIs('/verify-email');
     });
