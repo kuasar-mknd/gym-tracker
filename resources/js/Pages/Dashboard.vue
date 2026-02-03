@@ -239,7 +239,7 @@ const colorForWorkout = (index) => {
                 <!-- Activity Cards -->
                 <div v-else class="flex flex-col gap-3">
                     <Link
-                        v-for="(workout, index) in recentWorkouts.slice(0, 3)"
+                        v-for="(workout, index) in recentWorkouts"
                         :key="workout.id"
                         :href="route('workouts.show', { workout: workout.id })"
                         class="activity-card"
@@ -257,7 +257,7 @@ const colorForWorkout = (index) => {
                                 ]"
                             >
                                 <span class="material-symbols-outlined">
-                                    {{ workout.workout_lines?.length > 3 ? 'timer' : 'fitness_center' }}
+                                    {{ workout.workout_lines_count > 3 ? 'timer' : 'fitness_center' }}
                                 </span>
                             </div>
                             <div>
@@ -318,7 +318,7 @@ const colorForWorkout = (index) => {
 
                 <div class="space-y-3">
                     <Link
-                        v-for="goal in activeGoals.slice(0, 2)"
+                        v-for="goal in activeGoals"
                         :key="goal.id"
                         :href="route('goals.index')"
                         class="block"
@@ -348,7 +348,7 @@ const colorForWorkout = (index) => {
                 </div>
 
                 <div class="space-y-3">
-                    <GlassCard v-for="pr in recentPRs.slice(0, 2)" :key="pr.id" padding="p-4">
+                    <GlassCard v-for="pr in recentPRs" :key="pr.id" padding="p-4">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <div
