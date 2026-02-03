@@ -18,10 +18,12 @@ test('user can manage exercises', function (): void {
 
             // 1. Verify empty state and create button
             ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->pause(500) // Ensure JS listeners are attached
             ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
         // 2. Fill and submit the create form
-        $browser->waitFor('input[name="name"]', 15)
+        $browser->waitFor('form', 15) // Wait for modal/form to appear first
+            ->waitFor('input[name="name"]', 15) // Then wait for input
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')
