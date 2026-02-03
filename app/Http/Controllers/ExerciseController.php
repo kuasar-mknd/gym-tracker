@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Exercises\FetchExerciseHistoryAction;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
@@ -23,40 +24,12 @@ class ExerciseController extends Controller
 {
     use AuthorizesRequests;
 
-    public function show(Exercise $exercise, StatsService $statsService): \Inertia\Response
+    public function show(Exercise $exercise, StatsService $statsService, FetchExerciseHistoryAction $fetchExerciseHistory): \Inertia\Response
     {
         $this->authorize('view', $exercise);
 
         $progress = $statsService->getExercise1RMProgress($this->user(), $exercise->id, 365);
-
-        // Fetch history
-        $history = $exercise->workoutLines()
-            ->with([
-                'workout' => function ($query): void {
-                    $query->select('id', 'name', 'started_at', 'ended_at');
-                },
-                'sets',
-            ])
-            ->whereHas('workout', function ($query): void {
-                $query->where('user_id', $this->user()->id)
-                    ->whereNotNull('ended_at');
-            })
-            ->get()
-            ->sortByDesc('workout.started_at')
-            ->values()
-            ->map(fn ($line): array => [
-                'id' => $line->id,
-                'workout_id' => $line->workout->id,
-                'workout_name' => $line->workout->name,
-                'date' => $line->workout->started_at->format('Y-m-d'),
-                'formatted_date' => $line->workout->started_at->format('d/m/Y'),
-                'sets' => $line->sets->map(fn ($set): array => [
-                    'weight' => $set->weight,
-                    'reps' => $set->reps,
-                    '1rm' => $set->weight * (1 + $set->reps / 30),
-                ]),
-                'best_1rm' => $line->sets->max(fn ($set): int|float => $set->weight * (1 + $set->reps / 30)),
-            ]);
+        $history = $fetchExerciseHistory->execute($this->user(), $exercise);
 
         return Inertia::render('Exercises/Show', [
             'exercise' => $exercise,
