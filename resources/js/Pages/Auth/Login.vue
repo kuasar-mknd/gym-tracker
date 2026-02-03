@@ -52,7 +52,8 @@ const submit = () => {
                 placeholder="ton@email.com"
                 :error="form.errors.email"
                 autocomplete="username"
-                required
+                name="email"
+                :required="true"
                 autofocus
             />
 
@@ -63,7 +64,8 @@ const submit = () => {
                 placeholder="••••••••"
                 :error="form.errors.password"
                 autocomplete="current-password"
-                required
+                name="password"
+                :required="true"
             />
 
             <div class="flex items-center justify-between">
@@ -87,6 +89,7 @@ const submit = () => {
                 class="w-full"
                 :loading="form.processing"
                 :disabled="form.processing"
+                data-testid="login-button"
             >
                 Se connecter
             </GlassButton>

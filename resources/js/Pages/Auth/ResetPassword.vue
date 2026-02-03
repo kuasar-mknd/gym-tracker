@@ -39,7 +39,7 @@ const submit = () => {
                 label="Email"
                 :error="form.errors.email"
                 autocomplete="username"
-                required
+                :required="true"
             />
 
             <GlassInput
@@ -49,7 +49,7 @@ const submit = () => {
                 placeholder="••••••••"
                 :error="form.errors.password"
                 autocomplete="new-password"
-                required
+                :required="true"
                 autofocus
             />
 
@@ -60,7 +60,7 @@ const submit = () => {
                 placeholder="••••••••"
                 :error="form.errors.password_confirmation"
                 autocomplete="new-password"
-                required
+                :required="true"
             />
 
             <GlassButton type="submit" variant="primary" class="w-full" :loading="form.processing">

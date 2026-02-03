@@ -37,7 +37,7 @@ const submit = () => {
                 label="Email"
                 placeholder="ton@email.com"
                 :error="form.errors.email"
-                required
+                :required="true"
                 autofocus
             />
 

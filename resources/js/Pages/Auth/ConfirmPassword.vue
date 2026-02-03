@@ -34,7 +34,7 @@ const submit = () => {
                 placeholder="••••••••"
                 :error="form.errors.password"
                 autocomplete="current-password"
-                required
+                :required="true"
                 autofocus
             />
 

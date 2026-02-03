@@ -41,7 +41,7 @@ const submit = () => {
                 :error="form.errors.name"
                 autocomplete="name"
                 name="name"
-                required
+                :required="true"
                 autofocus
             />
 
@@ -53,7 +53,7 @@ const submit = () => {
                 :error="form.errors.email"
                 autocomplete="username"
                 name="email"
-                required
+                :required="true"
             />
 
             <GlassInput
@@ -64,7 +64,7 @@ const submit = () => {
                 :error="form.errors.password"
                 autocomplete="new-password"
                 name="password"
-                required
+                :required="true"
             />
 
             <GlassInput
@@ -75,7 +75,7 @@ const submit = () => {
                 :error="form.errors.password_confirmation"
                 autocomplete="new-password"
                 name="password_confirmation"
-                required
+                :required="true"
             />
 
             <GlassButton
@@ -84,6 +84,7 @@ const submit = () => {
                 class="w-full"
                 :loading="form.processing"
                 :disabled="form.processing"
+                data-testid="register-button"
             >
                 Créer mon compte
             </GlassButton>
