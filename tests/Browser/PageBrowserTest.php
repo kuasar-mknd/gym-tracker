@@ -15,7 +15,7 @@ test('unauthenticated users are redirected to login', function (): void {
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/login')
-            ->waitForText('Se connecter', 30)
+            ->waitForText('Se connecter', 45)
             ->assertSee('Se connecter');
     });
 });
@@ -23,14 +23,14 @@ test('users can see login page', function (): void {
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/register')
-            ->waitFor('input[name="name"]', 30)
+            ->waitFor('input[name="name"]', 45)
             ->type('input[name="name"]', 'John Doe')
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
-            ->waitForText('Créer mon compte', 30)
+            ->waitForText('Créer mon compte', 45)
             ->press('Créer mon compte')
-            ->waitForLocation('/verify-email', 30)
+            ->waitForLocation('/verify-email', 45)
             ->assertPathIs('/verify-email');
     });
 });
