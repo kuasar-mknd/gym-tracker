@@ -15,7 +15,7 @@ test('unauthenticated users are redirected to login', function (): void {
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->visit('/login')
-            ->waitFor('@login-button', 30)
+            ->waitFor('[data-testid="login-button"]', 30)
             ->assertSee('Se connecter')
             ->assertNoConsoleExceptions();
     });
@@ -29,7 +29,7 @@ test('users can register', function (): void {
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
-            ->waitFor('@register-button', 30)
+            ->waitFor('[data-testid="register-button"]', 30)
             ->press('Créer mon compte')
             ->waitForLocation('/verify-email', 60) // Increased timeout for heavy operation
             ->assertPathIs('/verify-email');
