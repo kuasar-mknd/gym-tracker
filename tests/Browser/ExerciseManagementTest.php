@@ -17,8 +17,8 @@ test('user can manage exercises', function (): void {
             ->assertPathIs('/exercises')
 
             // 1. Verify empty state and create button
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
-            ->click('[data-testid="create-exercise-button"]');
+            ->waitFor('[data-testid="create-exercise-desktop"]', 15)
+            ->click('[data-testid="create-exercise-desktop"]');
 
         // 2. Fill and submit the create form
         $browser->waitFor('input[placeholder="Ex: Développé couché"]', 15)
@@ -55,7 +55,7 @@ test('user can manage exercises', function (): void {
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
             ->pause(1000)
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->waitFor('[data-testid="create-exercise-desktop"]', 15)
             ->assertNoConsoleExceptions();
     });
 });
