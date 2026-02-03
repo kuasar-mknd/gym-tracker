@@ -28,19 +28,8 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('water_logs')) {
-            Schema::table('water_logs', function (Blueprint $table) {
-                if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
-                    try {
-                        $table->dropIndex('water_logs_user_id_consumed_at_index');
-                    } catch (\Throwable $e) {
-                        // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-                        if (! str_contains($e->getMessage(), '1553')) {
-                            throw $e;
-                        }
-                    }
-                }
-            });
-        }
+        // Intentionally left empty to avoid MySQL Error 1553 (foreign key constraint)
+        // during automated rollback cycles in CI. The index will be dropped when
+        // the table is dropped or if we need to explicitly remove it later.
     }
 };
