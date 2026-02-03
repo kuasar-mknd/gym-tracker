@@ -272,11 +272,18 @@ class StatsService
      */
     public function getWeeklyVolumeComparison(User $user): array
     {
-        $comparison = $this->calculatePeriodComparison(
-            $user,
-            now()->startOfWeek(),
-            now()->subWeek()->startOfWeek(),
-            now()->subWeek()->endOfWeek()
+        $weekKey = now()->startOfWeek()->format('Y-W');
+
+        /** @var array{current_volume: float, previous_volume: float, difference: float, percentage: float} $comparison */
+        $comparison = \Illuminate\Support\Facades\Cache::remember(
+            "stats.weekly_volume_comparison.{$user->id}.{$weekKey}",
+            now()->addMinutes(10),
+            fn (): array => $this->calculatePeriodComparison(
+                $user,
+                now()->startOfWeek(),
+                now()->subWeek()->startOfWeek(),
+                now()->subWeek()->endOfWeek()
+            )
         );
 
         return [
@@ -472,9 +479,33 @@ class StatsService
 
         // Clear weekly volume and monthly comparison (previously missed)
         \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
+        $weekKey = now()->startOfWeek()->format('Y-W');
+        \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
         \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
         \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
         \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
+    }
+
+    /**
+     * Clear statistics affected by workout metadata changes (name).
+     * This avoids clearing expensive volume/muscle distribution stats when only the name/notes change.
+     */
+    public function clearWorkoutMetadataStats(User $user): void
+    {
+        // Clear dashboard (contains recent workouts list with names)
+        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
+
+        // Volume trend contains workout names
+        $periods = [7, 30, 90, 365];
+        foreach ($periods as $days) {
+            \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
+        }
+
+        // History lists contain workout names
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.20");
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
+        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
+        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
     }
 
     /**

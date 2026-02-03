@@ -20,6 +20,10 @@ final class UpdateWorkoutAction
      */
     public function execute(Workout $workout, array $data): Workout
     {
+        $oldName = $workout->name;
+        $oldStartedAt = $workout->started_at;
+        $oldEndedAt = $workout->ended_at;
+
         $workout->fill(collect($data)->only(['started_at', 'name', 'notes'])->toArray());
 
         if ($data['is_finished'] ?? false) {
@@ -28,7 +32,19 @@ final class UpdateWorkoutAction
 
         $workout->save();
 
-        $this->statsService->clearWorkoutRelatedStats($workout->user);
+        // Surgical cache invalidation
+        // Using != for Carbon dates works correctly for comparison
+        if ($workout->started_at != $oldStartedAt || $workout->ended_at != $oldEndedAt) {
+            // Structural changes affect volume, dates, and all statistics
+            $this->statsService->clearWorkoutRelatedStats($workout->user);
+        } elseif ($workout->name !== $oldName) {
+            // Name changes only affect dashboard and lists containing the name
+            $this->statsService->clearWorkoutMetadataStats($workout->user);
+        } else {
+            // If only notes changed (or nothing), only the dashboard data needs invalidation
+            // (Recent workouts list in dashboard might contain stale notes in JSON, though not displayed)
+            \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$workout->user_id}");
+        }
 
         return $workout;
     }
