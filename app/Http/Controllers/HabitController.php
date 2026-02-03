@@ -27,13 +27,13 @@ class HabitController extends Controller
      * including their completion logs for the current week.
      * Also generates the dates for the current week to be displayed in the calendar view.
      *
-     * @param  \Illuminate\Http\Request  $request  The HTTP request.
-     * @param  \App\Actions\Habits\FetchHabitsIndexAction  $fetchHabitsIndex  Action to fetch habits data.
      * @return \Inertia\Response The Inertia response rendering the Habits/Index page.
      */
-    public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
+    public function index(Request $request, FetchHabitsIndexAction $fetchHabitsIndex): \Inertia\Response
     {
-        return Inertia::render('Habits/Index', $fetchHabits->execute($this->user()));
+        $data = $fetchHabitsIndex->execute($this->user());
+
+        return Inertia::render('Habits/Index', $data);
     }
 
     /**

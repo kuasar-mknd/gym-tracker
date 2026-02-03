@@ -28,11 +28,9 @@ return new class() extends Migration
     public function down(): void
     {
         try {
-            if (Schema::hasTable('water_logs')) {
-                Schema::table('water_logs', function (Blueprint $table) {
-                    $table->dropIndex(['user_id', 'consumed_at']);
-                });
-            }
+            Schema::table('water_logs', function (Blueprint $table) {
+                $table->dropIndex(['user_id', 'consumed_at']);
+            });
         } catch (\Throwable $e) {
             // Ignore if index doesn't exist or is needed by FK
         }
