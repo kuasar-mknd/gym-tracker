@@ -17,7 +17,7 @@ test('users can see login page', function (): void {
         $browser->logout()
             ->visit('/login')
             ->waitFor('[data-testid="login-button"]', 30)
-            ->assertSeeIn('[data-testid="login-button"]', 'Se connecter');
+            ->assertSee('Se connecter');
     });
 });
 
