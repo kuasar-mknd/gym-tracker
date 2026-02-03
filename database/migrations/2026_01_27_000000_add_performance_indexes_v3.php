@@ -52,7 +52,6 @@ return new class() extends Migration
         } catch (\Throwable $e) {
             // Index doesn't exist or is needed by FK
         }
-
         try {
             if (Schema::hasTable('supplement_logs')) {
                 Schema::table('supplement_logs', function (Blueprint $table): void {

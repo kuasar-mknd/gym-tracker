@@ -76,6 +76,20 @@ describe('Authenticated', function (): void {
             ]);
         });
 
+        test('user cannot create a fast if one is already active', function (): void {
+            Fast::factory()->create(['user_id' => $this->user->id, 'status' => 'active']);
+
+            $data = [
+                'start_time' => now()->toDateTimeString(),
+                'target_duration_minutes' => 16 * 60,
+                'type' => '16:8',
+            ];
+
+            postJson(route('api.v1.fasts.store'), $data)
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['base']);
+        });
+
         test('validation: required fields', function (): void {
             postJson(route('api.v1.fasts.store'), [])
                 ->assertUnprocessable()
