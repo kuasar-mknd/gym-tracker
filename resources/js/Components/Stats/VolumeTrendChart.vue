@@ -5,7 +5,6 @@ import { computed } from 'vue'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
-// Visual component for displaying volume trends
 const props = defineProps({
     data: {
         type: Array,
