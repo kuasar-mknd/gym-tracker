@@ -30,9 +30,9 @@ class HabitController extends Controller
      * @param  \Illuminate\Http\Request  $request  The HTTP request.
      * @return \Inertia\Response The Inertia response rendering the Habits/Index page.
      */
-    public function index(Request $request, FetchHabitsIndexAction $fetchHabitsIndexAction): \Inertia\Response
+    public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
     {
-        return Inertia::render('Habits/Index', $fetchHabitsIndexAction->execute($this->user()));
+        return Inertia::render('Habits/Index', $fetchHabits->execute($this->user()));
     }
 
     /**
