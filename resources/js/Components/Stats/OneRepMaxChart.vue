@@ -15,7 +15,30 @@ import { computed } from 'vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
+/**
+ * OneRepMaxChart Component
+ *
+ * Renders a line chart visualizing the progression of the Estimated 1RM (One Rep Max) over time.
+ * Uses Chart.js with a custom "Liquid Glass" styling (gradient fill, custom tooltips).
+ *
+ * @component
+ */
+
 const props = defineProps({
+    /**
+     * The dataset to visualize.
+     * Expects an array of objects sorted by date.
+     *
+     * Structure:
+     * [
+     *   {
+     *     date: string,        // Formatted date (e.g., "12/05") for X-axis labels
+     *     one_rep_max: float,  // The estimated 1RM value in kg
+     *     full_date?: string,  // Optional full date for tooltip details
+     *   },
+     *   ...
+     * ]
+     */
     data: {
         type: Array,
         required: true,
@@ -30,8 +53,9 @@ const chartData = computed(() => {
                 label: 'Estimé 1RM (kg)',
                 data: props.data.map((item) => item.one_rep_max),
                 fill: true,
-                tension: 0.4,
+                tension: 0.4, // Smooth curve
                 borderColor: '#FF0080',
+                // Gradient background for the "Liquid Glass" effect
                 backgroundColor: (context) => {
                     const chart = context.chart
                     const { ctx, chartArea } = chart
@@ -60,7 +84,7 @@ const chartOptions = {
     maintainAspectRatio: false,
     plugins: {
         legend: {
-            display: false,
+            display: false, // Hide legend as we have a single dataset
         },
         tooltip: {
             backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -75,19 +99,19 @@ const chartOptions = {
     scales: {
         x: {
             grid: {
-                display: false,
+                display: false, // Clean look without vertical grid lines
             },
             ticks: {
-                color: '#64748B',
+                color: '#64748B', // Slate-500
                 font: { size: 10, weight: 'bold' },
             },
         },
         y: {
             grid: {
-                color: 'rgba(0, 0, 0, 0.03)',
+                color: 'rgba(0, 0, 0, 0.03)', // Subtle horizontal lines
             },
             ticks: {
-                color: '#64748B',
+                color: '#64748B', // Slate-500
                 font: { size: 10, weight: 'bold' },
             },
         },

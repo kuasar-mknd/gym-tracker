@@ -11,6 +11,9 @@ const DurationDistributionChart = defineAsyncComponent(() => import('@/Component
 /**
  * Dashboard - Command Center
  * New Liquid Glass Light design with redesigned layout matching mockups.
+ *
+ * PERFORMANCE: Optimized to show only the most recent items.
+ * Database queries are limited to match the visible items in the UI.
  */
 const props = defineProps({
     workoutsCount: { type: Number, default: 0 },
@@ -257,11 +260,7 @@ const colorForWorkout = (index) => {
                                 ]"
                             >
                                 <span class="material-symbols-outlined">
-                                    {{
-                                        (workout.workout_lines_count ?? workout.workout_lines?.length) > 3
-                                            ? 'timer'
-                                            : 'fitness_center'
-                                    }}
+                                    {{ (workout.workout_lines_count || 0) > 3 ? 'timer' : 'fitness_center' }}
                                 </span>
                             </div>
                             <div>
