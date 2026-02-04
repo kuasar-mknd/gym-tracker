@@ -30,11 +30,14 @@ class StoreFastRequest extends FormRequest
         ];
     }
 
-    public function withValidator($validator)
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
-        $validator->after(function ($validator) {
-            if ($this->user()->fasts()->where('status', 'active')->exists()) {
-                $validator->errors()->add('base', 'Un jeûne est déjà en cours.');
+        $validator->after(function (\Illuminate\Validation\Validator $validator) {
+            /** @var \App\Models\User|null $user */
+            $user = $this->user();
+
+            if ($user && $user->fasts()->where('status', 'active')->exists()) {
+                $validator->errors()->add('message', 'Un jeûne est déjà en cours.');
             }
         });
     }
