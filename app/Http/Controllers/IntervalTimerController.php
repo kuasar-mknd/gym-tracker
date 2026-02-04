@@ -17,6 +17,8 @@ class IntervalTimerController extends Controller
      */
     public function index(Request $request): Response
     {
+        $this->authorize('viewAny', IntervalTimer::class);
+
         return Inertia::render('Tools/IntervalTimer', [
             'timers' => $this->user()->intervalTimers()->latest()->get(),
         ]);
@@ -27,6 +29,8 @@ class IntervalTimerController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', IntervalTimer::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'work_seconds' => ['required', 'integer', 'min:1'],
@@ -46,9 +50,7 @@ class IntervalTimerController extends Controller
      */
     public function update(Request $request, IntervalTimer $intervalTimer): RedirectResponse
     {
-        if ($intervalTimer->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('update', $intervalTimer);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -69,9 +71,7 @@ class IntervalTimerController extends Controller
      */
     public function destroy(Request $request, IntervalTimer $intervalTimer): RedirectResponse
     {
-        if ($intervalTimer->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $intervalTimer);
 
         $intervalTimer->delete();
 

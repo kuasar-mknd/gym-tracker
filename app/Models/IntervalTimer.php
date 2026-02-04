@@ -14,6 +14,9 @@ class IntervalTimer extends Model
     /** @use HasFactory<IntervalTimerFactory> */
     use HasFactory;
 
+    /**
+     * @var array<int, string>
+     */
     protected $fillable = [
         'user_id',
         'name',
@@ -24,13 +27,16 @@ class IntervalTimer extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return BelongsTo<\App\Models\User, $this>
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
