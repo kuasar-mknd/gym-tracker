@@ -2,16 +2,11 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
-<<<<<<< HEAD
-import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
-import ExerciseVolumeChart from '@/Components/Stats/ExerciseVolumeChart.vue'
-=======
 import { computed, defineAsyncComponent } from 'vue'
 
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
 const WeightDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/WeightDistributionChart.vue'))
->>>>>>> main
 
 const props = defineProps({
     exercise: Object,
@@ -98,10 +93,6 @@ const weightDistributionData = computed(() => {
                 </div>
             </GlassCard>
 
-            <<<<<<< HEAD
-            <!-- Volume Chart -->
-            <ExerciseVolumeChart :history="history" style="animation-delay: 0.1s" />
-            =======
             <!-- Analytics Grid -->
             <div
                 v-if="history && history.length > 0"
@@ -134,7 +125,6 @@ const weightDistributionData = computed(() => {
                     <p class="text-text-muted text-sm">Pas assez de données pour afficher les statistiques</p>
                 </div>
             </GlassCard>
-            >>>>>>> main
 
             <!-- History List -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
