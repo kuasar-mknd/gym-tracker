@@ -37,9 +37,10 @@ return new class() extends Migration
                 });
             } catch (\Throwable $e) {
                 // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-                if (! str_contains($e->getMessage(), '1553')) {
-                    throw $e;
+                if ($e instanceof \Illuminate\Database\QueryException && ($e->errorInfo[1] ?? 0) === 1553) {
+                    return;
                 }
+                throw $e;
             }
         }
     }
