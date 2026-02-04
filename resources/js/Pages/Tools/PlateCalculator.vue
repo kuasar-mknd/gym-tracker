@@ -28,7 +28,7 @@
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -42,7 +42,7 @@
                                     type="number"
                                     v-model="barWeight"
                                     placeholder="20"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -54,7 +54,7 @@
                     <!-- Barbell Visualization -->
                     <div
                         v-if="calculatedPlates.length > 0"
-                        class="mt-8 overflow-x-auto rounded-3xl border border-slate-100 bg-slate-50 p-6"
+                        class="mt-8 overflow-x-auto rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm"
                     >
                         <div class="relative flex h-[200px] min-w-[300px] items-center justify-center">
                             <!-- Bar -->
@@ -130,7 +130,7 @@
                     <!-- Cannot load message -->
                     <div
                         v-else-if="targetWeight > barWeight"
-                        class="mt-8 rounded-3xl border border-slate-100 bg-slate-50 py-8 text-center"
+                        class="mt-8 rounded-3xl border border-white/10 bg-white/5 py-8 text-center backdrop-blur-sm"
                     >
                         <span class="material-symbols-outlined mb-3 text-5xl text-slate-300">error</span>
                         <p class="text-text-muted font-medium">
@@ -170,7 +170,7 @@
                                 :class="[
                                     getPlateColor(parseFloat(plate.weight)),
                                     parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
-                                        ? 'border-slate-200'
+                                        ? 'border-white/20'
                                         : 'border-transparent',
                                 ]"
                             >
@@ -224,7 +224,7 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+                <div class="flex justify-end gap-3 border-t border-white/10 pt-4">
                     <GlassButton @click="addingPlate = false" variant="ghost">Annuler</GlassButton>
                     <GlassButton @click="savePlate" variant="primary" :disabled="form.processing"
                         >Enregistrer</GlassButton

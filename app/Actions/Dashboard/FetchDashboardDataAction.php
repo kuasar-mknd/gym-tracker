@@ -66,7 +66,12 @@ final class FetchDashboardDataAction
             ->count();
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord> */
+    /**
+     * Get recent Personal Records.
+     * Optimized to fetch only the amount displayed on the dashboard (2).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>
+     */
     private function getRecentPRs(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->personalRecords()
@@ -76,7 +81,12 @@ final class FetchDashboardDataAction
             ->get();
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal> */
+    /**
+     * Get active goals.
+     * Optimized to fetch only the amount displayed on the dashboard (2).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
+     */
     private function getActiveGoals(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->goals()
@@ -87,7 +97,14 @@ final class FetchDashboardDataAction
             ->append(['progress', 'unit']);
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout> */
+    /**
+     * Get recent workouts.
+     * PERFORMANCE OPTIMIZATION: Uses withCount('workoutLines') instead of with('workoutLines')
+     * to avoid loading full collections when only the count is needed for UI logic.
+     * Limits to 3 items as per dashboard layout.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>
+     */
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->workouts()
