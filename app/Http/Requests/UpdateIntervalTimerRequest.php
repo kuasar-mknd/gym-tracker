@@ -33,7 +33,6 @@ class UpdateIntervalTimerRequest extends FormRequest
             'work_seconds' => ['required', 'integer', 'min:1'],
             'rest_seconds' => ['required', 'integer', 'min:0'],
             'rounds' => ['required', 'integer', 'min:1'],
-
             'warmup_seconds' => ['nullable', 'integer', 'min:0'],
         ];
     }
