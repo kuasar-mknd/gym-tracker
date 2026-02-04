@@ -28,17 +28,9 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('water_logs')) {
-            try {
-                Schema::table('water_logs', function (Blueprint $table) {
-                    if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
-                        $table->dropIndex('water_logs_user_id_consumed_at_index');
-                    }
-                });
-            } catch (\Throwable $e) {
-                // Ignore errors when dropping this index (e.g. MySQL 1553 foreign key constraint)
-                // This ensures CI/Tests rollbacks don't fail.
-            }
-        }
+        // Intentionally left empty.
+        // Dropping this index causes MySQL Error 1553 (Foreign Key Constraint) during rollback in CI/Tests.
+        // Since `up()` checks for index existence before adding, it is safe to leave the index in place during rollback/refresh cycles.
+        // The index will be dropped naturally if the table is dropped (migrate:fresh).
     }
 };
