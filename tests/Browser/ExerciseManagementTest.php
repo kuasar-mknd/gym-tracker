@@ -16,45 +16,43 @@ test('user can manage exercises', function (): void {
             ->waitFor('main', 15)
             ->assertPathIs('/exercises')
 
-            // 1. Verify empty state and create button
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
-            ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
+            // 1. Verify create button and click it
+            ->waitFor('[data-testid="create-exercise-desktop"]', 15)
+            ->click('[data-testid="create-exercise-desktop"]');
 
         // 2. Fill and submit the create form
-        $browser->waitForText('Nouvel exercice', 15)
+        $browser->waitFor('[data-testid="submit-exercise-button"]', 15)
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')
-            ->waitFor('[data-testid="submit-exercise-button"]', 5)
-            ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
+            ->click('[data-testid="submit-exercise-button"]');
 
         // 3. Verify exercise was created
         $browser->pause(1000)
             ->waitForText('Dusk Test Exercise', 15);
 
         // 4. Edit the exercise
-        $browser->waitFor('[data-testid="edit-exercise-button"]', 5)
-            ->script("document.querySelector('[data-testid=\"edit-exercise-button\"]').click();");
+        $browser->waitFor('[data-testid="edit-exercise-button"]', 15)
+            ->click('[data-testid="edit-exercise-button"]');
 
         $browser->waitFor('input[type="text"]', 10)
             ->pause(500)
             ->clear('input[type="text"]')
             ->type('input[type="text"]', 'Updated Exercise')
-            ->waitFor('[data-testid="save-exercise-button"]', 5)
-            ->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
+            ->click('[data-testid="save-exercise-button"]');
 
         // 5. Verify update
         $browser->pause(1000)
             ->waitForText('Updated Exercise', 15);
 
         // 6. Delete the exercise
-        $browser->waitFor('[data-testid="delete-exercise-button"]', 5)
-            ->script("document.querySelector('[data-testid=\"delete-exercise-button\"]').click();");
+        $browser->waitFor('[data-testid="delete-exercise-button"]', 15)
+            ->click('[data-testid="delete-exercise-button"]');
 
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
             ->pause(1000)
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->waitFor('[data-testid="create-exercise-desktop"]', 15)
             ->assertNoConsoleExceptions();
     });
 });

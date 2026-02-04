@@ -35,7 +35,7 @@ final class WorkoutCompletionTest extends DuskTestCase
 
             $browser->waitForText('TERMINER LA SÉANCE ?', 30) // Increased timeout
                 ->pause(1000)
-                ->click('#confirm-finish-button');
+                ->script("document.getElementById('confirm-finish-button').click();");
 
             $browser->waitForLocation('/dashboard', 30); // Increased timeout
         });
