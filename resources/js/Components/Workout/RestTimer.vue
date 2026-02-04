@@ -9,11 +9,10 @@
   - Audio and Haptic feedback upon completion.
   - Minimizable/Closeable interface.
   - Draggable or fixed positioning (currently fixed).
+  - "Liquid Glass" aesthetics (Apple Human Interface Guidelines).
 -->
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassButton from '@/Components/UI/GlassButton.vue'
 
 /**
  * Component Props
@@ -198,11 +197,14 @@ watch(
 
 <template>
     <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-60 sm:right-4 sm:left-auto sm:w-80">
-        <GlassCard class="overflow-hidden border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md" padding="p-0">
+        <!-- Liquid Glass Card -->
+        <div
+            class="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300 dark:bg-black/40"
+        >
             <!-- Progress bar -->
-            <div class="h-1 w-full bg-white/5">
+            <div class="h-1 w-full bg-slate-200/50 dark:bg-white/10">
                 <div
-                    class="h-full bg-white/80 shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-1000 ease-linear"
+                    class="bg-accent-primary h-full transition-all duration-1000 ease-linear"
                     :style="{ width: `${progress}%` }"
                 ></div>
             </div>
@@ -210,8 +212,10 @@ watch(
             <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold tracking-wider text-white/40 uppercase">Repos en cours</div>
-                        <div class="text-3xl font-black text-white tabular-nums">
+                        <div class="text-xs font-bold tracking-wider text-slate-900/60 uppercase dark:text-white/60">
+                            Repos en cours
+                        </div>
+                        <div class="text-3xl font-black text-slate-900 tabular-nums dark:text-white">
                             {{ formatTime(timeLeft) }}
                         </div>
                     </div>
@@ -219,7 +223,7 @@ watch(
                     <div class="flex gap-2">
                         <button
                             @click="addTime(30)"
-                            class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 active:scale-95"
+                            class="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                             title="+30s"
                         >
                             <span class="text-xs font-bold">+30s</span>
@@ -227,7 +231,7 @@ watch(
 
                         <button
                             @click="toggleTimer"
-                            class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/20 text-white transition hover:bg-white/30 active:scale-95"
+                            class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
                         >
                             <svg v-if="isActive" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 4h4v16H6V4zm8 0h4v16h4V4z" />
@@ -241,21 +245,22 @@ watch(
                 </div>
 
                 <div class="mt-4 flex gap-2">
+                    <!-- Custom "Glass" button for skip to ensure style consistency -->
                     <button
                         @click="skipTimer"
-                        class="flex-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/20 active:scale-95"
+                        class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                     >
                         Passer
                     </button>
                     <button
                         @click="close"
-                        class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/60 transition hover:bg-white/10 active:scale-95"
+                        class="rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
                     >
                         Fermer
                     </button>
                 </div>
             </div>
-        </GlassCard>
+        </div>
     </div>
 </template>
 
