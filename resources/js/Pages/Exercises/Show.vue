@@ -8,6 +8,31 @@ const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/One
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
 const WeightDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/WeightDistributionChart.vue'))
 
+/**
+ * Component Props
+ *
+ * @property {Object} exercise - The exercise details.
+ * @property {number} exercise.id - The unique identifier of the exercise.
+ * @property {string} exercise.name - The name of the exercise.
+ * @property {string} exercise.category - The category (e.g., 'Pectoraux').
+ * @property {string} exercise.type - The type ('strength', 'cardio', 'timed').
+ *
+ * @property {Array} progress - Data for the 1RM progression chart.
+ * @property {string} progress[].date - The date of the record (e.g., '12/05').
+ * @property {string} progress[].full_date - The full ISO date string.
+ * @property {number} progress[].one_rep_max - The estimated 1RM value.
+ *
+ * @property {Array} history - List of past workout sessions for this exercise.
+ * @property {number} history[].id - Unique session identifier.
+ * @property {number} history[].workout_id - ID of the workout.
+ * @property {string} history[].workout_name - Name of the workout.
+ * @property {string} history[].formatted_date - Formatted date string (e.g., 'Lun 12 Mai').
+ * @property {number} history[].best_1rm - The best estimated 1RM for this specific session.
+ * @property {Array} history[].sets - List of sets performed in this session.
+ * @property {number} history[].sets[].weight - Weight lifted.
+ * @property {number} history[].sets[].reps - Repetitions performed.
+ * @property {number} history[].sets[].1rm - Estimated 1RM for this set.
+ */
 const props = defineProps({
     exercise: Object,
     progress: Array,
