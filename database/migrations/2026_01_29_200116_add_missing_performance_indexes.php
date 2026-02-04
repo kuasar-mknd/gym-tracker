@@ -28,10 +28,12 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('water_logs') && Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+        if (Schema::hasTable('water_logs')) {
             try {
-                Schema::table('water_logs', function (Blueprint $table): void {
-                    $table->dropIndex('water_logs_user_id_consumed_at_index');
+                Schema::table('water_logs', function (Blueprint $table) {
+                    if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+                        $table->dropIndex('water_logs_user_id_consumed_at_index');
+                    }
                 });
             } catch (\Throwable $e) {
                 // Ignore 1553: Cannot drop index ... needed in a foreign key constraint

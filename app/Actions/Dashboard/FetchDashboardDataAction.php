@@ -72,7 +72,7 @@ final class FetchDashboardDataAction
         return $user->personalRecords()
             ->with('exercise')
             ->latest('achieved_at')
-            ->take(5)
+            ->take(2)
             ->get();
     }
 
@@ -82,7 +82,7 @@ final class FetchDashboardDataAction
         return $user->goals()
             ->whereNull('completed_at')
             ->latest()
-            ->take(3)
+            ->take(2)
             ->get()
             ->append(['progress', 'unit']);
     }
@@ -93,7 +93,7 @@ final class FetchDashboardDataAction
         return $user->workouts()
             ->withCount('workoutLines')
             ->latest('started_at')
-            ->limit(5)
+            ->limit(3)
             ->get();
     }
 }
