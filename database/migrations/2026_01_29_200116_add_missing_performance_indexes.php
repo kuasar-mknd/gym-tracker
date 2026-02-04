@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -35,9 +36,9 @@ return new class() extends Migration
                         $table->dropIndex('water_logs_user_id_consumed_at_index');
                     }
                 });
-            } catch (\Throwable $e) {
+            } catch (QueryException $e) {
                 // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-                if (! str_contains($e->getMessage(), '1553')) {
+                if ($e->errorInfo[1] !== 1553) {
                     throw $e;
                 }
             }

@@ -16,7 +16,10 @@ class WilksScoreController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $scores = $request->user()->wilksScores()
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $scores = $user->wilksScores()
             ->orderByDesc('created_at')
             ->paginate(20);
 
@@ -28,7 +31,10 @@ class WilksScoreController extends Controller
         /** @var array{body_weight: float, lifted_weight: float, gender: 'male'|'female', unit: 'kg'|'lbs'} $validated */
         $validated = $request->validated();
 
-        $wilksScore = $action->execute($request->user(), $validated);
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $wilksScore = $action->execute($user, $validated);
 
         return new WilksScoreResource($wilksScore);
     }
@@ -44,7 +50,10 @@ class WilksScoreController extends Controller
 
     public function update(StoreWilksScoreRequest $request, WilksScore $wilksScore, UpdateWilksScoreAction $action): WilksScoreResource
     {
-        if ($wilksScore->user_id !== $request->user()->id) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        if ($wilksScore->user_id !== $user->id) {
             abort(403);
         }
 
