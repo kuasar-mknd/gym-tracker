@@ -25,8 +25,9 @@ defineProps({
                     v-if="showBack && backRoute"
                     :href="backRoute.startsWith('http') || backRoute.startsWith('/') ? backRoute : route(backRoute)"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
+                    aria-label="Retour"
                 >
-                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
                 <h1 class="font-display text-text-main text-xl font-black tracking-tight uppercase italic">
                     {{ title }}

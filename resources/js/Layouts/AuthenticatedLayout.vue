@@ -144,9 +144,10 @@ const showingNavigationDropdown = ref(false)
                     v-if="showBack"
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    aria-label="Retour"
                     @click="triggerHaptic('tap')"
                 >
-                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
                 <h1
                     v-if="pageTitle"

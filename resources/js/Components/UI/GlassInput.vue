@@ -31,6 +31,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    clearLabel: {
+        type: String,
+        default: 'Effacer le texte',
+    },
 })
 
 defineEmits(['update:modelValue'])
@@ -150,11 +154,10 @@ const isRequired = computed(() => {
                 v-if="showClearButton"
                 type="button"
                 @click="$emit('update:modelValue', '')"
-                class="text-text-muted hover:text-text-main absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors"
-                aria-label="Effacer le texte"
-                tabindex="-1"
+                class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors focus:outline-none focus-visible:ring-2"
+                :aria-label="clearLabel"
             >
-                <span class="material-symbols-outlined text-lg leading-none">cancel</span>
+                <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">cancel</span>
             </button>
         </div>
 
