@@ -21,7 +21,8 @@ test('user can manage exercises', function (): void {
             ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
         // 2. Fill and submit the create form
-        $browser->waitForText('Nouvel exercice', 15)
+        $browser->pause(500)
+            ->waitForText('NOUVEL EXERCICE', 15) // Case sensitive check or wait for element
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')
