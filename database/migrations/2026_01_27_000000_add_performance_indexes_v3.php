@@ -43,27 +43,9 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        try {
-            Schema::table('water_logs', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
-        try {
-            Schema::table('supplement_logs', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'consumed_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
+        // We do not drop indexes in down() because they might be used by foreign key constraints
+        // (MySQL error 1553), causing rollback issues in CI/testing environments.
+        // Since these are performance indexes, leaving them is safer than crashing the migration rollback.
 
-        try {
-            Schema::table('body_part_measurements', function (Blueprint $table): void {
-                $table->dropIndex(['user_id', 'measured_at']);
-            });
-        } catch (\Throwable $e) {
-            // Index doesn't exist or is needed by FK
-        }
     }
 };

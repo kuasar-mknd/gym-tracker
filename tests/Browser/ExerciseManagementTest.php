@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Laravel\Dusk\Browser;
+
+uses(DatabaseMigrations::class);
 
 test('user can manage exercises', function (): void {
     $user = User::factory()->create();
@@ -21,7 +24,8 @@ test('user can manage exercises', function (): void {
             ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
 
         // 2. Fill and submit the create form
-        $browser->waitFor('[data-testid="submit-exercise-button"]', 15)
+        $browser->pause(500)
+            ->waitForText('NOUVEL EXERCICE', 15) // Case sensitive check or wait for element
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')
@@ -30,7 +34,7 @@ test('user can manage exercises', function (): void {
 
         // 3. Verify exercise was created
         $browser->pause(1000)
-            ->waitForText('Dusk Test Exercise', 30);
+            ->waitForText('Dusk Test Exercise', 15);
 
         // 4. Edit the exercise
         $browser->waitFor('[data-testid="edit-exercise-button"]', 5)

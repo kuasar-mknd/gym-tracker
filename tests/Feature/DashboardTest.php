@@ -33,12 +33,13 @@ test('dashboard displays correct workout stats', function (): void {
     $this->actingAs($user)
         ->get('/dashboard')
         ->assertStatus(200)
-        ->assertInertia(fn ($page) => $page
-            ->component('Dashboard')
-            ->where('workoutsCount', 13)
-            ->where('thisWeekCount', 3)
-            ->where('latestWeight', '75.50')
-            ->has('recentWorkouts', 3)
-            ->has('durationDistribution')
+        ->assertInertia(
+            fn ($page) => $page
+                ->component('Dashboard')
+                ->where('workoutsCount', 13)
+                ->where('thisWeekCount', 3)
+                ->where('latestWeight', '75.50')
+                ->has('recentWorkouts', 3)
+                ->has('durationDistribution')
         );
 });
