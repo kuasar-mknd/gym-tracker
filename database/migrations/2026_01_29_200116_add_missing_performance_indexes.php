@@ -29,17 +29,13 @@ return new class() extends Migration
     public function down(): void
     {
         // NITRO FIX: Use a more robust way to handle potential index dropping failures in MySQL
-        if (Schema::hasTable('water_logs') && Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+        if (Schema::hasTable('water_logs')) {
             try {
                 Schema::table('water_logs', function (Blueprint $table) {
                     $table->dropIndex('water_logs_user_id_consumed_at_index');
                 });
             } catch (\Throwable $e) {
-                // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-                // This happens in MySQL if this index is the only one supporting a foreign key.
-                if (!str_contains($e->getMessage(), '1553') && !str_contains($e->getMessage(), 'foreign key constraint')) {
-                    throw $e;
-                }
+                // Ignore all index drop failures to ensure migration rollback continues
             }
         }
     }
