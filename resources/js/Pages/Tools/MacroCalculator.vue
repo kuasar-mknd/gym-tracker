@@ -25,22 +25,22 @@
                         <div class="grid grid-cols-2 gap-3">
                             <button
                                 @click="form.gender = 'male'"
-                                class="flex h-16 items-center justify-center rounded-2xl border-2 transition-all"
+                                class="flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all"
                                 :class="
                                     form.gender === 'male'
-                                        ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
+                                        ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
+                                        : 'text-text-muted hover:text-text-main border-white/20 bg-white/10 hover:border-white/30 hover:bg-white/20'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Homme</span>
                             </button>
                             <button
                                 @click="form.gender = 'female'"
-                                class="flex h-16 items-center justify-center rounded-2xl border-2 transition-all"
+                                class="flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all"
                                 :class="
                                     form.gender === 'female'
-                                        ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
-                                        : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
+                                        ? 'border-hot-pink bg-hot-pink/20 text-hot-pink shadow-[0_0_15px_rgba(236,72,153,0.3)]'
+                                        : 'text-text-muted hover:text-text-main border-white/20 bg-white/10 hover:border-white/30 hover:bg-white/20'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -50,50 +50,53 @@
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <!-- Age -->
-                        <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Age</label>
-                            <input
-                                type="number"
-                                v-model="form.age"
-                                placeholder="25"
-                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
-                            />
-                        </div>
+                        <GlassInput type="number" v-model="form.age" label="Age" placeholder="25" size="lg" />
                         <!-- Height -->
-                        <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Taille (cm)</label>
-                            <input
-                                type="number"
-                                v-model="form.height"
-                                placeholder="175"
-                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
-                            />
-                        </div>
+                        <GlassInput
+                            type="number"
+                            v-model="form.height"
+                            label="Taille (cm)"
+                            placeholder="175"
+                            size="lg"
+                        />
                         <!-- Weight -->
-                        <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Poids (kg)</label>
-                            <input
-                                type="number"
-                                v-model="form.weight"
-                                placeholder="70"
-                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-xl font-bold transition-all outline-none focus:ring-2"
-                            />
-                        </div>
+                        <GlassInput type="number" v-model="form.weight" label="Poids (kg)" placeholder="70" size="lg" />
                     </div>
 
                     <!-- Activity Level -->
                     <div>
                         <label class="font-display-label text-text-muted mb-2 block">Niveau d'activité</label>
-                        <select
-                            v-model="form.activity_level"
-                            class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-14 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-lg font-bold transition-all outline-none focus:ring-2"
-                        >
-                            <option value="sedentary">Sédentaire (peu ou pas d'exercice)</option>
-                            <option value="light">Légèrement actif (1-3 jours/semaine)</option>
-                            <option value="moderate">Modérément actif (3-5 jours/semaine)</option>
-                            <option value="very">Très actif (6-7 jours/semaine)</option>
-                            <option value="extra">Extrêmement actif (travail physique)</option>
-                        </select>
+                        <div class="relative">
+                            <select
+                                v-model="form.activity_level"
+                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-[56px] w-full appearance-none rounded-2xl border border-white/20 bg-white/10 px-4 text-lg backdrop-blur-md transition-all outline-none focus:bg-white/20 focus:ring-2"
+                            >
+                                <option
+                                    value="sedentary"
+                                    class="text-text-main bg-white dark:bg-slate-900 dark:text-white"
+                                >
+                                    Sédentaire (peu ou pas d'exercice)
+                                </option>
+                                <option value="light" class="text-text-main bg-white dark:bg-slate-900 dark:text-white">
+                                    Légèrement actif (1-3 jours/semaine)
+                                </option>
+                                <option
+                                    value="moderate"
+                                    class="text-text-main bg-white dark:bg-slate-900 dark:text-white"
+                                >
+                                    Modérément actif (3-5 jours/semaine)
+                                </option>
+                                <option value="very" class="text-text-main bg-white dark:bg-slate-900 dark:text-white">
+                                    Très actif (6-7 jours/semaine)
+                                </option>
+                                <option value="extra" class="text-text-main bg-white dark:bg-slate-900 dark:text-white">
+                                    Extrêmement actif (travail physique)
+                                </option>
+                            </select>
+                            <div class="text-text-muted pointer-events-none absolute top-1/2 right-4 -translate-y-1/2">
+                                <span class="material-symbols-outlined">expand_more</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Goal -->
@@ -104,11 +107,11 @@
                                 v-for="goalOption in ['cut', 'maintain', 'bulk']"
                                 :key="goalOption"
                                 @click="form.goal = goalOption"
-                                class="flex h-12 items-center justify-center rounded-xl border-2 transition-all"
+                                class="flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all"
                                 :class="
                                     form.goal === goalOption
-                                        ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted border-slate-200 bg-white hover:border-slate-300'
+                                        ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
+                                        : 'text-text-muted hover:text-text-main border-white/20 bg-white/10 hover:border-white/30 hover:bg-white/20'
                                 "
                             >
                                 <span class="font-display font-bold uppercase">{{
@@ -121,7 +124,7 @@
                     <!-- Result -->
                     <div
                         v-if="isValid"
-                        class="mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-100 bg-slate-50 p-6 text-center"
+                        class="mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-md"
                     >
                         <div>
                             <p class="text-text-muted text-sm font-bold tracking-wider uppercase">
@@ -135,7 +138,7 @@
                             <p class="text-text-muted text-xs font-semibold">TDEE: {{ calculatedResults.tdee }} kcal</p>
                         </div>
 
-                        <div class="grid w-full grid-cols-3 gap-4 border-t border-slate-200 pt-4">
+                        <div class="grid w-full grid-cols-3 gap-4 border-t border-white/10 pt-4">
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Protéines</p>
                                 <p class="font-display text-text-main text-2xl font-black">
@@ -193,11 +196,11 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group relative flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-4 transition-all hover:border-slate-200 hover:shadow-sm sm:flex-row sm:items-center"
+                            class="group relative flex flex-col justify-between rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md transition-all hover:bg-white/10 hover:shadow-lg sm:flex-row sm:items-center"
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="text-text-main flex h-12 w-16 items-center justify-center rounded-xl bg-slate-50 text-lg font-bold"
+                                    class="text-text-main flex h-12 w-16 items-center justify-center rounded-xl bg-white/10 text-lg font-bold"
                                 >
                                     {{ entry.target_calories }}
                                 </div>
@@ -220,7 +223,7 @@
 
                             <button
                                 @click="deleteEntry(entry)"
-                                class="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 sm:static"
+                                class="text-text-muted absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-red-500/20 hover:text-red-500 sm:static"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>
@@ -238,6 +241,7 @@ import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassInput from '@/Components/UI/GlassInput.vue'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 

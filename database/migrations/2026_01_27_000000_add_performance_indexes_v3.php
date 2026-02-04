@@ -43,7 +43,9 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        // We skip dropping these indexes because they may be required by foreign key constraints (Error 1553)
-        // in some environments. Since these are optimization indexes, leaving them is safe.
+        // We do not drop indexes in down() because they might be used by foreign key constraints
+        // (MySQL error 1553), causing rollback issues in CI/testing environments.
+        // Since these are performance indexes, leaving them is safer than crashing the migration rollback.
+
     }
 };
