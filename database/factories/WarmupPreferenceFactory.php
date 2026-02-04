@@ -21,13 +21,12 @@ class WarmupPreferenceFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'bar_weight' => $this->faker->randomFloat(1, 10, 20),
-            'rounding_increment' => $this->faker->randomElement([2.5, 5.0]),
+            'bar_weight' => $this->faker->randomElement([20.0, 15.0, 10.0]),
+            'rounding_increment' => $this->faker->randomElement([2.5, 1.25, 5.0]),
             'steps' => [
                 ['percent' => 50, 'reps' => 10, 'label' => 'Warmup 1'],
-                ['percent' => 60, 'reps' => 8, 'label' => 'Warmup 2'],
-                ['percent' => 70, 'reps' => 5, 'label' => 'Warmup 3'],
-                ['percent' => 80, 'reps' => 3, 'label' => 'Warmup 4'],
+                ['percent' => 70, 'reps' => 5, 'label' => 'Warmup 2'],
+                ['percent' => 90, 'reps' => 3, 'label' => 'Warmup 3'],
             ],
         ];
     }

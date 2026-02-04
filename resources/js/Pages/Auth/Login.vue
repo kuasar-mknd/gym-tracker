@@ -48,12 +48,10 @@ const submit = () => {
             <GlassInput
                 v-model="form.email"
                 type="email"
-                name="email"
                 label="Email"
                 placeholder="ton@email.com"
                 :error="form.errors.email"
                 autocomplete="username"
-                name="email"
                 required
                 autofocus
             />
@@ -61,12 +59,10 @@ const submit = () => {
             <GlassInput
                 v-model="form.password"
                 type="password"
-                name="password"
                 label="Mot de passe"
                 placeholder="••••••••"
                 :error="form.errors.password"
                 autocomplete="current-password"
-                name="password"
                 required
             />
 

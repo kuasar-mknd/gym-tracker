@@ -8,7 +8,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
-final class FetchHabitsIndexAction
+class FetchHabitsIndexAction
 {
     /**
      * @return array{
@@ -34,14 +34,15 @@ final class FetchHabitsIndexAction
 
         // Calculate consistency for the last 30 days
         $past30Days = Carbon::now()->subDays(29)->startOfDay();
+
+        /** @var \Illuminate\Support\Collection<string, int|string> $consistencyStats */
         $consistencyStats = DB::table('habit_logs')
             ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
             ->where('habits.user_id', $user->id)
             ->where('habit_logs.date', '>=', $past30Days)
             ->groupBy('habit_logs.date')
             ->selectRaw('DATE(habit_logs.date) as date, COUNT(*) as count')
-            ->pluck('count', 'date')
-            ->all();
+            ->pluck('count', 'date');
 
         $consistencyData = [];
         $history = []; // For Bar Chart
@@ -49,7 +50,10 @@ final class FetchHabitsIndexAction
         for ($i = 29; $i >= 0; $i--) {
             $dateObj = Carbon::now()->subDays($i);
             $dateStr = $dateObj->format('Y-m-d');
-            $count = (int) ($consistencyStats[$dateStr] ?? 0);
+
+            /** @var int|string $rawCount */
+            $rawCount = $consistencyStats[$dateStr] ?? 0;
+            $count = (int) $rawCount;
 
             // For Line Chart (consistencyData)
             $consistencyData[] = [

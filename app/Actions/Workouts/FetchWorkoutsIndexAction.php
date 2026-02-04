@@ -66,12 +66,14 @@ final class FetchWorkoutsIndexAction
     protected function getMonthlyFrequency(
         User $user
     ): Collection {
-        /** @var Collection<int, array{month: string, count: int}> */
-        return Cache::remember(
+        /** @var Collection<int, array{month: string, count: int}> $frequency */
+        $frequency = Cache::remember(
             "stats.monthly_frequency.{$user->id}",
             now()->addHour(),
             fn (): Collection => $this->calculateMonthlyFrequency($user)
         );
+
+        return $frequency;
     }
 
     /**
