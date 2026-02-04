@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Laravel\Dusk\Browser;
+
+uses(DatabaseMigrations::class);
 
 test('user can manage exercises', function (): void {
     $user = User::factory()->create();
@@ -17,11 +20,12 @@ test('user can manage exercises', function (): void {
             ->assertPathIs('/exercises')
 
             // 1. Verify empty state and create button
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
-            ->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
+            ->waitFor('[data-testid="create-exercise-desktop"]', 15)
+            ->script("document.querySelector('[data-testid=\"create-exercise-desktop\"]').click();");
 
         // 2. Fill and submit the create form
-        $browser->waitFor('input[placeholder="Ex: Développé couché"]', 15)
+        $browser->pause(500)
+            ->waitForText('NOUVEL EXERCICE', 15) // Case sensitive check or wait for element
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')
@@ -54,7 +58,7 @@ test('user can manage exercises', function (): void {
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
             ->pause(1000)
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->waitFor('[data-testid="create-exercise-desktop"]', 15)
             ->assertNoConsoleExceptions();
     });
 });
