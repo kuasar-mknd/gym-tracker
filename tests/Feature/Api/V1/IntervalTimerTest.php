@@ -2,157 +2,144 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Api\V1;
-
 use App\Models\IntervalTimer;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Tests\TestCase;
 
-class IntervalTimerTest extends TestCase
-{
-    use RefreshDatabase;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\deleteJson;
+use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
 
-    public function test_user_can_list_interval_timers(): void
-    {
-        $user = User::factory()->create();
-        IntervalTimer::factory()->count(3)->create(['user_id' => $user->id]);
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-        Sanctum::actingAs($user);
+describe('Guest', function (): void {
+    test('cannot list interval timers', function (): void {
+        getJson(route('api.v1.interval-timers.index'))->assertUnauthorized();
+    });
+});
 
-        $response = $this->getJson(route('api.v1.interval-timers.index'));
+describe('Authenticated', function (): void {
+    beforeEach(function (): void {
+        $this->user = User::factory()->create();
+        Sanctum::actingAs($this->user);
+    });
 
-        $response->assertOk()
-            ->assertJsonCount(3, 'data');
-    }
+    describe('Index', function (): void {
+        test('user can list their timers', function (): void {
+            IntervalTimer::factory()->count(3)->create(['user_id' => $this->user->id]);
 
-    public function test_user_can_create_interval_timer(): void
-    {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
+            $response = getJson(route('api.v1.interval-timers.index'));
 
-        $data = [
-            'name' => 'Tabata',
-            'work_seconds' => 20,
-            'rest_seconds' => 10,
-            'rounds' => 8,
-            'warmup_seconds' => 30,
-        ];
+            $response->assertOk()
+                ->assertJsonCount(3, 'data')
+                ->assertJsonStructure([
+                    'data' => [
+                        '*' => ['id', 'user_id', 'name', 'work_seconds', 'rest_seconds', 'rounds', 'warmup_seconds', 'created_at', 'updated_at'],
+                    ],
+                ]);
+        });
+    });
 
-        $response = $this->postJson(route('api.v1.interval-timers.store'), $data);
+    describe('Store', function (): void {
+        test('user can create a timer', function (): void {
+            $data = [
+                'name' => 'Tabata',
+                'work_seconds' => 20,
+                'rest_seconds' => 10,
+                'rounds' => 8,
+                'warmup_seconds' => 60,
+            ];
 
-        $response->assertCreated()
-            ->assertJsonPath('data.name', 'Tabata')
-            ->assertJsonPath('data.work_seconds', 20);
+            $response = postJson(route('api.v1.interval-timers.store'), $data);
 
-        $this->assertDatabaseHas('interval_timers', [
-            'user_id' => $user->id,
-            'name' => 'Tabata',
-            'work_seconds' => 20,
-        ]);
-    }
+            $response->assertCreated()
+                ->assertJsonPath('data.name', 'Tabata')
+                ->assertJsonPath('data.work_seconds', 20);
 
-    public function test_user_can_view_interval_timer(): void
-    {
-        $user = User::factory()->create();
-        $timer = IntervalTimer::factory()->create(['user_id' => $user->id]);
-        Sanctum::actingAs($user);
+            assertDatabaseHas('interval_timers', [
+                'user_id' => $this->user->id,
+                'name' => 'Tabata',
+            ]);
+        });
 
-        $response = $this->getJson(route('api.v1.interval-timers.show', $timer));
+        test('validation: required fields', function (): void {
+            postJson(route('api.v1.interval-timers.store'), [])
+                ->assertUnprocessable()
+                ->assertJsonValidationErrors(['name', 'work_seconds', 'rest_seconds', 'rounds']);
+        });
+    });
 
-        $response->assertOk()
-            ->assertJsonPath('data.id', $timer->id)
-            ->assertJsonPath('data.name', $timer->name);
-    }
+    describe('Show', function (): void {
+        test('user can view their timer', function (): void {
+            $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id]);
 
-    public function test_user_cannot_view_others_interval_timer(): void
-    {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
-        Sanctum::actingAs($user);
+            getJson(route('api.v1.interval-timers.show', $timer))
+                ->assertOk()
+                ->assertJsonPath('data.id', $timer->id);
+        });
 
-        $response = $this->getJson(route('api.v1.interval-timers.show', $timer));
+        test('user cannot view others timer', function (): void {
+            $otherUser = User::factory()->create();
+            $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
-        $response->assertForbidden();
-    }
+            getJson(route('api.v1.interval-timers.show', $timer))
+                ->assertForbidden();
+        });
+    });
 
-    public function test_user_can_update_interval_timer(): void
-    {
-        $user = User::factory()->create();
-        $timer = IntervalTimer::factory()->create(['user_id' => $user->id]);
-        Sanctum::actingAs($user);
+    describe('Update', function (): void {
+        test('user can update their timer', function (): void {
+            $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id, 'name' => 'Old Name']);
 
-        $data = [
-            'name' => 'Updated Timer',
-            'work_seconds' => 45,
-        ];
+            putJson(route('api.v1.interval-timers.update', $timer), [
+                'name' => 'New Name',
+                'work_seconds' => 30,
+                'rest_seconds' => 30,
+                'rounds' => 3,
+                'warmup_seconds' => 0,
+            ])
+                ->assertOk()
+                ->assertJsonPath('data.name', 'New Name');
 
-        $response = $this->putJson(route('api.v1.interval-timers.update', $timer), $data);
+            assertDatabaseHas('interval_timers', ['id' => $timer->id, 'name' => 'New Name']);
+        });
 
-        $response->assertOk()
-            ->assertJsonPath('data.name', 'Updated Timer')
-            ->assertJsonPath('data.work_seconds', 45);
+        test('user cannot update others timer', function (): void {
+            $otherUser = User::factory()->create();
+            $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
-        $this->assertDatabaseHas('interval_timers', [
-            'id' => $timer->id,
-            'name' => 'Updated Timer',
-            'work_seconds' => 45,
-        ]);
-    }
+            putJson(route('api.v1.interval-timers.update', $timer), [
+                'name' => 'Hacked',
+                'work_seconds' => 30,
+                'rest_seconds' => 30,
+                'rounds' => 3,
+                'warmup_seconds' => 0,
+            ])
+                ->assertForbidden();
+        });
+    });
 
-    public function test_user_cannot_update_others_interval_timer(): void
-    {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
-        Sanctum::actingAs($user);
+    describe('Destroy', function (): void {
+        test('user can delete their timer', function (): void {
+            $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id]);
 
-        $response = $this->putJson(route('api.v1.interval-timers.update', $timer), [
-            'name' => 'Hacked',
-        ]);
+            deleteJson(route('api.v1.interval-timers.destroy', $timer))
+                ->assertNoContent();
 
-        $response->assertForbidden();
-    }
+            assertDatabaseMissing('interval_timers', ['id' => $timer->id]);
+        });
 
-    public function test_user_can_delete_interval_timer(): void
-    {
-        $user = User::factory()->create();
-        $timer = IntervalTimer::factory()->create(['user_id' => $user->id]);
-        Sanctum::actingAs($user);
+        test('user cannot delete others timer', function (): void {
+            $otherUser = User::factory()->create();
+            $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
-        $response = $this->deleteJson(route('api.v1.interval-timers.destroy', $timer));
+            deleteJson(route('api.v1.interval-timers.destroy', $timer))
+                ->assertForbidden();
 
-        $response->assertNoContent();
-        $this->assertDatabaseMissing('interval_timers', ['id' => $timer->id]);
-    }
-
-    public function test_user_cannot_delete_others_interval_timer(): void
-    {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
-        $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
-        Sanctum::actingAs($user);
-
-        $response = $this->deleteJson(route('api.v1.interval-timers.destroy', $timer));
-
-        $response->assertForbidden();
-    }
-
-    public function test_validation_errors(): void
-    {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
-
-        $response = $this->postJson(route('api.v1.interval-timers.store'), [
-            'name' => '', // Required
-            'work_seconds' => 0, // Min 1
-            'rest_seconds' => -1, // Min 0
-            'rounds' => 0, // Min 1
-        ]);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'work_seconds', 'rest_seconds', 'rounds']);
-    }
-}
+            assertDatabaseHas('interval_timers', ['id' => $timer->id]);
+        });
+    });
+});

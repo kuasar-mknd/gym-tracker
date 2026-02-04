@@ -33,8 +33,8 @@
 **Learning:** When resources can be both system-owned and user-owned, simple `where` or `whereNull` checks are insufficient. You must explicitly handle the "System OR Owner" logic.
 **Prevention:** Use nested closures to group the OR condition: `$query->where(fn($q) => $q->whereNull('user_id')->orWhere('user_id', $this->user()->id))`.
 
-## 2026-02-05 - Side-Channel Information Disclosure via Status Codes
+## 2026-08-23 - Insecure Mass Assignment Configuration for User Stats
 
-**Vulnerability:** Distinguishing between `403 Forbidden` (exists but not yours) and `422 Unprocessable Entity` (does not exist) in `SetStoreRequest` allowed attackers to probe the existence of private IDs belonging to other users. Similarly, unscoped `exists` validation in `PersonalRecordController` index also leaked existence.
-**Learning:** Even when authorization is present, the difference in response types between "unauthorized" and "non-existent" can create an information leak side-channel.
-**Prevention:** Scope the `exists` validation rule to the user's records so that "not mine" and "doesn't exist" both result in `422`. Ensure the `authorize()` method doesn't trigger a `403` for non-existent or other users' resources that should remain hidden.
+**Vulnerability:** The `User` model included `current_streak`, `longest_streak`, and `last_workout_at` in the `$fillable` array. This exposed system-managed statistics to mass assignment vulnerabilities if any controller or action used unvalidated input (e.g., `User::create($request->all())`).
+**Learning:** Documentation or memory claiming "strict limits" on mass assignment was incorrect. Defense in Depth requires minimizing `$fillable` even if current usage patterns seem safe.
+**Prevention:** Audit `$fillable` arrays regularly. Remove system-managed fields and use `forceFill()` or direct property assignment in Services/Actions for internal state updates.

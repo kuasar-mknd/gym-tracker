@@ -23,14 +23,6 @@ class Fast extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -42,5 +34,13 @@ class Fast extends Model
             'end_time' => 'datetime',
             'target_duration_minutes' => 'integer',
         ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }
