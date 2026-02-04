@@ -37,13 +37,19 @@ test('user can manage exercises', function (): void {
             ->waitForText('DUSK TEST EXERCISE', 15);
 
         // 4. Edit the exercise
-        $browser->waitFor('[data-testid="edit-exercise-button"]', 5)
-            ->script("document.querySelector('[data-testid=\"edit-exercise-button\"]').click();");
+        // Use JS to click because the button is hidden via opacity until hover on desktop
+        $browser->waitUntil("document.querySelector('[data-testid=\"edit-exercise-button\"]') != null", 5)
+            ->script("
+                var btn = document.querySelector('[data-testid=\"edit-exercise-button\"]');
+                btn.classList.remove('opacity-0');
+                btn.style.opacity = '1';
+                btn.click();
+            ");
 
-        $browser->waitFor('input[type="text"]', 10)
+        $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 10)
             ->pause(500)
-            ->clear('input[type="text"]')
-            ->type('input[type="text"]', 'Updated Exercise')
+            ->clear('input[placeholder="Nom de l\'exercice"]')
+            ->type('input[placeholder="Nom de l\'exercice"]', 'Updated Exercise')
             ->waitFor('[data-testid="save-exercise-button"]', 5)
             ->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
 
@@ -52,8 +58,13 @@ test('user can manage exercises', function (): void {
             ->waitForText('UPDATED EXERCISE', 15);
 
         // 6. Delete the exercise
-        $browser->waitFor('[data-testid="delete-exercise-button"]', 5)
-            ->script("document.querySelector('[data-testid=\"delete-exercise-button\"]').click();");
+        $browser->waitUntil("document.querySelector('[data-testid=\"delete-exercise-button\"]') != null", 5)
+            ->script("
+                var btn = document.querySelector('[data-testid=\"delete-exercise-button\"]');
+                btn.classList.remove('opacity-0');
+                btn.style.opacity = '1';
+                btn.click();
+            ");
 
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
