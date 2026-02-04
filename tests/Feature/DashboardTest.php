@@ -60,7 +60,7 @@ test('dashboard displays correct workout stats for populated user', function ():
     actingAs($user)
         ->get('/dashboard')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): Assert => $page
             ->component('Dashboard')
             ->where('workoutsCount', 13) // 10 + 3
             ->where('thisWeekCount', 3)
@@ -82,7 +82,7 @@ test('dashboard handles new user with no data', function (): void {
     actingAs($user)
         ->get('/dashboard')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): Assert => $page
             ->component('Dashboard')
             ->where('workoutsCount', 0)
             ->where('thisWeekCount', 0)
@@ -109,7 +109,7 @@ test('dashboard is resilient to extra query parameters', function (): void {
     actingAs($user)
         ->get('/dashboard?period=invalid_garbage_value&foo=bar')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): Assert => $page
             ->component('Dashboard')
             ->has('workoutsCount')
         );
