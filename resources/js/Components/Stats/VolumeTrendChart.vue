@@ -47,6 +47,10 @@ const chartOptions = {
             ticks: {
                 color: '#64748B',
                 font: { size: 10, weight: 'bold' },
+                callback: (value) => {
+                    if (value >= 1000) return (value / 1000).toFixed(1) + 'k'
+                    return value
+                },
             },
         },
         x: {
