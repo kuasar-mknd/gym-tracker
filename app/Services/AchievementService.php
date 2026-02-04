@@ -66,6 +66,7 @@ final class AchievementService
     /**
      * Pre-calculate metrics for the given set of achievements to avoid N+1 queries.
      *
+     * @param  Collection<int, Achievement>  $achievements
      * @return array<string, mixed>
      */
     private function preCalculateMetrics(User $user, Collection $achievements): array
@@ -78,27 +79,54 @@ final class AchievementService
         }
 
         if ($types->contains('weight_record')) {
-            $metrics['max_weight'] = $user->workouts()
-                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                ->max('sets.weight') ?? 0;
+            $metrics['max_weight'] = $this->calculateMaxWeight($user);
         }
 
         if ($types->contains('volume_total')) {
-            $metrics['total_volume'] = $user->workouts()
-                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-                ->sum(DB::raw('sets.weight * sets.reps'));
+            $metrics['total_volume'] = $this->calculateTotalVolume($user);
         }
 
         if ($types->contains('streak')) {
-            // Find the maximum threshold among streak achievements to determine lookback
-            $maxStreakThreshold = $achievements->where('type', 'streak')->max('threshold');
-            $metrics['max_streak'] = $this->calculateStreakForThreshold($user, (int) $maxStreakThreshold);
+            $metrics['max_streak'] = $this->calculateStreakMetric($user, $achievements);
         }
 
         return $metrics;
+    }
+
+    private function calculateMaxWeight(User $user): float
+    {
+        /** @var float|null $maxWeight */
+        $maxWeight = $user->workouts()
+            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->max('sets.weight');
+
+        return $maxWeight ?? 0.0;
+    }
+
+    private function calculateTotalVolume(User $user): float
+    {
+        return (float) $user->workouts()
+            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+            ->sum(DB::raw('sets.weight * sets.reps'));
+    }
+
+    /**
+     * @param  Collection<int, Achievement>  $achievements
+     */
+    private function calculateStreakMetric(User $user, Collection $achievements): int
+    {
+        // Find the maximum threshold among streak achievements to determine lookback
+        /** @var float|int|null $maxStreakThreshold */
+        $maxStreakThreshold = $achievements->where('type', 'streak')->max('threshold');
+
+        if ($maxStreakThreshold === null) {
+            return 0;
+        }
+
+        return $this->calculateStreakForThreshold($user, (int) $maxStreakThreshold);
     }
 
     /**
