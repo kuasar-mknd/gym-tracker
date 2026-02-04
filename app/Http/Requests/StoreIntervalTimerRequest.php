@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\IntervalTimer;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateIntervalTimerRequest extends FormRequest
+class StoreIntervalTimerRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        $timer = $this->route('intervalTimer');
-        return $this->user()->can('update', $timer);
+        return $this->user()->can('create', IntervalTimer::class);
     }
 
     /**
