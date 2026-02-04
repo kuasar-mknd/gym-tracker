@@ -33,8 +33,9 @@ test('user can manage exercises', function (): void {
             ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
 
         // 3. Verify exercise was created
-        $browser->pause(2000)
+        $browser->pause(4000)
             ->waitForLocation('/exercises')
+            ->waitFor('[data-testid="create-exercise-desktop"]', 15) // Ensure list page is loaded
             ->waitForText('Dusk Test Exercise', 15);
 
         // 4. Edit the exercise
