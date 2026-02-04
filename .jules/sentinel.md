@@ -32,3 +32,8 @@
 **Vulnerability:** In `WorkoutLineStoreRequest`, `exercise_id` validation was unscoped (`exists:exercises,id`), allowing users to link private exercises from other users. The fix required handling both system exercises (null `user_id`) and user-owned exercises.
 **Learning:** When resources can be both system-owned and user-owned, simple `where` or `whereNull` checks are insufficient. You must explicitly handle the "System OR Owner" logic.
 **Prevention:** Use nested closures to group the OR condition: `$query->where(fn($q) => $q->whereNull('user_id')->orWhere('user_id', $this->user()->id))`.
+
+## 2026-02-04 - Inconsistent Rate Limiting on Authentication Endpoints
+**Vulnerability:** Sensitive authentication-related routes like password reset (POST), password confirmation, and logged-in password updates lacked rate limiting, while login and registration were protected.
+**Learning:** Security features implemented via middleware must be applied consistently across all related endpoints. Forgetting to throttle password reset or confirmation allows for targeted brute-force attacks even if login is protected.
+**Prevention:** Audit all state-changing or sensitive authentication routes to ensure they are wrapped in appropriate 'throttle' middleware. Standardize on 'throttle:6,1' for high-sensitivity auth actions.
