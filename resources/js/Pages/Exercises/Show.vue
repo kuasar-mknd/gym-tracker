@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
+import ExerciseVolumeChart from '@/Components/Stats/ExerciseVolumeChart.vue'
 
 const props = defineProps({
     exercise: Object,
@@ -51,8 +52,23 @@ const props = defineProps({
                 </div>
             </GlassCard>
 
+            <!-- Volume Chart -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
+                <div class="mb-4">
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume par Séance</h3>
+                    <p class="text-text-muted text-xs font-semibold">Total (Poids x Reps) par session</p>
+                </div>
+                <div v-if="history.length > 0" class="h-48">
+                    <ExerciseVolumeChart :sessions="history" />
+                </div>
+                <div v-else class="flex h-48 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                    <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
+                </div>
+            </GlassCard>
+
             <!-- History List -->
-            <div class="animate-slide-up" style="animation-delay: 0.1s">
+            <div class="animate-slide-up" style="animation-delay: 0.2s">
                 <h3 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Historique</h3>
 
                 <div v-if="history.length === 0" class="py-8 text-center">
