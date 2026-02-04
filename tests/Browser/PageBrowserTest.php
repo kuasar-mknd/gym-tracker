@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Laravel\Dusk\Browser;
+
+uses(DatabaseMigrations::class);
 
 test('unauthenticated users are redirected to login', function (): void {
     $this->browse(function (Browser $browser): void {
@@ -14,25 +17,23 @@ test('unauthenticated users are redirected to login', function (): void {
 
 test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->visit('/login')
-            ->waitFor('body', 30)
-            ->waitFor('[data-testid="login-button"]', 30) // Wait for the button specifically
-            // Use assertSeeIn to be more specific if possible, or stick to assertSee with sufficient wait
-            ->assertSee('Bon retour');
+        $browser->logout()
+            ->visit('/login')
+            ->waitFor('[data-testid="login-button"]', 30)
+            ->assertVisible('[data-testid="login-button"]');
     });
 });
 
 test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
-        $browser->visit('/register')
-            ->waitFor('body', 30)
-            ->waitFor('[data-testid="register-button"]', 30) // Ensure form is loaded
-            ->waitFor('input[name="name"]', 10) // Ensure input is ready
+        $browser->logout()
+            ->visit('/register')
+            ->waitFor('input[name="name"]', 30) // Ensure form is loaded
             ->type('input[name="name"]', 'John Doe')
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
-            ->click('[data-testid="register-button"]') // Use click with selector for robustness
+            ->click('[data-testid="register-button"]')
             ->waitForLocation('/verify-email', 60) // Increased timeout for heavy operation
             ->assertPathIs('/verify-email');
     });

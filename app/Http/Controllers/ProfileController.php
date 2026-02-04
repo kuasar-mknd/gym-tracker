@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Profile\UpdateNotificationPreferencesAction;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UpdateNotificationPreferencesRequest;
 use Illuminate\Http\RedirectResponse;
@@ -60,8 +61,10 @@ class ProfileController extends Controller
     /**
      * Update the user's notification preferences.
      */
-    public function updatePreferences(UpdateNotificationPreferencesRequest $request): RedirectResponse
-    {
+    public function updatePreferences(
+        UpdateNotificationPreferencesRequest $request,
+        UpdateNotificationPreferencesAction $updatePreferences
+    ): RedirectResponse {
         /**
          * @var array{
          *     preferences: array<string, bool>,
@@ -71,16 +74,7 @@ class ProfileController extends Controller
          */
         $validated = $request->validated();
 
-        foreach ($validated['preferences'] as $type => $isEnabled) {
-            $this->user()->notificationPreferences()->updateOrCreate(
-                ['type' => $type],
-                [
-                    'is_enabled' => $isEnabled,
-                    'is_push_enabled' => $validated['push_preferences'][$type] ?? false,
-                    'value' => $validated['values'][$type] ?? null,
-                ]
-            );
-        }
+        $updatePreferences->execute($this->user(), $validated);
 
         return Redirect::route('profile.edit')->with('status', 'notification-preferences-updated');
     }

@@ -32,3 +32,9 @@
 **Vulnerability:** In `WorkoutLineStoreRequest`, `exercise_id` validation was unscoped (`exists:exercises,id`), allowing users to link private exercises from other users. The fix required handling both system exercises (null `user_id`) and user-owned exercises.
 **Learning:** When resources can be both system-owned and user-owned, simple `where` or `whereNull` checks are insufficient. You must explicitly handle the "System OR Owner" logic.
 **Prevention:** Use nested closures to group the OR condition: `$query->where(fn($q) => $q->whereNull('user_id')->orWhere('user_id', $this->user()->id))`.
+
+## 2026-08-23 - Insecure Mass Assignment Configuration for User Stats
+
+**Vulnerability:** The `User` model included `current_streak`, `longest_streak`, and `last_workout_at` in the `$fillable` array. This exposed system-managed statistics to mass assignment vulnerabilities if any controller or action used unvalidated input (e.g., `User::create($request->all())`).
+**Learning:** Documentation or memory claiming "strict limits" on mass assignment was incorrect. Defense in Depth requires minimizing `$fillable` even if current usage patterns seem safe.
+**Prevention:** Audit `$fillable` arrays regularly. Remove system-managed fields and use `forceFill()` or direct property assignment in Services/Actions for internal state updates.
