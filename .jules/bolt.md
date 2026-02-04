@@ -32,3 +32,9 @@
 
 **Learning:** Eager loading full collections (e.g., `with('workoutLines')`) just to check counts or presence in Inertia.js components is a massive hydration bottleneck. It inflates the JSON payload and server-side memory usage. Additionally, class-based Dusk tests in this repo do NOT inherit global Pest traits and must explicitly include `DatabaseMigrations`.
 **Action:** Use `withCount()` for summary views and always verify that class-based tests have necessary traits for CI database initialization.
+
+## 2026-02-18 - Surgical Cache Invalidation & Test Consistency
+
+**Learning:** When implementing granular cache invalidation (splitting a "nuke all" method), ensure that the consumers (Actions) correctly identify which "scope" of data changed. In this case, updating a workout's *name* only requires clearing metadata caches, not heavy volume aggregations.
+**Also:** Codebase performance optimizations (like `limit(3)` in `FetchDashboardDataAction`) must be reflected in tests. I found `DashboardTest` expecting 5 items when the code explicitly limits to 3. Always verify tests align with optimization constraints.
+**Action:** When refactoring cache logic, define clear boundaries (e.g., `clearMetadata` vs `clearAggregates`) and verify test expectations against these boundaries.

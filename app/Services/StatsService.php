@@ -19,10 +19,6 @@ use Illuminate\Support\Facades\DB;
  * - Period-over-period comparisons
  *
  * It utilizes caching (via Redis/Cache facade) to optimize performance for expensive database queries.
- *
- * PERFORMANCE NOTE:
- * Heavy volume aggregations (SUM(weight * reps)) rely on a composite index on the `sets` table:
- * ['workout_line_id', 'weight', 'reps']. This allows for Index Only Scans.
  */
 class StatsService
 {
@@ -458,59 +454,40 @@ class StatsService
      */
     public function clearWorkoutRelatedStats(User $user): void
     {
-        // Granular clearing calls
-        $this->clearDashboardCache($user);
-        $this->clearWorkoutNameDependentStats($user);
-        $this->clearWorkoutDurationDependentStats($user);
+        $this->clearWorkoutMetadataStats($user);
 
-        // Clear remaining aggregates not covered by above
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             \Illuminate\Support\Facades\Cache::forget("stats.daily_volume.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
         }
 
+        // Clear weekly volume and monthly comparison (previously missed)
         \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
         \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
+        \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
         \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
     }
 
     /**
-     * Clear dashboard specific cache.
+     * Clear only cache related to workout metadata (names, notes).
+     * Does NOT clear heavy aggregation stats (muscle dist, daily volume, etc).
      */
-    public function clearDashboardCache(User $user): void
-    {
-        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
-    }
-
-    /**
-     * Clear stats that depend on the workout name.
-     * Includes: Volume Trend, Volume History, Duration History.
-     */
-    public function clearWorkoutNameDependentStats(User $user): void
+    public function clearWorkoutMetadataStats(User $user): void
     {
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
         }
 
-        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
-        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.20");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
-    }
+        // Clear dashboard-specific cache (contains both workout and weight data)
+        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
 
-    /**
-     * Clear stats that depend on workout duration (ended_at).
-     * Includes: Duration History, Volume History (checks ended_at), Duration Distribution.
-     */
-    public function clearWorkoutDurationDependentStats(User $user): void
-    {
+        // Clear duration and volume history caches
         \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.20");
         \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
         \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
     }
 
     /**
@@ -525,7 +502,8 @@ class StatsService
             \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
 
-        $this->clearDashboardCache($user);
+        // Clear dashboard-specific cache (contains both workout and weight data)
+        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
     }
 
     protected function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
@@ -699,7 +677,6 @@ class StatsService
                 'workouts.started_at',
                 'workouts.name',
                 // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-                // OPTIMIZATION: Uses covering index ['workout_line_id', 'weight', 'reps'] on sets table.
                 DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
             )
             ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
