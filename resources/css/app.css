@@ -548,8 +548,6 @@
     max-height: 85vh;
     overflow-y: auto;
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-    position: relative;
-    z-index: 60;
 }
 
 @utility category-pill {
@@ -903,8 +901,4 @@
             background-position: -200% 0;
         }
     }
-}
-@utility dusk-visible {
-    /* Force visibility for Dusk tests */
-    opacity: 1 !important;
 }

@@ -32,8 +32,10 @@ class StoreWorkoutTemplateRequest extends FormRequest
                 'required',
                 'integer',
                 Rule::exists('exercises', 'id')->where(function ($query): void {
-                    $query->where('user_id', $this->user()?->id)
-                        ->orWhereNull('user_id');
+                    $query->where(function ($q): void {
+                        $q->where('user_id', $this->user()?->id)
+                            ->orWhereNull('user_id');
+                    });
                 }),
             ],
             'exercises.*.sets' => 'nullable|array',

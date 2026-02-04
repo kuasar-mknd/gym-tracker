@@ -9,6 +9,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property int $work_seconds
+ * @property int $rest_seconds
+ * @property int $rounds
+ * @property int $warmup_seconds
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read User $user
+ */
 class IntervalTimer extends Model
 {
     /** @use HasFactory<IntervalTimerFactory> */
