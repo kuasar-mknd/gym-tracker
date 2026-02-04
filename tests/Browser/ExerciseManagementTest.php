@@ -26,6 +26,7 @@ test('user can manage exercises', function (): void {
             ->waitFor('select', 5)
             ->select('select', 'strength')
             ->waitFor('[data-testid="submit-exercise-button"]', 5)
+            ->pause(500) // Ensure listeners attached
             ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
 
         // 3. Verify exercise was created
