@@ -121,8 +121,7 @@ test('user cannot create set in another users workout line', function (): void {
 
     actingAs($user, 'sanctum')
         ->postJson(route('api.v1.sets.store'), $data)
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('workout_line_id');
+        ->assertForbidden();
 });
 
 test('user cannot show another users set', function (): void {
