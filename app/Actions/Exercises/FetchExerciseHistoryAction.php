@@ -33,7 +33,7 @@ final class FetchExerciseHistoryAction
             ->orderByDesc('workouts.started_at')
             ->get();
 
-        return $history->groupBy('workout_id')->map(function ($sets) {
+        return $history->groupBy('workout_id')->map(function ($sets): ?array {
             $first = $sets->first();
 
             if (! $first) {
@@ -44,7 +44,7 @@ final class FetchExerciseHistoryAction
                 'date' => Carbon::parse($first->started_at)->format('d/m/Y'),
                 'full_date' => $first->started_at,
                 'workout_name' => $first->workout_name,
-                'sets' => $sets->map(fn ($set) => [
+                'sets' => $sets->map(fn ($set): array => [
                     'weight' => (float) $set->weight,
                     'reps' => (int) $set->reps,
                     'rpe' => $set->rpe ? (float) $set->rpe : null,

@@ -32,7 +32,7 @@ class StoreFastRequest extends FormRequest
 
     public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
-        $validator->after(function (\Illuminate\Validation\Validator $validator) {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
             /** @var \App\Models\User|null $user */
             $user = $this->user();
 
