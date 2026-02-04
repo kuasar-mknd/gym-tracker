@@ -170,4 +170,28 @@ class ExerciseTest extends TestCase
 
         $response->assertRedirect('/login');
     }
+
+    public function test_exercise_show_page_is_displayed_with_history(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+        $workout = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now(),
+            'ended_at' => now(),
+        ]);
+        $line = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+        $line->sets()->create(['reps' => 10, 'weight' => 100]);
+
+        $response = $this->actingAs($user)->get("/exercises/{$exercise->id}");
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Exercises/Show')
+            ->has('history', 1)
+        );
+    }
 }

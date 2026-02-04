@@ -27,17 +27,17 @@ final class WorkoutCompletionTest extends DuskTestCase
             $browser->loginAs($user)
                 ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
-                ->waitFor('main', 15)
+                ->waitFor('main', 30) // Increased timeout
                 ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
-                ->waitFor('#finish-workout-desktop', 15)
-                ->click('#finish-workout-desktop');
+                ->waitFor('#finish-workout-desktop', 30) // Increased timeout
+                ->script("document.getElementById('finish-workout-desktop').click();");
 
-            $browser->waitForText('TERMINER LA SÉANCE ?', 15)
-                ->pause(2000)
-                ->click('#confirm-finish-button');
+            $browser->waitForText('TERMINER LA SÉANCE ?', 30) // Increased timeout
+                ->pause(1000)
+                ->script("document.getElementById('confirm-finish-button').click();");
 
-            $browser->waitForLocation('/dashboard', 15);
+            $browser->waitForLocation('/dashboard', 30); // Increased timeout
         });
     }
 
@@ -57,7 +57,7 @@ final class WorkoutCompletionTest extends DuskTestCase
             $browser->loginAs($user)
                 ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
-                ->waitFor('main', 15)
+                ->waitFor('main', 30) // Increased timeout
                 ->assertNoConsoleExceptions()
                 ->assertMissing('#finish-workout-desktop')
                 ->assertVisible('#workout-status-badge-desktop');

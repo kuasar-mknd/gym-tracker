@@ -464,7 +464,11 @@ const typeLabel = (type) => {
                                 ]"
                             >
                                 <!-- View Mode -->
-                                <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
+                                <div
+                                    v-if="editingExercise !== exercise.id"
+                                    class="flex cursor-pointer items-center justify-between"
+                                    @click="router.visit(route('exercises.show', { exercise: exercise.id }))"
+                                >
                                     <div class="flex items-center gap-4">
                                         <div
                                             :class="[
@@ -494,7 +498,7 @@ const typeLabel = (type) => {
                                         </div>
                                     </div>
                                     <div
-                                        class="dusk-visible flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+                                        class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                     >
                                         <button
                                             @click="startEdit(exercise)"
