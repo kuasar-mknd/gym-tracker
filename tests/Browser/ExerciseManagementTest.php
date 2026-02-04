@@ -37,7 +37,7 @@ test('user can manage exercises', function (): void {
             ->waitForText('DUSK TEST EXERCISE', 15);
 
         // 4. Edit the exercise
-        // Use JS to click because the button is hidden via opacity until hover on desktop
+        // Use JS click to bypass strict interactability checks on opacity-0 elements
         $browser->waitUntil("document.querySelector('[data-testid=\"edit-exercise-button\"]') != null", 5)
             ->script("
                 var btn = document.querySelector('[data-testid=\"edit-exercise-button\"]');
