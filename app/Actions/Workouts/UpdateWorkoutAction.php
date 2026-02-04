@@ -33,8 +33,12 @@ final class UpdateWorkoutAction
         $workout->save();
 
         // Surgical cache invalidation
-        // Using != for Carbon dates works correctly for comparison
-        if ($workout->started_at != $oldStartedAt || $workout->ended_at != $oldEndedAt) {
+        $dateChanged = !$workout->started_at->equalTo($oldStartedAt);
+        $completionChanged = ($workout->ended_at && $oldEndedAt)
+            ? !$workout->ended_at->equalTo($oldEndedAt)
+            : $workout->ended_at !== $oldEndedAt;
+
+        if ($dateChanged || $completionChanged) {
             // Structural changes affect volume, dates, and all statistics
             $this->statsService->clearWorkoutRelatedStats($workout->user);
         } elseif ($workout->name !== $oldName) {

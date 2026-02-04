@@ -28,18 +28,16 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasTable('water_logs')) {
-            // NITRO FIX: Wrap the entire Schema::table call in try-catch to properly handle Error 1553
-            // because Schema commands are queued and executed AFTER the closure.
+        // NITRO FIX: Use a more robust way to handle potential index dropping failures in MySQL
+        if (Schema::hasTable('water_logs') && Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
             try {
                 Schema::table('water_logs', function (Blueprint $table) {
-                    if (Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
-                        $table->dropIndex('water_logs_user_id_consumed_at_index');
-                    }
+                    $table->dropIndex('water_logs_user_id_consumed_at_index');
                 });
             } catch (\Throwable $e) {
                 // Ignore 1553: Cannot drop index ... needed in a foreign key constraint
-                if (! str_contains($e->getMessage(), '1553')) {
+                // This happens in MySQL if this index is the only one supporting a foreign key.
+                if (!str_contains($e->getMessage(), '1553') && !str_contains($e->getMessage(), 'foreign key constraint')) {
                     throw $e;
                 }
             }
