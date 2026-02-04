@@ -14,7 +14,7 @@ class UpdateIntervalTimerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $intervalTimer = $this->route('interval_timer');
+        $intervalTimer = $this->route('interval_timer') ?? $this->route('intervalTimer');
 
         return $this->user() &&
             $intervalTimer instanceof IntervalTimer &&
@@ -33,6 +33,7 @@ class UpdateIntervalTimerRequest extends FormRequest
             'work_seconds' => ['required', 'integer', 'min:1'],
             'rest_seconds' => ['required', 'integer', 'min:0'],
             'rounds' => ['required', 'integer', 'min:1'],
+
             'warmup_seconds' => ['nullable', 'integer', 'min:0'],
         ];
     }
