@@ -13,10 +13,18 @@ const props = defineProps({
 })
 
 const volumeHistory = computed(() => {
-    return [...props.history].reverse().map((session) => ({
-        date: session.formatted_date,
-        volume: session.sets.reduce((sum, set) => sum + set.weight * set.reps, 0),
-    }))
+    if (!props.history) return []
+    return props.history
+        .map((session) => {
+            const totalVolume = session.sets.reduce((sum, set) => {
+                return sum + (set.weight || 0) * (set.reps || 0)
+            }, 0)
+            return {
+                date: session.formatted_date,
+                volume: totalVolume,
+            }
+        })
+        .reverse()
 })
 </script>
 
