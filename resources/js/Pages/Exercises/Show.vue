@@ -3,10 +3,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
-import { computed, defineAsyncComponent } from 'vue'
-
-const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
-const WeightDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/WeightDistributionChart.vue'))
+import VolumeTrendChart from '@/Components/Stats/VolumeTrendChart.vue'
+import WeightDistributionChart from '@/Components/Stats/WeightDistributionChart.vue'
+import { computed } from 'vue'
 
 const props = defineProps({
     exercise: Object,
@@ -19,7 +18,7 @@ const volumeData = computed(() => {
     // History is desc, so reverse for chart
     return [...props.history].reverse().map((session) => ({
         date: session.formatted_date.split('/').slice(0, 2).join('/'), // Just dd/mm
-        volume: session.sets.reduce((sum, set) => sum + set.weight * set.reps, 0),
+        volume: session.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0),
     }))
 })
 
@@ -95,7 +94,7 @@ const weightDistributionData = computed(() => {
 
             <!-- Analytics Grid -->
             <div
-                v-if="history.length > 0"
+                v-if="history && history.length > 0"
                 class="animate-slide-up grid grid-cols-1 gap-6 md:grid-cols-2"
                 style="animation-delay: 0.05s"
             >
@@ -104,7 +103,9 @@ const weightDistributionData = computed(() => {
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume</h3>
                         <p class="text-text-muted text-xs font-semibold">Volume total par séance (kg)</p>
                     </div>
-                    <VolumeTrendChart :data="volumeData" />
+                    <div class="h-64">
+                        <VolumeTrendChart :data="volumeData" />
+                    </div>
                 </GlassCard>
 
                 <GlassCard>
@@ -112,9 +113,17 @@ const weightDistributionData = computed(() => {
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charges</h3>
                         <p class="text-text-muted text-xs font-semibold">Distribution des poids utilisés</p>
                     </div>
-                    <WeightDistributionChart :data="weightDistributionData" />
+                    <div class="h-64">
+                        <WeightDistributionChart :data="weightDistributionData" />
+                    </div>
                 </GlassCard>
             </div>
+            <GlassCard v-else class="animate-slide-up" style="animation-delay: 0.05s">
+                <div class="flex h-64 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                    <p class="text-text-muted text-sm">Pas assez de données pour afficher les statistiques</p>
+                </div>
+            </GlassCard>
 
             <!-- History List -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
