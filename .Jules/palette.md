@@ -9,3 +9,7 @@
 ## 2026-02-03 - Dynamic Labels for Badged Buttons
 **Learning:** Buttons with status badges (like notification counts) need dynamic aria-labels (e.g., "Notifications (3 unread)") because the badge content itself is often just a number and separate from the icon.
 **Action:** Use computed properties or template literals for aria-labels on buttons with state counters.
+
+## 2026-02-04 - Keyboard Shortcut Implementation & Case Sensitivity
+**Learning:** Visual keyboard hints (e.g., ⌘K) in the UI create a functional promise. If not implemented, they frustrate power users. Using `e.key.toLowerCase()` ensures shortcuts work regardless of Caps Lock or Shift state.
+**Action:** Verify visual shortcut hints are implemented and use case-insensitive matching for keyboard event listeners.

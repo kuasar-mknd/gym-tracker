@@ -11,7 +11,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted, watch } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
@@ -34,13 +34,29 @@ const props = defineProps({
 const showAddForm = ref(false)
 const editingExercise = ref(null)
 const searchQuery = ref('')
+const searchInput = ref(null)
 const activeCategory = ref('all')
 
 // Local state for optimistic updates to ensure immediate UI feedback before server confirmation
 const localExercises = ref([...props.exercises])
 
+// Keyboard shortcut for search (⌘K / Ctrl+K)
+const handleKeyDown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchInput.value?.focus()
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown)
+})
+
 // Sync local state when the server returns updated props (e.g., after a successful partial reload)
-import { watch } from 'vue'
 watch(
     () => props.exercises,
     (newExercises) => {
@@ -269,8 +285,10 @@ const typeLabel = (type) => {
                 <span class="material-symbols-outlined text-text-muted text-[24px]">search</span>
                 <input
                     v-model="searchQuery"
+                    ref="searchInput"
                     type="search"
                     placeholder="Recherche exercices..."
+                    aria-label="Rechercher des exercices"
                     class="text-text-main placeholder:text-text-muted/50 flex-1 border-none bg-transparent text-lg focus:ring-0 focus:outline-none"
                 />
                 <div
