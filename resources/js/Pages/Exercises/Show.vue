@@ -3,12 +3,28 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
-import ExerciseVolumeChart from '@/Components/Stats/ExerciseVolumeChart.vue'
+import VolumeTrendChart from '@/Components/Stats/VolumeTrendChart.vue'
+import { computed } from 'vue'
 
 const props = defineProps({
     exercise: Object,
     progress: Array,
     history: Array,
+})
+
+const volumeHistory = computed(() => {
+    if (!props.history) return []
+    return props.history
+        .map((session) => {
+            const totalVolume = session.sets.reduce((sum, set) => {
+                return sum + (set.weight || 0) * (set.reps || 0)
+            }, 0)
+            return {
+                date: session.formatted_date,
+                volume: totalVolume,
+            }
+        })
+        .reverse()
 })
 </script>
 
@@ -52,18 +68,18 @@ const props = defineProps({
                 </div>
             </GlassCard>
 
-            <!-- Volume History Chart -->
+            <!-- Volume Chart -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume par Séance</h3>
-                    <p class="text-text-muted text-xs font-semibold">Tonnage total</p>
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume par séance</h3>
+                    <p class="text-text-muted text-xs font-semibold">Tonnage total (kg)</p>
                 </div>
-                <div v-if="history.length > 0" class="h-64">
-                    <ExerciseVolumeChart :data="history" />
+                <div v-if="volumeHistory.length > 0" class="h-64">
+                    <VolumeTrendChart :data="volumeHistory" />
                 </div>
                 <div v-else class="flex h-64 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
-                    <p class="text-text-muted text-sm">Pas de données de volume</p>
+                    <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                 </div>
             </GlassCard>
 
