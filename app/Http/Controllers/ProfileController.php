@@ -61,10 +61,8 @@ class ProfileController extends Controller
     /**
      * Update the user's notification preferences.
      */
-    public function updatePreferences(
-        UpdateNotificationPreferencesRequest $request,
-        UpdateNotificationPreferencesAction $updatePreferences
-    ): RedirectResponse {
+    public function updatePreferences(UpdateNotificationPreferencesRequest $request, UpdateNotificationPreferencesAction $updatePreferences): RedirectResponse
+    {
         /**
          * @var array{
          *     preferences: array<string, bool>,
