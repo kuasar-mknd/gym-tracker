@@ -34,6 +34,7 @@ test('user can manage exercises', function (): void {
 
         // 3. Verify exercise was created
         $browser->pause(2000)
+            ->waitForLocation('/exercises')
             ->waitForText('Dusk Test Exercise', 15);
 
         // 4. Edit the exercise
