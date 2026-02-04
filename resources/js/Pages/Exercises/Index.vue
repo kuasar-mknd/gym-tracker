@@ -464,7 +464,11 @@ const typeLabel = (type) => {
                                 ]"
                             >
                                 <!-- View Mode -->
-                                <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
+                                <div
+                                    v-if="editingExercise !== exercise.id"
+                                    class="flex cursor-pointer items-center justify-between"
+                                    @click="router.visit(route('exercises.show', { exercise: exercise.id }))"
+                                >
                                     <div class="flex items-center gap-4">
                                         <div
                                             :class="[
