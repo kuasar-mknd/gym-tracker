@@ -7,6 +7,7 @@ namespace Tests\Unit\Services;
 use App\Models\User;
 use App\Services\StatsService;
 use Illuminate\Support\Facades\Cache;
+use Mockery;
 use Tests\TestCase;
 
 class StatsServiceCacheTest extends TestCase
@@ -25,6 +26,7 @@ class StatsServiceCacheTest extends TestCase
 
         // Expectation: Workout related keys are cleared
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
+        Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key) => str_starts_with($key, "stats.weekly_volume_comparison.{$user->id}")));
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
         Cache::shouldReceive('forget')->once()->with("dashboard_data_{$user->id}");
 
@@ -69,6 +71,7 @@ class StatsServiceCacheTest extends TestCase
 
         // Expect everything to be cleared
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
+        Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key) => str_starts_with($key, "stats.weekly_volume_comparison.{$user->id}")));
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
         Cache::shouldReceive('forget')->times(2)->with("dashboard_data_{$user->id}"); // Called by both sub-methods
 
