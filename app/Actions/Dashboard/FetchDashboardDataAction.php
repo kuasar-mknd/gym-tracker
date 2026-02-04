@@ -66,34 +66,51 @@ final class FetchDashboardDataAction
             ->count();
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord> */
+    /**
+     * Get recent Personal Records.
+     * Optimized to fetch only the amount displayed on the dashboard (2).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>
+     */
     private function getRecentPRs(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->personalRecords()
             ->with('exercise')
             ->latest('achieved_at')
-            ->take(5)
+            ->take(2)
             ->get();
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal> */
+    /**
+     * Get active goals.
+     * Optimized to fetch only the amount displayed on the dashboard (2).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
+     */
     private function getActiveGoals(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->goals()
             ->whereNull('completed_at')
             ->latest()
-            ->take(3)
+            ->take(2)
             ->get()
             ->append(['progress', 'unit']);
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout> */
+    /**
+     * Get recent workouts.
+     * PERFORMANCE OPTIMIZATION: Uses withCount('workoutLines') instead of with('workoutLines')
+     * to avoid loading full collections when only the count is needed for UI logic.
+     * Limits to 3 items as per dashboard layout.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>
+     */
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->workouts()
-            ->with('workoutLines')
+            ->withCount('workoutLines')
             ->latest('started_at')
-            ->limit(5)
+            ->limit(3)
             ->get();
     }
 }
