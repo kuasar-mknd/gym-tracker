@@ -22,9 +22,11 @@ class StatsServiceCacheTest extends TestCase
     public function test_clear_workout_related_stats_clears_correct_keys(): void
     {
         $user = User::factory()->make(['id' => 123]);
+        $weekKey = now()->startOfWeek()->format('Y-W');
 
         // Expectation: Workout related keys are cleared
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
+        Cache::shouldReceive('forget')->once()->with("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
         Cache::shouldReceive('forget')->once()->with("dashboard_data_{$user->id}");
 
@@ -78,9 +80,11 @@ class StatsServiceCacheTest extends TestCase
     public function test_clear_user_stats_cache_clears_all_keys(): void
     {
         $user = User::factory()->make(['id' => 123]);
+        $weekKey = now()->startOfWeek()->format('Y-W');
 
         // Expect everything to be cleared
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
+        Cache::shouldReceive('forget')->once()->with("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
         Cache::shouldReceive('forget')->times(2)->with("dashboard_data_{$user->id}"); // Called by both sub-methods
 
