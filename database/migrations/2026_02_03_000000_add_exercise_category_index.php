@@ -25,13 +25,12 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        Schema::table('exercises', function (Blueprint $table): void {
-            // Check if index exists before dropping to avoid errors
-            try {
+        try {
+            Schema::table('exercises', function (Blueprint $table): void {
                 $table->dropIndex(['user_id', 'category', 'name']);
-            } catch (\Throwable $e) {
-                // Index might not exist or be named differently, safe to ignore in down
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            // Index might not exist or be named differently, safe to ignore in down
+        }
     }
 };
