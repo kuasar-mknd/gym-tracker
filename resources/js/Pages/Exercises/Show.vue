@@ -87,8 +87,9 @@ const weightDistributionData = computed(() => {
                 <Link
                     :href="route('exercises.index')"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
+                    aria-label="Retour aux exercices"
                 >
-                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
                 <div>
                     <h1 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
