@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Laravel\Dusk\Browser;
+
+uses(DatabaseMigrations::class);
 
 test('user can manage exercises', function (): void {
     $user = User::factory()->create();
@@ -12,7 +15,6 @@ test('user can manage exercises', function (): void {
         // Start with desktop view for reliability
         $browser->loginAs($user)
             ->resize(1280, 800)
-            ->pause(1000) // Ensure resize stabilizes
             ->visit('/exercises')
             ->waitFor('main', 15)
             ->assertPathIs('/exercises')
@@ -22,8 +24,8 @@ test('user can manage exercises', function (): void {
             ->script("document.querySelector('[data-testid=\"create-exercise-desktop\"]').click();");
 
         // 2. Fill and submit the create form
-        $browser->pause(1000) // Allow modal animation
-            ->waitForText('Nouvel exercice', 15)
+        $browser->pause(500)
+            ->waitForText('NOUVEL EXERCICE', 15) // Case sensitive check or wait for element
             ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')

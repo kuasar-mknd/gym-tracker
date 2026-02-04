@@ -198,14 +198,11 @@ watch(
 
 <template>
     <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-60 sm:right-4 sm:left-auto sm:w-80">
-        <GlassCard
-            class="border-accent-primary/20 overflow-hidden bg-black/80 shadow-2xl backdrop-blur-xl"
-            padding="p-0"
-        >
+        <GlassCard class="overflow-hidden border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md" padding="p-0">
             <!-- Progress bar -->
             <div class="h-1 w-full bg-white/5">
                 <div
-                    class="bg-accent-primary h-full transition-all duration-1000 ease-linear"
+                    class="h-full bg-white/80 shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-1000 ease-linear"
                     :style="{ width: `${progress}%` }"
                 ></div>
             </div>
@@ -222,7 +219,7 @@ watch(
                     <div class="flex gap-2">
                         <button
                             @click="addTime(30)"
-                            class="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition hover:bg-white/10 active:scale-95"
+                            class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition hover:bg-white/20 active:scale-95"
                             title="+30s"
                         >
                             <span class="text-xs font-bold">+30s</span>
@@ -230,7 +227,7 @@ watch(
 
                         <button
                             @click="toggleTimer"
-                            class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black transition hover:brightness-110 active:scale-95"
+                            class="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/20 text-white transition hover:bg-white/30 active:scale-95"
                         >
                             <svg v-if="isActive" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 4h4v16H6V4zm8 0h4v16h4V4z" />
@@ -244,10 +241,15 @@ watch(
                 </div>
 
                 <div class="mt-4 flex gap-2">
-                    <GlassButton @click="skipTimer" variant="secondary" size="sm" class="flex-1"> Passer </GlassButton>
+                    <button
+                        @click="skipTimer"
+                        class="flex-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/20 active:scale-95"
+                    >
+                        Passer
+                    </button>
                     <button
                         @click="close"
-                        class="rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-white/60 transition hover:bg-white/10"
+                        class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/60 transition hover:bg-white/10 active:scale-95"
                     >
                         Fermer
                     </button>
