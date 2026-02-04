@@ -14,11 +14,13 @@ return new class() extends Migration
     public function up(): void
     {
         try {
-            Schema::table('water_logs', function (Blueprint $table): void {
-                $table->index(['user_id', 'consumed_at']);
-            });
+            if (Schema::hasTable('water_logs') && ! Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
+                Schema::table('water_logs', function (Blueprint $table): void {
+                    $table->index(['user_id', 'consumed_at'], 'water_logs_user_id_consumed_at_index');
+                });
+            }
         } catch (\Throwable $e) {
-            // Index already exists
+            // Silently ignore
         }
     }
 
