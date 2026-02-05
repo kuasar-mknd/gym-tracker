@@ -489,7 +489,6 @@ class StatsService
     }
 
     /**
-     * @param  \stdClass  $row
      * @return array{date: string, full_date: string, name: string, volume: float}
      */
     protected function formatVolumeTrendItem(\stdClass $row): array
@@ -498,7 +497,6 @@ class StatsService
     }
 
     /**
-     * @param  \stdClass  $set
      * @return array{date: string, full_date: string, one_rep_max: float}
      */
     protected function formatExercise1RMItem(\stdClass $set): array
