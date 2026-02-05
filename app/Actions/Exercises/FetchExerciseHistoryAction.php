@@ -9,11 +9,6 @@ use Illuminate\Support\Collection;
 
 class FetchExerciseHistoryAction
 {
-    /**
-     * @param User $user
-     * @param Exercise $exercise
-     * @return Collection
-     */
     public function execute(User $user, Exercise $exercise): Collection
     {
         $workouts = Workout::where('user_id', $user->id)
@@ -31,6 +26,7 @@ class FetchExerciseHistoryAction
             $sets = $line->sets->map(function ($set) {
                 // Epley formula: w * (1 + r/30)
                 $oneRm = ($set->weight ?? 0) * (1 + ($set->reps ?? 0) / 30);
+
                 return [
                     'weight' => $set->weight,
                     'reps' => $set->reps,
