@@ -171,6 +171,7 @@ jobs:
                   LOG_LEVEL: debug
                   TELESCOPE_ENABLED: false
                   PULSE_ENABLED: false
+                  DUSK_DRIVER_URL: http://127.0.0.1:9515
 
               run: |
                   # Write environment variables to .env so artisan serve subprocess uses them
@@ -195,6 +196,7 @@ jobs:
                   echo "LOG_LEVEL=debug" >> .env
                   echo "TELESCOPE_ENABLED=false" >> .env
                   echo "PULSE_ENABLED=false" >> .env
+                  echo "DUSK_DRIVER_URL=http://127.0.0.1:9515" >> .env
                   php artisan migrate:fresh --seed
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
                   sleep 15
