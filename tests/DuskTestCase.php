@@ -34,7 +34,7 @@ abstract class DuskTestCase extends BaseTestCase
             $logs = $this->driver->manage()->getLog('browser');
             $failures = collect($logs)->filter(
                 fn ($log): bool => $log['level'] === 'SEVERE' &&
-                    ! str_contains($log['message'], 'Failed to send logs')
+                    ! str_contains((string) $log['message'], 'Failed to send logs')
             );
 
             \PHPUnit\Framework\Assert::assertTrue(
