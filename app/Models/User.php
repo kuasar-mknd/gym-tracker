@@ -79,6 +79,14 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough<WorkoutLine, Workout, $this>
+     */
+    public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(WorkoutLine::class, Workout::class);
+    }
+
+    /**
      * @return HasMany<BodyMeasurement, $this>
      */
     public function bodyMeasurements(): HasMany
