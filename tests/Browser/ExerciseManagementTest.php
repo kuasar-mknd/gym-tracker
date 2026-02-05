@@ -34,7 +34,7 @@ test('user can manage exercises', function (): void {
 
         // 3. Verify exercise was created
         $browser->pause(1000)
-            ->waitForText('Dusk Test Exercise', 15);
+            ->waitForText('DUSK TEST EXERCISE', 15);
 
         // 4. Edit the exercise
         $browser->waitFor('[data-testid="edit-exercise-button"]', 5)
