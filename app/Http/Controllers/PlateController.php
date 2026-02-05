@@ -33,7 +33,7 @@ class PlateController extends Controller
         $plate->user_id = $this->user()->id;
         $plate->save();
 
-        return redirect()->route('plates.index')->with('success', 'Plaque ajoutée.');
+        return redirect()->back();
     }
 
     public function update(\App\Http\Requests\UpdatePlateRequest $request, Plate $plate): \Illuminate\Http\RedirectResponse
@@ -42,7 +42,7 @@ class PlateController extends Controller
 
         $plate->update($request->validated());
 
-        return redirect()->route('plates.index')->with('success', 'Plaque mise à jour.');
+        return redirect()->back();
     }
 
     public function destroy(Plate $plate): \Illuminate\Http\RedirectResponse
@@ -51,6 +51,6 @@ class PlateController extends Controller
 
         $plate->delete();
 
-        return redirect()->route('plates.index')->with('success', 'Plaque supprimée.');
+        return redirect()->back();
     }
 }
