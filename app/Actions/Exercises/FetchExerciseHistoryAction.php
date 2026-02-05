@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions\Exercises;
+
+use App\Models\Exercise;
+use App\Models\User;
+use App\Models\Workout;
+use Illuminate\Support\Collection;
+
+class FetchExerciseHistoryAction
+{
+    public function execute(User $user, Exercise $exercise): array
+    {
+        // Fetch workouts containing this exercise
+        $workouts = Workout::query()
+            ->where('user_id', $user->id)
+            ->whereHas('workoutLines', function ($query) use ($exercise) {
+                $query->where('exercise_id', $exercise->id);
+            })
+            ->with(['workoutLines' => function ($query) use ($exercise) {
+                $query->where('exercise_id', $exercise->id)
+                      ->with('sets');
+            }])
+            ->orderByDesc('started_at')
+            ->get();
+
+        return $workouts->map(function (Workout $workout) {
+            $line = $workout->workoutLines->first();
+            $sets = $line ? $line->sets->map(fn ($set) => [
+                'weight' => $set->weight,
+                'reps' => $set->reps,
+                '1rm' => $set->weight * (1 + $set->reps / 30.0),
+            ]) : collect();
+
+            $best1rm = $sets->max('1rm') ?? 0;
+
+            return [
+                'id' => $workout->id,
+                'workout_id' => $workout->id,
+                'workout_name' => $workout->name,
+                'formatted_date' => $workout->started_at->translatedFormat('D d M'),
+                'best_1rm' => $best1rm,
+                'sets' => $sets->toArray(),
+            ];
+        })->toArray();
+    }
+}
