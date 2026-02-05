@@ -46,7 +46,7 @@ class SetsController extends Controller
         $this->authorize('create', [Set::class, $workoutLine]);
 
         $set = $workoutLine->sets()->create($request->validated());
-        $this->prService->syncSetPRs($set);
+        $this->prService->syncSetPRs($set, $this->user());
         $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return back();
@@ -70,7 +70,7 @@ class SetsController extends Controller
         $this->authorize('update', $set);
 
         $set->update($request->validated());
-        $this->prService->syncSetPRs($set);
+        $this->prService->syncSetPRs($set, $this->user());
         $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return back();

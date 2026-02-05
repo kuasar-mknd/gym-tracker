@@ -30,15 +30,16 @@ final class PersonalRecordService
      * skips processing for non-relevant sets (warmups, missing data).
      *
      * @param  Set  $set  The completed set to evaluate.
+     * @param  User|null  $user  The user who performed the set (optional, for performance).
      */
-    public function syncSetPRs(Set $set): void
+    public function syncSetPRs(Set $set, ?User $user = null): void
     {
         // Early return for non-relevant sets to save DB queries
         if ($set->is_warmup || (! $set->weight && ! $set->reps)) {
             return;
         }
 
-        $user = $set->workoutLine->workout->user;
+        $user = $user ?: $set->workoutLine->workout->user;
         $exerciseId = $set->workoutLine->exercise_id;
 
         // Fetch all existing PRs for this user and exercise in a single query
@@ -89,7 +90,7 @@ final class PersonalRecordService
         }
 
         if (! $existingPR || $set->weight > $existingPR->value) {
-            $this->savePR($user, $exerciseId, 'max_weight', $set->weight, (float) $set->reps, $workoutId, $set->id, $existingPR);
+            $this->savePR($user, $exerciseId, 'max_weight', $set->weight, $set->reps, $workoutId, $set->id, $existingPR);
         }
     }
 
