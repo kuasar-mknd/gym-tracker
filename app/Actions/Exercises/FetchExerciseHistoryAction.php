@@ -18,10 +18,10 @@ class FetchExerciseHistoryAction
         // Fetch workouts containing this exercise
         $workouts = Workout::query()
             ->where('user_id', $user->id)
-            ->whereHas('workoutLines', function ($query) use ($exercise) {
+            ->whereHas('workoutLines', function ($query) use ($exercise): void {
                 $query->where('exercise_id', $exercise->id);
             })
-            ->with(['workoutLines' => function ($query) use ($exercise) {
+            ->with(['workoutLines' => function ($query) use ($exercise): void {
                 $query->where('exercise_id', $exercise->id)
                     ->with('sets');
             }])
@@ -29,9 +29,9 @@ class FetchExerciseHistoryAction
             ->get();
 
         /** @var array<int, array<string, mixed>> $history */
-        $history = $workouts->map(function (Workout $workout) {
+        $history = $workouts->map(function (Workout $workout): array {
             $line = $workout->workoutLines->first();
-            $sets = $line ? $line->sets->map(fn ($set) => [
+            $sets = $line ? $line->sets->map(fn ($set): array => [
                 'weight' => $set->weight,
                 'reps' => $set->reps,
                 '1rm' => $set->weight * (1 + $set->reps / 30.0),

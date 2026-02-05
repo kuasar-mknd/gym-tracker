@@ -37,8 +37,9 @@ test('user can manage exercises', function (): void {
             ->waitForText('DUSK TEST EXERCISE', 15);
 
         // 4. Edit the exercise
-        $browser->waitFor('[data-testid="edit-exercise-button"]', 5)
-            ->script("document.querySelector('[data-testid=\"edit-exercise-button\"]').click();");
+        $browser->mouseover('[data-testid="edit-exercise-button"]')
+            ->waitFor('[data-testid="edit-exercise-button"]', 5)
+            ->click('[data-testid="edit-exercise-button"]');
 
         $browser->waitFor('input[type="text"]', 10)
             ->pause(500)
