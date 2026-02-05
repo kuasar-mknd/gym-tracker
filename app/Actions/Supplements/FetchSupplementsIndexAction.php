@@ -29,11 +29,10 @@ final class FetchSupplementsIndexAction
     /**
      * Retrieve supplements with their latest log status.
      *
-     * @return Collection<int, mixed>
+     * @return Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: null}>
      */
     private function getSupplementsWithLatestLog(User $user): Collection
     {
-        /** @var Collection<int, mixed> $results */
         return Supplement::forUser($user->id)
             ->with(['latestLog'])
             ->get()
