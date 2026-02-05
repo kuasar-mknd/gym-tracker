@@ -112,7 +112,7 @@ class WorkoutsController extends Controller
         $data = $request->validated();
         $updateWorkout->execute($workout, $data);
 
-        return back();
+        return redirect()->route('workouts.show', $workout);
     }
 
     /**

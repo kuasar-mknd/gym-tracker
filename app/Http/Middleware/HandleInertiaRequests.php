@@ -24,12 +24,14 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $isTesting = app()->environment(['testing', 'dusk', 'dusk.local']) || $request->cookie('is_dusk_test');
+
         return [
             ...parent::share($request),
             'auth' => [
                 'user' => $this->getUserData($request),
             ],
-            'is_testing' => app()->environment('testing'),
+            'is_testing' => $isTesting,
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             'ziggy' => function () use ($request): array {
                 $ziggy = new Ziggy();
