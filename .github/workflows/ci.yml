@@ -174,29 +174,27 @@ jobs:
 
               run: |
                   # Write environment variables to .env so artisan serve subprocess uses them
-                  cat >> .env << 'EOF'
-                  APP_ENV=testing
-                  APP_URL=http://127.0.0.1:8000
-                  DB_CONNECTION=mysql
-                  DB_HOST=127.0.0.1
-                  DB_PORT=3307
-                  DB_DATABASE=gym_tracker_dusk
-                  DB_USERNAME=root
-                  DB_PASSWORD=
-                  SESSION_DRIVER=cookie
-                  SESSION_DOMAIN=
-                  SESSION_SECURE_COOKIE=false
-                  SESSION_SAME_SITE=lax
-                  SESSION_PATH=/
-                  BROADCAST_CONNECTION=log
-                  CACHE_STORE=array
-                  QUEUE_CONNECTION=sync
-                  MAIL_MAILER=array
-                  APP_DEBUG=false
-                  LOG_LEVEL=debug
-                  TELESCOPE_ENABLED=false
-                  PULSE_ENABLED=false
-                  EOF
+                  echo "APP_ENV=testing" >> .env
+                  echo "APP_URL=http://127.0.0.1:8000" >> .env
+                  echo "DB_CONNECTION=mysql" >> .env
+                  echo "DB_HOST=127.0.0.1" >> .env
+                  echo "DB_PORT=3307" >> .env
+                  echo "DB_DATABASE=gym_tracker_dusk" >> .env
+                  echo "DB_USERNAME=root" >> .env
+                  echo "DB_PASSWORD=" >> .env
+                  echo "SESSION_DRIVER=cookie" >> .env
+                  echo "SESSION_DOMAIN=" >> .env
+                  echo "SESSION_SECURE_COOKIE=false" >> .env
+                  echo "SESSION_SAME_SITE=lax" >> .env
+                  echo "SESSION_PATH=/" >> .env
+                  echo "BROADCAST_CONNECTION=log" >> .env
+                  echo "CACHE_STORE=array" >> .env
+                  echo "QUEUE_CONNECTION=sync" >> .env
+                  echo "MAIL_MAILER=array" >> .env
+                  echo "APP_DEBUG=false" >> .env
+                  echo "LOG_LEVEL=debug" >> .env
+                  echo "TELESCOPE_ENABLED=false" >> .env
+                  echo "PULSE_ENABLED=false" >> .env
                   php artisan migrate:fresh --seed
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
                   sleep 15
