@@ -25,7 +25,6 @@ class WorkoutLineController extends Controller
     {
         $this->authorize('viewAny', WorkoutLine::class);
 
-        // @phpstan-ignore-next-line
         $lines = QueryBuilder::for(WorkoutLine::class)
             ->allowedFilters(['workout_id'])
             ->whereHas('workout', function ($query): void {

@@ -20,7 +20,7 @@ class WorkoutLineUpdateRequest extends FormRequest
             $workoutLine = WorkoutLine::find($this->route('workout_line'));
         }
 
-        if (! $workoutLine) {
+        if (! $workoutLine instanceof WorkoutLine) {
             return false;
         }
 
