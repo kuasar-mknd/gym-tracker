@@ -51,7 +51,9 @@ COPY --from=frontend-builder /app/public/build ./public/build
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-RUN composer dump-autoload --classmap-authoritative --no-dev
+RUN composer dump-autoload --classmap-authoritative --no-dev --no-scripts
+RUN php artisan package:discover --ansi
+
 RUN php artisan storage:link
 RUN chmod -R 777 storage bootstrap/cache
 RUN mkdir -p storage/logs && touch storage/logs/laravel.log
