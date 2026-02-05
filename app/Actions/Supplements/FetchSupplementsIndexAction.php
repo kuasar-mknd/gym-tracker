@@ -34,7 +34,7 @@ final class FetchSupplementsIndexAction
     private function getSupplementsWithLatestLog(User $user): Collection
     {
         /** @var Collection<int, mixed> $results */
-        $results = Supplement::forUser($user->id)
+        return Supplement::forUser($user->id)
             ->with(['latestLog'])
             ->get()
             ->map(fn (Supplement $supplement): array => [
@@ -45,8 +45,6 @@ final class FetchSupplementsIndexAction
                 'unit' => 'servings',
                 'daily_goal' => null,
             ]);
-
-        return $results;
     }
 
     /**
