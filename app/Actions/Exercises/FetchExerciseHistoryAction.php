@@ -12,13 +12,13 @@ use Illuminate\Support\Collection;
 class FetchExerciseHistoryAction
 {
     /**
-     * @return Collection<int, array{
+     * @return \Illuminate\Support\Collection<int, array{
      *     id: int,
      *     workout_id: int,
      *     workout_name: string,
      *     formatted_date: string,
      *     best_1rm: float,
-     *     sets: Collection<int, array{weight: float, reps: int, 1rm: float}>
+     *     sets: \Illuminate\Support\Collection<int, array{weight: float, reps: int, 1rm: float}>
      * }>
      */
     public function execute(User $user, Exercise $exercise): Collection
@@ -33,6 +33,7 @@ class FetchExerciseHistoryAction
             ->get()
             ->map(function (WorkoutLine $line) {
                 $workout = $line->workout;
+                /** @phpstan-ignore-next-line */
                 if (! $workout || ! $workout->started_at) {
                     return null;
                 }

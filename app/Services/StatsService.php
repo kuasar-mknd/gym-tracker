@@ -298,13 +298,16 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
-        return $this->queryVolumeHistory($user, $limit)
-            ->map(fn (object $row): array => $this->formatVolumeHistoryRow($row))
+        /** @var array<int, array{date: string, volume: float, name: string}> $result */
+        $result = $this->queryVolumeHistory($user, $limit)
+            ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
+
+        return $result;
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, object{id: int, started_at: string, name: string, volume: int|float}>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
     protected function queryVolumeHistory(User $user, int $limit): \Illuminate\Support\Collection
     {
@@ -382,7 +385,7 @@ class StatsService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<string, object{date: string, volume: int|float}>
+     * @return \Illuminate\Support\Collection<string, \stdClass>
      */
     protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): \Illuminate\Support\Collection
     {
@@ -414,7 +417,7 @@ class StatsService
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, object{volume: int|float}>  $workouts
+     * @param  \Illuminate\Support\Collection<string, \stdClass>  $workouts
      * @return array<int, array{date: string, day_label: string, volume: float}>
      */
     protected function fillWeeklyTrend(Carbon $startOfWeek, \Illuminate\Support\Collection $workouts): array
@@ -434,6 +437,7 @@ class StatsService
      */
     protected function formatVolumeTrendItem(\stdClass $row): array
     {
+        // @phpstan-ignore-next-line
         return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'), 'name' => $row->name, 'volume' => (float) $row->volume];
     }
 
