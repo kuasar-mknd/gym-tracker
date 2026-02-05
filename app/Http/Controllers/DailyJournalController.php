@@ -55,7 +55,7 @@ class DailyJournalController extends Controller
         $journal->fill($validated);
         $journal->save();
 
-        return redirect()->route('daily-journals.index')->with('success', 'Journal enregistré.');
+        return redirect()->back();
     }
 
     /**
@@ -67,6 +67,6 @@ class DailyJournalController extends Controller
 
         $dailyJournal->delete();
 
-        return redirect()->route('daily-journals.index')->with('success', 'Journal supprimé.');
+        return redirect()->back();
     }
 }

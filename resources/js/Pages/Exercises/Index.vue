@@ -25,39 +25,38 @@ const ExerciseCategoryChart = defineAsyncComponent(() => import('@/Components/St
 const props = defineProps({
     /** Array of all exercises belonging to the user. */
     exercises: Array,
-    /** Indicates if the application is in a testing environment. */
-    is_testing: Boolean,
     /** List of available exercise categories (e.g., 'Pectoraux', 'Dos'). */
     categories: Array,
     /** List of available exercise types (e.g., 'strength', 'cardio'). */
     types: Array,
 })
 
-// --- State Management ---
-
-/** Controls the visibility of the Add Exercise form. */
 const showAddForm = ref(false)
-
-/** Search query for filtering exercises. */
+const editingExercise = ref(null)
 const searchQuery = ref('')
-
-/** Currently selected category for filtering. */
 const activeCategory = ref('all')
 
-/** ID of the exercise currently being edited. */
-const editingExercise = ref(null)
+// Local state for optimistic updates to ensure immediate UI feedback before server confirmation
+const localExercises = ref([...props.exercises])
 
-/** Form for creating a new exercise. */
+// Sync local state when the server returns updated props (e.g., after a successful partial reload)
+import { watch } from 'vue'
+watch(
+    () => props.exercises,
+    (newExercises) => {
+        localExercises.value = [...newExercises]
+    },
+)
+
 const form = useForm({
     name: '',
     type: 'strength',
     category: '',
 })
 
-/** Form for editing an existing exercise. */
 const editForm = useForm({
     name: '',
-    type: 'strength',
+    type: '',
     category: '',
 })
 
@@ -67,17 +66,12 @@ const editForm = useForm({
  */
 const submit = () => {
     form.post(route('exercises.store'), {
-        preserveScroll: true,
         onSuccess: () => {
-            console.log('Exercise created successfully')
             form.reset()
             showAddForm.value = false
             triggerHaptic('success')
         },
-        onError: (errors) => {
-            console.error('Exercise creation failed:', errors)
-            triggerHaptic('error')
-        },
+        onError: () => triggerHaptic('error'),
     })
 }
 
@@ -107,27 +101,32 @@ const updateExercise = (exercise) => {
  */
 const deleteExercise = (id) => {
     if (confirm('Supprimer cet exercice ?')) {
+        const index = localExercises.value.findIndex((e) => e.id === id)
+        if (index === -1) return
+
+        const removed = localExercises.value[index]
+        localExercises.value.splice(index, 1)
         triggerHaptic('warning')
 
         router.delete(route('exercises.destroy', { exercise: id }), {
             preserveScroll: true,
             onError: () => {
+                // Rollback if server fails
+                localExercises.value.splice(index, 0, removed)
                 triggerHaptic('error')
             },
         })
     }
 }
 
-//** Filtered list of exercises based on category and search query. */
+// Filter exercises based on the search query and selected category
 const filteredExercises = computed(() => {
-    const exercises = props.exercises || []
-    if (activeCategory.value === 'all') {
-        return exercises.filter((e) => e.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
-    }
-
-    return exercises.filter(
-        (e) => e.category === activeCategory.value && e.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
-    )
+    return localExercises.value.filter((exercise) => {
+        const matchesSearch =
+            !searchQuery.value || exercise.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+        const matchesCategory = activeCategory.value === 'all' || exercise.category === activeCategory.value
+        return matchesSearch && matchesCategory
+    })
 })
 
 // Group filtered exercises by category for display
@@ -324,7 +323,7 @@ const typeLabel = (type) => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="font-display-label text-text-muted mb-2 block">Type</label>
-                            <select v-model="form.type" class="glass-input w-full" data-testid="exercise-type-select">
+                            <select v-model="form.type" class="glass-input w-full">
                                 <option v-for="t in types" :key="t.value" :value="t.value">
                                     {{ t.label }}
                                 </option>
@@ -335,11 +334,7 @@ const typeLabel = (type) => {
                         </div>
                         <div>
                             <label class="font-display-label text-text-muted mb-2 block">Catégorie</label>
-                            <select
-                                v-model="form.category"
-                                class="glass-input w-full"
-                                data-testid="exercise-category-select"
-                            >
+                            <select v-model="form.category" class="glass-input w-full">
                                 <option value="">— Aucune —</option>
                                 <option v-for="cat in categories" :key="cat" :value="cat">
                                     {{ cat }}
@@ -436,9 +431,9 @@ const typeLabel = (type) => {
                         >
                             <template #action-left>
                                 <button
-                                    @click.stop="startEdit(exercise)"
+                                    @click="startEdit(exercise)"
                                     class="flex h-full w-full items-center justify-start bg-blue-500 pl-6 text-white"
-                                    data-testid="edit-exercise-button-swipe"
+                                    data-testid="edit-exercise-button-mobile"
                                 >
                                     <div class="flex flex-col items-center">
                                         <span class="material-symbols-outlined text-2xl">edit</span>
@@ -449,7 +444,7 @@ const typeLabel = (type) => {
 
                             <template #action-right>
                                 <button
-                                    @click.stop="deleteExercise(exercise.id)"
+                                    @click="deleteExercise(exercise.id)"
                                     class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
                                     data-testid="delete-exercise-button-mobile"
                                 >
@@ -464,34 +459,17 @@ const typeLabel = (type) => {
                                 padding="p-4"
                                 :class="[
                                     'group relative overflow-hidden transition-all duration-300',
-                                    editingExercise === exercise.id
-                                        ? 'ring-electric-orange shadow-electric-orange/20 shadow-lg ring-2'
-                                        : '',
-                                    exercise.category === 'Pectoraux'
-                                        ? 'border-l-[6px] border-l-blue-400'
-                                        : exercise.category === 'Dos'
-                                          ? 'border-l-[6px] border-l-green-400'
-                                          : exercise.category === 'Jambes'
-                                            ? 'border-l-[6px] border-l-purple-400'
-                                            : exercise.category === 'Épaules'
-                                              ? 'border-l-[6px] border-l-orange-400'
-                                              : exercise.category === 'Bras'
-                                                ? 'border-l-[6px] border-l-red-400'
-                                                : exercise.category === 'Abdominaux'
-                                                  ? 'border-l-[6px] border-l-yellow-400'
-                                                  : exercise.category === 'Cardio'
-                                                    ? 'border-l-[6px] border-l-cyan-400'
-                                                    : 'border-l-[6px] border-l-slate-400',
+                                    'border-l-[6px]',
+                                    categoryBorderColors[category] || 'border-l-slate-300',
                                 ]"
-                                :data-exercise-row="exercise.name"
                             >
                                 <!-- View Mode -->
-                                <div v-if="editingExercise !== exercise.id" class="flex items-center justify-between">
-                                    <Link
-                                        :href="route('exercises.show', { exercise: exercise.id })"
-                                        class="flex cursor-pointer items-center gap-4"
-                                        data-testid="exercise-navigation-link"
-                                    >
+                                <div
+                                    v-if="editingExercise !== exercise.id"
+                                    class="flex cursor-pointer items-center justify-between"
+                                    @click="router.visit(route('exercises.show', { exercise: exercise.id }))"
+                                >
+                                    <div class="flex items-center gap-4">
                                         <div
                                             :class="[
                                                 'flex size-14 items-center justify-center rounded-2xl',
@@ -509,8 +487,6 @@ const typeLabel = (type) => {
                                         <div>
                                             <div
                                                 class="font-display text-text-main text-lg leading-tight font-bold uppercase italic"
-                                                data-testid="exercise-name"
-                                                :data-exercise-name="exercise.name"
                                             >
                                                 {{ exercise.name }}
                                             </div>
@@ -520,19 +496,13 @@ const typeLabel = (type) => {
                                                 {{ typeLabel(exercise.type) }}
                                             </div>
                                         </div>
-                                    </Link>
+                                    </div>
                                     <div
-                                        class="flex items-center gap-2 transition-opacity"
-                                        :class="
-                                            is_testing
-                                                ? 'opacity-100 sm:opacity-100'
-                                                : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
-                                        "
+                                        class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                     >
                                         <button
-                                            @click.stop="startEdit(exercise)"
+                                            @click="startEdit(exercise)"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all sm:hidden"
-                                            data-testid="edit-exercise-button-mobile"
                                             :aria-label="`Modifier ${exercise.name}`"
                                         >
                                             <span class="material-symbols-outlined text-sm opacity-50">edit</span>
@@ -540,28 +510,20 @@ const typeLabel = (type) => {
 
                                         <!-- Desktop Buttons -->
                                         <button
-                                            @click.stop="startEdit(exercise)"
+                                            @click="startEdit(exercise)"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all sm:flex"
-                                            data-testid="edit-exercise-button-desktop"
+                                            data-testid="edit-exercise-button"
                                             :aria-label="`Modifier ${exercise.name}`"
                                         >
                                             <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                                         </button>
                                         <button
-                                            @click.stop="deleteExercise(exercise.id)"
+                                            @click="deleteExercise(exercise.id)"
                                             class="text-text-muted hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:flex"
                                             data-testid="delete-exercise-button"
                                             :aria-label="`Supprimer ${exercise.name}`"
                                         >
                                             <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                                        </button>
-                                        <button
-                                            @click.stop="deleteExercise(exercise.id)"
-                                            class="text-text-muted flex size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:hidden"
-                                            data-testid="delete-exercise-button"
-                                            :aria-label="`Supprimer ${exercise.name}`"
-                                        >
-                                            <span class="material-symbols-outlined text-sm opacity-50">delete</span>
                                         </button>
                                     </div>
                                 </div>
@@ -572,7 +534,6 @@ const typeLabel = (type) => {
                                         v-model="editForm.name"
                                         placeholder="Nom de l'exercice"
                                         :error="editForm.errors.name"
-                                        data-testid="edit-exercise-name-input"
                                     />
                                     <div class="grid grid-cols-2 gap-3">
                                         <select v-model="editForm.type" class="glass-input text-sm">

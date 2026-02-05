@@ -45,7 +45,7 @@ class BodyPartMeasurementController extends Controller
         $user = $request->user();
         $user->bodyPartMeasurements()->create($request->validated());
 
-        return redirect()->route('body-parts.index')->with('success', 'Measurement added.');
+        return redirect()->back()->with('success', 'Measurement added.');
     }
 
     public function destroy(BodyPartMeasurement $bodyPartMeasurement): \Illuminate\Http\RedirectResponse
@@ -54,6 +54,6 @@ class BodyPartMeasurementController extends Controller
 
         $bodyPartMeasurement->delete();
 
-        return redirect()->route('body-parts.index')->with('success', 'Measurement deleted.');
+        return redirect()->back()->with('success', 'Measurement deleted.');
     }
 }
