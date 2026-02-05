@@ -14,23 +14,11 @@ use PHPUnit\Framework\Attributes\BeforeClass;
 
 abstract class DuskTestCase extends BaseTestCase
 {
-    /**
-     * Prepare for Dusk test execution.
-     */
-    #[BeforeClass]
-    public static function prepare(): void
-    {
-        if (! static::runningInSail()) {
-            static::startChromeDriver(['--port=9515']);
-        }
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
 
         Browser::macro('assertNoConsoleExceptions', function (): object {
-            /** @var Browser $this */
             $logs = $this->driver->manage()->getLog('browser');
             $failures = collect($logs)->filter(
                 fn ($log): bool => $log['level'] === 'SEVERE' &&
@@ -44,6 +32,17 @@ abstract class DuskTestCase extends BaseTestCase
 
             return $this;
         });
+    }
+
+    /**
+     * Prepare for Dusk test execution.
+     */
+    #[BeforeClass]
+    public static function prepare(): void
+    {
+        if (! static::runningInSail()) {
+            static::startChromeDriver(['--port=9515']);
+        }
     }
 
     /**

@@ -127,6 +127,6 @@ class HabitController extends Controller
             $habit->logs()->create(['date' => $date]);
         }
 
-        return redirect()->route('habits.index');
+        return redirect()->back();
     }
 }
