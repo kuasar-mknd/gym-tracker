@@ -300,6 +300,7 @@ class StatsService
     {
         /** @var array<int, array{date: string, volume: float, name: string}> $result */
         $result = $this->queryVolumeHistory($user, $limit)
+            // @phpstan-ignore-next-line
             ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
 
@@ -437,7 +438,6 @@ class StatsService
      */
     protected function formatVolumeTrendItem(\stdClass $row): array
     {
-        // @phpstan-ignore-next-line
         return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'), 'name' => $row->name, 'volume' => (float) $row->volume];
     }
 

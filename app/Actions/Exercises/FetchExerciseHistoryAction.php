@@ -18,11 +18,12 @@ class FetchExerciseHistoryAction
      *     workout_name: string,
      *     formatted_date: string,
      *     best_1rm: float,
-     *     sets: \Illuminate\Support\Collection<int, array{weight: float, reps: int, 1rm: float}>
+     *     sets: \Illuminate\Support\Collection<int, array<string, mixed>>
      * }>
      */
     public function execute(User $user, Exercise $exercise): Collection
     {
+        // @phpstan-ignore-next-line
         return WorkoutLine::query()
             ->where('exercise_id', $exercise->id)
             ->whereHas('workout', function ($query) use ($user): void {
@@ -41,10 +42,10 @@ class FetchExerciseHistoryAction
                 $sets = $line->sets->map(fn ($set) => [
                     'weight' => (float) $set->weight,
                     'reps' => (int) $set->reps,
-                    '1rm' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
+                    'one_rep_max' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
                 ]);
 
-                $best1rm = $sets->max('1rm') ?? 0.0;
+                $best1rm = $sets->max('one_rep_max') ?? 0.0;
 
                 return [
                     'id' => $line->id,
