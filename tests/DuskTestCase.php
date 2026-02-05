@@ -34,7 +34,7 @@ abstract class DuskTestCase extends BaseTestCase
             $logs = $this->driver->manage()->getLog('browser');
             $failures = collect($logs)->filter(
                 fn ($log): bool => $log['level'] === 'SEVERE' &&
-                    ! str_contains((string) $log['message'], 'Failed to send logs')
+                    ! str_contains($log['message'], 'Failed to send logs')
             );
 
             \PHPUnit\Framework\Assert::assertTrue(
@@ -67,7 +67,8 @@ abstract class DuskTestCase extends BaseTestCase
         return RemoteWebDriver::create(
             $_ENV['DUSK_DRIVER_URL'] ?? env('DUSK_DRIVER_URL') ?? 'http://localhost:9515',
             DesiredCapabilities::chrome()->setCapability(
-                ChromeOptions::CAPABILITY, $options
+                ChromeOptions::CAPABILITY,
+                $options
             )
         );
     }

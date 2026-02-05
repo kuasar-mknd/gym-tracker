@@ -106,7 +106,7 @@ class HabitController extends Controller
 
         $this->user()->habits()->create($data);
 
-        return redirect()->back()->with('success', 'Habitude créée.');
+        return redirect()->route('habits.index')->with('success', 'Habitude créée.');
     }
 
     /**
@@ -124,7 +124,7 @@ class HabitController extends Controller
         // Authorization is handled by HabitUpdateRequest
         $habit->update($request->validated());
 
-        return redirect()->back()->with('success', 'Habitude mise à jour.');
+        return redirect()->route('habits.index')->with('success', 'Habitude mise à jour.');
     }
 
     /**
@@ -145,7 +145,7 @@ class HabitController extends Controller
 
         $habit->delete();
 
-        return redirect()->back()->with('success', 'Habitude supprimée.');
+        return redirect()->route('habits.index')->with('success', 'Habitude supprimée.');
     }
 
     /**
@@ -177,7 +177,7 @@ class HabitController extends Controller
             $habit->logs()->create(['date' => $date]);
         }
 
-        return redirect()->back();
+        return redirect()->route('habits.index');
     }
 
     /**
