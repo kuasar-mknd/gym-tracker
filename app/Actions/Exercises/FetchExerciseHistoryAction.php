@@ -38,6 +38,7 @@ class FetchExerciseHistoryAction
                 'one_rep_max' => (float) $row->one_rep_max,
                 'set_count' => (int) $row->set_count,
             ])
+            ->values()
             ->toArray();
     }
 }

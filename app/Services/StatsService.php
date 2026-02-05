@@ -313,7 +313,7 @@ class StatsService
             ->whereNotNull('workouts.ended_at')
             ->select('workouts.id', 'workouts.started_at', 'workouts.name', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))
             ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
-            ->orderByDesc('workouts.started_at')->limit($limit)->get();
+            ->orderByDesc('workouts.started_at')->limit($limit)->get()->map(fn (object $row): object => $row);
     }
 
     /**
@@ -383,7 +383,7 @@ class StatsService
      */
     protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy(DB::raw('DATE(workouts.started_at)'))->get()->keyBy('date');
+        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy(DB::raw('DATE(workouts.started_at)'))->get()->keyBy(fn (object $item): string => (string) $item->date);
     }
 
     /**
@@ -412,7 +412,9 @@ class StatsService
         $labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
         for ($i = 0; $i < 7; $i++) {
             $date = $startOfWeek->copy()->addDays($i)->format('Y-m-d');
-            $trend[] = ['date' => $date, 'day_label' => $labels[$i], 'volume' => isset($workouts[$date]) ? (float) $workouts[$date]->volume : 0.0];
+            /** @var object|null $workout */
+            $workout = $workouts->get($date);
+            $trend[] = ['date' => $date, 'day_label' => $labels[$i], 'volume' => $workout ? (float) $workout->volume : 0.0];
         }
 
         return $trend;
@@ -423,7 +425,7 @@ class StatsService
      */
     protected function formatVolumeTrendItem(\stdClass $row): array
     {
-        return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'), 'name' => $row->name, 'volume' => (float) $row->volume];
+        return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'), 'name' => (string) $row->name, 'volume' => (float) $row->volume];
     }
 
     /**
