@@ -10,6 +10,9 @@ use App\Models\Workout;
 
 class FetchExerciseHistoryAction
 {
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function execute(User $user, Exercise $exercise): array
     {
         // Fetch workouts containing this exercise
@@ -25,7 +28,8 @@ class FetchExerciseHistoryAction
             ->orderByDesc('started_at')
             ->get();
 
-        return $workouts->map(function (Workout $workout) {
+        /** @var array<int, array<string, mixed>> $history */
+        $history = $workouts->map(function (Workout $workout) {
             $line = $workout->workoutLines->first();
             $sets = $line ? $line->sets->map(fn ($set) => [
                 'weight' => $set->weight,
@@ -44,5 +48,7 @@ class FetchExerciseHistoryAction
                 'sets' => $sets->toArray(),
             ];
         })->toArray();
+
+        return $history;
     }
 }
