@@ -48,7 +48,7 @@ final class FetchHabitsIndexAction
         for ($i = 29; $i >= 0; $i--) {
             $dateObj = Carbon::now()->subDays($i);
             $dateStr = $dateObj->format('Y-m-d');
-            $count = $consistencyStats[$dateStr] ?? 0;
+            $count = (int) ($consistencyStats[$dateStr] ?? 0);
 
             // For Line Chart (consistencyData)
             $consistencyData[] = [
