@@ -14,7 +14,7 @@ class StoreIntervalTimerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('create', IntervalTimer::class);
+        return $this->user()?->can('create', IntervalTimer::class) ?? false;
     }
 
     /**
