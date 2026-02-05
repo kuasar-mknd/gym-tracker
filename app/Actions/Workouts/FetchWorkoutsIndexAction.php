@@ -42,21 +42,21 @@ final class FetchWorkoutsIndexAction
      */
     public function execute(User $user): array
     {
+        /** @var array<int, array{date: string, duration: int, name: string}> $durationHistory */
+        $durationHistory = $this->statsService->getDurationHistory($user, 20);
+
+        /** @var array<int, array{date: string, volume: float, name: string}> $volumeHistory */
+        $volumeHistory = $this->statsService->getVolumeHistory($user, 20);
+
+        /** @var array<int, array{month: string, volume: float}> $monthlyVolume */
+        $monthlyVolume = $this->statsService->getMonthlyVolumeHistory($user, 6);
+
         return [
             'workouts' => $this->getWorkouts($user),
             'monthlyFrequency' => $this->getMonthlyFrequency($user),
-            'durationHistory' => $this->statsService->getDurationHistory(
-                $user,
-                20
-            ),
-            'volumeHistory' => $this->statsService->getVolumeHistory(
-                $user,
-                20
-            ),
-            'monthlyVolume' => $this->statsService->getMonthlyVolumeHistory(
-                $user,
-                6
-            ),
+            'durationHistory' => $durationHistory,
+            'volumeHistory' => $volumeHistory,
+            'monthlyVolume' => $monthlyVolume,
         ];
     }
 

@@ -15,7 +15,10 @@ class UpdateIntervalTimerRequest extends FormRequest
     {
         $timer = $this->route('intervalTimer') ?? $this->route('interval_timer');
 
-        return $this->user()->can('update', $timer);
+        /** @var \App\Models\User $user */
+        $user = $this->user();
+
+        return $user->can('update', $timer);
     }
 
     /**

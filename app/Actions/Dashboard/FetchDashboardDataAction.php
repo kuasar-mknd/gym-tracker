@@ -43,6 +43,10 @@ final class FetchDashboardDataAction
             $volumeTrend = $this->statsService->getDailyVolumeTrend($user, 7);
             $durationDistribution = $this->statsService->getDurationDistribution($user);
 
+            /** @var array{date: string, day_label: string, volume: float}[] $weeklyTrend */
+            /** @var array{date: string, day_name: string, volume: float}[] $volumeTrend */
+            /** @var array{label: string, count: int}[] $durationDistribution */
+
             return [
                 'workoutsCount' => $user->workouts()->count(),
                 'thisWeekCount' => $this->getThisWeekCount($user),
@@ -50,8 +54,8 @@ final class FetchDashboardDataAction
                 'recentWorkouts' => $this->getRecentWorkouts($user),
                 'recentPRs' => $this->getRecentPRs($user),
                 'activeGoals' => $this->getActiveGoals($user),
-                'weeklyVolume' => $weeklyStats['current_week_volume'],
-                'volumeChange' => $weeklyStats['percentage'],
+                'weeklyVolume' => (float) $weeklyStats['current_week_volume'],
+                'volumeChange' => (float) $weeklyStats['percentage'],
                 'weeklyVolumeTrend' => $weeklyTrend,
                 'volumeTrend' => $volumeTrend,
                 'durationDistribution' => $durationDistribution,
