@@ -225,8 +225,6 @@ class StatsService
 
     public function clearWorkoutMetadataStats(User $user): void
     {
-        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
-
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
@@ -245,8 +243,6 @@ class StatsService
             \Illuminate\Support\Facades\Cache::forget("stats.weight_history.{$user->id}.{$days}");
             \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
-
-        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
     }
 
     protected function fetchVolumeHistory(User $user, int $limit): array
