@@ -11,7 +11,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
@@ -37,10 +37,9 @@ const searchQuery = ref('')
 const searchInput = ref(null)
 const activeCategory = ref('all')
 
-// Local state for optimistic updates to ensure immediate UI feedback before server confirmation
-const localExercises = ref([...props.exercises])
-
-// Keyboard shortcut for search (⌘K / Ctrl+K)
+/**
+ * Keyboard shortcut for search (⌘K / Ctrl+K)
+ */
 const handleKeyDown = (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
@@ -56,7 +55,12 @@ onUnmounted(() => {
     window.removeEventListener('keydown', handleKeyDown)
 })
 
+// Local state for optimistic updates to ensure immediate UI feedback before server confirmation
+const localExercises = ref([...props.exercises])
+
+
 // Sync local state when the server returns updated props (e.g., after a successful partial reload)
+import { watch } from 'vue'
 watch(
     () => props.exercises,
     (newExercises) => {
