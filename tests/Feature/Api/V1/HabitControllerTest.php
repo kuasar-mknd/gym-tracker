@@ -2,107 +2,151 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Api\V1;
-
 use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Tests\TestCase;
 
-class HabitControllerTest extends TestCase
-{
-    use RefreshDatabase;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\deleteJson;
+use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
 
-    public function test_user_can_list_habits(): void
-    {
-        $user = User::factory()->create();
-        Habit::factory()->count(3)->create(['user_id' => $user->id]);
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-        Sanctum::actingAs($user);
+describe('Habits API', function (): void {
+    beforeEach(function (): void {
+        $this->user = User::factory()->create();
+        Sanctum::actingAs($this->user);
+    });
 
-        $response = $this->getJson(route('api.v1.habits.index'));
+    test('user can list habits', function (): void {
+        Habit::factory()->count(3)->create(['user_id' => $this->user->id]);
+
+        $response = getJson(route('api.v1.habits.index'));
 
         $response->assertOk()
             ->assertJsonCount(3, 'data');
-    }
+    });
 
-    public function test_user_can_create_habit(): void
-    {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
-
+    test('user can create habit', function (): void {
         $data = [
             'name' => 'Drink Water',
             'goal_times_per_week' => 7,
             'color' => '#0000FF',
+            'icon' => 'water_drop',
         ];
 
-        $response = $this->postJson(route('api.v1.habits.store'), $data);
+        $response = postJson(route('api.v1.habits.store'), $data);
 
         $response->assertCreated()
-            ->assertJsonFragment(['name' => 'Drink Water']);
+            ->assertJsonFragment(['name' => 'Drink Water'])
+            ->assertJsonPath('data.goal_times_per_week', 7);
 
-        $this->assertDatabaseHas('habits', [
-            'user_id' => $user->id,
+        assertDatabaseHas('habits', [
+            'user_id' => $this->user->id,
             'name' => 'Drink Water',
         ]);
-    }
+    });
 
-    public function test_user_can_update_habit(): void
-    {
-        $user = User::factory()->create();
-        $habit = Habit::factory()->create(['user_id' => $user->id]);
-
-        Sanctum::actingAs($user);
+    test('user can update habit', function (): void {
+        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
 
         $data = ['name' => 'Updated Name'];
 
-        $response = $this->putJson(route('api.v1.habits.update', $habit), $data);
+        $response = putJson(route('api.v1.habits.update', $habit), $data);
 
         $response->assertOk()
             ->assertJsonFragment(['name' => 'Updated Name']);
 
-        $this->assertDatabaseHas('habits', [
+        assertDatabaseHas('habits', [
             'id' => $habit->id,
             'name' => 'Updated Name',
         ]);
-    }
+    });
 
-    public function test_user_can_delete_habit(): void
-    {
-        $user = User::factory()->create();
-        $habit = Habit::factory()->create(['user_id' => $user->id]);
+    test('user can delete habit', function (): void {
+        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
 
-        Sanctum::actingAs($user);
-
-        $response = $this->deleteJson(route('api.v1.habits.destroy', $habit));
+        $response = deleteJson(route('api.v1.habits.destroy', $habit));
 
         $response->assertNoContent();
 
-        $this->assertDatabaseMissing('habits', ['id' => $habit->id]);
-    }
+        assertDatabaseMissing('habits', ['id' => $habit->id]);
+    });
 
-    public function test_user_cannot_access_others_habits(): void
-    {
-        $user = User::factory()->create();
+    test('user cannot access others habits', function (): void {
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
 
-        Sanctum::actingAs($user);
+        getJson(route('api.v1.habits.show', $habit))->assertForbidden();
+        putJson(route('api.v1.habits.update', $habit), ['name' => 'Hack'])->assertForbidden();
+        deleteJson(route('api.v1.habits.destroy', $habit))->assertForbidden();
+    });
 
-        $this->getJson(route('api.v1.habits.show', $habit))->assertForbidden();
-        $this->putJson(route('api.v1.habits.update', $habit), ['name' => 'Hack'])->assertForbidden();
-        $this->deleteJson(route('api.v1.habits.destroy', $habit))->assertForbidden();
-    }
+    test('store validates required fields', function (): void {
+        $response = postJson(route('api.v1.habits.store'), []);
 
-    public function test_user_can_create_habit_log(): void
-    {
-        $user = User::factory()->create();
-        $habit = Habit::factory()->create(['user_id' => $user->id]);
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['name', 'goal_times_per_week']);
+    });
 
-        Sanctum::actingAs($user);
+    test('store validates numeric ranges', function (): void {
+        $response = postJson(route('api.v1.habits.store'), [
+            'name' => 'Bad Habit',
+            'goal_times_per_week' => 8, // Max is 7
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['goal_times_per_week']);
+
+        $response = postJson(route('api.v1.habits.store'), [
+            'name' => 'Bad Habit',
+            'goal_times_per_week' => 0, // Min is 1
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['goal_times_per_week']);
+    });
+
+    test('update validates numeric ranges', function (): void {
+        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+
+        $response = putJson(route('api.v1.habits.update', $habit), [
+            'goal_times_per_week' => 8,
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['goal_times_per_week']);
+    });
+
+    test('update allows partial updates', function (): void {
+        $habit = Habit::factory()->create([
+            'user_id' => $this->user->id,
+            'name' => 'Old Name',
+            'goal_times_per_week' => 5,
+        ]);
+
+        $response = putJson(route('api.v1.habits.update', $habit), [
+            'goal_times_per_week' => 6,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.name', 'Old Name') // Unchanged
+            ->assertJsonPath('data.goal_times_per_week', 6);
+    });
+});
+
+describe('Habit Logs API', function (): void {
+    beforeEach(function (): void {
+        $this->user = User::factory()->create();
+        Sanctum::actingAs($this->user);
+    });
+
+    test('user can create habit log', function (): void {
+        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
 
         $data = [
             'habit_id' => $habit->id,
@@ -110,41 +154,33 @@ class HabitControllerTest extends TestCase
             'notes' => 'Drank 2L',
         ];
 
-        $response = $this->postJson(route('api.v1.habit-logs.store'), $data);
+        $response = postJson(route('api.v1.habit-logs.store'), $data);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('habit_logs', ['habit_id' => $habit->id]);
-    }
+        assertDatabaseHas('habit_logs', ['habit_id' => $habit->id]);
+    });
 
-    public function test_user_cannot_log_for_others_habit(): void
-    {
-        $user = User::factory()->create();
+    test('user cannot log for others habit', function (): void {
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
-
-        Sanctum::actingAs($user);
 
         $data = [
             'habit_id' => $habit->id,
             'date' => now()->format('Y-m-d'),
         ];
 
-        $response = $this->postJson(route('api.v1.habit-logs.store'), $data);
+        $response = postJson(route('api.v1.habit-logs.store'), $data);
 
-        $response->assertUnprocessable(); // Validation should fail due to exists rule scope
-    }
+        $response->assertUnprocessable();
+    });
 
-    public function test_user_can_list_habit_logs(): void
-    {
-        $user = User::factory()->create();
-        $habit = Habit::factory()->create(['user_id' => $user->id]);
+    test('user can list habit logs', function (): void {
+        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
         HabitLog::factory()->count(3)->create(['habit_id' => $habit->id]);
 
-        Sanctum::actingAs($user);
-
-        $response = $this->getJson(route('api.v1.habit-logs.index'));
+        $response = getJson(route('api.v1.habit-logs.index'));
 
         $response->assertOk()
             ->assertJsonCount(3, 'data');
-    }
-}
+    });
+});

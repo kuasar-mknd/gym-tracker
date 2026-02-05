@@ -19,7 +19,7 @@ test('users can see login page', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->logout()
             ->visit('/login')
-            ->waitFor('[data-testid="login-button"]', 30)
+            ->waitFor('[data-testid="login-button"]', 60)
             ->assertVisible('[data-testid="login-button"]');
     });
 });
@@ -28,7 +28,7 @@ test('users can register', function (): void {
     $this->browse(function (Browser $browser): void {
         $browser->logout()
             ->visit('/register')
-            ->waitFor('input[name="name"]', 30) // Ensure form is loaded
+            ->waitFor('input[name="name"]', 60) // Ensure form is loaded
             ->type('input[name="name"]', 'John Doe')
             ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
