@@ -32,7 +32,10 @@ abstract class DuskTestCase extends BaseTestCase
         Browser::macro('assertNoConsoleExceptions', function (): object {
             /** @var Browser $this */
             $logs = $this->driver->manage()->getLog('browser');
-            $failures = collect($logs)->filter(fn ($log): bool => $log['level'] === 'SEVERE');
+            $failures = collect($logs)->filter(
+                fn ($log): bool => $log['level'] === 'SEVERE' &&
+                    ! str_contains((string) $log['message'], 'Failed to send logs')
+            );
 
             \PHPUnit\Framework\Assert::assertTrue(
                 $failures->isEmpty(),

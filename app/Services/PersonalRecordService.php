@@ -39,7 +39,7 @@ final class PersonalRecordService
             return;
         }
 
-        $user = $user ?: $set->workoutLine->workout->user;
+        $user ??= $set->workoutLine->workout->user;
         $exerciseId = $set->workoutLine->exercise_id;
 
         // Fetch all existing PRs for this user and exercise in a single query
@@ -158,7 +158,7 @@ final class PersonalRecordService
     protected function savePR(User $user, int $exerciseId, string $type, float $value, ?float $secondary, int $workoutId, int $setId, ?PersonalRecord $pr = null): void
     {
         // Use the passed PR record if available to avoid another database query
-        $pr = $pr ?: new PersonalRecord([
+        $pr ??= new PersonalRecord([
             'user_id' => $user->id,
             'exercise_id' => $exerciseId,
             'type' => $type,
