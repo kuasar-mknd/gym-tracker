@@ -272,7 +272,7 @@ class StatsService
             ->reverse()->values()->toArray();
     }
 
-    /** @return \Illuminate\Support\Collection<int, object> */
+    /** @return \Illuminate\Support\Collection<int, \stdClass> */
     protected function queryVolumeHistory(User $user, int $limit): \Illuminate\Support\Collection
     {
         return DB::table('workouts')
@@ -288,7 +288,7 @@ class StatsService
     /** @return array{date: string, volume: float, name: string} */
     protected function formatVolumeHistoryRow(object $row): array
     {
-        /** @var object{started_at: string, volume: float|int, name: string} $row */
+        /** @var \stdClass $row */
         return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'volume' => (float) $row->volume, 'name' => (string) $row->name];
     }
 
@@ -344,7 +344,7 @@ class StatsService
         return (float) $query->sum(DB::raw('sets.weight * sets.reps'));
     }
 
-    /** @return \Illuminate\Support\Collection<string, object> */
+    /** @return \Illuminate\Support\Collection<string, \stdClass> */
     protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): \Illuminate\Support\Collection
     {
         return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy(DB::raw('DATE(workouts.started_at)'))->get()->keyBy('date');
@@ -367,7 +367,7 @@ class StatsService
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, object>  $workouts
+     * @param  \Illuminate\Support\Collection<string, \stdClass>  $workouts
      * @return array<int, array{date: string, day_label: string, volume: float}>
      */
     protected function fillWeeklyTrend(Carbon $startOfWeek, \Illuminate\Support\Collection $workouts): array
@@ -387,14 +387,12 @@ class StatsService
     /** @return array{date: string, full_date: string, name: string, volume: float} */
     protected function formatVolumeTrendItem(\stdClass $row): array
     {
-        /** @var object{started_at: string, name: string, volume: float|int} $row */
         return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'), 'name' => $row->name, 'volume' => (float) $row->volume];
     }
 
     /** @return array{date: string, full_date: string, one_rep_max: float} */
     protected function formatExercise1RMItem(\stdClass $set): array
     {
-        /** @var object{started_at: string, epley_1rm: float|int} $set */
         return ['date' => Carbon::parse($set->started_at)->format('d/m'), 'full_date' => Carbon::parse($set->started_at)->format('Y-m-d'), 'one_rep_max' => round((float) $set->epley_1rm, 2)];
     }
 

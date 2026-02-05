@@ -33,18 +33,30 @@ class FetchExerciseHistoryAction
             ->orderByDesc('workouts.started_at')
             ->get();
 
+        /** @var Collection<int, \stdClass> $rows */
         $grouped = $rows->groupBy('workout_id');
 
-        /** @var Collection<int, \stdClass> $sessionRows */
+        /** @var Collection<int, Collection<int, \stdClass>> $grouped */
         return $grouped->map(function (Collection $sessionRows) {
+            /** @var \stdClass|null $first */
             $first = $sessionRows->first();
 
-            /** @var \stdClass $row */
-            $sets = $sessionRows->map(function ($row) {
-                $oneRm = $row->weight * (1 + ($row->reps / 30));
+            if (! $first) {
+                return [];
+            }
+
+            /** @var array<int, array{weight: float, reps: int, 1rm: float}> $sets */
+            $sets = $sessionRows->map(function (\stdClass $row): array {
+                /** @var float|int $weight */
+                $weight = $row->weight;
+                /** @var int $reps */
+                $reps = $row->reps;
+
+                $oneRm = $weight * (1 + ($reps / 30));
+
                 return [
-                    'weight' => (float) $row->weight,
-                    'reps' => (int) $row->reps,
+                    'weight' => (float) $weight,
+                    'reps' => (int) $reps,
                     '1rm' => (float) $oneRm,
                 ];
             })->values()->all();
@@ -52,13 +64,13 @@ class FetchExerciseHistoryAction
             $best1rm = collect($sets)->max('1rm');
 
             return [
-                'id' => $first->workout_id,
-                'workout_id' => $first->workout_id,
-                'workout_name' => $first->workout_name,
+                'id' => (int) $first->workout_id,
+                'workout_id' => (int) $first->workout_id,
+                'workout_name' => (string) $first->workout_name,
                 'formatted_date' => Carbon::parse($first->started_at)->translatedFormat('D d M'),
-                'best_1rm' => (float) $best1rm,
+                'best_1rm' => is_numeric($best1rm) ? (float) $best1rm : 0.0,
                 'sets' => $sets,
             ];
-        })->values()->all();
+        })->filter()->values()->all();
     }
 }
