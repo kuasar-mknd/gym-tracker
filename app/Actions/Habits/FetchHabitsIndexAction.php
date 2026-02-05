@@ -6,16 +6,17 @@ namespace App\Actions\Habits;
 
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class FetchHabitsIndexAction
+final class FetchHabitsIndexAction
 {
     /**
      * @return array{
-     *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
-     *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>,
-     *     consistencyData: array<int, array{date: string, count: int}>,
-     *     history: array<int, array{date: string, full_date: string, count: int}>
+     *     habits: Collection,
+     *     weekDates: array,
+     *     consistencyData: array,
+     *     history: array
      * }
      */
     public function execute(User $user): array
@@ -34,7 +35,6 @@ class FetchHabitsIndexAction
 
         // Calculate consistency for the last 30 days
         $past30Days = Carbon::now()->subDays(29)->startOfDay();
-        /** @var \Illuminate\Support\Collection<string, int|string> $consistencyStats */
         $consistencyStats = DB::table('habit_logs')
             ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
             ->where('habits.user_id', $user->id)
@@ -49,9 +49,7 @@ class FetchHabitsIndexAction
         for ($i = 29; $i >= 0; $i--) {
             $dateObj = Carbon::now()->subDays($i);
             $dateStr = $dateObj->format('Y-m-d');
-            /** @var int|string $rawCount */
-            $rawCount = $consistencyStats[$dateStr] ?? 0;
-            $count = (int) $rawCount;
+            $count = $consistencyStats[$dateStr] ?? 0;
 
             // For Line Chart (consistencyData)
             $consistencyData[] = [
@@ -87,7 +85,8 @@ class FetchHabitsIndexAction
         for ($i = 0; $i < 7; $i++) {
             $date = $start->copy()->addDays($i);
 
-            if (! $date instanceof \Illuminate\Support\Carbon) {
+            if (! $date instanceof \Carbon\CarbonInterface) {
+                // Should not happen with Carbon
                 continue;
             }
 

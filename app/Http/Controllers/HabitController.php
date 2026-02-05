@@ -32,9 +32,7 @@ class HabitController extends Controller
      */
     public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
     {
-        $data = $fetchHabits->execute($this->user());
-
-        return Inertia::render('Habits/Index', $data);
+        return Inertia::render('Habits/Index', $fetchHabits->execute($this->user()));
     }
 
     /**
@@ -129,6 +127,6 @@ class HabitController extends Controller
             $habit->logs()->create(['date' => $date]);
         }
 
-        return redirect()->back();
+        return redirect()->route('habits.index');
     }
 }
