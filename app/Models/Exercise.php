@@ -74,14 +74,10 @@ class Exercise extends Model
      */
     public static function getCachedForUser(int $userId): Collection
     {
-        return Cache::remember(
-            "exercises_list_{$userId}",
-            3600,
-            fn () => self::forUser($userId)
-                ->orderBy('category')
-                ->orderBy('name')
-                ->get()
-        );
+        return self::forUser($userId)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get();
     }
 
     /**
