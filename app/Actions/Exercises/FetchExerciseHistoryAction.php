@@ -7,7 +7,6 @@ namespace App\Actions\Exercises;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
-use Illuminate\Support\Collection;
 
 class FetchExerciseHistoryAction
 {
@@ -21,7 +20,7 @@ class FetchExerciseHistoryAction
             })
             ->with(['workoutLines' => function ($query) use ($exercise) {
                 $query->where('exercise_id', $exercise->id)
-                      ->with('sets');
+                    ->with('sets');
             }])
             ->orderByDesc('started_at')
             ->get();
