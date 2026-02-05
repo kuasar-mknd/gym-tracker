@@ -37,7 +37,7 @@ function handleToggle() {
             class="flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
             :class="[isDark ? 'bg-violet-500/20 text-violet-400' : 'bg-orange-500/20 text-orange-500']"
         >
-            <span class="material-symbols-outlined text-2xl">
+            <span class="material-symbols-outlined text-2xl" aria-hidden="true">
                 {{ themeIcons[theme] }}
             </span>
         </div>
@@ -47,6 +47,8 @@ function handleToggle() {
                 {{ themeLabels[theme] }}
             </div>
         </div>
-        <span class="material-symbols-outlined text-text-muted ml-auto dark:text-slate-400"> chevron_right </span>
+        <span class="material-symbols-outlined text-text-muted ml-auto dark:text-slate-400" aria-hidden="true">
+            chevron_right
+        </span>
     </button>
 </template>
