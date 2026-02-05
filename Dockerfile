@@ -53,7 +53,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN composer dump-autoload --classmap-authoritative --no-dev --no-scripts
 
-RUN php artisan storage:link
 RUN chmod -R 777 storage bootstrap/cache
 RUN mkdir -p storage/logs && touch storage/logs/laravel.log
 

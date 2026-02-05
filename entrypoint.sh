@@ -21,6 +21,7 @@ php artisan config:cache
 
 echo "Caching routes..."
 php artisan package:discover --ansi
+php artisan storage:link
 php artisan route:cache
 
 # Run migrations ONLY for the app service (when command contains octane)
