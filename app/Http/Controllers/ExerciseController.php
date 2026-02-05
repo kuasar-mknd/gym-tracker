@@ -68,7 +68,7 @@ class ExerciseController extends Controller
      *
      * Validates and creates a new exercise for the authenticated user.
      * Invalidates the 'exercises_list_{userId}' cache.
-     * Returns JSON if requested (e.g., from a workout creation modal) or redirects back.
+     * Returns JSON if requested (e.g., from workout creation modal) or redirects back.
      *
      * @param  \App\Http\Requests\ExerciseStoreRequest  $request  The validated request containing name, type, and category.
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse JSON response with the created exercise or a redirect back.
@@ -83,11 +83,11 @@ class ExerciseController extends Controller
         $exercise->save();
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
-        if ($request->wantsJson() || $request->header('X-Quick-Create')) {
+        if (($request->wantsJson() && ! $request->header('X-Inertia')) || $request->header('X-Quick-Create')) {
             return response()->json(['exercise' => $exercise], 201);
         }
 
-        return redirect()->back();
+        return redirect()->route('exercises.index');
     }
 
     /**
@@ -107,7 +107,7 @@ class ExerciseController extends Controller
 
         $exercise->update($request->validated());
 
-        return redirect()->back();
+        return redirect()->route('exercises.index');
     }
 
     /**
@@ -126,13 +126,13 @@ class ExerciseController extends Controller
         $this->authorize('delete', $exercise);
 
         if ($exercise->workoutLines()->exists()) {
-            return redirect()->back()->withErrors([
+            return redirect()->route('exercises.index')->withErrors([
                 'exercise' => 'Cet exercice est utilisé dans une séance et ne peut pas être supprimé.',
             ]);
         }
 
         $exercise->delete();
 
-        return redirect()->back();
+        return redirect()->route('exercises.index');
     }
 }
