@@ -319,6 +319,7 @@ const typeLabel = (type) => {
                         label="Nom de l'exercice"
                         placeholder="Ex: Développé couché"
                         :error="form.errors.name"
+                        data-testid="exercise-name-input"
                     />
                     <div class="grid grid-cols-2 gap-4">
                         <div>

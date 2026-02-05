@@ -26,7 +26,7 @@ test('user can manage exercises', function (): void {
         // 2. Fill and submit the create form
         $browser->pause(500)
             ->waitForText('NOUVEL EXERCICE', 15) // Case sensitive check or wait for element
-            ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
+            ->type('[data-testid="exercise-name-input"]', 'Dusk Test Exercise')
             ->waitFor('select', 5)
             ->select('select', 'strength')
             ->waitFor('[data-testid="submit-exercise-button"]', 5)
