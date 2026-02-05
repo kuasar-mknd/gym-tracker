@@ -6,6 +6,7 @@ namespace App\Http\Requests\Api;
 
 use App\Models\Workout;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class WorkoutLineStoreRequest extends FormRequest
 {
@@ -49,7 +50,12 @@ class WorkoutLineStoreRequest extends FormRequest
             ],
             'exercise_id' => [
                 'required',
-                'exists:exercises,id',
+                Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
+                        $q->whereNull('user_id')
+                            ->orWhere('user_id', $this->user()?->id);
+                    });
+                }),
             ],
             'order' => 'nullable|integer',
             'notes' => 'nullable|string',
