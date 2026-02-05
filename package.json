@@ -43,6 +43,8 @@
         "@sentry/vue": "^10.38.0",
         "chart.js": "^4.5.1",
         "dayjs": "^1.11.19",
+        "lucide-vue-next": "^0.563.0",
+        "radix-vue": "^1.9.17",
         "vue-chartjs": "^5.3.3",
         "ziggy-js": "^2.6.0"
     },
