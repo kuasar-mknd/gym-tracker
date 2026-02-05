@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\BodyMeasurement;
 use App\Models\User;
 use App\Models\Workout;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('dashboard displays correct workout stats', function (): void {
     $user = User::factory()->create();
@@ -34,12 +35,17 @@ test('dashboard displays correct workout stats', function (): void {
         ->get('/dashboard')
         ->assertStatus(200)
         ->assertInertia(
-            fn ($page) => $page
+            fn (Assert $page) => $page
                 ->component('Dashboard')
                 ->where('workoutsCount', 13)
                 ->where('thisWeekCount', 3)
                 ->where('latestWeight', '75.50')
                 ->has('recentWorkouts', 3)
-                ->has('durationDistribution')
+                // Deferred props should be missing from initial response
+                ->missing('weeklyVolume')
+                ->missing('volumeChange')
+                ->missing('weeklyVolumeTrend')
+                ->missing('volumeTrend')
+                ->missing('durationDistribution')
         );
 });
