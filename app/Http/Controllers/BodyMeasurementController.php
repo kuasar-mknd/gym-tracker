@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\BodyMeasurementStoreRequest;
-use App\Http\Requests\BodyMeasurementUpdateRequest;
 use App\Models\BodyMeasurement;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
@@ -42,28 +41,18 @@ class BodyMeasurementController extends Controller
 
         $this->statsService->clearBodyMeasurementStats($this->user());
 
-        return redirect()->route('body-measurements.index')->with('success', 'Mesures enregistrées.');
-    }
-
-    public function update(BodyMeasurementUpdateRequest $request, BodyMeasurement $bodyMeasurement): \Illuminate\Http\RedirectResponse
-    {
-        $this->authorize('update', $bodyMeasurement);
-
-        $bodyMeasurement->update($request->validated());
-
-        $this->statsService->clearBodyMeasurementStats($this->user());
-
-        return redirect()->route('body-measurements.index')->with('success', 'Mesures mises à jour.');
+        return redirect()->back();
     }
 
     public function destroy(BodyMeasurement $bodyMeasurement): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $bodyMeasurement);
 
+        $user = $this->user();
         $bodyMeasurement->delete();
 
-        $this->statsService->clearBodyMeasurementStats($this->user());
+        $this->statsService->clearBodyMeasurementStats($user);
 
-        return redirect()->route('body-measurements.index')->with('success', 'Mesures supprimées.');
+        return redirect()->back();
     }
 }

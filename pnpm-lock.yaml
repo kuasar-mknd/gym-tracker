@@ -17,12 +17,6 @@ importers:
       dayjs:
         specifier: ^1.11.19
         version: 1.11.19
-      lucide-vue-next:
-        specifier: ^0.563.0
-        version: 0.563.0(vue@3.5.27)
-      radix-vue:
-        specifier: ^1.9.17
-        version: 1.9.17(vue@3.5.27)
       vue-chartjs:
         specifier: ^5.3.3
         version: 5.3.3(chart.js@4.5.1)(vue@3.5.27)

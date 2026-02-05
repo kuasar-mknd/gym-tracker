@@ -57,7 +57,6 @@ class Set extends Model
             'weight' => 'float',
             'distance_km' => 'float',
             'duration_seconds' => 'integer',
-            'rpe' => 'float',
         ];
     }
 }
