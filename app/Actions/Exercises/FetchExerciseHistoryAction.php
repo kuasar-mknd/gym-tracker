@@ -15,7 +15,8 @@ class FetchExerciseHistoryAction
      */
     public function execute(User $user, Exercise $exercise): array
     {
-        return DB::table('sets')
+        /** @var array<int, array{date: string, weight: float, reps: int, one_rep_max: float, volume: float}> $history */
+        $history = DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $user->id)
@@ -40,5 +41,7 @@ class FetchExerciseHistoryAction
                 'volume' => (float) $record->volume,
             ])
             ->toArray();
+
+        return $history;
     }
 }

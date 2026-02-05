@@ -83,7 +83,8 @@ class ExerciseController extends Controller
         $exercise->save();
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
-        if ($request->wantsJson() || $request->header('X-Quick-Create')) {
+        // Ensure we don't intercept Inertia requests which also might 'wantJson' but expect a redirect/page response
+        if (($request->wantsJson() && ! $request->header('X-Inertia')) || $request->header('X-Quick-Create')) {
             return response()->json(['exercise' => $exercise], 201);
         }
 
