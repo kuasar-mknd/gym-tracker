@@ -2,7 +2,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
+
+const AchievementRadarChart = defineAsyncComponent(() => import('@/Components/Stats/AchievementRadarChart.vue'))
 
 const props = defineProps({
     achievements: Array,
@@ -50,6 +52,13 @@ const getCategoryLabel = (category) => {
         </template>
 
         <div class="space-y-6 pb-24">
+            <!-- Stats Chart -->
+            <div class="animate-slide-up" style="animation-delay: 0.05s">
+                <GlassCard padding="p-4" class="bg-glass-card/50">
+                    <AchievementRadarChart :achievements="achievements" />
+                </GlassCard>
+            </div>
+
             <!-- Categories -->
             <div class="scrollbar-none animate-slide-up flex gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
                 <button
