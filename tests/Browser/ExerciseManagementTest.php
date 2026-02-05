@@ -33,8 +33,9 @@ test('user can manage exercises', function (): void {
             ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
 
         // 3. Verify exercise was created
+        // Note: The UI displays exercise names in uppercase
         $browser->pause(1000)
-            ->waitForText('Dusk Test Exercise', 15);
+            ->waitForText('DUSK TEST EXERCISE', 15);
 
         // 4. Edit the exercise
         $browser->waitFor('[data-testid="edit-exercise-button"]', 5)
@@ -48,8 +49,9 @@ test('user can manage exercises', function (): void {
             ->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
 
         // 5. Verify update
+        // Note: The UI displays exercise names in uppercase
         $browser->pause(1000)
-            ->waitForText('Updated Exercise', 15);
+            ->waitForText('UPDATED EXERCISE', 15);
 
         // 6. Delete the exercise
         $browser->waitFor('[data-testid="delete-exercise-button"]', 5)

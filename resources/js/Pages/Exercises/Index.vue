@@ -58,7 +58,6 @@ onUnmounted(() => {
 // Local state for optimistic updates to ensure immediate UI feedback before server confirmation
 const localExercises = ref([...props.exercises])
 
-
 // Sync local state when the server returns updated props (e.g., after a successful partial reload)
 import { watch } from 'vue'
 watch(
