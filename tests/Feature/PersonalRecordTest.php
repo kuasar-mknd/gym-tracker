@@ -107,4 +107,25 @@ class PersonalRecordTest extends TestCase
             'value' => 100,
         ]);
     }
+
+    public function test_warmup_set_does_not_create_pr(): void
+    {
+        $user = \App\Models\User::factory()->create();
+        $this->actingAs($user);
+
+        $exercise = \App\Models\Exercise::factory()->create();
+        $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id]);
+        $workoutLine = \App\Models\WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+
+        $this->post(route('sets.store', $workoutLine), [
+            'reps' => 10,
+            'weight' => 50,
+            'is_warmup' => true,
+        ]);
+
+        $this->assertDatabaseEmpty('personal_records');
+    }
 }

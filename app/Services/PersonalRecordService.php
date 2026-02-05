@@ -26,22 +26,37 @@ final class PersonalRecordService
      * This method evaluates the completed set against existing records for the
      * user and exercise. It triggers checks for all supported PR types.
      *
+     * PERFORMANCE OPTIMIZATION: Fetches all PR types in a single query and
+     * skips processing for non-relevant sets (warmups, missing data).
+     *
      * @param  Set  $set  The completed set to evaluate.
      */
     public function syncSetPRs(Set $set): void
     {
+        // Early return for non-relevant sets to save DB queries
+        if ($set->is_warmup || (! $set->weight && ! $set->reps)) {
+            return;
+        }
+
         $user = $set->workoutLine->workout->user;
         $exerciseId = $set->workoutLine->exercise_id;
+
+        // Fetch all existing PRs for this user and exercise in a single query
+        $existingPRs = PersonalRecord::where('user_id', $user->id)
+            ->where('exercise_id', $exerciseId)
+            ->get()
+            ->keyBy('type');
+
         $workoutId = $set->workoutLine->workout_id;
 
         // 1. Max Weight PR
-        $this->updateMaxWeightPR($user, $exerciseId, $set, $workoutId);
+        $this->updateMaxWeightPR($user, $exerciseId, $set, $workoutId, $existingPRs->get('max_weight'));
 
         // 2. Max 1RM PR (Estimated)
-        $this->updateMax1RMPR($user, $exerciseId, $set, $workoutId);
+        $this->updateMax1RMPR($user, $exerciseId, $set, $workoutId, $existingPRs->get('max_1rm'));
 
         // 3. Max Volume PR (Set volume)
-        $this->updateMaxVolumeSetPR($user, $exerciseId, $set, $workoutId);
+        $this->updateMaxVolumeSetPR($user, $exerciseId, $set, $workoutId, $existingPRs->get('max_volume_set'));
     }
 
     /**
@@ -65,20 +80,16 @@ final class PersonalRecordService
      * @param  int  $exerciseId  The ID of the exercise.
      * @param  Set  $set  The set being evaluated.
      * @param  int  $workoutId  The ID of the current workout.
+     * @param  PersonalRecord|null  $existingPR  The current record, if any.
      */
-    protected function updateMaxWeightPR(User $user, int $exerciseId, Set $set, int $workoutId): void
+    protected function updateMaxWeightPR(User $user, int $exerciseId, Set $set, int $workoutId, ?PersonalRecord $existingPR = null): void
     {
         if (! $set->weight) {
             return;
         }
 
-        $existingPR = PersonalRecord::where('user_id', $user->id)
-            ->where('exercise_id', $exerciseId)
-            ->where('type', 'max_weight')
-            ->first();
-
         if (! $existingPR || $set->weight > $existingPR->value) {
-            $this->savePR($user, $exerciseId, 'max_weight', $set->weight, $set->reps, $workoutId, $set->id);
+            $this->savePR($user, $exerciseId, 'max_weight', $set->weight, (float) $set->reps, $workoutId, $set->id, $existingPR);
         }
     }
 
@@ -91,8 +102,9 @@ final class PersonalRecordService
      * @param  int  $exerciseId  The ID of the exercise.
      * @param  Set  $set  The set being evaluated.
      * @param  int  $workoutId  The ID of the current workout.
+     * @param  PersonalRecord|null  $existingPR  The current record, if any.
      */
-    protected function updateMax1RMPR(User $user, int $exerciseId, Set $set, int $workoutId): void
+    protected function updateMax1RMPR(User $user, int $exerciseId, Set $set, int $workoutId, ?PersonalRecord $existingPR = null): void
     {
         if (! $set->weight || ! $set->reps) {
             return;
@@ -100,13 +112,8 @@ final class PersonalRecordService
 
         $oneRM = $this->calculate1RM($set->weight, $set->reps);
 
-        $existingPR = PersonalRecord::where('user_id', $user->id)
-            ->where('exercise_id', $exerciseId)
-            ->where('type', 'max_1rm')
-            ->first();
-
         if (! $existingPR || $oneRM > $existingPR->value) {
-            $this->savePR($user, $exerciseId, 'max_1rm', $oneRM, $set->weight, $workoutId, $set->id);
+            $this->savePR($user, $exerciseId, 'max_1rm', $oneRM, $set->weight, $workoutId, $set->id, $existingPR);
         }
     }
 
@@ -117,8 +124,9 @@ final class PersonalRecordService
      * @param  int  $exerciseId  The ID of the exercise.
      * @param  Set  $set  The set being evaluated.
      * @param  int  $workoutId  The ID of the current workout.
+     * @param  PersonalRecord|null  $existingPR  The current record, if any.
      */
-    protected function updateMaxVolumeSetPR(User $user, int $exerciseId, Set $set, int $workoutId): void
+    protected function updateMaxVolumeSetPR(User $user, int $exerciseId, Set $set, int $workoutId, ?PersonalRecord $existingPR = null): void
     {
         if (! $set->weight || ! $set->reps) {
             return;
@@ -126,13 +134,8 @@ final class PersonalRecordService
 
         $volume = $set->weight * $set->reps;
 
-        $existingPR = PersonalRecord::where('user_id', $user->id)
-            ->where('exercise_id', $exerciseId)
-            ->where('type', 'max_volume_set')
-            ->first();
-
         if (! $existingPR || $volume > $existingPR->value) {
-            $this->savePR($user, $exerciseId, 'max_volume_set', $volume, null, $workoutId, $set->id);
+            $this->savePR($user, $exerciseId, 'max_volume_set', $volume, null, $workoutId, $set->id, $existingPR);
         }
     }
 
@@ -149,10 +152,12 @@ final class PersonalRecordService
      * @param  float|null  $secondary  Secondary value for context (e.g., reps for max_weight).
      * @param  int  $workoutId  The workout ID.
      * @param  int  $setId  The set ID.
+     * @param  PersonalRecord|null  $pr  The existing record to update, if available.
      */
-    protected function savePR(User $user, int $exerciseId, string $type, float $value, ?float $secondary, int $workoutId, int $setId): void
+    protected function savePR(User $user, int $exerciseId, string $type, float $value, ?float $secondary, int $workoutId, int $setId, ?PersonalRecord $pr = null): void
     {
-        $pr = PersonalRecord::firstOrNew([
+        // Use the passed PR record if available to avoid another database query
+        $pr = $pr ?: new PersonalRecord([
             'user_id' => $user->id,
             'exercise_id' => $exerciseId,
             'type' => $type,
