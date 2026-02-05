@@ -37,6 +37,6 @@ class WarmupController extends Controller
             $validated
         );
 
-        return redirect()->back()->with('success', 'Préférences de récupération sauvegardées.');
+        return redirect()->route('tools.warmup')->with('success', 'Préférences de récupération sauvegardées.');
     }
 }
