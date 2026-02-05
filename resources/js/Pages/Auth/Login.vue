@@ -87,7 +87,6 @@ const submit = () => {
                 class="w-full"
                 :loading="form.processing"
                 :disabled="form.processing"
-                data-testid="login-button"
             >
                 Se connecter
             </GlassButton>

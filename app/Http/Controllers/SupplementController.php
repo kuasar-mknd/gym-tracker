@@ -53,7 +53,7 @@ class SupplementController extends Controller
 
         Supplement::create(array_merge($validated, ['user_id' => $this->user()->id]));
 
-        return redirect()->route('supplements.index')->with('success', 'Complément ajouté.');
+        return redirect()->back()->with('success', 'Complément ajouté.');
     }
 
     /**
@@ -77,7 +77,7 @@ class SupplementController extends Controller
 
         $supplement->update($validated);
 
-        return redirect()->route('supplements.index')->with('success', 'Complément mis à jour.');
+        return redirect()->back()->with('success', 'Complément mis à jour.');
     }
 
     /**
@@ -98,7 +98,7 @@ class SupplementController extends Controller
 
         $supplement->delete();
 
-        return redirect()->route('supplements.index')->with('success', 'Complément supprimé.');
+        return redirect()->back()->with('success', 'Complément supprimé.');
     }
 
     /**
@@ -131,6 +131,6 @@ class SupplementController extends Controller
             $supplement->decrement('servings_remaining');
         }
 
-        return redirect()->route('supplements.index')->with('success', 'Consommation enregistrée.');
+        return redirect()->back()->with('success', 'Consommation enregistrée.');
     }
 }
