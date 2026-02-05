@@ -16,7 +16,7 @@ RUN install-php-extensions \
 FROM --platform=$BUILDPLATFORM node:25-slim AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 
 COPY . .
