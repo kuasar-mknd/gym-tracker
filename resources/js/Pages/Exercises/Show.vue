@@ -7,6 +7,7 @@ import { computed, defineAsyncComponent } from 'vue'
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
 const WeightDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/WeightDistributionChart.vue'))
+const MaxRepsChart = defineAsyncComponent(() => import('@/Components/Stats/MaxRepsChart.vue'))
 
 /**
  * Component Props
@@ -76,6 +77,18 @@ const weightDistributionData = computed(() => {
         .map(([label, count]) => ({ label, count }))
         .sort((a, b) => parseFloat(a.label) - parseFloat(b.label))
 })
+
+const maxRepsData = computed(() => {
+    if (!props.history || props.history.length === 0) return []
+    return [...props.history].reverse().map((session) => {
+        const setReps = session.sets.map((s) => s.reps || 0)
+        const maxReps = setReps.length > 0 ? Math.max(...setReps) : 0
+        return {
+            date: session.formatted_date.split('/').slice(0, 2).join('/'),
+            reps: maxReps,
+        }
+    })
+})
 </script>
 
 <template>
@@ -142,6 +155,16 @@ const weightDistributionData = computed(() => {
                     </div>
                     <div class="h-64">
                         <WeightDistributionChart :data="weightDistributionData" />
+                    </div>
+                </GlassCard>
+
+                <GlassCard>
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Max Reps</h3>
+                        <p class="text-text-muted text-xs font-semibold">Maximum de répétitions par séance</p>
+                    </div>
+                    <div class="h-64">
+                        <MaxRepsChart :data="maxRepsData" />
                     </div>
                 </GlassCard>
             </div>
