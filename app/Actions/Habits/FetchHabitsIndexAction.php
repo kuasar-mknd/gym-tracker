@@ -6,17 +6,16 @@ namespace App\Actions\Habits;
 
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 final class FetchHabitsIndexAction
 {
     /**
      * @return array{
-     *     habits: Collection,
-     *     weekDates: array,
-     *     consistencyData: array,
-     *     history: array
+     *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
+     *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>,
+     *     consistencyData: array<int, array{date: string, count: int}>,
+     *     history: array<int, array{date: string, full_date: string, count: int}>
      * }
      */
     public function execute(User $user): array
@@ -84,11 +83,6 @@ final class FetchHabitsIndexAction
         $dates = [];
         for ($i = 0; $i < 7; $i++) {
             $date = $start->copy()->addDays($i);
-
-            if (! $date instanceof \Carbon\CarbonInterface) {
-                // Should not happen with Carbon
-                continue;
-            }
 
             $dates[] = [
                 'date' => $date->format('Y-m-d'),
