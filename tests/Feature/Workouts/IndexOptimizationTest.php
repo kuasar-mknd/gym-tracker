@@ -17,7 +17,7 @@ test('workouts index action optimizes json payload', function (): void {
         'name' => 'Bench Press',
         'category' => 'Chest',
         'type' => 'strength',
-        'default_rest_time' => 60
+        'default_rest_time' => 60,
     ]);
 
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -26,7 +26,7 @@ test('workouts index action optimizes json payload', function (): void {
         'workout_id' => $workout->id,
         'exercise_id' => $exercise->id,
         'notes' => 'Some heavy notes here that we do not want to load',
-        'order' => 1
+        'order' => 1,
     ]);
 
     $action = app(FetchWorkoutsIndexAction::class);
