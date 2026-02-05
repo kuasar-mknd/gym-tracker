@@ -59,6 +59,7 @@ class NewPasswordController extends Controller
      */
     private function resetPassword(array $credentials): string
     {
+        /** @phpstan-ignore-next-line */
         return Password::reset(
             $credentials,
             function (\App\Models\User $user) use ($credentials): void {

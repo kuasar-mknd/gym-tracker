@@ -14,7 +14,7 @@ final class FetchSupplementsIndexAction
 {
     /**
      * @return array{
-     *     supplements: Collection<int, mixed>,
+     *     supplements: Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: null}>,
      *     usageHistory: array<int, array{date: string, count: float}>
      * }
      */
