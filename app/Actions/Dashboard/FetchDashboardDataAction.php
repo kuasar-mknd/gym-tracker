@@ -43,6 +43,7 @@ final class FetchDashboardDataAction
 
     /**
      * Get weekly volume comparison stats.
+     *
      * @return array{current_week_volume: float, percentage: float|int}
      */
     public function getWeeklyVolumeStats(User $user): array

@@ -28,7 +28,6 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
         Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key) => str_starts_with($key, "stats.weekly_volume_comparison.{$user->id}")));
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
-        Cache::shouldReceive('forget')->once()->with("dashboard_data_{$user->id}");
 
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
@@ -64,8 +63,6 @@ class StatsServiceCacheTest extends TestCase
         $user = User::factory()->make(['id' => 123]);
 
         // Expectation: Body measurement keys are cleared
-        Cache::shouldReceive('forget')->once()->with("dashboard_data_{$user->id}");
-
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.weight_history.{$user->id}.{$days}");
@@ -85,7 +82,6 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
         Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key) => str_starts_with($key, "stats.weekly_volume_comparison.{$user->id}")));
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
-        Cache::shouldReceive('forget')->times(2)->with("dashboard_data_{$user->id}"); // Called by both sub-methods
 
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
