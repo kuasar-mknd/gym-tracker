@@ -9,10 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
-use function Pest\Laravel\postJson;
-use function Pest\Laravel\putJson;
 
 uses(RefreshDatabase::class);
 
