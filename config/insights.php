@@ -69,9 +69,7 @@ return [
     ],
 
     'add' => [
-        Classes::class => [
-            ForbiddenFinalClasses::class,
-        ],
+        //
     ],
 
     'remove' => [
@@ -88,6 +86,11 @@ return [
         \PHP_CodeSniffer\Standards\Generic\Sniffs\Files\LineLengthSniff::class,
         \SlevomatCodingStandard\Sniffs\Functions\UnusedParameterSniff::class,
         \NunoMaduro\PhpInsights\Domain\Insights\CyclomaticComplexityIsHigh::class,
+        ForbiddenFinalClasses::class, // Allow final classes
+        \SlevomatCodingStandard\Sniffs\Classes\SuperfluousExceptionNamingSniff::class, // Allow "Exception" suffix
+        \SlevomatCodingStandard\Sniffs\Functions\FunctionLengthSniff::class, // Allow longer functions
+        \SlevomatCodingStandard\Sniffs\Commenting\InlineDocCommentDeclarationSniff::class, // Allow simple @var
+        \SlevomatCodingStandard\Sniffs\Commenting\DocCommentSpacingSniff::class, // Relaxed doc spacing
     ],
 
     'config' => [

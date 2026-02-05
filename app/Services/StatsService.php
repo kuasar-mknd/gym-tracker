@@ -286,19 +286,10 @@ class StatsService
         return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
     }
 
-    private function incrementBucket(array &$buckets, int $minutes): void
-    {
-        if ($minutes < 30) {
-            $buckets['< 30 min']++;
-        } elseif ($minutes < 60) {
-            $buckets['30-60 min']++;
-        } elseif ($minutes < 90) {
-            $buckets['60-90 min']++;
-        } else {
-            $buckets['90+ min']++;
-        }
-    }
-
+    /**
+     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, \stdClass>>  $grouped
+     * @return array<int, array{month: string, volume: float}>
+     */
     protected function fillMonthlyVolumeHistory(int $months, \Illuminate\Support\Collection $grouped): array
     {
         $result = [];
@@ -430,5 +421,21 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return ['current_volume' => $currentVolume, 'previous_volume' => $previousVolume, 'difference' => $diff, 'percentage' => round($percentage, 1)];
+    }
+
+    /**
+     * @param  array<string, int>  $buckets
+     */
+    private function incrementBucket(array &$buckets, int $minutes): void
+    {
+        if ($minutes < 30) {
+            $buckets['< 30 min']++;
+        } elseif ($minutes < 60) {
+            $buckets['30-60 min']++;
+        } elseif ($minutes < 90) {
+            $buckets['60-90 min']++;
+        } else {
+            $buckets['90+ min']++;
+        }
     }
 }
