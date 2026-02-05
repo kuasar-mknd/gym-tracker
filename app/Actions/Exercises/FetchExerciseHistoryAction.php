@@ -32,14 +32,14 @@ class FetchExerciseHistoryAction
             })
             ->with(['workout', 'sets'])
             ->get()
-            ->map(function (WorkoutLine $line) {
+            ->map(function (WorkoutLine $line): ?array {
                 $workout = $line->workout;
                 /** @phpstan-ignore-next-line */
                 if (! $workout || ! $workout->started_at) {
                     return null;
                 }
 
-                $sets = $line->sets->map(fn ($set) => [
+                $sets = $line->sets->map(fn ($set): array => [
                     'weight' => (float) $set->weight,
                     'reps' => (int) $set->reps,
                     'one_rep_max' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
@@ -61,7 +61,7 @@ class FetchExerciseHistoryAction
             ->filter()
             ->sortByDesc('started_at')
             ->values()
-            ->map(function ($item) {
+            ->map(function (array $item): array {
                 unset($item['started_at']);
 
                 return $item;

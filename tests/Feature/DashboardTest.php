@@ -35,7 +35,7 @@ test('dashboard displays correct workout stats', function (): void {
         ->get('/dashboard')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page) => $page
+            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Dashboard')
                 ->where('workoutsCount', 13)
                 ->where('thisWeekCount', 3)

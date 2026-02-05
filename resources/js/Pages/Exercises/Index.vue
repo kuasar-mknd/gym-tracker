@@ -462,6 +462,7 @@ const typeLabel = (type) => {
                                     'border-l-[6px]',
                                     categoryBorderColors[category] || 'border-l-slate-300',
                                 ]"
+                                data-testid="exercise-card"
                             >
                                 <!-- View Mode -->
                                 <div
