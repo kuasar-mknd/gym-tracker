@@ -44,8 +44,6 @@ test('user can manage exercises', function (): void {
             ->assertVisible('[data-exercise-name="Dusk Test Exercise"]')
             ->waitFor('[data-exercise-name="Dusk Test Exercise"]', 5);
 
-        // 3. Verify exercise is present (removed outdated tbody check)
-
         // 4. Edit the exercise
         // Hovering is technically not needed if is_testing=true makes buttons visible,
         // but we keep specific selector usage.

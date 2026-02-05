@@ -10,8 +10,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
+import { Head, useForm, router, Link } from '@inertiajs/vue3'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted, watch } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
@@ -41,7 +41,7 @@ const showAddForm = ref(false)
 /** Search query for filtering exercises. */
 const searchQuery = ref('')
 
-/** Reference to the search input element for keyboard focus. */
+/** Reference to the search input element for focus management. */
 const searchInput = ref(null)
 
 /** Currently selected category for filtering. */
@@ -124,7 +124,6 @@ const updateExercise = (exercise) => {
 
 /**
  * Optimistically delete an exercise.
- * Removes it from the local list immediately and restores it if the server request fails.
  */
 const deleteExercise = (id) => {
     if (confirm('Supprimer cet exercice ?')) {
