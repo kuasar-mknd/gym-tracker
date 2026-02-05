@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Models\IntervalTimer;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreIntervalTimerRequest extends FormRequest
@@ -14,7 +15,10 @@ class StoreIntervalTimerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('create', IntervalTimer::class);
+        /** @var User|null $user */
+        $user = $this->user();
+
+        return $user?->can('create', IntervalTimer::class) ?? false;
     }
 
     /**
