@@ -5,59 +5,75 @@ All notable changes to GymTracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.5] - 2026-02-05
 
-### Added
+### 💪 UX & Interaction
 
-- UI Design System "Liquid Glass" polish (translucent cards, gradient glows)
-- Professional GitHub documentation (README, CONTRIBUTING, etc.)
+- **Swipe-to-Action**: Integrated `SwipeableRow` for sets (swipe left to delete, right to duplicate).
+- **Smart Timer**: Added haptic-enabled intelligent rest timer.
+- **Haptic Engine**: Tactile feedback for gesture completion and timer events.
+- **Dynamic Themes**: Added dark/light mode engine with system preference sync.
 
-### Changed
+### 🛡️ Security
 
-- Progress bars now use gradient glow effect
-- Modal overlay uses proper glass-overlay class
-- Login divider uses translucent backdrop
+- **Fix IDOR**: Prevented unauthorized exercise association in goals/PRs.
+- **Mass Assignment**: Hardened user statistics models against unauthorized updates.
 
-### Fixed
+### ⚡ Performance
 
-- Hardcoded color in login divider replaced with design tokens
+- **N+1 Fix**: Optimized `PersonalRecordService` to eager-load workout/exercise relations (#395).
+- **Bolt Optimization**: Reduced dashboard payload size and optimized cache invalidation.
+
+### 🐞 Bug Fixes
+
+- Fixed `TypeError` in `SetsController` (#393).
+- Fixed `TypeError` in `Modal.vue` unmount phase for iOS (#394).
+- Resolved Larastan audit failures in PR synchronization service.
+
+---
+
+## [1.4.0] - 2026-01-30
+
+### 🛡️ Security & Ops
+
+- Added Multi-Factor Authentication (MFA) for Filament Admin.
+- Hardened Content Security Policy (CSP) for backoffice routes.
+- Stabilized migration rollbacks for SQLite/CI.
+
+### 📱 PWA & Mobile
+
+- Implemented Offline-first sync with Workbox and Dexie.
+- Refined mobile safe-area insets for superior ergonomics.
+
+---
+
+## [1.3.1] - 2026-01-24
+
+### 🐞 Fixed
+
+- Corrected cached notification count `TypeError`.
+- Resolved PHP 8.4 deprecation warnings (PDO constants).
 
 ---
 
 ## [1.3.0] - 2026-01-21
 
-### Added
+### 🚀 Core Features
 
-- **Modules**:
-    - Habit Tracking System (Create, Log, Visualize habits)
-    - Vitals Tracking (Heart Rate, Blood Pressure)
-    - Body Fat Calculation & Visualization
-- **UI/UX**:
-    - Full "Liquid Glass" Design System implementation
-    - New Dashboard Widgets (Quick actions, vital summaries)
-    - Animated Charts (Chart.js integration)
-- **Security**:
-    - Strict type enforcement (Larastan Level 8/Max)
-    - Automated Rector code style fixes
-    - Hardened API Authentication & Session Security
-    - CSRF/XSS protection enhancements
+- **Habit Tracker**: Full implementation of habit creation, logging, and visualization.
+- **Health Vitals**: New modules for Heart Rate, Blood Pressure, and Body Fat tracking.
+- **Glass UI**: Implementation of the "Liquid Glass" design system across all pages.
 
-### Changed
+### 🛡️ Security & Quality
 
-- **Architecture**:
-    - Standardized Service Layer patterns
-    - Optimized Database Queries (Reduced N+1 by 90%)
-    - Refactored `StatsService` for strict validation
-- **DevOps**:
-    - CI Pipeline now enforces 100% pass on PHPStan, Insights, and Rector
-    - Docker production build optimization
+- Achieved Larastan Level 8 compliance.
+- Enforced 100% Laravel Pint style coverage.
+- Optimized database query patterns to reduce overhead.
 
-### Fixed
+### 🐞 Fixes
 
-- All loose type definitions in Controllers and Services
-- Rector style violations (Arrow functions, Void returns)
-- Mobile safe-area inset issues on iOS
-- Date parsing inconsistencies in API responses
+- Resolved mobile layout shifts on iOS Safari.
+- Fixed date parsing alignment between API and Frontend.
 
 ---
 
