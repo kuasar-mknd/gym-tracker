@@ -11,7 +11,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
@@ -19,6 +19,23 @@ import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
 const { isRefreshing, pullDistance } = usePullToRefresh()
+
+const searchInput = ref(null)
+
+const handleKeydown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchInput.value?.focus()
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown)
+})
 
 const ExerciseCategoryChart = defineAsyncComponent(() => import('@/Components/Stats/ExerciseCategoryChart.vue'))
 
@@ -263,14 +280,16 @@ const typeLabel = (type) => {
 
             <!-- Search Bar -->
             <div
-                class="glass-panel-light animate-slide-up flex items-center gap-3 rounded-2xl p-3"
+                class="glass-panel-light animate-slide-up focus-within:ring-electric-orange/50 flex items-center gap-3 rounded-2xl p-3 transition-shadow focus-within:ring-2"
                 style="animation-delay: 0.1s"
             >
                 <span class="material-symbols-outlined text-text-muted text-[24px]">search</span>
                 <input
+                    ref="searchInput"
                     v-model="searchQuery"
                     type="search"
                     placeholder="Recherche exercices..."
+                    aria-label="Recherche exercices"
                     class="text-text-main placeholder:text-text-muted/50 flex-1 border-none bg-transparent text-lg focus:ring-0 focus:outline-none"
                 />
                 <div
