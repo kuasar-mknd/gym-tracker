@@ -196,13 +196,15 @@ class StatsService
         return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
+            fn (): array => Workout::query()
+                ->toBase()
+                ->select(['name', 'started_at', 'ended_at'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn (Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->map(fn (object $workout): array => $this->formatDurationHistoryItem($workout))
                 ->reverse()->values()->toArray()
         );
     }
@@ -336,11 +338,24 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
-        $workouts = Workout::select(['started_at', 'ended_at'])->where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))->get();
+        // PERFORMANCE OPTIMIZATION: Use toBase() to avoid expensive Model hydration.
+        // We only need raw date strings to calculate durations.
+        $workouts = Workout::query()
+            ->toBase()
+            ->select(['started_at', 'ended_at'])
+            ->where('user_id', $user->id)
+            ->whereNotNull('ended_at')
+            ->where('started_at', '>=', now()->subDays($days))
+            ->get();
+
         $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
 
         foreach ($workouts as $workout) {
-            $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
+            /** @var object{started_at: string, ended_at: string} $workout */
+            $start = Carbon::parse($workout->started_at);
+            $end = Carbon::parse($workout->ended_at);
+
+            $minutes = abs((int) $end->diffInMinutes($start));
             $this->incrementBucket($buckets, $minutes);
         }
 
@@ -452,9 +467,20 @@ class StatsService
     /**
      * @return array{date: string, duration: int, name: string}
      */
-    protected function formatDurationHistoryItem(Workout $workout): array
+    /**
+     * @param  object{started_at: string|\DateTimeInterface, ended_at: string|\DateTimeInterface|null, name: string}  $workout
+     * @return array{date: string, duration: int, name: string}
+     */
+    protected function formatDurationHistoryItem(object $workout): array
     {
-        return ['date' => $workout->started_at->format('d/m'), 'duration' => (int) ($workout->ended_at ? $workout->ended_at->diffInMinutes($workout->started_at, true) : 0), 'name' => (string) $workout->name];
+        $start = $workout->started_at instanceof \DateTimeInterface ? $workout->started_at : Carbon::parse($workout->started_at);
+        $end = $workout->ended_at instanceof \DateTimeInterface ? $workout->ended_at : ($workout->ended_at ? Carbon::parse($workout->ended_at) : null);
+
+        return [
+            'date' => $start->format('d/m'),
+            'duration' => (int) ($end ? $end->diffInMinutes($start, true) : 0),
+            'name' => (string) $workout->name,
+        ];
     }
 
     /**
