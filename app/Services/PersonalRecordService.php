@@ -26,10 +26,6 @@ final class PersonalRecordService
         /** @var \App\Models\User|null $user */
         $user ??= $set->workoutLine->workout->user;
 
-        if (! $user) {
-            return;
-        }
-
         $exerciseId = $set->workoutLine->exercise_id;
         $existingPRs = PersonalRecord::where('user_id', $user->id)->where('exercise_id', $exerciseId)->get()->keyBy('type');
 
