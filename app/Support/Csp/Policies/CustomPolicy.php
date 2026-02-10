@@ -43,7 +43,7 @@ class CustomPolicy extends Basic
     protected function configureLocal(Policy $policy): void
     {
         $policy
-            ->add(Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_EVAL, Keyword::UNSAFE_INLINE])
+            ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
             ->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
     }
 
