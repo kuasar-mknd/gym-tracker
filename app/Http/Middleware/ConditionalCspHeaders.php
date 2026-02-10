@@ -13,10 +13,13 @@ class ConditionalCspHeaders extends AddCspHeaders
     /**
      * Handle an incoming request.
      */
-    public function handle(Request $request, \Closure $next, $customPreset = null): Response
+    public function handle(Request $request, \Closure $next, ?string $customPreset = null): Response
     {
+        /** @var string $path */
+        $path = config('pulse.path', 'backoffice/pulse');
+
         // Skip global CSP for Pulse routes as they have their own policy in config/pulse.php
-        if ($request->is(config('pulse.path', 'backoffice/pulse').'*')) {
+        if ($request->is($path.'*')) {
             return $next($request);
         }
 
