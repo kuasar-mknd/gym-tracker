@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.4.8] - 2026-02-10
 
+### Fixed
+
+- **Pulse Dashboard**: Resolved production crash at `/backoffice/pulse` by correctly implementing `Spatie\Csp\Preset` in `PulsePolicy`.
+
 ### Optimized
 
 - **Docker Build Performance**: Refactored CI workflow to leverage Native ARM64 runners in GitHub Actions, slashing build times by ~80%.
