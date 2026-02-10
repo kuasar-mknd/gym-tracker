@@ -5,17 +5,23 @@ All notable changes to GymTracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.8] - 2026-02-10
+## [1.4.9] - 2026-02-10
 
 ### Fixed
 
-- **Pulse Dashboard**: Resolved production crash at `/backoffice/pulse` by correctly implementing `Spatie\Csp\Preset` in `PulsePolicy`.
+- **Pulse Dashboard**: Implemented a definitive architectural fix for Content Security Policy (CSP) conflicts using `ConditionalCspHeaders`. This allows Pulse to manage its own security headers without being overridden by the global web policy.
+- **GitHub Actions**: Corrected the ARM64 runner label to `ubuntu-24.04-arm` (from `ubuntu-24.04-arm64`), resolving the "waiting for runner" hang in CI.
 
 ### Optimized
 
-- **Docker Build Performance**: Refactored CI workflow to leverage Native ARM64 runners in GitHub Actions, slashing build times by ~80%.
+- **Docker Build Performance**: Refactored CI workflow to leverage Native ARM64 runners, slashing build times by ~85% (down to ~2.5 minutes from 15+ minutes).
 - **Dockerfile Layering**: Implemented `--platform=$BUILDPLATFORM` for builder stages and granular copying for better cache utilization.
 - **Multi-Arch Strategy**: Switched to a parallel build and manifest merge strategy, following 2026 industry best practices.
+
+## [1.4.8] - 2026-02-10 [DEPRECATED]
+
+> [!WARNING]
+> This version contained an incorrect GitHub Actions runner label and a conflicting CSP configuration. Users should upgrade to v1.4.9 immediately.
 
 ## [1.4.7] - 2026-02-10
 
@@ -170,7 +176,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.7...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.9...HEAD
+[1.4.9]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.7...v1.4.9
+[1.4.8]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.7...v1.4.8
 [1.4.7]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.6...v1.4.7
 [1.4.6]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.5...v1.4.6
 [1.4.5]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.0...v1.4.5
