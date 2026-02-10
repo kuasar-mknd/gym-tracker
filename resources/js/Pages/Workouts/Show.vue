@@ -17,6 +17,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
+import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
@@ -76,19 +77,13 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
         showTimer.value = true
     }
 
-    router.patch(
-        route('sets.update', { set: set.id }),
-        { is_completed: newState },
-        {
-            preserveScroll: true,
-            only: ['workout'],
-            onError: () => {
-                // Rollback on error
-                set.is_completed = previousState
-                triggerHaptic('error')
-            },
-        },
-    )
+    SyncService.patch(route('api.v1.sets.update', { set: set.id }), { is_completed: newState }).catch((err) => {
+        // Rollback on error (only if not a queueing "error")
+        if (!err.isOffline) {
+            set.is_completed = previousState
+            triggerHaptic('error')
+        }
+    })
 }
 
 /** Controls the loading state when saving as template. */
@@ -337,13 +332,12 @@ const removeLine = (lineId) => {
         props.workout.workout_lines.splice(lineIndex, 1) // Remove immediately
         showConfirmModal.value = false
 
-        router.delete(route('workout-lines.destroy', { workoutLine: lineId }), {
-            preserveScroll: true,
-            onError: () => {
-                // Rollback if failed
+        SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: lineId })).catch((err) => {
+            // Rollback if failed
+            if (!err.isOffline) {
                 props.workout.workout_lines.splice(lineIndex, 0, removedLine)
                 triggerHaptic('error')
-            },
+            }
         })
     }
     showConfirmModal.value = true
@@ -406,23 +400,28 @@ const addSet = (lineId) => {
 
     line.sets.push(optimisticSet)
 
-    router.post(route('sets.store', { workoutLine: lineId }), data, {
-        preserveScroll: true,
-        onSuccess: () => {
-            // The page reload from Inertia will replace the temp set with the real one.
-            // However, to prevent flickering or duplication if Inertia merges somewhat weirdly (though it usually replaces),
-            // we strictly rely on the server response "wiping" our optimistic state by replacing props.
-            triggerHaptic('tap')
-        },
-        onError: () => {
-            // Rollback: remove the temp set
+    SyncService.post(route('api.v1.sets.store'), {
+        workout_line_id: lineId,
+        ...data,
+    })
+        .then((response) => {
+            // Update temp set with real ID from database
             const index = line.sets.findIndex((s) => s.id === tempId)
             if (index !== -1) {
-                line.sets.splice(index, 1)
+                line.sets[index].id = response.data.data.id
             }
-            triggerHaptic('error')
-        },
-    })
+            triggerHaptic('tap')
+        })
+        .catch((err) => {
+            // Rollback: remove the temp set (only if real failure, not queuing)
+            if (!err.isOffline) {
+                const index = line.sets.findIndex((s) => s.id === tempId)
+                if (index !== -1) {
+                    line.sets.splice(index, 1)
+                }
+                triggerHaptic('error')
+            }
+        })
 }
 
 /**
@@ -444,19 +443,13 @@ const updateSet = (set, field, value) => {
     // Optimistic Update
     set[field] = value
 
-    router.patch(
-        route('sets.update', { set: set.id }),
-        { [field]: value },
-        {
-            preserveScroll: true,
-            only: ['workout'],
-            onError: () => {
-                // Rollback
-                set[field] = oldValue
-                triggerHaptic('error')
-            },
-        },
-    )
+    SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value }).catch((err) => {
+        // Rollback
+        if (!err.isOffline) {
+            set[field] = oldValue
+            triggerHaptic('error')
+        }
+    })
 }
 
 /**
@@ -488,13 +481,12 @@ const removeSet = (setId) => {
     const removedSet = line.sets[setIndex]
     line.sets.splice(setIndex, 1)
 
-    router.delete(route('sets.destroy', { set: setId }), {
-        preserveScroll: true,
-        onError: () => {
-            // Rollback
+    SyncService.delete(route('api.v1.sets.destroy', { set: setId })).catch((err) => {
+        // Rollback
+        if (!err.isOffline) {
             line.sets.splice(setIndex, 0, removedSet)
             triggerHaptic('error')
-        },
+        }
     })
 }
 
@@ -522,27 +514,30 @@ const duplicateSet = (set, lineId) => {
     // Insert after the current set or at the end? Usually at the end.
     line.sets.push(optimisticSet)
 
-    router.post(
-        route('sets.store', { workoutLine: lineId }),
-        {
-            weight: set.weight,
-            reps: set.reps,
-            distance_km: set.distance_km,
-            duration_seconds: set.duration_seconds,
-        },
-        {
-            preserveScroll: true,
-            onSuccess: () => triggerHaptic('success'),
-            onError: () => {
-                // Rollback
+    SyncService.post(route('api.v1.sets.store'), {
+        workout_line_id: lineId,
+        weight: set.weight,
+        reps: set.reps,
+        distance_km: set.distance_km,
+        duration_seconds: set.duration_seconds,
+    })
+        .then((response) => {
+            const index = line.sets.findIndex((s) => s.id === tempId)
+            if (index !== -1) {
+                line.sets[index].id = response.data.data.id
+            }
+            triggerHaptic('success')
+        })
+        .catch((err) => {
+            // Rollback
+            if (!err.isOffline) {
                 const index = line.sets.findIndex((s) => s.id === tempId)
                 if (index !== -1) {
                     line.sets.splice(index, 1)
                 }
                 triggerHaptic('error')
-            },
-        },
-    )
+            }
+        })
 }
 
 /**
