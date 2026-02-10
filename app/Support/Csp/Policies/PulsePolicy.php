@@ -23,7 +23,7 @@ class PulsePolicy implements Preset
             ->add(Directive::IMG, Keyword::SELF)
             ->add(Directive::MEDIA, Keyword::SELF)
             ->add(Directive::OBJECT, Keyword::NONE)
-            ->add(Directive::SCRIPT, Keyword::SELF)
+            ->add(Directive::SCRIPT, [Keyword::SELF, Keyword::UNSAFE_INLINE])
             ->add(Directive::SCRIPT, Keyword::UNSAFE_INLINE)
             ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
             ->add(Directive::STYLE, Keyword::SELF)
