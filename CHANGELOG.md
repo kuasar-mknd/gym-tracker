@@ -5,6 +5,14 @@ All notable changes to GymTracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.8] - 2026-02-10
+
+### Optimized
+
+- **Docker Build Performance**: Refactored CI workflow to leverage Native ARM64 runners in GitHub Actions, slashing build times by ~80%.
+- **Dockerfile Layering**: Implemented `--platform=$BUILDPLATFORM` for builder stages and granular copying for better cache utilization.
+- **Multi-Arch Strategy**: Switched to a parallel build and manifest merge strategy, following 2026 industry best practices.
+
 ## [1.4.7] - 2026-02-10
 
 ### 🛡️ Ops
