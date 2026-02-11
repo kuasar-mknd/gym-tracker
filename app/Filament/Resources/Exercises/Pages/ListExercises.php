@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Exercises\Pages;
 
 use App\Filament\Resources\Exercises\ExerciseResource;
+use Database\Seeders\PrecorExerciseSeeder;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
-use Illuminate\Support\Facades\Artisan;
 
 class ListExercises extends ListRecords
 {
@@ -23,11 +23,8 @@ class ListExercises extends ListRecords
                 ->icon('heroicon-o-plus-circle')
                 ->color('info')
                 ->requiresConfirmation()
-                ->action(function (): void {
-                    Artisan::call('db:seed', [
-                        '--class' => 'PrecorExerciseSeeder',
-                        '--no-interaction' => true,
-                    ]);
+                ->action(function (PrecorExerciseSeeder $seeder): void {
+                    $seeder->run();
 
                     Notification::make()
                         ->title('Exercices installés avec succès !')
