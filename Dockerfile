@@ -12,6 +12,12 @@ RUN install-php-extensions \
     opcache \
     sockets
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-mysql-client \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+
 # 2. Builder stage for Frontend assets
 FROM --platform=$BUILDPLATFORM node:25-slim AS frontend-builder
 WORKDIR /app
