@@ -44,7 +44,7 @@
         "lucide-vue-next": "^0.563.0",
         "radix-vue": "^1.9.17",
         "vue-chartjs": "^5.3.3",
-        "ziggy-js": "^2.6.0"
+        "ziggy-js": "^2.6.1"
     },
     "optionalDependencies": {
         "@rollup/rollup-linux-arm64-gnu": "^4.57.0"
