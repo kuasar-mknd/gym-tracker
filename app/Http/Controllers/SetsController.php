@@ -19,11 +19,9 @@ class SetsController extends Controller
     /**
      * Create a new controller instance.
      *
-     * @param  \App\Services\PersonalRecordService  $prService  Service for handling Personal Record calculations and updates.
      * @param  \App\Services\StatsService  $statsService  Service for managing user statistics and cache invalidation.
      */
     public function __construct(
-        protected \App\Services\PersonalRecordService $prService,
         protected \App\Services\StatsService $statsService
     ) {
     }
@@ -48,7 +46,6 @@ class SetsController extends Controller
         $set = $workoutLine->sets()->create($request->validated());
         /** @var \App\Models\User $user */
         $user = $this->user();
-        $this->prService->syncSetPRs($set, $user);
         $this->statsService->clearWorkoutRelatedStats($user);
 
         return back();
@@ -74,7 +71,6 @@ class SetsController extends Controller
         $set->update($request->validated());
         /** @var \App\Models\User $user */
         $user = $this->user();
-        $this->prService->syncSetPRs($set, $user);
         $this->statsService->clearWorkoutRelatedStats($user);
 
         return back();

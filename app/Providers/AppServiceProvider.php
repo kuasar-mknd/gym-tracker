@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
+use App\Services\PersonalRecordService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -103,5 +104,30 @@ class AppServiceProvider extends ServiceProvider
         Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
         Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
+
+        // Incremental total volume tracking
+        Set::saved(function (Set $set) {
+            $user = $set->workoutLine->workout->user;
+            $oldVolume = (float) ($set->getOriginal('weight') ?? 0) * (int) ($set->getOriginal('reps') ?? 0);
+            $newVolume = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+            $diff = $newVolume - $oldVolume;
+
+            if ($diff != 0) {
+                $user->increment('total_volume', $diff);
+            }
+        });
+
+        Set::deleted(function (Set $set) {
+            $user = $set->workoutLine?->workout?->user;
+            if ($user) {
+                $volume = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+                if ($volume != 0) {
+                    $user->decrement('total_volume', $volume);
+                }
+            }
+        });
+
+        // Sync Personal Records on every set save
+        Set::saved(fn (Set $set) => app(PersonalRecordService::class)->syncSetPRs($set));
     }
 }

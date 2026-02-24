@@ -7,7 +7,6 @@ namespace App\Services;
 use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Service for managing user achievements.
@@ -96,21 +95,16 @@ final class AchievementService
     private function calculateMaxWeight(User $user): float
     {
         /** @var float|null $maxWeight */
-        $maxWeight = $user->workouts()
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->max('sets.weight');
+        $maxWeight = $user->personalRecords()
+            ->where('type', 'max_weight')
+            ->max('value');
 
-        return $maxWeight ?? 0.0;
+        return (float) ($maxWeight ?? 0.0);
     }
 
     private function calculateTotalVolume(User $user): float
     {
-        return (float) $user->workouts()
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-            ->sum(DB::raw('sets.weight * sets.reps'));
+        return (float) $user->total_volume;
     }
 
     /**
