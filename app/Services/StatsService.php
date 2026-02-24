@@ -312,12 +312,15 @@ class StatsService
      */
     protected function queryVolumeHistory(User $user, int $limit): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')
-            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $user->id)
+        return $this->getBaseVolumeQuery($user)
             ->whereNotNull('workouts.ended_at')
-            ->select('workouts.id', 'workouts.started_at', 'workouts.name', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))
+            ->select(
+                'workouts.id',
+                'workouts.started_at',
+                'workouts.name',
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
             ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
             ->orderByDesc('workouts.started_at')->limit($limit)->get();
     }
@@ -375,14 +378,29 @@ class StatsService
 
     protected function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
     {
-        $query = DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id);
+        $query = $this->getBaseVolumeQuery($user);
+
         if ($end) {
             $query->whereBetween('workouts.started_at', [$start, $end]);
         } else {
             $query->where('workouts.started_at', '>=', $start);
         }
 
-        return (float) $query->sum(DB::raw('sets.weight * sets.reps'));
+        return (float) $query->sum(
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+            DB::raw('sets.weight * sets.reps')
+        );
+    }
+
+    /**
+     * @return \Illuminate\Database\Query\Builder
+     */
+    protected function getBaseVolumeQuery(User $user): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('workouts')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id);
     }
 
     /**
@@ -390,13 +408,18 @@ class StatsService
      */
     protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')
-            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $user->id)
+        return $this->getBaseVolumeQuery($user)
             ->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])
-            ->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))
-            ->groupBy(DB::raw('DATE(workouts.started_at)'))
+            ->select(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('DATE(workouts.started_at) as date'),
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('DATE(workouts.started_at)')
+            )
             ->get()
             ->keyBy('date');
     }
@@ -462,7 +485,18 @@ class StatsService
      */
     protected function fetchVolumeTrendData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->select('workouts.id', 'workouts.started_at', 'workouts.name', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')->orderBy('workouts.started_at')->get();
+        return $this->getBaseVolumeQuery($user)
+            ->where('workouts.started_at', '>=', now()->subDays($days))
+            ->select(
+                'workouts.id',
+                'workouts.started_at',
+                'workouts.name',
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
+            ->orderBy('workouts.started_at')
+            ->get();
     }
 
     /**
@@ -470,7 +504,17 @@ class StatsService
      */
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->whereBetween('workouts.started_at', [$start, now()->endOfDay()])->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('date')->pluck('volume', 'date')->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
+        return $this->getBaseVolumeQuery($user)
+            ->whereBetween('workouts.started_at', [$start, now()->endOfDay()])
+            ->select(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('DATE(workouts.started_at) as date'),
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('date')
+            ->pluck('volume', 'date')
+            ->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
     }
 
     /**
@@ -478,7 +522,15 @@ class StatsService
      */
     protected function fetchMonthlyVolumeHistoryData(User $user, int $months): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subMonths($months - 1)->startOfMonth())->select('workouts.started_at', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('workouts.id', 'workouts.started_at')->get();
+        return $this->getBaseVolumeQuery($user)
+            ->where('workouts.started_at', '>=', now()->subMonths($months - 1)->startOfMonth())
+            ->select(
+                'workouts.started_at',
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('workouts.id', 'workouts.started_at')
+            ->get();
     }
 
     /**
@@ -486,7 +538,10 @@ class StatsService
      */
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')->groupBy('exercises.category')->get();
+        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+            'exercises.category, SUM(sets.weight * sets.reps) as volume'
+        )->groupBy('exercises.category')->get();
     }
 
     /**
@@ -494,7 +549,10 @@ class StatsService
      */
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id)->where('workout_lines.exercise_id', $exerciseId)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw('workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')->groupBy('workouts.started_at')->orderBy('workouts.started_at')->get();
+        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id)->where('workout_lines.exercise_id', $exerciseId)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+            'workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm'
+        )->groupBy('workouts.started_at')->orderBy('workouts.started_at')->get();
     }
 
     /**
