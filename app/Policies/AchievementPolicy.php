@@ -36,19 +36,11 @@ final class AchievementPolicy
 
     public function update(AuthUser $authUser): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return false;
-        }
-
         return $authUser->can('Update:Achievement');
     }
 
     public function delete(AuthUser $authUser): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return false;
-        }
-
         return $authUser->can('Delete:Achievement');
     }
 
