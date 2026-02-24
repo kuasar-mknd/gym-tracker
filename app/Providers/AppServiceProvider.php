@@ -48,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureGates();
         $this->configureVite();
+        $this->configureLivewire();
         $this->configureSocialite();
         $this->configureModelHooks();
     }
@@ -69,6 +70,13 @@ class AppServiceProvider extends ServiceProvider
 
             return is_object($user) && is_string($role) && method_exists($user, 'hasRole') && $user->hasRole($role);
         });
+    }
+
+    private function configureLivewire(): void
+    {
+        if ($this->app->bound('csp-nonce')) {
+            config(['livewire.nonce' => $this->app->make('csp-nonce')]);
+        }
     }
 
     private function configureVite(): void
