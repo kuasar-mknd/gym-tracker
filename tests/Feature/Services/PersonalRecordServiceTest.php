@@ -15,12 +15,12 @@ use Illuminate\Support\Facades\Notification;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->service = new PersonalRecordService();
     Notification::fake();
 });
 
-it('returns early if set is a warmup', function () {
+it('returns early if set is a warmup', function (): void {
     $set = Set::factory()->make(['is_warmup' => true]);
 
     $this->service->syncSetPRs($set);
@@ -28,7 +28,7 @@ it('returns early if set is a warmup', function () {
     expect(PersonalRecord::count())->toBe(0);
 });
 
-it('returns early if set weight is missing', function () {
+it('returns early if set weight is missing', function (): void {
     $set = Set::factory()->make(['weight' => 0, 'reps' => 10]);
 
     $this->service->syncSetPRs($set);
@@ -36,7 +36,7 @@ it('returns early if set weight is missing', function () {
     expect(PersonalRecord::count())->toBe(0);
 });
 
-it('returns early if set reps is missing', function () {
+it('returns early if set reps is missing', function (): void {
     $set = Set::factory()->make(['weight' => 100, 'reps' => 0]);
 
     $this->service->syncSetPRs($set);
@@ -44,7 +44,7 @@ it('returns early if set reps is missing', function () {
     expect(PersonalRecord::count())->toBe(0);
 });
 
-it('creates personal records correctly for a new exercise', function () {
+it('creates personal records correctly for a new exercise', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -76,7 +76,7 @@ it('creates personal records correctly for a new exercise', function () {
     expect($maxVolume->secondary_value)->toBeNull();
 });
 
-it('correctly calculates 1RM for single rep sets', function () {
+it('correctly calculates 1RM for single rep sets', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -96,7 +96,7 @@ it('correctly calculates 1RM for single rep sets', function () {
     expect((float) $max1rm->value)->toBe(100.0);
 });
 
-it('updates existing personal records if new value is better', function () {
+it('updates existing personal records if new value is better', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -126,7 +126,7 @@ it('updates existing personal records if new value is better', function () {
     expect((float) $maxWeight->value)->toBe(100.0);
 });
 
-it('does not update personal records if new value is not better', function () {
+it('does not update personal records if new value is not better', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -156,7 +156,7 @@ it('does not update personal records if new value is not better', function () {
     expect((float) $maxWeight->value)->toBe(120.0);
 });
 
-it('sends notification when a PR is achieved and user has notifications enabled', function () {
+it('sends notification when a PR is achieved and user has notifications enabled', function (): void {
     $user = User::factory()->create();
     $user->notificationPreferences()->create([
         'type' => 'personal_record',
@@ -180,7 +180,7 @@ it('sends notification when a PR is achieved and user has notifications enabled'
     Notification::assertSentTo($user, PersonalRecordAchieved::class);
 });
 
-it('does not send notification when notifications are disabled', function () {
+it('does not send notification when notifications are disabled', function (): void {
     $user = User::factory()->create();
     $user->notificationPreferences()->create([
         'type' => 'personal_record',
@@ -204,7 +204,7 @@ it('does not send notification when notifications are disabled', function () {
     Notification::assertNotSentTo($user, PersonalRecordAchieved::class);
 });
 
-it('uses explicitly provided user if passed', function () {
+it('uses explicitly provided user if passed', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $exercise = Exercise::factory()->create();
