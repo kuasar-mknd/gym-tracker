@@ -8,7 +8,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-final class SyncUserAchievements implements ShouldQueue, ShouldBeUnique
+final class SyncUserAchievements implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
