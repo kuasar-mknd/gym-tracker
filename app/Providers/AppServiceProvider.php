@@ -90,7 +90,7 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureModelHooks(): void
     {
-        $syncGoals = function (?\App\Models\User $user, bool $debounce = false) {
+        $syncGoals = function (?\App\Models\User $user, bool $debounce = false): void {
             if (! $user) {
                 return;
             }
@@ -104,7 +104,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Jobs\SyncUserGoals::dispatch($user);
         };
 
-        $syncAchievements = function (?\App\Models\User $user, bool $debounce = false) {
+        $syncAchievements = function (?\App\Models\User $user, bool $debounce = false): void {
             if (! $user) {
                 return;
             }
@@ -125,21 +125,21 @@ class AppServiceProvider extends ServiceProvider
         Workout::deleted(fn (Workout $workout) => $syncAchievements($workout->user));
 
         // Sets only trigger if the workout is finished, and they are debounced per request
-        Set::saved(function (Set $set) use ($syncGoals) {
-            $workout = $set->workoutLine?->workout;
-            if ($workout && $workout->ended_at !== null) {
+        Set::saved(function (Set $set) use ($syncGoals): void {
+            $workout = $set->workoutLine->workout;
+            if ($workout->ended_at !== null) {
                 $syncGoals($workout->user, true);
             }
         });
-        Set::deleted(function (Set $set) use ($syncGoals) {
-            $workout = $set->workoutLine?->workout;
-            if ($workout && $workout->ended_at !== null) {
+        Set::deleted(function (Set $set) use ($syncGoals): void {
+            $workout = $set->workoutLine->workout;
+            if ($workout->ended_at !== null) {
                 $syncGoals($workout->user, true);
             }
         });
-        Set::saved(function (Set $set) use ($syncAchievements) {
-            $workout = $set->workoutLine?->workout;
-            if ($workout && $workout->ended_at !== null) {
+        Set::saved(function (Set $set) use ($syncAchievements): void {
+            $workout = $set->workoutLine->workout;
+            if ($workout->ended_at !== null) {
                 $syncAchievements($workout->user, true);
             }
         });
