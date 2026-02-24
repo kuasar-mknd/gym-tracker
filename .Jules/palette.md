@@ -13,3 +13,7 @@
 ## 2026-02-19 - Interactive Image Links
 **Learning:** Links containing only images (like social login buttons) should have an `aria-label` on the `<a>` tag itself. Relying solely on the image's `alt` text can be less robust for keyboard/screen reader navigation.
 **Action:** Always add descriptive `aria-label` to icon-only or image-only links.
+
+## 2025-05-22 - Notification Accessibility
+**Learning:** Action buttons in notification lists that only use an icon (like a checkmark for "Mark as read") should have an explicit `aria-label` even if a `title` is present, to ensure clarity for screen reader users.
+**Action:** Added `aria-label="Marquer comme lu"` to the mark-as-read button in the Notifications index page.
