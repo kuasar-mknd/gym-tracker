@@ -46,7 +46,7 @@
                 </GlassCard>
 
                 <!-- Result Card (Mobile/Desktop split) -->
-                <GlassCard v-if="oneRepMax > 0" class="border-accent-primary/30 bg-accent-primary/10">
+                <GlassCard v-if="oneRepMax > 0" class="border-electric-orange/30 bg-electric-orange/10">
                     <div class="p-6 text-center">
                         <h3 class="text-text-main/80 text-lg font-medium">1RM Estimé</h3>
                         <div class="text-text-main mt-2 text-5xl font-bold">

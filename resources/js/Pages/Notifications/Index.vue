@@ -86,7 +86,7 @@ const formatDate = (date) => {
                 <GlassCard
                     v-for="notification in notifications.data"
                     :key="notification.id"
-                    :class="['transition', !notification.read_at ? 'ring-accent-primary/30 ring-1' : 'opacity-70']"
+                    :class="['transition', !notification.read_at ? 'ring-electric-orange/30 ring-1' : 'opacity-70']"
                 >
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex gap-4">

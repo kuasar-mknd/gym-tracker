@@ -204,7 +204,7 @@ watch(
             <!-- Progress bar -->
             <div class="h-1 w-full bg-slate-200/50 dark:bg-white/10">
                 <div
-                    class="bg-accent-primary h-full transition-all duration-1000 ease-linear"
+                    class="bg-electric-orange h-full transition-all duration-1000 ease-linear"
                     :style="{ width: `${progress}%` }"
                 ></div>
             </div>
@@ -231,7 +231,7 @@ watch(
 
                         <button
                             @click="toggleTimer"
-                            class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
+                            class="bg-electric-orange flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
                         >
                             <svg v-if="isActive" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 4h4v16H6V4zm8 0h4v16h4V4z" />
