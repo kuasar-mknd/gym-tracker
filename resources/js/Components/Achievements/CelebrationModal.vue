@@ -60,6 +60,10 @@ const close = () => {
         <!-- Modal -->
         <div
             class="animate-bounce-in bg-glass-strong relative w-full max-w-sm overflow-hidden rounded-3xl p-1 shadow-2xl ring-1 ring-white/10"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="achievement-title"
+            aria-describedby="achievement-description"
         >
             <!-- Glow Effect -->
             <div
@@ -75,7 +79,7 @@ const close = () => {
                 </div>
 
                 <!-- Icon -->
-                <div class="relative mb-4">
+                <div class="relative mb-4" aria-hidden="true">
                     <div
                         class="animate-wobble flex h-24 w-24 items-center justify-center rounded-3xl border border-white/10 bg-linear-to-br from-white/10 to-white/5 text-6xl shadow-lg"
                     >
@@ -84,9 +88,9 @@ const close = () => {
                 </div>
 
                 <!-- Text -->
-                <h2 class="mb-1 text-xl font-bold text-white">Badge Débloqué !</h2>
+                <h2 class="mb-1 text-xl font-bold text-white" id="achievement-title">Badge Débloqué !</h2>
                 <h3 class="text-accent-primary mb-3 text-lg font-bold">{{ achievement.name }}</h3>
-                <p class="mb-6 text-sm text-white/70">
+                <p class="mb-6 text-sm text-white/70" id="achievement-description">
                     {{
                         achievement.message?.replace('Nouveau badge débloqué : ' + achievement.name + ' !', '') ||
                         'Félicitations pour cet exploit !'

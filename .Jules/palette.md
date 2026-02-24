@@ -13,3 +13,7 @@
 ## 2026-02-19 - Interactive Image Links
 **Learning:** Links containing only images (like social login buttons) should have an `aria-label` on the `<a>` tag itself. Relying solely on the image's `alt` text can be less robust for keyboard/screen reader navigation.
 **Action:** Always add descriptive `aria-label` to icon-only or image-only links.
+
+## 2026-02-24 - Accessibility for Celebration Modals
+**Learning:** Full-screen modal overlays like achievement celebrations should use proper ARIA roles (`role="dialog"`, `aria-modal="true"`) and descriptive links (`aria-labelledby`, `aria-describedby`) to ensure they are properly handled by assistive technologies.
+**Action:** Always include ARIA identification and description IDs for modal content headings and body text.
