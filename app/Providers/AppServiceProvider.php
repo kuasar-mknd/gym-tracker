@@ -90,17 +90,63 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureModelHooks(): void
     {
-        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
-        Workout::deleted(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        $syncGoals = function (?\App\Models\User $user, bool $debounce = false) {
+            if (! $user) {
+                return;
+            }
+            if ($debounce) {
+                $key = 'dispatched:sync-goals:'.$user->id;
+                if ($this->app->bound($key)) {
+                    return;
+                }
+                $this->app->instance($key, true);
+            }
+            \App\Jobs\SyncUserGoals::dispatch($user);
+        };
 
-        Set::saved(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
-        Set::deleted(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
+        $syncAchievements = function (?\App\Models\User $user, bool $debounce = false) {
+            if (! $user) {
+                return;
+            }
+            if ($debounce) {
+                $key = 'dispatched:sync-achievements:'.$user->id;
+                if ($this->app->bound($key)) {
+                    return;
+                }
+                $this->app->instance($key, true);
+            }
+            \App\Jobs\SyncUserAchievements::dispatch($user);
+        };
 
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        // Workouts always trigger (covers creation and completion)
+        Workout::saved(fn (Workout $workout) => $syncGoals($workout->user));
+        Workout::deleted(fn (Workout $workout) => $syncGoals($workout->user));
+        Workout::saved(fn (Workout $workout) => $syncAchievements($workout->user));
+        Workout::deleted(fn (Workout $workout) => $syncAchievements($workout->user));
 
-        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
-        Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
+        // Sets only trigger if the workout is finished, and they are debounced per request
+        Set::saved(function (Set $set) use ($syncGoals) {
+            $workout = $set->workoutLine?->workout;
+            if ($workout && $workout->ended_at !== null) {
+                $syncGoals($workout->user, true);
+            }
+        });
+        Set::deleted(function (Set $set) use ($syncGoals) {
+            $workout = $set->workoutLine?->workout;
+            if ($workout && $workout->ended_at !== null) {
+                $syncGoals($workout->user, true);
+            }
+        });
+        Set::saved(function (Set $set) use ($syncAchievements) {
+            $workout = $set->workoutLine?->workout;
+            if ($workout && $workout->ended_at !== null) {
+                $syncAchievements($workout->user, true);
+            }
+        });
+
+        // Body Measurements always trigger
+        BodyMeasurement::saved(fn (BodyMeasurement $bm) => $syncGoals($bm->user));
+        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => $syncGoals($bm->user));
 
         Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
     }

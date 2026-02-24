@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-final class SyncUserAchievements implements ShouldQueue
+final class SyncUserAchievements implements ShouldQueue, ShouldBeUnique
 {
     use Queueable;
 
@@ -16,6 +17,14 @@ final class SyncUserAchievements implements ShouldQueue
      */
     public function __construct(public \App\Models\User $user)
     {
+    }
+
+    /**
+     * The unique ID of the job.
+     */
+    public function uniqueId(): string
+    {
+        return (string) $this->user->id;
     }
 
     /**
