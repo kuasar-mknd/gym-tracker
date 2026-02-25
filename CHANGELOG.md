@@ -5,6 +5,50 @@ All notable changes to GymTracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.9] - 2026-02-10
+
+### Fixed
+
+- **Pulse Dashboard**: Implemented a definitive architectural fix for Content Security Policy (CSP) conflicts using `ConditionalCspHeaders`. This allows Pulse to manage its own security headers without being overridden by the global web policy.
+- **GitHub Actions**: Corrected the ARM64 runner label to `ubuntu-24.04-arm` (from `ubuntu-24.04-arm64`), resolving the "waiting for runner" hang in CI.
+
+### Optimized
+
+- **Docker Build Performance**: Refactored CI workflow to leverage Native ARM64 runners, slashing build times by ~85% (down to ~2.5 minutes from 15+ minutes).
+- **Dockerfile Layering**: Implemented `--platform=$BUILDPLATFORM` for builder stages and granular copying for better cache utilization.
+- **Multi-Arch Strategy**: Switched to a parallel build and manifest merge strategy, following 2026 industry best practices.
+
+## [1.4.8] - 2026-02-10 [DEPRECATED]
+
+> [!WARNING]
+> This version contained an incorrect GitHub Actions runner label and a conflicting CSP configuration. Users should upgrade to v1.4.9 immediately.
+
+## [1.4.7] - 2026-02-10
+
+### 🛡️ Ops
+
+- **Production Fix**: Removed unsupported `--force` from `filament:upgrade` in `entrypoint.sh` to prevent server crash.
+
+---
+
+## [1.4.6] - 2026-02-10
+
+### ⚡ Performance & Offline
+
+- **Axios Migration**: Migrated workout interactions and profile notification preferences to Axios for robust API communication.
+- **SyncService**: Introduced centralized synchronization logic to prepare for full offline support.
+
+### 🛡️ Security & Ops
+
+- **Production Fix**: Resolved critical server startup failure caused by Telescope loading in production.
+- **CI Stability**: Fixed Dusk test failures (white pages) by isolating Vite assets conflict.
+
+### 🧹 Modernization
+
+- **Rector & Pint**: Applied automated code modernization and style enforcement across the codebase.
+
+---
+
 ## [1.4.5] - 2026-02-05
 
 ### 💪 UX & Interaction
@@ -132,7 +176,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.9...HEAD
+[1.4.9]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.7...v1.4.9
+[1.4.8]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.7...v1.4.8
+[1.4.7]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.6...v1.4.7
+[1.4.6]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.5...v1.4.6
+[1.4.5]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.0...v1.4.5
+[1.4.0]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.3.1...v1.4.0
+[1.3.1]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/kuasar-mknd/gym-tracker/releases/tag/v1.0.0
