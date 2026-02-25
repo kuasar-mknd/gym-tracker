@@ -9,7 +9,7 @@ use App\Models\WorkoutLine;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\post;
 
-test('set creation with massive weight and reps causes database overflow or application error', function () {
+test('set creation with massive weight and reps causes database overflow or application error', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -45,7 +45,7 @@ test('set creation with massive weight and reps causes database overflow or appl
     ]);
 });
 
-test('set update with massive weight and reps is rejected', function () {
+test('set update with massive weight and reps is rejected', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
