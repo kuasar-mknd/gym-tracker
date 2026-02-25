@@ -7,7 +7,6 @@ namespace App\Services;
 use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Service for managing user achievements.
@@ -33,6 +32,9 @@ final class AchievementService
         }
     }
 
+    /**
+     * @param  array<string, int|float>  $metrics
+     */
     private function checkAndUnlock(User $user, Achievement $achievement, array $metrics): void
     {
         $isUnlocked = match ($achievement->type) {
@@ -119,7 +121,6 @@ final class AchievementService
     }
 
     /**
-     * @param  int  $days
      * @return array<int, string>
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
@@ -129,7 +130,7 @@ final class AchievementService
             ->latest('started_at')
             ->pluck('started_at');
 
-        return $dates->map(function (\DateTimeInterface|string|null $date): string {
+        return $dates->map(function ($date): string {
             if ($date instanceof \DateTimeInterface) {
                 return $date->format('Y-m-d');
             }

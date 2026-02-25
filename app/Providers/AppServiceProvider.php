@@ -109,7 +109,9 @@ class AppServiceProvider extends ServiceProvider
 
         Set::saved(function (Set $set): void {
             $user = $set->workoutLine->workout->user;
-            $oldVol = (float) ($set->getOriginal('weight') ?? 0) * (int) ($set->getOriginal('reps') ?? 0);
+            $oldWeight = $set->getOriginal('weight');
+            $oldReps = $set->getOriginal('reps');
+            $oldVol = (is_numeric($oldWeight) ? (float) $oldWeight : 0.0) * (is_numeric($oldReps) ? (int) $oldReps : 0);
             $newVol = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
             $diff = $newVol - $oldVol;
 
@@ -119,8 +121,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Set::deleted(function (Set $set): void {
-            $user = $set->workoutLine?->workout?->user;
-            if ($user && ($vol = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0)) !== 0.0) {
+            $user = $set->workoutLine->workout->user;
+            $vol = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+            if ($vol !== 0.0) {
                 $user->decrement('total_volume', $vol);
             }
         });
