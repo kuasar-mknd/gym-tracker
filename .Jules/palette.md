@@ -10,6 +10,13 @@
 **Learning:** Buttons with status badges (like notification counts) need dynamic aria-labels (e.g., "Notifications (3 unread)") because the badge content itself is often just a number and separate from the icon.
 **Action:** Use computed properties or template literals for aria-labels on buttons with state counters.
 
-## 2026-02-04 - Keyboard Shortcut Implementation & Case Sensitivity
-**Learning:** Visual keyboard hints (e.g., ⌘K) in the UI create a functional promise. If not implemented, they frustrate power users. Using `e.key.toLowerCase()` ensures shortcuts work regardless of Caps Lock or Shift state.
-**Action:** Verify visual shortcut hints are implemented and use case-insensitive matching for keyboard event listeners.
+## 2026-02-19 - Interactive Image Links
+**Learning:** Links containing only images (like social login buttons) should have an `aria-label` on the `<a>` tag itself. Relying solely on the image's `alt` text can be less robust for keyboard/screen reader navigation.
+**Action:** Always add descriptive `aria-label` to icon-only or image-only links.
+
+## [2026-02-24] - Accessibility Improvement - Exercise Selection
+
+- **Task**: Add Unit Tests for PersonalRecordService Sync Logic
+- **Improvement**: Added `aria-label` to the exercise selection dropdown in the Stats page.
+- **Reasoning**: The dropdown had a placeholder option but no descriptive label for screen readers. Adding an explicit `aria-label` ensures that users using assistive technologies understand the purpose of the input.
+- **Learning**: Always ensure interactive elements that rely on visual context (like being under a heading) have explicit ARIA labels for accessibility.

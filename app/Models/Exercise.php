@@ -74,19 +74,31 @@ class Exercise extends Model
      */
     public static function getCachedForUser(int $userId): Collection
     {
-        return self::forUser($userId)
-            ->orderBy('category')
-            ->orderBy('name')
-            ->get();
+        $globalVersion = Cache::get('exercises_global_version', '1');
+        $globalVersion = is_scalar($globalVersion) ? (string) $globalVersion : '1';
+
+        return Cache::remember(
+            "exercises_list_{$userId}_v{$globalVersion}",
+            3600,
+            fn () => self::forUser($userId)
+                ->orderBy('category')
+                ->orderBy('name')
+                ->get()
+        );
     }
 
     /**
      * Clear the exercise list cache for the owner of this exercise.
+     * If it's a global exercise, increment the global version to invalidate all user caches.
      */
     public function invalidateCache(): void
     {
         if ($this->user_id) {
-            Cache::forget("exercises_list_{$this->user_id}");
+            $globalVersion = Cache::get('exercises_global_version', '1');
+            $globalVersion = is_scalar($globalVersion) ? (string) $globalVersion : '1';
+            Cache::forget("exercises_list_{$this->user_id}_v{$globalVersion}");
+        } else {
+            Cache::forever('exercises_global_version', time());
         }
     }
 

@@ -68,7 +68,7 @@ class ExerciseController extends Controller
      *
      * Validates and creates a new exercise for the authenticated user.
      * Invalidates the 'exercises_list_{userId}' cache.
-     * Returns JSON if requested (e.g., from workout creation modal) or redirects back.
+     * Returns JSON if requested (e.g., from a workout creation modal) or redirects back.
      *
      * @param  \App\Http\Requests\ExerciseStoreRequest  $request  The validated request containing name, type, and category.
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse JSON response with the created exercise or a redirect back.
@@ -82,12 +82,15 @@ class ExerciseController extends Controller
         $exercise->user_id = $this->user()->id;
         $exercise->save();
 
+        // Explicitly invalidate cache to ensure UI updates immediately
+        $exercise->invalidateCache();
+
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
-        if (($request->wantsJson() && ! $request->header('X-Inertia')) || $request->header('X-Quick-Create')) {
+        if ($request->header('X-Quick-Create')) {
             return response()->json(['exercise' => $exercise], 201);
         }
 
-        return redirect()->route('exercises.index');
+        return redirect()->back();
     }
 
     /**
@@ -106,8 +109,9 @@ class ExerciseController extends Controller
         $this->authorize('update', $exercise);
 
         $exercise->update($request->validated());
+        $exercise->invalidateCache();
 
-        return redirect()->route('exercises.index');
+        return redirect()->back();
     }
 
     /**
@@ -126,13 +130,14 @@ class ExerciseController extends Controller
         $this->authorize('delete', $exercise);
 
         if ($exercise->workoutLines()->exists()) {
-            return redirect()->route('exercises.index')->withErrors([
+            return redirect()->back()->withErrors([
                 'exercise' => 'Cet exercice est utilisé dans une séance et ne peut pas être supprimé.',
             ]);
         }
 
         $exercise->delete();
+        $exercise->invalidateCache();
 
-        return redirect()->route('exercises.index');
+        return redirect()->back();
     }
 }

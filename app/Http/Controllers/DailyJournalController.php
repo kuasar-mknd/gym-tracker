@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Journal\LogDailyJournalAction;
 use App\Http\Requests\DailyJournalStoreRequest;
 use App\Models\DailyJournal;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -33,29 +34,16 @@ class DailyJournalController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(DailyJournalStoreRequest $request): \Illuminate\Http\RedirectResponse
+    public function store(DailyJournalStoreRequest $request, LogDailyJournalAction $logDailyJournal): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', DailyJournal::class);
 
+        /** @var array{date: string, content?: string|null, mood_score?: int|null, sleep_quality?: int|null, stress_level?: int|null, energy_level?: int|null, motivation_level?: int|null, nutrition_score?: int|null, training_intensity?: int|null} $validated */
         $validated = $request->validated();
-        $dateInput = $validated['date'];
-        if (! is_string($dateInput)) {
-            throw new \UnexpectedValueException('Date must be a string');
-        }
-        $date = \Illuminate\Support\Carbon::parse($dateInput);
-        $dateString = $date->format('Y-m-d');
 
-        $journal = $this->user()->dailyJournals()->where('date', $dateString)->first() ?? new DailyJournal();
+        $logDailyJournal->execute($this->user(), $validated);
 
-        if (! $journal->exists) {
-            $journal->user_id = $this->user()->id;
-            $journal->date = $date;
-        }
-
-        $journal->fill($validated);
-        $journal->save();
-
-        return redirect()->route('daily-journals.index')->with('success', 'Journal enregistré.');
+        return redirect()->back();
     }
 
     /**
@@ -67,6 +55,6 @@ class DailyJournalController extends Controller
 
         $dailyJournal->delete();
 
-        return redirect()->route('daily-journals.index')->with('success', 'Journal supprimé.');
+        return redirect()->back();
     }
 }

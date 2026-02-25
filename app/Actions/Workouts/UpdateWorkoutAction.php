@@ -24,8 +24,8 @@ final class UpdateWorkoutAction
 
         // Check what changed to determine cache invalidation strategy
         $needsFullClear = $workout->isDirty(['started_at', 'ended_at']);
-        $needsNameClear = $workout->isDirty(['name']);
-        $needsNotesClear = $workout->isDirty(['notes']);
+        $needsMetaClear = $workout->isDirty(['name']);
+        $needsDashboardClear = $workout->isDirty(['notes']);
 
         if ($data['is_finished'] ?? false) {
             $workout->ended_at = now();
@@ -36,9 +36,9 @@ final class UpdateWorkoutAction
 
         if ($needsFullClear) {
             $this->statsService->clearWorkoutRelatedStats($workout->user);
-        } elseif ($needsNameClear) {
+        } elseif ($needsMetaClear) {
             $this->statsService->clearWorkoutMetadataStats($workout->user);
-        } elseif ($needsNotesClear) {
+        } elseif ($needsDashboardClear) {
             \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$workout->user_id}");
         }
 

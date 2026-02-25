@@ -11,8 +11,8 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        Schema::table('sets', function (Blueprint $table) {
-            $table->decimal('rpe', 4, 1)->nullable()->after('reps');
+        Schema::table('workout_lines', function (Blueprint $table): void {
+            $table->text('notes')->nullable()->after('order');
         });
     }
 
@@ -21,8 +21,8 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        Schema::table('sets', function (Blueprint $table) {
-            $table->dropColumn('rpe');
+        Schema::table('workout_lines', function (Blueprint $table): void {
+            $table->dropColumn('notes');
         });
     }
 };

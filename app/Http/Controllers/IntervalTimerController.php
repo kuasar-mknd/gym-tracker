@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreIntervalTimerRequest;
+use App\Http\Requests\UpdateIntervalTimerRequest;
 use App\Models\IntervalTimer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,15 +27,9 @@ class IntervalTimerController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreIntervalTimerRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'work_seconds' => ['required', 'integer', 'min:1'],
-            'rest_seconds' => ['required', 'integer', 'min:0'],
-            'rounds' => ['required', 'integer', 'min:1'],
-            'warmup_seconds' => ['nullable', 'integer', 'min:0'],
-        ]);
+        $validated = $request->validated();
 
         $this->user()->intervalTimers()->create($validated);
 
@@ -44,19 +40,9 @@ class IntervalTimerController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, IntervalTimer $intervalTimer): RedirectResponse
+    public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): RedirectResponse
     {
-        if ($intervalTimer->user_id !== $this->user()->id) {
-            abort(403);
-        }
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'work_seconds' => ['required', 'integer', 'min:1'],
-            'rest_seconds' => ['required', 'integer', 'min:0'],
-            'rounds' => ['required', 'integer', 'min:1'],
-            'warmup_seconds' => ['nullable', 'integer', 'min:0'],
-        ]);
+        $validated = $request->validated();
 
         $intervalTimer->update($validated);
 
@@ -69,9 +55,7 @@ class IntervalTimerController extends Controller
      */
     public function destroy(Request $request, IntervalTimer $intervalTimer): RedirectResponse
     {
-        if ($intervalTimer->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $intervalTimer);
 
         $intervalTimer->delete();
 

@@ -87,7 +87,7 @@ describe('Authenticated', function (): void {
 
             postJson(route('api.v1.fasts.store'), $data)
                 ->assertUnprocessable()
-                ->assertJsonValidationErrors(['message']);
+                ->assertJsonValidationErrors(['base']);
         });
 
         test('validation: required fields', function (): void {

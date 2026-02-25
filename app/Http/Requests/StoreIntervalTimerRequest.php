@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\IntervalTimer;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreIntervalTimerRequest extends FormRequest
@@ -13,7 +14,10 @@ class StoreIntervalTimerRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        /** @var \App\Models\User|null $user */
+        $user = $this->user();
+
+        return $user?->can('create', IntervalTimer::class) ?? false;
     }
 
     /**
@@ -24,10 +28,11 @@ class StoreIntervalTimerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'work_seconds' => 'required|integer|min:1',
-            'rest_seconds' => 'required|integer|min:0',
-            'rounds' => 'required|integer|min:1',
+            'name' => ['required', 'string', 'max:255'],
+            'work_seconds' => ['required', 'integer', 'min:1'],
+            'rest_seconds' => ['required', 'integer', 'min:0'],
+            'rounds' => ['required', 'integer', 'min:1'],
+            'warmup_seconds' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }
