@@ -28,7 +28,7 @@ class AchievementController extends Controller
             ->paginate();
 
         // Load unlock status for the current user
-        $achievements->getCollection()->load([
+        (new \Illuminate\Database\Eloquent\Collection($achievements->items()))->load([
             'users' => function ($query) {
                 $query->where('user_id', $this->user()->id);
             },
