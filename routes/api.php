@@ -16,6 +16,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:api'])->as('api.v1.')
     Route::get('/user', fn (Request $request): \App\Http\Resources\UserResource => new \App\Http\Resources\UserResource($request->user()));
 
     Route::apiResource('achievements', \App\Http\Controllers\Api\AchievementController::class);
+    Route::apiResource('user-achievements', \App\Http\Controllers\Api\UserAchievementController::class);
     Route::apiResource('exercises', ExerciseController::class);
     Route::apiResource('plates', \App\Http\Controllers\Api\PlateController::class);
     Route::apiResource('workouts', WorkoutController::class);
