@@ -34,6 +34,7 @@ class MacroCalculationController extends Controller
      */
     public function store(StoreMacroCalculationRequest $request, CreateMacroCalculationAction $action): MacroCalculationResource
     {
+        /** @var array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string} $validated */
         $validated = $request->validated();
 
         $calculation = $action->execute($this->user(), $validated);
@@ -58,6 +59,7 @@ class MacroCalculationController extends Controller
     {
         $this->authorize('update', $macroCalculation);
 
+        /** @var array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string} $validated */
         $validated = $request->validated();
 
         $updated = $action->execute($macroCalculation, $validated);
