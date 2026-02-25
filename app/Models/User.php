@@ -14,7 +14,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\LogOptions;
@@ -73,6 +72,14 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function workouts(): HasMany
     {
         return $this->hasMany(Workout::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough<WorkoutLine, Workout, $this>
+     */
+    public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(WorkoutLine::class, Workout::class);
     }
 
     /**
@@ -235,27 +242,6 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->logOnly(['name', 'email', 'avatar', 'default_rest_time'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
-    }
-
-    public function getUnreadNotificationsCountCached(): int
-    {
-        return (int) Cache::remember(
-            "user:{$this->id}:unread_notifications_count",
-            now()->addSeconds(30),
-            fn () => $this->unreadNotifications()->count()
-        );
-    }
-
-    public function getLatestAchievementCached(): ?Notification
-    {
-        return Cache::remember(
-            "user:{$this->id}:latest_achievement",
-            now()->addSeconds(30),
-            fn () => $this->unreadNotifications()
-                ->where('type', \App\Notifications\AchievementUnlocked::class)
-                ->latest()
-                ->first()
-        );
     }
 
     /**

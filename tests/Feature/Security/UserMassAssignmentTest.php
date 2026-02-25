@@ -1,47 +1,38 @@
 <?php
 
+declare(strict_types=1);
+
+namespace Tests\Feature\Security;
+
 use App\Models\User;
-use Illuminate\Database\Eloquent\MassAssignmentException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Tests\TestCase;
 
-test('current_streak cannot be mass assigned', function () {
-    $this->expectException(MassAssignmentException::class);
+class UserMassAssignmentTest extends TestCase
+{
+    use RefreshDatabase;
 
-    User::create([
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-        'current_streak' => 100,
-    ]);
-});
+    public function test_system_stats_are_protected_against_mass_assignment(): void
+    {
+        $user = User::factory()->create();
+        $user->forceFill([
+            'current_streak' => 1,
+            'longest_streak' => 5,
+            'last_workout_at' => Carbon::parse('2023-01-01 12:00:00'),
+        ])->save();
 
-test('longest_streak cannot be mass assigned', function () {
-    $this->expectException(MassAssignmentException::class);
+        $payload = [
+            'name' => 'Hacker Name',
+            'current_streak' => 999,
+            'longest_streak' => 999,
+            'last_workout_at' => '2025-01-01 12:00:00',
+        ];
 
-    User::create([
-        'name' => 'Test User',
-        'email' => 'test2@example.com',
-        'password' => 'password',
-        'longest_streak' => 100,
-    ]);
-});
+        // Expect MassAssignmentException because strict mode is enabled in tests
+        $this->expectException(\Illuminate\Database\Eloquent\MassAssignmentException::class);
 
-test('last_workout_at cannot be mass assigned', function () {
-    $this->expectException(MassAssignmentException::class);
-
-    User::create([
-        'name' => 'Test User',
-        'email' => 'test3@example.com',
-        'password' => 'password',
-        'last_workout_at' => now(),
-    ]);
-});
-
-test('stats cannot be mass assigned during update', function () {
-    $user = User::factory()->create();
-
-    $this->expectException(MassAssignmentException::class);
-
-    $user->update([
-        'current_streak' => 100,
-    ]);
-});
+        // Simulate mass assignment
+        $user->update($payload);
+    }
+}

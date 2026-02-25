@@ -1,3 +1,13 @@
+<!--
+  Journal/Index.vue - Daily Journal & Wellness Tracker
+
+  This page allows users to:
+  - Log daily wellness metrics (mood, sleep, stress, energy, etc.).
+  - Write free-text journal entries.
+  - View historical data grouped by month.
+  - Visualize trends via the JournalChart component.
+  - Add, edit, and delete journal entries.
+-->
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -8,13 +18,26 @@ import { ref, computed, defineAsyncComponent } from 'vue'
 
 const JournalChart = defineAsyncComponent(() => import('@/Components/Stats/JournalChart.vue'))
 
+/**
+ * Component Props
+ * @property {Array} journals - List of journal entries for the user.
+ */
 const props = defineProps({
     journals: Array,
 })
 
+// --- State Management ---
+
+/** Controls the visibility of the Add/Edit form modal/card. */
 const showAddForm = ref(false)
+
+/** Holds the journal entry currently being edited (null if creating new). */
 const editingJournal = ref(null)
 
+/**
+ * Inertia form handling for journal entries.
+ * Includes fields for date, content (text), and various wellness scores.
+ */
 const form = useForm({
     date: new Date().toISOString().substr(0, 10),
     content: '',
@@ -27,6 +50,7 @@ const form = useForm({
     training_intensity: null,
 })
 
+/** Available mood options with values and labels. */
 const moods = [
     { value: 5, label: '🤩 Excellent' },
     { value: 4, label: '🙂 Bon' },
@@ -35,6 +59,10 @@ const moods = [
     { value: 1, label: '😫 Terrible' },
 ]
 
+/**
+ * Opens the form to create a new journal entry.
+ * Resets the form to default values.
+ */
 const openAddForm = () => {
     form.reset()
     form.date = new Date().toISOString().substr(0, 10)
@@ -42,6 +70,12 @@ const openAddForm = () => {
     showAddForm.value = true
 }
 
+/**
+ * Opens the form to edit an existing journal entry.
+ * Populates the form with the entry's data.
+ *
+ * @param {Object} journal - The journal entry to edit.
+ */
 const editJournal = (journal) => {
     form.date = journal.date
     form.content = journal.content
@@ -56,6 +90,10 @@ const editJournal = (journal) => {
     showAddForm.value = true
 }
 
+/**
+ * Submits the form to create or update a journal entry.
+ * The backend handles upsert based on the date.
+ */
 const submit = () => {
     form.post(route('daily-journals.store'), {
         onSuccess: () => {
@@ -66,13 +104,21 @@ const submit = () => {
     })
 }
 
+/**
+ * Deletes a journal entry after confirmation.
+ *
+ * @param {Number} id - The ID of the journal entry to delete.
+ */
 const deleteJournal = (id) => {
     if (confirm('Supprimer cette entrée ?')) {
         useForm({}).delete(route('daily-journals.destroy', { daily_journal: id }))
     }
 }
 
-// Group journals by month
+/**
+ * Computed property that groups journal entries by month for display.
+ * Returns an object where keys are "Month Year" strings and values are arrays of journals.
+ */
 const journalsByMonth = computed(() => {
     const groups = {}
     props.journals.forEach((journal) => {
@@ -86,6 +132,12 @@ const journalsByMonth = computed(() => {
     return groups
 })
 
+/**
+ * Formats a date string into a readable French date format.
+ *
+ * @param {String} dateStr - Date string (YYYY-MM-DD).
+ * @returns {String} Formatted date (e.g., "lundi 1 janvier").
+ */
 const formatDate = (dateStr) => {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR', {
         weekday: 'long',
@@ -164,7 +216,7 @@ const formatDate = (dateStr) => {
                                 :class="[
                                     'flex-1 rounded-lg border border-slate-200 p-2 text-center text-sm transition',
                                     form.mood_score === mood.value
-                                        ? 'bg-accent-primary border-transparent text-white'
+                                        ? 'bg-electric-orange border-transparent text-white'
                                         : 'text-text-muted bg-white/50 hover:bg-slate-50',
                                 ]"
                             >
@@ -244,7 +296,7 @@ const formatDate = (dateStr) => {
                         <textarea
                             v-model="form.content"
                             rows="4"
-                            class="text-text-main placeholder-text-muted/30 focus:border-accent-primary focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 backdrop-blur-md focus:ring-1 focus:outline-none"
+                            class="text-text-main placeholder-text-muted/30 focus:border-electric-orange focus:ring-electric-orange w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 backdrop-blur-md focus:ring-1 focus:outline-none"
                             placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
                         ></textarea>
                         <div v-if="form.errors.content" class="mt-1 text-xs text-red-400">
