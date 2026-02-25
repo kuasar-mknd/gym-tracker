@@ -60,22 +60,26 @@ const close = () => {
         <!-- Modal -->
         <div
             class="animate-bounce-in bg-glass-strong relative w-full max-w-sm overflow-hidden rounded-3xl p-1 shadow-2xl ring-1 ring-white/10"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="achievement-title"
+            aria-describedby="achievement-description"
         >
             <!-- Glow Effect -->
             <div
-                class="to-accent-secondary/20 from-accent-primary/20 absolute inset-0 bg-linear-to-br via-transparent opacity-50"
+                class="to-vivid-violet/20 from-electric-orange/20 absolute inset-0 bg-linear-to-br via-transparent opacity-50"
             ></div>
 
             <div class="relative flex flex-col items-center rounded-[20px] bg-gray-900/50 p-6 text-center">
                 <!-- Confetti/Burst Animation Background (CSS only) -->
                 <div class="pointer-events-none absolute top-0 left-0 h-full w-full overflow-hidden">
                     <div
-                        class="bg-accent-primary/20 absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full blur-[60px]"
+                        class="bg-electric-orange/20 absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full blur-[60px]"
                     ></div>
                 </div>
 
                 <!-- Icon -->
-                <div class="relative mb-4">
+                <div class="relative mb-4" aria-hidden="true">
                     <div
                         class="animate-wobble flex h-24 w-24 items-center justify-center rounded-3xl border border-white/10 bg-linear-to-br from-white/10 to-white/5 text-6xl shadow-lg"
                     >
@@ -84,9 +88,9 @@ const close = () => {
                 </div>
 
                 <!-- Text -->
-                <h2 class="mb-1 text-xl font-bold text-white">Badge Débloqué !</h2>
-                <h3 class="text-accent-primary mb-3 text-lg font-bold">{{ achievement.name }}</h3>
-                <p class="mb-6 text-sm text-white/70">
+                <h2 class="mb-1 text-xl font-bold text-white" id="achievement-title">Badge Débloqué !</h2>
+                <h3 class="text-electric-orange mb-3 text-lg font-bold">{{ achievement.name }}</h3>
+                <p class="mb-6 text-sm text-white/70" id="achievement-description">
                     {{
                         achievement.message?.replace('Nouveau badge débloqué : ' + achievement.name + ' !', '') ||
                         'Félicitations pour cet exploit !'
@@ -96,7 +100,7 @@ const close = () => {
                 <!-- Action -->
                 <button
                     @click="close"
-                    class="hover:bg-accent-primary-hover bg-accent-primary shadow-accent-primary/25 w-full rounded-xl py-3 font-bold text-white shadow-lg transition-all active:scale-95"
+                    class="bg-electric-orange shadow-electric-orange/25 w-full rounded-xl py-3 font-bold text-white shadow-lg transition-all hover:brightness-110 active:scale-95"
                 >
                     Génial ! 🤩
                 </button>
