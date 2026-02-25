@@ -24,7 +24,7 @@ defineProps({
                 <Link
                     v-if="showBack && backRoute"
                     :href="backRoute.startsWith('http') || backRoute.startsWith('/') ? backRoute : route(backRoute)"
-                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
+                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-sm backdrop-blur-md transition-all hover:bg-white/20 hover:shadow-lg active:scale-95"
                 >
                     <span class="material-symbols-outlined">arrow_back</span>
                 </Link>

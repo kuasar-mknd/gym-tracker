@@ -82,9 +82,11 @@ class ExerciseController extends Controller
         $exercise->user_id = $this->user()->id;
         $exercise->save();
 
+        // Explicitly invalidate cache to ensure UI updates immediately
+        $exercise->invalidateCache();
+
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
-        // Ensure we don't intercept Inertia requests which also might 'wantJson' but expect a redirect/page response
-        if (($request->wantsJson() && ! $request->header('X-Inertia')) || $request->header('X-Quick-Create')) {
+        if ($request->header('X-Quick-Create')) {
             return response()->json(['exercise' => $exercise], 201);
         }
 
@@ -107,6 +109,7 @@ class ExerciseController extends Controller
         $this->authorize('update', $exercise);
 
         $exercise->update($request->validated());
+        $exercise->invalidateCache();
 
         return redirect()->back();
     }
@@ -133,6 +136,7 @@ class ExerciseController extends Controller
         }
 
         $exercise->delete();
+        $exercise->invalidateCache();
 
         return redirect()->back();
     }
