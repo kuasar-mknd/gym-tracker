@@ -7,9 +7,9 @@ namespace Tests\Unit\Actions\Tools;
 use App\Actions\Tools\CreateWilksScoreAction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use ReflectionClass;
 use Tests\TestCase;
-use PHPUnit\Framework\Attributes\DataProvider;
 
 class CreateWilksScoreActionTest extends TestCase
 {
@@ -24,17 +24,23 @@ class CreateWilksScoreActionTest extends TestCase
     }
 
     #[DataProvider('wilksDataProvider')]
-    public function test_calculate_wilks_formula(float $bw, float $lifted, string $gender, float $expected): void
-    {
+    public function test_calculate_wilks_formula(
+        float $bw,
+        float $lifted,
+        string $gender,
+        float $expected
+    ): void {
         $reflection = new ReflectionClass(CreateWilksScoreAction::class);
         $method = $reflection->getMethod('calculateWilks');
-        $method->setAccessible(true);
 
         $result = $method->invokeArgs($this->action, [$bw, $lifted, $gender]);
 
         $this->assertEquals($expected, $result);
     }
 
+    /**
+     * @return array<string, array{0: float, 1: float, 2: string, 3: float}>
+     */
     public static function wilksDataProvider(): array
     {
         return [
