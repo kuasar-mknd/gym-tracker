@@ -2,18 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Models;
+namespace Tests\Unit\Services;
 
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Mockery;
 use Tests\TestCase;
 
-class UserCacheTest extends TestCase
+class NotificationServiceTest extends TestCase
 {
     use RefreshDatabase;
+
+    private NotificationService $service;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->service = app(NotificationService::class);
+    }
 
     public function test_get_unread_notifications_count_cached_interacts_with_cache(): void
     {
@@ -25,12 +34,12 @@ class UserCacheTest extends TestCase
             ->once()
             ->with(
                 $cacheKey,
-                Mockery::on(fn($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
+                Mockery::on(fn ($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
                 Mockery::type('Closure')
             )
             ->andReturn(5);
 
-        $count = $user->getUnreadNotificationsCountCached();
+        $count = $this->service->getUnreadCount($user);
 
         $this->assertEquals(5, $count);
     }
@@ -62,7 +71,7 @@ class UserCacheTest extends TestCase
         // We use Cache::spy() to allow the real implementation to run while still verifying interaction
         Cache::spy();
 
-        $count = $user->getUnreadNotificationsCountCached();
+        $count = $this->service->getUnreadCount($user);
 
         $this->assertEquals(2, $count);
         Cache::shouldHaveReceived('remember')
@@ -83,12 +92,12 @@ class UserCacheTest extends TestCase
             ->once()
             ->with(
                 $cacheKey,
-                Mockery::on(fn($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
+                Mockery::on(fn ($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
                 Mockery::type('Closure')
             )
             ->andReturn(null);
 
-        $achievement = $user->getLatestAchievementCached();
+        $achievement = $this->service->getLatestAchievement($user);
 
         $this->assertNull($achievement);
     }
@@ -115,7 +124,7 @@ class UserCacheTest extends TestCase
 
         Cache::spy();
 
-        $result = $user->getLatestAchievementCached();
+        $result = $this->service->getLatestAchievement($user);
 
         $this->assertNotNull($result);
         $this->assertEquals($achievement->id, $result->id);

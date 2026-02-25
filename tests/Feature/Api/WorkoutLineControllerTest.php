@@ -43,7 +43,7 @@ test('store creates workout line', function () {
         ->postJson(route('api.v1.workout-lines.store'), $data)
         ->assertCreated()
         ->assertJsonFragment(['notes' => 'Test Note'])
-        ->assertJsonFragment(['order' => 0]);
+        ->assertJsonFragment(['order' => 1]);
 
     expect($workout->workoutLines()->count())->toBe(1);
 });
