@@ -1,7 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\User;
 use Illuminate\Database\Eloquent\MassAssignmentException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+uses(TestCase::class, RefreshDatabase::class);
 
 test('current_streak cannot be mass assigned', function () {
     $this->expectException(MassAssignmentException::class);

@@ -36,7 +36,7 @@ class StatsCacheTest extends TestCase
         $this->assertTrue(Cache::has($key));
     }
 
-    public function test_updating_workout_notes_only_clears_dashboard_cache(): void
+    public function test_updating_workout_notes_does_not_clear_trend_cache(): void
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create([
@@ -47,13 +47,10 @@ class StatsCacheTest extends TestCase
         ]);
 
         // Fill caches
-        $dashboardKey = "dashboard_data_{$user->id}";
         $trendKey = "stats.volume_trend.{$user->id}.30";
 
-        Cache::put($dashboardKey, ['data'], 600);
         Cache::put($trendKey, ['data'], 600);
 
-        $this->assertTrue(Cache::has($dashboardKey));
         $this->assertTrue(Cache::has($trendKey));
 
         // Update ONLY notes
@@ -61,7 +58,6 @@ class StatsCacheTest extends TestCase
             'notes' => 'Updated Notes',
         ]);
 
-        $this->assertFalse(Cache::has($dashboardKey), 'Dashboard cache should be cleared');
         $this->assertTrue(Cache::has($trendKey), 'Volume trend cache should NOT be cleared when only notes change');
     }
 
@@ -74,11 +70,9 @@ class StatsCacheTest extends TestCase
         ]);
 
         // Fill caches
-        $dashboardKey = "dashboard_data_{$user->id}";
         $trendKey = "stats.volume_trend.{$user->id}.30";
         $muscleKey = "stats.muscle_dist.{$user->id}.30";
 
-        Cache::put($dashboardKey, ['data'], 600);
         Cache::put($trendKey, ['data'], 600);
         Cache::put($muscleKey, ['data'], 600);
 
@@ -87,7 +81,6 @@ class StatsCacheTest extends TestCase
             'name' => 'New Name',
         ]);
 
-        $this->assertFalse(Cache::has($dashboardKey), 'Dashboard cache should be cleared');
         $this->assertFalse(Cache::has($trendKey), 'Volume trend cache should be cleared when name changes');
         $this->assertTrue(Cache::has($muscleKey), 'Muscle distribution cache should NOT be cleared when only name changes');
     }

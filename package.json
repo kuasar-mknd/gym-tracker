@@ -21,7 +21,7 @@
         "@tailwindcss/vite": "^4.1.18",
         "@vitejs/plugin-vue": "^6.0.4",
         "autoprefixer": "^10.4.12",
-        "axios": "^1.13.4",
+        "axios": "^1.13.5",
         "concurrently": "^9.0.1",
         "husky": "^9.1.7",
         "laravel-vite-plugin": "^2.0.0",
@@ -29,10 +29,10 @@
         "postcss": "^8.4.31",
         "prettier": "^3.8.0",
         "prettier-plugin-tailwindcss": "^0.7.2",
-        "tailwindcss": "^4.1.18",
+        "tailwindcss": "^4.2.1",
         "vite": "^7.0.7",
         "vite-plugin-pwa": "^1.2.0",
-        "vue": "^3.5.27",
+        "vue": "^3.5.28",
         "workbox-precaching": "^7.4.0",
         "workbox-routing": "^7.4.0",
         "workbox-strategies": "^7.4.0"
@@ -41,10 +41,12 @@
         "@sentry/vue": "^10.38.0",
         "chart.js": "^4.5.1",
         "dayjs": "^1.11.19",
+        "lucide-vue-next": "^0.575.0",
+        "radix-vue": "^1.9.17",
         "vue-chartjs": "^5.3.3",
-        "ziggy-js": "^2.6.0"
+        "ziggy-js": "^2.6.1"
     },
     "optionalDependencies": {
-        "@rollup/rollup-linux-arm64-gnu": "^4.57.0"
+        "@rollup/rollup-linux-arm64-gnu": "^4.59.0"
     }
 }

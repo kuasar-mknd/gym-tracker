@@ -28,9 +28,9 @@ class UserForm
             TextInput::make('provider_id'),
             TextInput::make('avatar'),
             TextInput::make('password')->password(),
-            TextInput::make('current_streak')->required()->numeric()->default(0)->disabled(),
-            TextInput::make('longest_streak')->required()->numeric()->default(0)->disabled(),
-            DateTimePicker::make('last_workout_at')->disabled(),
+            TextInput::make('current_streak')->required()->numeric()->default(0)->readOnly(),
+            TextInput::make('longest_streak')->required()->numeric()->default(0)->readOnly(),
+            DateTimePicker::make('last_workout_at')->readOnly(),
         ];
     }
 }
