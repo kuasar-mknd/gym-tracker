@@ -47,10 +47,10 @@ class GoalTest extends TestCase
             'start_value' => 50,
         ]);
 
-        $workout = $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+        $workout = $user->workouts()->create(['started_at' => now()]);
         $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id]);
 
-        // This should trigger the saved event and GoalService since workout is finished
+        // This should trigger the saved event and GoalService
         $line->sets()->create([
             'weight' => 80,
             'reps' => 5,
@@ -72,7 +72,7 @@ class GoalTest extends TestCase
             'start_value' => 50,
         ]);
 
-        $workout = $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+        $workout = $user->workouts()->create(['started_at' => now()]);
         $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id]);
 
         $line->sets()->create([

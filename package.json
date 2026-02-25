@@ -18,7 +18,7 @@
     "devDependencies": {
         "@inertiajs/vue3": "^2.3.10",
         "@tailwindcss/forms": "^0.5.3",
-        "@tailwindcss/vite": "^4.2.1",
+        "@tailwindcss/vite": "^4.1.18",
         "@vitejs/plugin-vue": "^6.0.4",
         "autoprefixer": "^10.4.12",
         "axios": "^1.13.4",
@@ -38,7 +38,7 @@
         "workbox-strategies": "^7.4.0"
     },
     "dependencies": {
-        "@sentry/vue": "^10.39.0",
+        "@sentry/vue": "^10.38.0",
         "chart.js": "^4.5.1",
         "dayjs": "^1.11.19",
         "lucide-vue-next": "^0.563.0",

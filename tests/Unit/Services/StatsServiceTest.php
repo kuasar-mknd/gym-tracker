@@ -225,4 +225,56 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(90, $history[1]['duration']);
         $this->assertEquals(45, $history[2]['duration']); // Should be absolute difference
     }
+
+    public function test_can_calculate_duration_distribution(): void
+    {
+        $user = User::factory()->create();
+
+        // < 30 min
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(5)->hour(10)->minute(0),
+            'ended_at' => now()->subDays(5)->hour(10)->minute(20),
+        ]);
+
+        // 30-60 min
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(4)->hour(10)->minute(0),
+            'ended_at' => now()->subDays(4)->hour(10)->minute(45),
+        ]);
+
+        // 60-90 min
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(3)->hour(10)->minute(0),
+            'ended_at' => now()->subDays(3)->hour(11)->minute(15),
+        ]);
+
+        // 90+ min
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(2)->hour(10)->minute(0),
+            'ended_at' => now()->subDays(2)->hour(12)->minute(0),
+        ]);
+
+        // Outside of range (91 days ago)
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays(91)->hour(10)->minute(0),
+            'ended_at' => now()->subDays(91)->hour(11)->minute(0),
+        ]);
+
+        $dist = (new \App\Services\StatsService())->getDurationDistribution($user);
+
+        $this->assertCount(4, $dist);
+        $this->assertEquals(1, $dist[0]['count']); // < 30
+        $this->assertEquals('< 30 min', $dist[0]['label']);
+        $this->assertEquals(1, $dist[1]['count']); // 30-60
+        $this->assertEquals('30-60 min', $dist[1]['label']);
+        $this->assertEquals(1, $dist[2]['count']); // 60-90
+        $this->assertEquals('60-90 min', $dist[2]['label']);
+        $this->assertEquals(1, $dist[3]['count']); // 90+
+        $this->assertEquals('90+ min', $dist[3]['label']);
+    }
 }

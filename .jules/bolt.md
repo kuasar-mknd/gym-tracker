@@ -38,3 +38,8 @@
 **Learning:** When implementing granular cache invalidation (splitting a "nuke all" method), ensure that the consumers (Actions) correctly identify which "scope" of data changed. In this case, updating a workout's *name* only requires clearing metadata caches, not heavy volume aggregations.
 **Also:** Codebase performance optimizations (like `limit(3)` in `FetchDashboardDataAction`) must be reflected in tests. I found `DashboardTest` expecting 5 items when the code explicitly limits to 3. Always verify tests align with optimization constraints.
 **Action:** When refactoring cache logic, define clear boundaries (e.g., `clearMetadata` vs `clearAggregates`) and verify test expectations against these boundaries.
+
+## 2026-03-05 - Database-Level Distribution Aggregation
+
+**Learning:** Generating statistical distributions (e.g., duration buckets) by fetching collections into PHP and iterating is a major bottleneck (O(N) memory and CPU). Using SQL `COUNT(CASE...)` with `toBase()` reduces the overhead to O(1) memory and leverages database performance.
+**Action:** Use `SUM(CASE...)` or `COUNT(CASE...)` with driver-specific functions (`julianday` for SQLite, `TIMESTAMPDIFF` for MySQL) for all bucketed statistics. Use `toBase()` when model features (scopes, accessors) are not needed to avoid hydration cost.
