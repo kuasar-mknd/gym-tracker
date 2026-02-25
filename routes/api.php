@@ -13,7 +13,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.')->group(function (): void {
+<<<<<<< ours
     Route::get('/user', fn(Request $request): \App\Http\Resources\UserResource => new \App\Http\Resources\UserResource($request->user()));
+=======
+<<<<<<< HEAD
+    Route::get('/user', fn (Request $request): \App\Http\Resources\UserResource => new \App\Http\Resources\UserResource($request->user()));
+=======
+    Route::get('/user', fn(Request $request): \App\Http\Resources\UserResource => new \App\Http\Resources\UserResource($request->user()));
+>>>>>>> main
+>>>>>>> theirs
 
     Route::apiResource('achievements', \App\Http\Controllers\Api\AchievementController::class);
     Route::apiResource('user-achievements', \App\Http\Controllers\Api\UserAchievementController::class);
