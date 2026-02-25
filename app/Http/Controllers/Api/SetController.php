@@ -56,7 +56,7 @@ class SetController extends Controller
             collect($validated)->except('workout_line_id')->toArray()
         );
 
-        $this->prService->syncSetPRs($set);
+        $this->prService->syncSetPRs($set, $this->user());
         $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return new SetResource($set);
@@ -81,7 +81,7 @@ class SetController extends Controller
 
         $set->update($request->validated());
 
-        $this->prService->syncSetPRs($set);
+        $this->prService->syncSetPRs($set, $this->user());
         $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return new SetResource($set);

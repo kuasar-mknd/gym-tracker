@@ -1,9 +1,10 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { useForm, usePage } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { usePage } from '@inertiajs/vue3'
+import { ref, reactive } from 'vue'
 import axios from 'axios'
+import SyncService from '@/Utils/SyncService'
 
 const props = defineProps({
     preferences: {
@@ -19,7 +20,7 @@ const pushSupported = 'Notification' in window && 'serviceWorker' in navigator
 const pushPermission = ref(typeof Notification !== 'undefined' ? Notification.permission : 'default')
 const isSubscribing = ref(false)
 
-const form = useForm({
+const form = reactive({
     preferences: {
         personal_record: props.preferences.personal_record?.is_enabled ?? true,
         training_reminder: props.preferences.training_reminder?.is_enabled ?? true,
@@ -32,6 +33,10 @@ const form = useForm({
         training_reminder: props.preferences.training_reminder?.value ?? 3,
     },
 })
+
+const isSaving = ref(false)
+const recentlySuccessful = ref(false)
+const errors = ref({})
 
 const urlBase64ToUint8Array = (base64String) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -74,12 +79,31 @@ const enablePush = async () => {
 }
 
 const updatePreferences = () => {
-    form.patch(route('profile.preferences.update'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            // Success logic if needed
-        },
-    })
+    isSaving.value = true
+    errors.value = {}
+
+    SyncService.patch(route('profile.preferences.update'), form)
+        .then(() => {
+            recentlySuccessful.value = true
+            setTimeout(() => {
+                recentlySuccessful.value = false
+            }, 2000)
+        })
+        .catch((err) => {
+            if (err.isOffline) {
+                recentlySuccessful.value = true
+                setTimeout(() => {
+                    recentlySuccessful.value = false
+                }, 2000)
+                return
+            }
+            if (err.response?.status === 422) {
+                errors.value = err.response.data.errors
+            }
+        })
+        .finally(() => {
+            isSaving.value = false
+        })
 }
 </script>
 
@@ -95,7 +119,7 @@ const updatePreferences = () => {
                 <!-- Web Push Banner -->
                 <div
                     v-if="pushSupported && pushPermission !== 'granted'"
-                    class="border-accent-primary/20 bg-accent-primary/10 mb-6 rounded-xl border p-4"
+                    class="border-electric-orange/20 bg-electric-orange/10 mb-6 rounded-xl border p-4"
                 >
                     <div class="flex items-center justify-between gap-4">
                         <div>
@@ -105,7 +129,9 @@ const updatePreferences = () => {
                                 fermée.
                             </p>
                         </div>
-                        <GlassButton size="sm" @click="enablePush" :loading="isSubscribing"> Activer </GlassButton>
+                        <GlassButton type="button" size="sm" @click="enablePush" :loading="isSubscribing">
+                            Activer
+                        </GlassButton>
                     </div>
                 </div>
 
@@ -123,7 +149,7 @@ const updatePreferences = () => {
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" v-model="form.preferences.personal_record" class="peer sr-only" />
                             <div
-                                class="peer peer-checked:bg-accent-primary h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
+                                class="peer peer-checked:bg-electric-orange h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
                             ></div>
                         </label>
                     </div>
@@ -133,7 +159,7 @@ const updatePreferences = () => {
                             type="checkbox"
                             v-model="form.push_preferences.personal_record"
                             id="push_pr"
-                            class="text-accent-primary focus:ring-accent-primary rounded border-white/10 bg-white/5"
+                            class="text-electric-orange focus:ring-electric-orange rounded border-white/10 bg-white/5"
                         />
                         <label for="push_pr" class="text-text-muted text-xs">Envoyer aussi en Push</label>
                     </div>
@@ -151,7 +177,7 @@ const updatePreferences = () => {
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" v-model="form.preferences.training_reminder" class="peer sr-only" />
                             <div
-                                class="peer peer-checked:bg-accent-primary h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
+                                class="peer peer-checked:bg-electric-orange h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
                             ></div>
                         </label>
                     </div>
@@ -161,7 +187,7 @@ const updatePreferences = () => {
                             type="checkbox"
                             v-model="form.push_preferences.training_reminder"
                             id="push_reminder"
-                            class="text-accent-primary focus:ring-accent-primary rounded border-white/10 bg-white/5"
+                            class="text-electric-orange focus:ring-electric-orange rounded border-white/10 bg-white/5"
                         />
                         <label for="push_reminder" class="text-text-muted text-xs">Envoyer aussi en Push</label>
                     </div>
@@ -181,7 +207,7 @@ const updatePreferences = () => {
                                 min="1"
                                 max="30"
                                 label="Nombre de jours d'inactivité"
-                                :error="form.errors['values.training_reminder']"
+                                :error="errors['values.training_reminder']"
                             />
                         </div>
                     </Transition>
@@ -189,7 +215,7 @@ const updatePreferences = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <GlassButton :disabled="form.processing">Sauvegarder</GlassButton>
+                <GlassButton :loading="isSaving">Sauvegarder</GlassButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
@@ -197,7 +223,7 @@ const updatePreferences = () => {
                     leave-active-class="transition ease-in-out"
                     leave-to-class="opacity-0"
                 >
-                    <p v-if="form.recentlySuccessful" class="text-sm text-emerald-400">Enregistré.</p>
+                    <p v-if="recentlySuccessful" class="text-sm text-emerald-400">Enregistré.</p>
                 </Transition>
             </div>
         </form>
