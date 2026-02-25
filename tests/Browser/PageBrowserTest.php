@@ -30,10 +30,11 @@ test('users can register', function (): void {
             ->visit('/register')
             ->waitFor('input[name="name"]', 60) // Ensure form is loaded
             ->type('input[name="name"]', 'John Doe')
-            ->type('input[name="email"]', 'john'.time().'@example.com')
+            ->type('input[name="email"]', 'john' . time() . '@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
-            ->click('button[type="submit"]')
+            ->waitFor('[data-testid="register-button"]', 30)
+            ->click('[data-testid="register-button"]')
             ->waitForLocation('/verify-email', 60) // Increased timeout for heavy operation
             ->assertPathIs('/verify-email');
     });
