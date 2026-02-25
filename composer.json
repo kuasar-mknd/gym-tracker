@@ -26,7 +26,7 @@
         "laravel/tinker": "^2.10.1",
         "sentry/sentry-laravel": "^4.20",
         "shuvroroy/filament-spatie-laravel-backup": "dev-main",
-        "socialiteproviders/apple": "^5.7",
+        "socialiteproviders/apple": "^5.8",
         "spatie/laravel-activitylog": "^4.0",
         "spatie/laravel-backup": "^9.0",
         "spatie/laravel-csp": "^3.21",
