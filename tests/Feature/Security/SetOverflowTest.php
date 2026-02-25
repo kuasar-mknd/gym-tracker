@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\post;
 
