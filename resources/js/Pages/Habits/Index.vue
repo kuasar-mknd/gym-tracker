@@ -245,10 +245,13 @@ const getProgressPercent = (habit) => {
                         v-for="day in weekDates"
                         :key="day.date"
                         class="flex flex-col items-center justify-center border-l border-slate-100 p-2 text-center"
-                        :class="{ 'bg-accent-primary/5': day.is_today }"
+                        :class="{ 'bg-electric-orange/5': day.is_today }"
                     >
                         <div class="text-text-muted text-[10px] uppercase">{{ day.day_short || day.day }}</div>
-                        <div class="text-sm font-bold" :class="day.is_today ? 'text-accent-primary' : 'text-text-main'">
+                        <div
+                            class="text-sm font-bold"
+                            :class="day.is_today ? 'text-electric-orange' : 'text-text-main'"
+                        >
                             {{ day.day_num }}
                         </div>
                     </div>
@@ -312,7 +315,7 @@ const getProgressPercent = (habit) => {
                             v-for="day in weekDates"
                             :key="day.date"
                             class="flex items-center justify-center border-l border-slate-100 p-2"
-                            :class="{ 'bg-accent-primary/5': day.is_today }"
+                            :class="{ 'bg-electric-orange/5': day.is_today }"
                         >
                             <button
                                 @click="toggleHabit(habit, day.date)"
@@ -388,7 +391,7 @@ const getProgressPercent = (habit) => {
                                 class="flex h-10 w-10 items-center justify-center rounded-lg border-2 transition hover:bg-slate-100"
                                 :class="[
                                     form.icon === icon
-                                        ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                                        ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
                                         : 'text-text-muted border-transparent',
                                 ]"
                             >
