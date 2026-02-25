@@ -7,11 +7,8 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-<<<<<<< HEAD
-=======
 use \App\Services\PersonalRecordService;
 use \App\Services\StreakService;
->>>>>>> main
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -167,9 +164,6 @@ class AppServiceProvider extends ServiceProvider
         BodyMeasurement::saved(fn(BodyMeasurement $bm) => $syncGoals($bm->user));
         BodyMeasurement::deleted(fn(BodyMeasurement $bm) => $syncGoals($bm->user));
     }
-<<<<<<< HEAD
-=======
-
     private function updateUserVolume(Set $set): void
     {
         $u = $set->workoutLine->workout->user;
@@ -192,5 +186,4 @@ class AppServiceProvider extends ServiceProvider
             $u->decrement('total_volume', $v);
         }
     }
->>>>>>> main
 }

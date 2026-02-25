@@ -21,14 +21,7 @@ final class AchievementService
         $unlockedIds = $user->achievements()->pluck('achievements.id')->toArray();
         $locked = Achievement::whereNotIn('id', $unlockedIds)->get();
 
-<<<<<<< HEAD
-        // 2. Get only locked achievements
-        $lockedAchievements = Achievement::whereNotIn('id', $unlockedAchievementIds)->get();
-
-        if ($lockedAchievements->isEmpty()) {
-=======
         if ($locked->isEmpty()) {
->>>>>>> main
             return;
         }
 
@@ -120,11 +113,7 @@ final class AchievementService
     {
         $workoutDates = $this->getUniqueWorkoutDates($user, $threshold);
 
-<<<<<<< HEAD
-        if (empty($workoutDates)) {
-=======
         if ($workoutDates === []) {
->>>>>>> main
             return 0;
         }
 
