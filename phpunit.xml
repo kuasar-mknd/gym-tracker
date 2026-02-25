@@ -33,7 +33,5 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="CSP_ENABLED" value="false"/>
-        <env name="MAIL_FROM_ADDRESS" value="hello@example.com"/>
-        <env name="BACKUP_NOTIFICATION_EMAIL" value="hello@example.com"/>
     </php>
 </phpunit>

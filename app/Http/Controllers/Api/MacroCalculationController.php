@@ -7,8 +7,6 @@ namespace App\Http\Controllers\Api;
 use App\Actions\Tools\CreateMacroCalculationAction;
 use App\Actions\Tools\UpdateMacroCalculationAction;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreMacroCalculationRequest;
-use App\Http\Requests\UpdateMacroCalculationRequest;
 use App\Http\Resources\MacroCalculationResource;
 use App\Models\MacroCalculation;
 use Illuminate\Http\Request;
@@ -32,10 +30,16 @@ class MacroCalculationController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreMacroCalculationRequest $request, CreateMacroCalculationAction $action): MacroCalculationResource
+    public function store(Request $request, CreateMacroCalculationAction $action): MacroCalculationResource
     {
-        /** @var array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string} $validated */
-        $validated = $request->validated();
+        $validated = $request->validate([
+            'gender' => ['required', 'string', 'in:male,female'],
+            'age' => ['required', 'integer', 'min:10', 'max:100'],
+            'height' => ['required', 'numeric', 'min:50', 'max:300'],
+            'weight' => ['required', 'numeric', 'min:20', 'max:300'],
+            'activity_level' => ['required', 'string', 'in:sedentary,light,moderate,very,extra'],
+            'goal' => ['required', 'string', 'in:cut,maintain,bulk'],
+        ]);
 
         $calculation = $action->execute($this->user(), $validated);
 
@@ -55,12 +59,18 @@ class MacroCalculationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateMacroCalculationRequest $request, MacroCalculation $macroCalculation, UpdateMacroCalculationAction $action): MacroCalculationResource
+    public function update(Request $request, MacroCalculation $macroCalculation, UpdateMacroCalculationAction $action): MacroCalculationResource
     {
         $this->authorize('update', $macroCalculation);
 
-        /** @var array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string} $validated */
-        $validated = $request->validated();
+        $validated = $request->validate([
+            'gender' => ['required', 'string', 'in:male,female'],
+            'age' => ['required', 'integer', 'min:10', 'max:100'],
+            'height' => ['required', 'numeric', 'min:50', 'max:300'],
+            'weight' => ['required', 'numeric', 'min:20', 'max:300'],
+            'activity_level' => ['required', 'string', 'in:sedentary,light,moderate,very,extra'],
+            'goal' => ['required', 'string', 'in:cut,maintain,bulk'],
+        ]);
 
         $updated = $action->execute($macroCalculation, $validated);
 
