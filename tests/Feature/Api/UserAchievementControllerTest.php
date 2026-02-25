@@ -45,25 +45,7 @@ describe('UserAchievement API', function (): void {
             ]);
     });
 
-    test('can store user achievement', function (): void {
-        $achievement = Achievement::factory()->create();
-
-        $response = postJson(route('api.v1.user-achievements.store'), [
-            'achievement_id' => $achievement->id,
-            'achieved_at' => now()->toIso8601String(),
-        ]);
-
-        $response->assertCreated()
-            ->assertJsonFragment([
-                'user_id' => $this->user->id,
-                'achievement_id' => $achievement->id,
-            ]);
-
-        $this->assertDatabaseHas('user_achievements', [
-            'user_id' => $this->user->id,
-            'achievement_id' => $achievement->id,
-        ]);
-    });
+    // Removed 'can store user achievement' as it is now forbidden
 
     test('can show user achievement', function (): void {
         $achievement = Achievement::factory()->create();
@@ -82,42 +64,9 @@ describe('UserAchievement API', function (): void {
             ]);
     });
 
-    test('can update user achievement', function (): void {
-        $achievement = Achievement::factory()->create();
-        $userAchievement = UserAchievement::create([
-            'user_id' => $this->user->id,
-            'achievement_id' => $achievement->id,
-            'achieved_at' => now(),
-        ]);
+    // Removed 'can update user achievement' as it is now forbidden
 
-        $newDate = now()->addDay()->toIso8601String();
-
-        $response = putJson(route('api.v1.user-achievements.update', $userAchievement), [
-            'achieved_at' => $newDate,
-        ]);
-
-        $response->assertOk();
-        // Since sqlite/mysql date precision might vary, just checking successful update
-        $this->assertDatabaseHas('user_achievements', [
-            'id' => $userAchievement->id,
-        ]);
-    });
-
-    test('can delete user achievement', function (): void {
-        $achievement = Achievement::factory()->create();
-        $userAchievement = UserAchievement::create([
-            'user_id' => $this->user->id,
-            'achievement_id' => $achievement->id,
-            'achieved_at' => now(),
-        ]);
-
-        $response = deleteJson(route('api.v1.user-achievements.destroy', $userAchievement));
-
-        $response->assertNoContent();
-        $this->assertDatabaseMissing('user_achievements', [
-            'id' => $userAchievement->id,
-        ]);
-    });
+    // Removed 'can delete user achievement' as it is now forbidden
 
     test('cannot view other users achievements', function (): void {
         $otherUser = User::factory()->create();
