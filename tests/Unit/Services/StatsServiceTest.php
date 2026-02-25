@@ -225,7 +225,6 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(90, $history[1]['duration']);
         $this->assertEquals(45, $history[2]['duration']); // Should be absolute difference
     }
-
     public function test_can_calculate_duration_distribution(): void
     {
         $user = User::factory()->create();
