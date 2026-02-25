@@ -34,10 +34,7 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
         return $channels;
     }
 
-    /**
-     * @param  mixed  $_notification
-     */
-    public function toWebPush(object $_notifiable, $_notification): WebPushMessage
+    public function toWebPush(object $_notifiable, mixed $_notification): WebPushMessage
     {
         return (new WebPushMessage())
             ->title('Nouveau Record ! 🏆')
