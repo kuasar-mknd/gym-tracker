@@ -25,7 +25,7 @@ class AchievementResource extends JsonResource
             'description' => $this->description,
             'icon' => $this->icon,
             'type' => $this->type,
-            'threshold_value' => $this->threshold_value,
+            'threshold' => $this->threshold,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
