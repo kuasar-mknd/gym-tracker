@@ -28,6 +28,7 @@ class HabitController extends Controller
      * Also generates the dates for the current week to be displayed in the calendar view.
      *
      * @param  \Illuminate\Http\Request  $request  The HTTP request.
+     * @param  \App\Actions\Habits\FetchHabitsIndexAction  $fetchHabits  The action to fetch habits data.
      * @return \Inertia\Response The Inertia response rendering the Habits/Index page.
      */
     public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
