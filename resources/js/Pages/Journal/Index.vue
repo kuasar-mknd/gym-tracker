@@ -216,7 +216,7 @@ const formatDate = (dateStr) => {
                                 :class="[
                                     'flex-1 rounded-lg border border-slate-200 p-2 text-center text-sm transition',
                                     form.mood_score === mood.value
-                                        ? 'bg-accent-primary border-transparent text-white'
+                                        ? 'bg-electric-orange border-transparent text-white'
                                         : 'text-text-muted bg-white/50 hover:bg-slate-50',
                                 ]"
                             >
@@ -296,7 +296,7 @@ const formatDate = (dateStr) => {
                         <textarea
                             v-model="form.content"
                             rows="4"
-                            class="text-text-main placeholder-text-muted/30 focus:border-accent-primary focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 backdrop-blur-md focus:ring-1 focus:outline-none"
+                            class="text-text-main placeholder-text-muted/30 focus:border-electric-orange focus:ring-electric-orange w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 backdrop-blur-md focus:ring-1 focus:outline-none"
                             placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
                         ></textarea>
                         <div v-if="form.errors.content" class="mt-1 text-xs text-red-400">
