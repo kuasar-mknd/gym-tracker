@@ -48,7 +48,7 @@ class WorkoutLineController extends Controller
         $this->authorize('create', [WorkoutLine::class, $workout]);
 
         // @phpstan-ignore-next-line
-        $order = $validated['order'] ?? ($workout->workoutLines()->max('order') ?? 0) + 1;
+        $order = $validated['order'] ?? (is_null($workout->workoutLines()->max('order')) ? 0 : $workout->workoutLines()->max('order') + 1);
 
         /** @var \App\Models\WorkoutLine $workoutLine */
         $workoutLine = $workout->workoutLines()->create(array_merge(

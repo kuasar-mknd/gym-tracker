@@ -36,8 +36,10 @@ class StatsService
      */
     public function getDailyVolumeTrend(User $user, int $days = 7): array
     {
+        $cacheKey = "stats.daily_volume.{$user->id}.{$days}";
+
         return Cache::remember(
-            "stats.daily_volume.{$user->id}.{$days}",
+            $cacheKey,
             now()->addMinutes(30),
             function () use ($user, $days): array {
                 $start = now()->subDays($days - 1)->startOfDay();
@@ -149,8 +151,10 @@ class StatsService
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
+        $cacheKey = "stats.weekly_volume.{$user->id}";
+
         return Cache::remember(
-            "stats.weekly_volume.{$user->id}",
+            $cacheKey,
             now()->addMinutes(10),
             function () use ($user): array {
                 $startOfWeek = now()->startOfWeek();

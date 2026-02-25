@@ -44,7 +44,7 @@ test('it awards count achievement', function (): void {
     Notification::assertSentTo(
         $user,
         \App\Notifications\AchievementUnlocked::class,
-        fn ($notification): bool => $notification->achievement->id === $achievement->id
+        fn($notification): bool => $notification->achievement->id === $achievement->id
     );
 });
 
@@ -141,6 +141,7 @@ test('it does not award achievement if threshold not met', function (): void {
         'reps' => 1,
     ]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseMissing('user_achievements', [
