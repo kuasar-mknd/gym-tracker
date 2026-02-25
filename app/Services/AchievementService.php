@@ -34,7 +34,7 @@ final class AchievementService
         // 1. Get IDs of already unlocked achievements
         $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Achievement> $lockedAchievements */
+        // 2. Get only locked achievements
         $lockedAchievements = Achievement::whereNotIn('id', $unlockedAchievementIds)->get();
 
         if ($lockedAchievements->isEmpty()) {

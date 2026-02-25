@@ -24,8 +24,8 @@ class StatsService
         return Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $this->fetchVolumeTrendData($user, $days)
-                ->map(fn (\stdClass $row): array => $this->formatVolumeTrendItem($row))
+            fn(): array => $this->fetchVolumeTrendData($user, $days)
+                ->map(fn(\stdClass $row): array => $this->formatVolumeTrendItem($row))
                 ->values()
                 ->toArray()
         );
@@ -55,7 +55,7 @@ class StatsService
         return Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $this->fetchMuscleDistributionData($user, $days)->toArray()
+            fn(): array => $this->fetchMuscleDistributionData($user, $days)->toArray()
         );
     }
 
@@ -67,8 +67,8 @@ class StatsService
         return Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
-                ->map(fn (\stdClass $set): array => $this->formatExercise1RMItem($set))
+            fn(): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
+                ->map(fn(\stdClass $set): array => $this->formatExercise1RMItem($set))
                 ->toArray()
         );
     }
@@ -82,7 +82,7 @@ class StatsService
         $comparison = Cache::remember(
             "stats.monthly_volume_comparison.{$user->id}",
             now()->addMinutes(30),
-            fn (): array => $this->calculatePeriodComparison(
+            fn(): array => $this->calculatePeriodComparison(
                 $user,
                 now()->startOfMonth(),
                 now()->subMonth()->startOfMonth(),
@@ -106,8 +106,8 @@ class StatsService
         return Cache::remember(
             "stats.weight_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $this->fetchWeightHistoryData($user, $days)
-                ->map(fn (BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
+            fn(): array => $this->fetchWeightHistoryData($user, $days)
+                ->map(fn(BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
                 ->toArray()
         );
     }
@@ -138,8 +138,8 @@ class StatsService
         return Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $this->fetchBodyFatHistoryData($user, $days)
-                ->map(fn (BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+            fn(): array => $this->fetchBodyFatHistoryData($user, $days)
+                ->map(fn(BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
                 ->toArray()
         );
     }
@@ -172,7 +172,7 @@ class StatsService
         $comparison = Cache::remember(
             "stats.weekly_volume_comparison.{$user->id}.{$weekKey}",
             now()->addMinutes(10),
-            fn (): array => $this->calculatePeriodComparison(
+            fn(): array => $this->calculatePeriodComparison(
                 $user,
                 now()->startOfWeek(),
                 now()->subWeek()->startOfWeek(),
@@ -196,13 +196,13 @@ class StatsService
         return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
+            fn(): array => Workout::select(['name', 'started_at', 'ended_at'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn (Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->map(fn(Workout $workout): array => $this->formatDurationHistoryItem($workout))
                 ->reverse()->values()->toArray()
         );
     }
@@ -215,7 +215,7 @@ class StatsService
         return Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => $this->fetchVolumeHistory($user, $limit)
+            fn(): array => $this->fetchVolumeHistory($user, $limit)
         );
     }
 
@@ -227,7 +227,7 @@ class StatsService
         return Cache::remember(
             "stats.duration_distribution.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $this->calculateDurationDistribution($user, $days)
+            fn(): array => $this->calculateDurationDistribution($user, $days)
         );
     }
 
@@ -241,7 +241,7 @@ class StatsService
             now()->addMinutes(30),
             function () use ($user, $months): array {
                 $data = $this->fetchMonthlyVolumeHistoryData($user, $months);
-                $grouped = $data->groupBy(fn ($row): string => Carbon::parse($row->started_at)->format('Y-m'));
+                $grouped = $data->groupBy(fn($row): string => Carbon::parse($row->started_at)->format('Y-m'));
 
                 return $this->fillMonthlyVolumeHistory($months, $grouped);
             }
@@ -298,11 +298,13 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
-        /** @var array<int, array{date: string, volume: float, name: string}> */
-        return $this->queryVolumeHistory($user, $limit)
+        /** @var array<int, array{date: string, volume: float, name: string}> $result */
+        $result = $this->queryVolumeHistory($user, $limit)
             // @phpstan-ignore-next-line
-            ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
+            ->map(fn(\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
+
+        return $result;
     }
 
     /**
@@ -310,12 +312,15 @@ class StatsService
      */
     protected function queryVolumeHistory(User $user, int $limit): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')
-            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $user->id)
+        return $this->getBaseVolumeQuery($user)
             ->whereNotNull('workouts.ended_at')
-            ->select('workouts.id', 'workouts.started_at', 'workouts.name', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))
+            ->select(
+                'workouts.id',
+                'workouts.started_at',
+                'workouts.name',
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
             ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
             ->orderByDesc('workouts.started_at')->limit($limit)->get();
     }
@@ -334,29 +339,15 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
-        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
-        $durationExpression = $isSqlite
-            ? 'ABS(julianday(ended_at) - julianday(started_at)) * 1440'
-            : 'ABS(TIMESTAMPDIFF(MINUTE, started_at, ended_at))';
+        $workouts = Workout::select(['started_at', 'ended_at'])->where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))->get();
+        $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
 
-        // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-        $results = Workout::where('user_id', $user->id)
-            ->whereNotNull('ended_at')
-            ->where('started_at', '>=', now()->subDays($days))
-            ->selectRaw("
-                SUM(CASE WHEN {$durationExpression} < 30 THEN 1 ELSE 0 END) as bucket_1,
-                SUM(CASE WHEN {$durationExpression} >= 30 AND {$durationExpression} < 60 THEN 1 ELSE 0 END) as bucket_2,
-                SUM(CASE WHEN {$durationExpression} >= 60 AND {$durationExpression} < 90 THEN 1 ELSE 0 END) as bucket_3,
-                SUM(CASE WHEN {$durationExpression} >= 90 THEN 1 ELSE 0 END) as bucket_4
-            ")
-            ->first();
+        foreach ($workouts as $workout) {
+            $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
+            $this->incrementBucket($buckets, $minutes);
+        }
 
-        return [
-            ['label' => '< 30 min', 'count' => (int) ($results->bucket_1 ?? 0)],
-            ['label' => '30-60 min', 'count' => (int) ($results->bucket_2 ?? 0)],
-            ['label' => '60-90 min', 'count' => (int) ($results->bucket_3 ?? 0)],
-            ['label' => '90+ min', 'count' => (int) ($results->bucket_4 ?? 0)],
-        ];
+        return collect($buckets)->map(fn(int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
     }
 
     /**
@@ -387,14 +378,26 @@ class StatsService
 
     protected function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
     {
-        $query = DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id);
+        $query = $this->getBaseVolumeQuery($user);
+
         if ($end) {
             $query->whereBetween('workouts.started_at', [$start, $end]);
         } else {
             $query->where('workouts.started_at', '>=', $start);
         }
 
-        return (float) $query->sum(DB::raw('sets.weight * sets.reps'));
+        return (float) $query->sum(
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+            DB::raw('sets.weight * sets.reps')
+        );
+    }
+
+    protected function getBaseVolumeQuery(User $user): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('workouts')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id);
     }
 
     /**
@@ -402,13 +405,18 @@ class StatsService
      */
     protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')
-            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $user->id)
+        return $this->getBaseVolumeQuery($user)
             ->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])
-            ->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))
-            ->groupBy(DB::raw('DATE(workouts.started_at)'))
+            ->select(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('DATE(workouts.started_at) as date'),
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('DATE(workouts.started_at)')
+            )
             ->get()
             ->keyBy('date');
     }
@@ -474,7 +482,18 @@ class StatsService
      */
     protected function fetchVolumeTrendData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->select('workouts.id', 'workouts.started_at', 'workouts.name', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')->orderBy('workouts.started_at')->get();
+        return $this->getBaseVolumeQuery($user)
+            ->where('workouts.started_at', '>=', now()->subDays($days))
+            ->select(
+                'workouts.id',
+                'workouts.started_at',
+                'workouts.name',
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
+            ->orderBy('workouts.started_at')
+            ->get();
     }
 
     /**
@@ -482,7 +501,17 @@ class StatsService
      */
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->whereBetween('workouts.started_at', [$start, now()->endOfDay()])->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('date')->pluck('volume', 'date')->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
+        return $this->getBaseVolumeQuery($user)
+            ->whereBetween('workouts.started_at', [$start, now()->endOfDay()])
+            ->select(
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('DATE(workouts.started_at) as date'),
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('date')
+            ->pluck('volume', 'date')
+            ->map(fn(mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
     }
 
     /**
@@ -490,7 +519,15 @@ class StatsService
      */
     protected function fetchMonthlyVolumeHistoryData(User $user, int $months): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subMonths($months - 1)->startOfMonth())->select('workouts.started_at', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('workouts.id', 'workouts.started_at')->get();
+        return $this->getBaseVolumeQuery($user)
+            ->where('workouts.started_at', '>=', now()->subMonths($months - 1)->startOfMonth())
+            ->select(
+                'workouts.started_at',
+                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+            )
+            ->groupBy('workouts.id', 'workouts.started_at')
+            ->get();
     }
 
     /**
@@ -498,7 +535,10 @@ class StatsService
      */
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')->groupBy('exercises.category')->get();
+        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+            'exercises.category, SUM(sets.weight * sets.reps) as volume'
+        )->groupBy('exercises.category')->get();
     }
 
     /**
@@ -506,7 +546,10 @@ class StatsService
      */
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id)->where('workout_lines.exercise_id', $exerciseId)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw('workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')->groupBy('workouts.started_at')->orderBy('workouts.started_at')->get();
+        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id)->where('workout_lines.exercise_id', $exerciseId)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
+            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+            'workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm'
+        )->groupBy('workouts.started_at')->orderBy('workouts.started_at')->get();
     }
 
     /**
@@ -552,5 +595,21 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return ['current_volume' => $currentVolume, 'previous_volume' => $previousVolume, 'difference' => $diff, 'percentage' => round($percentage, 1)];
+    }
+
+    /**
+     * @param  array<string, int>  $buckets
+     */
+    private function incrementBucket(array &$buckets, int $minutes): void
+    {
+        if ($minutes < 30) {
+            $buckets['< 30 min']++;
+        } elseif ($minutes < 60) {
+            $buckets['30-60 min']++;
+        } elseif ($minutes < 90) {
+            $buckets['60-90 min']++;
+        } else {
+            $buckets['90+ min']++;
+        }
     }
 }

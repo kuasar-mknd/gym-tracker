@@ -31,6 +31,12 @@
     --color-plate-yellow: #eab308;
     --color-plate-green: #22c55e;
 
+    --color-accent-primary: #ff5500;
+    --color-accent-success: #22c55e;
+    --color-accent-warning: #eab308;
+    --color-accent-danger: #ef4444;
+    --color-accent-info: #00e5ff;
+
     --backdrop-blur-glass: 20px;
     --backdrop-blur-glass-strong: 24px;
 
