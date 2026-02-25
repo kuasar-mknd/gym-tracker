@@ -136,7 +136,7 @@ final class AchievementService
     {
         $workoutDates = $this->getUniqueWorkoutDates($user, $threshold);
 
-        if (empty($workoutDates)) {
+        if ($workoutDates === []) {
             return 0;
         }
 

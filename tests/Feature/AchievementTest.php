@@ -51,7 +51,7 @@ class AchievementTest extends TestCase
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create();
 
-        $workout = $user->workouts()->create(['started_at' => now()]);
+        $workout = $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
         $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id]);
 
         // Lift 100kg
@@ -74,13 +74,13 @@ class AchievementTest extends TestCase
         $user = User::factory()->create();
 
         // Unlock first workout
-        $user->workouts()->create(['started_at' => now()]);
+        $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
 
         // Check count
         $this->assertEquals(1, $user->achievements()->count());
 
         // Do another workout
-        $user->workouts()->create(['started_at' => now()->addDay()]);
+        $user->workouts()->create(['started_at' => now()->addDay(), 'ended_at' => now()->addDay()]);
 
         // Still 1 (assuming Next badge is at 3)
         $this->assertEquals(1, $user->achievements()->count());
@@ -91,10 +91,10 @@ class AchievementTest extends TestCase
         Notification::fake();
         $user = User::factory()->create();
 
-        // Create workouts on 3 consecutive days (use recent dates within the optimized window)
-        $user->workouts()->create(['started_at' => now()->subDays(2)]);
-        $user->workouts()->create(['started_at' => now()->subDays(1)]);
-        $user->workouts()->create(['started_at' => now()]);
+        // Create workouts on 3 consecutive days
+        $user->workouts()->create(['started_at' => now()->subDays(2), 'ended_at' => now()->subDays(2)]);
+        $user->workouts()->create(['started_at' => now()->subDays(1), 'ended_at' => now()->subDays(1)]);
+        $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,
