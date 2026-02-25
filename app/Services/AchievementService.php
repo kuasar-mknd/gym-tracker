@@ -18,18 +18,16 @@ final class AchievementService
      */
     public function syncAchievements(User $user): void
     {
-        $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
+        $unlockedIds = $user->achievements()->pluck('achievements.id')->toArray();
+        $locked = Achievement::whereNotIn('id', $unlockedIds)->get();
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Achievement> $lockedAchievements */
-        $lockedAchievements = Achievement::whereNotIn('id', $unlockedAchievementIds)->get();
-
-        if ($lockedAchievements->isEmpty()) {
+        if ($locked->isEmpty()) {
             return;
         }
 
-        $metrics = $this->preCalculateMetrics($user, $lockedAchievements);
+        $metrics = $this->preCalculateMetrics($user, $locked);
 
-        foreach ($lockedAchievements as $achievement) {
+        foreach ($locked as $achievement) {
             $this->checkAndUnlock($user, $achievement, $metrics);
         }
     }
@@ -115,7 +113,7 @@ final class AchievementService
     {
         $workoutDates = $this->getUniqueWorkoutDates($user, $threshold);
 
-        if (count($workoutDates) === 0) {
+        if ($workoutDates === []) {
             return 0;
         }
 
@@ -132,16 +130,16 @@ final class AchievementService
             ->latest('started_at')
             ->pluck('started_at');
 
-        return $dates->map(function ($date): string {
+        /** @var Collection<int, string> $mapped */
+        $mapped = $dates->map(function ($date): string {
             if ($date instanceof \DateTimeInterface) {
                 return $date->format('Y-m-d');
             }
 
             return \Illuminate\Support\Carbon::parse(is_string($date) ? $date : '')->format('Y-m-d');
-        })
-            ->unique()
-            ->values()
-            ->all();
+        });
+
+        return $mapped->unique()->values()->all();
     }
 
     /**

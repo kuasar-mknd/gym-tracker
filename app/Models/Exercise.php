@@ -94,9 +94,7 @@ class Exercise extends Model
     public function invalidateCache(): void
     {
         if ($this->user_id) {
-            $globalVersion = Cache::get('exercises_global_version', '1');
-            $globalVersion = is_scalar($globalVersion) ? (string) $globalVersion : '1';
-            Cache::forget("exercises_list_{$this->user_id}_v{$globalVersion}");
+            Cache::forget("exercises_list_{$this->user_id}");
         } else {
             Cache::forever('exercises_global_version', time());
         }

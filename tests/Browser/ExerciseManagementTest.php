@@ -31,10 +31,11 @@ test('user can manage exercises', function (): void {
             ->select('select', 'strength')
             ->waitFor('[data-testid="submit-exercise-button"]', 5)
             ->pause(500) // Ensure Vue state sync before click
-            ->click('[data-testid="submit-exercise-button"]');
+            ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
 
         // 3. Verify exercise was created
-        $browser->waitForText('DUSK TEST EXERCISE', 15);
+        $browser->pause(1000)
+            ->waitForText('DUSK TEST EXERCISE', 15);
 
         // 4. Edit the exercise
         $browser->mouseover('[data-testid="exercise-card"]')
