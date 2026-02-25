@@ -196,13 +196,15 @@ class StatsService
         return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
+            fn (): array => Workout::query()
+                ->toBase()
+                ->select(['name', 'started_at', 'ended_at'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn (Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->map(fn (object $workout): array => $this->formatDurationHistoryItem($workout))
                 ->reverse()->values()->toArray()
         );
     }
@@ -298,11 +300,13 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
-        /** @var array<int, array{date: string, volume: float, name: string}> */
-        return $this->queryVolumeHistory($user, $limit)
+        /** @var array<int, array{date: string, volume: float, name: string}> $result */
+        $result = $this->queryVolumeHistory($user, $limit)
             // @phpstan-ignore-next-line
             ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
+
+        return $result;
     }
 
     /**
@@ -334,29 +338,30 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
-        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
-        $durationExpression = $isSqlite
-            ? 'ABS(julianday(ended_at) - julianday(started_at)) * 1440'
-            : 'ABS(TIMESTAMPDIFF(MINUTE, started_at, ended_at))';
-
-        // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-        $results = Workout::where('user_id', $user->id)
+        // PERFORMANCE OPTIMIZATION: Use toBase() to avoid expensive Model hydration.
+        // We only need raw date strings to calculate durations.
+        $workouts = Workout::query()
+            ->toBase()
+            ->select(['started_at', 'ended_at'])
+            ->where('user_id', $user->id)
             ->whereNotNull('ended_at')
             ->where('started_at', '>=', now()->subDays($days))
-            ->selectRaw("
-                SUM(CASE WHEN {$durationExpression} < 30 THEN 1 ELSE 0 END) as bucket_1,
-                SUM(CASE WHEN {$durationExpression} >= 30 AND {$durationExpression} < 60 THEN 1 ELSE 0 END) as bucket_2,
-                SUM(CASE WHEN {$durationExpression} >= 60 AND {$durationExpression} < 90 THEN 1 ELSE 0 END) as bucket_3,
-                SUM(CASE WHEN {$durationExpression} >= 90 THEN 1 ELSE 0 END) as bucket_4
-            ")
-            ->first();
+            ->get();
 
-        return [
-            ['label' => '< 30 min', 'count' => (int) ($results->bucket_1 ?? 0)],
-            ['label' => '30-60 min', 'count' => (int) ($results->bucket_2 ?? 0)],
-            ['label' => '60-90 min', 'count' => (int) ($results->bucket_3 ?? 0)],
-            ['label' => '90+ min', 'count' => (int) ($results->bucket_4 ?? 0)],
-        ];
+        $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
+
+        foreach ($workouts as $workout) {
+            $startedAt = data_get($workout, 'started_at');
+            $endedAt = data_get($workout, 'ended_at');
+
+            $start = Carbon::parse(is_string($startedAt) ? $startedAt : 'now');
+            $end = Carbon::parse(is_string($endedAt) ? $endedAt : 'now');
+
+            $minutes = abs((int) $end->diffInMinutes($start));
+            $this->incrementBucket($buckets, $minutes);
+        }
+
+        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
     }
 
     /**
@@ -464,9 +469,38 @@ class StatsService
     /**
      * @return array{date: string, duration: int, name: string}
      */
-    protected function formatDurationHistoryItem(Workout $workout): array
+    protected function formatDurationHistoryItem(object $workout): array
     {
-        return ['date' => $workout->started_at->format('d/m'), 'duration' => (int) ($workout->ended_at ? $workout->ended_at->diffInMinutes($workout->started_at, true) : 0), 'name' => (string) $workout->name];
+        $startedAt = data_get($workout, 'started_at');
+        $endedAt = data_get($workout, 'ended_at');
+        $name = data_get($workout, 'name');
+
+        if ($startedAt instanceof \DateTimeInterface) {
+            $start = Carbon::instance($startedAt);
+        } elseif (is_string($startedAt)) {
+            $start = Carbon::parse($startedAt);
+        } else {
+            $start = now();
+        }
+
+        if ($endedAt instanceof \DateTimeInterface) {
+            $end = Carbon::instance($endedAt);
+        } elseif (is_string($endedAt)) {
+            $end = Carbon::parse($endedAt);
+        } else {
+            $end = null;
+        }
+
+        $duration = 0;
+        if ($end instanceof Carbon) {
+            $duration = (int) $end->diffInMinutes($start, true);
+        }
+
+        return [
+            'date' => $start->format('d/m'),
+            'duration' => $duration,
+            'name' => is_string($name) ? $name : 'Séance',
+        ];
     }
 
     /**
@@ -552,5 +586,21 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return ['current_volume' => $currentVolume, 'previous_volume' => $previousVolume, 'difference' => $diff, 'percentage' => round($percentage, 1)];
+    }
+
+    /**
+     * @param  array<string, int>  $buckets
+     */
+    private function incrementBucket(array &$buckets, int $minutes): void
+    {
+        if ($minutes < 30) {
+            $buckets['< 30 min']++;
+        } elseif ($minutes < 60) {
+            $buckets['30-60 min']++;
+        } elseif ($minutes < 90) {
+            $buckets['60-90 min']++;
+        } else {
+            $buckets['90+ min']++;
+        }
     }
 }

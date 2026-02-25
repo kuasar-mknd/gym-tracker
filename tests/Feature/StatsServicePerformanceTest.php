@@ -14,7 +14,7 @@ class StatsServicePerformanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_duration_distribution_calculation()
+    public function test_duration_distribution_calculation(): void
     {
         $user = User::factory()->create();
         $service = new StatsService();
@@ -57,7 +57,7 @@ class StatsServicePerformanceTest extends TestCase
         $this->assertEquals(1, collect($distribution)->where('label', '90+ min')->first()['count']);
     }
 
-    public function test_get_duration_history_structure()
+    public function test_get_duration_history_structure(): void
     {
         $user = User::factory()->create();
         $service = new StatsService();

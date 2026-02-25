@@ -225,49 +225,4 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(90, $history[1]['duration']);
         $this->assertEquals(45, $history[2]['duration']); // Should be absolute difference
     }
-
-    public function test_can_calculate_duration_distribution(): void
-    {
-        $user = User::factory()->create();
-
-        // < 30 min: 20 min
-        Workout::factory()->create([
-            'user_id' => $user->id,
-            'started_at' => now()->subDay(),
-            'ended_at' => now()->subDay()->addMinutes(20),
-        ]);
-
-        // 30-60 min: 45 min
-        Workout::factory()->create([
-            'user_id' => $user->id,
-            'started_at' => now()->subDay(),
-            'ended_at' => now()->subDay()->addMinutes(45),
-        ]);
-
-        // 60-90 min: 75 min
-        Workout::factory()->create([
-            'user_id' => $user->id,
-            'started_at' => now()->subDay(),
-            'ended_at' => now()->subDay()->addMinutes(75),
-        ]);
-
-        // 90+ min: 100 min
-        Workout::factory()->create([
-            'user_id' => $user->id,
-            'started_at' => now()->subDay(),
-            'ended_at' => now()->subDay()->addMinutes(100),
-        ]);
-
-        $dist = $this->statsService->getDurationDistribution($user, 90);
-
-        $this->assertCount(4, $dist);
-        $this->assertEquals('< 30 min', $dist[0]['label']);
-        $this->assertEquals(1, $dist[0]['count']);
-        $this->assertEquals('30-60 min', $dist[1]['label']);
-        $this->assertEquals(1, $dist[1]['count']);
-        $this->assertEquals('60-90 min', $dist[2]['label']);
-        $this->assertEquals(1, $dist[2]['count']);
-        $this->assertEquals('90+ min', $dist[3]['label']);
-        $this->assertEquals(1, $dist[3]['count']);
-    }
 }

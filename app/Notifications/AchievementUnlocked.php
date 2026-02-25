@@ -34,7 +34,10 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
         return $channels;
     }
 
-    public function toWebPush(object $_notifiable, mixed $_notification): WebPushMessage
+    /**
+     * @param  mixed  $_notification
+     */
+    public function toWebPush(object $_notifiable, $_notification): WebPushMessage
     {
         return (new WebPushMessage())
             ->title('Succès Déverrouillé ! 🏆')
