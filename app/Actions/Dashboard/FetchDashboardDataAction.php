@@ -6,7 +6,6 @@ namespace App\Actions\Dashboard;
 
 use App\Models\User;
 use App\Services\StatsService;
-use Illuminate\Support\Facades\Cache;
 
 final class FetchDashboardDataAction
 {
@@ -16,7 +15,8 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Fetch dashboard data for the given user.
+     * Fetch immediate dashboard data for the given user.
+     * These are lightweight queries or single-row fetches suitable for initial page load.
      *
      * @return array{
      *     workoutsCount: int,
@@ -24,39 +24,81 @@ final class FetchDashboardDataAction
      *     latestWeight: float|string|null,
      *     recentWorkouts: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
      *     recentPRs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>,
-     *     activeGoals: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>,
-     *     weeklyVolume: float,
-     *     volumeChange: float|int,
-     *     weeklyVolumeTrend: array<int, array{date: string, day_label: string, volume: float}>,
-     *     volumeTrend: array<int, array{date: string, day_name: string, volume: float}>,
-     *     durationDistribution: array<int, array{label: string, count: int}>
+     *     activeGoals: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
      * }
+     */
+    public function getImmediateStats(User $user): array
+    {
+        $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
+
+        return [
+            'workoutsCount' => $user->workouts()->count(),
+            'thisWeekCount' => $this->getThisWeekCount($user),
+            'latestWeight' => $latestMeasurement?->weight,
+            'recentWorkouts' => $this->getRecentWorkouts($user),
+            'recentPRs' => $this->getRecentPRs($user),
+            'activeGoals' => $this->getActiveGoals($user),
+        ];
+    }
+
+    /**
+     * Get weekly volume comparison stats.
+     *
+     * @return array{current_week_volume: float, percentage: float|int}
+     */
+    public function getWeeklyVolumeStats(User $user): array
+    {
+        $stats = $this->statsService->getWeeklyVolumeComparison($user);
+
+        return [
+            'current_week_volume' => $stats['current_week_volume'],
+            'percentage' => $stats['percentage'],
+        ];
+    }
+
+    /**
+     * @return array<int, array{date: string, day_label: string, volume: float}>
+     */
+    public function getWeeklyVolumeTrend(User $user): array
+    {
+        return $this->statsService->getWeeklyVolumeTrend($user);
+    }
+
+    /**
+     * @return array<int, array{date: string, day_name: string, volume: float}>
+     */
+    public function getVolumeTrend(User $user): array
+    {
+        return $this->statsService->getDailyVolumeTrend($user, 7);
+    }
+
+    /**
+     * @return array<int, array{label: string, count: int}>
+     */
+    public function getDurationDistribution(User $user): array
+    {
+        return $this->statsService->getDurationDistribution($user);
+    }
+
+    /**
+     * Legacy method if needed, but we will update the controller.
+     *
+     * @return array<string, mixed>
      */
     public function execute(User $user): array
     {
-        // Cache dashboard data for 10 minutes
-        return Cache::remember("dashboard_data_{$user->id}", 600, function () use ($user): array {
-            $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
+        $weeklyStats = $this->getWeeklyVolumeStats($user);
 
-            $weeklyStats = $this->statsService->getWeeklyVolumeComparison($user);
-            $weeklyTrend = $this->statsService->getWeeklyVolumeTrend($user);
-            $volumeTrend = $this->statsService->getDailyVolumeTrend($user, 7);
-            $durationDistribution = $this->statsService->getDurationDistribution($user);
-
-            return [
-                'workoutsCount' => $user->workouts()->count(),
-                'thisWeekCount' => $this->getThisWeekCount($user),
-                'latestWeight' => $latestMeasurement?->weight,
-                'recentWorkouts' => $this->getRecentWorkouts($user),
-                'recentPRs' => $this->getRecentPRs($user),
-                'activeGoals' => $this->getActiveGoals($user),
+        return array_merge(
+            $this->getImmediateStats($user),
+            [
                 'weeklyVolume' => $weeklyStats['current_week_volume'],
                 'volumeChange' => $weeklyStats['percentage'],
-                'weeklyVolumeTrend' => $weeklyTrend,
-                'volumeTrend' => $volumeTrend,
-                'durationDistribution' => $durationDistribution,
-            ];
-        });
+                'weeklyVolumeTrend' => $this->getWeeklyVolumeTrend($user),
+                'volumeTrend' => $this->getVolumeTrend($user),
+                'durationDistribution' => $this->getDurationDistribution($user),
+            ]
+        );
     }
 
     private function getThisWeekCount(User $user): int

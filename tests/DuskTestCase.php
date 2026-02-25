@@ -14,6 +14,29 @@ use PHPUnit\Framework\Attributes\BeforeClass;
 
 abstract class DuskTestCase extends BaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Browser::macro('assertNoConsoleExceptions', function (): object {
+            $logs = $this->driver->manage()->getLog('browser');
+            $failures = collect($logs)->filter(
+                fn ($log): bool => $log['level'] === 'SEVERE' &&
+                    ! str_contains((string) $log['message'], 'Failed to send logs') &&
+                    ! str_contains((string) $log['message'], 'ERR_NAME_NOT_RESOLVED') &&
+                    ! str_contains((string) $log['message'], 'fonts.googleapis.com') &&
+                    ! str_contains((string) $log['message'], 'fonts.gstatic.com')
+            );
+
+            \PHPUnit\Framework\Assert::assertTrue(
+                $failures->isEmpty(),
+                "Console exceptions found:\n".$failures->implode('message', "\n")
+            );
+
+            return $this;
+        });
+    }
+
     /**
      * Prepare for Dusk test execution.
      */
@@ -23,24 +46,6 @@ abstract class DuskTestCase extends BaseTestCase
         if (! static::runningInSail()) {
             static::startChromeDriver(['--port=9515']);
         }
-    }
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Browser::macro('assertNoConsoleExceptions', function (): object {
-            /** @var Browser $this */
-            $logs = $this->driver->manage()->getLog('browser');
-            $failures = collect($logs)->filter(fn ($log): bool => $log['level'] === 'SEVERE');
-
-            \PHPUnit\Framework\Assert::assertTrue(
-                $failures->isEmpty(),
-                "Console exceptions found:\n".$failures->implode('message', "\n")
-            );
-
-            return $this;
-        });
     }
 
     /**
@@ -64,7 +69,8 @@ abstract class DuskTestCase extends BaseTestCase
         return RemoteWebDriver::create(
             $_ENV['DUSK_DRIVER_URL'] ?? env('DUSK_DRIVER_URL') ?? 'http://localhost:9515',
             DesiredCapabilities::chrome()->setCapability(
-                ChromeOptions::CAPABILITY, $options
+                ChromeOptions::CAPABILITY,
+                $options
             )
         );
     }

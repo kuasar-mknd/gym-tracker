@@ -9,3 +9,7 @@
 ## 2026-02-03 - Dynamic Labels for Badged Buttons
 **Learning:** Buttons with status badges (like notification counts) need dynamic aria-labels (e.g., "Notifications (3 unread)") because the badge content itself is often just a number and separate from the icon.
 **Action:** Use computed properties or template literals for aria-labels on buttons with state counters.
+
+## 2026-02-19 - Interactive Image Links
+**Learning:** Links containing only images (like social login buttons) should have an `aria-label` on the `<a>` tag itself. Relying solely on the image's `alt` text can be less robust for keyboard/screen reader navigation.
+**Action:** Always add descriptive `aria-label` to icon-only or image-only links.
