@@ -93,19 +93,19 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureModelHooks(): void
     {
-        Workout::saved(fn(Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
-        Workout::deleted(fn(Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        Workout::deleted(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
 
-        Set::saved(fn(Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
-        Set::deleted(fn(Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
+        Set::saved(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
+        Set::deleted(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
 
-        BodyMeasurement::saved(fn(BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
-        BodyMeasurement::deleted(fn(BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
 
-        Workout::saved(fn(Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
-        Set::saved(fn(Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
+        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
+        Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
-        Workout::saved(fn(Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
+        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
     }
 
     private function configureRateLimiters(): void
