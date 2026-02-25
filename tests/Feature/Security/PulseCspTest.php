@@ -4,9 +4,9 @@ namespace Tests\Feature\Security;
 
 use App\Models\Admin;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
-use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Config;
+use Spatie\Permission\Models\Role;
+use Tests\TestCase;
 
 class PulseCspTest extends TestCase
 {
@@ -21,7 +21,7 @@ class PulseCspTest extends TestCase
         Config::set('pulse.enabled', true);
     }
 
-    public function test_pulse_dashboard_has_secure_csp_headers_and_nonces_in_content()
+    public function test_pulse_dashboard_has_secure_csp_headers_and_nonces_in_content(): void
     {
         $roleName = config('filament-shield.super_admin.name', 'super_admin');
         Role::create(['name' => $roleName, 'guard_name' => 'admin']);
@@ -36,12 +36,12 @@ class PulseCspTest extends TestCase
         $csp = $response->headers->get('Content-Security-Policy');
 
         // Extract nonce from CSP header
-        preg_match("/'nonce-([^']+)'/", $csp, $matches);
-        $this->assertNotEmpty($matches[1], "Nonce not found in CSP header");
+        preg_match("/'nonce-([^']+)'/", (string) $csp, $matches);
+        $this->assertNotEmpty($matches[1], 'Nonce not found in CSP header');
         $nonce = $matches[1];
 
         // Verify that unsafe-inline is removed
-        $this->assertStringNotContainsString("'unsafe-inline'", $csp);
+        $this->assertStringNotContainsString("'unsafe-inline'", (string) $csp);
 
         // Verify that nonces are added to tags in the response content
         $content = $response->getContent();

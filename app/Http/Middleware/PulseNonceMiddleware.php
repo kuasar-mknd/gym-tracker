@@ -23,8 +23,8 @@ class PulseNonceMiddleware
             $nonce = app('csp-nonce');
             $content = $response->getContent();
             if (is_string($content)) {
-                $content = str_replace('<script>', '<script nonce="' . $nonce . '">', $content);
-                $content = str_replace('<style>', '<style nonce="' . $nonce . '">', $content);
+                $content = str_replace('<script>', '<script nonce="'.$nonce.'">', $content);
+                $content = str_replace('<style>', '<style nonce="'.$nonce.'">', $content);
                 $response->setContent($content);
             }
         }
