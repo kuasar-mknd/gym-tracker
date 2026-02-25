@@ -110,7 +110,7 @@ final class GoalService
             ->where('workout_lines.exercise_id', $goal->exercise_id)
             ->selectRaw('SUM(sets.weight * sets.reps) as total_volume')
             ->groupBy('workouts.id')
-            ->get()->max('total_volume');
+            ->max('total_volume');
 
         if ($maxVolume) {
             $goal->update(['current_value' => $maxVolume]);

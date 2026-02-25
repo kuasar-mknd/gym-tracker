@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\Security;
 
 use App\Models\Admin;
@@ -44,8 +46,8 @@ class PulseCspTest extends TestCase
         $this->assertStringNotContainsString("'unsafe-inline'", (string) $csp);
 
         // Verify that nonces are added to tags in the response content
-        $content = $response->getContent();
-        $this->assertStringContainsString("<script nonce=\"$nonce\">", $content);
-        $this->assertStringContainsString("<style nonce=\"$nonce\">", $content);
+        $content = (string) $response->getContent();
+        $this->assertStringContainsString('<script nonce="'.$nonce.'">', $content);
+        $this->assertStringContainsString('<style nonce="'.$nonce.'">', $content);
     }
 }

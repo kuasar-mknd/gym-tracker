@@ -172,9 +172,9 @@ const chartOptions = {
                             :class="[
                                 'text-3xl font-bold',
                                 weightDiff > 0
-                                    ? 'text-plate-yellow'
+                                    ? 'text-accent-warning'
                                     : weightDiff < 0
-                                      ? 'text-plate-green'
+                                      ? 'text-accent-success'
                                       : 'text-text-muted',
                             ]"
                         >
