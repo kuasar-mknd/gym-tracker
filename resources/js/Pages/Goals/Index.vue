@@ -127,7 +127,7 @@ import { computed } from 'vue'
                                             >
                                             <select
                                                 v-model="form.type"
-                                                class="text-text-main focus:ring-electric-orange w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
+                                                class="text-text-main focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
                                             >
                                                 <option value="weight" class="bg-white">Force (Poids max)</option>
                                                 <option value="frequency" class="bg-white">Fréquence (Séances)</option>
@@ -143,7 +143,7 @@ import { computed } from 'vue'
                                             >
                                             <select
                                                 v-model="form.exercise_id"
-                                                class="text-text-main focus:ring-electric-orange w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
+                                                class="text-text-main focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
                                             >
                                                 <option value="" disabled class="bg-white">
                                                     Sélectionner un exercice
@@ -166,7 +166,7 @@ import { computed } from 'vue'
                                             >
                                             <select
                                                 v-model="form.measurement_type"
-                                                class="text-text-main focus:ring-electric-orange w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
+                                                class="text-text-main focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
                                             >
                                                 <option value="" disabled class="bg-white">
                                                     Sélectionner une mesure

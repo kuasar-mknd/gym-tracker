@@ -123,6 +123,7 @@ return [
 
     'middleware' => [
         \Spatie\Csp\AddCspHeaders::class.':'.\App\Support\Csp\Policies\PulsePolicy::class,
+        \App\Http\Middleware\PulseNonceMiddleware::class,
         'web',
         'auth:admin,web',
         Laravel\Pulse\Http\Middleware\Authorize::class,

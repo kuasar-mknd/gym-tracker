@@ -112,10 +112,7 @@ final class FetchWorkoutsIndexAction
     ): \Illuminate\Pagination\LengthAwarePaginator {
         return Workout::with([
             'workoutLines' => function ($query): void {
-                $query->select(['id', 'workout_id', 'exercise_id', 'order'])
-                    ->with('exercise:id,name')
-                    ->orderBy('order')
-                    ->withCount('sets');
+                $query->with('exercise')->withCount('sets');
             },
         ])
             ->where('user_id', $user->id)
