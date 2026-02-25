@@ -13,12 +13,28 @@
 **Learning:** Laravel's `groupBy` on a collection preserves the original keys, which can cause unexpected behavior if you assume keys are re-indexed (0, 1, ...). However, `skip(1)->first()` is robust against this. Also, `json_decode` in tests converts `5.0` to `5`, causing strict `toBe(5.0)` assertions to fail.
 **Action:** Use `values()` after `groupBy` if you need re-indexed keys, or use methods like `skip()` that don't rely on keys. Use `toEqual()` for numeric assertions in JSON responses.
 
-## 2026-02-05 - Dashboard Workout Lines Optimization
+## 2026-02-05 - Covering Index for Aggregations
 
-**Learning:** Eager loading relationships (`with('workoutLines')`) when only the count is needed is a common "over-fetching" performance pitfall, especially for dashboard widgets. The `WorkoutLines` collection can be large, causing unnecessary hydration and larger JSON payloads/cache entries. Additionally, align database query limits with the actual number of items displayed in the frontend to further reduce waste.
-**Action:** Replaced `with('workoutLines')` with `withCount('workoutLines')` in `FetchDashboardDataAction`. Updated the frontend `Dashboard.vue` to use the aggregate attribute `workout_lines_count`. This reduced the memory footprint for the dashboard "Recent Activity" section.
+**Learning:** Heavy aggregation queries like `SUM(weight * reps)` on large tables (`sets`) can be significantly optimized using a covering index (e.g., `['workout_line_id', 'weight', 'reps']`). This enables Index Only Scans, avoiding heap lookups.
+**Action:** When optimizing `SUM` or `COUNT` queries, check if all columns involved can be included in a composite index.
+
+## 2026-02-05 - Dashboard Payload and Query Optimization
+
+**Learning:** The dashboard was loading full collections of `workoutLines` just to show a count-based icon. This causes O(N) memory and hydration overhead. Also, fetching more records than visible (e.g. 5 vs 2) bloats the Inertia payload.
+**Action:** Use Eloquent `withCount()` to only fetch the integer count. Align database `limit()` with UI `.slice()` and then remove the redundant frontend slicing to minimize JSON payload and hydration time.
+
+## 2026-02-04 - Surgical Cache Invalidation
+
+**Learning:** Nuke-it-all cache strategies (clearing everything on any change) cause unnecessary database load (cache thrashing). Using Eloquent's `wasChanged()` in Actions allows for precise invalidation of only the affected cache keys (e.g., changing 'notes' shouldn't clear 'volume trends').
+**Action:** Implement granular cache clearing methods in Services and call them conditionally in Actions based on `$model->wasChanged(['attributes'])`.
 
 ## 2025-05-15 - [Inertia Hydration Bottleneck & CI Stability]
 
 **Learning:** Eager loading full collections (e.g., `with('workoutLines')`) just to check counts or presence in Inertia.js components is a massive hydration bottleneck. It inflates the JSON payload and server-side memory usage. Additionally, class-based Dusk tests in this repo do NOT inherit global Pest traits and must explicitly include `DatabaseMigrations`.
 **Action:** Use `withCount()` for summary views and always verify that class-based tests have necessary traits for CI database initialization.
+
+## 2026-02-18 - Surgical Cache Invalidation & Test Consistency
+
+**Learning:** When implementing granular cache invalidation (splitting a "nuke all" method), ensure that the consumers (Actions) correctly identify which "scope" of data changed. In this case, updating a workout's *name* only requires clearing metadata caches, not heavy volume aggregations.
+**Also:** Codebase performance optimizations (like `limit(3)` in `FetchDashboardDataAction`) must be reflected in tests. I found `DashboardTest` expecting 5 items when the code explicitly limits to 3. Always verify tests align with optimization constraints.
+**Action:** When refactoring cache logic, define clear boundaries (e.g., `clearMetadata` vs `clearAggregates`) and verify test expectations against these boundaries.

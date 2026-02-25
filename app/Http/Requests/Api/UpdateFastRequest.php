@@ -8,12 +8,16 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateFastRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return true;
+        $fast = $this->route('fast');
+        $user = $this->user();
+
+        if (! $user instanceof \App\Models\User || ! $fast instanceof \App\Models\Fast) {
+            return false;
+        }
+
+        return $user->id === $fast->user_id;
     }
 
     /**

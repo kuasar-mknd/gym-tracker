@@ -2,29 +2,88 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link } from '@inertiajs/vue3'
-import OneRepMaxChart from '@/Components/Stats/OneRepMaxChart.vue'
-import ExerciseVolumeChart from '@/Components/Stats/ExerciseVolumeChart.vue'
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 
+const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
+const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
+const WeightDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/WeightDistributionChart.vue'))
+const MaxRepsChart = defineAsyncComponent(() => import('@/Components/Stats/MaxRepsChart.vue'))
+
+/**
+ * Component Props
+ *
+ * @property {Object} exercise - The exercise details.
+ * @property {number} exercise.id - The unique identifier of the exercise.
+ * @property {string} exercise.name - The name of the exercise.
+ * @property {string} exercise.category - The category (e.g., 'Pectoraux').
+ * @property {string} exercise.type - The type ('strength', 'cardio', 'timed').
+ *
+ * @property {Array} progress - Data for the 1RM progression chart.
+ * @property {string} progress[].date - The date of the record (e.g., '12/05').
+ * @property {string} progress[].full_date - The full ISO date string.
+ * @property {number} progress[].one_rep_max - The estimated 1RM value.
+ *
+ * @property {Array} history - List of past workout sessions for this exercise.
+ * @property {number} history[].id - Unique session identifier.
+ * @property {number} history[].workout_id - ID of the workout.
+ * @property {string} history[].workout_name - Name of the workout.
+ * @property {string} history[].formatted_date - Formatted date string (e.g., 'Lun 12 Mai').
+ * @property {number} history[].best_1rm - The best estimated 1RM for this specific session.
+ * @property {Array} history[].sets - List of sets performed in this session.
+ * @property {number} history[].sets[].weight - Weight lifted.
+ * @property {number} history[].sets[].reps - Repetitions performed.
+ * @property {number} history[].sets[].1rm - Estimated 1RM for this set.
+ */
 const props = defineProps({
     exercise: Object,
     progress: Array,
     history: Array,
 })
 
-const volumeHistory = computed(() => {
-    if (!props.history) return []
-    return props.history
-        .map((session) => {
-            const totalVolume = session.sets.reduce((sum, set) => {
-                return sum + (set.weight || 0) * (set.reps || 0)
-            }, 0)
-            return {
-                date: session.formatted_date,
-                volume: totalVolume,
-            }
-        })
-        .reverse()
+const volumeData = computed(() => {
+    if (!props.history || props.history.length === 0) return []
+    // History is desc, so reverse for chart
+    return [...props.history].reverse().map((session) => ({
+        date: session.formatted_date.split('/').slice(0, 2).join('/'), // Just dd/mm
+        volume: session.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0),
+    }))
+})
+
+const maxRepsData = computed(() => {
+    if (!props.history || props.history.length === 0) return []
+    return [...props.history].reverse().map((session) => ({
+        date: session.formatted_date.split('/').slice(0, 2).join('/'),
+        reps: session.sets.length > 0 ? Math.max(...session.sets.map((s) => s.reps || 0)) : 0,
+    }))
+})
+
+const weightDistributionData = computed(() => {
+    if (!props.history || props.history.length === 0) return []
+    const allSets = props.history.flatMap((s) => s.sets)
+    if (allSets.length === 0) return []
+
+    const weights = allSets.map((s) => parseFloat(s.weight))
+    const min = Math.floor(Math.min(...weights) / 5) * 5
+    const max = Math.ceil(Math.max(...weights) / 5) * 5
+
+    const distribution = {}
+    // Initialize bins
+    for (let i = min; i <= max; i += 5) {
+        distribution[i] = 0
+    }
+
+    weights.forEach((w) => {
+        const bin = Math.floor(w / 5) * 5
+        if (distribution[bin] !== undefined) {
+            distribution[bin]++
+        } else {
+            distribution[bin] = 1
+        }
+    })
+
+    return Object.entries(distribution)
+        .map(([label, count]) => ({ label, count }))
+        .sort((a, b) => parseFloat(a.label) - parseFloat(b.label))
 })
 </script>
 
@@ -37,8 +96,9 @@ const volumeHistory = computed(() => {
                 <Link
                     :href="route('exercises.index')"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
+                    aria-label="Retour aux exercices"
                 >
-                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
                 <div>
                     <h1 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
@@ -68,19 +128,51 @@ const volumeHistory = computed(() => {
                 </div>
             </GlassCard>
 
-            <!-- Volume Chart -->
-            <GlassCard v-if="volumeHistory.length > 0" class="animate-slide-up" style="animation-delay: 0.05s">
-                <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume par séance</h3>
-                    <p class="text-text-muted text-xs font-semibold">Total: Poids x Répétitions</p>
-                </div>
-                <div class="h-64">
-                    <ExerciseVolumeChart :data="volumeHistory" />
+            <!-- Analytics Grid -->
+            <div
+                v-if="history && history.length > 0"
+                class="animate-slide-up grid grid-cols-1 gap-6 md:grid-cols-2"
+                style="animation-delay: 0.05s"
+            >
+                <GlassCard>
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume</h3>
+                        <p class="text-text-muted text-xs font-semibold">Volume total par séance (kg)</p>
+                    </div>
+                    <div class="h-64">
+                        <VolumeTrendChart :data="volumeData" />
+                    </div>
+                </GlassCard>
+
+                <GlassCard>
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Endurance</h3>
+                        <p class="text-text-muted text-xs font-semibold">Max Reps par série</p>
+                    </div>
+                    <div class="h-64">
+                        <MaxRepsChart :data="maxRepsData" />
+                    </div>
+                </GlassCard>
+
+                <GlassCard>
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charges</h3>
+                        <p class="text-text-muted text-xs font-semibold">Distribution des poids utilisés</p>
+                    </div>
+                    <div class="h-64">
+                        <WeightDistributionChart :data="weightDistributionData" />
+                    </div>
+                </GlassCard>
+            </div>
+            <GlassCard v-else class="animate-slide-up" style="animation-delay: 0.05s">
+                <div class="flex h-64 flex-col items-center justify-center text-center">
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                    <p class="text-text-muted text-sm">Pas assez de données pour afficher les statistiques</p>
                 </div>
             </GlassCard>
 
             <!-- History List -->
-            <div class="animate-slide-up" style="animation-delay: 0.1s">
+            <div class="animate-slide-up" style="animation-delay: 0.2s">
                 <h3 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Historique</h3>
 
                 <div v-if="history.length === 0" class="py-8 text-center">

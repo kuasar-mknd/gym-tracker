@@ -22,13 +22,25 @@ final class UpdateWorkoutAction
     {
         $workout->fill(collect($data)->only(['started_at', 'name', 'notes'])->toArray());
 
+        // Check what changed to determine cache invalidation strategy
+        $needsFullClear = $workout->isDirty(['started_at', 'ended_at']);
+        $needsMetaClear = $workout->isDirty(['name']);
+        $needsDashboardClear = $workout->isDirty(['notes']);
+
         if ($data['is_finished'] ?? false) {
             $workout->ended_at = now();
+            $needsFullClear = true;
         }
 
         $workout->save();
 
-        $this->statsService->clearWorkoutRelatedStats($workout->user);
+        if ($needsFullClear) {
+            $this->statsService->clearWorkoutRelatedStats($workout->user);
+        } elseif ($needsMetaClear) {
+            $this->statsService->clearWorkoutMetadataStats($workout->user);
+        } elseif ($needsDashboardClear) {
+            \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$workout->user_id}");
+        }
 
         return $workout;
     }

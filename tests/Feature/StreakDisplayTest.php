@@ -16,10 +16,11 @@ class StreakDisplayTest extends TestCase
 
     public function test_dashboard_shows_zero_streak_when_day_missed(): void
     {
-        $user = User::factory()->create([
+        $user = User::factory()->create();
+        $user->forceFill([
             'current_streak' => 5,
             'last_workout_at' => Carbon::now()->subDays(2), // 2 days ago
-        ]);
+        ])->save();
 
         $this->actingAs($user)
             ->get('/dashboard')
@@ -32,10 +33,11 @@ class StreakDisplayTest extends TestCase
 
     public function test_dashboard_shows_correct_streak_when_streak_active(): void
     {
-        $user = User::factory()->create([
+        $user = User::factory()->create();
+        $user->forceFill([
             'current_streak' => 5,
             'last_workout_at' => Carbon::now()->subDays(1), // Yesterday
-        ]);
+        ])->save();
 
         $this->actingAs($user)
             ->get('/dashboard')

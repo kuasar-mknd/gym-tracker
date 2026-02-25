@@ -11,6 +11,9 @@ const DurationDistributionChart = defineAsyncComponent(() => import('@/Component
 /**
  * Dashboard - Command Center
  * New Liquid Glass Light design with redesigned layout matching mockups.
+ *
+ * PERFORMANCE: Optimized to show only the most recent items.
+ * Database queries are limited to match the visible items in the UI.
  */
 const props = defineProps({
     workoutsCount: { type: Number, default: 0 },
@@ -90,6 +93,7 @@ const colorForWorkout = (index) => {
             <section class="animate-slide-up grid grid-cols-2 gap-4" style="animation-delay: 0.1s">
                 <!-- Start Workout -->
                 <button
+                    dusk="start-workout-button"
                     @click="startWorkout"
                     :disabled="form.processing"
                     class="hover:shadow-glow-orange/70 group shadow-glow-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 active:scale-95"

@@ -6,47 +6,77 @@ namespace App\Actions\Exercises;
 
 use App\Models\Exercise;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\WorkoutLine;
 use Illuminate\Support\Collection;
 
 class FetchExerciseHistoryAction
 {
     /**
-     * @return Collection<int, array{
-     *   id: int,
-     *   workout_id: int,
-     *   workout_name: string|null,
-     *   date: string,
-     *   formatted_date: string,
-     *   sets: Collection<int, array{weight: float|null, reps: int|null, '1rm': float|int}>,
-     *   best_1rm: mixed
+     * @return \Illuminate\Support\Collection<int, array{
+     *     id: int,
+     *     workout_id: int,
+     *     workout_name: string,
+     *     formatted_date: string,
+     *     best_1rm: float,
+     *     sets: \Illuminate\Support\Collection<int, array<string, mixed>>
      * }>
      */
     public function execute(User $user, Exercise $exercise): Collection
     {
-        return $exercise->workoutLines()
-            ->with(['workout' => function ($query): void {
-                $query->select('id', 'name', 'started_at', 'ended_at');
-            }, 'sets'])
-            ->whereHas('workout', function (Builder $query) use ($user): void {
+        // @phpstan-ignore-next-line
+        return WorkoutLine::query()
+            ->where('exercise_id', $exercise->id)
+            ->whereHas('workout', function ($query) use ($user): void {
                 $query->where('user_id', $user->id)
-                    ->whereNotNull('ended_at');
+                    ->whereNotNull('started_at');
             })
+            ->with(['workout', 'sets'])
             ->get()
-            ->sortByDesc('workout.started_at')
+            ->map(function (WorkoutLine $line): ?array {
+                $workout = $line->workout;
+                /** @phpstan-ignore-next-line */
+                if (! $workout || ! $workout->started_at) {
+                    return null;
+                }
+
+                $sets = $line->sets->map(fn ($set): array => [
+                    'weight' => (float) $set->weight,
+                    'reps' => (int) $set->reps,
+                    'one_rep_max' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
+                ]);
+
+                $best1rm = $sets->max('one_rep_max') ?? 0.0;
+
+                return [
+                    'id' => $line->id,
+                    'workout_id' => $workout->id,
+                    'workout_name' => $workout->name,
+                    // @phpstan-ignore-next-line
+                    'formatted_date' => $workout->started_at->locale('fr')->isoFormat('ddd D MMM'),
+                    'best_1rm' => $best1rm,
+                    'sets' => $sets,
+                    'started_at' => $workout->started_at, // For sorting
+                ];
+            })
+            ->filter()
+            ->sortByDesc('started_at')
             ->values()
-            ->map(fn ($line): array => [
-                'id' => $line->id,
-                'workout_id' => $line->workout->id,
-                'workout_name' => $line->workout->name,
-                'date' => $line->workout->started_at->format('Y-m-d'),
-                'formatted_date' => $line->workout->started_at->format('d/m/Y'),
-                'sets' => $line->sets->map(fn ($set): array => [
-                    'weight' => $set->weight,
-                    'reps' => $set->reps,
-                    '1rm' => $set->weight * (1 + $set->reps / 30),
-                ]),
-                'best_1rm' => $line->sets->max(fn ($set): int|float => $set->weight * (1 + $set->reps / 30)),
-            ]);
+            ->map(function (array $item): array {
+                unset($item['started_at']);
+
+                return $item;
+            });
+    }
+
+    private function calculate1RM(float $weight, int $reps): float
+    {
+        if ($reps === 0) {
+            return 0.0;
+        }
+        if ($reps === 1) {
+            return $weight;
+        }
+
+        return $weight * (1 + ($reps / 30));
     }
 }

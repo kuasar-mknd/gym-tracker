@@ -46,5 +46,6 @@ return new class() extends Migration
         // We do not drop indexes in down() because they might be used by foreign key constraints
         // (MySQL error 1553), causing rollback issues in CI/testing environments.
         // Since these are performance indexes, leaving them is safer than crashing the migration rollback.
+
     }
 };

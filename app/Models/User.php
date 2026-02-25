@@ -53,6 +53,9 @@ final class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'provider',
+        'provider_id',
+        'avatar',
         'default_rest_time',
     ];
 
@@ -70,6 +73,14 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function workouts(): HasMany
     {
         return $this->hasMany(Workout::class);
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough<WorkoutLine, Workout, $this>
+     */
+    public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(WorkoutLine::class, Workout::class);
     }
 
     /**

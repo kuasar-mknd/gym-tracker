@@ -5,3 +5,18 @@
 ## 2026-02-12 - Icon Standardization & Accessibility
 **Learning:** The app uses `Material Symbols Outlined` as its primary icon system. Replacing legacy inline SVGs with `<span class="material-symbols-outlined">icon_name</span>` improves maintainability but **must** include `aria-hidden="true"` to prevent screen readers from announcing the ligature text (e.g., "inventory_2").
 **Action:** When refactoring icons, always add `aria-hidden="true"` to the icon span and verify text labels exist on the parent button.
+
+## 2026-02-03 - Dynamic Labels for Badged Buttons
+**Learning:** Buttons with status badges (like notification counts) need dynamic aria-labels (e.g., "Notifications (3 unread)") because the badge content itself is often just a number and separate from the icon.
+**Action:** Use computed properties or template literals for aria-labels on buttons with state counters.
+
+## 2026-02-19 - Interactive Image Links
+**Learning:** Links containing only images (like social login buttons) should have an `aria-label` on the `<a>` tag itself. Relying solely on the image's `alt` text can be less robust for keyboard/screen reader navigation.
+**Action:** Always add descriptive `aria-label` to icon-only or image-only links.
+
+## [2026-02-24] - Accessibility Improvement - Exercise Selection
+
+- **Task**: Add Unit Tests for PersonalRecordService Sync Logic
+- **Improvement**: Added `aria-label` to the exercise selection dropdown in the Stats page.
+- **Reasoning**: The dropdown had a placeholder option but no descriptive label for screen readers. Adding an explicit `aria-label` ensures that users using assistive technologies understand the purpose of the input.
+- **Learning**: Always ensure interactive elements that rely on visual context (like being under a heading) have explicit ARIA labels for accessibility.

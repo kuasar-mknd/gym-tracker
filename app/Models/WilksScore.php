@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WilksScore extends Model
 {
+    /** @use HasFactory<\Database\Factories\WilksScoreFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'body_weight',
@@ -29,9 +33,9 @@ class WilksScore extends Model
     protected function casts(): array
     {
         return [
-            'body_weight' => 'decimal:2',
-            'lifted_weight' => 'decimal:2',
-            'score' => 'decimal:2',
+            'body_weight' => 'float',
+            'lifted_weight' => 'float',
+            'score' => 'float',
         ];
     }
 }

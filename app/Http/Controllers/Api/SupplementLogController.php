@@ -23,8 +23,12 @@ class SupplementLogController extends Controller
     {
         $this->authorize('viewAny', SupplementLog::class);
 
+        $validated = $request->validate([
+            'per_page' => 'sometimes|integer|min:1|max:100',
+        ]);
+
         /** @var int $perPage */
-        $perPage = $request->input('per_page', 15);
+        $perPage = $validated['per_page'] ?? 15;
 
         $logs = QueryBuilder::for(SupplementLog::class)
             ->allowedFilters(['supplement_id'])

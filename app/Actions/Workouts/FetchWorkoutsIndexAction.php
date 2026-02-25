@@ -42,21 +42,21 @@ final class FetchWorkoutsIndexAction
      */
     public function execute(User $user): array
     {
+        /** @var array<int, array{date: string, duration: int, name: string}> $durationHistory */
+        $durationHistory = $this->statsService->getDurationHistory($user, 20);
+
+        /** @var array<int, array{date: string, volume: float, name: string}> $volumeHistory */
+        $volumeHistory = $this->statsService->getVolumeHistory($user, 20);
+
+        /** @var array<int, array{month: string, volume: float}> $monthlyVolume */
+        $monthlyVolume = $this->statsService->getMonthlyVolumeHistory($user, 6);
+
         return [
             'workouts' => $this->getWorkouts($user),
             'monthlyFrequency' => $this->getMonthlyFrequency($user),
-            'durationHistory' => $this->statsService->getDurationHistory(
-                $user,
-                20
-            ),
-            'volumeHistory' => $this->statsService->getVolumeHistory(
-                $user,
-                20
-            ),
-            'monthlyVolume' => $this->statsService->getMonthlyVolumeHistory(
-                $user,
-                6
-            ),
+            'durationHistory' => $durationHistory,
+            'volumeHistory' => $volumeHistory,
+            'monthlyVolume' => $monthlyVolume,
         ];
     }
 
@@ -66,14 +66,11 @@ final class FetchWorkoutsIndexAction
     protected function getMonthlyFrequency(
         User $user
     ): Collection {
-        /** @var Collection<int, array{month: string, count: int}> $frequency */
-        $frequency = Cache::remember(
+        return Cache::remember(
             "stats.monthly_frequency.{$user->id}",
             now()->addHour(),
             fn (): Collection => $this->calculateMonthlyFrequency($user)
         );
-
-        return $frequency;
     }
 
     /**
@@ -115,7 +112,10 @@ final class FetchWorkoutsIndexAction
     ): \Illuminate\Pagination\LengthAwarePaginator {
         return Workout::with([
             'workoutLines' => function ($query): void {
-                $query->with('exercise')->withCount('sets');
+                $query->select(['id', 'workout_id', 'exercise_id', 'order'])
+                    ->with('exercise:id,name')
+                    ->orderBy('order')
+                    ->withCount('sets');
             },
         ])
             ->where('user_id', $user->id)

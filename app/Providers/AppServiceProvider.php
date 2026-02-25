@@ -7,11 +7,14 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
     {
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
-            $this->app->register(TelescopeServiceProvider::class);
+            $this->app->register(\App\Providers\TelescopeServiceProvider::class);
         }
     }
 
@@ -37,10 +40,19 @@ class AppServiceProvider extends ServiceProvider
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
 
+        Password::defaults(function () {
+            $rule = Password::min(8);
+
+            return $this->app->isProduction()
+                ? $rule->mixedCase()->numbers()->symbols()->uncompromised()
+                : $rule;
+        });
+
         $this->configureGates();
         $this->configureVite();
         $this->configureSocialite();
         $this->configureModelHooks();
+        $this->configureRateLimiters();
     }
 
     private function configureGates(): void
@@ -94,5 +106,15 @@ class AppServiceProvider extends ServiceProvider
         Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
         Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
+    }
+
+    private function configureRateLimiters(): void
+    {
+        RateLimiter::for('api', function ($request): Limit {
+            $configured = config('app.api_rate_limit', 60);
+            $limit = is_numeric($configured) ? (int) $configured : 60;
+
+            return Limit::perMinute($limit)->by($request->user()->id ?? $request->ip());
+        });
     }
 }
