@@ -41,7 +41,7 @@ const getCategoryLabel = (category) => {
                     <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
                 </div>
                 <div class="text-right">
-                    <div class="text-accent-primary text-2xl font-bold">
+                    <div class="text-electric-orange text-2xl font-bold">
                         {{ summary.unlocked }} / {{ summary.total }}
                     </div>
                     <div class="text-text-muted/50 text-xs tracking-wider uppercase">Débloqués</div>
@@ -59,7 +59,7 @@ const getCategoryLabel = (category) => {
                     class="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all"
                     :class="
                         currentCategory === cat.value
-                            ? 'bg-accent-primary shadow-accent-primary/20 text-white shadow-lg'
+                            ? 'bg-electric-orange shadow-electric-orange/20 text-white shadow-lg'
                             : 'text-text-muted border border-slate-200 bg-white/50 hover:bg-white/80'
                     "
                 >
@@ -75,14 +75,14 @@ const getCategoryLabel = (category) => {
                         class="flex h-full flex-col items-center text-center transition-all duration-300"
                         :class="[
                             achievement.is_unlocked
-                                ? 'bg-glass-strong border-accent-primary/20'
+                                ? 'bg-glass-strong border-electric-orange/20'
                                 : 'opacity-60 grayscale',
                         ]"
                     >
                         <!-- Badge Icon -->
                         <div
                             class="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl text-4xl transition-transform duration-300 group-hover:scale-110"
-                            :class="achievement.is_unlocked ? 'bg-accent-primary/10' : 'bg-white/5'"
+                            :class="achievement.is_unlocked ? 'bg-electric-orange/10' : 'bg-white/5'"
                         >
                             {{ achievement.icon }}
                         </div>
@@ -101,7 +101,7 @@ const getCategoryLabel = (category) => {
                         <div
                             class="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[20px] bg-black/80 p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
-                            <span class="text-accent-primary mb-1 text-xs font-bold">{{ achievement.name }}</span>
+                            <span class="text-electric-orange mb-1 text-xs font-bold">{{ achievement.name }}</span>
                             <span class="text-[10px] leading-tight text-white/80">{{ achievement.description }}</span>
                             <div v-if="achievement.is_unlocked" class="mt-2 text-[8px] text-white/30 italic">
                                 Débloqué le {{ new Date(achievement.unlocked_at).toLocaleDateString('fr-FR') }}
@@ -111,7 +111,7 @@ const getCategoryLabel = (category) => {
                         <!-- Unlocked Checkmark -->
                         <div
                             v-if="achievement.is_unlocked"
-                            class="bg-accent-success absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full shadow-lg"
+                            class="bg-plate-green absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full shadow-lg"
                         >
                             <svg class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path
