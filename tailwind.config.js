@@ -40,15 +40,6 @@ export default {
                 'plate-blue': '#3B82F6',
                 'plate-yellow': '#EAB308',
                 'plate-green': '#22C55E',
-
-                // Legacy mappings for compatibility
-                accent: {
-                    primary: '#FF5500', // Now electric-orange
-                    success: '#22C55E',
-                    warning: '#EAB308',
-                    danger: '#EF4444',
-                    info: '#00E5FF',
-                },
             },
             backdropBlur: {
                 glass: '20px',
