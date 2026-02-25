@@ -8,9 +8,11 @@ use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
 use App\Services\PersonalRecordService;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -48,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureVite();
         $this->configureSocialite();
         $this->configureModelHooks();
+        $this->configureRateLimiters();
     }
 
     private function configureGates(): void
@@ -95,17 +98,17 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureWorkoutHooks(): void
     {
-        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
-        Workout::deleted(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
-        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
-        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
+        Workout::saved(fn(Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        Workout::deleted(fn(Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        Workout::saved(fn(Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
+        Workout::saved(fn(Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
     }
 
     private function configureSetHooks(): void
     {
-        Set::saved(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
-        Set::deleted(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
-        Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
+        Set::saved(fn(Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
+        Set::deleted(fn(Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
+        Set::saved(fn(Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
         Set::saved(function (Set $set): void {
             $user = $set->workoutLine->workout->user;
@@ -128,12 +131,22 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        Set::saved(fn (Set $set) => app(PersonalRecordService::class)->syncSetPRs($set));
+        Set::saved(fn(Set $set) => app(PersonalRecordService::class)->syncSetPRs($set));
     }
 
     private function configureMeasurementHooks(): void
     {
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::saved(fn(BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::deleted(fn(BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+    }
+
+    private function configureRateLimiters(): void
+    {
+        RateLimiter::for('api', function ($request): Limit {
+            $configured = config('app.api_rate_limit', 60);
+            $limit = is_numeric($configured) ? (int) $configured : 60;
+
+            return Limit::perMinute($limit)->by($request->user()->id ?? $request->ip());
+        });
     }
 }

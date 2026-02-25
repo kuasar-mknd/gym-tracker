@@ -18,16 +18,18 @@ final class AchievementService
      */
     public function syncAchievements(User $user): void
     {
-        $unlockedIds = $user->achievements()->pluck('achievements.id')->toArray();
-        $locked = Achievement::whereNotIn('id', $unlockedIds)->get();
+        $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
 
-        if ($locked->isEmpty()) {
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Achievement> $lockedAchievements */
+        $lockedAchievements = Achievement::whereNotIn('id', $unlockedAchievementIds)->get();
+
+        if ($lockedAchievements->isEmpty()) {
             return;
         }
 
-        $metrics = $this->preCalculateMetrics($user, $locked);
+        $metrics = $this->preCalculateMetrics($user, $lockedAchievements);
 
-        foreach ($locked as $achievement) {
+        foreach ($lockedAchievements as $achievement) {
             $this->checkAndUnlock($user, $achievement, $metrics);
         }
     }
@@ -113,7 +115,7 @@ final class AchievementService
     {
         $workoutDates = $this->getUniqueWorkoutDates($user, $threshold);
 
-        if ($workoutDates === []) {
+        if (count($workoutDates) === 0) {
             return 0;
         }
 
