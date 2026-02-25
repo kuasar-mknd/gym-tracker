@@ -80,27 +80,6 @@ final class FetchDashboardDataAction
         return $this->statsService->getDurationDistribution($user);
     }
 
-    /**
-     * Legacy method if needed, but we will update the controller.
-     *
-     * @return array<string, mixed>
-     */
-    public function execute(User $user): array
-    {
-        $weeklyStats = $this->getWeeklyVolumeStats($user);
-
-        return array_merge(
-            $this->getImmediateStats($user),
-            [
-                'weeklyVolume' => $weeklyStats['current_week_volume'],
-                'volumeChange' => $weeklyStats['percentage'],
-                'weeklyVolumeTrend' => $this->getWeeklyVolumeTrend($user),
-                'volumeTrend' => $this->getVolumeTrend($user),
-                'durationDistribution' => $this->getDurationDistribution($user),
-            ]
-        );
-    }
-
     private function getThisWeekCount(User $user): int
     {
         return $user->workouts()
