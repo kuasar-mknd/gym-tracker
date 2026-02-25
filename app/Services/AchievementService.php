@@ -34,7 +34,7 @@ final class AchievementService
         // 1. Get IDs of already unlocked achievements
         $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
 
-        // 2. Get only locked achievements
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Achievement> $lockedAchievements */
         $lockedAchievements = Achievement::whereNotIn('id', $unlockedAchievementIds)->get();
 
         if ($lockedAchievements->isEmpty()) {
@@ -136,7 +136,7 @@ final class AchievementService
     {
         $workoutDates = $this->getUniqueWorkoutDates($user, $threshold);
 
-        if (empty($workoutDates)) {
+        if (count($workoutDates) === 0) {
             return 0;
         }
 
