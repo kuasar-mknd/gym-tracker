@@ -1,10 +1,9 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { usePage } from '@inertiajs/vue3'
-import { ref, reactive } from 'vue'
+import { useForm, usePage } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import axios from 'axios'
-import SyncService from '@/Utils/SyncService'
 
 const props = defineProps({
     preferences: {
@@ -20,7 +19,7 @@ const pushSupported = 'Notification' in window && 'serviceWorker' in navigator
 const pushPermission = ref(typeof Notification !== 'undefined' ? Notification.permission : 'default')
 const isSubscribing = ref(false)
 
-const form = reactive({
+const form = useForm({
     preferences: {
         personal_record: props.preferences.personal_record?.is_enabled ?? true,
         training_reminder: props.preferences.training_reminder?.is_enabled ?? true,
@@ -33,10 +32,6 @@ const form = reactive({
         training_reminder: props.preferences.training_reminder?.value ?? 3,
     },
 })
-
-const isSaving = ref(false)
-const recentlySuccessful = ref(false)
-const errors = ref({})
 
 const urlBase64ToUint8Array = (base64String) => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -79,31 +74,12 @@ const enablePush = async () => {
 }
 
 const updatePreferences = () => {
-    isSaving.value = true
-    errors.value = {}
-
-    SyncService.patch(route('profile.preferences.update'), form)
-        .then(() => {
-            recentlySuccessful.value = true
-            setTimeout(() => {
-                recentlySuccessful.value = false
-            }, 2000)
-        })
-        .catch((err) => {
-            if (err.isOffline) {
-                recentlySuccessful.value = true
-                setTimeout(() => {
-                    recentlySuccessful.value = false
-                }, 2000)
-                return
-            }
-            if (err.response?.status === 422) {
-                errors.value = err.response.data.errors
-            }
-        })
-        .finally(() => {
-            isSaving.value = false
-        })
+    form.patch(route('profile.preferences.update'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Success logic if needed
+        },
+    })
 }
 </script>
 
@@ -129,9 +105,7 @@ const updatePreferences = () => {
                                 fermée.
                             </p>
                         </div>
-                        <GlassButton type="button" size="sm" @click="enablePush" :loading="isSubscribing">
-                            Activer
-                        </GlassButton>
+                        <GlassButton size="sm" @click="enablePush" :loading="isSubscribing"> Activer </GlassButton>
                     </div>
                 </div>
 
@@ -207,7 +181,7 @@ const updatePreferences = () => {
                                 min="1"
                                 max="30"
                                 label="Nombre de jours d'inactivité"
-                                :error="errors['values.training_reminder']"
+                                :error="form.errors['values.training_reminder']"
                             />
                         </div>
                     </Transition>
@@ -215,7 +189,7 @@ const updatePreferences = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <GlassButton :loading="isSaving">Sauvegarder</GlassButton>
+                <GlassButton :disabled="form.processing">Sauvegarder</GlassButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
@@ -223,7 +197,7 @@ const updatePreferences = () => {
                     leave-active-class="transition ease-in-out"
                     leave-to-class="opacity-0"
                 >
-                    <p v-if="recentlySuccessful" class="text-sm text-emerald-400">Enregistré.</p>
+                    <p v-if="form.recentlySuccessful" class="text-sm text-emerald-400">Enregistré.</p>
                 </Transition>
             </div>
         </form>

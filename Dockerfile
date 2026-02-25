@@ -12,31 +12,21 @@ RUN install-php-extensions \
     opcache \
     sockets
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    default-mysql-client \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-
 # 2. Builder stage for Frontend assets
 FROM --platform=$BUILDPLATFORM node:25-slim AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 
-COPY vite.config.js tailwind.config.js ./
-COPY resources/ ./resources/
+
+COPY . .
 RUN npm run build
 
 # 3. Builder stage for Composer dependencies
-FROM --platform=$BUILDPLATFORM composer:2 AS composer-builder
+FROM composer:2 AS composer-builder
 WORKDIR /app
 COPY composer.* ./
 RUN composer install --no-dev --no-autoloader --no-scripts --ignore-platform-reqs
-
-# Finalize autoloader in builder to keep final image clean
-COPY . .
-RUN composer dump-autoload --classmap-authoritative --no-dev --no-scripts
 
 # 4. Final production image
 FROM base AS final
@@ -45,10 +35,13 @@ ENV SERVER_NAME=:80
 ENV APP_ENV=production
 ENV APP_DEBUG=false
 
-# Copy application files
+# Copy composer from builder to allow dump-autoload
+COPY --from=composer-builder /usr/bin/composer /usr/bin/composer
+
+# Copy application files FIRST (excludes vendor/ & public/build via .dockerignore)
 COPY . .
 
-# Copy PHP dependencies (including pre-generated autoloader)
+# Copy PHP dependencies
 COPY --from=composer-builder /app/vendor ./vendor
 
 # Copy built frontend assets
@@ -58,11 +51,14 @@ COPY --from=frontend-builder /app/public/build ./public/build
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+RUN composer dump-autoload --classmap-authoritative --no-dev --no-scripts
+
 RUN chmod -R 777 storage bootstrap/cache
 RUN mkdir -p storage/logs && touch storage/logs/laravel.log
 
 # Expose production port
 EXPOSE 80
+
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=1"]

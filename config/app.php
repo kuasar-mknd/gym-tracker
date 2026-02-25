@@ -129,6 +129,4 @@ return [
 
     'admin_initial_password' => env('ADMIN_INITIAL_PASSWORD', 'CHANGE_THIS_PASSWORD'),
 
-    'api_rate_limit' => (int) env('RATE_LIMIT_API', 60),
-
 ];

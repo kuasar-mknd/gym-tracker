@@ -17,7 +17,6 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
-import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
@@ -77,13 +76,19 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
         showTimer.value = true
     }
 
-    SyncService.patch(route('api.v1.sets.update', { set: set.id }), { is_completed: newState }).catch((err) => {
-        // Rollback on error (only if not a queueing "error")
-        if (!err.isOffline) {
-            set.is_completed = previousState
-            triggerHaptic('error')
-        }
-    })
+    router.patch(
+        route('sets.update', { set: set.id }),
+        { is_completed: newState },
+        {
+            preserveScroll: true,
+            only: ['workout'],
+            onError: () => {
+                // Rollback on error
+                set.is_completed = previousState
+                triggerHaptic('error')
+            },
+        },
+    )
 }
 
 /** Controls the loading state when saving as template. */
@@ -332,12 +337,13 @@ const removeLine = (lineId) => {
         props.workout.workout_lines.splice(lineIndex, 1) // Remove immediately
         showConfirmModal.value = false
 
-        SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: lineId })).catch((err) => {
-            // Rollback if failed
-            if (!err.isOffline) {
+        router.delete(route('workout-lines.destroy', { workoutLine: lineId }), {
+            preserveScroll: true,
+            onError: () => {
+                // Rollback if failed
                 props.workout.workout_lines.splice(lineIndex, 0, removedLine)
                 triggerHaptic('error')
-            }
+            },
         })
     }
     showConfirmModal.value = true
@@ -400,28 +406,23 @@ const addSet = (lineId) => {
 
     line.sets.push(optimisticSet)
 
-    SyncService.post(route('api.v1.sets.store'), {
-        workout_line_id: lineId,
-        ...data,
-    })
-        .then((response) => {
-            // Update temp set with real ID from database
+    router.post(route('sets.store', { workoutLine: lineId }), data, {
+        preserveScroll: true,
+        onSuccess: () => {
+            // The page reload from Inertia will replace the temp set with the real one.
+            // However, to prevent flickering or duplication if Inertia merges somewhat weirdly (though it usually replaces),
+            // we strictly rely on the server response "wiping" our optimistic state by replacing props.
+            triggerHaptic('tap')
+        },
+        onError: () => {
+            // Rollback: remove the temp set
             const index = line.sets.findIndex((s) => s.id === tempId)
             if (index !== -1) {
-                line.sets[index].id = response.data.data.id
+                line.sets.splice(index, 1)
             }
-            triggerHaptic('tap')
-        })
-        .catch((err) => {
-            // Rollback: remove the temp set (only if real failure, not queuing)
-            if (!err.isOffline) {
-                const index = line.sets.findIndex((s) => s.id === tempId)
-                if (index !== -1) {
-                    line.sets.splice(index, 1)
-                }
-                triggerHaptic('error')
-            }
-        })
+            triggerHaptic('error')
+        },
+    })
 }
 
 /**
@@ -443,13 +444,19 @@ const updateSet = (set, field, value) => {
     // Optimistic Update
     set[field] = value
 
-    SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value }).catch((err) => {
-        // Rollback
-        if (!err.isOffline) {
-            set[field] = oldValue
-            triggerHaptic('error')
-        }
-    })
+    router.patch(
+        route('sets.update', { set: set.id }),
+        { [field]: value },
+        {
+            preserveScroll: true,
+            only: ['workout'],
+            onError: () => {
+                // Rollback
+                set[field] = oldValue
+                triggerHaptic('error')
+            },
+        },
+    )
 }
 
 /**
@@ -481,12 +488,13 @@ const removeSet = (setId) => {
     const removedSet = line.sets[setIndex]
     line.sets.splice(setIndex, 1)
 
-    SyncService.delete(route('api.v1.sets.destroy', { set: setId })).catch((err) => {
-        // Rollback
-        if (!err.isOffline) {
+    router.delete(route('sets.destroy', { set: setId }), {
+        preserveScroll: true,
+        onError: () => {
+            // Rollback
             line.sets.splice(setIndex, 0, removedSet)
             triggerHaptic('error')
-        }
+        },
     })
 }
 
@@ -514,30 +522,27 @@ const duplicateSet = (set, lineId) => {
     // Insert after the current set or at the end? Usually at the end.
     line.sets.push(optimisticSet)
 
-    SyncService.post(route('api.v1.sets.store'), {
-        workout_line_id: lineId,
-        weight: set.weight,
-        reps: set.reps,
-        distance_km: set.distance_km,
-        duration_seconds: set.duration_seconds,
-    })
-        .then((response) => {
-            const index = line.sets.findIndex((s) => s.id === tempId)
-            if (index !== -1) {
-                line.sets[index].id = response.data.data.id
-            }
-            triggerHaptic('success')
-        })
-        .catch((err) => {
-            // Rollback
-            if (!err.isOffline) {
+    router.post(
+        route('sets.store', { workoutLine: lineId }),
+        {
+            weight: set.weight,
+            reps: set.reps,
+            distance_km: set.distance_km,
+            duration_seconds: set.duration_seconds,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => triggerHaptic('success'),
+            onError: () => {
+                // Rollback
                 const index = line.sets.findIndex((s) => s.id === tempId)
                 if (index !== -1) {
                     line.sets.splice(index, 1)
                 }
                 triggerHaptic('error')
-            }
-        })
+            },
+        },
+    )
 }
 
 /**
@@ -635,7 +640,6 @@ const hasNoResults = computed(() => {
             <button
                 v-if="!workout.ended_at"
                 id="finish-workout-mobile"
-                dusk="finish-workout-button"
                 @click="finishWorkout"
                 class="border-electric-orange/20 bg-electric-orange/10 text-electric-orange hover:bg-electric-orange/20 flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-xs font-black tracking-widest uppercase transition active:scale-95"
             >
@@ -654,12 +658,7 @@ const hasNoResults = computed(() => {
 
         <div class="space-y-4">
             <!-- Exercise Cards -->
-            <GlassCard
-                v-for="(line, lineIndex) in workout.workout_lines"
-                :key="line.id"
-                class="animate-slide-up"
-                :dusk="'exercise-card-' + lineIndex"
-            >
+            <GlassCard v-for="line in workout.workout_lines" :key="line.id" class="animate-slide-up">
                 <!-- Exercise Header -->
                 <div class="mb-4 flex items-center justify-between">
                     <div>
@@ -707,7 +706,6 @@ const hasNoResults = computed(() => {
                         >
                             <!-- Complete Button -->
                             <button
-                                :dusk="'complete-set-' + lineIndex + '-' + index"
                                 @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
                                 class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
                                 :class="[
@@ -807,7 +805,6 @@ const hasNoResults = computed(() => {
                                 <div class="flex flex-1 items-center gap-2">
                                     <input
                                         type="number"
-                                        :dusk="'weight-input-' + lineIndex + '-' + index"
                                         :value="set.weight"
                                         @change="(e) => updateSet(set, 'weight', e.target.value)"
                                         @focus="(e) => e.target.select()"
@@ -821,7 +818,6 @@ const hasNoResults = computed(() => {
                                 <div class="flex flex-1 items-center gap-2">
                                     <input
                                         type="number"
-                                        :dusk="'reps-input-' + lineIndex + '-' + index"
                                         :value="set.reps"
                                         @change="(e) => updateSet(set, 'reps', e.target.value)"
                                         @focus="(e) => e.target.select()"
@@ -874,7 +870,6 @@ const hasNoResults = computed(() => {
                 <!-- Add Set Button -->
                 <button
                     v-if="!workout.ended_at"
-                    :dusk="'add-set-' + lineIndex"
                     @click="addSet(line.id)"
                     class="text-text-muted hover:border-neon-green hover:bg-neon-green/5 hover:text-text-main mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 py-3 text-sm font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
                 >
@@ -895,7 +890,6 @@ const hasNoResults = computed(() => {
             <!-- Persistent Add Exercise Button (when not empty) -->
             <button
                 v-if="!workout.ended_at && workout.workout_lines.length > 0"
-                dusk="add-exercise-existing"
                 @click="showAddExercise = true"
                 class="animate-slide-up text-text-muted hover:border-electric-orange hover:bg-electric-orange/5 hover:text-electric-orange flex min-h-[80px] w-full items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 py-6 text-sm font-black tracking-widest uppercase transition-all active:scale-[0.98]"
             >
@@ -912,7 +906,6 @@ const hasNoResults = computed(() => {
                     <GlassButton
                         v-if="!workout.ended_at"
                         variant="primary"
-                        dusk="add-first-exercise"
                         @click="showAddExercise = true"
                         class="px-8"
                         data-testid="add-exercise-button"
@@ -1078,7 +1071,6 @@ const hasNoResults = computed(() => {
                                     <button
                                         v-for="exercise in filteredExercises"
                                         :key="exercise.id"
-                                        :dusk="'select-exercise-' + exercise.id"
                                         @click="addExercise(exercise.id)"
                                         :disabled="addExerciseForm.processing"
                                         class="group flex w-full items-center justify-between rounded-xl p-4 text-left transition hover:bg-slate-50 disabled:opacity-50"
@@ -1241,12 +1233,7 @@ const hasNoResults = computed(() => {
 
                 <div class="grid grid-cols-2 gap-3">
                     <GlassButton variant="ghost" @click="showFinishModal = false"> Annuler </GlassButton>
-                    <GlassButton
-                        variant="primary"
-                        id="confirm-finish-button"
-                        dusk="confirm-finish-button"
-                        @click="confirmFinishWorkout"
-                    >
+                    <GlassButton variant="primary" id="confirm-finish-button" @click="confirmFinishWorkout">
                         Confirmer
                     </GlassButton>
                 </div>

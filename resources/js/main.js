@@ -21,17 +21,15 @@ createInertiaApp({
             .use(plugin)
             .use(ZiggyVue)
 
-        // Sentry disabled for debugging
-        if (import.meta.env.VITE_SENTRY_DSN_PUBLIC) {
-            Sentry.init({
-                app,
-                dsn: import.meta.env.VITE_SENTRY_DSN_PUBLIC,
-                integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
-                tracesSampleRate: 1.0,
-                replaysSessionSampleRate: 0.1,
-                replaysOnErrorSampleRate: 1.0,
-            })
-        }
+        Sentry.init({
+            app,
+            dsn: window.SENTRY_CONFIG?.dsn || import.meta.env.VITE_SENTRY_DSN_PUBLIC,
+            environment: window.SENTRY_CONFIG?.environment || import.meta.env.MODE,
+            integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+            tracesSampleRate: 1.0,
+            replaysSessionSampleRate: 0.1,
+            replaysOnErrorSampleRate: 1.0,
+        })
 
         // Register custom directives
         import('./directives/vPress').then((m) => {

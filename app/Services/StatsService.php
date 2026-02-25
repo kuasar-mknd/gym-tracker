@@ -300,11 +300,13 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
-        /** @var array<int, array{date: string, volume: float, name: string}> */
-        return $this->queryVolumeHistory($user, $limit)
+        /** @var array<int, array{date: string, volume: float, name: string}> $result */
+        $result = $this->queryVolumeHistory($user, $limit)
             // @phpstan-ignore-next-line
             ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
+
+        return $result;
     }
 
     /**
@@ -349,9 +351,11 @@ class StatsService
         $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
 
         foreach ($workouts as $workout) {
-            /** @var object{started_at: string, ended_at: string} $workout */
-            $start = Carbon::parse($workout->started_at);
-            $end = Carbon::parse($workout->ended_at);
+            $startedAt = data_get($workout, 'started_at');
+            $endedAt = data_get($workout, 'ended_at');
+
+            $start = Carbon::parse(is_string($startedAt) ? $startedAt : 'now');
+            $end = Carbon::parse(is_string($endedAt) ? $endedAt : 'now');
 
             $minutes = abs((int) $end->diffInMinutes($start));
             $this->incrementBucket($buckets, $minutes);
@@ -465,19 +469,37 @@ class StatsService
     /**
      * @return array{date: string, duration: int, name: string}
      */
-    /**
-     * @param  object{started_at: string|\DateTimeInterface, ended_at: string|\DateTimeInterface|null, name: string}  $workout
-     * @return array{date: string, duration: int, name: string}
-     */
     protected function formatDurationHistoryItem(object $workout): array
     {
-        $start = $workout->started_at instanceof \DateTimeInterface ? $workout->started_at : Carbon::parse($workout->started_at);
-        $end = $workout->ended_at instanceof \DateTimeInterface ? $workout->ended_at : ($workout->ended_at ? Carbon::parse($workout->ended_at) : null);
+        $startedAt = data_get($workout, 'started_at');
+        $endedAt = data_get($workout, 'ended_at');
+        $name = data_get($workout, 'name');
+
+        if ($startedAt instanceof \DateTimeInterface) {
+            $start = Carbon::instance($startedAt);
+        } elseif (is_string($startedAt)) {
+            $start = Carbon::parse($startedAt);
+        } else {
+            $start = now();
+        }
+
+        if ($endedAt instanceof \DateTimeInterface) {
+            $end = Carbon::instance($endedAt);
+        } elseif (is_string($endedAt)) {
+            $end = Carbon::parse($endedAt);
+        } else {
+            $end = null;
+        }
+
+        $duration = 0;
+        if ($end instanceof Carbon) {
+            $duration = (int) $end->diffInMinutes($start, true);
+        }
 
         return [
             'date' => $start->format('d/m'),
-            'duration' => (int) ($end ? $end->diffInMinutes($start, true) : 0),
-            'name' => (string) $workout->name,
+            'duration' => $duration,
+            'name' => is_string($name) ? $name : 'Séance',
         ];
     }
 

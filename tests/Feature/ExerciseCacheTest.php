@@ -17,8 +17,7 @@ class ExerciseCacheTest extends TestCase
     public function test_web_store_invalidates_cache(): void
     {
         $user = User::factory()->create();
-        $globalVersion = Cache::get('exercises_global_version', 1);
-        $cacheKey = "exercises_list_{$user->id}_v{$globalVersion}";
+        $cacheKey = "exercises_list_{$user->id}";
         Cache::put($cacheKey, 'some cached data', 3600);
 
         $this->actingAs($user)->post('/exercises', [
@@ -34,8 +33,7 @@ class ExerciseCacheTest extends TestCase
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create(['user_id' => $user->id]);
-        $globalVersion = Cache::get('exercises_global_version', 1);
-        $cacheKey = "exercises_list_{$user->id}_v{$globalVersion}";
+        $cacheKey = "exercises_list_{$user->id}";
         Cache::put($cacheKey, 'some cached data', 3600);
 
         $this->actingAs($user)->put("/exercises/{$exercise->id}", [
@@ -51,8 +49,7 @@ class ExerciseCacheTest extends TestCase
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create(['user_id' => $user->id]);
-        $globalVersion = Cache::get('exercises_global_version', 1);
-        $cacheKey = "exercises_list_{$user->id}_v{$globalVersion}";
+        $cacheKey = "exercises_list_{$user->id}";
         Cache::put($cacheKey, 'some cached data', 3600);
 
         $this->actingAs($user)->delete("/exercises/{$exercise->id}");
@@ -63,8 +60,7 @@ class ExerciseCacheTest extends TestCase
     public function test_api_store_invalidates_cache(): void
     {
         $user = User::factory()->create();
-        $globalVersion = Cache::get('exercises_global_version', 1);
-        $cacheKey = "exercises_list_{$user->id}_v{$globalVersion}";
+        $cacheKey = "exercises_list_{$user->id}";
         Cache::put($cacheKey, 'some cached data', 3600);
 
         $this->actingAs($user, 'sanctum')->postJson('/api/v1/exercises', [
@@ -80,8 +76,7 @@ class ExerciseCacheTest extends TestCase
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create(['user_id' => $user->id]);
-        $globalVersion = Cache::get('exercises_global_version', 1);
-        $cacheKey = "exercises_list_{$user->id}_v{$globalVersion}";
+        $cacheKey = "exercises_list_{$user->id}";
         Cache::put($cacheKey, 'some cached data', 3600);
 
         $this->actingAs($user, 'sanctum')->putJson("/api/v1/exercises/{$exercise->id}", [
@@ -95,8 +90,7 @@ class ExerciseCacheTest extends TestCase
     {
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create(['user_id' => $user->id]);
-        $globalVersion = Cache::get('exercises_global_version', 1);
-        $cacheKey = "exercises_list_{$user->id}_v{$globalVersion}";
+        $cacheKey = "exercises_list_{$user->id}";
         Cache::put($cacheKey, 'some cached data', 3600);
 
         $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/exercises/{$exercise->id}");

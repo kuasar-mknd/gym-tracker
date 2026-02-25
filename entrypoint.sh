@@ -27,7 +27,7 @@ php artisan route:cache
 # Run migrations ONLY for the app service (when command contains octane)
 if echo "$@" | grep -q "octane:frankenphp"; then
     php artisan migrate --force --quiet || true
-    php artisan filament:upgrade --no-interaction
+    php artisan filament:upgrade --force
 fi
 
 # Execute the main command
