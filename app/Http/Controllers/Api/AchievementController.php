@@ -28,9 +28,11 @@ class AchievementController extends Controller
             ->paginate();
 
         // Load unlock status for the current user
-        $achievements->getCollection()->load(['users' => function ($query) {
-            $query->where('user_id', $this->user()->id);
-        }]);
+        $achievements->getCollection()->load([
+            'users' => function ($query) {
+                $query->where('user_id', $this->user()->id);
+            },
+        ]);
 
         return AchievementResource::collection($achievements);
     }
@@ -55,9 +57,11 @@ class AchievementController extends Controller
     {
         $this->authorize('view', $achievement);
 
-        $achievement->load(['users' => function ($query) {
-            $query->where('user_id', $this->user()->id);
-        }]);
+        $achievement->load([
+            'users' => function ($query) {
+                $query->where('user_id', $this->user()->id);
+            },
+        ]);
 
         return new AchievementResource($achievement);
     }
