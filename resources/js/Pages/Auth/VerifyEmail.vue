@@ -29,7 +29,7 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
             </p>
         </div>
 
-        <div v-if="verificationLinkSent" class="bg-accent-success/20 text-accent-success mb-4 rounded-xl p-3 text-sm">
+        <div v-if="verificationLinkSent" class="bg-plate-green/20 text-plate-green mb-4 rounded-xl p-3 text-sm">
             Un nouveau lien de vérification a été envoyé à ton adresse email.
         </div>
 
