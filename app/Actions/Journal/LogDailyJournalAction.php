@@ -7,7 +7,6 @@ namespace App\Actions\Journal;
 use App\Models\DailyJournal;
 use App\Models\User;
 use Illuminate\Support\Carbon;
-use UnexpectedValueException;
 
 final class LogDailyJournalAction
 {
@@ -15,16 +14,13 @@ final class LogDailyJournalAction
      * Log a daily journal entry for the user.
      *
      * @param  User  $user  The user to log the journal for.
-     * @param  array  $data  The validated data for the journal entry.
+     * @param  array<string, mixed>  $data  The validated data for the journal entry.
      * @return DailyJournal The created or updated journal entry.
      */
     public function execute(User $user, array $data): DailyJournal
     {
+        /** @var string $dateInput */
         $dateInput = $data['date'];
-
-        if (! is_string($dateInput)) {
-            throw new UnexpectedValueException('Date must be a string');
-        }
 
         $date = Carbon::parse($dateInput);
         $dateString = $date->format('Y-m-d');
