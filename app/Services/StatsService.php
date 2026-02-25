@@ -298,10 +298,14 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
-        return $this->queryVolumeHistory($user, $limit)
+        /** @var \Illuminate\Support\Collection<int, array{date: string, volume: float, name: string}> $history */
+        $history = $this->queryVolumeHistory($user, $limit)
             // @phpstan-ignore-next-line
             ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
-            ->reverse()->values()->toArray();
+            ->reverse()
+            ->values();
+
+        return $history->all();
     }
 
     /**
