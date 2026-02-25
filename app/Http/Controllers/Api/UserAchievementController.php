@@ -26,8 +26,7 @@ class UserAchievementController extends Controller
     {
         $this->authorize('viewAny', UserAchievement::class);
 
-        $achievements = QueryBuilder::for(UserAchievement::class)
-            ->where('user_id', $this->user()->id)
+        $achievements = QueryBuilder::for(UserAchievement::where('user_id', $this->user()->id))
             ->allowedIncludes(['achievement'])
             ->allowedSorts(['achieved_at', 'created_at'])
             ->paginate();
