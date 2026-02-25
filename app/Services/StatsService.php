@@ -298,13 +298,10 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
-        /** @var array<int, array{date: string, volume: float, name: string}> $result */
-        $result = $this->queryVolumeHistory($user, $limit)
+        return $this->queryVolumeHistory($user, $limit)
             // @phpstan-ignore-next-line
             ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
-
-        return $result;
     }
 
     /**
@@ -336,31 +333,32 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
+        $results = $this->fetchDurationDistributionBuckets($user, $days);
+
+        return [
+            ['label' => '< 30 min', 'count' => (int) ($results->b1 ?? 0)],
+            ['label' => '30-60 min', 'count' => (int) ($results->b2 ?? 0)],
+            ['label' => '60-90 min', 'count' => (int) ($results->b3 ?? 0)],
+            ['label' => '90+ min', 'count' => (int) ($results->b4 ?? 0)],
+        ];
+    }
+
+    protected function fetchDurationDistributionBuckets(User $user, int $days): \stdClass
+    {
         $driver = DB::getDriverName();
-        // Use driver-specific SQL to calculate duration in minutes.
-        // PERFORMANCE: Performing aggregation in the database avoids fetching and hydrating multiple Workout models.
-        $durationSql = $driver === 'sqlite'
+        $sql = $driver === 'sqlite'
             ? 'ABS((julianday(ended_at) - julianday(started_at)) * 1440)'
             : 'ABS(TIMESTAMPDIFF(MINUTE, started_at, ended_at))';
 
-        $results = Workout::where('user_id', $user->id)
+        return Workout::where('user_id', $user->id)
             ->whereNotNull('ended_at')
             ->where('started_at', '>=', now()->subDays($days))
             ->selectRaw("
-                COUNT(CASE WHEN $durationSql < 30 THEN 1 END) as bucket_1,
-                COUNT(CASE WHEN $durationSql >= 30 AND $durationSql < 60 THEN 1 END) as bucket_2,
-                COUNT(CASE WHEN $durationSql >= 60 AND $durationSql < 90 THEN 1 END) as bucket_3,
-                COUNT(CASE WHEN $durationSql >= 90 THEN 1 END) as bucket_4
-            ")
-            ->toBase()
-            ->first();
-
-        return [
-            ['label' => '< 30 min', 'count' => (int) ($results->bucket_1 ?? 0)],
-            ['label' => '30-60 min', 'count' => (int) ($results->bucket_2 ?? 0)],
-            ['label' => '60-90 min', 'count' => (int) ($results->bucket_3 ?? 0)],
-            ['label' => '90+ min', 'count' => (int) ($results->bucket_4 ?? 0)],
-        ];
+                COUNT(CASE WHEN {$sql} < 30 THEN 1 END) as b1,
+                COUNT(CASE WHEN {$sql} >= 30 AND {$sql} < 60 THEN 1 END) as b2,
+                COUNT(CASE WHEN {$sql} >= 60 AND {$sql} < 90 THEN 1 END) as b3,
+                COUNT(CASE WHEN {$sql} >= 90 THEN 1 END) as b4
+            ")->toBase()->first() ?? (object) ['b1' => 0, 'b2' => 0, 'b3' => 0, 'b4' => 0];
     }
 
     /**
