@@ -29,3 +29,7 @@
 - **Improvement**: Added `aria-label` to the exercise selection dropdown in the Stats page.
 - **Reasoning**: The dropdown had a placeholder option but no descriptive label for screen readers. Adding an explicit `aria-label` ensures that users using assistive technologies understand the purpose of the input.
 - **Learning**: Always ensure interactive elements that rely on visual context (like being under a heading) have explicit ARIA labels for accessibility.
+
+## 2026-02-24 - Gamification Accessibility
+**Learning:** Gamification elements like streak badges often use icons and numbers that lack context for screen readers. They also invite interaction (e.g., hover effects) but may not lead anywhere, creating user frustration.
+**Action:** Ensure gamification badges are interactive (linking to details/stats) and use `aria-label` to translate the icon+number combo into a meaningful sentence (e.g., "Current streak: 5 days").
