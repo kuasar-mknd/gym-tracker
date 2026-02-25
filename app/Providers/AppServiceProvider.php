@@ -7,6 +7,8 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
+use App\Services\PersonalRecordService;
+use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -32,9 +34,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Enforce strict model behavior in non-production environments
-        // This prevents N+1 queries (preventLazyLoading) and Mass Assignment vulnerabilities (preventSilentlyDiscardingAttributes).
-        // We do NOT enable preventAccessingMissingAttributes to avoid breaking existing tests/logic that rely on lenient attribute access.
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
 
@@ -90,18 +89,65 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureModelHooks(): void
     {
-        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
-        Workout::deleted(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        $this->configureWorkoutHooks();
+        $this->configureSetHooks();
+        $this->configureMeasurementHooks();
+    }
 
-        Set::saved(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
-        Set::deleted(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
+    private function configureWorkoutHooks(): void
+    {
+        $goals = fn (Workout $w) => \App\Jobs\SyncUserGoals::dispatch($w->user);
+        Workout::saved($goals);
+        Workout::deleted($goals);
+        Workout::saved(fn (Workout $w) => \App\Jobs\SyncUserAchievements::dispatch($w->user));
+        Workout::saved(fn (Workout $w) => app(StreakService::class)->updateStreak($w->user, $w));
+    }
 
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+    private function configureSetHooks(): void
+    {
+        $goals = fn (Set $s) => \App\Jobs\SyncUserGoals::dispatch($s->workoutLine->workout->user);
+        Set::saved($goals);
+        Set::deleted($goals);
+        Set::saved(fn (Set $s) => \App\Jobs\SyncUserAchievements::dispatch($s->workoutLine->workout->user));
 
-        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
-        Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
+        Set::saved(function (Set $set): void {
+            $this->updateUserVolume($set);
+        });
 
-        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
+        Set::deleted(function (Set $set): void {
+            $this->decrementUserVolume($set);
+        });
+
+        Set::saved(fn (Set $s) => app(PersonalRecordService::class)->syncSetPRs($s));
+    }
+
+    private function updateUserVolume(Set $set): void
+    {
+        $u = $set->workoutLine->workout->user;
+        $ow = $set->getOriginal('weight');
+        $or = $set->getOriginal('reps');
+        $ov = (is_numeric($ow) ? (float) $ow : 0.0) * (is_numeric($or) ? (int) $or : 0);
+        $nv = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+        $d = $nv - $ov;
+
+        if ($d !== 0.0) {
+            $u->increment('total_volume', $d);
+        }
+    }
+
+    private function decrementUserVolume(Set $set): void
+    {
+        $u = $set->workoutLine->workout->user;
+        $v = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+        if ($v !== 0.0) {
+            $u->decrement('total_volume', $v);
+        }
+    }
+
+    private function configureMeasurementHooks(): void
+    {
+        $goals = fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user);
+        BodyMeasurement::saved($goals);
+        BodyMeasurement::deleted($goals);
     }
 }

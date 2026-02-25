@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a5716be364599cd683681585240ecf2c",
+    "content-hash": "0b0abd40fdfcc64aa6e4df50d009d359",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -2044,16 +2044,16 @@
         },
         {
             "name": "firebase/php-jwt",
-            "version": "v6.11.1",
+            "version": "v7.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/firebase/php-jwt.git",
-                "reference": "d1e91ecf8c598d073d0995afa8cd5c75c6e19e66"
+                "reference": "5645b43af647b6947daac1d0f659dd1fbe8d3b65"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/firebase/php-jwt/zipball/d1e91ecf8c598d073d0995afa8cd5c75c6e19e66",
-                "reference": "d1e91ecf8c598d073d0995afa8cd5c75c6e19e66",
+                "url": "https://api.github.com/repos/firebase/php-jwt/zipball/5645b43af647b6947daac1d0f659dd1fbe8d3b65",
+                "reference": "5645b43af647b6947daac1d0f659dd1fbe8d3b65",
                 "shasum": ""
             },
             "require": {
@@ -2101,9 +2101,9 @@
             ],
             "support": {
                 "issues": "https://github.com/firebase/php-jwt/issues",
-                "source": "https://github.com/firebase/php-jwt/tree/v6.11.1"
+                "source": "https://github.com/firebase/php-jwt/tree/v7.0.2"
             },
-            "time": "2025-04-09T20:32:01+00:00"
+            "time": "2025-12-16T22:17:28+00:00"
         },
         {
             "name": "fruitcake/php-cors",
@@ -7448,22 +7448,22 @@
         },
         {
             "name": "socialiteproviders/apple",
-            "version": "5.7.0",
+            "version": "5.9.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SocialiteProviders/Apple.git",
-                "reference": "7ae1fdf3c4395d1a4b525b013759672e2129bdd5"
+                "reference": "46e2e432c95f22de80739e6c7427b3f4bc198eac"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SocialiteProviders/Apple/zipball/7ae1fdf3c4395d1a4b525b013759672e2129bdd5",
-                "reference": "7ae1fdf3c4395d1a4b525b013759672e2129bdd5",
+                "url": "https://api.github.com/repos/SocialiteProviders/Apple/zipball/46e2e432c95f22de80739e6c7427b3f4bc198eac",
+                "reference": "46e2e432c95f22de80739e6c7427b3f4bc198eac",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
                 "ext-openssl": "*",
-                "firebase/php-jwt": "^6.8",
+                "firebase/php-jwt": "^7.0",
                 "lcobucci/clock": "^2.0 || ^3.0",
                 "lcobucci/jwt": "^4.1.5 || ^5.0.0",
                 "php": "^8.0",
@@ -7516,7 +7516,7 @@
                 "issues": "https://github.com/socialiteproviders/providers/issues",
                 "source": "https://github.com/socialiteproviders/providers"
             },
-            "time": "2025-06-28T23:39:01+00:00"
+            "time": "2026-02-18T14:40:47+00:00"
         },
         {
             "name": "socialiteproviders/manager",
