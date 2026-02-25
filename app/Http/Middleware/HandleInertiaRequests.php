@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
@@ -55,13 +56,15 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
+        $notificationService = app(NotificationService::class);
+
         return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'avatar' => $user->avatar,
-            'unread_notifications_count' => $user->getUnreadNotificationsCountCached(),
-            'latest_achievement' => $user->getLatestAchievementCached(),
+            'unread_notifications_count' => $notificationService->getUnreadCount($user),
+            'latest_achievement' => $notificationService->getLatestAchievement($user),
             'current_streak' => $user->last_workout_at && $user->last_workout_at->startOfDay()->diffInDays(now()->startOfDay()) > 1 ? 0 : $user->current_streak,
             'longest_streak' => $user->longest_streak,
         ];

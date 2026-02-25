@@ -27,27 +27,35 @@ final class CreateWorkoutFromTemplateAction
             $workout->user_id = $user->id;
             $workout->save();
 
-            $this->createLinesAndSets($workout, $template);
+            $this->createLinesAndSets($workout, $template, $user);
 
             return $workout;
         });
     }
 
-    private function createLinesAndSets(Workout $workout, WorkoutTemplate $template): void
+    private function createLinesAndSets(Workout $workout, WorkoutTemplate $template, User $user): void
     {
+        // Optimization: Prime the relationship to prevent N+1 queries in observers
+        $workout->setRelation('user', $user);
+
         foreach ($template->workoutTemplateLines as $templateLine) {
             /** @var \App\Models\WorkoutLine $workoutLine */
             $workoutLine = $workout->workoutLines()->create([
                 'exercise_id' => $templateLine->exercise_id,
                 'order' => $templateLine->order,
             ]);
+            $workoutLine->setRelation('workout', $workout);
 
             foreach ($templateLine->workoutTemplateSets as $templateSet) {
-                $workoutLine->sets()->create([
+                // Use make() + save() to set relationships before saving
+                // This prevents N+1 queries in Set::saved observers which access $set->workoutLine->workout->user
+                $set = $workoutLine->sets()->make([
                     'reps' => $templateSet->reps,
                     'weight' => $templateSet->weight,
                     'is_warmup' => $templateSet->is_warmup,
                 ]);
+                $set->setRelation('workoutLine', $workoutLine);
+                $set->save();
             }
         }
     }
