@@ -7,10 +7,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\deleteJson;
-use function Pest\Laravel\getJson;
-use function Pest\Laravel\postJson;
-use function Pest\Laravel\putJson;
 
 test('authenticated user can list achievements', function (): void {
     $user = User::factory()->create();
@@ -34,7 +30,7 @@ test('user can view specific achievement', function (): void {
 
 test('user with permission can create achievement', function (): void {
     $user = User::factory()->create();
-    Gate::define('Create:Achievement', fn () => true);
+    Gate::define('Create:Achievement', fn (): true => true);
 
     $data = [
         'name' => 'New Achievement',
@@ -57,7 +53,7 @@ test('user with permission can create achievement', function (): void {
 test('user without permission cannot create achievement', function (): void {
     $user = User::factory()->create();
     // No gate definition, or explicitly false
-    Gate::define('Create:Achievement', fn () => false);
+    Gate::define('Create:Achievement', fn (): false => false);
 
     $data = [
         'name' => 'New Achievement',
@@ -77,7 +73,7 @@ test('user without permission cannot create achievement', function (): void {
 test('user with permission can update achievement', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
-    Gate::define('Update:Achievement', fn () => true);
+    Gate::define('Update:Achievement', fn (): true => true);
 
     $data = [
         'name' => 'Updated Name',
@@ -100,7 +96,7 @@ test('user with permission can update achievement', function (): void {
 test('user with permission can delete achievement', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
-    Gate::define('Delete:Achievement', fn () => true);
+    Gate::define('Delete:Achievement', fn (): true => true);
 
     actingAs($user)
         ->deleteJson(route('api.v1.achievements.destroy', $achievement))
