@@ -1,5 +1,1 @@
-if docker ps | grep -q 'gym-tracker-laravel.test-1'; then
-    docker exec gym-tracker-laravel.test-1 npx lint-staged
-else
-    npx lint-staged
-fi
+npx lint-staged

@@ -119,7 +119,7 @@ const updatePreferences = () => {
                 <!-- Web Push Banner -->
                 <div
                     v-if="pushSupported && pushPermission !== 'granted'"
-                    class="border-electric-orange/20 bg-electric-orange/10 mb-6 rounded-xl border p-4"
+                    class="border-accent-primary/20 bg-accent-primary/10 mb-6 rounded-xl border p-4"
                 >
                     <div class="flex items-center justify-between gap-4">
                         <div>
@@ -149,7 +149,7 @@ const updatePreferences = () => {
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" v-model="form.preferences.personal_record" class="peer sr-only" />
                             <div
-                                class="peer peer-checked:bg-electric-orange h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
+                                class="peer peer-checked:bg-accent-primary h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
                             ></div>
                         </label>
                     </div>
@@ -159,7 +159,7 @@ const updatePreferences = () => {
                             type="checkbox"
                             v-model="form.push_preferences.personal_record"
                             id="push_pr"
-                            class="text-electric-orange focus:ring-electric-orange rounded border-white/10 bg-white/5"
+                            class="text-accent-primary focus:ring-accent-primary rounded border-white/10 bg-white/5"
                         />
                         <label for="push_pr" class="text-text-muted text-xs">Envoyer aussi en Push</label>
                     </div>
@@ -177,7 +177,7 @@ const updatePreferences = () => {
                         <label class="relative inline-flex cursor-pointer items-center">
                             <input type="checkbox" v-model="form.preferences.training_reminder" class="peer sr-only" />
                             <div
-                                class="peer peer-checked:bg-electric-orange h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
+                                class="peer peer-checked:bg-accent-primary h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
                             ></div>
                         </label>
                     </div>
@@ -187,7 +187,7 @@ const updatePreferences = () => {
                             type="checkbox"
                             v-model="form.push_preferences.training_reminder"
                             id="push_reminder"
-                            class="text-electric-orange focus:ring-electric-orange rounded border-white/10 bg-white/5"
+                            class="text-accent-primary focus:ring-accent-primary rounded border-white/10 bg-white/5"
                         />
                         <label for="push_reminder" class="text-text-muted text-xs">Envoyer aussi en Push</label>
                     </div>

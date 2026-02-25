@@ -286,11 +286,7 @@ watch(selectedExercise, (newVal) => {
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression 1RM</h3>
                         <div class="mt-3">
-                            <select
-                                v-model="selectedExercise"
-                                class="glass-input w-full"
-                                aria-label="Sélectionner un exercice pour voir la progression"
-                            >
+                            <select v-model="selectedExercise" class="glass-input w-full">
                                 <option :value="null" disabled>Sélectionner un exercice</option>
                                 <option v-for="ex in exercises" :key="ex.id" :value="ex.id">
                                     {{ ex.name }}

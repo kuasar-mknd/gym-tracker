@@ -56,7 +56,7 @@ const progressBarColor = computed(() => {
 
 <template>
     <div
-        class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-[0.98]"
+        class="group relative overflow-hidden rounded-3xl border border-white/40 bg-white/60 p-5 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/80 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
     >
         <!-- Completion Badge -->
         <div
@@ -68,7 +68,9 @@ const progressBarColor = computed(() => {
 
         <div class="mb-4 flex items-start justify-between">
             <div class="flex items-center gap-3">
-                <div class="rounded-xl border border-white/20 bg-white/10 p-2 text-2xl">
+                <div
+                    class="rounded-xl border border-white/20 bg-white/40 p-2 text-2xl dark:border-white/10 dark:bg-white/5"
+                >
                     {{ typeIcon }}
                 </div>
                 <div>
@@ -93,7 +95,9 @@ const progressBarColor = computed(() => {
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
-                <div class="h-2 w-full overflow-hidden rounded-full border border-white/20 bg-white/10">
+                <div
+                    class="h-2 w-full overflow-hidden rounded-full border border-white/20 bg-white/40 dark:border-white/10 dark:bg-white/5"
+                >
                     <div
                         class="relative h-full transition-all duration-1000 ease-out"
                         :class="progressBarColor"
@@ -106,7 +110,7 @@ const progressBarColor = computed(() => {
 
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-4">
-                <div class="rounded-lg border border-white/20 bg-white/10 p-2">
+                <div class="rounded-lg border border-white/20 bg-white/40 p-2 dark:border-white/10 dark:bg-white/5">
                     <p class="text-[10px] font-bold tracking-tight text-gray-400 uppercase dark:text-white/40">
                         Actuel
                     </p>
@@ -115,7 +119,7 @@ const progressBarColor = computed(() => {
                         <span class="text-[10px] text-gray-500 dark:text-white/60">{{ goal.unit }}</span>
                     </p>
                 </div>
-                <div class="rounded-lg border border-white/20 bg-white/10 p-2">
+                <div class="rounded-lg border border-white/20 bg-white/40 p-2 dark:border-white/10 dark:bg-white/5">
                     <p class="text-[10px] font-bold tracking-tight text-gray-400 uppercase dark:text-white/40">Cible</p>
                     <p class="text-sm font-semibold text-gray-900 dark:text-white">
                         {{ goal.target_value }}
