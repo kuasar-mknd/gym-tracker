@@ -88,15 +88,9 @@ const close = () => {
                 </div>
 
                 <!-- Text -->
-<<<<<<< ours
-                <h2 class="mb-1 text-xl font-bold text-white">Badge Débloqué !</h2>
-                <h3 class="text-accent-primary mb-3 text-lg font-bold">{{ achievement.name }}</h3>
-                <p class="mb-6 text-sm text-white/70">
-=======
                 <h2 class="mb-1 text-xl font-bold text-white" id="achievement-title">Badge Débloqué !</h2>
                 <h3 class="text-accent-primary mb-3 text-lg font-bold">{{ achievement.name }}</h3>
                 <p class="mb-6 text-sm text-white/70" id="achievement-description">
->>>>>>> theirs
                     {{
                         achievement.message?.replace('Nouveau badge débloqué : ' + achievement.name + ' !', '') ||
                         'Félicitations pour cet exploit !'
