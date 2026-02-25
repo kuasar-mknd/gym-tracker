@@ -30,6 +30,7 @@ final class CreateWilksScoreAction
 
         $scoreValue = $this->calculateWilks($bwKg, $liftedKg, $gender);
 
+        /** @var WilksScore */
         return $user->wilksScores()->create([
             'body_weight' => $bw,
             'lifted_weight' => $lifted,
