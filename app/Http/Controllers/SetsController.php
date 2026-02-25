@@ -43,7 +43,7 @@ class SetsController extends Controller
     {
         $this->authorize('create', [Set::class, $workoutLine]);
 
-        $set = $workoutLine->sets()->create($request->validated());
+        $workoutLine->sets()->create($request->validated());
         /** @var \App\Models\User $user */
         $user = $this->user();
         $this->statsService->clearWorkoutRelatedStats($user);

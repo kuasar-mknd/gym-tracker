@@ -33,9 +33,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Enforce strict model behavior in non-production environments
-        // This prevents N+1 queries (preventLazyLoading) and Mass Assignment vulnerabilities (preventSilentlyDiscardingAttributes).
-        // We do NOT enable preventAccessingMissingAttributes to avoid breaking existing tests/logic that rely on lenient attribute access.
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
 
@@ -91,43 +88,49 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureModelHooks(): void
     {
+        $this->configureWorkoutHooks();
+        $this->configureSetHooks();
+        $this->configureMeasurementHooks();
+    }
+
+    private function configureWorkoutHooks(): void
+    {
         Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
         Workout::deleted(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
+        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
+    }
 
+    private function configureSetHooks(): void
+    {
         Set::saved(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
         Set::deleted(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
-
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
-
-        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
         Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
-        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
-
-        // Incremental total volume tracking
-        Set::saved(function (Set $set) {
+        Set::saved(function (Set $set): void {
             $user = $set->workoutLine->workout->user;
-            $oldVolume = (float) ($set->getOriginal('weight') ?? 0) * (int) ($set->getOriginal('reps') ?? 0);
-            $newVolume = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
-            $diff = $newVolume - $oldVolume;
+            $oldVol = (float) ($set->getOriginal('weight') ?? 0) * (int) ($set->getOriginal('reps') ?? 0);
+            $newVol = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+            $diff = $newVol - $oldVol;
 
-            if ($diff != 0) {
+            if ($diff !== 0.0) {
                 $user->increment('total_volume', $diff);
             }
         });
 
-        Set::deleted(function (Set $set) {
+        Set::deleted(function (Set $set): void {
             $user = $set->workoutLine?->workout?->user;
-            if ($user) {
-                $volume = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
-                if ($volume != 0) {
-                    $user->decrement('total_volume', $volume);
-                }
+            if ($user && ($vol = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0)) !== 0.0) {
+                $user->decrement('total_volume', $vol);
             }
         });
 
-        // Sync Personal Records on every set save
         Set::saved(fn (Set $set) => app(PersonalRecordService::class)->syncSetPRs($set));
+    }
+
+    private function configureMeasurementHooks(): void
+    {
+        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
     }
 }
