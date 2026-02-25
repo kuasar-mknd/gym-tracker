@@ -85,18 +85,6 @@ const weightDistributionData = computed(() => {
         .map(([label, count]) => ({ label, count }))
         .sort((a, b) => parseFloat(a.label) - parseFloat(b.label))
 })
-
-const maxRepsData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    return [...props.history].reverse().map((session) => {
-        const setReps = session.sets.map((s) => s.reps || 0)
-        const maxReps = setReps.length > 0 ? Math.max(...setReps) : 0
-        return {
-            date: session.formatted_date.split('/').slice(0, 2).join('/'),
-            reps: maxReps,
-        }
-    })
-})
 </script>
 
 <template>
