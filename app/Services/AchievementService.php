@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Achievement;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,24 +25,35 @@ final class AchievementService
      * has met the criteria to unlock them. If eligible, the achievement
      * is attached to the user and a notification is sent.
      *
-     * Includes optimization to avoid N+1 queries by pre-loading unlocked achievements.
+     * Includes optimization to avoid N+1 queries by pre-calculating metrics.
      *
      * @param  User  $user  The user to synchronize achievements for.
      */
     public function syncAchievements(User $user): void
     {
-        $achievements = Achievement::all();
-
-        // NITRO FIX: Pre-load unlocked IDs to avoid N+1 query in loop
+        // 1. Get IDs of already unlocked achievements
         $unlockedAchievementIds = $user->achievements()->pluck('achievements.id')->toArray();
 
-        foreach ($achievements as $achievement) {
-            // Skip if already unlocked - memory check, no query
-            if (in_array($achievement->id, $unlockedAchievementIds)) {
-                continue;
-            }
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Achievement> $lockedAchievements */
+        $lockedAchievements = Achievement::whereNotIn('id', $unlockedAchievementIds)->get();
 
-            if ($this->checkAchievement($user, $achievement)) {
+        if ($lockedAchievements->isEmpty()) {
+            return;
+        }
+
+        // 3. Pre-calculate metrics based on what types are present in locked achievements
+        $metrics = $this->preCalculateMetrics($user, $lockedAchievements);
+
+        foreach ($lockedAchievements as $achievement) {
+            $isUnlocked = match ($achievement->type) {
+                'count' => ($metrics['count'] ?? 0) >= $achievement->threshold,
+                'weight_record' => ($metrics['max_weight'] ?? 0) >= $achievement->threshold,
+                'volume_total' => ($metrics['total_volume'] ?? 0) >= $achievement->threshold,
+                'streak' => ($metrics['max_streak'] ?? 0) >= $achievement->threshold,
+                default => false,
+            };
+
+            if ($isUnlocked) {
                 $user->achievements()->attach($achievement->id, [
                     'achieved_at' => now(),
                 ]);
@@ -52,83 +64,83 @@ final class AchievementService
     }
 
     /**
-     * Check if a user meets the requirements for a specific achievement.
+     * Pre-calculate metrics for the given set of achievements to avoid N+1 queries.
      *
-     * Delegates the check to specific methods based on the achievement type:
-     * - count: Total number of workouts.
-     * - weight_record: Maximum weight lifted in a single set.
-     * - volume_total: Cumulative volume lifted across all workouts.
-     * - streak: Consecutive days of workouts.
-     *
-     * @param  User  $user  The user to check.
-     * @param  Achievement  $achievement  The achievement to verify.
-     * @return bool True if the user meets the criteria, false otherwise.
+     * @param  Collection<int, Achievement>  $achievements
+     * @return array<string, mixed>
      */
-    protected function checkAchievement(User $user, Achievement $achievement): bool
+    private function preCalculateMetrics(User $user, Collection $achievements): array
     {
-        return match ($achievement->type) {
-            'count' => $user->workouts()->count() >= $achievement->threshold,
-            'weight_record' => $this->checkWeightRecord($user, $achievement->threshold),
-            'volume_total' => $this->checkTotalVolume($user, $achievement->threshold),
-            'streak' => $this->checkStreak($user, $achievement->threshold),
-            default => false,
-        };
+        $types = $achievements->pluck('type')->unique();
+        $metrics = [];
+
+        if ($types->contains('count')) {
+            $metrics['count'] = $user->workouts()->count();
+        }
+
+        if ($types->contains('weight_record')) {
+            $metrics['max_weight'] = $this->calculateMaxWeight($user);
+        }
+
+        if ($types->contains('volume_total')) {
+            $metrics['total_volume'] = $this->calculateTotalVolume($user);
+        }
+
+        if ($types->contains('streak')) {
+            $metrics['max_streak'] = $this->calculateStreakMetric($user, $achievements);
+        }
+
+        return $metrics;
     }
 
-    /**
-     * Check if the user has lifted a specific weight in any set.
-     *
-     * @param  User  $user  The user to check.
-     * @param  float  $threshold  The weight threshold to reach.
-     * @return bool True if a set exists with weight >= threshold.
-     */
-    protected function checkWeightRecord(User $user, float $threshold): bool
+    private function calculateMaxWeight(User $user): float
     {
-        return $user->workouts()
+        /** @var float|null $maxWeight */
+        $maxWeight = $user->workouts()
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('sets.weight', '>=', $threshold)
-            ->exists();
+            ->max('sets.weight');
+
+        return $maxWeight ?? 0.0;
     }
 
-    /**
-     * Check if the user's total lifetime volume meets a threshold.
-     *
-     * Calculates the sum of (weight * reps) for all sets in all workouts.
-     *
-     * @param  User  $user  The user to check.
-     * @param  float  $threshold  The volume threshold to reach.
-     * @return bool True if total volume >= threshold.
-     */
-    protected function checkTotalVolume(User $user, float $threshold): bool
+    private function calculateTotalVolume(User $user): float
     {
-        $totalVolume = $user->workouts()
+        return (float) $user->workouts()
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             ->sum(DB::raw('sets.weight * sets.reps'));
-
-        return $totalVolume >= $threshold;
     }
 
     /**
-     * Check if the user has maintained a workout streak.
-     *
-     * Calculates the maximum number of consecutive days with at least one workout.
-     *
-     * @param  User  $user  The user to check.
-     * @param  float  $threshold  The number of consecutive days required.
-     * @return bool True if max streak >= threshold.
+     * @param  Collection<int, Achievement>  $achievements
      */
-    protected function checkStreak(User $user, float $threshold): bool
+    private function calculateStreakMetric(User $user, Collection $achievements): int
     {
-        $workoutDates = $this->getUniqueWorkoutDates($user, (int) $threshold);
+        // Find the maximum threshold among streak achievements to determine lookback
+        /** @var float|int|null $maxStreakThreshold */
+        $maxStreakThreshold = $achievements->where('type', 'streak')->max('threshold');
 
-        if (count($workoutDates) < (int) $threshold) {
-            return false;
+        if ($maxStreakThreshold === null) {
+            return 0;
         }
 
-        return $this->calculateMaxStreak($workoutDates) >= (int) $threshold;
+        return $this->calculateStreakForThreshold($user, (int) $maxStreakThreshold);
+    }
+
+    /**
+     * Calculate streak logic reused for pre-calculation.
+     */
+    private function calculateStreakForThreshold(User $user, int $threshold): int
+    {
+        $workoutDates = $this->getUniqueWorkoutDates($user, $threshold);
+
+        if (count($workoutDates) === 0) {
+            return 0;
+        }
+
+        return $this->calculateMaxStreak($workoutDates);
     }
 
     /**
@@ -174,6 +186,11 @@ final class AchievementService
         $currentStreak = 1;
         $maxStreak = 1;
         $count = count($dates);
+
+        // If there is only 1 date, streak is 1
+        if ($count === 1) {
+            return 1;
+        }
 
         for ($i = 0; $i < $count - 1; $i++) {
             $current = \Carbon\Carbon::parse($dates[$i]);

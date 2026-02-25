@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Models\WorkoutLine;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,7 +15,20 @@ class WorkoutLineUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $workoutLine = $this->route('workout_line');
+
+        if (! $workoutLine instanceof WorkoutLine) {
+            $workoutLine = WorkoutLine::find($this->route('workout_line'));
+        }
+
+        if (! $workoutLine instanceof WorkoutLine) {
+            return false;
+        }
+
+        /** @var \App\Models\User $user */
+        $user = $this->user();
+
+        return $workoutLine->workout->user_id === $user->id;
     }
 
     /**
@@ -27,18 +41,15 @@ class WorkoutLineUpdateRequest extends FormRequest
         return [
             'exercise_id' => [
                 'sometimes',
-                'required',
                 Rule::exists('exercises', 'id')->where(function ($query): void {
-                    /** @var \Illuminate\Database\Eloquent\Builder $query */
                     $query->where(function ($q): void {
-                        /** @var \Illuminate\Database\Eloquent\Builder $q */
                         $q->whereNull('user_id')
                             ->orWhere('user_id', $this->user()?->id);
                     });
                 }),
             ],
-            'order' => ['sometimes', 'integer'],
-            'notes' => ['nullable', 'string'],
+            'order' => 'sometimes|integer',
+            'notes' => 'nullable|string',
         ];
     }
 }

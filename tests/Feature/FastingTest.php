@@ -53,7 +53,7 @@ test('user cannot start a fast if one is already active', function (): void {
             'target_duration_minutes' => 960,
             'type' => '16:8',
         ])
-        ->assertSessionHasErrors(['message']);
+        ->assertSessionHasErrors(['base']);
 });
 
 test('user can end a fast', function (): void {
