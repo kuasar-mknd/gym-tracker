@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { Bar } from 'vue-chartjs'
-import GlassCard from '@/Components/UI/GlassCard.vue'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -114,7 +113,9 @@ const chartOptions = {
 </script>
 
 <template>
-    <GlassCard variant="iridescent" padding="p-6" class="group relative overflow-hidden">
+    <div
+        class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-[0.98]"
+    >
         <div class="relative z-10 h-64 transition-transform duration-500 group-hover:scale-[1.02]">
             <Bar :data="chartData" :options="chartOptions" />
         </div>
@@ -123,5 +124,5 @@ const chartOptions = {
         <div
             class="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-3xl transition-all duration-700 group-hover:bg-white/20"
         ></div>
-    </GlassCard>
+    </div>
 </template>

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\BodyMeasurement;
 use App\Models\User;
 use App\Models\Workout;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,7 +21,7 @@ class StatsService
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchVolumeTrendData($user, $days)
@@ -36,7 +36,7 @@ class StatsService
      */
     public function getDailyVolumeTrend(User $user, int $days = 7): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.daily_volume.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days): array {
@@ -48,11 +48,11 @@ class StatsService
     }
 
     /**
-     * @return array<int, object>
+     * @return array<int, array{category: string, volume: float}>
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchMuscleDistributionData($user, $days)->toArray()
@@ -64,7 +64,7 @@ class StatsService
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
@@ -79,7 +79,7 @@ class StatsService
     public function getMonthlyVolumeComparison(User $user): array
     {
         /** @var array{current_volume: float, previous_volume: float, difference: float, percentage: float} $comparison */
-        $comparison = \Illuminate\Support\Facades\Cache::remember(
+        $comparison = Cache::remember(
             "stats.monthly_volume_comparison.{$user->id}",
             now()->addMinutes(30),
             fn (): array => $this->calculatePeriodComparison(
@@ -103,11 +103,11 @@ class StatsService
      */
     public function getWeightHistory(User $user, int $days = 90): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.weight_history.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchWeightHistoryData($user, $days)
-                ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
+                ->map(fn (BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
                 ->toArray()
         );
     }
@@ -135,11 +135,11 @@ class StatsService
      */
     public function getBodyFatHistory(User $user, int $days = 90): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchBodyFatHistoryData($user, $days)
-                ->map(fn (\App\Models\BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+                ->map(fn (BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
                 ->toArray()
         );
     }
@@ -149,7 +149,7 @@ class StatsService
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.weekly_volume.{$user->id}",
             now()->addMinutes(10),
             function () use ($user): array {
@@ -169,7 +169,7 @@ class StatsService
         $weekKey = now()->startOfWeek()->format('Y-W');
 
         /** @var array{current_volume: float, previous_volume: float, difference: float, percentage: float} $comparison */
-        $comparison = \Illuminate\Support\Facades\Cache::remember(
+        $comparison = Cache::remember(
             "stats.weekly_volume_comparison.{$user->id}.{$weekKey}",
             now()->addMinutes(10),
             fn (): array => $this->calculatePeriodComparison(
@@ -193,7 +193,7 @@ class StatsService
      */
     public function getDurationHistory(User $user, int $limit = 20): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
             fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
@@ -202,7 +202,7 @@ class StatsService
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn (\App\Models\Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->map(fn (Workout $workout): array => $this->formatDurationHistoryItem($workout))
                 ->reverse()->values()->toArray()
         );
     }
@@ -212,7 +212,7 @@ class StatsService
      */
     public function getVolumeHistory(User $user, int $limit = 20): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
             fn (): array => $this->fetchVolumeHistory($user, $limit)
@@ -224,7 +224,7 @@ class StatsService
      */
     public function getDurationDistribution(User $user, int $days = 90): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.duration_distribution.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->calculateDurationDistribution($user, $days)
@@ -236,7 +236,7 @@ class StatsService
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.monthly_volume_history.{$user->id}.{$months}",
             now()->addMinutes(30),
             function () use ($user, $months): array {
@@ -259,38 +259,38 @@ class StatsService
         $this->clearWorkoutTrendStats($user);
         $this->clearWorkoutMetadataStats($user);
 
-        \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume.{$user->id}");
+        Cache::forget("stats.weekly_volume.{$user->id}");
         $weekKey = now()->startOfWeek()->format('Y-W');
-        \Illuminate\Support\Facades\Cache::forget("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
-        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_comparison.{$user->id}");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_distribution.{$user->id}.90");
-        \Illuminate\Support\Facades\Cache::forget("stats.monthly_volume_history.{$user->id}.6");
+        Cache::forget("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
+        Cache::forget("stats.monthly_volume_comparison.{$user->id}");
+        Cache::forget("stats.duration_distribution.{$user->id}.90");
+        Cache::forget("stats.monthly_volume_history.{$user->id}.6");
     }
 
     public function clearWorkoutMetadataStats(User $user): void
     {
-        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
+        Cache::forget("dashboard_data_{$user->id}");
 
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
-            \Illuminate\Support\Facades\Cache::forget("stats.volume_trend.{$user->id}.{$days}");
+            Cache::forget("stats.volume_trend.{$user->id}.{$days}");
         }
 
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.20");
-        \Illuminate\Support\Facades\Cache::forget("stats.duration_history.{$user->id}.30");
-        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.20");
-        \Illuminate\Support\Facades\Cache::forget("stats.volume_history.{$user->id}.30");
+        Cache::forget("stats.duration_history.{$user->id}.20");
+        Cache::forget("stats.duration_history.{$user->id}.30");
+        Cache::forget("stats.volume_history.{$user->id}.20");
+        Cache::forget("stats.volume_history.{$user->id}.30");
     }
 
     public function clearBodyMeasurementStats(User $user): void
     {
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
-            \Illuminate\Support\Facades\Cache::forget("stats.weight_history.{$user->id}.{$days}");
-            \Illuminate\Support\Facades\Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
+            Cache::forget("stats.weight_history.{$user->id}.{$days}");
+            Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
 
-        \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$user->id}");
+        Cache::forget("dashboard_data_{$user->id}");
     }
 
     /**
@@ -298,15 +298,17 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
+        /** @var array<int, array{date: string, volume: float, name: string}> */
         return $this->queryVolumeHistory($user, $limit)
-            ->map(fn (object $row): array => $this->formatVolumeHistoryRow($row))
+            // @phpstan-ignore-next-line
+            ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
     }
 
     /**
-     * @return Collection<int, object>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    protected function queryVolumeHistory(User $user, int $limit): Collection
+    protected function queryVolumeHistory(User $user, int $limit): \Illuminate\Support\Collection
     {
         return DB::table('workouts')
             ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
@@ -319,11 +321,11 @@ class StatsService
     }
 
     /**
+     * @param  object{started_at: string, volume: int|float, name: string}  $row
      * @return array{date: string, volume: float, name: string}
      */
     protected function formatVolumeHistoryRow(object $row): array
     {
-        /** @var object{started_at: string, volume: float, name: string} $row */
         return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'volume' => (float) $row->volume, 'name' => (string) $row->name];
     }
 
@@ -332,28 +334,41 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
-        $workouts = Workout::select(['started_at', 'ended_at'])->where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))->get();
-        $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+        $durationExpression = $isSqlite
+            ? 'ABS(julianday(ended_at) - julianday(started_at)) * 1440'
+            : 'ABS(TIMESTAMPDIFF(MINUTE, started_at, ended_at))';
 
-        foreach ($workouts as $workout) {
-            $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
-            $this->incrementBucket($buckets, $minutes);
-        }
+        // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
+        $results = Workout::where('user_id', $user->id)
+            ->whereNotNull('ended_at')
+            ->where('started_at', '>=', now()->subDays($days))
+            ->selectRaw("
+                SUM(CASE WHEN {$durationExpression} < 30 THEN 1 ELSE 0 END) as bucket_1,
+                SUM(CASE WHEN {$durationExpression} >= 30 AND {$durationExpression} < 60 THEN 1 ELSE 0 END) as bucket_2,
+                SUM(CASE WHEN {$durationExpression} >= 60 AND {$durationExpression} < 90 THEN 1 ELSE 0 END) as bucket_3,
+                SUM(CASE WHEN {$durationExpression} >= 90 THEN 1 ELSE 0 END) as bucket_4
+            ")
+            ->first();
 
-        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
+        return [
+            ['label' => '< 30 min', 'count' => (int) ($results->bucket_1 ?? 0)],
+            ['label' => '30-60 min', 'count' => (int) ($results->bucket_2 ?? 0)],
+            ['label' => '60-90 min', 'count' => (int) ($results->bucket_3 ?? 0)],
+            ['label' => '90+ min', 'count' => (int) ($results->bucket_4 ?? 0)],
+        ];
     }
 
     /**
-     * @param  Collection<string, Collection<int, object>>  $grouped
+     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, \stdClass>>  $grouped
      * @return array<int, array{month: string, volume: float}>
      */
-    protected function fillMonthlyVolumeHistory(int $months, Collection $grouped): array
+    protected function fillMonthlyVolumeHistory(int $months, \Illuminate\Support\Collection $grouped): array
     {
         $result = [];
         for ($i = $months - 1; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $monthData = $grouped->get($date->format('Y-m'));
-            /** @var float $sum */
             $sum = $monthData ? $monthData->sum('volume') : 0.0;
             $result[] = ['month' => $date->translatedFormat('M'), 'volume' => is_numeric($sum) ? floatval($sum) : 0.0];
         }
@@ -365,8 +380,8 @@ class StatsService
     {
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
-            \Illuminate\Support\Facades\Cache::forget("stats.daily_volume.{$user->id}.{$days}");
-            \Illuminate\Support\Facades\Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
+            Cache::forget("stats.daily_volume.{$user->id}.{$days}");
+            Cache::forget("stats.muscle_dist.{$user->id}.{$days}");
         }
     }
 
@@ -383,18 +398,26 @@ class StatsService
     }
 
     /**
-     * @return Collection<string, object{date: string, volume: float}>
+     * @return \Illuminate\Support\Collection<string, \stdClass>
      */
-    protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): Collection
+    protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy(DB::raw('DATE(workouts.started_at)'))->get()->keyBy('date');
+        return DB::table('workouts')
+            ->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->whereBetween('workouts.started_at', [$startOfWeek, $endOfWeek])
+            ->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))
+            ->groupBy(DB::raw('DATE(workouts.started_at)'))
+            ->get()
+            ->keyBy('date');
     }
 
     /**
-     * @param  Collection<string, float>  $results
+     * @param  \Illuminate\Support\Collection<string, float>  $results
      * @return array<int, array{date: string, day_name: string, volume: float}>
      */
-    protected function fillDailyTrend(Carbon $start, int $days, Collection $results): array
+    protected function fillDailyTrend(Carbon $start, int $days, \Illuminate\Support\Collection $results): array
     {
         $data = [];
         for ($i = 0; $i < $days; $i++) {
@@ -407,10 +430,10 @@ class StatsService
     }
 
     /**
-     * @param  Collection<string, object{date: string, volume: float}>  $workouts
+     * @param  \Illuminate\Support\Collection<string, \stdClass>  $workouts
      * @return array<int, array{date: string, day_label: string, volume: float}>
      */
-    protected function fillWeeklyTrend(Carbon $startOfWeek, Collection $workouts): array
+    protected function fillWeeklyTrend(Carbon $startOfWeek, \Illuminate\Support\Collection $workouts): array
     {
         $trend = [];
         $labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -447,57 +470,57 @@ class StatsService
     }
 
     /**
-     * @return Collection<int, \stdClass>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    protected function fetchVolumeTrendData(User $user, int $days): Collection
+    protected function fetchVolumeTrendData(User $user, int $days): \Illuminate\Support\Collection
     {
         return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->select('workouts.id', 'workouts.started_at', 'workouts.name', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')->orderBy('workouts.started_at')->get();
     }
 
     /**
-     * @return Collection<string, float>
+     * @return \Illuminate\Support\Collection<string, float>
      */
-    protected function fetchDailyVolumeData(User $user, Carbon $start): Collection
+    protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
         return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->whereBetween('workouts.started_at', [$start, now()->endOfDay()])->select(DB::raw('DATE(workouts.started_at) as date'), DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('date')->pluck('volume', 'date')->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
     }
 
     /**
-     * @return Collection<int, object>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    protected function fetchMonthlyVolumeHistoryData(User $user, int $months): Collection
+    protected function fetchMonthlyVolumeHistoryData(User $user, int $months): \Illuminate\Support\Collection
     {
         return DB::table('workouts')->leftJoin('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')->leftJoin('sets', 'workout_lines.id', '=', 'sets.workout_line_id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subMonths($months - 1)->startOfMonth())->select('workouts.started_at', DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume'))->groupBy('workouts.id', 'workouts.started_at')->get();
     }
 
     /**
-     * @return Collection<int, object>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    protected function fetchMuscleDistributionData(User $user, int $days): Collection
+    protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
         return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')->groupBy('exercises.category')->get();
     }
 
     /**
-     * @return Collection<int, \stdClass>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): Collection
+    protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
         return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id)->where('workout_lines.exercise_id', $exerciseId)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw('workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')->groupBy('workouts.started_at')->orderBy('workouts.started_at')->get();
     }
 
     /**
-     * @return EloquentCollection<int, \App\Models\BodyMeasurement>
+     * @return \Illuminate\Database\Eloquent\Collection<int, BodyMeasurement>
      */
-    protected function fetchWeightHistoryData(User $user, int $days): EloquentCollection
+    protected function fetchWeightHistoryData(User $user, int $days): \Illuminate\Database\Eloquent\Collection
     {
         return $user->bodyMeasurements()->where('measured_at', '>=', now()->subDays($days))->orderBy('measured_at', 'asc')->get();
     }
 
     /**
-     * @return EloquentCollection<int, \App\Models\BodyMeasurement>
+     * @return \Illuminate\Database\Eloquent\Collection<int, BodyMeasurement>
      */
-    protected function fetchBodyFatHistoryData(User $user, int $days): EloquentCollection
+    protected function fetchBodyFatHistoryData(User $user, int $days): \Illuminate\Database\Eloquent\Collection
     {
         return $user->bodyMeasurements()->where('measured_at', '>=', now()->subDays($days))->whereNotNull('body_fat')->orderBy('measured_at', 'asc')->get();
     }
@@ -505,7 +528,7 @@ class StatsService
     /**
      * @return array{date: string, full_date: string, weight: float}
      */
-    protected function formatWeightHistoryItem(\App\Models\BodyMeasurement $m): array
+    protected function formatWeightHistoryItem(BodyMeasurement $m): array
     {
         return ['date' => Carbon::parse($m->measured_at)->format('d/m'), 'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'), 'weight' => (float) $m->weight];
     }
@@ -513,7 +536,7 @@ class StatsService
     /**
      * @return array{date: string, full_date: string, body_fat: float}
      */
-    protected function formatBodyFatHistoryItem(\App\Models\BodyMeasurement $m): array
+    protected function formatBodyFatHistoryItem(BodyMeasurement $m): array
     {
         return ['date' => Carbon::parse($m->measured_at)->format('d/m'), 'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'), 'body_fat' => (float) $m->body_fat];
     }
@@ -529,21 +552,5 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return ['current_volume' => $currentVolume, 'previous_volume' => $previousVolume, 'difference' => $diff, 'percentage' => round($percentage, 1)];
-    }
-
-    /**
-     * @param  array<string, int>  $buckets
-     */
-    private function incrementBucket(array &$buckets, int $minutes): void
-    {
-        if ($minutes < 30) {
-            $buckets['< 30 min']++;
-        } elseif ($minutes < 60) {
-            $buckets['30-60 min']++;
-        } elseif ($minutes < 90) {
-            $buckets['60-90 min']++;
-        } else {
-            $buckets['90+ min']++;
-        }
     }
 }

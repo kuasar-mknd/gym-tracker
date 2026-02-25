@@ -18,6 +18,8 @@ class IntervalTimerController extends Controller
      */
     public function index(): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', IntervalTimer::class);
+
         return IntervalTimerResource::collection(
             $this->user()->intervalTimers()->latest()->get()
         );
@@ -28,6 +30,8 @@ class IntervalTimerController extends Controller
      */
     public function store(StoreIntervalTimerRequest $request): IntervalTimerResource
     {
+        $this->authorize('create', IntervalTimer::class);
+
         $intervalTimer = $this->user()->intervalTimers()->create($request->validated());
 
         return new IntervalTimerResource($intervalTimer);
@@ -38,9 +42,7 @@ class IntervalTimerController extends Controller
      */
     public function show(IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        if ((int) $intervalTimer->user_id !== (int) $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('view', $intervalTimer);
 
         return new IntervalTimerResource($intervalTimer);
     }
@@ -50,11 +52,6 @@ class IntervalTimerController extends Controller
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): IntervalTimerResource
     {
-        if ((int) $intervalTimer->user_id !== (int) $this->user()->id) {
-            // Debug info in message to diagnose CI failure
-            abort(403, "Forbidden: Timer User ID {$intervalTimer->user_id} !== Auth User ID {$this->user()->id}");
-        }
-
         $intervalTimer->update($request->validated());
 
         return new IntervalTimerResource($intervalTimer);
@@ -65,9 +62,7 @@ class IntervalTimerController extends Controller
      */
     public function destroy(IntervalTimer $intervalTimer): JsonResponse
     {
-        if ((int) $intervalTimer->user_id !== (int) $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $intervalTimer);
 
         $intervalTimer->delete();
 

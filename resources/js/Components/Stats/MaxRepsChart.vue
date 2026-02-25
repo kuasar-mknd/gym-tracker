@@ -15,13 +15,6 @@ import { computed } from 'vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
-/**
- * Component Props
- *
- * @property {Array} data - Array of data points.
- * @property {string} data[].date - Date label.
- * @property {number} data[].reps - Number of reps.
- */
 const props = defineProps({
     data: {
         type: Array,
@@ -38,7 +31,7 @@ const chartData = computed(() => {
                 data: props.data.map((item) => item.reps),
                 fill: true,
                 tension: 0.4,
-                borderColor: '#8B5CF6', // Violet
+                borderColor: '#06b6d4', // Cyan
                 backgroundColor: (context) => {
                     const chart = context.chart
                     const { ctx, chartArea } = chart
@@ -51,10 +44,10 @@ const chartData = computed(() => {
                 borderWidth: 3,
                 pointRadius: 3,
                 pointBackgroundColor: '#fff',
-                pointBorderColor: '#06B6D4', // Cyan
+                pointBorderColor: '#06b6d4',
                 pointBorderWidth: 2,
                 pointHoverRadius: 6,
-                pointHoverBackgroundColor: '#06B6D4',
+                pointHoverBackgroundColor: '#06b6d4',
                 pointHoverBorderColor: '#fff',
                 pointHoverBorderWidth: 2,
             },
@@ -96,7 +89,7 @@ const chartOptions = {
             ticks: {
                 color: '#64748B',
                 font: { size: 10, weight: 'bold' },
-                precision: 0,
+                precision: 0, // Integers only
             },
         },
     },
