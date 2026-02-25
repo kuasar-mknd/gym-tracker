@@ -13,6 +13,8 @@
 /.zed
 /auth.json
 /node_modules
+pnpm-debug.log*
+.pnpm-store
 /public/build
 /public/hot
 /public/storage
@@ -38,3 +40,5 @@ frankenphp
 /resources/views/vendor
 /storage/app/GymTracker
 /public/css/filament-spatie-backup
+gym_tracker
+database/database.sqlite

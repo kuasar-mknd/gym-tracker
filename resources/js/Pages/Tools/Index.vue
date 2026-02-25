@@ -19,7 +19,7 @@
                     class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-primary/20 text-accent-primary rounded-full p-4">
+                        <div class="bg-electric-orange/20 text-electric-orange rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"
@@ -50,7 +50,7 @@
                     class="relative h-full overflow-hidden p-6 transition-all duration-300 group-hover:bg-white/10"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-secondary/20 text-accent-secondary rounded-full p-4">
+                        <div class="bg-vivid-violet/20 text-vivid-violet rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"
