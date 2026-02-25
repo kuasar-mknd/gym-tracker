@@ -76,17 +76,23 @@ const colorForWorkout = (index) => {
                 </div>
 
                 <!-- Streak Badge -->
-                <div class="streak-badge cursor-pointer transition-transform hover:scale-105">
+                <Link
+                    :href="route('stats.index')"
+                    class="streak-badge cursor-pointer transition-transform hover:scale-105"
+                    :aria-label="`Série actuelle : ${$page.props.auth.user.current_streak || 0} jours. Voir les statistiques.`"
+                    title="Voir mes statistiques"
+                >
                     <span
                         class="material-symbols-outlined text-electric-orange text-[24px]"
                         style="font-variation-settings: 'FILL' 1"
+                        aria-hidden="true"
                         >local_fire_department</span
                     >
                     <span class="text-text-main text-xl font-black italic dark:text-white">
                         {{ $page.props.auth.user.current_streak || 0 }}
                         <span class="text-text-muted ml-0.5 text-[10px] font-bold uppercase not-italic">Jours</span>
                     </span>
-                </div>
+                </Link>
             </header>
 
             <!-- Quick Actions (Two Big Cards) -->

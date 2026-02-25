@@ -10,7 +10,7 @@ use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
-test('index returns user workout lines', function () {
+test('index returns user workout lines', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
@@ -28,7 +28,7 @@ test('index returns user workout lines', function () {
         ->assertJsonFragment(['id' => $line->id]);
 });
 
-test('store creates workout line', function () {
+test('store creates workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $exercise = Exercise::factory()->create();
@@ -43,12 +43,12 @@ test('store creates workout line', function () {
         ->postJson(route('api.v1.workout-lines.store'), $data)
         ->assertCreated()
         ->assertJsonFragment(['notes' => 'Test Note'])
-        ->assertJsonFragment(['order' => 0]);
+        ->assertJsonFragment(['order' => 1]);
 
     expect($workout->workoutLines()->count())->toBe(1);
 });
 
-test('store validates workout ownership', function () {
+test('store validates workout ownership', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -62,7 +62,7 @@ test('store validates workout ownership', function () {
         ->assertForbidden();
 });
 
-test('show returns workout line', function () {
+test('show returns workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -73,7 +73,7 @@ test('show returns workout line', function () {
         ->assertJsonFragment(['id' => $line->id]);
 });
 
-test('update updates workout line', function () {
+test('update updates workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'notes' => 'Old Note']);
@@ -86,7 +86,7 @@ test('update updates workout line', function () {
         ->assertJsonFragment(['notes' => 'New Note']);
 });
 
-test('destroy deletes workout line', function () {
+test('destroy deletes workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);

@@ -24,8 +24,8 @@ class StatsService
         return Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchVolumeTrendData($user, $days)
-                ->map(fn(\stdClass $row): array => $this->formatVolumeTrendItem($row))
+            fn (): array => $this->fetchVolumeTrendData($user, $days)
+                ->map(fn (\stdClass $row): array => $this->formatVolumeTrendItem($row))
                 ->values()
                 ->toArray()
         );
@@ -55,7 +55,7 @@ class StatsService
         return Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchMuscleDistributionData($user, $days)->toArray()
+            fn (): array => $this->fetchMuscleDistributionData($user, $days)->toArray()
         );
     }
 
@@ -67,8 +67,8 @@ class StatsService
         return Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
-                ->map(fn(\stdClass $set): array => $this->formatExercise1RMItem($set))
+            fn (): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
+                ->map(fn (\stdClass $set): array => $this->formatExercise1RMItem($set))
                 ->toArray()
         );
     }
@@ -82,7 +82,7 @@ class StatsService
         $comparison = Cache::remember(
             "stats.monthly_volume_comparison.{$user->id}",
             now()->addMinutes(30),
-            fn(): array => $this->calculatePeriodComparison(
+            fn (): array => $this->calculatePeriodComparison(
                 $user,
                 now()->startOfMonth(),
                 now()->subMonth()->startOfMonth(),
@@ -106,8 +106,8 @@ class StatsService
         return Cache::remember(
             "stats.weight_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchWeightHistoryData($user, $days)
-                ->map(fn(BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
+            fn (): array => $this->fetchWeightHistoryData($user, $days)
+                ->map(fn (BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
                 ->toArray()
         );
     }
@@ -138,8 +138,8 @@ class StatsService
         return Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchBodyFatHistoryData($user, $days)
-                ->map(fn(BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+            fn (): array => $this->fetchBodyFatHistoryData($user, $days)
+                ->map(fn (BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
                 ->toArray()
         );
     }
@@ -172,7 +172,7 @@ class StatsService
         $comparison = Cache::remember(
             "stats.weekly_volume_comparison.{$user->id}.{$weekKey}",
             now()->addMinutes(10),
-            fn(): array => $this->calculatePeriodComparison(
+            fn (): array => $this->calculatePeriodComparison(
                 $user,
                 now()->startOfWeek(),
                 now()->subWeek()->startOfWeek(),
@@ -196,13 +196,13 @@ class StatsService
         return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn(): array => Workout::select(['name', 'started_at', 'ended_at'])
+            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn(Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->map(fn (Workout $workout): array => $this->formatDurationHistoryItem($workout))
                 ->reverse()->values()->toArray()
         );
     }
@@ -215,7 +215,7 @@ class StatsService
         return Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchVolumeHistory($user, $limit)
+            fn (): array => $this->fetchVolumeHistory($user, $limit)
         );
     }
 
@@ -227,7 +227,7 @@ class StatsService
         return Cache::remember(
             "stats.duration_distribution.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->calculateDurationDistribution($user, $days)
+            fn (): array => $this->calculateDurationDistribution($user, $days)
         );
     }
 
@@ -241,7 +241,7 @@ class StatsService
             now()->addMinutes(30),
             function () use ($user, $months): array {
                 $data = $this->fetchMonthlyVolumeHistoryData($user, $months);
-                $grouped = $data->groupBy(fn($row): string => Carbon::parse($row->started_at)->format('Y-m'));
+                $grouped = $data->groupBy(fn ($row): string => Carbon::parse($row->started_at)->format('Y-m'));
 
                 return $this->fillMonthlyVolumeHistory($months, $grouped);
             }
@@ -301,7 +301,7 @@ class StatsService
         /** @var array<int, array{date: string, volume: float, name: string}> $result */
         $result = $this->queryVolumeHistory($user, $limit)
             // @phpstan-ignore-next-line
-            ->map(fn(\stdClass $row): array => $this->formatVolumeHistoryRow($row))
+            ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
 
         return $result;
@@ -347,7 +347,7 @@ class StatsService
             $this->incrementBucket($buckets, $minutes);
         }
 
-        return collect($buckets)->map(fn(int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
+        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
     }
 
     /**
@@ -511,7 +511,7 @@ class StatsService
             )
             ->groupBy('date')
             ->pluck('volume', 'date')
-            ->map(fn(mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
+            ->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
     }
 
     /**
