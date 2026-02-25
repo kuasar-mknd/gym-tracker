@@ -9,7 +9,6 @@ use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
 use App\Models\WorkoutLine;
-use App\Services\PersonalRecordService;
 use App\Services\StatsService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -20,7 +19,6 @@ class SetController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected PersonalRecordService $prService,
         protected StatsService $statsService
     ) {
     }
@@ -56,7 +54,6 @@ class SetController extends Controller
             collect($validated)->except('workout_line_id')->toArray()
         );
 
-        $this->prService->syncSetPRs($set, $this->user());
         $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return new SetResource($set);
@@ -81,7 +78,6 @@ class SetController extends Controller
 
         $set->update($request->validated());
 
-        $this->prService->syncSetPRs($set, $this->user());
         $this->statsService->clearWorkoutRelatedStats($this->user());
 
         return new SetResource($set);

@@ -7,6 +7,8 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
+use \App\Services\PersonalRecordService;
+use \App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -103,7 +105,7 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
             if ($debounce) {
-                $key = 'dispatched:sync-goals:'.$user->id;
+                $key = 'dispatched:sync-goals:' . $user->id;
                 if ($this->app->bound($key)) {
                     return;
                 }
@@ -117,7 +119,7 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
             if ($debounce) {
-                $key = 'dispatched:sync-achievements:'.$user->id;
+                $key = 'dispatched:sync-achievements:' . $user->id;
                 if ($this->app->bound($key)) {
                     return;
                 }
@@ -127,10 +129,11 @@ class AppServiceProvider extends ServiceProvider
         };
 
         // Workouts always trigger (covers creation and completion)
-        Workout::saved(fn (Workout $workout) => $syncGoals($workout->user));
-        Workout::deleted(fn (Workout $workout) => $syncGoals($workout->user));
-        Workout::saved(fn (Workout $workout) => $syncAchievements($workout->user));
-        Workout::deleted(fn (Workout $workout) => $syncAchievements($workout->user));
+        Workout::saved(fn(Workout $workout) => $syncGoals($workout->user));
+        Workout::deleted(fn(Workout $workout) => $syncGoals($workout->user));
+        Workout::saved(fn(Workout $workout) => $syncAchievements($workout->user));
+        Workout::deleted(fn(Workout $workout) => $syncAchievements($workout->user));
+        Workout::saved(fn(Workout $workout) => app(StreakService::class)->updateStreak($workout->user, $workout));
 
         // Sets only trigger if the workout is finished, and they are debounced per request
         Set::saved(function (Set $set) use ($syncGoals): void {
@@ -138,13 +141,18 @@ class AppServiceProvider extends ServiceProvider
             if ($workout->ended_at !== null) {
                 $syncGoals($workout->user, true);
             }
+            $this->updateUserVolume($set);
+            app(PersonalRecordService::class)->syncSetPRs($set);
         });
+
         Set::deleted(function (Set $set) use ($syncGoals): void {
             $workout = $set->workoutLine->workout;
             if ($workout->ended_at !== null) {
                 $syncGoals($workout->user, true);
             }
+            $this->decrementUserVolume($set);
         });
+
         Set::saved(function (Set $set) use ($syncAchievements): void {
             $workout = $set->workoutLine->workout;
             if ($workout->ended_at !== null) {
@@ -153,9 +161,30 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Body Measurements always trigger
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => $syncGoals($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => $syncGoals($bm->user));
+        BodyMeasurement::saved(fn(BodyMeasurement $bm) => $syncGoals($bm->user));
+        BodyMeasurement::deleted(fn(BodyMeasurement $bm) => $syncGoals($bm->user));
+    }
 
-        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
+    private function updateUserVolume(Set $set): void
+    {
+        $u = $set->workoutLine->workout->user;
+        $ow = $set->getOriginal('weight');
+        $or = $set->getOriginal('reps');
+        $ov = (is_numeric($ow) ? (float) $ow : 0.0) * (is_numeric($or) ? (int) $or : 0);
+        $nv = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+        $d = $nv - $ov;
+
+        if ($d !== 0.0) {
+            $u->increment('total_volume', $d);
+        }
+    }
+
+    private function decrementUserVolume(Set $set): void
+    {
+        $u = $set->workoutLine->workout->user;
+        $v = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+        if ($v !== 0.0) {
+            $u->decrement('total_volume', $v);
+        }
     }
 }
