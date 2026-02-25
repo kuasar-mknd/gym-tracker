@@ -161,7 +161,7 @@ const submit = () => {
                             v-model="form.name"
                             type="text"
                             required
-                            class="text-text-main focus:ring-accent-primary mt-1 w-full rounded-xl border border-slate-200 bg-white/50 focus:ring-2"
+                            class="text-text-main focus:ring-electric-orange mt-1 w-full rounded-xl border border-slate-200 bg-white/50 focus:ring-2"
                             placeholder="ex: Full Body Lundi"
                         />
                         <div v-if="form.errors.name" class="mt-1 text-xs text-red-400">{{ form.errors.name }}</div>
@@ -172,7 +172,7 @@ const submit = () => {
                         <textarea
                             v-model="form.description"
                             rows="2"
-                            class="text-text-main focus:ring-accent-primary mt-1 w-full rounded-xl border border-slate-200 bg-white/50 focus:ring-2"
+                            class="text-text-main focus:ring-electric-orange mt-1 w-full rounded-xl border border-slate-200 bg-white/50 focus:ring-2"
                             placeholder="Détails de la séance..."
                         ></textarea>
                     </div>
@@ -258,7 +258,7 @@ const submit = () => {
                                 <button
                                     @click="addSet(exIndex)"
                                     type="button"
-                                    class="text-accent-primary text-xs hover:underline"
+                                    class="text-electric-orange text-xs hover:underline"
                                 >
                                     + Ajouter une série
                                 </button>
@@ -384,13 +384,13 @@ const submit = () => {
                                         :key="ex.id"
                                         type="button"
                                         @click="addExercise(ex)"
-                                        class="hover:border-accent-primary flex w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white"
+                                        class="hover:border-electric-orange flex w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white"
                                     >
                                         <div class="text-left">
                                             <div class="text-text-main font-bold">{{ ex.name }}</div>
                                             <div class="text-text-muted text-xs">{{ ex.category }}</div>
                                         </div>
-                                        <span class="material-symbols-outlined text-accent-primary">add_circle</span>
+                                        <span class="material-symbols-outlined text-electric-orange">add_circle</span>
                                     </button>
                                 </div>
                             </div>

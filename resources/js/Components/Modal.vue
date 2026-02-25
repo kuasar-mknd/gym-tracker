@@ -61,6 +61,16 @@ onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape)
 
     document.body.style.overflow = ''
+
+    // Ensure dialog ref is still valid before calling close
+    // This prevents "null is not an object" error if unmount happens during transition
+    if (dialog.value) {
+        try {
+            dialog.value.close()
+        } catch (e) {
+            // Ignore errors if dialog is already detached
+        }
+    }
 })
 
 const maxWidthClass = computed(() => {
