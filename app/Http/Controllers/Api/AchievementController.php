@@ -18,8 +18,6 @@ class AchievementController extends Controller
 {
     /**
      * List achievements.
-     *
-     * @return AnonymousResourceCollection
      */
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -34,9 +32,6 @@ class AchievementController extends Controller
 
     /**
      * Show achievement.
-     *
-     * @param Achievement $achievement
-     * @return AchievementResource
      */
     public function show(Achievement $achievement): AchievementResource
     {
@@ -45,8 +40,6 @@ class AchievementController extends Controller
 
     /**
      * Create achievement (Admin only - placeholder).
-     *
-     * @return JsonResponse
      */
     public function store(Request $request): JsonResponse
     {
@@ -55,8 +48,6 @@ class AchievementController extends Controller
 
     /**
      * Update achievement (Admin only - placeholder).
-     *
-     * @return JsonResponse
      */
     public function update(Request $request, Achievement $achievement): JsonResponse
     {
@@ -65,8 +56,6 @@ class AchievementController extends Controller
 
     /**
      * Delete achievement (Admin only - placeholder).
-     *
-     * @return JsonResponse
      */
     public function destroy(Achievement $achievement): JsonResponse
     {
