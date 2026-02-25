@@ -25,9 +25,7 @@ class UserCacheTest extends TestCase
             ->once()
             ->with(
                 $cacheKey,
-                Mockery::on(function ($ttl) {
-                    return $ttl->diffInSeconds(now()) <= 30;
-                }),
+                Mockery::on(fn($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
                 Mockery::type('Closure')
             )
             ->andReturn(5);
@@ -85,9 +83,7 @@ class UserCacheTest extends TestCase
             ->once()
             ->with(
                 $cacheKey,
-                Mockery::on(function ($ttl) {
-                    return $ttl->diffInSeconds(now()) <= 30;
-                }),
+                Mockery::on(fn($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
                 Mockery::type('Closure')
             )
             ->andReturn(null);
@@ -112,7 +108,7 @@ class UserCacheTest extends TestCase
         // Create an achievement notification
         $achievement = $user->notifications()->create([
             'id' => Str::uuid(),
-            'type' => 'App\Notifications\AchievementUnlocked',
+            'type' => \App\Notifications\AchievementUnlocked::class,
             'data' => ['achievement_id' => 1],
             'read_at' => null,
         ]);

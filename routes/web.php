@@ -111,10 +111,8 @@ Route::middleware('auth')->group(function (): void {
 
 // Social Login
 Route::get('/auth/{provider}/redirect', [\App\Http\Controllers\Auth\SocialAuthController::class, 'redirect'])
-    ->whereIn('provider', ['github', 'google', 'apple'])
     ->name('social.redirect');
 Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback'])
-    ->whereIn('provider', ['github', 'google', 'apple'])
     ->name('social.callback');
 
 require __DIR__.'/auth.php';
