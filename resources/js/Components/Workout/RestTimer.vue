@@ -39,6 +39,31 @@ const props = defineProps({
  */
 const emit = defineEmits(['finished', 'close'])
 
+// --- Drag State ---
+const offset = ref({ x: 0, y: 0 })
+const isDragging = ref(false)
+const dragStart = { x: 0, y: 0 }
+
+const handlePointerDown = (e) => {
+    if (e.target.closest("button")) return
+    isDragging.value = true
+    dragStart.x = e.clientX - offset.value.x
+    dragStart.y = e.clientY - offset.value.y
+    e.currentTarget.setPointerCapture(e.pointerId)
+}
+
+const handlePointerMove = (e) => {
+    if (!isDragging.value) return
+    offset.value.x = e.clientX - dragStart.x
+    offset.value.y = e.clientY - dragStart.y
+}
+
+const handlePointerUp = (e) => {
+    if (!isDragging.value) return
+    isDragging.value = false
+    e.currentTarget.releasePointerCapture(e.pointerId)
+}
+
 // --- State ---
 
 /** Remaining time in seconds. */
@@ -199,12 +224,19 @@ watch(
     <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-60 sm:right-4 sm:left-auto sm:w-80">
         <!-- Liquid Glass Card -->
         <div
-            class="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300 dark:bg-black/40"
+            @pointerdown="handlePointerDown"
+            @pointermove="handlePointerMove"
+            @pointerup="handlePointerUp"
+            :class="[isDragging ? 'cursor-grabbing' : 'cursor-grab', 'relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md dark:bg-black/40']"
+            :style="{
+                transform: `translate(${offset.x}px, ${offset.y}px)`,
+                transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.3s, border-color 0.3s, box-shadow 0.3s'
+            }"
         >
             <!-- Progress bar -->
             <div class="h-1 w-full bg-slate-200/50 dark:bg-white/10">
                 <div
-                    class="bg-accent-primary h-full transition-all duration-1000 ease-linear"
+                    class="bg-electric-orange h-full transition-all duration-1000 ease-linear"
                     :style="{ width: `${progress}%` }"
                 ></div>
             </div>
@@ -231,7 +263,7 @@ watch(
 
                         <button
                             @click="toggleTimer"
-                            class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
+                            class="bg-electric-orange flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
                         >
                             <svg v-if="isActive" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 4h4v16H6V4zm8 0h4v16h4V4z" />
