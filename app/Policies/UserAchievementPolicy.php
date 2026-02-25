@@ -12,7 +12,7 @@ final class UserAchievementPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(User $user): bool
+    public function viewAny(): bool
     {
         return true;
     }
@@ -22,7 +22,7 @@ final class UserAchievementPolicy
         return $user->id === $userAchievement->user_id;
     }
 
-    public function create(User $user): bool
+    public function create(): bool
     {
         return true;
     }
