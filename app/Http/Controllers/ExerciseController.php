@@ -86,7 +86,7 @@ class ExerciseController extends Controller
         $exercise->invalidateCache();
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
-        if ($request->header('X-Quick-Create')) {
+        if ($request->wantsJson() || $request->header('X-Quick-Create')) {
             return response()->json(['exercise' => $exercise], 201);
         }
 
