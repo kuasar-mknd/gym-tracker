@@ -163,16 +163,6 @@ const weightDistributionData = computed(() => {
                         <WeightDistributionChart :data="weightDistributionData" />
                     </div>
                 </GlassCard>
-
-                <GlassCard>
-                    <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Max Reps</h3>
-                        <p class="text-text-muted text-xs font-semibold">Maximum de répétitions par séance</p>
-                    </div>
-                    <div class="h-64">
-                        <MaxRepsChart :data="maxRepsData" />
-                    </div>
-                </GlassCard>
             </div>
             <GlassCard v-else class="animate-slide-up" style="animation-delay: 0.05s">
                 <div class="flex h-64 flex-col items-center justify-center text-center">

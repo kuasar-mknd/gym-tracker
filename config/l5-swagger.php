@@ -67,10 +67,10 @@ return [
              * Middleware allows to prevent unexpected access to API documentation
              */
             'middleware' => [
-                'api' => ['auth'],
+                'api' => [],
                 'asset' => [],
-                'docs' => ['auth'],
-                'oauth2_callback' => ['auth'],
+                'docs' => [],
+                'oauth2_callback' => [],
             ],
 
             /*

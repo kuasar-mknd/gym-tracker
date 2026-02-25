@@ -10,12 +10,7 @@ use App\Models\WilksScore;
 final class CreateWilksScoreAction
 {
     /**
-     * @param  array{
-     *     body_weight: float,
-     *     lifted_weight: float,
-     *     gender: string,
-     *     unit: string
-     * }  $data
+     * @param  array{body_weight: float, lifted_weight: float, gender: string, unit: string}  $data
      */
     public function execute(User $user, array $data): WilksScore
     {
@@ -28,7 +23,7 @@ final class CreateWilksScoreAction
         $bwKg = $unit === 'lbs' ? $bw / 2.20462 : $bw;
         $liftedKg = $unit === 'lbs' ? $lifted / 2.20462 : $lifted;
 
-        $scoreValue = $this->calculateWilks($bwKg, $liftedKg, $gender);
+        $score = $this->calculateWilks($bwKg, $liftedKg, $gender);
 
         /** @var WilksScore */
         return $user->wilksScores()->create([
@@ -36,7 +31,7 @@ final class CreateWilksScoreAction
             'lifted_weight' => $lifted,
             'gender' => $gender,
             'unit' => $unit,
-            'score' => $scoreValue,
+            'score' => $score,
         ]);
     }
 
@@ -58,8 +53,7 @@ final class CreateWilksScoreAction
             $f = -9.054E-08;
         }
 
-        $val = $a + $b * $bw + $c * $bw ** 2 + $d * $bw ** 3 + $e * $bw ** 4 + $f * $bw ** 5;
-        $coeff = 500 / $val;
+        $coeff = 500 / ($a + $b * $bw + $c * $bw ** 2 + $d * $bw ** 3 + $e * $bw ** 4 + $f * $bw ** 5);
 
         return round($lifted * $coeff, 2);
     }

@@ -7,8 +7,6 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-use \App\Services\PersonalRecordService;
-use \App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -50,7 +48,6 @@ class AppServiceProvider extends ServiceProvider
 
         $this->configureGates();
         $this->configureVite();
-        $this->configureLivewire();
         $this->configureSocialite();
         $this->configureModelHooks();
     }
@@ -74,13 +71,6 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    private function configureLivewire(): void
-    {
-        if ($this->app->bound('csp-nonce')) {
-            config(['livewire.nonce' => $this->app->make('csp-nonce')]);
-        }
-    }
-
     private function configureVite(): void
     {
         if ($this->app->bound('csp-nonce')) {
@@ -100,90 +90,18 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureModelHooks(): void
     {
-        $syncGoals = function (?\App\Models\User $user, bool $debounce = false): void {
-            if (! $user) {
-                return;
-            }
-            if ($debounce) {
-                $key = 'dispatched:sync-goals:' . $user->id;
-                if ($this->app->bound($key)) {
-                    return;
-                }
-                $this->app->instance($key, true);
-            }
-            \App\Jobs\SyncUserGoals::dispatch($user);
-        };
+        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
+        Workout::deleted(fn (Workout $workout) => \App\Jobs\SyncUserGoals::dispatch($workout->user));
 
-        $syncAchievements = function (?\App\Models\User $user, bool $debounce = false): void {
-            if (! $user) {
-                return;
-            }
-            if ($debounce) {
-                $key = 'dispatched:sync-achievements:' . $user->id;
-                if ($this->app->bound($key)) {
-                    return;
-                }
-                $this->app->instance($key, true);
-            }
-            \App\Jobs\SyncUserAchievements::dispatch($user);
-        };
+        Set::saved(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
+        Set::deleted(fn (Set $set) => \App\Jobs\SyncUserGoals::dispatch($set->workoutLine->workout->user));
 
-        // Workouts always trigger (covers creation and completion)
-        Workout::saved(fn(Workout $workout) => $syncGoals($workout->user));
-        Workout::deleted(fn(Workout $workout) => $syncGoals($workout->user));
-        Workout::saved(fn(Workout $workout) => $syncAchievements($workout->user));
-        Workout::deleted(fn(Workout $workout) => $syncAchievements($workout->user));
-        Workout::saved(fn(Workout $workout) => app(StreakService::class)->updateStreak($workout->user, $workout));
+        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
 
-        // Sets only trigger if the workout is finished, and they are debounced per request
-        Set::saved(function (Set $set) use ($syncGoals): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
-                $syncGoals($workout->user, true);
-            }
-            $this->updateUserVolume($set);
-            app(PersonalRecordService::class)->syncSetPRs($set);
-        });
+        Workout::saved(fn (Workout $workout) => \App\Jobs\SyncUserAchievements::dispatch($workout->user));
+        Set::saved(fn (Set $set) => \App\Jobs\SyncUserAchievements::dispatch($set->workoutLine->workout->user));
 
-        Set::deleted(function (Set $set) use ($syncGoals): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
-                $syncGoals($workout->user, true);
-            }
-            $this->decrementUserVolume($set);
-        });
-
-        Set::saved(function (Set $set) use ($syncAchievements): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
-                $syncAchievements($workout->user, true);
-            }
-        });
-
-        // Body Measurements always trigger
-        BodyMeasurement::saved(fn(BodyMeasurement $bm) => $syncGoals($bm->user));
-        BodyMeasurement::deleted(fn(BodyMeasurement $bm) => $syncGoals($bm->user));
-    }
-    private function updateUserVolume(Set $set): void
-    {
-        $u = $set->workoutLine->workout->user;
-        $ow = $set->getOriginal('weight');
-        $or = $set->getOriginal('reps');
-        $ov = (is_numeric($ow) ? (float) $ow : 0.0) * (is_numeric($or) ? (int) $or : 0);
-        $nv = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
-        $d = $nv - $ov;
-
-        if ($d !== 0.0) {
-            $u->increment('total_volume', $d);
-        }
-    }
-
-    private function decrementUserVolume(Set $set): void
-    {
-        $u = $set->workoutLine->workout->user;
-        $v = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
-        if ($v !== 0.0) {
-            $u->decrement('total_volume', $v);
-        }
+        Workout::saved(fn (Workout $workout) => app(\App\Services\StreakService::class)->updateStreak($workout->user, $workout));
     }
 }

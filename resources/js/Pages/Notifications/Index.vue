@@ -143,7 +143,6 @@ const formatDate = (date) => {
                             @click="markAsRead(notification.id)"
                             class="text-text-muted/20 hover:text-text-main rounded-lg p-1 hover:bg-slate-100/50"
                             title="Marquer comme lu"
-                            aria-label="Marquer comme lu"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
