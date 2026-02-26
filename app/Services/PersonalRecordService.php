@@ -23,15 +23,31 @@ final class PersonalRecordService
         // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
+        if (! $set->workoutLine || ! $set->workoutLine->workout) {
+            return;
+        }
+
         /** @var \App\Models\User|null $user */
         $user ??= $set->workoutLine->workout->user;
 
+        if (! $user) {
+            return;
+        }
+
         $exerciseId = $set->workoutLine->exercise_id;
-        $existingPRs = PersonalRecord::where('user_id', $user->id)->where('exercise_id', $exerciseId)->get()->keyBy('type');
+
+        if (! $exerciseId) {
+            return;
+        }
+
+        $existingPRs = PersonalRecord::where('user_id', $user->id)
+            ->where('exercise_id', $exerciseId)
+            ->get()
+            ->keyBy('type');
 
         $this->update($user, $exerciseId, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
         $this->update($user, $exerciseId, 'max_1rm', $set->reps > 1 ? round($set->weight * (1 + $set->reps / 30), 2) : (float) $set->weight, (float) $set->weight, $set, $existingPRs->get('max_1rm'));
-        $this->update($user, $exerciseId, 'max_volume_set', $set->weight * $set->reps, null, $set, $existingPRs->get('max_volume_set'));
+        $this->update($user, $exerciseId, 'max_volume_set', (float) ($set->weight * $set->reps), null, $set, $existingPRs->get('max_volume_set'));
     }
 
     protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void

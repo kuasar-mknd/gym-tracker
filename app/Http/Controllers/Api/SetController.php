@@ -47,16 +47,29 @@ class SetController extends Controller
     {
         $validated = $request->validated();
 
-        /** @var \App\Models\WorkoutLine $workoutLine */
-        $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
+        try {
+            /** @var \App\Models\WorkoutLine $workoutLine */
+            $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
 
-        $set = $workoutLine->sets()->create(
-            collect($validated)->except('workout_line_id')->toArray()
-        );
+            $this->authorize('create', [Set::class, $workoutLine]);
 
-        $this->statsService->clearWorkoutRelatedStats($this->user());
+            $set = $workoutLine->sets()->create(
+                collect($validated)->except('workout_line_id')->toArray()
+            );
 
-        return new SetResource($set);
+            $this->statsService->clearWorkoutRelatedStats($this->user());
+
+            return new SetResource($set);
+        } catch (\Exception $e) {
+            \Log::error('Failed to create set in API:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => $request->user()?->id,
+                'data' => $validated,
+            ]);
+
+            throw $e;
+        }
     }
 
     /**

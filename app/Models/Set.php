@@ -25,6 +25,7 @@ class Set extends Model
     use HasFactory;
 
     protected $fillable = [
+        'workout_line_id',
         'weight',
         'reps',
         'duration_seconds',

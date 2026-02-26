@@ -393,6 +393,7 @@ const addSet = (lineId) => {
         workout_line_id: lineId,
         workout_id: props.workout.id,
         is_completed: false,
+        is_warmup: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...data,
@@ -402,23 +403,21 @@ const addSet = (lineId) => {
 
     SyncService.post(route('api.v1.sets.store'), {
         workout_line_id: lineId,
+        is_warmup: false,
+        is_completed: false,
         ...data,
     })
         .then((response) => {
-            // Update temp set with real ID from database
             const index = line.sets.findIndex((s) => s.id === tempId)
             if (index !== -1) {
-                line.sets[index].id = response.data.data.id
+                line.sets[index] = response.data.data
             }
             triggerHaptic('tap')
         })
         .catch((err) => {
-            // Rollback: remove the temp set (only if real failure, not queuing)
             if (!err.isOffline) {
-                const index = line.sets.findIndex((s) => s.id === tempId)
-                if (index !== -1) {
-                    line.sets.splice(index, 1)
-                }
+                line.sets = line.sets.filter((s) => s.id !== tempId)
+                console.error('Failed to create set:', err)
                 triggerHaptic('error')
             }
         })
@@ -653,7 +652,12 @@ const hasNoResults = computed(() => {
 
         <div class="space-y-4">
             <!-- Exercise Cards -->
-            <GlassCard v-for="line in workout.workout_lines" :key="line.id" class="animate-slide-up">
+            <GlassCard
+                v-for="(line, lineIndex) in workout.workout_lines"
+                :key="line.id"
+                :dusk="`exercise-card-${lineIndex}`"
+                class="animate-slide-up"
+            >
                 <!-- Exercise Header -->
                 <div class="mb-4 flex items-center justify-between">
                     <div>
@@ -702,7 +706,8 @@ const hasNoResults = computed(() => {
                             <!-- Complete Button -->
                             <button
                                 @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
-                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-90"
+                                :dusk="`complete-set-${lineIndex}-${index}`"
+                                class="group flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all active:scale-90"
                                 :class="[
                                     set.is_completed
                                         ? 'bg-neon-green text-text-main shadow-neon'
@@ -803,6 +808,7 @@ const hasNoResults = computed(() => {
                                         :value="set.weight"
                                         @change="(e) => updateSet(set, 'weight', e.target.value)"
                                         @focus="(e) => e.target.select()"
+                                        :dusk="`weight-input-${lineIndex}-${index}`"
                                         class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
                                         :disabled="set.is_completed || !!workout.ended_at"
                                         inputmode="decimal"
@@ -816,6 +822,7 @@ const hasNoResults = computed(() => {
                                         :value="set.reps"
                                         @change="(e) => updateSet(set, 'reps', e.target.value)"
                                         @focus="(e) => e.target.select()"
+                                        :dusk="`reps-input-${lineIndex}-${index}`"
                                         class="text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-11 w-20 rounded-xl border-2 border-slate-200 bg-white px-2 py-2 text-center font-bold transition-all outline-none focus:ring-2 disabled:opacity-50"
                                         :disabled="set.is_completed || !!workout.ended_at"
                                         inputmode="numeric"
@@ -866,6 +873,7 @@ const hasNoResults = computed(() => {
                 <button
                     v-if="!workout.ended_at"
                     @click="addSet(line.id)"
+                    :dusk="`add-set-${lineIndex}`"
                     class="text-text-muted hover:border-neon-green hover:bg-neon-green/5 hover:text-text-main mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 py-3 text-sm font-bold tracking-wider uppercase transition-all active:scale-[0.98]"
                 >
                     <svg
@@ -886,6 +894,7 @@ const hasNoResults = computed(() => {
             <button
                 v-if="!workout.ended_at && workout.workout_lines.length > 0"
                 @click="showAddExercise = true"
+                dusk="add-exercise-existing"
                 class="animate-slide-up text-text-muted hover:border-electric-orange hover:bg-electric-orange/5 hover:text-electric-orange flex min-h-[80px] w-full items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 py-6 text-sm font-black tracking-widest uppercase transition-all active:scale-[0.98]"
             >
                 <span class="material-symbols-outlined text-3xl">add_circle</span>
@@ -903,6 +912,7 @@ const hasNoResults = computed(() => {
                         variant="primary"
                         @click="showAddExercise = true"
                         class="px-8"
+                        dusk="add-first-exercise"
                         data-testid="add-exercise-button"
                     >
                         Ajouter un exercice
@@ -1068,6 +1078,7 @@ const hasNoResults = computed(() => {
                                         :key="exercise.id"
                                         @click="addExercise(exercise.id)"
                                         :disabled="addExerciseForm.processing"
+                                        :dusk="`select-exercise-${exercise.id}`"
                                         class="group flex w-full items-center justify-between rounded-xl p-4 text-left transition hover:bg-slate-50 disabled:opacity-50"
                                         :aria-label="`Ajouter ${exercise.name}`"
                                     >
