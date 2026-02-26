@@ -38,3 +38,8 @@
 **Vulnerability:** The `User` model included `current_streak`, `longest_streak`, and `last_workout_at` in the `$fillable` array. This exposed system-managed statistics to mass assignment vulnerabilities if any controller or action used unvalidated input (e.g., `User::create($request->all())`).
 **Learning:** Documentation or memory claiming "strict limits" on mass assignment was incorrect. Defense in Depth requires minimizing `$fillable` even if current usage patterns seem safe.
 **Prevention:** Audit `$fillable` arrays regularly. Remove system-managed fields and use `forceFill()` or direct property assignment in Services/Actions for internal state updates.
+
+## 2026-02-26 - [DoS] Enforcing Input Limits on Numeric Fields
+**Vulnerability:** The API allowed unlimited values for `weight`, `reps`, `distance_km`, and `duration_seconds` in Set creation/update requests. This could allow an attacker to send excessively large numbers, potentially causing database overflow (for `decimal` types) or application logic errors (DoS via math operations or stats calculation).
+**Learning:** Numeric inputs in APIs should always have reasonable `min` and `max` bounds, especially when they map to specific database column types or physical constraints (e.g., a workout set).
+**Prevention:** Use Laravel's validation rules (`max:value`, `digits_between`) to enforce strict bounds on all numeric inputs based on domain logic and database schema limits.

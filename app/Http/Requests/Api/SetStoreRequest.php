@@ -14,10 +14,10 @@ class SetStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        /** @var mixed $workoutLineId */
         $workoutLineId = $this->input('workout_line_id');
 
-        // Let validation rules handle missing ID
-        if (! $workoutLineId) {
+        if ($workoutLineId === null) {
             return true;
         }
 
@@ -25,6 +25,7 @@ class SetStoreRequest extends FormRequest
         $workoutLine = WorkoutLine::with('workout')->find($workoutLineId);
 
         // Let validation rules handle non-existent ID
+        /** @phpstan-ignore-next-line */
         if (! $workoutLine || ! $workoutLine->workout) {
             return true;
         }
@@ -51,10 +52,10 @@ class SetStoreRequest extends FormRequest
                 'required',
                 'exists:workout_lines,id',
             ],
-            'weight' => 'nullable|numeric|min:0',
-            'reps' => 'nullable|integer|min:0',
-            'duration_seconds' => 'nullable|integer|min:0',
-            'distance_km' => 'nullable|numeric|min:0',
+            'weight' => 'nullable|numeric|min:0|max:1000',
+            'reps' => 'nullable|integer|min:0|max:1000',
+            'duration_seconds' => 'nullable|integer|min:0|max:86400',
+            'distance_km' => 'nullable|numeric|min:0|max:1000',
             'is_warmup' => 'boolean',
             'is_completed' => 'boolean',
         ];
