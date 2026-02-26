@@ -38,7 +38,7 @@ class FastingController extends Controller
             ->get()
             ->reverse()
             ->values()
-            ->map(function ($fast) {
+            ->map(function ($fast): array {
                 $start = Carbon::parse($fast->start_time);
                 $end = Carbon::parse($fast->end_time);
                 $durationHours = $end->diffInMinutes($start) / 60;
