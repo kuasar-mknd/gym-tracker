@@ -26,6 +26,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('body-part-measurements', BodyPartMeasurementController::class);
     Route::apiResource('goals', GoalController::class);
     Route::apiResource('workout-templates', WorkoutTemplateController::class);
+    Route::apiResource('workout-template-lines', \App\Http\Controllers\Api\WorkoutTemplateLineController::class);
     Route::apiResource('workout-lines', \App\Http\Controllers\Api\WorkoutLineController::class);
     Route::apiResource('daily-journals', \App\Http\Controllers\Api\DailyJournalController::class);
     Route::apiResource('fasts', \App\Http\Controllers\Api\FastController::class);
