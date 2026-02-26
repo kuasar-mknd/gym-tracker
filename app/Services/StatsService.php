@@ -343,15 +343,33 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
-        $workouts = Workout::select(['started_at', 'ended_at'])->where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))->get();
-        $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
+        $driver = DB::getDriverName();
 
-        foreach ($workouts as $workout) {
-            $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
-            $this->incrementBucket($buckets, $minutes);
-        }
+        // Database-specific duration calculation to ensure cross-driver compatibility
+        // Performance: Calculating at DB level avoids hydrating large collections of Workout models
+        $durationSql = $driver === 'sqlite'
+            ? '(julianday(ended_at) - julianday(started_at)) * 1440'
+            : 'TIMESTAMPDIFF(MINUTE, started_at, ended_at)';
 
-        return collect($buckets)->map(fn(int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
+        /** @var \stdClass|null $results */
+        $results = Workout::where('user_id', $user->id)
+            ->whereNotNull('ended_at')
+            ->where('started_at', '>=', now()->subDays($days))
+            ->toBase()
+            ->selectRaw("
+                SUM(CASE WHEN {$durationSql} < 30 THEN 1 ELSE 0 END) as bucket_1,
+                SUM(CASE WHEN {$durationSql} >= 30 AND {$durationSql} < 60 THEN 1 ELSE 0 END) as bucket_2,
+                SUM(CASE WHEN {$durationSql} >= 60 AND {$durationSql} < 90 THEN 1 ELSE 0 END) as bucket_3,
+                SUM(CASE WHEN {$durationSql} >= 90 THEN 1 ELSE 0 END) as bucket_4
+            ")
+            ->first();
+
+        return [
+            ['label' => '< 30 min', 'count' => (int) ($results->bucket_1 ?? 0)],
+            ['label' => '30-60 min', 'count' => (int) ($results->bucket_2 ?? 0)],
+            ['label' => '60-90 min', 'count' => (int) ($results->bucket_3 ?? 0)],
+            ['label' => '90+ min', 'count' => (int) ($results->bucket_4 ?? 0)],
+        ];
     }
 
     /**
@@ -599,21 +617,5 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return ['current_volume' => $currentVolume, 'previous_volume' => $previousVolume, 'difference' => $diff, 'percentage' => round($percentage, 1)];
-    }
-
-    /**
-     * @param  array<string, int>  $buckets
-     */
-    private function incrementBucket(array &$buckets, int $minutes): void
-    {
-        if ($minutes < 30) {
-            $buckets['< 30 min']++;
-        } elseif ($minutes < 60) {
-            $buckets['30-60 min']++;
-        } elseif ($minutes < 90) {
-            $buckets['60-90 min']++;
-        } else {
-            $buckets['90+ min']++;
-        }
     }
 }
