@@ -22,7 +22,9 @@ final class CreateMacroCalculationAction
         // Store multiplier instead of label
         $data['activity_level'] = self::MULTIPLIERS[$data['activity_level']];
 
-        /** @var MacroCalculation */
-        return $user->macroCalculations()->create(array_merge($data, $results));
+        /** @var \App\Models\MacroCalculation $macroCalculation */
+        $macroCalculation = $user->macroCalculations()->create(array_merge($data, $results));
+
+        return $macroCalculation;
     }
 }
