@@ -105,7 +105,7 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
             if ($debounce) {
-                $key = 'dispatched:sync-goals:' . $user->id;
+                $key = 'dispatched:sync-goals:'.$user->id;
                 if ($this->app->bound($key)) {
                     return;
                 }
@@ -119,7 +119,7 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
             if ($debounce) {
-                $key = 'dispatched:sync-achievements:' . $user->id;
+                $key = 'dispatched:sync-achievements:'.$user->id;
                 if ($this->app->bound($key)) {
                     return;
                 }
