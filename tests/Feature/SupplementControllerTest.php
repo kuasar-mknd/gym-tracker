@@ -20,7 +20,6 @@ use function Pest\Laravel\post;
 uses(RefreshDatabase::class);
 
 describe('SupplementController', function (): void {
-
     // Happy Path Tests
     test('authenticated user can view supplements page', function (): void {
         $user = User::factory()->create();
