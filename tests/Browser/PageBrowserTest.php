@@ -30,7 +30,7 @@ test('users can register', function (): void {
             ->visit('/register')
             ->waitFor('input[name="name"]', 60) // Ensure form is loaded
             ->type('input[name="name"]', 'John Doe')
-            ->type('input[name="email"]', 'john' . time() . '@example.com')
+            ->type('input[name="email"]', 'john'.time().'@example.com')
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
             ->waitFor('[data-testid="register-button"]', 30)
