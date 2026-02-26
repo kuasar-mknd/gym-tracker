@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -24,11 +23,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('user_achievements', function (Blueprint $table) {
-             try {
-                 $table->dropIndex(['user_id', 'achieved_at']);
-             } catch (\Throwable $e) {
-                 // Index might not exist
-             }
+            try {
+                $table->dropIndex(['user_id', 'achieved_at']);
+            } catch (\Throwable $e) {
+                // Index might not exist
+            }
         });
     }
 };
