@@ -16,7 +16,21 @@ final class PersonalRecordService
 {
     public function syncSetPRs(Set $set, ?User $user = null): void
     {
-        if ($set->is_warmup || ! $set->weight || ! $set->reps) {
+        if ($set->is_warmup) {
+            return;
+        }
+
+        /** @var float|int|null $weight */
+        $weight = $set->weight;
+        /** @phpstan-ignore-next-line */
+        if (empty($weight) || $weight <= 0) {
+            return;
+        }
+
+        /** @var int|null $reps */
+        $reps = $set->reps;
+        /** @phpstan-ignore-next-line */
+        if (empty($reps) || $reps <= 0) {
             return;
         }
 

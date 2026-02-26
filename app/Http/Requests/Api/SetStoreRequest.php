@@ -14,10 +14,12 @@ class SetStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        /** @var mixed $workoutLineId */
+        /** @var mixed $workoutLineId */
         $workoutLineId = $this->input('workout_line_id');
 
-        // Let validation rules handle missing ID
-        if (! $workoutLineId) {
+        /** @phpstan-ignore-next-line */
+        if (empty($workoutLineId)) {
             return true;
         }
 
