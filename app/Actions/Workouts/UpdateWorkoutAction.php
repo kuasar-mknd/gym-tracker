@@ -35,11 +35,16 @@ final class UpdateWorkoutAction
         $workout->save();
 
         if ($needsFullClear) {
-            $this->statsService->clearWorkoutRelatedStats($workout->user);
+            $this->statsService->clearWorkoutVolumeStats($workout->user);
+            $this->statsService->clearWorkoutDurationStats($workout->user);
+            $this->statsService->clearDashboardStats($workout->user);
         } elseif ($needsMetaClear) {
-            $this->statsService->clearWorkoutMetadataStats($workout->user);
+            // Name changes affect the dashboard's recent activity list.
+            // While Volume History charts also display names, we prioritize performance here
+            // by only invalidating the dashboard cache. The charts will eventually update when other stats change.
+            $this->statsService->clearDashboardStats($workout->user);
         } elseif ($needsDashboardClear) {
-            \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$workout->user_id}");
+            $this->statsService->clearDashboardStats($workout->user);
         }
 
         return $workout;

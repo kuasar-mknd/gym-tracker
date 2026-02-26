@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Models\BodyMeasurement;
+use App\Services\StatsService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
@@ -13,7 +14,7 @@ class BodyMeasurementController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(protected \App\Services\StatsService $statsService)
+    public function __construct(protected StatsService $statsService)
     {
     }
 

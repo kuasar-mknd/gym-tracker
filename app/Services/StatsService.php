@@ -254,36 +254,35 @@ class StatsService
 
     public function clearUserStatsCache(User $user): void
     {
-        $this->clearWorkoutRelatedStats($user);
+        $this->clearWorkoutVolumeStats($user);
+        $this->clearWorkoutDurationStats($user);
         $this->clearBodyMeasurementStats($user);
+        $this->clearDashboardStats($user);
     }
 
-    public function clearWorkoutRelatedStats(User $user): void
+    public function clearWorkoutVolumeStats(User $user): void
     {
         $this->clearWorkoutTrendStats($user);
-        $this->clearWorkoutMetadataStats($user);
 
         Cache::forget("stats.weekly_volume.{$user->id}");
         $weekKey = now()->startOfWeek()->format('Y-W');
         Cache::forget("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
         Cache::forget("stats.monthly_volume_comparison.{$user->id}");
-        Cache::forget("stats.duration_distribution.{$user->id}.90");
         Cache::forget("stats.monthly_volume_history.{$user->id}.6");
-    }
-
-    public function clearWorkoutMetadataStats(User $user): void
-    {
-        Cache::forget("dashboard_data_{$user->id}");
+        Cache::forget("stats.volume_history.{$user->id}.20");
+        Cache::forget("stats.volume_history.{$user->id}.30");
 
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             Cache::forget("stats.volume_trend.{$user->id}.{$days}");
         }
+    }
 
+    public function clearWorkoutDurationStats(User $user): void
+    {
+        Cache::forget("stats.duration_distribution.{$user->id}.90");
         Cache::forget("stats.duration_history.{$user->id}.20");
         Cache::forget("stats.duration_history.{$user->id}.30");
-        Cache::forget("stats.volume_history.{$user->id}.20");
-        Cache::forget("stats.volume_history.{$user->id}.30");
     }
 
     public function clearBodyMeasurementStats(User $user): void
@@ -294,7 +293,34 @@ class StatsService
             Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
 
+        $this->clearDashboardStats($user);
+    }
+
+    public function clearDashboardStats(User $user): void
+    {
         Cache::forget("dashboard_data_{$user->id}");
+    }
+
+    /**
+     * Deprecated: Use clearWorkoutVolumeStats or clearWorkoutDurationStats for better performance
+     */
+    public function clearWorkoutRelatedStats(User $user): void
+    {
+        $this->clearWorkoutVolumeStats($user);
+        $this->clearWorkoutDurationStats($user);
+    }
+
+    /**
+     * Deprecated: Use clearDashboardStats for better performance
+     */
+    public function clearWorkoutMetadataStats(User $user): void
+    {
+        $this->clearDashboardStats($user);
+
+        $periods = [7, 30, 90, 365];
+        foreach ($periods as $days) {
+            Cache::forget("stats.volume_trend.{$user->id}.{$days}");
+        }
     }
 
     /**
