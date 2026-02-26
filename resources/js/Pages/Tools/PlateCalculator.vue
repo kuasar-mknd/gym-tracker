@@ -28,7 +28,7 @@
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main placeholder-white/50 focus:border-white/40 focus:bg-white/20 h-16 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-0 focus:outline-none"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -42,7 +42,7 @@
                                     type="number"
                                     v-model="barWeight"
                                     placeholder="20"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main placeholder-white/50 focus:border-white/40 focus:bg-white/20 h-16 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-0 focus:outline-none"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -54,7 +54,7 @@
                     <!-- Barbell Visualization -->
                     <div
                         v-if="calculatedPlates.length > 0"
-                        class="mt-8 overflow-x-auto rounded-3xl border border-slate-100 bg-slate-50 p-6"
+                        class="mt-8 overflow-x-auto rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md"
                     >
                         <div class="relative flex h-[200px] min-w-[300px] items-center justify-center">
                             <!-- Bar -->
@@ -130,7 +130,7 @@
                     <!-- Cannot load message -->
                     <div
                         v-else-if="targetWeight > barWeight"
-                        class="mt-8 rounded-3xl border border-slate-100 bg-slate-50 py-8 text-center"
+                        class="mt-8 rounded-3xl border border-white/20 bg-white/10 py-8 text-center backdrop-blur-md"
                     >
                         <span class="material-symbols-outlined mb-3 text-5xl text-slate-300">error</span>
                         <p class="text-text-muted font-medium">
@@ -164,9 +164,13 @@
                     </div>
 
                     <div v-else class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                        <div v-for="plate in plates" :key="plate.id" class="group relative">
+                        <div
+                            v-for="plate in plates"
+                            :key="plate.id"
+                            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/5 p-2 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:bg-white/10 hover:shadow-lg"
+                        >
                             <div
-                                class="rounded-2xl border-2 p-4 text-center transition-all hover:shadow-md"
+                                class="rounded-2xl border-2 p-3 text-center transition-all"
                                 :class="[
                                     getPlateColor(parseFloat(plate.weight)),
                                     parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
@@ -175,7 +179,7 @@
                                 ]"
                             >
                                 <div
-                                    class="font-display text-3xl font-black"
+                                    class="font-display text-2xl font-black"
                                     :class="
                                         parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
                                             ? 'text-text-main'
@@ -185,7 +189,7 @@
                                     {{ plate.weight }}
                                 </div>
                                 <div
-                                    class="mt-1 text-xs font-bold tracking-wider uppercase"
+                                    class="mt-1 text-[10px] font-bold tracking-wider uppercase"
                                     :class="
                                         parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
                                             ? 'text-text-muted'
@@ -194,13 +198,13 @@
                                 >
                                     x {{ plate.quantity }}
                                 </div>
-                                <button
-                                    @click="deletePlate(plate)"
-                                    class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all group-hover:opacity-100 hover:bg-red-600"
-                                >
-                                    <span class="material-symbols-outlined text-sm">close</span>
-                                </button>
                             </div>
+                            <button
+                                @click="deletePlate(plate)"
+                                class="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all hover:bg-red-600 group-hover:opacity-100"
+                            >
+                                <span class="material-symbols-outlined text-sm">close</span>
+                            </button>
                         </div>
                     </div>
                 </div>
