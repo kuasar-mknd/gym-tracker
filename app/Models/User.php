@@ -164,6 +164,19 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->exists();
     }
 
+    public function getUnreadNotificationsCountCached(): int
+    {
+        return app(\App\Services\NotificationService::class)->getUnreadCount($this);
+    }
+
+    /**
+     * @return Notification|null
+     */
+    public function getLatestAchievementCached()
+    {
+        return app(\App\Services\NotificationService::class)->getLatestAchievement($this);
+    }
+
     /**
      * @return HasMany<WorkoutTemplate, $this>
      */
