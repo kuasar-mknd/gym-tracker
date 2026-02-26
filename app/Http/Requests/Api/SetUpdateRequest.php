@@ -24,10 +24,10 @@ class SetUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'weight' => 'nullable|numeric|min:0',
-            'reps' => 'nullable|integer|min:0',
-            'duration_seconds' => 'nullable|integer|min:0',
-            'distance_km' => 'nullable|numeric|min:0',
+            'weight' => 'nullable|numeric|min:0|max:1000',
+            'reps' => 'nullable|integer|min:0|max:1000',
+            'duration_seconds' => 'nullable|integer|min:0|max:86400',
+            'distance_km' => 'nullable|numeric|min:0|max:1000',
             'is_warmup' => 'boolean',
             'is_completed' => 'boolean',
         ];
