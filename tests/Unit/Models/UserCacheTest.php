@@ -25,7 +25,7 @@ class UserCacheTest extends TestCase
             ->once()
             ->with(
                 $cacheKey,
-                Mockery::on(fn($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
+                Mockery::on(fn ($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
                 Mockery::type('Closure')
             )
             ->andReturn(5);
@@ -83,7 +83,7 @@ class UserCacheTest extends TestCase
             ->once()
             ->with(
                 $cacheKey,
-                Mockery::on(fn($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
+                Mockery::on(fn ($ttl): bool => $ttl->diffInSeconds(now()) <= 30),
                 Mockery::type('Closure')
             )
             ->andReturn(null);

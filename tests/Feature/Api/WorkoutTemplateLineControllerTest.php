@@ -20,7 +20,7 @@ test('index returns user workout template lines', function () {
     $line = WorkoutTemplateLine::create([
         'workout_template_id' => $template->id,
         'exercise_id' => $exercise->id,
-        'order' => 0
+        'order' => 0,
     ]);
 
     // Other user's data
@@ -28,7 +28,7 @@ test('index returns user workout template lines', function () {
     WorkoutTemplateLine::create([
         'workout_template_id' => $otherTemplate->id,
         'exercise_id' => $exercise->id,
-        'order' => 0
+        'order' => 0,
     ]);
 
     actingAs($user)
@@ -78,7 +78,7 @@ test('show returns workout template line', function () {
     $line = WorkoutTemplateLine::create([
         'workout_template_id' => $template->id,
         'exercise_id' => $exercise->id,
-        'order' => 0
+        'order' => 0,
     ]);
 
     actingAs($user)
@@ -94,7 +94,7 @@ test('update updates workout template line', function () {
     $line = WorkoutTemplateLine::create([
         'workout_template_id' => $template->id,
         'exercise_id' => $exercise->id,
-        'order' => 0
+        'order' => 0,
     ]);
 
     actingAs($user)
@@ -112,7 +112,7 @@ test('destroy deletes workout template line', function () {
     $line = WorkoutTemplateLine::create([
         'workout_template_id' => $template->id,
         'exercise_id' => $exercise->id,
-        'order' => 0
+        'order' => 0,
     ]);
 
     actingAs($user)
