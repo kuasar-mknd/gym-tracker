@@ -18,6 +18,7 @@ use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use App\Services\NotificationService;
 
 /**
  * @property int $id
@@ -162,6 +163,16 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->where('type', $type)
             ->where('is_enabled', true)
             ->exists();
+    }
+
+    public function getUnreadNotificationsCountCached(): int
+    {
+        return app(NotificationService::class)->getUnreadCount($this);
+    }
+
+    public function getLatestAchievementCached(): ?Notification
+    {
+        return app(NotificationService::class)->getLatestAchievement($this);
     }
 
     /**
