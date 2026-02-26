@@ -169,10 +169,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         return app(\App\Services\NotificationService::class)->getUnreadCount($this);
     }
 
-    /**
-     * @return Notification|null
-     */
-    public function getLatestAchievementCached()
+    public function getLatestAchievementCached(): ?\Illuminate\Notifications\DatabaseNotification
     {
         return app(\App\Services\NotificationService::class)->getLatestAchievement($this);
     }
