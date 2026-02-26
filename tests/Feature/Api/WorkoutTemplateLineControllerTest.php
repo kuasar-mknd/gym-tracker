@@ -10,7 +10,7 @@ use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
-test('index returns user workout template lines', function () {
+test('index returns user workout template lines', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
@@ -38,7 +38,7 @@ test('index returns user workout template lines', function () {
         ->assertJsonFragment(['id' => $line->id]);
 });
 
-test('store creates workout template line', function () {
+test('store creates workout template line', function (): void {
     $user = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $exercise = Exercise::factory()->create();
@@ -57,7 +57,7 @@ test('store creates workout template line', function () {
     expect($template->workoutTemplateLines()->count())->toBe(1);
 });
 
-test('store validates workout template ownership', function () {
+test('store validates workout template ownership', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
@@ -71,7 +71,7 @@ test('store validates workout template ownership', function () {
         ->assertForbidden();
 });
 
-test('show returns workout template line', function () {
+test('show returns workout template line', function (): void {
     $user = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $exercise = Exercise::factory()->create();
@@ -87,7 +87,7 @@ test('show returns workout template line', function () {
         ->assertJsonFragment(['id' => $line->id]);
 });
 
-test('update updates workout template line', function () {
+test('update updates workout template line', function (): void {
     $user = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $exercise = Exercise::factory()->create();
@@ -105,7 +105,7 @@ test('update updates workout template line', function () {
         ->assertJsonFragment(['order' => 10]);
 });
 
-test('destroy deletes workout template line', function () {
+test('destroy deletes workout template line', function (): void {
     $user = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $exercise = Exercise::factory()->create();
