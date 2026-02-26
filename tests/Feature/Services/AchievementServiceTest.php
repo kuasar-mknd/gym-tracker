@@ -97,6 +97,7 @@ test('it awards volume_total achievement', function (): void {
         'reps' => 10,
     ]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseHas('user_achievements', [
