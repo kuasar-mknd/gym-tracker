@@ -65,6 +65,7 @@ test('it awards weight_record achievement', function (): void {
         'reps' => 1,
     ]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseHas('user_achievements', [
@@ -120,6 +121,7 @@ test('it awards streak achievement', function (): void {
     Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays(1)]);
     Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseHas('user_achievements', [

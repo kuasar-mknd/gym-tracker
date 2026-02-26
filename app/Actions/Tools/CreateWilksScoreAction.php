@@ -30,14 +30,16 @@ final class CreateWilksScoreAction
 
         $scoreValue = $this->calculateWilks($bwKg, $liftedKg, $gender);
 
-        /** @var WilksScore */
-        return $user->wilksScores()->create([
+        /** @var \App\Models\WilksScore $score */
+        $score = $user->wilksScores()->create([
             'body_weight' => $bw,
             'lifted_weight' => $lifted,
             'gender' => $gender,
             'unit' => $unit,
             'score' => $scoreValue,
         ]);
+
+        return $score;
     }
 
     private function calculateWilks(float $bw, float $lifted, string $gender): float
