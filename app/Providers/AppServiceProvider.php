@@ -129,11 +129,11 @@ class AppServiceProvider extends ServiceProvider
         };
 
         // Workouts always trigger (covers creation and completion)
-        Workout::saved(fn(Workout $workout) => $syncGoals($workout->user));
-        Workout::deleted(fn(Workout $workout) => $syncGoals($workout->user));
-        Workout::saved(fn(Workout $workout) => $syncAchievements($workout->user));
-        Workout::deleted(fn(Workout $workout) => $syncAchievements($workout->user));
-        Workout::saved(fn(Workout $workout) => app(StreakService::class)->updateStreak($workout->user, $workout));
+        Workout::saved(fn (Workout $workout) => $syncGoals($workout->user));
+        Workout::deleted(fn (Workout $workout) => $syncGoals($workout->user));
+        Workout::saved(fn (Workout $workout) => $syncAchievements($workout->user));
+        Workout::deleted(fn (Workout $workout) => $syncAchievements($workout->user));
+        Workout::saved(fn (Workout $workout) => app(StreakService::class)->updateStreak($workout->user, $workout));
 
         // Sets only trigger if the workout is finished, and they are debounced per request
         Set::saved(function (Set $set) use ($syncGoals): void {
@@ -161,8 +161,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Body Measurements always trigger
-        BodyMeasurement::saved(fn(BodyMeasurement $bm) => $syncGoals($bm->user));
-        BodyMeasurement::deleted(fn(BodyMeasurement $bm) => $syncGoals($bm->user));
+        BodyMeasurement::saved(fn (BodyMeasurement $bm) => $syncGoals($bm->user));
+        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => $syncGoals($bm->user));
     }
 
     private function updateUserVolume(Set $set): void
