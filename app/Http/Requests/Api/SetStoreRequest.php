@@ -15,10 +15,8 @@ class SetStoreRequest extends FormRequest
     public function authorize(): bool
     {
         /** @var mixed $workoutLineId */
-        /** @var mixed $workoutLineId */
         $workoutLineId = $this->input('workout_line_id');
 
-        /** @phpstan-ignore-next-line */
         if (empty($workoutLineId)) {
             return true;
         }
@@ -27,6 +25,7 @@ class SetStoreRequest extends FormRequest
         $workoutLine = WorkoutLine::with('workout')->find($workoutLineId);
 
         // Let validation rules handle non-existent ID
+        /** @phpstan-ignore-next-line */
         if (! $workoutLine || ! $workoutLine->workout) {
             return true;
         }

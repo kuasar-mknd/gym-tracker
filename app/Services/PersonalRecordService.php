@@ -22,14 +22,12 @@ final class PersonalRecordService
 
         /** @var float|int|null $weight */
         $weight = $set->weight;
-        /** @phpstan-ignore-next-line */
         if (empty($weight) || $weight <= 0) {
             return;
         }
 
         /** @var int|null $reps */
         $reps = $set->reps;
-        /** @phpstan-ignore-next-line */
         if (empty($reps) || $reps <= 0) {
             return;
         }
@@ -37,6 +35,7 @@ final class PersonalRecordService
         // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
+        /** @phpstan-ignore-next-line */
         if (! $set->workoutLine || ! $set->workoutLine->workout) {
             return;
         }
@@ -44,6 +43,7 @@ final class PersonalRecordService
         /** @var \App\Models\User|null $user */
         $user ??= $set->workoutLine->workout->user;
 
+        /** @phpstan-ignore-next-line */
         if (! $user) {
             return;
         }
@@ -59,9 +59,9 @@ final class PersonalRecordService
             ->get()
             ->keyBy('type');
 
-        $this->update($user, $exerciseId, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
-        $this->update($user, $exerciseId, 'max_1rm', $set->reps > 1 ? round($set->weight * (1 + $set->reps / 30), 2) : (float) $set->weight, (float) $set->weight, $set, $existingPRs->get('max_1rm'));
-        $this->update($user, $exerciseId, 'max_volume_set', (float) ($set->weight * $set->reps), null, $set, $existingPRs->get('max_volume_set'));
+        $this->update($user, $exerciseId, 'max_weight', (float) $weight, (float) $reps, $set, $existingPRs->get('max_weight'));
+        $this->update($user, $exerciseId, 'max_1rm', $reps > 1 ? round($weight * (1 + $reps / 30), 2) : (float) $weight, (float) $weight, $set, $existingPRs->get('max_1rm'));
+        $this->update($user, $exerciseId, 'max_volume_set', (float) ($weight * $reps), null, $set, $existingPRs->get('max_volume_set'));
     }
 
     protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
