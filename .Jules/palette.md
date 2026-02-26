@@ -29,3 +29,8 @@
 - **Improvement**: Added `aria-label` to the exercise selection dropdown in the Stats page.
 - **Reasoning**: The dropdown had a placeholder option but no descriptive label for screen readers. Adding an explicit `aria-label` ensures that users using assistive technologies understand the purpose of the input.
 - **Learning**: Always ensure interactive elements that rely on visual context (like being under a heading) have explicit ARIA labels for accessibility.
+
+## 2025-02-27 - Timer Accessibility & Haptic Feedback
+
+**Learning:** Timers and progress bars need specific ARIA roles (`role="timer"`, `role="progressbar"`) to be accessible. Combining these with haptic feedback (`triggerHaptic`) significantly enhances the UX on mobile, providing both visual and tactile confirmation of state changes (start, pause, complete).
+**Action:** Always use ARIA attributes for live-updating components and integrate standardized haptics for critical timer events to provide a multi-sensory experience.
