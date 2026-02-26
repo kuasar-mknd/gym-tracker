@@ -23,14 +23,16 @@ class FetchExerciseHistoryAction
      */
     public function execute(User $user, Exercise $exercise): Collection
     {
+        // Optimization: Use JOIN instead of whereHas + PHP sorting
         // @phpstan-ignore-next-line
         return WorkoutLine::query()
-            ->where('exercise_id', $exercise->id)
-            ->whereHas('workout', function ($query) use ($user): void {
-                $query->where('user_id', $user->id)
-                    ->whereNotNull('started_at');
-            })
+            ->select('workout_lines.*')
+            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+            ->where('workout_lines.exercise_id', $exercise->id)
+            ->where('workouts.user_id', $user->id)
+            ->whereNotNull('workouts.started_at')
             ->with(['workout', 'sets'])
+            ->orderByDesc('workouts.started_at')
             ->get()
             ->map(function (WorkoutLine $line): ?array {
                 $workout = $line->workout;
@@ -55,17 +57,10 @@ class FetchExerciseHistoryAction
                     'formatted_date' => $workout->started_at->locale('fr')->isoFormat('ddd D MMM'),
                     'best_1rm' => $best1rm,
                     'sets' => $sets,
-                    'started_at' => $workout->started_at, // For sorting
                 ];
             })
             ->filter()
-            ->sortByDesc('started_at')
-            ->values()
-            ->map(function (array $item): array {
-                unset($item['started_at']);
-
-                return $item;
-            });
+            ->values();
     }
 
     private function calculate1RM(float $weight, int $reps): float
