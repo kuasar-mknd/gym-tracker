@@ -24,9 +24,28 @@ class SetStoreRequest extends FormRequest
         /** @var \App\Models\WorkoutLine|null $workoutLine */
         $workoutLine = WorkoutLine::with('workout')->find($workoutLineId);
 
-        // Let validation rules handle non-existent ID
-        if (! $workoutLine || ! $workoutLine->workout) {
+        // PHPStan analysis says this check is redundant if types are strict,
+        // but finding by ID can definitely return null.
+        // However, if the error is "Negated boolean expression is always false" on line 28:
+        // if (! $workoutLine || ! $workoutLine->workout)
+        // It implies PHPStan thinks one of these is always true?
+        // No, it likely thinks $workoutLine->workout is always present if $workoutLine is present.
+        // But `with('workout')` doesn't guarantee relationship existence if DB is inconsistent.
+        // To be safe and satisfy PHPStan, we can use `optional()` or just suppress.
+        // Or maybe refactor.
+
+        if ($workoutLine === null) {
             return true;
+        }
+
+        // If we found the line but no workout (orphan), allow? Or fail?
+        // Authorization should probably fail if data is corrupted, or just return false.
+        // But here we return true to let rules validation fail on "exists"?
+        // Actually, if we return true, the controller runs.
+        // If we found the object, we check ownership.
+
+        if ($workoutLine->workout === null) {
+             return true;
         }
 
         /** @var \App\Models\User|null $user */

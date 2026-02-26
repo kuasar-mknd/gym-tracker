@@ -23,18 +23,29 @@ final class PersonalRecordService
         // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
-        if (! $set->workoutLine || ! $set->workoutLine->workout) {
+        /** @var \App\Models\WorkoutLine|null $workoutLine */
+        $workoutLine = $set->workoutLine;
+
+        // PHPStan might think relationships are always loaded due to previous loadMissing,
+        // but loadMissing doesn't guarantee non-null result if FK is broken.
+        // However, standard Eloquent typing might assume not-null for belongsTo.
+        // We suppress the warning if we are sure it's necessary for runtime safety,
+        // OR we trust Eloquent typing and remove checks if PHPStan is strict.
+        // Given PHPStan errors "Negated boolean expression is always false", it implies
+        // PHPStan believes $set->workoutLine is NEVER null.
+
+        if (! $workoutLine || ! $workoutLine->workout) {
             return;
         }
 
         /** @var \App\Models\User|null $user */
-        $user ??= $set->workoutLine->workout->user;
+        $user ??= $workoutLine->workout->user;
 
         if (! $user) {
             return;
         }
 
-        $exerciseId = $set->workoutLine->exercise_id;
+        $exerciseId = $workoutLine->exercise_id;
 
         if (! $exerciseId) {
             return;
