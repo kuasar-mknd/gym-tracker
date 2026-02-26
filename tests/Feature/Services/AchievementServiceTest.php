@@ -34,6 +34,7 @@ test('it awards count achievement', function (): void {
     // Perform workout
     Workout::factory()->create(['user_id' => $user->id]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseHas('user_achievements', [
@@ -44,7 +45,7 @@ test('it awards count achievement', function (): void {
     Notification::assertSentTo(
         $user,
         \App\Notifications\AchievementUnlocked::class,
-        fn($notification): bool => $notification->achievement->id === $achievement->id
+        fn ($notification): bool => $notification->achievement->id === $achievement->id
     );
 });
 
@@ -64,6 +65,7 @@ test('it awards weight_record achievement', function (): void {
         'reps' => 1,
     ]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseHas('user_achievements', [
@@ -97,6 +99,7 @@ test('it awards volume_total achievement', function (): void {
         'reps' => 10,
     ]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseHas('user_achievements', [
@@ -118,6 +121,7 @@ test('it awards streak achievement', function (): void {
     Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays(1)]);
     Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseHas('user_achievements', [
@@ -185,6 +189,7 @@ test('it does not award achievement based on other users data', function (): voi
         'reps' => 10,
     ]); // 100 volume
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseMissing('user_achievements', [

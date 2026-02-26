@@ -24,8 +24,8 @@ class StatsService
         return Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchVolumeTrendData($user, $days)
-                ->map(fn(\stdClass $row): array => $this->formatVolumeTrendItem($row))
+            fn (): array => $this->fetchVolumeTrendData($user, $days)
+                ->map(fn (\stdClass $row): array => $this->formatVolumeTrendItem($row))
                 ->values()
                 ->toArray()
         );
@@ -57,7 +57,7 @@ class StatsService
         return Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchMuscleDistributionData($user, $days)->toArray()
+            fn (): array => $this->fetchMuscleDistributionData($user, $days)->toArray()
         );
     }
 
@@ -69,8 +69,8 @@ class StatsService
         return Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
-                ->map(fn(\stdClass $set): array => $this->formatExercise1RMItem($set))
+            fn (): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
+                ->map(fn (\stdClass $set): array => $this->formatExercise1RMItem($set))
                 ->toArray()
         );
     }
@@ -84,7 +84,7 @@ class StatsService
         $comparison = Cache::remember(
             "stats.monthly_volume_comparison.{$user->id}",
             now()->addMinutes(30),
-            fn(): array => $this->calculatePeriodComparison(
+            fn (): array => $this->calculatePeriodComparison(
                 $user,
                 now()->startOfMonth(),
                 now()->subMonth()->startOfMonth(),
@@ -108,8 +108,8 @@ class StatsService
         return Cache::remember(
             "stats.weight_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchWeightHistoryData($user, $days)
-                ->map(fn(BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
+            fn (): array => $this->fetchWeightHistoryData($user, $days)
+                ->map(fn (BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
                 ->toArray()
         );
     }
@@ -140,8 +140,8 @@ class StatsService
         return Cache::remember(
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchBodyFatHistoryData($user, $days)
-                ->map(fn(BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+            fn (): array => $this->fetchBodyFatHistoryData($user, $days)
+                ->map(fn (BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
                 ->toArray()
         );
     }
@@ -176,7 +176,7 @@ class StatsService
         $comparison = Cache::remember(
             "stats.weekly_volume_comparison.{$user->id}.{$weekKey}",
             now()->addMinutes(10),
-            fn(): array => $this->calculatePeriodComparison(
+            fn (): array => $this->calculatePeriodComparison(
                 $user,
                 now()->startOfWeek(),
                 now()->subWeek()->startOfWeek(),
@@ -200,13 +200,13 @@ class StatsService
         return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn(): array => Workout::select(['name', 'started_at', 'ended_at'])
+            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn(Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->map(fn (Workout $workout): array => $this->formatDurationHistoryItem($workout))
                 ->reverse()->values()->toArray()
         );
     }
@@ -219,7 +219,7 @@ class StatsService
         return Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn(): array => $this->fetchVolumeHistory($user, $limit)
+            fn (): array => $this->fetchVolumeHistory($user, $limit)
         );
     }
 
@@ -231,7 +231,7 @@ class StatsService
         return Cache::remember(
             "stats.duration_distribution.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn(): array => $this->calculateDurationDistribution($user, $days)
+            fn (): array => $this->calculateDurationDistribution($user, $days)
         );
     }
 
@@ -245,7 +245,7 @@ class StatsService
             now()->addMinutes(30),
             function () use ($user, $months): array {
                 $data = $this->fetchMonthlyVolumeHistoryData($user, $months);
-                $grouped = $data->groupBy(fn($row): string => Carbon::parse($row->started_at)->format('Y-m'));
+                $grouped = $data->groupBy(fn ($row): string => Carbon::parse($row->started_at)->format('Y-m'));
 
                 return $this->fillMonthlyVolumeHistory($months, $grouped);
             }
@@ -305,7 +305,7 @@ class StatsService
         /** @var array<int, array{date: string, volume: float, name: string}> $result */
         $result = $this->queryVolumeHistory($user, $limit)
             // @phpstan-ignore-next-line
-            ->map(fn(\stdClass $row): array => $this->formatVolumeHistoryRow($row))
+            ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
 
         return $result;
@@ -343,15 +343,33 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
-        $workouts = Workout::select(['started_at', 'ended_at'])->where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))->get();
-        $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
+        $driver = DB::getDriverName();
 
-        foreach ($workouts as $workout) {
-            $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
-            $this->incrementBucket($buckets, $minutes);
-        }
+        // Database-specific duration calculation to ensure cross-driver compatibility
+        // Performance: Calculating at DB level avoids hydrating large collections of Workout models
+        $durationSql = $driver === 'sqlite'
+            ? '(julianday(ended_at) - julianday(started_at)) * 1440'
+            : 'TIMESTAMPDIFF(MINUTE, started_at, ended_at)';
 
-        return collect($buckets)->map(fn(int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
+        /** @var \stdClass|null $results */
+        $results = Workout::where('user_id', $user->id)
+            ->whereNotNull('ended_at')
+            ->where('started_at', '>=', now()->subDays($days))
+            ->toBase()
+            ->selectRaw("
+                SUM(CASE WHEN {$durationSql} < 30 THEN 1 ELSE 0 END) as bucket_1,
+                SUM(CASE WHEN {$durationSql} >= 30 AND {$durationSql} < 60 THEN 1 ELSE 0 END) as bucket_2,
+                SUM(CASE WHEN {$durationSql} >= 60 AND {$durationSql} < 90 THEN 1 ELSE 0 END) as bucket_3,
+                SUM(CASE WHEN {$durationSql} >= 90 THEN 1 ELSE 0 END) as bucket_4
+            ")
+            ->first();
+
+        return [
+            ['label' => '< 30 min', 'count' => (int) ($results->bucket_1 ?? 0)],
+            ['label' => '30-60 min', 'count' => (int) ($results->bucket_2 ?? 0)],
+            ['label' => '60-90 min', 'count' => (int) ($results->bucket_3 ?? 0)],
+            ['label' => '90+ min', 'count' => (int) ($results->bucket_4 ?? 0)],
+        ];
     }
 
     /**
@@ -515,7 +533,7 @@ class StatsService
             )
             ->groupBy('date')
             ->pluck('volume', 'date')
-            ->map(fn(mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
+            ->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
     }
 
     /**
@@ -599,21 +617,5 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return ['current_volume' => $currentVolume, 'previous_volume' => $previousVolume, 'difference' => $diff, 'percentage' => round($percentage, 1)];
-    }
-
-    /**
-     * @param  array<string, int>  $buckets
-     */
-    private function incrementBucket(array &$buckets, int $minutes): void
-    {
-        if ($minutes < 30) {
-            $buckets['< 30 min']++;
-        } elseif ($minutes < 60) {
-            $buckets['30-60 min']++;
-        } elseif ($minutes < 90) {
-            $buckets['60-90 min']++;
-        } else {
-            $buckets['90+ min']++;
-        }
     }
 }
