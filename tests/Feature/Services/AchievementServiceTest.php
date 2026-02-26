@@ -44,7 +44,7 @@ test('it awards count achievement', function (): void {
     Notification::assertSentTo(
         $user,
         \App\Notifications\AchievementUnlocked::class,
-        fn($notification): bool => $notification->achievement->id === $achievement->id
+        fn ($notification): bool => $notification->achievement->id === $achievement->id
     );
 });
 
@@ -97,6 +97,7 @@ test('it awards volume_total achievement', function (): void {
         'reps' => 10,
     ]);
 
+    $user->refresh();
     $this->service->syncAchievements($user);
 
     assertDatabaseHas('user_achievements', [
