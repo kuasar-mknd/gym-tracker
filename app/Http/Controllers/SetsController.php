@@ -35,7 +35,10 @@ class SetsController extends Controller
 
         /** @var \App\Models\User $user */
         $user = $this->user();
-        $this->statsService->clearWorkoutRelatedStats($user);
+
+        // Clear both volume stats and dashboard, as sets affect daily totals and recent activity.
+        $this->statsService->clearWorkoutVolumeStats($user);
+        $this->statsService->clearDashboardStats($user);
 
         return back();
     }
@@ -51,7 +54,10 @@ class SetsController extends Controller
 
         /** @var \App\Models\User $user */
         $user = $this->user();
-        $this->statsService->clearWorkoutRelatedStats($user);
+
+        // Clear both volume stats and dashboard, as sets affect daily totals and recent activity.
+        $this->statsService->clearWorkoutVolumeStats($user);
+        $this->statsService->clearDashboardStats($user);
 
         return back();
     }
@@ -65,7 +71,10 @@ class SetsController extends Controller
 
         $user = $this->user();
         $set->delete();
-        $this->statsService->clearWorkoutRelatedStats($user);
+
+        // Clear both volume stats and dashboard, as sets affect daily totals and recent activity.
+        $this->statsService->clearWorkoutVolumeStats($user);
+        $this->statsService->clearDashboardStats($user);
 
         return back();
     }

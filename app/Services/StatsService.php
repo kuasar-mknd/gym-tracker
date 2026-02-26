@@ -254,36 +254,37 @@ class StatsService
 
     public function clearUserStatsCache(User $user): void
     {
-        $this->clearWorkoutRelatedStats($user);
+        $this->clearWorkoutVolumeStats($user);
+        $this->clearWorkoutDurationStats($user);
         $this->clearBodyMeasurementStats($user);
+        $this->clearDashboardStats($user);
     }
 
-    public function clearWorkoutRelatedStats(User $user): void
+    public function clearWorkoutVolumeStats(User $user): void
     {
         $this->clearWorkoutTrendStats($user);
-        $this->clearWorkoutMetadataStats($user);
 
         Cache::forget("stats.weekly_volume.{$user->id}");
         $weekKey = now()->startOfWeek()->format('Y-W');
         Cache::forget("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
         Cache::forget("stats.monthly_volume_comparison.{$user->id}");
-        Cache::forget("stats.duration_distribution.{$user->id}.90");
         Cache::forget("stats.monthly_volume_history.{$user->id}.6");
-    }
+        Cache::forget("stats.volume_history.{$user->id}.20");
+        Cache::forget("stats.volume_history.{$user->id}.30");
 
-    public function clearWorkoutMetadataStats(User $user): void
-    {
-        Cache::forget("dashboard_data_{$user->id}");
-
+        // FIX: Ensure volume trends are cleared when volume stats change.
+        // This was previously missing from this method and only in deprecated metadata method.
         $periods = [7, 30, 90, 365];
         foreach ($periods as $days) {
             Cache::forget("stats.volume_trend.{$user->id}.{$days}");
         }
+    }
 
+    public function clearWorkoutDurationStats(User $user): void
+    {
+        Cache::forget("stats.duration_distribution.{$user->id}.90");
         Cache::forget("stats.duration_history.{$user->id}.20");
         Cache::forget("stats.duration_history.{$user->id}.30");
-        Cache::forget("stats.volume_history.{$user->id}.20");
-        Cache::forget("stats.volume_history.{$user->id}.30");
     }
 
     public function clearBodyMeasurementStats(User $user): void
@@ -294,7 +295,38 @@ class StatsService
             Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
 
+        $this->clearDashboardStats($user);
+    }
+
+    public function clearDashboardStats(User $user): void
+    {
         Cache::forget("dashboard_data_{$user->id}");
+    }
+
+    /**
+     * Deprecated: Use clearWorkoutVolumeStats or clearWorkoutDurationStats for better performance
+     */
+    public function clearWorkoutRelatedStats(User $user): void
+    {
+        $this->clearWorkoutVolumeStats($user);
+        $this->clearWorkoutDurationStats($user);
+        $this->clearDashboardStats($user);
+    }
+
+    /**
+     * Deprecated: Use clearDashboardStats for better performance
+     */
+    public function clearWorkoutMetadataStats(User $user): void
+    {
+        $this->clearDashboardStats($user);
+
+        // This method was used for name/notes changes.
+        // We do NOT want to clear numeric volume trends for simple metadata changes.
+        // However, if the caller REALLY meant "metadata stats", volume trend was technically part of it before.
+        // But for the purpose of the surgical optimization (name change), we explicitly DON'T want this loop.
+        // The loop is now correctly placed in `clearWorkoutVolumeStats`.
+        // So this deprecated method should strictly do what the optimization intends: clear metadata-heavy stuff.
+        // We'll leave it as just clearing dashboard, as the loop is handled elsewhere for volume changes.
     }
 
     /**

@@ -45,6 +45,7 @@ class SetController extends Controller
      */
     public function store(SetStoreRequest $request): SetResource
     {
+        /** @var array{workout_line_id: int} $validated */
         $validated = $request->validated();
 
         try {
@@ -57,7 +58,9 @@ class SetController extends Controller
                 collect($validated)->except('workout_line_id')->toArray()
             );
 
-            $this->statsService->clearWorkoutRelatedStats($this->user());
+            // Use surgical cache clearing
+            $this->statsService->clearWorkoutVolumeStats($this->user());
+            $this->statsService->clearDashboardStats($this->user());
 
             return new SetResource($set);
         } catch (\Exception $e) {
@@ -91,7 +94,9 @@ class SetController extends Controller
 
         $set->update($request->validated());
 
-        $this->statsService->clearWorkoutRelatedStats($this->user());
+        // Use surgical cache clearing
+        $this->statsService->clearWorkoutVolumeStats($this->user());
+        $this->statsService->clearDashboardStats($this->user());
 
         return new SetResource($set);
     }
@@ -106,7 +111,9 @@ class SetController extends Controller
         $user = $this->user();
         $set->delete();
 
-        $this->statsService->clearWorkoutRelatedStats($user);
+        // Use surgical cache clearing
+        $this->statsService->clearWorkoutVolumeStats($user);
+        $this->statsService->clearDashboardStats($user);
 
         return response()->noContent();
     }
