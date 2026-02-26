@@ -236,6 +236,16 @@ final class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(WarmupPreference::class);
     }
 
+    public function getUnreadNotificationsCountCached(): int
+    {
+        return app(\App\Services\NotificationService::class)->getUnreadCount($this);
+    }
+
+    public function getLatestAchievementCached(): ?Notification
+    {
+        return app(\App\Services\NotificationService::class)->getLatestAchievement($this);
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
