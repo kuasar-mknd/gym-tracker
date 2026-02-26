@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Api\StoreFastRequest;
 use App\Http\Requests\Api\UpdateFastRequest;
 use App\Models\Fast;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,9 +29,31 @@ class FastingController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        // Chart Data: Last 30 completed fasts
+        $chartData = $user->fasts()
+            ->where('status', 'completed')
+            ->whereNotNull('end_time')
+            ->orderBy('end_time', 'desc')
+            ->take(30)
+            ->get()
+            ->reverse()
+            ->values()
+            ->map(function ($fast) {
+                $start = Carbon::parse($fast->start_time);
+                $end = Carbon::parse($fast->end_time);
+                $durationHours = $end->diffInMinutes($start) / 60;
+
+                return [
+                    'date' => $end->format('d/m'),
+                    'duration' => round($durationHours, 1),
+                    'target' => round($fast->target_duration_minutes / 60, 1),
+                ];
+            });
+
         return Inertia::render('Tools/Fasting/Index', [
             'activeFast' => $activeFast,
             'history' => $history,
+            'fastingHistoryChartData' => $chartData,
         ]);
     }
 

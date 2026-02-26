@@ -4,7 +4,7 @@ import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import duration from 'dayjs/plugin/duration'
@@ -12,9 +12,12 @@ import duration from 'dayjs/plugin/duration'
 dayjs.extend(relativeTime)
 dayjs.extend(duration)
 
+const FastingHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/FastingHistoryChart.vue'))
+
 const props = defineProps({
     activeFast: Object,
     history: Object,
+    fastingHistoryChartData: Array,
 })
 
 const fastingTypes = [
@@ -211,6 +214,15 @@ const formatHistoryDuration = (start, end) => {
                         Commencer
                     </GlassButton>
                 </form>
+            </GlassCard>
+
+            <!-- History Chart -->
+            <GlassCard v-if="fastingHistoryChartData && fastingHistoryChartData.length > 0" class="p-6">
+                <div class="mb-4">
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression</h3>
+                    <p class="text-text-muted text-xs font-semibold">Durée des derniers jeûnes</p>
+                </div>
+                <FastingHistoryChart :data="fastingHistoryChartData" />
             </GlassCard>
 
             <!-- History Section -->
