@@ -15,10 +15,10 @@ use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Services\NotificationService;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use App\Services\NotificationService;
 
 /**
  * @property int $id
