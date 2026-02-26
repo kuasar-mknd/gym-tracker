@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Profile\UpdateNotificationPreferencesAction;
+use App\Http\Requests\DeleteUserRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UpdateNotificationPreferencesRequest;
 use Illuminate\Http\RedirectResponse;
@@ -80,11 +81,9 @@ class ProfileController extends Controller
     /**
      * Delete the user's account.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(DeleteUserRequest $request): RedirectResponse
     {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
+        $request->validated();
 
         $user = $this->user();
 
