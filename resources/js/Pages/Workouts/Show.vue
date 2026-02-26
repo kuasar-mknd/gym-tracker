@@ -17,6 +17,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
+import SessionAnalysis from '@/Components/Workout/SessionAnalysis.vue'
 import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
@@ -651,9 +652,13 @@ const hasNoResults = computed(() => {
             </span>
         </template>
 
-        <div class="space-y-4">
+        <div class="space-y-6">
+            <!-- Session Analysis (if finished) -->
+            <SessionAnalysis v-if="workout.ended_at" :workout="workout" />
+
             <!-- Exercise Cards -->
-            <GlassCard v-for="line in workout.workout_lines" :key="line.id" class="animate-slide-up">
+            <div class="space-y-4">
+                <GlassCard v-for="line in workout.workout_lines" :key="line.id" class="animate-slide-up">
                 <!-- Exercise Header -->
                 <div class="mb-4 flex items-center justify-between">
                     <div>
@@ -892,23 +897,24 @@ const hasNoResults = computed(() => {
                 Ajouter un exercice
             </button>
 
-            <!-- Empty State -->
-            <GlassCard v-if="workout.workout_lines.length === 0" class="animate-slide-up">
-                <div class="py-12 text-center">
-                    <div class="mb-3 text-5xl">🎯</div>
-                    <h3 class="text-text-main text-lg font-bold">Séance vide</h3>
-                    <p class="text-text-muted mt-1">Ajoute ton premier exercice</p>
-                    <GlassButton
-                        v-if="!workout.ended_at"
-                        variant="primary"
-                        @click="showAddExercise = true"
-                        class="px-8"
-                        data-testid="add-exercise-button"
-                    >
-                        Ajouter un exercice
-                    </GlassButton>
-                </div>
-            </GlassCard>
+                <!-- Empty State -->
+                <GlassCard v-if="workout.workout_lines.length === 0" class="animate-slide-up">
+                    <div class="py-12 text-center">
+                        <div class="mb-3 text-5xl">🎯</div>
+                        <h3 class="text-text-main text-lg font-bold">Séance vide</h3>
+                        <p class="text-text-muted mt-1">Ajoute ton premier exercice</p>
+                        <GlassButton
+                            v-if="!workout.ended_at"
+                            variant="primary"
+                            @click="showAddExercise = true"
+                            class="px-8"
+                            data-testid="add-exercise-button"
+                        >
+                            Ajouter un exercice
+                        </GlassButton>
+                    </div>
+                </GlassCard>
+            </div>
         </div>
 
         <!-- Add Exercise Modal -->
