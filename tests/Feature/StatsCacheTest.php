@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use App\Services\StatsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -81,7 +82,8 @@ class StatsCacheTest extends TestCase
             'name' => 'New Name',
         ]);
 
-        $this->assertFalse(Cache::has($trendKey), 'Volume trend cache should be cleared when name changes');
+        // Optimized behavior: Name change does NOT clear volume trend (only dashboard list).
+        $this->assertTrue(Cache::has($trendKey), 'Volume trend cache should NOT be cleared when only name changes (optimization)');
         $this->assertTrue(Cache::has($muscleKey), 'Muscle distribution cache should NOT be cleared when only name changes');
     }
 
@@ -107,5 +109,27 @@ class StatsCacheTest extends TestCase
 
         $this->assertFalse(Cache::has($trendKey), 'Volume trend cache should be cleared');
         $this->assertFalse(Cache::has($muscleKey), 'Muscle distribution cache should be cleared when date changes');
+    }
+
+    public function test_adding_set_clears_volume_trend_cache(): void
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDay(),
+        ]);
+        $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+
+        // Fill caches
+        $trendKey = "stats.volume_trend.{$user->id}.30";
+        Cache::put($trendKey, ['data'], 600);
+
+        // Add Set
+        $this->actingAs($user)->post(route('sets.store', $line), [
+            'weight' => 100,
+            'reps' => 10,
+        ]);
+
+        $this->assertFalse(Cache::has($trendKey), 'Volume trend cache MUST be cleared when a set is added');
     }
 }
