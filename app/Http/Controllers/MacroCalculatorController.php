@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Tools\CreateMacroCalculationAction;
-use App\Http\Requests\StoreMacroCalculationRequest;
+use App\Http\Requests\Api\StoreMacroCalculationRequest;
 use App\Models\MacroCalculation;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;

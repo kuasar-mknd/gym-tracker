@@ -4,21 +4,19 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\DeletePushSubscriptionRequest;
+use App\Http\Requests\UpdatePushSubscriptionRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class PushSubscriptionController extends Controller
 {
     /**
      * Store a new push subscription.
      */
-    public function update(Request $request): JsonResponse
+    public function update(UpdatePushSubscriptionRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'endpoint' => 'required|url',
-            'keys.auth' => 'required',
-            'keys.p256dh' => 'required',
-        ]);
+        /** @var array{endpoint: string, keys: array{auth: string, p256dh: string}} $validated */
+        $validated = $request->validated();
 
         $this->user()->updatePushSubscription(
             $validated['endpoint'],
@@ -32,11 +30,10 @@ class PushSubscriptionController extends Controller
     /**
      * Delete a push subscription.
      */
-    public function destroy(Request $request): JsonResponse
+    public function destroy(DeletePushSubscriptionRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'endpoint' => 'required|url',
-        ]);
+        /** @var array{endpoint: string} $validated */
+        $validated = $request->validated();
 
         $this->user()->deletePushSubscription($validated['endpoint']);
 
