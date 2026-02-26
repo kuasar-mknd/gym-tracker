@@ -17,7 +17,6 @@ class WorkoutTemplateLineUpdateRequest extends FormRequest
         $workoutTemplateLine = $this->route('workout_template_line');
 
         if (! $workoutTemplateLine instanceof WorkoutTemplateLine) {
-            // @phpstan-ignore-next-line
             $workoutTemplateLine = WorkoutTemplateLine::find($workoutTemplateLine);
         }
 
