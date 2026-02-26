@@ -17,7 +17,7 @@ class SetStoreRequest extends FormRequest
         /** @var mixed $workoutLineId */
         $workoutLineId = $this->input('workout_line_id');
 
-        if (empty($workoutLineId)) {
+        if ($workoutLineId === null) {
             return true;
         }
 

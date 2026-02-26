@@ -22,13 +22,13 @@ final class PersonalRecordService
 
         /** @var float|int|null $weight */
         $weight = $set->weight;
-        if (empty($weight) || $weight <= 0) {
+        if ($weight === null || $weight <= 0) {
             return;
         }
 
         /** @var int|null $reps */
         $reps = $set->reps;
-        if (empty($reps) || $reps <= 0) {
+        if ($reps === null || $reps <= 0) {
             return;
         }
 
