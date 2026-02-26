@@ -7,8 +7,8 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-use \App\Services\PersonalRecordService;
-use \App\Services\StreakService;
+use App\Services\PersonalRecordService;
+use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -37,8 +37,8 @@ class AppServiceProvider extends ServiceProvider
         // Enforce strict model behavior in non-production environments
         // This prevents N+1 queries (preventLazyLoading) and Mass Assignment vulnerabilities (preventSilentlyDiscardingAttributes).
         // We do NOT enable preventAccessingMissingAttributes to avoid breaking existing tests/logic that rely on lenient attribute access.
-        Model::preventLazyLoading(! $this->app->isProduction());
-        Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
+        Model::preventLazyLoading(!$this->app->isProduction());
+        Model::preventSilentlyDiscardingAttributes(!$this->app->isProduction());
 
         Password::defaults(function () {
             $rule = Password::min(8);
@@ -101,7 +101,7 @@ class AppServiceProvider extends ServiceProvider
     private function configureModelHooks(): void
     {
         $syncGoals = function (?\App\Models\User $user, bool $debounce = false): void {
-            if (! $user) {
+            if (!$user) {
                 return;
             }
             if ($debounce) {
@@ -115,7 +115,7 @@ class AppServiceProvider extends ServiceProvider
         };
 
         $syncAchievements = function (?\App\Models\User $user, bool $debounce = false): void {
-            if (! $user) {
+            if (!$user) {
                 return;
             }
             if ($debounce) {
