@@ -1,4 +1,4 @@
-name: Auto-Merge PRs
+name: Dependabot Auto-Merge
 
 on: pull_request
 
@@ -24,24 +24,6 @@ jobs:
               run: |
                   gh pr review --approve "$PR_URL"
                   gh pr merge --auto --squash "$PR_URL"
-              env:
-                  PR_URL: ${{ github.event.pull_request.html_url }}
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    user-pr:
-        runs-on: ubuntu-latest
-        if: github.event.pull_request.user.login == 'kuasar-mknd'
-        steps:
-            - name: Approve and auto-merge User PRs
-              run: |
-                  OTHER_AUTHORS=$(gh pr view "$PR_URL" --json commits --jq '[.commits[].authors[]?.login | select(. != "kuasar-mknd" and . != "github-actions[bot]" and . != null)] | unique | length')
-                  if [ "$OTHER_AUTHORS" -eq 0 ]; then
-                      echo "kuasar-mknd is the sole contributor. Enabling auto-merge..."
-                      gh pr review --approve "$PR_URL" || true
-                      gh pr merge --auto --squash "$PR_URL"
-                  else
-                      echo "Other contributors found. Skipping auto-merge."
-                  fi
               env:
                   PR_URL: ${{ github.event.pull_request.html_url }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

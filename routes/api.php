@@ -13,8 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.')->group(function (): void {
-    // User
-    Route::get('/user', fn (Request $request): \App\Http\Resources\UserResource => new \App\Http\Resources\UserResource($request->user()));
+    Route::get('/user', fn(Request $request): \App\Http\Resources\UserResource => new \App\Http\Resources\UserResource($request->user()));
 
     Route::apiResource('achievements', \App\Http\Controllers\Api\AchievementController::class);
     Route::apiResource('user-achievements', \App\Http\Controllers\Api\UserAchievementController::class);
@@ -43,5 +42,5 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'throttle:60,1'])->as('api.v1.'
     Route::apiResource('wilks-scores', \App\Http\Controllers\Api\WilksScoreController::class);
     Route::apiResource('interval-timers', \App\Http\Controllers\Api\IntervalTimerController::class);
 
-    Route::get('/status', fn () => response()->json(['status' => 'ok']));
+    Route::get('/status', fn() => response()->json(['status' => 'ok']));
 });
