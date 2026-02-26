@@ -12,7 +12,7 @@ use UnexpectedValueException;
 class CreateOrUpdateDailyJournalAction
 {
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function execute(User $user, array $data): DailyJournal
     {
