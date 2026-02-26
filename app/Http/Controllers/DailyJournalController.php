@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\Journal\CreateOrUpdateDailyJournalAction;
 use App\Http\Requests\DailyJournalStoreRequest;
 use App\Models\DailyJournal;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -34,14 +33,27 @@ class DailyJournalController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(DailyJournalStoreRequest $request, CreateOrUpdateDailyJournalAction $action): \Illuminate\Http\RedirectResponse
+    public function store(DailyJournalStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', DailyJournal::class);
 
-        /** @var array<string, mixed> $validated */
         $validated = $request->validated();
+        $dateInput = $validated['date'];
+        if (! is_string($dateInput)) {
+            throw new \UnexpectedValueException('Date must be a string');
+        }
+        $date = \Illuminate\Support\Carbon::parse($dateInput);
+        $dateString = $date->format('Y-m-d');
 
-        $action->execute($this->user(), $validated);
+        $journal = $this->user()->dailyJournals()->where('date', $dateString)->first() ?? new DailyJournal();
+
+        if (! $journal->exists) {
+            $journal->user_id = $this->user()->id;
+            $journal->date = $date;
+        }
+
+        $journal->fill($validated);
+        $journal->save();
 
         return redirect()->back();
     }
