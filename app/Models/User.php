@@ -236,6 +236,14 @@ final class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(WarmupPreference::class);
     }
 
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email', 'avatar', 'default_rest_time'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
     public function getUnreadNotificationsCountCached(): int
     {
         return app(\App\Services\NotificationService::class)->getUnreadCount($this);
@@ -244,14 +252,6 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function getLatestAchievementCached(): ?Notification
     {
         return app(\App\Services\NotificationService::class)->getLatestAchievement($this);
-    }
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['name', 'email', 'avatar', 'default_rest_time'])
-            ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
     }
 
     /**
