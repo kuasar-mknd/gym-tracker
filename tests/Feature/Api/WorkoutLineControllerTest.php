@@ -10,7 +10,7 @@ use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
-test('index returns user workout lines', function (): void {
+test('index returns user workout lines', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
@@ -28,7 +28,7 @@ test('index returns user workout lines', function (): void {
         ->assertJsonFragment(['id' => $line->id]);
 });
 
-test('store creates workout line', function (): void {
+test('store creates workout line', function () {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $exercise = Exercise::factory()->create();
@@ -48,7 +48,7 @@ test('store creates workout line', function (): void {
     expect($workout->workoutLines()->count())->toBe(1);
 });
 
-test('store validates workout ownership', function (): void {
+test('store validates workout ownership', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -62,7 +62,7 @@ test('store validates workout ownership', function (): void {
         ->assertForbidden();
 });
 
-test('show returns workout line', function (): void {
+test('show returns workout line', function () {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -73,7 +73,7 @@ test('show returns workout line', function (): void {
         ->assertJsonFragment(['id' => $line->id]);
 });
 
-test('update updates workout line', function (): void {
+test('update updates workout line', function () {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'notes' => 'Old Note']);
@@ -86,7 +86,7 @@ test('update updates workout line', function (): void {
         ->assertJsonFragment(['notes' => 'New Note']);
 });
 
-test('destroy deletes workout line', function (): void {
+test('destroy deletes workout line', function () {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);

@@ -27,7 +27,7 @@ describe('SupplementController', function (): void {
         actingAs($user)
             ->get(route('supplements.index'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
+            ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Supplements/Index')
                 ->has('supplements')
                 ->has('usageHistory')
