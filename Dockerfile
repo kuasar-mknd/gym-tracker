@@ -19,10 +19,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # 2. Builder stage for Frontend assets
-FROM --platform=$BUILDPLATFORM node:25-slim AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:22-slim AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 COPY vite.config.js tailwind.config.js ./
 COPY resources/ ./resources/
