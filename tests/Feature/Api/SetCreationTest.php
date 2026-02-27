@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Laravel\Sanctum\Sanctum;
 
-it('can create a set via API with minimal data', function () {
+it('can create a set via API with minimal data', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
