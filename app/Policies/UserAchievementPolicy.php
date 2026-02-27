@@ -22,18 +22,28 @@ final class UserAchievementPolicy
         return $user->id === $userAchievement->user_id;
     }
 
+    /**
+     * Standard users cannot manually create achievements.
+     * They are earned via system activity.
+     */
     public function create(): bool
     {
-        return true;
+        return false;
     }
 
+    /**
+     * Standard users cannot manually update achievements.
+     */
     public function update(User $user, UserAchievement $userAchievement): bool
     {
-        return $user->id === $userAchievement->user_id;
+        return false;
     }
 
+    /**
+     * Standard users cannot manually delete achievements.
+     */
     public function delete(User $user, UserAchievement $userAchievement): bool
     {
-        return $user->id === $userAchievement->user_id;
+        return false;
     }
 }

@@ -45,7 +45,7 @@ describe('UserAchievement API', function (): void {
             ]);
     });
 
-    test('can store user achievement', function (): void {
+    test('cannot store user achievement', function (): void {
         $achievement = Achievement::factory()->create();
 
         $response = postJson(route('api.v1.user-achievements.store'), [
@@ -53,13 +53,9 @@ describe('UserAchievement API', function (): void {
             'achieved_at' => now()->toIso8601String(),
         ]);
 
-        $response->assertCreated()
-            ->assertJsonFragment([
-                'user_id' => $this->user->id,
-                'achievement_id' => $achievement->id,
-            ]);
+        $response->assertForbidden();
 
-        $this->assertDatabaseHas('user_achievements', [
+        $this->assertDatabaseMissing('user_achievements', [
             'user_id' => $this->user->id,
             'achievement_id' => $achievement->id,
         ]);
@@ -82,7 +78,7 @@ describe('UserAchievement API', function (): void {
             ]);
     });
 
-    test('can update user achievement', function (): void {
+    test('cannot update user achievement', function (): void {
         $achievement = Achievement::factory()->create();
         $userAchievement = UserAchievement::create([
             'user_id' => $this->user->id,
@@ -96,14 +92,10 @@ describe('UserAchievement API', function (): void {
             'achieved_at' => $newDate,
         ]);
 
-        $response->assertOk();
-        // Since sqlite/mysql date precision might vary, just checking successful update
-        $this->assertDatabaseHas('user_achievements', [
-            'id' => $userAchievement->id,
-        ]);
+        $response->assertForbidden();
     });
 
-    test('can delete user achievement', function (): void {
+    test('cannot delete user achievement', function (): void {
         $achievement = Achievement::factory()->create();
         $userAchievement = UserAchievement::create([
             'user_id' => $this->user->id,
@@ -113,8 +105,8 @@ describe('UserAchievement API', function (): void {
 
         $response = deleteJson(route('api.v1.user-achievements.destroy', $userAchievement));
 
-        $response->assertNoContent();
-        $this->assertDatabaseMissing('user_achievements', [
+        $response->assertForbidden();
+        $this->assertDatabaseHas('user_achievements', [
             'id' => $userAchievement->id,
         ]);
     });
