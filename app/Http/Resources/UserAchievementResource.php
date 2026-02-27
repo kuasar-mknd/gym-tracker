@@ -15,6 +15,15 @@ class UserAchievementResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
+     * Returns:
+     * - `id`: The user achievement ID.
+     * - `user_id`: The ID of the user who earned the achievement.
+     * - `achievement_id`: The ID of the achievement definition.
+     * - `achieved_at`: The date/time when the achievement was earned.
+     * - `achievement`: The full achievement details (if loaded).
+     * - `created_at`: The creation timestamp.
+     * - `updated_at`: The last update timestamp.
+     *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array

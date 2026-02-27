@@ -23,12 +23,23 @@ final class PersonalRecordService
         // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
-        if (! $set->workoutLine || ! $set->workoutLine->workout) {
+        /** @var \App\Models\WorkoutLine|null $workoutLine */
+        $workoutLine = $set->workoutLine;
+
+        if (! $workoutLine) {
             return;
         }
 
-        /** @var \App\Models\User|null $user */
-        $user ??= $set->workoutLine->workout->user;
+        /** @var \App\Models\Workout|null $workout */
+        $workout = $workoutLine->workout;
+
+        if (! $workout) {
+            return;
+        }
+
+        /** @var \App\Models\User|null $workoutUser */
+        $workoutUser = $workout->user;
+        $user ??= $workoutUser;
 
         if (! $user) {
             return;
