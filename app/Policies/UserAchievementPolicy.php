@@ -27,12 +27,12 @@ final class UserAchievementPolicy
         return false;
     }
 
-    public function update(User $user, UserAchievement $userAchievement): bool
+    public function update(): bool
     {
         return false;
     }
 
-    public function delete(User $user, UserAchievement $userAchievement): bool
+    public function delete(): bool
     {
         return false;
     }
