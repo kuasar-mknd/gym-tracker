@@ -10,6 +10,8 @@ class UpdateUserAchievementRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {
@@ -18,6 +20,9 @@ class UpdateUserAchievementRequest extends FormRequest
 
     /**
      * Get the validation rules that apply to the request.
+     *
+     * Validates:
+     * - `achieved_at`: Optional, must be a valid date.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
