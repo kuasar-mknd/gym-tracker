@@ -22,15 +22,16 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
-        // @phpstan-ignore-next-line
-        $templates = QueryBuilder::for(WorkoutTemplate::class)
-            ->where('user_id', $this->user()->id)
-            ->allowedSorts(['created_at', 'name'])
-            ->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets']);
+        /** @var \Spatie\QueryBuilder\QueryBuilder<\App\Models\WorkoutTemplate> $templates */
+        $templates = QueryBuilder::for(WorkoutTemplate::class);
+        $templates->where('user_id', $this->user()->id);
 
-        $templates = $templates->paginate();
+        $templates->allowedSorts(['created_at', 'name']);
+        $templates->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets']);
 
-        return WorkoutTemplateResource::collection($templates);
+        $result = $templates->paginate();
+
+        return WorkoutTemplateResource::collection($result);
     }
 
     public function store(WorkoutTemplateStoreRequest $request, CreateWorkoutTemplateAction $action): WorkoutTemplateResource

@@ -13,11 +13,22 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Service for calculating and retrieving user workout statistics.
+ *
+ * This service handles the aggregation and caching of various user statistics,
+ * including volume trends, muscle distribution, personal records, and body measurements.
+ * Most methods implement a caching strategy to improve performance for expensive queries.
  */
 class StatsService
 {
     /**
-     * @return array<int, array{date: string, full_date: string, name: string, volume: float}>
+     * Get the volume trend (volume per workout) over a specific number of days.
+     *
+     * Calculates the total volume (weight * reps) for each workout within the given period.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  The number of days to look back (default: 30).
+     * @return array<int, array{date: string, full_date: string, name: string, volume: float}> List of workouts with their volume.
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
@@ -32,7 +43,14 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, day_name: string, volume: float}>
+     * Get the daily volume trend over a specific number of days.
+     *
+     * Aggregates the total volume per day. Days without workouts will have a volume of 0.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  The number of days to look back (default: 7).
+     * @return array<int, array{date: string, day_name: string, volume: float}> List of daily volumes.
      */
     public function getDailyVolumeTrend(User $user, int $days = 7): array
     {
@@ -50,7 +68,14 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{category: string, volume: float}>
+     * Get the muscle distribution based on volume over a specific number of days.
+     *
+     * Groups the total volume by exercise category (e.g., "Chest", "Legs").
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  The number of days to look back (default: 30).
+     * @return array<int, array{category: string, volume: float}> Volume distribution per category.
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
@@ -62,7 +87,15 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, one_rep_max: float}>
+     * Get the estimated 1RM progress for a specific exercise over time.
+     *
+     * Uses the Epley formula to estimate the 1 Rep Max for each workout session.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $exerciseId  The ID of the exercise.
+     * @param  int  $days  The number of days to look back (default: 90).
+     * @return array<int, array{date: string, full_date: string, one_rep_max: float}> List of 1RM estimates over time.
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
@@ -76,7 +109,13 @@ class StatsService
     }
 
     /**
-     * @return array{current_month_volume: float, previous_month_volume: float, difference: float, percentage: float}
+     * Compare the total volume of the current month with the previous month.
+     *
+     * Calculates the percentage difference between the two periods.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @return array{current_month_volume: float, previous_month_volume: float, difference: float, percentage: float} Comparison data.
      */
     public function getMonthlyVolumeComparison(User $user): array
     {
@@ -101,7 +140,14 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, weight: float}>
+     * Get the user's body weight history over a specific number of days.
+     *
+     * Retrieves recorded weight measurements.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  The number of days to look back (default: 90).
+     * @return array<int, array{date: string, full_date: string, weight: float}> List of weight measurements.
      */
     public function getWeightHistory(User $user, int $days = 90): array
     {
@@ -115,7 +161,13 @@ class StatsService
     }
 
     /**
-     * @return array{latest_weight: float|null, weight_change: float, latest_body_fat: float|null}
+     * Get the user's latest body metrics (weight and body fat).
+     *
+     * Retrieves the most recent and previous measurements to calculate the change.
+     * This method is NOT cached to provide real-time updates after a new entry.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @return array{latest_weight: float|null, weight_change: float, latest_body_fat: float|null} Latest metrics and changes.
      */
     public function getLatestBodyMetrics(User $user): array
     {
@@ -133,7 +185,14 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, body_fat: float}>
+     * Get the user's body fat percentage history over a specific number of days.
+     *
+     * Retrieves recorded body fat measurements.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  The number of days to look back (default: 90).
+     * @return array<int, array{date: string, full_date: string, body_fat: float}> List of body fat measurements.
      */
     public function getBodyFatHistory(User $user, int $days = 90): array
     {
@@ -147,7 +206,13 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, day_label: string, volume: float}>
+     * Get the daily volume trend for the current week.
+     *
+     * Returns a list of days in the current week (Mon-Sun) with their total volume.
+     * The result is cached for 10 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @return array<int, array{date: string, day_label: string, volume: float}> Daily volume for the current week.
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
@@ -166,7 +231,13 @@ class StatsService
     }
 
     /**
-     * @return array{current_week_volume: float, previous_week_volume: float, difference: float, percentage: float}
+     * Compare the total volume of the current week with the previous week.
+     *
+     * Calculates the percentage difference between the two weeks.
+     * The result is cached for 10 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @return array{current_week_volume: float, previous_week_volume: float, difference: float, percentage: float} Comparison data.
      */
     public function getWeeklyVolumeComparison(User $user): array
     {
@@ -193,7 +264,14 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, duration: int, name: string}>
+     * Get the duration history of the last N workouts.
+     *
+     * Retrieves the duration (in minutes) for the most recent completed workouts.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $limit  The number of workouts to retrieve (default: 20).
+     * @return array<int, array{date: string, duration: int, name: string}> List of workout durations.
      */
     public function getDurationHistory(User $user, int $limit = 20): array
     {
@@ -212,7 +290,14 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, volume: float, name: string}>
+     * Get the volume history of the last N workouts.
+     *
+     * Retrieves the total volume for the most recent completed workouts.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $limit  The number of workouts to retrieve (default: 20).
+     * @return array<int, array{date: string, volume: float, name: string}> List of workout volumes.
      */
     public function getVolumeHistory(User $user, int $limit = 20): array
     {
@@ -224,7 +309,14 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{label: string, count: int}>
+     * Get the distribution of workout durations.
+     *
+     * Categorizes workouts into duration buckets (e.g., "< 30 min", "30-60 min").
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $days  The number of days to look back (default: 90).
+     * @return array<int, array{label: string, count: int}> Distribution of durations.
      */
     public function getDurationDistribution(User $user, int $days = 90): array
     {
@@ -236,7 +328,14 @@ class StatsService
     }
 
     /**
-     * @return array<int, array{month: string, volume: float}>
+     * Get the monthly volume history over a specific number of months.
+     *
+     * Aggregates total volume per month.
+     * The result is cached for 30 minutes.
+     *
+     * @param  User  $user  The user to retrieve stats for.
+     * @param  int  $months  The number of months to look back (default: 6).
+     * @return array<int, array{month: string, volume: float}> Monthly volume totals.
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {
@@ -252,12 +351,24 @@ class StatsService
         );
     }
 
+    /**
+     * Clear all statistics cache for a user.
+     *
+     * @param  User  $user  The user to clear cache for.
+     */
     public function clearUserStatsCache(User $user): void
     {
         $this->clearWorkoutRelatedStats($user);
         $this->clearBodyMeasurementStats($user);
     }
 
+    /**
+     * Clear workout-related statistics cache for a user.
+     *
+     * This includes volume trends, muscle distribution, weekly volume, and duration stats.
+     *
+     * @param  User  $user  The user to clear cache for.
+     */
     public function clearWorkoutRelatedStats(User $user): void
     {
         $this->clearWorkoutTrendStats($user);
@@ -271,6 +382,13 @@ class StatsService
         Cache::forget("stats.monthly_volume_history.{$user->id}.6");
     }
 
+    /**
+     * Clear metadata statistics cache for a user.
+     *
+     * This includes dashboard data and specific history limits.
+     *
+     * @param  User  $user  The user to clear cache for.
+     */
     public function clearWorkoutMetadataStats(User $user): void
     {
         Cache::forget("dashboard_data_{$user->id}");
@@ -286,6 +404,13 @@ class StatsService
         Cache::forget("stats.volume_history.{$user->id}.30");
     }
 
+    /**
+     * Clear body measurement statistics cache for a user.
+     *
+     * This includes weight and body fat history.
+     *
+     * @param  User  $user  The user to clear cache for.
+     */
     public function clearBodyMeasurementStats(User $user): void
     {
         $periods = [7, 30, 90, 365];
