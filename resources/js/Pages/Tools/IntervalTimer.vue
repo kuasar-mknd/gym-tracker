@@ -351,6 +351,8 @@ onUnmounted(() => {
                     </div>
 
                     <div
+                        role="timer"
+                        aria-atomic="true"
                         class="font-display text-[6rem] leading-none font-black tracking-tighter tabular-nums"
                         :class="phaseColor"
                     >
@@ -358,7 +360,7 @@ onUnmounted(() => {
                     </div>
 
                     <div class="text-text-muted mt-8 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">repeat</span>
+                        <span class="material-symbols-outlined text-sm" aria-hidden="true">repeat</span>
                         <span class="font-bold">{{ currentRound }}</span>
                         <span class="text-xs">/ {{ timerConfig.rounds }}</span>
                     </div>
@@ -372,8 +374,9 @@ onUnmounted(() => {
                         <button
                             @click="toggleTimer"
                             class="text-text-main flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+                            :aria-label="status === 'running' ? 'Pause' : 'Démarrer'"
                         >
-                            <span class="material-symbols-outlined text-3xl">
+                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">
                                 {{ status === 'running' ? 'pause' : 'play_arrow' }}
                             </span>
                         </button>
@@ -381,8 +384,9 @@ onUnmounted(() => {
                         <button
                             @click="resetRunner"
                             class="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-lg backdrop-blur-md transition-transform hover:scale-110 active:scale-95"
+                            aria-label="Réinitialiser"
                         >
-                            <span class="material-symbols-outlined text-3xl">restart_alt</span>
+                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">restart_alt</span>
                         </button>
                     </div>
                 </GlassCard>
