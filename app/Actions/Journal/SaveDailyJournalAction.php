@@ -9,6 +9,9 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use UnexpectedValueException;
 
+/**
+ * Action to handle the creation or update of a DailyJournal entry.
+ */
 class SaveDailyJournalAction
 {
     /**

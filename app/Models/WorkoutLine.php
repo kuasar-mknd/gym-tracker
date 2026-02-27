@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $order
  * @property string|null $notes
  * @property-read \App\Models\Workout $workout
- * @property-read \App\Models\Exercise $exercise
+ * @property-read \App\Models\Exercise|null $exercise
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Set> $sets
  */
 class WorkoutLine extends Model

@@ -43,7 +43,10 @@ final class FetchCalendarEventsAction
             ->get()
             ->map(function ($workout): array {
                 /** @var array<int, string> $preview */
-                $preview = $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray();
+                $preview = $workout->workoutLines->take(3)
+                    ->map(fn ($line) => $line->exercise?->name)
+                    ->filter()
+                    ->toArray();
 
                 return [
                     'id' => $workout->id,
