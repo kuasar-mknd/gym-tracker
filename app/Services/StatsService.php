@@ -339,44 +339,34 @@ class StatsService
     }
 
     /**
-     * Calculate duration distribution using a single SQL aggregate query for performance.
-     * Reduces memory usage from O(N) to O(1).
-     *
      * @return array<int, array{label: string, count: int}>
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
+        $results = $this->queryDurationDistribution($user, $days);
+        $buckets = ['< 30 min', '30-60 min', '60-90 min', '90+ min'];
+
+        return array_map(fn (string $l): array => ['label' => $l, 'count' => (int) ($results->get($l) ?? 0)], $buckets);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<string, int>
+     */
+    protected function queryDurationDistribution(User $user, int $days): \Illuminate\Support\Collection
+    {
         $driver = DB::getDriverName();
-        $durationSql = match ($driver) {
+        $sql = match ($driver) {
             'sqlite' => 'ABS(julianday(ended_at) - julianday(started_at)) * 1440',
             'pgsql' => 'ABS(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60)',
             default => 'ABS(TIMESTAMPDIFF(MINUTE, started_at, ended_at))',
         };
 
-        /** @var \Illuminate\Support\Collection<string, int> $results */
-        $results = Workout::query()
-            ->where('user_id', $user->id)
-            ->whereNotNull('ended_at')
-            ->where('started_at', '>=', now()->subDays($days))
-            ->selectRaw("
-                CASE
-                    WHEN {$durationSql} < 30 THEN '< 30 min'
-                    WHEN {$durationSql} < 60 THEN '30-60 min'
-                    WHEN {$durationSql} < 90 THEN '60-90 min'
-                    ELSE '90+ min'
-                END as label,
-                COUNT(*) as count
-            ")
-            ->groupBy('label')
-            ->get()
-            ->pluck('count', 'label');
+        /** @var \Illuminate\Support\Collection<string, int> $pluck */
+        $pluck = Workout::where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))
+            ->selectRaw("CASE WHEN {$sql} < 30 THEN '< 30 min' WHEN {$sql} < 60 THEN '30-60 min' WHEN {$sql} < 90 THEN '60-90 min' ELSE '90+ min' END as label, COUNT(*) as count")
+            ->groupBy('label')->get()->pluck('count', 'label');
 
-        $buckets = ['< 30 min', '30-60 min', '60-90 min', '90+ min'];
-
-        return array_map(fn (string $label): array => [
-            'label' => $label,
-            'count' => (int) ($results->get($label) ?? 0),
-        ], $buckets);
+        return $pluck;
     }
 
     /**
