@@ -43,7 +43,16 @@ final class FetchCalendarEventsAction
             ->get()
             ->map(function ($workout): array {
                 /** @var array<int, string> $preview */
-                $preview = $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray();
+                $preview = $workout->workoutLines->take(3)->map(function ($line): string {
+                    /** @var \App\Models\Exercise|null $exercise */
+                    $exercise = $line->exercise;
+
+                    if ($exercise === null) {
+                        return '';
+                    }
+
+                    return $exercise->name;
+                })->toArray();
 
                 return [
                     'id' => $workout->id,

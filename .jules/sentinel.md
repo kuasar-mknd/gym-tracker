@@ -38,3 +38,15 @@
 **Vulnerability:** The `User` model included `current_streak`, `longest_streak`, and `last_workout_at` in the `$fillable` array. This exposed system-managed statistics to mass assignment vulnerabilities if any controller or action used unvalidated input (e.g., `User::create($request->all())`).
 **Learning:** Documentation or memory claiming "strict limits" on mass assignment was incorrect. Defense in Depth requires minimizing `$fillable` even if current usage patterns seem safe.
 **Prevention:** Audit `$fillable` arrays regularly. Remove system-managed fields and use `forceFill()` or direct property assignment in Services/Actions for internal state updates.
+
+## 2026-08-25 - Exposed API for System-Managed Achievements
+
+**Vulnerability:** The `UserAchievement` API resource allowed standard users to manually create, update, and delete their own achievements because the policy defaulted to `true` for these actions.
+**Learning:** Achievements are intended to be earned automatically via system logic (Stats/Achievement Services). Exposing these via a standard `apiResource` without strictly restricting the policy allows users to bypass the intended gamification logic and manually grant themselves rewards.
+**Prevention:** For any resource that is system-managed but associated with a user, ensure the Policy explicitly returns `false` for `create`, `update`, and `delete` actions, even if the user owns the record. Standard `apiResource` routes should be audited for "view-only" status.
+
+## 2026-08-27 - Broken Authorization via Missing Relationship Context
+
+**Vulnerability:** Authorization policies (e.g., `SetPolicy`, `WorkoutLinePolicy`) relied on nested relationship properties (e.g., `$set->workoutLine->workout->user_id`) without null checks. If a record had a missing or corrupted relationship, the policy would either throw an `ErrorException` (potentially leaking info via stack traces) or fail to correctly verify ownership, violating "Fail Securely" principles.
+**Learning:** Implicit trust in model relationship integrity is a security risk. If a relationship is nullable or could be missing due to data corruption/logic errors, authorization logic must explicitly check for `null` before accessing owner properties.
+**Prevention:** Always use defensive null checks or null-safe navigation in Policies and FormRequests when verifying ownership across relationships. Default to denying access (`return false`) if context is missing.

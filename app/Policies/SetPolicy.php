@@ -22,7 +22,7 @@ final class SetPolicy
      */
     public function view(User $user, Set $set): bool
     {
-        return $user->id === $set->workoutLine->workout->user_id;
+        return $set->workoutLine?->workout?->user_id === $user->id;
     }
 
     /**
@@ -34,7 +34,13 @@ final class SetPolicy
             return true;
         }
 
-        return $user->id === $workoutLine->workout->user_id && is_null($workoutLine->workout->ended_at);
+        $workout = $workoutLine->workout;
+
+        if ($workout === null) {
+            return false;
+        }
+
+        return $user->id === $workout->user_id && is_null($workout->ended_at);
     }
 
     /**
@@ -42,7 +48,13 @@ final class SetPolicy
      */
     public function update(User $user, Set $set): bool
     {
-        return $user->id === $set->workoutLine->workout->user_id && is_null($set->workoutLine->workout->ended_at);
+        $workout = $set->workoutLine?->workout;
+
+        if ($workout === null) {
+            return false;
+        }
+
+        return $user->id === $workout->user_id && is_null($workout->ended_at);
     }
 
     /**
@@ -50,6 +62,12 @@ final class SetPolicy
      */
     public function delete(User $user, Set $set): bool
     {
-        return $user->id === $set->workoutLine->workout->user_id && is_null($set->workoutLine->workout->ended_at);
+        $workout = $set->workoutLine?->workout;
+
+        if ($workout === null) {
+            return false;
+        }
+
+        return $user->id === $workout->user_id && is_null($workout->ended_at);
     }
 }

@@ -27,9 +27,9 @@ final class PersonalRecordService
             return;
         }
 
-        /** @var \App\Models\User|null $user */
         $user ??= $set->workoutLine->workout->user;
 
+        /** @var \App\Models\User|null $user */
         if (! $user) {
             return;
         }
@@ -56,8 +56,11 @@ final class PersonalRecordService
             return;
         }
 
+        /** @var \App\Models\WorkoutLine $workoutLine */
+        $workoutLine = $set->workoutLine;
+
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
-        $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
+        $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
 
         if ($user->isNotificationEnabled('personal_record')) {
             $user->notify(new PersonalRecordAchieved($pr));
