@@ -23,7 +23,11 @@ final class PersonalRecordService
         // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
-        if (! $set->workoutLine || ! $set->workoutLine->workout) {
+        if (! $set->workoutLine) {
+            return;
+        }
+
+        if (! $set->workoutLine->workout) {
             return;
         }
 
@@ -56,8 +60,14 @@ final class PersonalRecordService
             return;
         }
 
+        $workoutLine = $set->workoutLine;
+        if (! $workoutLine) {
+            // Should not happen as checked in caller, but for safety and PHPStan
+            return;
+        }
+
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
-        $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
+        $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
 
         if ($user->isNotificationEnabled('personal_record')) {
             $user->notify(new PersonalRecordAchieved($pr));
