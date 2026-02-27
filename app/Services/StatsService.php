@@ -343,15 +343,30 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
-        $workouts = Workout::select(['started_at', 'ended_at'])->where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))->get();
-        $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
+        $results = $this->queryDurationDistribution($user, $days);
+        $buckets = ['< 30 min', '30-60 min', '60-90 min', '90+ min'];
 
-        foreach ($workouts as $workout) {
-            $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
-            $this->incrementBucket($buckets, $minutes);
-        }
+        return array_map(fn (string $l): array => ['label' => $l, 'count' => (int) ($results->get($l) ?? 0)], $buckets);
+    }
 
-        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
+    /**
+     * @return \Illuminate\Support\Collection<string, int>
+     */
+    protected function queryDurationDistribution(User $user, int $days): \Illuminate\Support\Collection
+    {
+        $driver = DB::getDriverName();
+        $sql = match ($driver) {
+            'sqlite' => 'ABS(julianday(ended_at) - julianday(started_at)) * 1440',
+            'pgsql' => 'ABS(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60)',
+            default => 'ABS(TIMESTAMPDIFF(MINUTE, started_at, ended_at))',
+        };
+
+        /** @var \Illuminate\Support\Collection<string, int> $pluck */
+        $pluck = Workout::where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))
+            ->selectRaw("CASE WHEN {$sql} < 30 THEN '< 30 min' WHEN {$sql} < 60 THEN '30-60 min' WHEN {$sql} < 90 THEN '60-90 min' ELSE '90+ min' END as label, COUNT(*) as count")
+            ->groupBy('label')->get()->pluck('count', 'label');
+
+        return $pluck;
     }
 
     /**
@@ -599,21 +614,5 @@ class StatsService
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
         return ['current_volume' => $currentVolume, 'previous_volume' => $previousVolume, 'difference' => $diff, 'percentage' => round($percentage, 1)];
-    }
-
-    /**
-     * @param  array<string, int>  $buckets
-     */
-    private function incrementBucket(array &$buckets, int $minutes): void
-    {
-        if ($minutes < 30) {
-            $buckets['< 30 min']++;
-        } elseif ($minutes < 60) {
-            $buckets['30-60 min']++;
-        } elseif ($minutes < 90) {
-            $buckets['60-90 min']++;
-        } else {
-            $buckets['90+ min']++;
-        }
     }
 }
