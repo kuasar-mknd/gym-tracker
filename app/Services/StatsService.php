@@ -343,12 +343,57 @@ class StatsService
      */
     protected function calculateDurationDistribution(User $user, int $days): array
     {
-        $workouts = Workout::select(['started_at', 'ended_at'])->where('user_id', $user->id)->whereNotNull('ended_at')->where('started_at', '>=', now()->subDays($days))->get();
+        $driver = DB::connection()->getDriverName();
+
+        $durationSql = match ($driver) {
+            'sqlite' => '(julianday(ended_at) - julianday(started_at)) * 1440',
+            'mysql' => 'TIMESTAMPDIFF(MINUTE, started_at, ended_at)',
+            'pgsql' => 'EXTRACT(EPOCH FROM (ended_at - started_at)) / 60',
+            default => null,
+        };
+
+        // Fallback to in-memory processing if driver is unsupported
+        if ($durationSql === null) {
+            $workouts = Workout::select(['started_at', 'ended_at'])
+                ->where('user_id', $user->id)
+                ->whereNotNull('ended_at')
+                ->where('started_at', '>=', now()->subDays($days))
+                ->get();
+
+            $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
+
+            foreach ($workouts as $workout) {
+                $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
+                $this->incrementBucket($buckets, $minutes);
+            }
+
+            return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
+        }
+
+        // PERFORMANCE OPTIMIZATION: Database-level aggregation to avoid loading large collections into memory.
+        // O(1) memory usage regardless of workout count.
+        $results = DB::table('workouts')
+            ->where('user_id', $user->id)
+            ->whereNotNull('ended_at')
+            ->where('started_at', '>=', now()->subDays($days))
+            ->selectRaw("
+                CASE
+                    WHEN ABS($durationSql) < 30 THEN '< 30 min'
+                    WHEN ABS($durationSql) < 60 THEN '30-60 min'
+                    WHEN ABS($durationSql) < 90 THEN '60-90 min'
+                    ELSE '90+ min'
+                END as label,
+                COUNT(*) as count
+            ")
+            ->groupBy('label')
+            ->get();
+
         $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
 
-        foreach ($workouts as $workout) {
-            $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
-            $this->incrementBucket($buckets, $minutes);
+        foreach ($results as $result) {
+            if (isset($buckets[$result->label])) {
+                $buckets[$result->label] = (int) $result->count;
+            }
         }
 
         return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
