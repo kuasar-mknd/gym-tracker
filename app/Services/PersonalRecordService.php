@@ -23,7 +23,11 @@ final class PersonalRecordService
         // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
-        if (! $set->workoutLine || ! $set->workoutLine->workout) {
+        if (! $set->workoutLine) {
+            return;
+        }
+
+        if (! $set->workoutLine->workout) {
             return;
         }
 
@@ -53,6 +57,10 @@ final class PersonalRecordService
     protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
     {
         if ($pr && $value <= $pr->value) {
+            return;
+        }
+
+        if (! $set->workoutLine) {
             return;
         }
 

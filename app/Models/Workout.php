@@ -6,29 +6,32 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @property int $id
- * @property int $user_id
- * @property string|null $name
- * @property \Illuminate\Support\Carbon $started_at
- * @property \Illuminate\Support\Carbon|null $ended_at
- * @property string|null $notes
- * @property-read \App\Models\User $user
+ * @property int|null $user_id
+ * @property string $name
+ * @property string $status
+ * @property-read \App\Models\User|null $user
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkoutLine> $workoutLines
  */
 class Workout extends Model
 {
     /** @use HasFactory<\Database\Factories\WorkoutFactory> */
-    use HasFactory, LogsActivity;
+    use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
+        'status',
         'started_at',
         'ended_at',
         'notes',
+    ];
+
+    protected $casts = [
+        'started_at' => 'datetime',
+        'ended_at' => 'datetime',
     ];
 
     /**
@@ -44,22 +47,6 @@ class Workout extends Model
      */
     public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(WorkoutLine::class)->orderBy('order');
-    }
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['started_at', 'ended_at', 'name'])
-            ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'started_at' => 'datetime',
-            'ended_at' => 'datetime',
-        ];
+        return $this->hasMany(WorkoutLine::class);
     }
 }
