@@ -11,10 +11,7 @@ use App\Models\UserAchievement;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
-use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
-use function Pest\Laravel\patchJson;
-use function Pest\Laravel\postJson;
 
 test('authenticated user can list their achievements', function (): void {
     $user = User::factory()->create();
