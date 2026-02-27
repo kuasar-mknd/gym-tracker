@@ -34,7 +34,7 @@ final class UserAchievementPolicy
     /**
      * Standard users cannot manually update achievements.
      */
-    public function update(User $user, UserAchievement $userAchievement): bool
+    public function update(): bool
     {
         return false;
     }
@@ -42,7 +42,7 @@ final class UserAchievementPolicy
     /**
      * Standard users cannot manually delete achievements.
      */
-    public function delete(User $user, UserAchievement $userAchievement): bool
+    public function delete(): bool
     {
         return false;
     }
