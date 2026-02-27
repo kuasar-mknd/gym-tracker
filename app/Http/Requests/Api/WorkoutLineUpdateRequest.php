@@ -24,10 +24,16 @@ class WorkoutLineUpdateRequest extends FormRequest
             return false;
         }
 
+        $workout = $workoutLine->workout;
+
+        if ($workout === null) {
+            return false;
+        }
+
         /** @var \App\Models\User $user */
         $user = $this->user();
 
-        return $workoutLine->workout->user_id === $user->id;
+        return $workout->user_id === $user->id;
     }
 
     /**

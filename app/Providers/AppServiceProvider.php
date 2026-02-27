@@ -137,8 +137,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Sets only trigger if the workout is finished, and they are debounced per request
         Set::saved(function (Set $set) use ($syncGoals): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
+            $workout = $set->workoutLine?->workout;
+            if ($workout && $workout->ended_at !== null) {
                 $syncGoals($workout->user, true);
             }
             $this->updateUserVolume($set);
@@ -146,16 +146,16 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Set::deleted(function (Set $set) use ($syncGoals): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
+            $workout = $set->workoutLine?->workout;
+            if ($workout && $workout->ended_at !== null) {
                 $syncGoals($workout->user, true);
             }
             $this->decrementUserVolume($set);
         });
 
         Set::saved(function (Set $set) use ($syncAchievements): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
+            $workout = $set->workoutLine?->workout;
+            if ($workout && $workout->ended_at !== null) {
                 $syncAchievements($workout->user, true);
             }
         });
@@ -167,7 +167,12 @@ class AppServiceProvider extends ServiceProvider
 
     private function updateUserVolume(Set $set): void
     {
-        $u = $set->workoutLine->workout->user;
+        $workout = $set->workoutLine?->workout;
+        if ($workout === null) {
+            return;
+        }
+
+        $u = $workout->user;
         $ow = $set->getOriginal('weight');
         $or = $set->getOriginal('reps');
         $ov = (is_numeric($ow) ? (float) $ow : 0.0) * (is_numeric($or) ? (int) $or : 0);
@@ -181,7 +186,12 @@ class AppServiceProvider extends ServiceProvider
 
     private function decrementUserVolume(Set $set): void
     {
-        $u = $set->workoutLine->workout->user;
+        $workout = $set->workoutLine?->workout;
+        if ($workout === null) {
+            return;
+        }
+
+        $u = $workout->user;
         $v = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
         if ($v !== 0.0) {
             $u->decrement('total_volume', $v);
