@@ -6,7 +6,6 @@ namespace App\Http\Requests\Api;
 
 use App\Models\Achievement;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class AchievementStoreRequest extends FormRequest
 {

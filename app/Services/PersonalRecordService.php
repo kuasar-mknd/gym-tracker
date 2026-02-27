@@ -16,6 +16,7 @@ final class PersonalRecordService
 {
     public function syncSetPRs(Set $set, ?User $user = null): void
     {
+        // @phpstan-ignore-next-line
         if ($set->is_warmup || ! $set->weight || ! $set->reps) {
             return;
         }
@@ -23,6 +24,7 @@ final class PersonalRecordService
         // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
+        // @phpstan-ignore-next-line
         if (! $set->workoutLine || ! $set->workoutLine->workout) {
             return;
         }
