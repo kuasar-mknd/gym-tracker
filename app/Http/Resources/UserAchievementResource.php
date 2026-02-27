@@ -24,7 +24,6 @@ class UserAchievementResource extends JsonResource
      * - `created_at`: The creation timestamp.
      * - `updated_at`: The last update timestamp.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
