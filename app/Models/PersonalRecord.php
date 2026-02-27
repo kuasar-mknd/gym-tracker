@@ -17,8 +17,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $workout_id
  * @property int|null $set_id
  * @property \Illuminate\Support\Carbon|null $achieved_at
- * @property-read \App\Models\User $user
- * @property-read \App\Models\Exercise $exercise
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\Exercise|null $exercise
  * @property-read \App\Models\Workout|null $workout
  * @property-read \App\Models\Set|null $set
  */

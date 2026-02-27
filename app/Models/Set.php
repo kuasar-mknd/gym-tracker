@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property float|null $distance_km
  * @property bool $is_warmup
  * @property bool $is_completed
- * @property-read \App\Models\WorkoutLine $workoutLine
+ * @property-read \App\Models\WorkoutLine|null $workoutLine
  * @property-read \App\Models\PersonalRecord|null $personalRecord
  */
 class Set extends Model

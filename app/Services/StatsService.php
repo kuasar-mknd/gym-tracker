@@ -353,6 +353,7 @@ class StatsService
             default => 'ABS(TIMESTAMPDIFF(MINUTE, started_at, ended_at))',
         };
 
+        /** @var \Illuminate\Support\Collection<string, int> $results */
         $results = Workout::query()
             ->where('user_id', $user->id)
             ->whereNotNull('ended_at')
@@ -374,7 +375,7 @@ class StatsService
 
         return array_map(fn (string $label): array => [
             'label' => $label,
-            'count' => (int) ($results[$label] ?? 0),
+            'count' => (int) ($results->get($label) ?? 0),
         ], $buckets);
     }
 

@@ -56,6 +56,10 @@ final class PersonalRecordService
             return;
         }
 
+        if (! $set->workoutLine) {
+            return;
+        }
+
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
         $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
 
