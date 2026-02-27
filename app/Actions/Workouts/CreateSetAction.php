@@ -21,15 +21,14 @@ class CreateSetAction
     /**
      * Create a new set for a workout line.
      *
-     * @param  User  $user  The authenticated user.
-     * @param  array  $data  The validated data (must contain 'workout_line_id').
-     * @return Set
+     * @param  array<string, mixed>  $data  The validated data (must contain 'workout_line_id').
      *
      * @throws AuthorizationException
      */
     public function execute(User $user, array $data): Set
     {
         $workoutLineId = $data['workout_line_id'];
+        /** @var \App\Models\WorkoutLine $workoutLine */
         $workoutLine = WorkoutLine::findOrFail($workoutLineId);
 
         if (! Gate::forUser($user)->allows('create', [Set::class, $workoutLine])) {
