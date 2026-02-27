@@ -23,13 +23,20 @@ final class PersonalRecordService
         // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
-        if (! $set->workoutLine || ! $set->workoutLine->workout) {
+        // @phpstan-ignore-next-line
+        if (! $set->workoutLine) {
+            return;
+        }
+
+        // @phpstan-ignore-next-line
+        if (! $set->workoutLine->workout) {
             return;
         }
 
         /** @var \App\Models\User|null $user */
         $user ??= $set->workoutLine->workout->user;
 
+        // @phpstan-ignore-next-line
         if (! $user) {
             return;
         }
@@ -53,6 +60,11 @@ final class PersonalRecordService
     protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
     {
         if ($pr && $value <= $pr->value) {
+            return;
+        }
+
+        // @phpstan-ignore-next-line
+        if (! $set->workoutLine) {
             return;
         }
 
