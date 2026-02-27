@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Workouts\CreateSetAction;
 use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
-use App\Models\WorkoutLine;
 use App\Services\StatsService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -19,7 +19,8 @@ class SetController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected StatsService $statsService
+        protected StatsService $statsService,
+        protected CreateSetAction $createSetAction
     ) {
     }
 
@@ -48,16 +49,7 @@ class SetController extends Controller
         $validated = $request->validated();
 
         try {
-            /** @var \App\Models\WorkoutLine $workoutLine */
-            $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
-
-            $this->authorize('create', [Set::class, $workoutLine]);
-
-            $set = $workoutLine->sets()->create(
-                collect($validated)->except('workout_line_id')->toArray()
-            );
-
-            $this->statsService->clearWorkoutRelatedStats($this->user());
+            $set = $this->createSetAction->execute($this->user(), $validated);
 
             return new SetResource($set);
         } catch (\Exception $e) {
