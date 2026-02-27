@@ -25,25 +25,11 @@ class SetStoreRequest extends FormRequest
         $workoutLine = WorkoutLine::with('workout')->find($workoutLineId);
 
         // Let validation rules handle non-existent ID
-        if (! $workoutLine) {
+        if (! $workoutLine || ! $workoutLine->workout) {
             return true;
         }
 
-        /** @var \App\Models\Workout|null $workout */
-        $workout = $workoutLine->workout;
-
-        if (! $workout) {
-            return true;
-        }
-
-        /** @var \App\Models\User|null $user */
-        $user = $this->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        return $workout->user_id === $user->id;
+        return $this->user()?->id === $workoutLine->workout->user_id;
     }
 
     /**
