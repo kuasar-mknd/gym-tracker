@@ -24,16 +24,16 @@ final class UserAchievementPolicy
 
     public function create(): bool
     {
-        return true;
+        return false;
     }
 
     public function update(User $user, UserAchievement $userAchievement): bool
     {
-        return $user->id === $userAchievement->user_id;
+        return false;
     }
 
     public function delete(User $user, UserAchievement $userAchievement): bool
     {
-        return $user->id === $userAchievement->user_id;
+        return false;
     }
 }
