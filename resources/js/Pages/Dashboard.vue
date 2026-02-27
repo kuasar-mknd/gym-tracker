@@ -1,7 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 
