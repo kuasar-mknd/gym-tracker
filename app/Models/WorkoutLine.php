@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $exercise_id
  * @property int $order
  * @property string|null $notes
- * @property-read \App\Models\Workout|null $workout
+ * @property-read \App\Models\Workout $workout
  * @property-read \App\Models\Exercise|null $exercise
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Set> $sets
  */

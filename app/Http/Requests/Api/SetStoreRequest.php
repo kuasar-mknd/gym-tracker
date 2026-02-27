@@ -29,6 +29,7 @@ class SetStoreRequest extends FormRequest
             return true;
         }
 
+        // @phpstan-ignore-next-line
         if (! $workoutLine->workout) {
             return true;
         }
