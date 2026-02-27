@@ -265,6 +265,7 @@ watch(
                     <!-- Custom "Glass" button for skip to ensure style consistency -->
                     <button
                         @click="skipTimer"
+                        dusk="skip-rest-timer"
                         class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                     >
                         Passer
