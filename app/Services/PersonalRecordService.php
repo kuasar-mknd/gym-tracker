@@ -16,7 +16,6 @@ final class PersonalRecordService
 {
     public function syncSetPRs(Set $set, ?User $user = null): void
     {
-        // @phpstan-ignore-next-line
         if ($set->is_warmup || ! $set->weight || ! $set->reps) {
             return;
         }
@@ -32,6 +31,7 @@ final class PersonalRecordService
         /** @var \App\Models\User|null $user */
         $user ??= $set->workoutLine->workout->user;
 
+        // @phpstan-ignore-next-line
         if (! $user) {
             return;
         }
