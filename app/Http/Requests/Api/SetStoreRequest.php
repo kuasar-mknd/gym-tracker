@@ -25,7 +25,15 @@ class SetStoreRequest extends FormRequest
         $workoutLine = WorkoutLine::with('workout')->find($workoutLineId);
 
         // Let validation rules handle non-existent ID
-        if (! $workoutLine || ! $workoutLine->workout) {
+        if ($workoutLine === null) {
+            return true;
+        }
+
+        /** @var \App\Models\Workout|null $workout */
+        $workout = $workoutLine->workout;
+
+        // Should not happen if data integrity is maintained, but possible
+        if ($workout === null) {
             return true;
         }
 
@@ -36,7 +44,7 @@ class SetStoreRequest extends FormRequest
             return false;
         }
 
-        return $workoutLine->workout->user_id === $user->id;
+        return $workout->user_id === $user->id;
     }
 
     /**
