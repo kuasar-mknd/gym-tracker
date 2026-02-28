@@ -55,7 +55,7 @@ class SetController extends Controller
             $this->authorize('create', [Set::class, $workoutLine]);
 
             /** @var \App\Models\User $user */
-            $user = $this->user();
+            $user = $request->user();
 
             $set = $createSetAction->execute($user, $workoutLine, $validated);
 

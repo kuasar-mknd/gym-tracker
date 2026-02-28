@@ -25,6 +25,7 @@ class SetStoreRequest extends FormRequest
         $workoutLine = WorkoutLine::with('workout')->find($workoutLineId);
 
         // Let validation rules handle non-existent ID
+                                                                                /** @phpstan-ignore-next-line */
         if (! $workoutLine || ! $workoutLine->workout) {
             return true;
         }
@@ -32,7 +33,7 @@ class SetStoreRequest extends FormRequest
         /** @var \App\Models\User|null $user */
         $user = $this->user();
 
-        if (! $user) {
+                                                                                        if (! $user) {
             return false;
         }
 

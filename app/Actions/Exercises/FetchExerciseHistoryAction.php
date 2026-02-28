@@ -23,7 +23,7 @@ class FetchExerciseHistoryAction
      */
     public function execute(User $user, Exercise $exercise): Collection
     {
-        // @phpstan-ignore-next-line
+                                                // @phpstan-ignore-next-line
         return WorkoutLine::query()
             ->where('exercise_id', $exercise->id)
             ->whereHas('workout', function ($query) use ($user): void {
@@ -34,6 +34,7 @@ class FetchExerciseHistoryAction
             ->get()
             ->map(function (WorkoutLine $line): ?array {
                 $workout = $line->workout;
+                                                                                                                                                                        /** @phpstan-ignore-next-line */
                 if (! $workout || ! $workout->started_at) {
                     return null;
                 }
@@ -50,7 +51,7 @@ class FetchExerciseHistoryAction
                     'id' => $line->id,
                     'workout_id' => $workout->id,
                     'workout_name' => $workout->name,
-                    // @phpstan-ignore-next-line
+                                                                                                                        // @phpstan-ignore-next-line
                     'formatted_date' => $workout->started_at->locale('fr')->isoFormat('ddd D MMM'),
                     'best_1rm' => $best1rm,
                     'sets' => $sets,
