@@ -172,6 +172,7 @@ jobs:
                   # Write environment variables to .env so artisan serve subprocess uses them
                   echo "APP_ENV=testing" >> .env
                   echo "APP_URL=http://127.0.0.1:8000" >> .env
+                  echo "SANCTUM_STATEFUL_DOMAINS=127.0.0.1,127.0.0.1:8000,localhost,::1" >> .env
                   echo "DB_CONNECTION=mysql" >> .env
                   echo "DB_HOST=127.0.0.1" >> .env
                   echo "DB_PORT=3307" >> .env
@@ -179,7 +180,7 @@ jobs:
                   echo "DB_USERNAME=root" >> .env
                   echo "DB_PASSWORD=" >> .env
                   echo "SESSION_DRIVER=cookie" >> .env
-                  echo "SESSION_DOMAIN=" >> .env
+                  echo "SESSION_DOMAIN=127.0.0.1" >> .env
                   echo "SESSION_SECURE_COOKIE=false" >> .env
                   echo "SESSION_SAME_SITE=lax" >> .env
                   echo "SESSION_PATH=/" >> .env
