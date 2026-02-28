@@ -27,7 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ConditionalCspHeaders::class,
         ]);
 
-        //
+        $middleware->api(prepend: [
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         \Sentry\Laravel\Integration::handles($exceptions);
