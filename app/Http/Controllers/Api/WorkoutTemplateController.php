@@ -23,11 +23,10 @@ class WorkoutTemplateController extends Controller
         $this->authorize('viewAny', WorkoutTemplate::class);
 
         $templates = QueryBuilder::for(WorkoutTemplate::class)
+            ->allowedSorts(['created_at', 'name'])
+            ->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets'])
             ->where('user_id', $this->user()->id)
-            ->allowedSorts(['created_at', 'name']) /** @phpstan-ignore-line */
-            ->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets']);
-
-        $templates = $templates->paginate();
+            ->paginate();
 
         return WorkoutTemplateResource::collection($templates);
     }
