@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\Models\WorkoutLine;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class SetStoreRequest extends FormRequest
 {
@@ -14,29 +14,7 @@ class SetStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $workoutLineId = $this->input('workout_line_id');
-
-        // Let validation rules handle missing ID
-        if (! $workoutLineId) {
-            return true;
-        }
-
-        /** @var \App\Models\WorkoutLine|null $workoutLine */
-        $workoutLine = WorkoutLine::with('workout')->find($workoutLineId);
-
-        // Let validation rules handle non-existent ID
-        if (! $workoutLine || ! $workoutLine->workout) {
-            return true;
-        }
-
-        /** @var \App\Models\User|null $user */
-        $user = $this->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        return $workoutLine->workout->user_id === $user->id;
+        return true;
     }
 
     /**
@@ -49,7 +27,11 @@ class SetStoreRequest extends FormRequest
         return [
             'workout_line_id' => [
                 'required',
-                'exists:workout_lines,id',
+                Rule::exists('workout_lines', 'id')->where(function ($query): void {
+                    $query->whereIn('workout_id', function ($q): void {
+                        $q->select('id')->from('workouts')->where('user_id', $this->user()?->id);
+                    });
+                }),
             ],
             'weight' => 'nullable|numeric|min:0',
             'reps' => 'nullable|integer|min:0',
