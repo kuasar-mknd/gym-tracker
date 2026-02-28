@@ -13,6 +13,7 @@
 -->
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 /**
  * Component Props
@@ -59,6 +60,22 @@ const progress = computed(() => {
 })
 
 /**
+ * Human-readable time for screen readers.
+ */
+const formattedAriaTime = computed(() => {
+    const mins = Math.floor(timeLeft.value / 60)
+    const secs = timeLeft.value % 60
+    let text = ''
+    if (mins > 0) {
+        text += `${mins} minute${mins > 1 ? 's' : ''} `
+    }
+    if (secs > 0 || mins === 0) {
+        text += `${secs} seconde${secs > 1 ? 's' : ''}`
+    }
+    return text.trim()
+})
+
+/**
  * Formats seconds into MM:SS format.
  * @param {Number} seconds
  * @return {String} Formatted time string.
@@ -99,6 +116,7 @@ const pauseTimer = () => {
 
 /** Toggles between start and pause states. */
 const toggleTimer = () => {
+    triggerHaptic('tap')
     if (isActive.value) {
         pauseTimer()
     } else {
@@ -111,6 +129,7 @@ const toggleTimer = () => {
  * @param {Number} seconds - Amount of seconds to add.
  */
 const addTime = (seconds) => {
+    triggerHaptic('tap')
     timeLeft.value += seconds
     if (isActive.value && endTime.value) {
         endTime.value += seconds * 1000
@@ -119,6 +138,7 @@ const addTime = (seconds) => {
 
 /** Immediately finishes the timer. */
 const skipTimer = () => {
+    triggerHaptic('tap')
     finishTimer()
 }
 
@@ -130,10 +150,8 @@ const finishTimer = () => {
     pauseTimer()
     timeLeft.value = 0
 
-    // Haptic feedback if available
-    if ('vibrate' in navigator) {
-        navigator.vibrate([200, 100, 200])
-    }
+    // Haptic feedback
+    triggerHaptic('timer')
 
     // Play a subtle sound if possible
     try {
@@ -160,6 +178,7 @@ const finishTimer = () => {
 
 /** Closes the timer component. */
 const close = () => {
+    triggerHaptic('tap')
     pauseTimer()
     emit('close')
 }
@@ -202,7 +221,14 @@ watch(
             class="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300 dark:bg-black/40"
         >
             <!-- Progress bar -->
-            <div class="h-1 w-full bg-slate-200/50 dark:bg-white/10">
+            <div
+                class="h-1 w-full bg-slate-200/50 dark:bg-white/10"
+                role="progressbar"
+                :aria-valuenow="timeLeft"
+                aria-valuemin="0"
+                :aria-valuemax="duration"
+                :aria-valuetext="formattedAriaTime"
+            >
                 <div
                     class="bg-accent-primary h-full transition-all duration-1000 ease-linear"
                     :style="{ width: `${progress}%` }"
@@ -215,7 +241,12 @@ watch(
                         <div class="text-xs font-bold tracking-wider text-slate-900/60 uppercase dark:text-white/60">
                             Repos en cours
                         </div>
-                        <div class="text-3xl font-black text-slate-900 tabular-nums dark:text-white">
+                        <div
+                            class="text-3xl font-black text-slate-900 tabular-nums dark:text-white"
+                            role="timer"
+                            aria-live="polite"
+                            aria-atomic="true"
+                        >
                             {{ formatTime(timeLeft) }}
                         </div>
                     </div>
@@ -225,6 +256,7 @@ watch(
                             @click="addTime(30)"
                             class="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                             title="+30s"
+                            aria-label="Ajouter 30 secondes"
                         >
                             <span class="text-xs font-bold">+30s</span>
                         </button>
@@ -232,6 +264,7 @@ watch(
                         <button
                             @click="toggleTimer"
                             class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
+                            :aria-label="isActive ? 'Pause' : 'Reprendre'"
                         >
                             <svg v-if="isActive" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 4h4v16H6V4zm8 0h4v16h4V4z" />
@@ -249,12 +282,14 @@ watch(
                     <button
                         @click="skipTimer"
                         class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                        aria-label="Passer le repos"
                     >
                         Passer
                     </button>
                     <button
                         @click="close"
                         class="rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                        aria-label="Fermer le minuteur"
                     >
                         Fermer
                     </button>
