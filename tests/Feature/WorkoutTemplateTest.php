@@ -2,25 +2,50 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature;
+use App\Models\Exercise;
+use App\Models\User;
+use App\Models\Workout;
+use App\Models\WorkoutTemplate;
+use Inertia\Testing\AssertableInertia as Assert;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\get;
+use function Pest\Laravel\post;
 
-class WorkoutTemplateTest extends TestCase
-{
-    use RefreshDatabase;
+test('authenticated user can view templates index', function (): void {
+    $user = User::factory()->create();
 
-    public function test_can_create_workout_template(): void
-    {
-        $user = \App\Models\User::factory()->create();
-        $this->actingAs($user);
+    actingAs($user)
+        ->get(route('templates.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('Workouts/Templates/Index')
+            ->has('templates')
+        );
+});
 
-        $exercise = \App\Models\Exercise::factory()->create();
+test('authenticated user can view create template page', function (): void {
+    $user = User::factory()->create();
 
-        $response = $this->post(route('templates.store'), [
-            'name' => 'Test Template',
-            'description' => 'Test Description',
+    actingAs($user)
+        ->get(route('templates.create'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('Workouts/Templates/Create')
+            ->has('exercises')
+        );
+});
+
+test('user can create a workout template with exercises and sets', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create();
+
+    actingAs($user)
+        ->post(route('templates.store'), [
+            'name' => 'Full Body Workout',
+            'description' => 'A great workout',
             'exercises' => [
                 [
                     'id' => $exercise->id,
@@ -30,67 +55,156 @@ class WorkoutTemplateTest extends TestCase
                     ],
                 ],
             ],
-        ]);
+        ])
+        ->assertRedirect(route('templates.index'));
 
-        $response->assertRedirect(route('templates.index'));
-        $this->assertDatabaseHas('workout_templates', ['name' => 'Test Template']);
-        $this->assertDatabaseHas('workout_template_lines', ['exercise_id' => $exercise->id]);
-        $this->assertDatabaseHas('workout_template_sets', ['reps' => 10, 'weight' => 50]);
-    }
+    assertDatabaseHas('workout_templates', [
+        'user_id' => $user->id,
+        'name' => 'Full Body Workout',
+        'description' => 'A great workout',
+    ]);
 
-    public function test_can_execute_template_into_workout(): void
-    {
-        $user = \App\Models\User::factory()->create();
-        $this->actingAs($user);
+    // We need to fetch the template to check lines because IDs are auto-generated
+    $template = WorkoutTemplate::where('name', 'Full Body Workout')->first();
+    expect($template)->not->toBeNull();
 
-        $exercise = \App\Models\Exercise::factory()->create();
-        $template = $user->workoutTemplates()->create([
-            'name' => 'Squat Day',
-        ]);
-        $line = $template->workoutTemplateLines()->create(['exercise_id' => $exercise->id]);
-        $line->workoutTemplateSets()->create(['reps' => 5, 'weight' => 100, 'order' => 0]);
+    assertDatabaseHas('workout_template_lines', [
+        'workout_template_id' => $template->id,
+        'exercise_id' => $exercise->id,
+        'order' => 0,
+    ]);
 
-        $response = $this->post(route('templates.execute', $template));
+    // Check sets implicitly via count or specific values if possible
+    $line = $template->workoutTemplateLines()->first();
+    expect($line->workoutTemplateSets()->count())->toBe(2);
+    expect($line->workoutTemplateSets()->first()->reps)->toBe(10);
+});
 
-        $response->assertRedirect();
-        $this->assertDatabaseHas('workouts', ['name' => 'Squat Day', 'user_id' => $user->id]);
-        $this->assertDatabaseHas('workout_lines', ['exercise_id' => $exercise->id]);
-        $this->assertDatabaseHas('sets', ['reps' => 5, 'weight' => 100]);
-    }
+test('store validation: name is required', function (): void {
+    $user = User::factory()->create();
 
-    public function test_can_save_workout_as_template(): void
-    {
-        $user = \App\Models\User::factory()->create();
-        $this->actingAs($user);
+    actingAs($user)
+        ->post(route('templates.store'), [
+            'description' => 'Missing name',
+        ])
+        ->assertSessionHasErrors('name');
+});
 
-        $exercise = \App\Models\Exercise::factory()->create();
-        $workout = $user->workouts()->create([
-            'name' => 'My Real Workout',
-            'started_at' => now(),
-        ]);
-        $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id]);
-        $line->sets()->create(['reps' => 12, 'weight' => 40]);
+test('store validation: exercises must have valid id', function (): void {
+    $user = User::factory()->create();
 
-        $response = $this->post(route('templates.save-from-workout', $workout));
+    actingAs($user)
+        ->post(route('templates.store'), [
+            'name' => 'Invalid Exercise',
+            'exercises' => [
+                ['id' => 99999], // Non-existent
+            ],
+        ])
+        ->assertSessionHasErrors('exercises.0.id');
+});
 
-        $response->assertRedirect(route('templates.index'));
-        $this->assertDatabaseHas('workout_templates', ['name' => 'My Real Workout (Modèle)']);
-        $this->assertDatabaseHas('workout_template_lines', ['exercise_id' => $exercise->id]);
-        $this->assertDatabaseHas('workout_template_sets', ['reps' => 12, 'weight' => 40]);
-    }
+test('user cannot create template with another users private exercise', function (): void {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $privateExercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
 
-    public function test_cannot_access_others_templates(): void
-    {
-        $user1 = \App\Models\User::factory()->create();
-        $user2 = \App\Models\User::factory()->create();
+    actingAs($user)
+        ->post(route('templates.store'), [
+            'name' => 'Stolen Exercise',
+            'exercises' => [
+                ['id' => $privateExercise->id],
+            ],
+        ])
+        ->assertSessionHasErrors('exercises.0.id');
+});
 
-        $template = $user1->workoutTemplates()->create([
-            'name' => 'User 1 Template',
-        ]);
+test('user can execute a template to start a workout', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create();
 
-        $this->actingAs($user2);
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id, 'name' => 'Exec Template']);
+    $line = $template->workoutTemplateLines()->create(['exercise_id' => $exercise->id, 'order' => 0]);
+    $line->workoutTemplateSets()->create(['reps' => 5, 'weight' => 100, 'order' => 0, 'is_warmup' => false]);
 
-        $this->post(route('templates.execute', $template))->assertStatus(403);
-        $this->delete(route('templates.destroy', $template))->assertStatus(403);
-    }
-}
+    actingAs($user)
+        ->post(route('templates.execute', $template))
+        ->assertRedirect(); // Should redirect to workout show page
+
+    assertDatabaseHas('workouts', [
+        'user_id' => $user->id,
+        'name' => 'Exec Template', // Usually uses template name
+    ]);
+
+    $workout = Workout::where('name', 'Exec Template')->first();
+    assertDatabaseHas('workout_lines', ['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
+
+    $workoutLine = $workout->workoutLines()->first();
+    assertDatabaseHas('sets', ['workout_line_id' => $workoutLine->id, 'reps' => 5, 'weight' => 100]);
+});
+
+test('user can save an existing workout as a template', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create();
+
+    $workout = Workout::factory()->create(['user_id' => $user->id, 'name' => 'Good Workout']);
+    $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id, 'order' => 0]);
+    $line->sets()->create(['reps' => 8, 'weight' => 80]);
+
+    actingAs($user)
+        ->post(route('templates.save-from-workout', $workout))
+        ->assertRedirect(route('templates.index'));
+
+    assertDatabaseHas('workout_templates', [
+        'user_id' => $user->id,
+        'name' => 'Good Workout (Modèle)',
+    ]);
+});
+
+test('user can delete their own template', function (): void {
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+
+    actingAs($user)
+        ->delete(route('templates.destroy', $template))
+        ->assertRedirect();
+
+    assertDatabaseMissing('workout_templates', ['id' => $template->id]);
+});
+
+test('authorization: cannot execute another users template', function (): void {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
+
+    actingAs($user)
+        ->post(route('templates.execute', $template))
+        ->assertForbidden();
+});
+
+test('authorization: cannot save from another users workout', function (): void {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
+
+    actingAs($user)
+        ->post(route('templates.save-from-workout', $workout))
+        ->assertForbidden();
+});
+
+test('authorization: cannot delete another users template', function (): void {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
+
+    actingAs($user)
+        ->delete(route('templates.destroy', $template))
+        ->assertForbidden();
+
+    assertDatabaseHas('workout_templates', ['id' => $template->id]);
+});
+
+test('unauthenticated user cannot access templates', function (): void {
+    get(route('templates.index'))->assertRedirect(route('login'));
+    get(route('templates.create'))->assertRedirect(route('login'));
+    post(route('templates.store'), [])->assertRedirect(route('login'));
+});

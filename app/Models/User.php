@@ -15,6 +15,7 @@ use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Services\NotificationService;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -162,6 +163,16 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->where('type', $type)
             ->where('is_enabled', true)
             ->exists();
+    }
+
+    public function getUnreadNotificationsCountCached(): int
+    {
+        return app(NotificationService::class)->getUnreadCount($this);
+    }
+
+    public function getLatestAchievementCached(): ?Notification
+    {
+        return app(NotificationService::class)->getLatestAchievement($this);
     }
 
     /**

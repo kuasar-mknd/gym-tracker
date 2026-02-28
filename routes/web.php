@@ -25,7 +25,7 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['index']);
     Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
     Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index', 'show']);
-    Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->only(['index', 'show']);
+    Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->only(['index']);
     Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index', 'show']);
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
 
@@ -61,7 +61,7 @@ Route::middleware('auth')->group(function (): void {
         Route::patch('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'update'])->name('workouts.update');
         Route::delete('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'destroy'])->name('workouts.destroy');
 
-        Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->except(['index', 'show']);
+        Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->except(['index']);
         Route::post('/templates/{template}/execute', [\App\Http\Controllers\WorkoutTemplatesController::class, 'execute'])->name('templates.execute');
         Route::post('/workouts/{workout}/save-as-template', [\App\Http\Controllers\WorkoutTemplatesController::class, 'saveFromWorkout'])->name('templates.save-from-workout');
 
