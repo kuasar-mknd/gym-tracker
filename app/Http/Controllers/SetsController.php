@@ -32,7 +32,10 @@ class SetsController extends Controller
     {
         $this->authorize('create', [Set::class, $workoutLine]);
 
-        $createSetAction->execute($this->user(), $workoutLine, $request->validated());
+        /** @var \App\Models\User $user */
+        $user = $this->user();
+
+        $createSetAction->execute($user, $workoutLine, $request->validated());
 
         return back();
     }

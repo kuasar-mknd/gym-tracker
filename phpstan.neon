@@ -2,6 +2,9 @@ includes:
     - vendor/larastan/larastan/extension.neon
 
 parameters:
+    treatPhpDocTypesAsCertain: false
+
+
     paths:
         - app/
         - database/

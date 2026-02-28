@@ -54,10 +54,13 @@ class SetController extends Controller
 
             $this->authorize('create', [Set::class, $workoutLine]);
 
-            $set = $createSetAction->execute($this->user(), $workoutLine, $validated);
+            /** @var \App\Models\User $user */
+            $user = $this->user();
+
+            $set = $createSetAction->execute($user, $workoutLine, $validated);
 
             return new SetResource($set);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             \Log::error('Failed to create set in API:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

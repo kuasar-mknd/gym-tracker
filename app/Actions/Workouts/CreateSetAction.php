@@ -22,7 +22,7 @@ class CreateSetAction
      *
      * @param  User  $user  The authenticated user.
      * @param  WorkoutLine  $workoutLine  The workout line the set belongs to.
-     * @param  array  $data  The validated data for the set.
+     * @param  array<string, mixed>  $data  The validated data for the set.
      * @return Set The newly created set.
      */
     public function execute(User $user, WorkoutLine $workoutLine, array $data): Set
