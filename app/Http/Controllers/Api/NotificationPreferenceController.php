@@ -19,9 +19,9 @@ class NotificationPreferenceController extends Controller
      */
     public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
-        // @phpstan-ignore-next-line
         $preferences = QueryBuilder::for(NotificationPreference::class)
             ->where('user_id', $this->user()->id)
+            // @phpstan-ignore-next-line
             ->allowedSorts(['type', 'created_at']);
 
         $preferences = $preferences->get();

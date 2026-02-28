@@ -22,9 +22,9 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
-        // @phpstan-ignore-next-line
         $templates = QueryBuilder::for(WorkoutTemplate::class)
             ->where('user_id', $this->user()->id)
+            // @phpstan-ignore-next-line
             ->allowedSorts(['created_at', 'name'])
             ->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets']);
 
