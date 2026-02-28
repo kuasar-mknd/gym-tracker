@@ -31,7 +31,6 @@ class AchievementController extends Controller
         /** @var \Spatie\QueryBuilder\QueryBuilder<\App\Models\Achievement> $query */
         $query = QueryBuilder::for(Achievement::class);
 
-        // @phpstan-ignore-next-line
         $achievements = $query->allowedSorts(['name', 'threshold', 'created_at'])
             ->allowedFilters(['category', 'type'])
             ->paginate();
