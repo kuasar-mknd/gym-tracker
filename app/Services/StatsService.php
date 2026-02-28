@@ -378,9 +378,9 @@ class StatsService
             ->where('started_at', '>=', now()->subDays($days))
             ->selectRaw("
                 CASE
-                    WHEN ABS($durationSql) < 30 THEN '< 30 min'
-                    WHEN ABS($durationSql) < 60 THEN '30-60 min'
-                    WHEN ABS($durationSql) < 90 THEN '60-90 min'
+                    WHEN ABS({$durationSql}) < 30 THEN '< 30 min'
+                    WHEN ABS({$durationSql}) < 60 THEN '30-60 min'
+                    WHEN ABS({$durationSql}) < 90 THEN '60-90 min'
                     ELSE '90+ min'
                 END as label,
                 COUNT(*) as count
