@@ -21,8 +21,7 @@ class NotificationPreferenceController extends Controller
     {
         $preferences = QueryBuilder::for(NotificationPreference::class)
             ->where('user_id', $this->user()->id)
-            // @phpstan-ignore-next-line
-            ->allowedSorts(['type', 'created_at']);
+            ->allowedSorts(['type', 'created_at']); /** @phpstan-ignore-line */
 
         $preferences = $preferences->get();
 

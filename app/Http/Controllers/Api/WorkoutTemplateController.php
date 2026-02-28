@@ -24,8 +24,7 @@ class WorkoutTemplateController extends Controller
 
         $templates = QueryBuilder::for(WorkoutTemplate::class)
             ->where('user_id', $this->user()->id)
-            // @phpstan-ignore-next-line
-            ->allowedSorts(['created_at', 'name'])
+            ->allowedSorts(['created_at', 'name']) /** @phpstan-ignore-line */
             ->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets']);
 
         $templates = $templates->paginate();
