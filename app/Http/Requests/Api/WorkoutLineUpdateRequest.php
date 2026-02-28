@@ -6,6 +6,7 @@ namespace App\Http\Requests\Api;
 
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class WorkoutLineUpdateRequest extends FormRequest
 {
@@ -40,7 +41,12 @@ class WorkoutLineUpdateRequest extends FormRequest
         return [
             'exercise_id' => [
                 'sometimes',
-                'exists:exercises,id',
+                Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
+                        $q->whereNull('user_id')
+                            ->orWhere('user_id', $this->user()?->id);
+                    });
+                }),
             ],
             'order' => 'sometimes|integer',
             'notes' => 'nullable|string',
