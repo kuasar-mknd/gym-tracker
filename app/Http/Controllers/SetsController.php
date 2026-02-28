@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Workouts\CreateSetAction;
 use App\Http\Requests\SetStoreRequest;
 use App\Http\Requests\SetUpdateRequest;
 use App\Models\Set;
@@ -27,15 +28,11 @@ class SetsController extends Controller
     /**
      * Store a newly created set in storage.
      */
-    public function store(SetStoreRequest $request, WorkoutLine $workoutLine): RedirectResponse
+    public function store(SetStoreRequest $request, WorkoutLine $workoutLine, CreateSetAction $createSetAction): RedirectResponse
     {
         $this->authorize('create', [Set::class, $workoutLine]);
 
-        $workoutLine->sets()->create($request->validated());
-
-        /** @var \App\Models\User $user */
-        $user = $this->user();
-        $this->statsService->clearWorkoutRelatedStats($user);
+        $createSetAction->execute($this->user(), $workoutLine, $request->validated());
 
         return back();
     }

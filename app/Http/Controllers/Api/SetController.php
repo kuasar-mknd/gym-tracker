@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Workouts\CreateSetAction;
 use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
@@ -43,7 +44,7 @@ class SetController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(SetStoreRequest $request): SetResource
+    public function store(SetStoreRequest $request, CreateSetAction $createSetAction): SetResource
     {
         $validated = $request->validated();
 
@@ -53,11 +54,7 @@ class SetController extends Controller
 
             $this->authorize('create', [Set::class, $workoutLine]);
 
-            $set = $workoutLine->sets()->create(
-                collect($validated)->except('workout_line_id')->toArray()
-            );
-
-            $this->statsService->clearWorkoutRelatedStats($this->user());
+            $set = $createSetAction->execute($this->user(), $workoutLine, $validated);
 
             return new SetResource($set);
         } catch (\Exception $e) {
