@@ -38,3 +38,8 @@
 **Vulnerability:** The `User` model included `current_streak`, `longest_streak`, and `last_workout_at` in the `$fillable` array. This exposed system-managed statistics to mass assignment vulnerabilities if any controller or action used unvalidated input (e.g., `User::create($request->all())`).
 **Learning:** Documentation or memory claiming "strict limits" on mass assignment was incorrect. Defense in Depth requires minimizing `$fillable` even if current usage patterns seem safe.
 **Prevention:** Audit `$fillable` arrays regularly. Remove system-managed fields and use `forceFill()` or direct property assignment in Services/Actions for internal state updates.
+
+## 2026-08-26 - IDOR via Global Exists Rule on WorkoutLine
+**Vulnerability:** In `WorkoutLineStoreRequest` and `WorkoutLineUpdateRequest`, the `exercise_id` was validated with a global `exists:exercises,id` rule. This allowed a user to add another user's private exercise to their own workout.
+**Learning:** Standard `exists` rules do not implicitly check ownership or scope. Any reference to a potentially private resource must have explicit scoping in the validation rule itself.
+**Prevention:** Replace global `exists` strings with `Rule::exists()->where(...)` closures that explicitly verify the record belongs to the user or is a public/system record.
