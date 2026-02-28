@@ -6,6 +6,7 @@ use App\Models\Achievement;
 use App\Models\Admin;
 use App\Models\User;
 use Spatie\Permission\Models\Permission;
+
 use function Pest\Laravel\actingAs;
 
 it('allows viewing achievements list for authenticated users', function (): void {
