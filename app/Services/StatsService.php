@@ -60,7 +60,7 @@ class StatsService
             fn (): array => $this->fetchMuscleDistributionData($user, $days)
                 ->map(fn (object $row): array => [
                     'category' => (string) ($row->category ?? 'Unknown'),
-                    'volume' => (float) ($row->category_volume ?? 0.0),
+                    'volume' => (float) ($row->volume ?? 0.0),
                 ])
                 ->toArray()
         );
@@ -542,13 +542,14 @@ class StatsService
      */
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, object{category: string, category_volume: float|int}> $results */
-        $results = DB::table('workout_lines')
+        /** @var \Illuminate\Support\Collection<int, object{category: string, volume: float|int}> $results */
+        $results = DB::table('sets')
+            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
             ->where('workouts.user_id', $user->id)
             ->where('workouts.started_at', '>=', now()->subDays($days))
-            ->selectRaw('exercises.category, SUM(workouts.workout_volume) as category_volume')
+            ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
             ->groupBy('exercises.category')
             ->get();
 
