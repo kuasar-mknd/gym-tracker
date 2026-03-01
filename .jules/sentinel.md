@@ -38,3 +38,8 @@
 **Vulnerability:** The `User` model included `current_streak`, `longest_streak`, and `last_workout_at` in the `$fillable` array. This exposed system-managed statistics to mass assignment vulnerabilities if any controller or action used unvalidated input (e.g., `User::create($request->all())`).
 **Learning:** Documentation or memory claiming "strict limits" on mass assignment was incorrect. Defense in Depth requires minimizing `$fillable` even if current usage patterns seem safe.
 **Prevention:** Audit `$fillable` arrays regularly. Remove system-managed fields and use `forceFill()` or direct property assignment in Services/Actions for internal state updates.
+
+## 2026-10-01 - Missing Unscoped Validation Fixes in API FormRequests
+**Vulnerability:** While unscoped validation for hybrid resources (e.g., `exercise_id` in `WorkoutLineStoreRequest`) was fixed for Web controllers, the corresponding API FormRequests (`app/Http/Requests/Api/WorkoutLineStoreRequest.php` and `WorkoutLineUpdateRequest.php`) were missed. This resulted in an IDOR where users could link private exercises and workouts of others via the API.
+**Learning:** Having separate FormRequests for Web and API controllers increases the risk of inconsistent security configurations and missed vulnerabilities.
+**Prevention:** Always check both Web and API namespaces for matching FormRequests when applying security fixes, or consolidate validation logic if possible.

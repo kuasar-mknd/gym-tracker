@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\Models\WorkoutLine;
 use Illuminate\Foundation\Http\FormRequest;
 
 class WorkoutLineUpdateRequest extends FormRequest
@@ -16,11 +15,11 @@ class WorkoutLineUpdateRequest extends FormRequest
     {
         $workoutLine = $this->route('workout_line');
 
-        if (! $workoutLine instanceof WorkoutLine) {
-            $workoutLine = WorkoutLine::find($this->route('workout_line'));
+        if (! $workoutLine instanceof \App\Models\WorkoutLine) {
+            $workoutLine = \App\Models\WorkoutLine::find($this->route('workout_line'));
         }
 
-        if (! $workoutLine instanceof WorkoutLine) {
+        if (! $workoutLine instanceof \App\Models\WorkoutLine) {
             return false;
         }
 
@@ -40,7 +39,12 @@ class WorkoutLineUpdateRequest extends FormRequest
         return [
             'exercise_id' => [
                 'sometimes',
-                'exists:exercises,id',
+                \Illuminate\Validation\Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
+                        $q->whereNull('user_id')
+                            ->orWhere('user_id', $this->user()?->id);
+                    });
+                }),
             ],
             'order' => 'sometimes|integer',
             'notes' => 'nullable|string',
