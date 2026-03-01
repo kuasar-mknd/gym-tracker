@@ -622,5 +622,4 @@ class StatsService
 
         return ['current_volume' => $currentVolume, 'previous_volume' => $previousVolume, 'difference' => $diff, 'percentage' => round($percentage, 1)];
     }
-
 }
