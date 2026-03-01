@@ -155,7 +155,7 @@ jobs:
 
             - name: Run Dusk Tests
               run: |
-                  # Create fresh .env
+                  # Create fresh .env for the application
                   cat <<EOF > .env
                   APP_NAME=GymTracker
                   APP_ENV=testing
@@ -179,6 +179,10 @@ jobs:
                   PULSE_ENABLED=false
                   DUSK_DRIVER_URL=http://127.0.0.1:9515
                   EOF
+
+                  # Dusk overwrites .env with .env.testing. We must override it.
+                  cp .env .env.testing
+                  cp .env .env.dusk.local
 
                   chmod -R 777 storage bootstrap/cache
                   php artisan config:clear
