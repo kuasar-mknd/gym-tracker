@@ -104,16 +104,18 @@ final class GoalService
             return;
         }
 
+        // Finds the maximum volume achieved in a single workout for the associated exercise
         $maxVolume = $goal->user->workouts()
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workout_lines.exercise_id', $goal->exercise_id)
-            ->selectRaw('SUM(sets.weight * sets.reps) as total_volume')
+            ->selectRaw('SUM(sets.weight * sets.reps) as workout_total_volume')
             ->groupBy('workouts.id')
-            ->max('total_volume');
+            ->get()
+            ->max('workout_total_volume');
 
         if ($maxVolume) {
-            $goal->update(['current_value' => $maxVolume]);
+            $goal->update(['current_value' => (float) $maxVolume]);
         }
     }
 
