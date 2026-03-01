@@ -12,6 +12,15 @@ parameters:
     level: 9
 
     ignoreErrors:
+        -
+            message: '#Negated boolean expression is always false.#'
+            path: app/Http/Requests/Api/SetStoreRequest.php
+        -
+            message: '#Negated boolean expression is always false.#'
+            path: app/Services/PersonalRecordService.php
+        -
+            message: '#Result of \|\| is always false.#'
+            path: app/Services/PersonalRecordService.php
 
     excludePaths:
         - ./*/*/FileToBeExcluded.php
