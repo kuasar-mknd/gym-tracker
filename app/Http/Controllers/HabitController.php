@@ -33,6 +33,8 @@ class HabitController extends Controller
      */
     public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
     {
+        $this->authorize('viewAny', Habit::class);
+
         return Inertia::render('Habits/Index', $fetchHabits->execute($this->user()));
     }
 
@@ -47,6 +49,8 @@ class HabitController extends Controller
      */
     public function store(HabitStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('create', Habit::class);
+
         $data = $request->validated();
         if (! ($data['color'] ?? null)) {
             $data['color'] = 'bg-slate-500';
@@ -72,7 +76,8 @@ class HabitController extends Controller
      */
     public function update(HabitUpdateRequest $request, Habit $habit): \Illuminate\Http\RedirectResponse
     {
-        // Authorization is handled by HabitUpdateRequest
+        $this->authorize('update', $habit);
+
         $habit->update($request->validated());
 
         return redirect()->back()->with('success', 'Habitude mise à jour.');
@@ -90,9 +95,7 @@ class HabitController extends Controller
      */
     public function destroy(Habit $habit): \Illuminate\Http\RedirectResponse
     {
-        if ($habit->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $habit);
 
         $habit->delete();
 
@@ -114,6 +117,8 @@ class HabitController extends Controller
      */
     public function toggle(ToggleHabitRequest $request, Habit $habit): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('update', $habit);
+
         $validated = $request->validated();
 
         /** @var string $date */

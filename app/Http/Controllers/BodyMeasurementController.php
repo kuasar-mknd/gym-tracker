@@ -22,7 +22,8 @@ class BodyMeasurementController extends Controller
         $this->authorize('viewAny', BodyMeasurement::class);
 
         $measurements = $this->user()->bodyMeasurements()
-            ->orderBy('measured_at', 'asc')
+            ->orderBy('measured_at', 'desc')
+            ->limit(100)
             ->get();
 
         $weightHistory = $this->statsService->getWeightHistory($this->user(), 365);

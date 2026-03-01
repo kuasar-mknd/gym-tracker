@@ -31,12 +31,12 @@ class StatsController extends Controller
         return Inertia::render('Stats/Index', [
             ...$immediateData,
             // Defer heavy data
-            'volumeTrend' => Inertia::defer(fn () => $this->statsService->getVolumeTrend($user, $days)),
-            'muscleDistribution' => Inertia::defer(fn () => $this->statsService->getMuscleDistribution($user, $days)),
-            'monthlyComparison' => Inertia::defer(fn () => $this->statsService->getMonthlyVolumeComparison($user)),
-            'weightHistory' => Inertia::defer(fn () => $this->statsService->getWeightHistory($user, $days)),
-            'bodyFatHistory' => Inertia::defer(fn () => $this->statsService->getBodyFatHistory($user, $days)),
-            'durationHistory' => Inertia::defer(fn () => $this->statsService->getDurationHistory($user, 30)),
+            'volumeTrend' => Inertia::defer(fn (): array => $this->statsService->getVolumeTrend($user, $days)),
+            'muscleDistribution' => Inertia::defer(fn (): array => $this->statsService->getMuscleDistribution($user, $days)),
+            'monthlyComparison' => Inertia::defer(fn (): array => $this->statsService->getMonthlyVolumeComparison($user)),
+            'weightHistory' => Inertia::defer(fn (): array => $this->statsService->getWeightHistory($user, $days)),
+            'bodyFatHistory' => Inertia::defer(fn (): array => $this->statsService->getBodyFatHistory($user, $days)),
+            'durationHistory' => Inertia::defer(fn (): array => $this->statsService->getDurationHistory($user, 30)),
         ]);
     }
 

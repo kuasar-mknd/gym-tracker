@@ -19,6 +19,8 @@ class MacroCalculatorController extends Controller
      */
     public function index(): \Inertia\Response
     {
+        $this->authorize('viewAny', MacroCalculation::class);
+
         $user = $this->user();
 
         $history = $user->macroCalculations()
@@ -35,6 +37,8 @@ class MacroCalculatorController extends Controller
      */
     public function store(StoreMacroCalculationRequest $request, CreateMacroCalculationAction $createMacroCalculationAction): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('create', MacroCalculation::class);
+
         /** @var array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string} $validated */
         $validated = $request->validated();
 
@@ -48,9 +52,7 @@ class MacroCalculatorController extends Controller
      */
     public function destroy(MacroCalculation $macroCalculation): \Illuminate\Http\RedirectResponse
     {
-        if ($macroCalculation->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $macroCalculation);
 
         $macroCalculation->delete();
 

@@ -22,7 +22,7 @@ class DailyJournalController extends Controller
 
         $journals = $this->user()->dailyJournals()
             ->orderBy('date', 'desc')
-            ->limit(30) // Show last 30 days
+            ->limit(100)
             ->get();
 
         return Inertia::render('Journal/Index', [

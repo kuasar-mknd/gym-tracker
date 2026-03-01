@@ -20,9 +20,11 @@ test('authenticated user can view stats page', function (): void {
         ->assertOk()
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
-            ->has('volumeTrend')
-            ->has('muscleDistribution')
-            ->has('monthlyComparison')
+            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->has('volumeTrend')
+                ->has('muscleDistribution')
+                ->has('monthlyComparison')
+            )
             ->has('exercises')
         );
 });
@@ -64,8 +66,10 @@ test('stats page calculates volume trend correctly', function (): void {
         ->assertOk()
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
-            ->where('volumeTrend.0.volume', 1500)
-            ->where('volumeTrend.0.name', $workout->name)
+            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->where('volumeTrend.0.volume', 1500)
+                ->where('volumeTrend.0.name', $workout->name)
+            )
         );
 });
 
@@ -106,13 +110,15 @@ test('stats page calculates muscle distribution correctly', function (): void {
         ->assertOk()
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
-            ->has('muscleDistribution', 2)
-            ->where('muscleDistribution', function ($distribution): bool {
-                $chest = collect($distribution)->firstWhere('category', 'Pectoraux');
-                $back = collect($distribution)->firstWhere('category', 'Dos');
+            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->has('muscleDistribution', 2)
+                ->where('muscleDistribution', function ($distribution): bool {
+                    $chest = collect($distribution)->firstWhere('category', 'Pectoraux');
+                    $back = collect($distribution)->firstWhere('category', 'Dos');
 
-                return $chest['volume'] == 1000 && $back['volume'] == 500;
-            })
+                    return $chest['volume'] == 1000 && $back['volume'] == 500;
+                })
+            )
         );
 });
 
@@ -151,9 +157,11 @@ test('stats page calculates monthly comparison correctly', function (): void {
         ->assertOk()
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
-            ->where('monthlyComparison.current_month_volume', fn ($val): bool => $val == 1000)
-            ->where('monthlyComparison.previous_month_volume', fn ($val): bool => $val == 500)
-            ->where('monthlyComparison.percentage', fn ($val): bool => $val == 100)
+            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->where('monthlyComparison.current_month_volume', fn ($val): bool => $val == 1000)
+                ->where('monthlyComparison.previous_month_volume', fn ($val): bool => $val == 500)
+                ->where('monthlyComparison.percentage', fn ($val): bool => $val == 100)
+            )
         );
 });
 
@@ -223,7 +231,9 @@ test('stats do not include other users data', function (): void {
         ->assertOk()
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
-            ->where('volumeTrend', []) // Should be empty for this user
+            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->where('volumeTrend', []) // Should be empty for this user
+            )
         );
 });
 
@@ -242,8 +252,10 @@ test('stats page provides duration history', function (): void {
         ->assertOk()
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
-            ->has('durationHistory')
-            ->where('durationHistory.0.duration', 60)
-            ->where('durationHistory.0.name', $workout->name)
+            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->has('durationHistory')
+                ->where('durationHistory.0.duration', 60)
+                ->where('durationHistory.0.name', $workout->name)
+            )
         );
 });

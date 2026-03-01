@@ -20,7 +20,7 @@ class IntervalTimerController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('Tools/IntervalTimer', [
-            'timers' => $this->user()->intervalTimers()->latest()->get(),
+            'timers' => $this->user()->intervalTimers()->latest()->limit(50)->get(),
         ]);
     }
 

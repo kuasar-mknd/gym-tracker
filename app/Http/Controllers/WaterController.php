@@ -17,6 +17,8 @@ class WaterController extends Controller
 {
     public function index(FetchWaterHistoryAction $fetchWaterHistory): Response
     {
+        $this->authorize('viewAny', WaterLog::class);
+
         /** @var User $user */
         $user = $this->user();
 
@@ -35,6 +37,8 @@ class WaterController extends Controller
 
     public function store(StoreWaterLogRequest $request): RedirectResponse
     {
+        $this->authorize('create', WaterLog::class);
+
         $data = $request->validated();
 
         if (! isset($data['consumed_at'])) {
@@ -48,9 +52,7 @@ class WaterController extends Controller
 
     public function destroy(WaterLog $waterLog): RedirectResponse
     {
-        if ($waterLog->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $waterLog);
 
         $waterLog->delete();
 

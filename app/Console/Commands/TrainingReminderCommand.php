@@ -34,27 +34,43 @@ class TrainingReminderCommand extends Command
         $this->info('Starting training reminders check...');
 
         $count = 0;
-        User::all()->each(function (User $user) use (&$count): void {
-            /** @var NotificationPreference|null $preference */
-            $preference = $user->notificationPreferences()
-                ->where('type', 'training_reminder')
-                ->first();
 
-            if ($preference && $preference->is_enabled) {
-                // Use user-defined value or fallback to 3 days
-                $days = $preference->value ?? 3;
-                $threshold = Carbon::now()->subDays($days);
+        // 1. Only fetch users who have the 'training_reminder' preference enabled
+        // 2. Use chunkById to process users in batches (memory efficient)
+        // 3. Eager load only the necessary preference to avoid N+1
+        User::query()
+            ->whereHas('notificationPreferences', function ($query): void {
+                $query->where('type', 'training_reminder')
+                    ->where('is_enabled', true);
+            })
+            ->with([
+                'notificationPreferences' => function ($query): void {
+                    $query->where('type', 'training_reminder');
+                },
+            ])
 
-                $lastWorkout = $user->workouts()->latest('started_at')->first();
+            ->chunkById(100, function ($users) use (&$count): void {
+                foreach ($users as $user) {
+                    /** @var NotificationPreference|null $preference */
+                    $preference = $user->notificationPreferences->first();
 
-                if (! $lastWorkout || $lastWorkout->started_at->lt($threshold)) {
-                    // Only notify if we haven't notified them recently to avoid daily spam?
-                    // For now, simplicity: if they are beyond threshold, notify.
-                    $user->notify(new TrainingReminder());
-                    $count++;
+                    if (! $preference) {
+                        continue;
+                    }
+
+                    // Use user-defined value or fallback to 3 days
+                    $days = $preference->value ?? 3;
+                    $threshold = Carbon::now()->subDays($days);
+
+                    // Still one query per user for the workout, but filtered users is much smaller
+                    $lastWorkout = $user->workouts()->latest('started_at')->first();
+
+                    if (! $lastWorkout || $lastWorkout->started_at->lt($threshold)) {
+                        $user->notify(new TrainingReminder());
+                        $count++;
+                    }
                 }
-            }
-        });
+            });
 
         $this->info("Sent {$count} training reminders.");
     }

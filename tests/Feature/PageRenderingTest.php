@@ -51,6 +51,7 @@ test('dashboard page renders with correct props', function (): void {
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Dashboard')
+                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page)
                 ->has('workoutsCount')
                 ->has('thisWeekCount')
                 ->has('recentWorkouts')
@@ -139,9 +140,11 @@ test('stats page renders without cache errors', function (): void {
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Stats/Index')
-                ->has('volumeTrend')
-                ->has('muscleDistribution')
-                ->has('monthlyComparison')
+                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                    ->has('volumeTrend')
+                    ->has('muscleDistribution')
+                    ->has('monthlyComparison')
+                )
                 ->has('exercises')
         );
 });

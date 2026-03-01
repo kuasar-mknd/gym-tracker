@@ -27,6 +27,8 @@ class BodyPartMeasurementController extends Controller
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     public function index(): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', BodyPartMeasurement::class);
+
         $measurements = QueryBuilder::for(BodyPartMeasurement::class)
             ->allowedFilters(['part'])
             ->allowedSorts(['measured_at', 'created_at', 'value'])
@@ -42,6 +44,8 @@ class BodyPartMeasurementController extends Controller
      */
     public function store(BodyPartMeasurementStoreRequest $request): BodyPartMeasurementResource
     {
+        $this->authorize('create', BodyPartMeasurement::class);
+
         $measurement = new BodyPartMeasurement($request->validated());
         $measurement->user_id = $this->user()->id;
         $measurement->save();
@@ -54,9 +58,7 @@ class BodyPartMeasurementController extends Controller
      */
     public function show(BodyPartMeasurement $bodyPartMeasurement): BodyPartMeasurementResource
     {
-        if ($bodyPartMeasurement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('view', $bodyPartMeasurement);
 
         return new BodyPartMeasurementResource($bodyPartMeasurement);
     }
@@ -66,9 +68,7 @@ class BodyPartMeasurementController extends Controller
      */
     public function update(BodyPartMeasurementUpdateRequest $request, BodyPartMeasurement $bodyPartMeasurement): BodyPartMeasurementResource
     {
-        if ($bodyPartMeasurement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('update', $bodyPartMeasurement);
 
         $bodyPartMeasurement->update($request->validated());
 
@@ -80,9 +80,7 @@ class BodyPartMeasurementController extends Controller
      */
     public function destroy(BodyPartMeasurement $bodyPartMeasurement): Response
     {
-        if ($bodyPartMeasurement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $bodyPartMeasurement);
 
         $bodyPartMeasurement->delete();
 

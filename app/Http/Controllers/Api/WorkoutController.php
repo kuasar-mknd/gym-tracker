@@ -72,6 +72,8 @@ class WorkoutController extends Controller
      */
     public function update(WorkoutUpdateRequest $request, Workout $workout): WorkoutResource
     {
+        $this->authorize('update', $workout);
+
         $validated = $request->validated();
 
         $workout->update($validated);

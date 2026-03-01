@@ -61,13 +61,10 @@ class CustomPolicy extends Basic
         $policy
             ->add(Directive::STYLE, 'https://fonts.googleapis.com')
             ->add(Directive::STYLE, 'https://fonts.bunny.net')
-            ->add(Directive::IMG, 'https:')
             ->add(Directive::IMG, 'data:')
             ->add(Directive::IMG, 'https://ui-avatars.com')
             ->add(Directive::FONT, 'https://fonts.bunny.net')
             ->add(Directive::FONT, 'https://fonts.gstatic.com')
-            ->add(Directive::FONT, 'data:')
-            ->add(Directive::CONNECT, 'https:')
-            ->add(Directive::FRAME, 'https:');
+            ->add(Directive::FONT, 'data:');
     }
 }

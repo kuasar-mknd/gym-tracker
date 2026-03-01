@@ -13,6 +13,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int $id
  * @property int $user_id
  * @property string|null $name
+ * @property float $volume
  * @property \Illuminate\Support\Carbon $started_at
  * @property \Illuminate\Support\Carbon|null $ended_at
  * @property string|null $notes
@@ -26,6 +27,7 @@ class Workout extends Model
 
     protected $fillable = [
         'name',
+        'volume',
         'started_at',
         'ended_at',
         'notes',
@@ -60,6 +62,7 @@ class Workout extends Model
         return [
             'started_at' => 'datetime',
             'ended_at' => 'datetime',
+            'volume' => 'float',
         ];
     }
 }

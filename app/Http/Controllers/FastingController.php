@@ -15,6 +15,8 @@ class FastingController extends Controller
 {
     public function index(): Response
     {
+        $this->authorize('viewAny', Fast::class);
+
         $user = $this->user();
 
         $activeFast = $user->fasts()
@@ -36,6 +38,8 @@ class FastingController extends Controller
 
     public function store(StoreFastRequest $request): RedirectResponse
     {
+        $this->authorize('create', Fast::class);
+
         $user = $this->user();
 
         // Check if there is already an active fast
@@ -53,6 +57,8 @@ class FastingController extends Controller
 
     public function update(UpdateFastRequest $request, Fast $fast): RedirectResponse
     {
+        $this->authorize('update', $fast);
+
         $fast->update($request->validated());
 
         return back()->with('success', 'Fast updated successfully.');
@@ -60,9 +66,7 @@ class FastingController extends Controller
 
     public function destroy(Fast $fast): RedirectResponse
     {
-        if ($fast->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $fast);
 
         $fast->delete();
 

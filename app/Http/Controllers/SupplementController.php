@@ -32,6 +32,8 @@ class SupplementController extends Controller
      */
     public function index(FetchSupplementsIndexAction $fetchSupplementsIndexAction): \Inertia\Response
     {
+        $this->authorize('viewAny', Supplement::class);
+
         /** @var User $user */
         $user = $this->user();
 
@@ -48,6 +50,8 @@ class SupplementController extends Controller
      */
     public function store(SupplementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('create', Supplement::class);
+
         /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $validated */
         $validated = $request->validated();
 
@@ -70,7 +74,7 @@ class SupplementController extends Controller
      */
     public function update(SupplementUpdateRequest $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
-        // Auth check is handled by the SupplementUpdateRequest
+        $this->authorize('update', $supplement);
 
         /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $validated */
         $validated = $request->validated();
@@ -92,9 +96,7 @@ class SupplementController extends Controller
      */
     public function destroy(Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
-        if ($supplement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $supplement);
 
         $supplement->delete();
 
@@ -115,9 +117,7 @@ class SupplementController extends Controller
      */
     public function consume(Request $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
     {
-        if ($supplement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('update', $supplement);
 
         // Create log
         SupplementLog::create([

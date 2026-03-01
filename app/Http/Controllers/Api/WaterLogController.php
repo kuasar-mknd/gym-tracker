@@ -24,6 +24,8 @@ class WaterLogController extends Controller
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
+        $this->authorize('viewAny', WaterLog::class);
+
         $logs = QueryBuilder::for(WaterLog::class)
             ->allowedFilters([
                 AllowedFilter::exact('amount'),
@@ -46,6 +48,8 @@ class WaterLogController extends Controller
     #[OA\Response(response: 422, description: 'Validation error')]
     public function store(StoreWaterLogRequest $request): \Illuminate\Http\JsonResponse
     {
+        $this->authorize('create', WaterLog::class);
+
         $validated = $request->validated();
 
         $log = new WaterLog($validated);
@@ -68,9 +72,7 @@ class WaterLogController extends Controller
     #[OA\Response(response: 404, description: 'Not found')]
     public function show(WaterLog $waterLog): WaterLogResource
     {
-        if ($waterLog->user_id !== $this->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('view', $waterLog);
 
         return new WaterLogResource($waterLog);
     }
@@ -84,9 +86,7 @@ class WaterLogController extends Controller
     #[OA\Response(response: 422, description: 'Validation error')]
     public function update(UpdateWaterLogRequest $request, WaterLog $waterLog): WaterLogResource
     {
-        if ($waterLog->user_id !== $this->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('update', $waterLog);
 
         $validated = $request->validated();
 
@@ -103,9 +103,7 @@ class WaterLogController extends Controller
     #[OA\Response(response: 204, description: 'Deleted successfully')]
     public function destroy(WaterLog $waterLog): \Illuminate\Http\Response
     {
-        if ($waterLog->user_id !== $this->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
+        $this->authorize('delete', $waterLog);
 
         $waterLog->delete();
 

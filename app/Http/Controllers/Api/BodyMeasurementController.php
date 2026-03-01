@@ -25,6 +25,8 @@ class BodyMeasurementController extends Controller
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
+        $this->authorize('viewAny', BodyMeasurement::class);
+
         $measurements = QueryBuilder::for(BodyMeasurement::class)
             ->allowedSorts(['measured_at', 'weight', 'created_at'])
             ->defaultSort('-measured_at')
@@ -39,6 +41,8 @@ class BodyMeasurementController extends Controller
      */
     public function store(BodyMeasurementStoreRequest $request): BodyMeasurementResource
     {
+        $this->authorize('create', BodyMeasurement::class);
+
         $measurement = new BodyMeasurement($request->validated());
         $measurement->user_id = $this->user()->id;
         $measurement->save();
@@ -51,9 +55,7 @@ class BodyMeasurementController extends Controller
      */
     public function show(BodyMeasurement $bodyMeasurement): BodyMeasurementResource
     {
-        if ($bodyMeasurement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('view', $bodyMeasurement);
 
         return new BodyMeasurementResource($bodyMeasurement);
     }
@@ -63,9 +65,7 @@ class BodyMeasurementController extends Controller
      */
     public function update(BodyMeasurementUpdateRequest $request, BodyMeasurement $bodyMeasurement): BodyMeasurementResource
     {
-        if ($bodyMeasurement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('update', $bodyMeasurement);
 
         $bodyMeasurement->update($request->validated());
 
@@ -77,9 +77,7 @@ class BodyMeasurementController extends Controller
      */
     public function destroy(BodyMeasurement $bodyMeasurement): \Illuminate\Http\Response
     {
-        if ($bodyMeasurement->user_id !== $this->user()->id) {
-            abort(403);
-        }
+        $this->authorize('delete', $bodyMeasurement);
 
         $bodyMeasurement->delete();
 

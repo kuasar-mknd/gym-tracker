@@ -389,18 +389,16 @@ class StatsService
 
     protected function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
     {
-        $query = $this->getBaseVolumeQuery($user);
+        $query = DB::table('workouts')
+            ->where('user_id', $user->id);
 
         if ($end) {
-            $query->whereBetween('workouts.started_at', [$start, $end]);
+            $query->whereBetween('started_at', [$start, $end]);
         } else {
-            $query->where('workouts.started_at', '>=', $start);
+            $query->where('started_at', '>=', $start);
         }
 
-        return (float) $query->sum(
-            // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-            DB::raw('sets.weight * sets.reps')
-        );
+        return (float) $query->sum('volume');
     }
 
     protected function getBaseVolumeQuery(User $user): \Illuminate\Database\Query\Builder
@@ -493,17 +491,16 @@ class StatsService
      */
     protected function fetchVolumeTrendData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return $this->getBaseVolumeQuery($user)
-            ->where('workouts.started_at', '>=', now()->subDays($days))
+        return DB::table('workouts')
+            ->where('user_id', $user->id)
+            ->where('started_at', '>=', now()->subDays($days))
             ->select(
-                'workouts.id',
-                'workouts.started_at',
-                'workouts.name',
-                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+                'id',
+                'started_at',
+                'name',
+                'volume'
             )
-            ->groupBy('workouts.id', 'workouts.started_at', 'workouts.name')
-            ->orderBy('workouts.started_at')
+            ->orderBy('started_at')
             ->get();
     }
 
@@ -512,16 +509,15 @@ class StatsService
      */
     protected function fetchDailyVolumeData(User $user, Carbon $start): \Illuminate\Support\Collection
     {
-        return $this->getBaseVolumeQuery($user)
-            ->whereBetween('workouts.started_at', [$start, now()->endOfDay()])
+        return DB::table('workouts')
+            ->where('user_id', $user->id)
+            ->whereBetween('started_at', [$start, now()->endOfDay()])
             ->select(
-                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-                DB::raw('DATE(workouts.started_at) as date'),
-                // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
-                DB::raw('COALESCE(SUM(sets.weight * sets.reps), 0) as volume')
+                DB::raw('DATE(started_at) as date'),
+                DB::raw('SUM(volume) as daily_volume')
             )
             ->groupBy('date')
-            ->pluck('volume', 'date')
+            ->pluck('daily_volume', 'date')
             ->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
     }
 
