@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,7 +13,7 @@ class StoreAchievementRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +24,13 @@ class StoreAchievementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'slug' => ['required', 'string', 'max:255', 'unique:achievements,slug'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'icon' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'string', 'max:255'],
+            'threshold' => ['required', 'numeric'],
+            'category' => ['required', 'string', 'max:255'],
         ];
     }
 }
