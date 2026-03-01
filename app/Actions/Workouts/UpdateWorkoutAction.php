@@ -25,7 +25,6 @@ final class UpdateWorkoutAction
         // Check what changed to determine cache invalidation strategy
         $needsFullClear = $workout->isDirty(['started_at', 'ended_at']);
         $needsMetaClear = $workout->isDirty(['name']);
-        $needsDashboardClear = $workout->isDirty(['notes']);
 
         if ($data['is_finished'] ?? false) {
             $workout->ended_at = now();
