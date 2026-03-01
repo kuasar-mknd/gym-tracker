@@ -38,8 +38,6 @@ final class UpdateWorkoutAction
             $this->statsService->clearWorkoutRelatedStats($workout->user);
         } elseif ($needsMetaClear) {
             $this->statsService->clearWorkoutMetadataStats($workout->user);
-        } elseif ($needsDashboardClear) {
-            \Illuminate\Support\Facades\Cache::forget("dashboard_data_{$workout->user_id}");
         }
 
         return $workout;

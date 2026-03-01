@@ -71,8 +71,11 @@ class StatsService
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
+        $version = Cache::get("stats.1rm_version.{$user->id}", '1');
+        $version = is_scalar($version) ? (string) $version : '1';
+
         return Cache::remember(
-            "stats.1rm.{$user->id}.{$exerciseId}.{$days}",
+            "stats.1rm.{$user->id}.{$exerciseId}.{$days}.v{$version}",
             now()->addMinutes(30),
             fn (): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
                 ->map(fn (object $set): array => $this->formatExercise1RMItem($set))
@@ -276,7 +279,7 @@ class StatsService
         Cache::forget("stats.volume_history.{$user->id}.30");
         Cache::forget("stats.duration_history.{$user->id}.20");
 
-        foreach ([7, 30, 90] as $days) {
+        foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.volume_trend.{$user->id}.{$days}");
         }
     }
@@ -295,12 +298,13 @@ class StatsService
         Cache::forget("stats.monthly_volume_history.{$user->id}.6");
         Cache::forget("stats.duration_distribution.{$user->id}.90");
 
+        // Invalidate 1RM cache for all exercises (O(1))
+        Cache::put("stats.1rm_version.{$user->id}", (string) time(), 86400 * 30);
+
         // Clear volume trends for common periods
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.volume_trend.{$user->id}.{$days}");
             Cache::forget("stats.daily_volume.{$user->id}.{$days}");
-            Cache::forget("stats.weight_history.{$user->id}.{$days}");
-            Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
         }
 
         // Clear volume history
