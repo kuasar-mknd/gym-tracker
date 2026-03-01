@@ -225,7 +225,7 @@ watch(
                             @click="addTime(30)"
                             class="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                             title="+30s"
-                            aria-label="Ajouter 30 secondes"
+                            aria-label="Add 30 seconds"
                         >
                             <span class="text-xs font-bold" aria-hidden="true">+30s</span>
                         </button>
@@ -233,7 +233,7 @@ watch(
                         <button
                             @click="toggleTimer"
                             class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
-                            :aria-label="isActive ? 'Mettre en pause le minuteur' : 'Démarrer le minuteur'"
+                            :aria-label="isActive ? 'Pause timer' : 'Start timer'"
                         >
                             <svg
                                 v-if="isActive"
