@@ -31,7 +31,7 @@ final class PersonalRecordService
         /** @var \App\Models\User|null $user */
         $user ??= $set->workoutLine->workout->user;
 
-        // @phpstan-ignore-next-line
+        // @phpstan-ignore booleanNot.alwaysFalse
         if (! $user) {
             return;
         }
