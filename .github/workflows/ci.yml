@@ -55,17 +55,11 @@ jobs:
               run: npm run build
 
             - name: Upload Build Artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  name: build-assets
-                  path: public/build
-              continue-on-error: true # Might fail if download-artifact is used instead of build
-
-            - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: build-assets
                   path: public/build
+                  retention-days: 1
 
     laravel-tests:
         runs-on: ubuntu-latest
@@ -94,17 +88,11 @@ jobs:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
-            - name: Copy .env
-              run: php -r "file_exists('.env') || copy('.env.example', '.env');"
-
-            - name: Generate key
-              run: php artisan key:generate
-
-            - name: Directory Permissions
-              run: chmod -R 777 storage bootstrap/cache
-
-            - name: Create Database
-              run: touch database/database.sqlite
+            - name: Prepare Application
+              run: |
+                  cp .env.example .env
+                  php artisan key:generate
+                  touch database/database.sqlite
 
             - name: Execute tests
               env:
@@ -148,12 +136,6 @@ jobs:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
-            - name: Prepare Application
-              run: |
-                  cp .env.example .env
-                  php artisan key:generate
-                  chmod -R 777 storage bootstrap/cache
-
             - name: Install Chrome Driver
               run: php artisan dusk:chrome-driver --detect
 
@@ -161,41 +143,36 @@ jobs:
               run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
 
             - name: Run Dusk Tests
-              env:
-                  APP_ENV: testing
-                  APP_URL: 'http://127.0.0.1:8000'
-                  DB_CONNECTION: mysql
-                  DB_HOST: 127.0.0.1
-                  DB_PORT: 3307
-                  DB_DATABASE: gym_tracker_dusk
-                  DB_USERNAME: root
-                  BROADCAST_CONNECTION: log
-                  CACHE_STORE: array
-                  SESSION_DRIVER: file
-                  QUEUE_CONNECTION: sync
-                  DUSK_DRIVER_URL: http://127.0.0.1:9515
-
               run: |
-                  # Build .env without overwriting the APP_KEY generated in Prepare Application
-                  sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/g' .env
-                  {
-                    echo "APP_ENV=testing"
-                    echo "APP_URL=http://127.0.0.1:8000"
-                    echo "DB_HOST=127.0.0.1"
-                    echo "DB_PORT=3307"
-                    echo "DB_DATABASE=gym_tracker_dusk"
-                    echo "DB_USERNAME=root"
-                    echo "DB_PASSWORD="
-                    echo "SESSION_DRIVER=file"
-                    echo "BROADCAST_CONNECTION=log"
-                    echo "CACHE_STORE=array"
-                    echo "QUEUE_CONNECTION=sync"
-                    echo "TELESCOPE_ENABLED=false"
-                    echo "PULSE_ENABLED=false"
-                    echo "DUSK_DRIVER_URL=http://127.0.0.1:9515"
-                  } >> .env
+                  # Create a fresh .env for Dusk
+                  cat <<EOF > .env
+                  APP_NAME=GymTracker
+                  APP_ENV=testing
+                  APP_KEY=base64:$(openssl rand -base64 32)
+                  APP_DEBUG=true
+                  APP_URL=http://127.0.0.1:8000
+
+                  DB_CONNECTION=mysql
+                  DB_HOST=127.0.0.1
+                  DB_PORT=3307
+                  DB_DATABASE=gym_tracker_dusk
+                  DB_USERNAME=root
+                  DB_PASSWORD=
+
+                  SESSION_DRIVER=file
+                  CACHE_STORE=array
+                  QUEUE_CONNECTION=sync
+                  MAIL_MAILER=array
+                  
+                  TELESCOPE_ENABLED=false
+                  PULSE_ENABLED=false
+                  DUSK_DRIVER_URL=http://127.0.0.1:9515
+                  EOF
 
                   php artisan config:clear
+                  php artisan route:clear
+                  php artisan view:clear
+                  
                   php artisan migrate:fresh --seed --force
                   
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
