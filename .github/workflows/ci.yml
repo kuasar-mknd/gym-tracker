@@ -98,6 +98,7 @@ jobs:
               env:
                   DB_CONNECTION: sqlite
                   DB_DATABASE: ':memory:'
+                  TELESCOPE_ENABLED: false
               run: php artisan test --parallel --processes=4
 
     browser-tests:
@@ -161,23 +162,41 @@ jobs:
                   CACHE_STORE: array
                   SESSION_DRIVER: file
                   QUEUE_CONNECTION: sync
+                  TELESCOPE_ENABLED: false
+                  PULSE_ENABLED: false
                   DUSK_DRIVER_URL: http://127.0.0.1:9515
               run: |
-                  # Explicitly set variables in .env
-                  sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/g' .env
-                  sed -i 's/APP_ENV=local/APP_ENV=testing/g' .env
-                  sed -i 's|APP_URL=.*|APP_URL=http://127.0.0.1:8000|g' .env
-                  echo "DB_HOST=127.0.0.1" >> .env
-                  echo "DB_PORT=3307" >> .env
-                  echo "DB_DATABASE=gym_tracker_dusk" >> .env
-                  echo "DB_USERNAME=root" >> .env
-                  echo "SESSION_DRIVER=file" >> .env
-                  echo "DUSK_DRIVER_URL=http://127.0.0.1:9515" >> .env
+                  # Force environment variables into .env for the serve process
+                  cat <<EOF > .env
+                  APP_NAME=GymTracker
+                  APP_ENV=testing
+                  APP_KEY=base64:$(php artisan key:generate --show --no-ansi)
+                  APP_DEBUG=true
+                  APP_URL=http://127.0.0.1:8000
+
+                  DB_CONNECTION=mysql
+                  DB_HOST=127.0.0.1
+                  DB_PORT=3307
+                  DB_DATABASE=gym_tracker_dusk
+                  DB_USERNAME=root
+                  DB_PASSWORD=
+
+                  SESSION_DRIVER=file
+                  CACHE_STORE=array
+                  QUEUE_CONNECTION=sync
+                  MAIL_MAILER=array
+                  
+                  TELESCOPE_ENABLED=false
+                  PULSE_ENABLED=false
+                  DUSK_DRIVER_URL=http://127.0.0.1:9515
+                  EOF
 
                   php artisan config:clear
+                  
+                  # Ensure Telescope tables exist to avoid 500 errors if it accidentally tries to record
                   php artisan migrate:fresh --seed --force
                   
-                  # Start server and capture logs
+                  # Start server
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
                   
                   # Wait for server
@@ -190,7 +209,7 @@ jobs:
               if: failure()
               run: |
                   echo "--- Laravel Log ---"
-                  cat storage/logs/laravel.log || echo "No laravel log found"
+                  tail -n 100 storage/logs/laravel.log || echo "No laravel log found"
                   echo "--- Serve Log ---"
                   cat storage/logs/serve.log || echo "No serve log found"
 
