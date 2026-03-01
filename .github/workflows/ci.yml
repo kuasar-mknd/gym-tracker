@@ -33,8 +33,7 @@ jobs:
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
             - name: Install PHP Dependencies
-              if: steps.vendor-cache.outputs.cache-hit != 'true'
-              run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+              run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
     frontend-build:
         runs-on: ubuntu-latest
@@ -137,12 +136,6 @@ jobs:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
-            - name: Prepare Application
-              run: |
-                  cp .env.example .env
-                  php artisan key:generate
-                  chmod -R 777 storage bootstrap/cache
-
             - name: Install Chrome Driver
               run: php artisan dusk:chrome-driver --detect
 
@@ -150,27 +143,12 @@ jobs:
               run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
 
             - name: Run Dusk Tests
-              env:
-                  APP_ENV: testing
-                  APP_URL: 'http://127.0.0.1:8000'
-                  DB_CONNECTION: mysql
-                  DB_HOST: 127.0.0.1
-                  DB_PORT: 3307
-                  DB_DATABASE: gym_tracker_dusk
-                  DB_USERNAME: root
-                  BROADCAST_CONNECTION: log
-                  CACHE_STORE: array
-                  SESSION_DRIVER: file
-                  QUEUE_CONNECTION: sync
-                  TELESCOPE_ENABLED: false
-                  PULSE_ENABLED: false
-                  DUSK_DRIVER_URL: http://127.0.0.1:9515
               run: |
-                  # Force environment variables into .env for the serve process
+                  # Create fresh .env
                   cat <<EOF > .env
                   APP_NAME=GymTracker
                   APP_ENV=testing
-                  APP_KEY=base64:$(php artisan key:generate --show --no-ansi)
+                  APP_KEY=base64:$(openssl rand -base64 32)
                   APP_DEBUG=true
                   APP_URL=http://127.0.0.1:8000
 
@@ -181,19 +159,17 @@ jobs:
                   DB_USERNAME=root
                   DB_PASSWORD=
 
-                  SESSION_DRIVER=file
+                  SESSION_DRIVER=cookie
                   CACHE_STORE=array
                   QUEUE_CONNECTION=sync
-                  MAIL_MAILER=array
                   
                   TELESCOPE_ENABLED=false
                   PULSE_ENABLED=false
                   DUSK_DRIVER_URL=http://127.0.0.1:9515
                   EOF
 
+                  chmod -R 777 storage bootstrap/cache
                   php artisan config:clear
-                  
-                  # Ensure Telescope tables exist to avoid 500 errors if it accidentally tries to record
                   php artisan migrate:fresh --seed --force
                   
                   # Start server
@@ -202,7 +178,7 @@ jobs:
                   # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
                   
-                  # Run dusk
+                  # Run dusk with increased timeout
                   php artisan dusk
 
             - name: Dump Logs on Failure
