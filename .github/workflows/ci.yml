@@ -108,15 +108,6 @@ jobs:
     browser-tests:
         runs-on: ubuntu-latest
         needs: [setup-php, frontend-build]
-        services:
-            mysql:
-                image: mysql:8.4
-                env:
-                    MYSQL_ALLOW_EMPTY_PASSWORD: yes
-                    MYSQL_DATABASE: gym_tracker_dusk
-                ports:
-                    - 33306:3306
-                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -146,6 +137,7 @@ jobs:
                   cp .env.example .env
                   php artisan key:generate
                   chmod -R 777 storage bootstrap/cache
+                  touch database/dusk.sqlite
 
             - name: Install Chrome Driver
               run: php artisan dusk:chrome-driver --detect
@@ -157,12 +149,8 @@ jobs:
               env:
                   APP_ENV: testing
                   APP_URL: 'http://127.0.0.1:8000'
-                  DB_CONNECTION: mysql
-                  DB_HOST: 127.0.0.1
-                  DB_PORT: 33306
-                  DB_DATABASE: gym_tracker_dusk
-                  DB_USERNAME: root
-                  DB_PASSWORD: ''
+                  DB_CONNECTION: sqlite
+                  DB_DATABASE: /home/runner/work/gym-tracker/gym-tracker/database/dusk.sqlite
                   BROADCAST_CONNECTION: log
                   CACHE_STORE: array
                   SESSION_DRIVER: cookie
@@ -175,7 +163,7 @@ jobs:
                   DUSK_DRIVER_URL: http://127.0.0.1:9515
 
               run: |
-                  # Write environment variables to .env so artisan serve subprocess uses them
+                  # Explicitly build .env for the subprocess
                   cat <<EOF > .env
                   APP_NAME=GymTracker
                   APP_ENV=testing
@@ -183,12 +171,8 @@ jobs:
                   APP_DEBUG=false
                   APP_URL=http://127.0.0.1:8000
 
-                  DB_CONNECTION=mysql
-                  DB_HOST=127.0.0.1
-                  DB_PORT=33306
-                  DB_DATABASE=gym_tracker_dusk
-                  DB_USERNAME=root
-                  DB_PASSWORD=
+                  DB_CONNECTION=sqlite
+                  DB_DATABASE=/home/runner/work/gym-tracker/gym-tracker/database/dusk.sqlite
 
                   SESSION_DRIVER=cookie
                   CACHE_STORE=array
@@ -208,6 +192,7 @@ jobs:
                   
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
                   
+                  # Run Dusk tests (back to sequential for stability on SQLite first)
                   php artisan dusk
 
             - name: Upload Test Screenshots
