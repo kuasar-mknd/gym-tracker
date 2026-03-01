@@ -44,7 +44,7 @@ return [
     |
     */
 
-    'enabled' => env('PULSE_ENABLED', true),
+    'enabled' => env('PULSE_ENABLED', true) && ! (defined('PHPUNIT_RUNNING') || env('APP_ENV') === 'testing'),
 
     /*
     |--------------------------------------------------------------------------
