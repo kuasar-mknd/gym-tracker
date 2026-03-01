@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Workouts\CreateSetAction;
 use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
@@ -17,11 +18,6 @@ use Spatie\QueryBuilder\QueryBuilder;
 class SetController extends Controller
 {
     use AuthorizesRequests;
-
-    public function __construct(
-        protected StatsService $statsService
-    ) {
-    }
 
     /**
      * Display a listing of the resource.
@@ -43,8 +39,9 @@ class SetController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(SetStoreRequest $request): SetResource
+    public function store(SetStoreRequest $request, CreateSetAction $createSetAction): SetResource
     {
+        /** @var array<string, mixed> $validated */
         $validated = $request->validated();
 
         try {
@@ -53,11 +50,11 @@ class SetController extends Controller
 
             $this->authorize('create', [Set::class, $workoutLine]);
 
-            $set = $workoutLine->sets()->create(
-                collect($validated)->except('workout_line_id')->toArray()
-            );
+            $data = collect($validated)->except('workout_line_id')->toArray();
+            /** @var \App\Models\User $user */
+            $user = $this->user();
 
-            $this->statsService->clearWorkoutRelatedStats($this->user());
+            $set = $createSetAction->execute($user, $workoutLine, $data);
 
             return new SetResource($set);
         } catch (\Exception $e) {
@@ -85,13 +82,13 @@ class SetController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(SetUpdateRequest $request, Set $set): SetResource
+    public function update(SetUpdateRequest $request, Set $set, StatsService $statsService): SetResource
     {
         $this->authorize('update', $set);
 
         $set->update($request->validated());
 
-        $this->statsService->clearWorkoutRelatedStats($this->user());
+        $statsService->clearWorkoutRelatedStats($this->user());
 
         return new SetResource($set);
     }
@@ -99,14 +96,14 @@ class SetController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Set $set): \Illuminate\Http\Response
+    public function destroy(Set $set, StatsService $statsService): \Illuminate\Http\Response
     {
         $this->authorize('delete', $set);
 
         $user = $this->user();
         $set->delete();
 
-        $this->statsService->clearWorkoutRelatedStats($user);
+        $statsService->clearWorkoutRelatedStats($user);
 
         return response()->noContent();
     }

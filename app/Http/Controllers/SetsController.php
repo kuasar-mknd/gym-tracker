@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Workouts\CreateSetAction;
 use App\Http\Requests\SetStoreRequest;
 use App\Http\Requests\SetUpdateRequest;
 use App\Models\Set;
@@ -17,25 +18,19 @@ use Illuminate\Http\RedirectResponse;
 class SetsController extends Controller
 {
     /**
-     * Create a new controller instance.
-     */
-    public function __construct(
-        protected StatsService $statsService
-    ) {
-    }
-
-    /**
      * Store a newly created set in storage.
      */
-    public function store(SetStoreRequest $request, WorkoutLine $workoutLine): RedirectResponse
+    public function store(SetStoreRequest $request, WorkoutLine $workoutLine, CreateSetAction $createSetAction): RedirectResponse
     {
         $this->authorize('create', [Set::class, $workoutLine]);
 
-        $workoutLine->sets()->create($request->validated());
+        /** @var array<string, mixed> $data */
+        $data = $request->validated();
 
         /** @var \App\Models\User $user */
         $user = $this->user();
-        $this->statsService->clearWorkoutRelatedStats($user);
+
+        $createSetAction->execute($user, $workoutLine, $data);
 
         return back();
     }
@@ -43,7 +38,7 @@ class SetsController extends Controller
     /**
      * Update the specified set in storage.
      */
-    public function update(SetUpdateRequest $request, Set $set): RedirectResponse
+    public function update(SetUpdateRequest $request, Set $set, StatsService $statsService): RedirectResponse
     {
         $this->authorize('update', $set);
 
@@ -51,7 +46,7 @@ class SetsController extends Controller
 
         /** @var \App\Models\User $user */
         $user = $this->user();
-        $this->statsService->clearWorkoutRelatedStats($user);
+        $statsService->clearWorkoutRelatedStats($user);
 
         return back();
     }
@@ -59,13 +54,13 @@ class SetsController extends Controller
     /**
      * Remove the specified set from storage.
      */
-    public function destroy(Set $set): RedirectResponse
+    public function destroy(Set $set, StatsService $statsService): RedirectResponse
     {
         $this->authorize('delete', $set);
 
         $user = $this->user();
         $set->delete();
-        $this->statsService->clearWorkoutRelatedStats($user);
+        $statsService->clearWorkoutRelatedStats($user);
 
         return back();
     }
