@@ -178,14 +178,15 @@ jobs:
                   php artisan config:clear
                   php artisan migrate:fresh --seed --force
                   
-                  # DEBUG: Show workouts table schema using PHP to avoid mysql binary dependency issues
+                  # DEBUG: Show workouts table schema
+                  echo "--- Database Schema Verification ---"
                   php artisan tinker --execute="print_r(DB::select('DESCRIBE workouts'))"
                   
                   # Start server
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
                   
-                  # Wait for server
-                  timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
+                  # Wait for server - increased timeout to 60s
+                  timeout 60s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
                   
                   # Run dusk
                   php artisan dusk

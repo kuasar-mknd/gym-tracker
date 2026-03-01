@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 pest()->extend(Tests\DuskTestCase::class)
-    ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
+    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Browser');
 
 use Illuminate\Foundation\Testing\RefreshDatabase;

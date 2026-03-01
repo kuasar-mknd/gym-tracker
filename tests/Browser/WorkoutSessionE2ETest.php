@@ -6,13 +6,13 @@ namespace Tests\Browser;
 
 use App\Models\Exercise;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 final class WorkoutSessionE2ETest extends DuskTestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_ultra_complete_workout_session_flow(): void
     {
