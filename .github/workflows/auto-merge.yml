@@ -22,7 +22,6 @@ jobs:
                   steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
                   steps.metadata.outputs.update-type == 'version-update:semver-minor'
               run: |
-                  gh pr review --approve "$PR_URL"
                   gh pr merge --auto --squash "$PR_URL"
               env:
                   PR_URL: ${{ github.event.pull_request.html_url }}
@@ -35,16 +34,16 @@ jobs:
             - name: Check contributor count
               id: check_contributors
               run: |
-                  CONTRIBUTORS_COUNT=$(gh pr view "$PR_NUMBER" --json participants --jq '.participants | length')
+                  # Fallback to checking commits and unique authors if participants field is not available
+                  CONTRIBUTORS_COUNT=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json commits --jq '[.commits[].authors[].email] | unique | length')
                   echo "count=$CONTRIBUTORS_COUNT" >> $GITHUB_OUTPUT
               env:
                   PR_NUMBER: ${{ github.event.pull_request.number }}
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Approve and auto-merge kuasar-mknd PRs
+            - name: Auto-merge kuasar-mknd PRs
               if: steps.check_contributors.outputs.count == '1'
               run: |
-                  gh pr review --approve "$PR_URL"
                   gh pr merge --auto --squash "$PR_URL"
               env:
                   PR_URL: ${{ github.event.pull_request.html_url }}
