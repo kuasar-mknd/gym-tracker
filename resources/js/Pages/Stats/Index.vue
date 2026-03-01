@@ -1,7 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { Head, Link, router, Deferred } from '@inertiajs/vue3'
 import { ref, watch, computed, defineAsyncComponent } from 'vue'
 import axios from 'axios'
 
@@ -20,7 +21,7 @@ const props = defineProps({
     bodyFatHistory: Array,
     durationHistory: Array,
     exercises: Array,
-    latestWeight: Number,
+    latestWeight: [Number, String],
     weightChange: Number,
     bodyFat: Number,
     selectedPeriod: String,
@@ -131,12 +132,19 @@ watch(selectedExercise, (newVal) => {
                     </div>
                 </div>
 
-                <!-- Real Weight Chart -->
+                <!-- Real Weight Chart (Deferred) -->
                 <div class="relative -mx-2 h-40 w-full">
-                    <WeightHistoryChart v-if="props.weightHistory?.length > 0" :data="props.weightHistory" />
-                    <div v-else class="flex h-full items-center justify-center text-center">
-                        <p class="text-text-muted/50 text-sm italic">Pas encore de données de poids</p>
-                    </div>
+                    <Deferred data="weightHistory">
+                        <template #fallback>
+                            <div class="flex h-full items-center justify-center px-4">
+                                <GlassSkeleton height="h-32" width="w-full" class="rounded-xl" />
+                            </div>
+                        </template>
+                        <WeightHistoryChart v-if="props.weightHistory?.length > 0" :data="props.weightHistory" />
+                        <div v-else class="flex h-full items-center justify-center text-center">
+                            <p class="text-text-muted/50 text-sm italic">Pas encore de données de poids</p>
+                        </div>
+                    </Deferred>
                 </div>
 
                 <Link
@@ -167,42 +175,56 @@ watch(selectedExercise, (newVal) => {
                         </div>
                     </div>
 
-                    <!-- Real Body Fat Chart -->
+                    <!-- Real Body Fat Chart (Deferred) -->
                     <div class="mt-4 h-32 w-full">
-                        <BodyFatChart v-if="props.bodyFatHistory?.length > 0" :data="props.bodyFatHistory" />
-                        <div v-else class="flex h-full items-center justify-center">
-                            <p class="text-text-muted/30 text-[10px] italic">Pas de données historiques</p>
-                        </div>
+                        <Deferred data="bodyFatHistory">
+                            <template #fallback>
+                                <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
+                            </template>
+                            <BodyFatChart v-if="props.bodyFatHistory?.length > 0" :data="props.bodyFatHistory" />
+                            <div v-else class="flex h-full items-center justify-center">
+                                <p class="text-text-muted/30 text-[10px] italic">Pas de données historiques</p>
+                            </div>
+                        </Deferred>
                     </div>
                 </GlassCard>
 
                 <!-- This Month Volume -->
                 <GlassCard padding="p-5">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h4 class="mb-1 text-[10px] font-black tracking-[0.15em] text-violet-600 uppercase">
-                                Volume Mois
-                            </h4>
-                            <p class="font-display text-text-main text-3xl font-black">
-                                {{ Math.round(monthlyComparison?.current_month_volume || 0).toLocaleString() }}
-                                <span class="text-text-muted text-sm">kg</span>
-                            </p>
+                    <Deferred data="monthlyComparison">
+                        <template #fallback>
+                            <div class="space-y-4">
+                                <GlassSkeleton height="h-4" width="w-24" />
+                                <GlassSkeleton height="h-10" width="w-32" />
+                                <GlassSkeleton height="h-6" width="w-16" class="rounded-lg" />
+                            </div>
+                        </template>
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="mb-1 text-[10px] font-black tracking-[0.15em] text-violet-600 uppercase">
+                                    Volume Mois
+                                </h4>
+                                <p class="font-display text-text-main text-3xl font-black">
+                                    {{ Math.round(monthlyComparison?.current_month_volume || 0).toLocaleString() }}
+                                    <span class="text-text-muted text-sm">kg</span>
+                                </p>
+                            </div>
+                            <div
+                                :class="[
+                                    'flex items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold',
+                                    (monthlyComparison?.percentage || 0) >= 0
+                                        ? 'bg-emerald-50 text-emerald-600'
+                                        : 'bg-red-50 text-red-600',
+                                ]"
+                            >
+                                <span class="material-symbols-outlined text-sm">
+                                    {{ (monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down' }}
+                                </span>
+                                {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
+                                }}{{ monthlyComparison?.percentage || 0 }}%
+                            </div>
                         </div>
-                        <div
-                            :class="[
-                                'flex items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold',
-                                (monthlyComparison?.percentage || 0) >= 0
-                                    ? 'bg-emerald-50 text-emerald-600'
-                                    : 'bg-red-50 text-red-600',
-                            ]"
-                        >
-                            <span class="material-symbols-outlined text-sm">
-                                {{ (monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down' }}
-                            </span>
-                            {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
-                            }}{{ monthlyComparison?.percentage || 0 }}%
-                        </div>
-                    </div>
+                    </Deferred>
                 </GlassCard>
             </div>
 
@@ -234,12 +256,19 @@ watch(selectedExercise, (newVal) => {
                         </div>
                     </div>
                 </div>
-                <div v-if="volumeTrend && volumeTrend.length > 0" class="h-48">
-                    <VolumeTrendChart :data="volumeTrend" />
-                </div>
-                <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
-                    <p class="text-text-muted text-sm">Pas encore de données de volume</p>
+                <div class="h-48">
+                    <Deferred data="volumeTrend">
+                        <template #fallback>
+                            <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
+                        </template>
+                        <div v-if="volumeTrend && volumeTrend.length > 0" class="h-full">
+                            <VolumeTrendChart :data="volumeTrend" />
+                        </div>
+                        <div v-else class="flex h-full flex-col items-center justify-center text-center">
+                            <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                            <p class="text-text-muted text-sm">Pas encore de données de volume</p>
+                        </div>
+                    </Deferred>
                 </div>
             </GlassCard>
 
@@ -253,12 +282,19 @@ watch(selectedExercise, (newVal) => {
                         <p class="text-text-muted text-xs font-semibold">Historique des 30 dernières séances</p>
                     </div>
                 </div>
-                <div v-if="durationHistory && durationHistory.length > 0" class="h-48">
-                    <DurationHistoryChart :data="durationHistory" />
-                </div>
-                <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">timer_off</span>
-                    <p class="text-text-muted text-sm">Pas encore de données de durée</p>
+                <div class="h-48">
+                    <Deferred data="durationHistory">
+                        <template #fallback>
+                            <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
+                        </template>
+                        <div v-if="durationHistory && durationHistory.length > 0" class="h-full">
+                            <DurationHistoryChart :data="durationHistory" />
+                        </div>
+                        <div v-else class="flex h-full flex-col items-center justify-center text-center">
+                            <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">timer_off</span>
+                            <p class="text-text-muted text-sm">Pas encore de données de durée</p>
+                        </div>
+                    </Deferred>
                 </div>
             </GlassCard>
 
@@ -272,12 +308,21 @@ watch(selectedExercise, (newVal) => {
                         </h3>
                         <p class="text-text-muted text-xs font-semibold">Volume par groupe musculaire</p>
                     </div>
-                    <div v-if="muscleDistribution && muscleDistribution.length > 0" class="h-52">
-                        <MuscleDistributionChart :data="muscleDistribution" />
-                    </div>
-                    <div v-else class="flex h-52 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">pie_chart</span>
-                        <p class="text-text-muted text-sm">Données de répartition indisponibles</p>
+                    <div class="h-52">
+                        <Deferred data="muscleDistribution">
+                            <template #fallback>
+                                <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
+                            </template>
+                            <div v-if="muscleDistribution && muscleDistribution.length > 0" class="h-full">
+                                <MuscleDistributionChart :data="muscleDistribution" />
+                            </div>
+                            <div v-else class="flex h-full flex-col items-center justify-center text-center">
+                                <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl"
+                                    >pie_chart</span
+                                >
+                                <p class="text-text-muted text-sm">Données de répartition indisponibles</p>
+                            </div>
+                        </Deferred>
                     </div>
                 </GlassCard>
 
@@ -321,15 +366,25 @@ watch(selectedExercise, (newVal) => {
             <div class="animate-slide-up grid grid-cols-4 gap-3" style="animation-delay: 0.25s">
                 <GlassCard padding="p-4" class="text-center">
                     <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
-                    <div class="font-display text-text-main mt-1 text-2xl font-black">
-                        {{ volumeTrend?.length || 0 }}
-                    </div>
+                    <Deferred data="volumeTrend">
+                        <template #fallback>
+                            <GlassSkeleton height="h-8" width="w-8" class="mx-auto mt-1" />
+                        </template>
+                        <div class="font-display text-text-main mt-1 text-2xl font-black">
+                            {{ volumeTrend?.length || 0 }}
+                        </div>
+                    </Deferred>
                 </GlassCard>
                 <GlassCard padding="p-4" class="text-center">
                     <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
-                    <div class="font-display text-text-main mt-1 text-2xl font-black">
-                        {{ muscleDistribution?.length || 0 }}
-                    </div>
+                    <Deferred data="muscleDistribution">
+                        <template #fallback>
+                            <GlassSkeleton height="h-8" width="w-8" class="mx-auto mt-1" />
+                        </template>
+                        <div class="font-display text-text-main mt-1 text-2xl font-black">
+                            {{ muscleDistribution?.length || 0 }}
+                        </div>
+                    </Deferred>
                 </GlassCard>
                 <GlassCard padding="p-4" class="text-center">
                     <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Exercices</div>
@@ -339,15 +394,20 @@ watch(selectedExercise, (newVal) => {
                 </GlassCard>
                 <GlassCard padding="p-4" class="text-center">
                     <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
-                    <div
-                        :class="[
-                            'font-display mt-1 text-2xl font-black',
-                            (monthlyComparison?.percentage || 0) >= 0 ? 'text-emerald-500' : 'text-red-500',
-                        ]"
-                    >
-                        {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
-                        }}{{ monthlyComparison?.percentage || 0 }}%
-                    </div>
+                    <Deferred data="monthlyComparison">
+                        <template #fallback>
+                            <GlassSkeleton height="h-8" width="w-12" class="mx-auto mt-1" />
+                        </template>
+                        <div
+                            :class="[
+                                'font-display mt-1 text-2xl font-black',
+                                (monthlyComparison?.percentage || 0) >= 0 ? 'text-emerald-500' : 'text-red-500',
+                            ]"
+                        >
+                            {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
+                            }}{{ monthlyComparison?.percentage || 0 }}%
+                        </div>
+                    </Deferred>
                 </GlassCard>
             </div>
         </div>

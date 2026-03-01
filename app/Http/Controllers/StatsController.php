@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\Stats\FetchStatsOverviewAction;
 use App\Models\Exercise;
 use App\Services\StatsService;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class StatsController extends Controller
@@ -16,14 +17,27 @@ class StatsController extends Controller
     }
 
     /**
-     * Display the main statistics dashboard.
+     * Display the main statistics dashboard with Deferred Loading (Inertia 2.0).
      */
-    public function index(\Illuminate\Http\Request $request, FetchStatsOverviewAction $fetchStatsOverview): \Inertia\Response
+    public function index(Request $request, FetchStatsOverviewAction $fetchStatsOverview): \Inertia\Response
     {
-        return Inertia::render('Stats/Index', $fetchStatsOverview->execute(
-            $this->user(),
-            $request->query('period', '30j')
-        ));
+        $user = $this->user();
+        $period = $request->query('period', '30j');
+        $days = $fetchStatsOverview->parsePeriod($period);
+
+        // Immediate data
+        $immediateData = $fetchStatsOverview->getImmediateStats($user, $period);
+
+        return Inertia::render('Stats/Index', [
+            ...$immediateData,
+            // Defer heavy data
+            'volumeTrend' => Inertia::defer(fn () => $this->statsService->getVolumeTrend($user, $days)),
+            'muscleDistribution' => Inertia::defer(fn () => $this->statsService->getMuscleDistribution($user, $days)),
+            'monthlyComparison' => Inertia::defer(fn () => $this->statsService->getMonthlyVolumeComparison($user)),
+            'weightHistory' => Inertia::defer(fn () => $this->statsService->getWeightHistory($user, $days)),
+            'bodyFatHistory' => Inertia::defer(fn () => $this->statsService->getBodyFatHistory($user, $days)),
+            'durationHistory' => Inertia::defer(fn () => $this->statsService->getDurationHistory($user, 30)),
+        ]);
     }
 
     /**

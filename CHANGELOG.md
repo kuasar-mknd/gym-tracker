@@ -5,6 +5,44 @@ All notable changes to GymTracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.14] - 2026-03-01
+
+### Fixed
+
+- **CI Reliability**: Resolved critical issues in GitHub Actions workflow, restoring MySQL for Dusk tests and ensuring `APP_KEY` preservation.
+- **E2E Authentication**: Fixed 401 errors in Dusk by enabling Sanctum stateful API and configuring Axios with credentials.
+- **Cache Invalidation**: Fixed a bug in `Exercise` model where versioned cache keys were not correctly invalidated, causing stale UI data.
+- **Rate Limiting**: Adjusted throttle limits for testing environments to prevent 429 errors during automated test runs.
+- **Dusk Robustness**: Improved selectors and added necessary pauses in `ExerciseManagementTest` to handle animations and asynchronous updates.
+
+## [1.4.13] - 2026-02-28
+
+### Security
+
+- **FormRequests**: Systematically replaced inline controller validation with dedicated FormRequest classes for improved security and type safety.
+- **API Hardening**: Improved validation rules for `PushSubscription`, `WorkoutLine`, and `DailyJournal`.
+
+## [1.4.12] - 2026-02-26
+
+### Added
+
+- **Achievement CRUD**: Implemented full backend support for creating, reading, updating, and deleting user achievements.
+- **E2E Testing**: Introduced comprehensive workout session E2E tests covering the entire training flow.
+
+## [1.4.11] - 2026-02-20
+
+### Improved
+
+- **Liquid Glass UI**: Refactored `InputLabel` and several form components to strictly adhere to the Liquid Glass design system.
+- **Performance**: Optimized volume history queries and improved database indexing for stats dashboard.
+
+## [1.4.10] - 2026-02-15
+
+### Fixed
+
+- **Frontend Dependencies**: Resolved conflicts with Inertia.js and Vue 3 core packages.
+- **Formatting**: Unified code style across the application using Laravel Pint and Prettier.
+
 ## [1.4.9] - 2026-02-10
 
 ### Fixed

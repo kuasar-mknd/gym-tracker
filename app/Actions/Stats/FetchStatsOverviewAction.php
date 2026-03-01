@@ -15,23 +15,15 @@ class FetchStatsOverviewAction
     }
 
     /**
+     * Get lightweight stats for immediate display.
+     *
      * @return array<string, mixed>
      */
-    public function execute(User $user, string $period): array
+    public function getImmediateStats(User $user, string $period): array
     {
-        $days = $this->parsePeriod($period);
-
-        // Body metrics and weight history
         $bodyMetrics = $this->statsService->getLatestBodyMetrics($user);
-        $weightHistory = $this->statsService->getWeightHistory($user, $days);
 
         return [
-            'volumeTrend' => $this->statsService->getVolumeTrend($user, $days),
-            'muscleDistribution' => $this->statsService->getMuscleDistribution($user, $days),
-            'monthlyComparison' => $this->statsService->getMonthlyVolumeComparison($user),
-            'weightHistory' => $weightHistory,
-            'bodyFatHistory' => $this->statsService->getBodyFatHistory($user, $days),
-            'durationHistory' => $this->statsService->getDurationHistory($user, 30),
             'latestWeight' => $bodyMetrics['latest_weight'],
             'weightChange' => $bodyMetrics['weight_change'],
             'bodyFat' => $bodyMetrics['latest_body_fat'],
@@ -40,7 +32,7 @@ class FetchStatsOverviewAction
         ];
     }
 
-    private function parsePeriod(string $period): int
+    public function parsePeriod(string $period): int
     {
         return match ($period) {
             '7j' => 7,
