@@ -57,7 +57,12 @@ class StatsService
         return Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $this->fetchMuscleDistributionData($user, $days)->toArray()
+            fn (): array => $this->fetchMuscleDistributionData($user, $days)
+                ->map(fn (object $row): array => [
+                    'category' => (string) ($row->category ?? 'Unknown'),
+                    'volume' => (float) ($row->volume ?? 0.0),
+                ])
+                ->toArray()
         );
     }
 
@@ -245,7 +250,8 @@ class StatsService
             now()->addMinutes(30),
             function () use ($user, $months): array {
                 $data = $this->fetchMonthlyVolumeHistoryData($user, $months);
-                $grouped = $data->groupBy(fn ($row): string => Carbon::parse($row->started_at)->format('Y-m'));
+                /** @var \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, object{workout_volume: float|int}>> $grouped */
+                $grouped = $data->groupBy(fn (object $row): string => Carbon::parse($row->started_at ?? (string) now())->format('Y-m'));
 
                 return $this->fillMonthlyVolumeHistory($months, $grouped);
             }
@@ -322,14 +328,21 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
-        return $this->queryVolumeHistory($user, $limit)
+        /** @var array<int, array{date: string, volume: float, name: string}> $result */
+        $result = $this->queryVolumeHistory($user, $limit)
             ->map(fn (object $row): array => $this->formatVolumeHistoryRow($row))
             ->toArray();
+
+        return $result;
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, object{id: int, started_at: string, name: string, workout_volume: float|int}>
+     */
     protected function queryVolumeHistory(User $user, int $limit): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')
+        /** @var \Illuminate\Support\Collection<int, object{id: int, started_at: string, name: string, workout_volume: float|int}> $results */
+        $results = DB::table('workouts')
             ->where('user_id', $user->id)
             ->whereNotNull('ended_at')
             ->select(
@@ -339,9 +352,12 @@ class StatsService
                 'workout_volume'
             )
             ->orderBy('started_at')->limit($limit)->get();
+
+        return $results;
     }
 
     /**
+     * @param  object{started_at: string, workout_volume: float|int, name: string}  $row
      * @return array{date: string, volume: float, name: string}
      */
     protected function formatVolumeHistoryRow(object $row): array
@@ -350,27 +366,34 @@ class StatsService
     }
 
     /**
+     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, object{workout_volume: float|int}>>  $grouped
      * @return array<int, array{month: string, volume: float}>
      */
     protected function fillMonthlyVolumeHistory(int $months, \Illuminate\Support\Collection $grouped): array
     {
-        return collect(range($months - 1, 0))
+        /** @var array<int, array{month: string, volume: float}> $result */
+        $result = collect(range($months - 1, 0))
             ->map(fn (int $i): array => $this->formatMonthlyVolumeItem($i, $grouped))
             ->toArray();
+
+        return $result;
     }
 
     /**
+     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, object{workout_volume: float|int}>>  $grouped
      * @return array{month: string, volume: float}
      */
     protected function formatMonthlyVolumeItem(int $monthsAgo, \Illuminate\Support\Collection $grouped): array
     {
         $month = now()->subMonths($monthsAgo)->format('Y-m');
+        /** @var \Illuminate\Support\Collection<int, object{workout_volume: float|int}>|null $monthData */
         $monthData = $grouped->get($month);
+        /** @var int|float|string|null $sum */
         $sum = $monthData ? $monthData->sum('workout_volume') : 0.0;
 
         return [
             'month' => now()->subMonths($monthsAgo)->translatedFormat('M'),
-            'volume' => is_numeric($sum) ? (float) $sum : 0.0,
+            'volume' => floatval($sum),
         ];
     }
 
@@ -385,7 +408,10 @@ class StatsService
             $query->where('started_at', '>=', $start);
         }
 
-        return (float) $query->sum('workout_volume');
+        /** @var int|float|string|null $sum */
+        $sum = $query->sum('workout_volume');
+
+        return floatval($sum);
     }
 
     protected function getBaseVolumeQuery(User $user): \Illuminate\Database\Query\Builder
@@ -397,11 +423,12 @@ class StatsService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<string, object>
+     * @return \Illuminate\Support\Collection<string, object{date: string, total_volume: float|int}>
      */
     protected function fetchWeeklyVolumeData(User $user, Carbon $startOfWeek, Carbon $endOfWeek): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')
+        /** @var \Illuminate\Support\Collection<int, object{date: string, total_volume: float|int}> $results */
+        $results = DB::table('workouts')
             ->where('user_id', $user->id)
             ->whereBetween('started_at', [$startOfWeek, $endOfWeek])
             ->select(
@@ -409,8 +436,9 @@ class StatsService
                 DB::raw('SUM(workout_volume) as total_volume')
             )
             ->groupBy('date')
-            ->get()
-            ->keyBy('date');
+            ->get();
+
+        return $results->keyBy('date');
     }
 
     /**
@@ -430,7 +458,7 @@ class StatsService
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, object>  $workouts
+     * @param  \Illuminate\Support\Collection<string, object{date: string, total_volume: float|int}>  $workouts
      * @return array<int, array{date: string, day_label: string, volume: float}>
      */
     protected function fillWeeklyTrend(Carbon $startOfWeek, \Illuminate\Support\Collection $workouts): array
@@ -439,26 +467,30 @@ class StatsService
         $labels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
         for ($i = 0; $i < 7; $i++) {
             $date = $startOfWeek->copy()->addDays($i)->format('Y-m-d');
-            $trend[] = ['date' => $date, 'day_label' => $labels[$i], 'volume' => isset($workouts[$date]) ? (float) $workouts[$date]->total_volume : 0.0];
+            /** @var object{total_volume: float|int}|null $workoutData */
+            $workoutData = $workouts->get($date);
+            $trend[] = ['date' => $date, 'day_label' => $labels[$i], 'volume' => $workoutData ? (float) $workoutData->total_volume : 0.0];
         }
 
         return $trend;
     }
 
     /**
+     * @param  object{started_at: string, name: string, workout_volume: float|int}  $row
      * @return array{date: string, full_date: string, name: string, volume: float}
      */
     protected function formatVolumeTrendItem(object $row): array
     {
-        return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'), 'name' => $row->name, 'volume' => (float) $row->workout_volume];
+        return ['date' => Carbon::parse($row->started_at)->format('d/m'), 'full_date' => Carbon::parse($row->started_at)->format('Y-m-d'), 'name' => (string) $row->name, 'volume' => (float) $row->workout_volume];
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, object>
+     * @return \Illuminate\Support\Collection<int, object{id: int, started_at: string, name: string, workout_volume: float|int}>
      */
     protected function fetchVolumeTrendData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')
+        /** @var \Illuminate\Support\Collection<int, object{id: int, started_at: string, name: string, workout_volume: float|int}> $results */
+        $results = DB::table('workouts')
             ->where('user_id', $user->id)
             ->where('started_at', '>=', now()->subDays($days))
             ->select(
@@ -469,6 +501,8 @@ class StatsService
             )
             ->orderBy('started_at')
             ->get();
+
+        return $results;
     }
 
     /**
@@ -489,37 +523,46 @@ class StatsService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, object>
+     * @return \Illuminate\Support\Collection<int, object{started_at: string, workout_volume: float|int}>
      */
     protected function fetchMonthlyVolumeHistoryData(User $user, int $months): \Illuminate\Support\Collection
     {
-        return DB::table('workouts')
+        /** @var \Illuminate\Support\Collection<int, object{started_at: string, workout_volume: float|int}> $results */
+        $results = DB::table('workouts')
             ->where('user_id', $user->id)
             ->where('started_at', '>=', now()->subMonths($months - 1)->startOfMonth())
             ->select('started_at', 'workout_volume')
             ->get();
+
+        return $results;
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, object>
+     * @return \Illuminate\Support\Collection<int, object{category: string, volume: float|int}>
      */
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
+        /** @var \Illuminate\Support\Collection<int, object{category: string, volume: float|int}> $results */
+        $results = DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')->where('workouts.user_id', $user->id)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
             // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             'exercises.category, SUM(sets.weight * sets.reps) as volume'
         )->groupBy('exercises.category')->get();
+
+        return $results;
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, object>
+     * @return \Illuminate\Support\Collection<int, object{started_at: string, epley_1rm: float|int}>
      */
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
-        return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id)->where('workout_lines.exercise_id', $exerciseId)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
+        /** @var \Illuminate\Support\Collection<int, object{started_at: string, epley_1rm: float|int}> $results */
+        $results = DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id)->where('workout_lines.exercise_id', $exerciseId)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
             // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             'workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm'
         )->groupBy('workouts.started_at')->orderBy('workouts.started_at')->get();
+
+        return $results;
     }
 
     /**
@@ -583,6 +626,7 @@ class StatsService
     }
 
     /**
+     * @param  object{started_at: string, epley_1rm: float|int}  $set
      * @return array{date: string, full_date: string, one_rep_max: float}
      */
     protected function formatExercise1RMItem(object $set): array
@@ -624,9 +668,12 @@ class StatsService
         ];
 
         foreach ($workouts as $workout) {
-            $this->incrementBucket($buckets, (int) $workout->started_at->diffInMinutes($workout->ended_at));
+            $this->incrementBucket($buckets, (int) abs($workout->started_at->diffInMinutes($workout->ended_at)));
         }
 
-        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->toArray();
+        /** @var array<int, array{label: string, count: int}> $result */
+        $result = collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->toArray();
+
+        return $result;
     }
 }

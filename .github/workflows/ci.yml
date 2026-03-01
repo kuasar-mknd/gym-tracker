@@ -169,6 +169,10 @@ jobs:
                   grep "APP_KEY=base64" .env || (echo "APP_KEY missing!" && exit 1)
                   
                   php artisan migrate:fresh --seed --force
+
+                  # DEBUG: Show table schema to verify volume column exists
+                  echo "--- Workouts Table Schema ---"
+                  mysql -u root -h 127.0.0.1 -P 3307 gym_tracker_dusk -e "DESCRIBE workouts;"
                   
                   # Start server
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
