@@ -167,8 +167,21 @@ class AppServiceProvider extends ServiceProvider
 
     private function updateUserVolume(Set $set): void
     {
-        $workout = $set->workoutLine->workout;
+        $workoutLine = $set->workoutLine;
+        if (! $workoutLine) {
+            return;
+        }
+
+        $workout = $workoutLine->workout;
+        if (! $workout) {
+            return;
+        }
+
         $u = $workout->user;
+        if (! $u) {
+            return;
+        }
+
         $ow = $set->getOriginal('weight');
         $or = $set->getOriginal('reps');
         $ov = (is_numeric($ow) ? (float) $ow : 0.0) * (is_numeric($or) ? (int) $or : 0);
@@ -183,8 +196,21 @@ class AppServiceProvider extends ServiceProvider
 
     private function decrementUserVolume(Set $set): void
     {
-        $workout = $set->workoutLine->workout;
+        $workoutLine = $set->workoutLine;
+        if (! $workoutLine) {
+            return;
+        }
+
+        $workout = $workoutLine->workout;
+        if (! $workout) {
+            return;
+        }
+
         $u = $workout->user;
+        if (! $u) {
+            return;
+        }
+
         $v = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
         if ($v !== 0.0) {
             $u->decrement('total_volume', $v);
