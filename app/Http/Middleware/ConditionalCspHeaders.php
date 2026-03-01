@@ -18,8 +18,10 @@ class ConditionalCspHeaders extends AddCspHeaders
         /** @var string $path */
         $path = config('pulse.path', 'backoffice/pulse');
 
-        // Skip global CSP for Pulse routes as they have their own policy in config/pulse.php
-        if ($request->is($path.'*')) {
+        // Skip global CSP for Pulse routes. Pulse routes have their own
+        // CSP middleware registered in config/pulse.php with a custom preset.
+        // We only want to skip the GLOBAL instance (which has no custom preset).
+        if ($request->is($path.'*') && $customPreset === null) {
             return $next($request);
         }
 

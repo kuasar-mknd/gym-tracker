@@ -20,37 +20,39 @@ test('user can manage exercises', function (): void {
             ->assertPathIs('/exercises')
 
             // 1. Verify empty state and create button
-            ->waitFor('[data-testid="create-exercise-desktop"]', 15)
-            ->script("document.querySelector('[data-testid=\"create-exercise-desktop\"]').click();");
+            ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->click('[data-testid="create-exercise-button"]');
 
         // 2. Fill and submit the create form
-        $browser->pause(500)
-            ->waitForText('NOUVEL EXERCICE', 15) // Case sensitive check or wait for element
-            ->type('input[placeholder="Ex: Développé couché"]', 'Dusk Test Exercise')
+        $exerciseName = 'DUSK TEST EXERCISE '.time();
+        $browser->pause(2000)
+            ->waitForText('NOUVEL EXERCICE', 15)
+            ->type('input[placeholder="Ex: Développé couché"]', $exerciseName)
             ->waitFor('select', 5)
             ->select('select', 'strength')
-            ->waitFor('[data-testid="submit-exercise-button"]', 5)
-            ->pause(500) // Ensure Vue state sync before click
-            ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
+            ->pause(1000)
+            ->click('[data-testid="submit-exercise-button"]');
 
         // 3. Verify exercise was created
         $browser->pause(1000)
-            ->waitForText('DUSK TEST EXERCISE', 15);
+            ->waitFor('[data-testid="exercise-card"]', 20)
+            ->assertSee(strtoupper($exerciseName));
 
         // 4. Edit the exercise
         $browser->mouseover('[data-testid="exercise-card"]')
             ->pause(500)
             ->script("const btn = document.querySelector('[data-testid=\"edit-exercise-button\"]'); btn.dispatchEvent(new Event('click', {bubbles: false}));");
 
+        $updatedName = 'UPDATED EXERCISE '.time();
         $browser->waitFor('input[type="text"]', 10)
             ->pause(500)
             ->clear('input[type="text"]')
-            ->type('input[type="text"]', 'Updated Exercise')
+            ->type('input[type="text"]', $updatedName)
             ->click('[data-testid="save-exercise-button"]');
 
         // 5. Verify update
         $browser->pause(1000)
-            ->waitForText('UPDATED EXERCISE', 15);
+            ->waitForText(strtoupper($updatedName), 15);
 
         // 6. Delete the exercise
         $browser->mouseover('[data-testid="exercise-card"]')

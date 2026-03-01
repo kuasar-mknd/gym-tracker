@@ -43,8 +43,17 @@
         "dayjs": "^1.11.19",
         "lucide-vue-next": "^0.563.0",
         "radix-vue": "^1.9.17",
+        "serialize-javascript": "^7.0.3",
         "vue-chartjs": "^5.3.3",
         "ziggy-js": "^2.6.0"
+    },
+    "overrides": {
+        "serialize-javascript": "^7.0.3"
+    },
+    "pnpm": {
+        "overrides": {
+            "serialize-javascript": "^7.0.3"
+        }
     },
     "optionalDependencies": {
         "@rollup/rollup-linux-arm64-gnu": "^4.57.0"

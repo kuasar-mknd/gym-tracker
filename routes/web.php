@@ -44,7 +44,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tools/interval-timer', [\App\Http\Controllers\IntervalTimerController::class, 'index'])->name('tools.interval-timer.index');
     Route::get('/tools/fasting', [\App\Http\Controllers\FastingController::class, 'index'])->name('tools.fasting.index');
 
-    Route::middleware('throttle:60,1')->group(function (): void {
+    Route::middleware(app()->isProduction() ? 'throttle:60,1' : 'throttle:1000,1')->group(function (): void {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::patch('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

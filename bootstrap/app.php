@@ -19,7 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
             '192.168.0.0/16',
         ]);
 
-        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+        $middleware->prepend(\App\Http\Middleware\SecurityHeaders::class);
+
+        $middleware->statefulApi();
 
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,

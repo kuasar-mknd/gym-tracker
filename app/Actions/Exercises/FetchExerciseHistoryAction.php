@@ -34,7 +34,6 @@ class FetchExerciseHistoryAction
             ->get()
             ->map(function (WorkoutLine $line): ?array {
                 $workout = $line->workout;
-                /** @phpstan-ignore-next-line */
                 if (! $workout || ! $workout->started_at) {
                     return null;
                 }

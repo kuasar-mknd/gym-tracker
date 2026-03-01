@@ -16,38 +16,26 @@ final class PersonalRecordService
 {
     public function syncSetPRs(Set $set, ?User $user = null): void
     {
-        if ($set->is_warmup || ! $set->weight || ! $set->reps) {
+        if ($this->shouldSkipSync($set)) {
             return;
         }
 
-        // Prevent N+1 queries by eager loading necessary relationships if not already loaded
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
-        if (! $set->workoutLine || ! $set->workoutLine->workout) {
+        $workout = $set->workoutLine->workout;
+
+        if (! $workout) {
             return;
         }
 
-        /** @var \App\Models\User|null $user */
-        $user ??= $set->workoutLine->workout->user;
-
-        if (! $user) {
-            return;
-        }
-
+        $user ??= $workout->user;
         $exerciseId = $set->workoutLine->exercise_id;
 
-        if (! $exerciseId) {
+        if (! $user || ! $exerciseId) {
             return;
         }
 
-        $existingPRs = PersonalRecord::where('user_id', $user->id)
-            ->where('exercise_id', $exerciseId)
-            ->get()
-            ->keyBy('type');
-
-        $this->update($user, $exerciseId, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
-        $this->update($user, $exerciseId, 'max_1rm', $set->reps > 1 ? round($set->weight * (1 + $set->reps / 30), 2) : (float) $set->weight, (float) $set->weight, $set, $existingPRs->get('max_1rm'));
-        $this->update($user, $exerciseId, 'max_volume_set', (float) ($set->weight * $set->reps), null, $set, $existingPRs->get('max_volume_set'));
+        $this->processUpdates($user, (int) $exerciseId, $set);
     }
 
     protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
@@ -62,5 +50,27 @@ final class PersonalRecordService
         if ($user->isNotificationEnabled('personal_record')) {
             $user->notify(new PersonalRecordAchieved($pr));
         }
+    }
+
+    private function shouldSkipSync(Set $set): bool
+    {
+        return $set->is_warmup || ! $set->weight || ! $set->reps;
+    }
+
+    private function processUpdates(User $user, int $exerciseId, Set $set): void
+    {
+        $existingPRs = PersonalRecord::where('user_id', $user->id)
+            ->where('exercise_id', $exerciseId)
+            ->get()
+            ->keyBy('type');
+
+        $this->update($user, $exerciseId, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
+        $this->update($user, $exerciseId, 'max_1rm', $this->calculate1RM((float) $set->weight, (int) $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm'));
+        $this->update($user, $exerciseId, 'max_volume_set', (float) ($set->weight * $set->reps), null, $set, $existingPRs->get('max_volume_set'));
+    }
+
+    private function calculate1RM(float $weight, int $reps): float
+    {
+        return $reps > 1 ? round($weight * (1 + $reps / 30), 2) : $weight;
     }
 }

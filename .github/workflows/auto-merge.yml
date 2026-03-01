@@ -1,4 +1,4 @@
-name: Dependabot Auto-Merge
+name: Auto-Merge
 
 on: pull_request
 
@@ -21,6 +21,28 @@ jobs:
               if: |
                   steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
                   steps.metadata.outputs.update-type == 'version-update:semver-minor'
+              run: |
+                  gh pr review --approve "$PR_URL"
+                  gh pr merge --auto --squash "$PR_URL"
+              env:
+                  PR_URL: ${{ github.event.pull_request.html_url }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    user-merge:
+        runs-on: ubuntu-latest
+        if: github.event.pull_request.user.login == 'kuasar-mknd'
+        steps:
+            - name: Check contributor count
+              id: check_contributors
+              run: |
+                  CONTRIBUTORS_COUNT=$(gh pr view "$PR_NUMBER" --json participants --jq '.participants | length')
+                  echo "count=$CONTRIBUTORS_COUNT" >> $GITHUB_OUTPUT
+              env:
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Approve and auto-merge kuasar-mknd PRs
+              if: steps.check_contributors.outputs.count == '1'
               run: |
                   gh pr review --approve "$PR_URL"
                   gh pr merge --auto --squash "$PR_URL"

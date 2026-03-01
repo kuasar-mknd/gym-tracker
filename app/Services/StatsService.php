@@ -302,13 +302,10 @@ class StatsService
      */
     protected function fetchVolumeHistory(User $user, int $limit): array
     {
-        /** @var array<int, array{date: string, volume: float, name: string}> $result */
-        $result = $this->queryVolumeHistory($user, $limit)
-            // @phpstan-ignore-next-line
+        // @phpstan-ignore-next-line
+        return $this->queryVolumeHistory($user, $limit)
             ->map(fn (\stdClass $row): array => $this->formatVolumeHistoryRow($row))
             ->reverse()->values()->toArray();
-
-        return $result;
     }
 
     /**
@@ -330,7 +327,7 @@ class StatsService
     }
 
     /**
-     * @param  object{started_at: string, volume: int|float, name: string}  $row
+     * @param  \stdClass  $row
      * @return array{date: string, volume: float, name: string}
      */
     protected function formatVolumeHistoryRow(object $row): array
@@ -347,7 +344,7 @@ class StatsService
         $buckets = ['< 30 min' => 0, '30-60 min' => 0, '60-90 min' => 0, '90+ min' => 0];
 
         foreach ($workouts as $workout) {
-            $minutes = abs((int) $workout->ended_at?->diffInMinutes($workout->started_at));
+            $minutes = abs((int) ($workout->ended_at?->diffInMinutes($workout->started_at) ?? 0));
             $this->incrementBucket($buckets, $minutes);
         }
 
@@ -360,15 +357,25 @@ class StatsService
      */
     protected function fillMonthlyVolumeHistory(int $months, \Illuminate\Support\Collection $grouped): array
     {
-        $result = [];
-        for ($i = $months - 1; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $monthData = $grouped->get($date->format('Y-m'));
-            $sum = $monthData ? $monthData->sum('volume') : 0.0;
-            $result[] = ['month' => $date->translatedFormat('M'), 'volume' => is_numeric($sum) ? floatval($sum) : 0.0];
-        }
+        return collect(range($months - 1, 0))
+            ->map(fn (int $i): array => $this->formatMonthlyVolumeItem($i, $grouped))
+            ->all();
+    }
 
-        return $result;
+    /**
+     * @param  \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, \stdClass>>  $grouped
+     * @return array{month: string, volume: float}
+     */
+    protected function formatMonthlyVolumeItem(int $monthsAgo, \Illuminate\Support\Collection $grouped): array
+    {
+        $date = now()->subMonths($monthsAgo);
+        $monthData = $grouped->get($date->format('Y-m'));
+        $sum = $monthData ? $monthData->sum('volume') : 0.0;
+
+        return [
+            'month' => $date->translatedFormat('M'),
+            'volume' => is_numeric($sum) ? (float) $sum : 0.0,
+        ];
     }
 
     protected function clearWorkoutTrendStats(User $user): void
@@ -606,14 +613,13 @@ class StatsService
      */
     private function incrementBucket(array &$buckets, int $minutes): void
     {
-        if ($minutes < 30) {
-            $buckets['< 30 min']++;
-        } elseif ($minutes < 60) {
-            $buckets['30-60 min']++;
-        } elseif ($minutes < 90) {
-            $buckets['60-90 min']++;
-        } else {
-            $buckets['90+ min']++;
-        }
+        $label = match (true) {
+            $minutes < 30 => '< 30 min',
+            $minutes < 60 => '30-60 min',
+            $minutes < 90 => '60-90 min',
+            default => '90+ min',
+        };
+
+        $buckets[$label]++;
     }
 }
