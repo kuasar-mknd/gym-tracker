@@ -208,6 +208,7 @@ jobs:
               with:
                   name: dusk-screenshots
                   path: tests/Browser/screenshots
+                  if-no-files-found: ignore
 
             - name: Upload Test Logs
               if: failure()
@@ -215,6 +216,7 @@ jobs:
               with:
                   name: dusk-logs
                   path: tests/Browser/logs
+                  if-no-files-found: ignore
 
     lint:
         runs-on: ubuntu-latest
