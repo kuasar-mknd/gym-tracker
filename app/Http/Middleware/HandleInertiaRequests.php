@@ -66,7 +66,11 @@ class HandleInertiaRequests extends Middleware
             'email' => $user->email,
             'avatar' => $user->avatar,
             'unread_notifications_count' => $notificationService->getUnreadCount($user),
-            'latest_achievement' => $latestAchievement ? $latestAchievement->toArray() : null,
+            'latest_achievement' => $latestAchievement ? [
+                'id' => $latestAchievement->id,
+                'data' => $latestAchievement->data,
+                'created_at' => $latestAchievement->created_at,
+            ] : null,
             'current_streak' => $user->last_workout_at && $user->last_workout_at->startOfDay()->diffInDays(now()->startOfDay()) > 1 ? 0 : $user->current_streak,
             'longest_streak' => $user->longest_streak,
         ];
