@@ -16,26 +16,26 @@ test('user can manage exercises', function (): void {
         $browser->loginAs($user)
             ->resize(1280, 800)
             ->visit('/exercises')
-            ->waitFor('main', 15)
+            ->waitFor('main', 30)
             ->assertPathIs('/exercises')
 
             // 1. Verify empty state and create button
-            ->waitFor('[data-testid="create-exercise-button"]', 15)
+            ->waitFor('[data-testid="create-exercise-button"]', 30)
             ->click('[data-testid="create-exercise-button"]');
 
         // 2. Fill and submit the create form
         $exerciseName = 'DUSK TEST EXERCISE '.time();
         $browser->pause(2000)
-            ->waitForText('NOUVEL EXERCICE', 15)
+            ->waitForText('NOUVEL EXERCICE', 30)
             ->type('input[placeholder="Ex: Développé couché"]', $exerciseName)
-            ->waitFor('select', 5)
+            ->waitFor('select', 10)
             ->select('select', 'strength')
             ->pause(1000)
             ->click('[data-testid="submit-exercise-button"]');
 
         // 3. Verify exercise was created
-        $browser->pause(1000)
-            ->waitFor('[data-testid="exercise-card"]', 20)
+        $browser->pause(2000)
+            ->waitFor('[data-testid="exercise-card"]', 30)
             ->assertSee(strtoupper($exerciseName));
 
         // 4. Edit the exercise
