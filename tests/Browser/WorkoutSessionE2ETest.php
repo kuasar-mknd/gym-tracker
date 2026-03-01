@@ -51,30 +51,26 @@ final class WorkoutSessionE2ETest extends DuskTestCase
                 if ($index === 0) {
                     // First time, the button has the add-first-exercise dusk attribute
                     $browser->waitFor('@add-first-exercise', 30)
-                        ->pause(1000) // Ensure animation finishes
                         ->click('@add-first-exercise');
                 } else {
                     // Subsequent times, the button has a different dusk tag at the bottom
                     $browser->waitFor('@add-exercise-existing', 30)
-                        ->pause(1000)
                         ->click('@add-exercise-existing');
                 }
 
                 // Wait for the modal and select the specific exercise
                 $browser->waitFor('@select-exercise-'.$exercise->id, 20)
-                    ->pause(500)
                     ->click('@select-exercise-'.$exercise->id);
 
                 // Wait for the modal to close and the exercise card to appear
-                $browser->waitFor('@exercise-card-'.$lineIndex, 30)
-                    ->pause(300); // Give Vue a moment to render the text nodes
+                $browser->waitFor('@exercise-card-'.$lineIndex, 30);
 
                 // There is automatically 1 empty set for a newly added exercise
                 // We want 4 sets in total, so we add 3 more sets.
                 for ($setIndex = 0; $setIndex < 4; $setIndex++) {
                     $browser->waitFor('@add-set-'.$lineIndex, 20)
                         ->script("document.querySelector('[dusk=\"add-set-{$lineIndex}\"]').click();");
-                    $browser->pause(1500); // Give ample time for API and DOM transitions
+                    $browser->pause(200); // Give a bit of time for DOM
                 }
 
                 $logs = $browser->driver->manage()->getLog('browser');
@@ -91,13 +87,11 @@ final class WorkoutSessionE2ETest extends DuskTestCase
                     try {
                         $browser->waitFor('@weight-input-'.$lineIndex.'-'.$setIndex, 20)
                             ->clear('@weight-input-'.$lineIndex.'-'.$setIndex)
-                            ->type('@weight-input-'.$lineIndex.'-'.$setIndex, (string) $weight)
-                            ->pause(200);
+                            ->type('@weight-input-'.$lineIndex.'-'.$setIndex, (string) $weight);
 
                         $browser->waitFor('@reps-input-'.$lineIndex.'-'.$setIndex, 20)
                             ->clear('@reps-input-'.$lineIndex.'-'.$setIndex)
-                            ->type('@reps-input-'.$lineIndex.'-'.$setIndex, (string) $reps)
-                            ->pause(200);
+                            ->type('@reps-input-'.$lineIndex.'-'.$setIndex, (string) $reps);
                     } catch (\Exception $e) {
                         dump("Exception on setIndex $setIndex. Dumping logs:");
                         dump($browser->driver->manage()->getLog('browser'));
@@ -106,14 +100,12 @@ final class WorkoutSessionE2ETest extends DuskTestCase
 
                     // Validate (Complete) the set
                     $browser->waitFor('@complete-set-'.$lineIndex.'-'.$setIndex, 10)
-                        ->click('@complete-set-'.$lineIndex.'-'.$setIndex)
-                        ->pause(1500); // Wait for optimistic UI sync and PR calculations
+                        ->click('@complete-set-'.$lineIndex.'-'.$setIndex);
 
                     $browser->assertNoConsoleExceptions();
 
-                    $browser->pause(500); // Short brief to let it render
                     if (count($browser->elements('@skip-rest-timer')) > 0) {
-                        $browser->click('@skip-rest-timer')->pause(500);
+                        $browser->click('@skip-rest-timer');
                     }
                 }
             }
