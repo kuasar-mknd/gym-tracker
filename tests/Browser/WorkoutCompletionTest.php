@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Tests\Browser;
+
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Foundation\Testing\RefreshDatabase;

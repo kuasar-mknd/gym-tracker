@@ -18,8 +18,6 @@ class AchievementController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
     #[OA\Get(
         path: '/api/v1/achievements',
@@ -44,9 +42,6 @@ class AchievementController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param \App\Http\Requests\Api\AchievementStoreRequest $request
-     * @return \App\Http\Resources\AchievementResource
      */
     #[OA\Post(
         path: '/api/v1/achievements',
@@ -72,9 +67,6 @@ class AchievementController extends Controller
 
     /**
      * Display the specified resource.
-     *
-     * @param \App\Models\Achievement $achievement
-     * @return \App\Http\Resources\AchievementResource
      */
     #[OA\Get(
         path: '/api/v1/achievements/{id}',
@@ -88,7 +80,7 @@ class AchievementController extends Controller
                 in: 'path',
                 required: true,
                 schema: new OA\Schema(type: 'integer')
-            )
+            ),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Successful operation'),
@@ -106,10 +98,6 @@ class AchievementController extends Controller
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param \App\Http\Requests\Api\AchievementUpdateRequest $request
-     * @param \App\Models\Achievement $achievement
-     * @return \App\Http\Resources\AchievementResource
      */
     #[OA\Put(
         path: '/api/v1/achievements/{id}',
@@ -123,7 +111,7 @@ class AchievementController extends Controller
                 in: 'path',
                 required: true,
                 schema: new OA\Schema(type: 'integer')
-            )
+            ),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Successful operation'),
@@ -145,9 +133,6 @@ class AchievementController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param \App\Models\Achievement $achievement
-     * @return \Illuminate\Http\JsonResponse
      */
     #[OA\Delete(
         path: '/api/v1/achievements/{id}',
@@ -161,7 +146,7 @@ class AchievementController extends Controller
                 in: 'path',
                 required: true,
                 schema: new OA\Schema(type: 'integer')
-            )
+            ),
         ],
         responses: [
             new OA\Response(response: 204, description: 'Successful operation'),
