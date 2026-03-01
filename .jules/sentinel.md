@@ -43,3 +43,9 @@
 **Vulnerability:** While unscoped validation for hybrid resources (e.g., `exercise_id` in `WorkoutLineStoreRequest`) was fixed for Web controllers, the corresponding API FormRequests (`app/Http/Requests/Api/WorkoutLineStoreRequest.php` and `WorkoutLineUpdateRequest.php`) were missed. This resulted in an IDOR where users could link private exercises and workouts of others via the API.
 **Learning:** Having separate FormRequests for Web and API controllers increases the risk of inconsistent security configurations and missed vulnerabilities.
 **Prevention:** Always check both Web and API namespaces for matching FormRequests when applying security fixes, or consolidate validation logic if possible.
+
+## 2026-10-02 - Consolidating Ownership Checks in Validation Rules
+
+**Vulnerability:** The `SetStoreRequest` used `authorize()` for ownership checks, which could lead to logic gaps if not all edge cases (e.g., orphaned records) were handled. It also resulted in inconsistent `403 Forbidden` responses for resource ownership vs `422` for other validation errors.
+**Learning:** Moving ownership checks for resource IDs into `rules()` using scoped `Rule::exists` provides a more robust, atomic check and ensures a consistent API experience (422 Unprocessable Entity).
+**Prevention:** For API requests involving IDs of user-owned resources, prefer scoped `Rule::exists` in `rules()` over manual checks in `authorize()`, unless the ID is a Route Model Bound parameter.
