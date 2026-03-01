@@ -164,32 +164,39 @@ jobs:
 
               run: |
                   # Write environment variables to .env so artisan serve subprocess uses them
-                  cp .env.example .env
+                  sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/g' .env
                   {
                     echo "APP_ENV=testing"
                     echo "APP_URL=http://127.0.0.1:8000"
-                    echo "DB_CONNECTION=sqlite"
-                    echo "DB_DATABASE=/home/runner/work/gym-tracker/gym-tracker/database/dusk.sqlite"
+                    echo "DB_HOST=127.0.0.1"
+                    echo "DB_PORT=3307"
+                    echo "DB_DATABASE=gym_tracker_dusk"
+                    echo "DB_USERNAME=root"
+                    echo "DB_PASSWORD="
                     echo "SESSION_DRIVER=cookie"
                     echo "BROADCAST_CONNECTION=log"
                     echo "CACHE_STORE=array"
                     echo "QUEUE_CONNECTION=sync"
                     echo "MAIL_MAILER=array"
                     echo "APP_DEBUG=false"
+                    echo "LOG_LEVEL=debug"
                     echo "TELESCOPE_ENABLED=false"
                     echo "PULSE_ENABLED=false"
                     echo "DUSK_DRIVER_URL=http://127.0.0.1:9515"
                   } >> .env
 
                   php artisan config:clear
+                  php artisan cache:clear
+                  php artisan route:clear
+                  php artisan view:clear
+
                   php artisan migrate:fresh --seed --force
                   
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
                   
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
                   
-                  # Use parallel execution for speed
-                  php artisan dusk --parallel --processes=2
+                  php artisan dusk
 
             - name: Upload Test Screenshots
               if: failure()
