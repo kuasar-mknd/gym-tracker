@@ -136,6 +136,12 @@ jobs:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
+            - name: Prepare Application
+              run: |
+                  cp .env.example .env
+                  php artisan key:generate
+                  chmod -R 777 storage bootstrap/cache
+
             - name: Install Chrome Driver
               run: php artisan dusk:chrome-driver --detect
 
@@ -143,36 +149,37 @@ jobs:
               run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
 
             - name: Run Dusk Tests
+              env:
+                  APP_ENV: testing
+                  APP_URL: 'http://127.0.0.1:8000'
+                  DB_CONNECTION: mysql
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 3307
+                  DB_DATABASE: gym_tracker_dusk
+                  DB_USERNAME: root
+                  BROADCAST_CONNECTION: log
+                  CACHE_STORE: array
+                  SESSION_DRIVER: file
+                  QUEUE_CONNECTION: sync
+                  TELESCOPE_ENABLED: false
+                  PULSE_ENABLED: false
+                  DUSK_DRIVER_URL: http://127.0.0.1:9515
               run: |
-                  # Prepare .env properly
-                  cp .env.example .env
-                  php artisan key:generate
-                  
+                  # Setup .env
                   sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/g' .env
                   sed -i 's/APP_ENV=local/APP_ENV=testing/g' .env
-                  sed -i 's|APP_URL=.*|APP_URL=http://127.0.0.1:8000|g' .env
-                  
                   echo "DB_HOST=127.0.0.1" >> .env
                   echo "DB_PORT=3307" >> .env
                   echo "DB_DATABASE=gym_tracker_dusk" >> .env
                   echo "DB_USERNAME=root" >> .env
-                  echo "SESSION_DRIVER=cookie" >> .env
-                  echo "CACHE_STORE=array" >> .env
-                  echo "TELESCOPE_ENABLED=false" >> .env
-                  echo "PULSE_ENABLED=false" >> .env
+                  echo "SESSION_DRIVER=file" >> .env
                   echo "DUSK_DRIVER_URL=http://127.0.0.1:9515" >> .env
 
-                  chmod -R 777 storage bootstrap/cache
                   php artisan config:clear
-                  
-                  # Verify APP_KEY exists
-                  grep "APP_KEY=base64" .env || (echo "APP_KEY missing!" && exit 1)
-                  
                   php artisan migrate:fresh --seed --force
-
-                  # DEBUG: Show table schema to verify volume column exists
-                  echo "--- Workouts Table Schema ---"
-                  mysql -u root -h 127.0.0.1 -P 3307 gym_tracker_dusk -e "DESCRIBE workouts;"
+                  
+                  # DEBUG: Show workouts table schema using PHP to avoid mysql binary dependency issues
+                  php artisan tinker --execute="print_r(DB::select('DESCRIBE workouts'))"
                   
                   # Start server
                   php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
@@ -186,8 +193,6 @@ jobs:
             - name: Dump Logs on Failure
               if: failure()
               run: |
-                  echo "--- .env Content (Redacted) ---"
-                  sed 's/APP_KEY=.*/APP_KEY=[REDACTED]/' .env
                   echo "--- Laravel Log ---"
                   tail -n 100 storage/logs/laravel.log || echo "No laravel log found"
                   echo "--- Serve Log ---"
