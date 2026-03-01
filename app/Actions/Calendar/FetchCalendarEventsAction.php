@@ -39,18 +39,21 @@ final class FetchCalendarEventsAction
     {
         return Workout::where('user_id', $user->id)
             ->whereBetween('started_at', [$start, $end])
-            ->with(['workoutLines.exercise'])
+            ->withCount('workoutLines')
+            ->with(['workoutLines' => function ($query): void {
+                $query->take(3)->with('exercise');
+            }])
             ->get()
             ->map(function ($workout): array {
                 /** @var array<int, string> $preview */
-                $preview = $workout->workoutLines->take(3)->map(fn ($line) => $line->exercise->name)->toArray();
+                $preview = $workout->workoutLines->map(fn ($line) => $line->exercise->name)->toArray();
 
                 return [
                     'id' => $workout->id,
                     'name' => $workout->name ?? 'Séance',
                     'date' => $workout->started_at->toDateString(),
                     'started_at' => $workout->started_at->toIso8601String(),
-                    'exercises_count' => $workout->workoutLines->count(),
+                    'exercises_count' => $workout->workout_lines_count ?? 0,
                     'preview_exercises' => $preview,
                 ];
             });
