@@ -108,4 +108,48 @@ class StatsCacheTest extends TestCase
         $this->assertFalse(Cache::has($trendKey), 'Volume trend cache should be cleared');
         $this->assertFalse(Cache::has($muscleKey), 'Muscle distribution cache should be cleared when date changes');
     }
+
+    public function test_updating_workout_does_not_clear_body_measurement_cache(): void
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDay(),
+        ]);
+
+        $weightKey = "stats.weight_history.{$user->id}.90";
+        Cache::put($weightKey, ['data'], 600);
+
+        $this->assertTrue(Cache::has($weightKey));
+
+        // Update workout DATE (causes full clear)
+        $this->actingAs($user)->patch(route('workouts.update', $workout), [
+            'started_at' => now()->subDays(2)->toDateTimeString(),
+        ]);
+
+        $this->assertTrue(Cache::has($weightKey), 'Body measurement cache should NOT be cleared even with a full workout cache clear');
+    }
+
+    public function test_clear_workout_related_stats_invalidates_1rm_cache(): void
+    {
+        $user = User::factory()->create();
+        $exerciseId = 1;
+
+        // Get initial 1RM progress (fills cache)
+        $this->statsService->getExercise1RMProgress($user, $exerciseId);
+        $version = Cache::get("stats.1rm_version.{$user->id}", '1');
+        $key = "stats.1rm.{$user->id}.{$exerciseId}.90.v{$version}";
+
+        $this->assertTrue(Cache::has($key));
+
+        // Clear workout related stats
+        $this->statsService->clearWorkoutRelatedStats($user);
+
+        // Check if version changed
+        $newVersion = Cache::get("stats.1rm_version.{$user->id}");
+        $this->assertNotEquals($version, $newVersion);
+
+        $newKey = "stats.1rm.{$user->id}.{$exerciseId}.90.v{$newVersion}";
+        $this->assertFalse(Cache::has($newKey));
+    }
 }
