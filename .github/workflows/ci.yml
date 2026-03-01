@@ -136,6 +136,12 @@ jobs:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
+            - name: Prepare Application
+              run: |
+                  cp .env.example .env
+                  php artisan key:generate
+                  chmod -R 777 storage bootstrap/cache
+
             - name: Install Chrome Driver
               run: php artisan dusk:chrome-driver --detect
 
@@ -143,44 +149,45 @@ jobs:
               run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
 
             - name: Run Dusk Tests
+              env:
+                  APP_ENV: testing
+                  APP_URL: 'http://127.0.0.1:8000'
+                  DB_CONNECTION: mysql
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 3307
+                  DB_DATABASE: gym_tracker_dusk
+                  DB_USERNAME: root
+                  BROADCAST_CONNECTION: log
+                  CACHE_STORE: array
+                  SESSION_DRIVER: file
+                  QUEUE_CONNECTION: sync
+                  DUSK_DRIVER_URL: http://127.0.0.1:9515
               run: |
-                  # Create a fresh .env for Dusk
-                  cat <<EOF > .env
-                  APP_NAME=GymTracker
-                  APP_ENV=testing
-                  APP_KEY=base64:$(openssl rand -base64 32)
-                  APP_DEBUG=true
-                  APP_URL=http://127.0.0.1:8000
-
-                  DB_CONNECTION=mysql
-                  DB_HOST=127.0.0.1
-                  DB_PORT=3307
-                  DB_DATABASE=gym_tracker_dusk
-                  DB_USERNAME=root
-                  DB_PASSWORD=
-
-                  SESSION_DRIVER=file
-                  CACHE_STORE=array
-                  QUEUE_CONNECTION=sync
-                  MAIL_MAILER=array
-                  
-                  TELESCOPE_ENABLED=false
-                  PULSE_ENABLED=false
-                  DUSK_DRIVER_URL=http://127.0.0.1:9515
-                  EOF
+                  # Setup .env for the serve process
+                  sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/g' .env
+                  sed -i 's/APP_ENV=local/APP_ENV=testing/g' .env
+                  echo "DB_HOST=127.0.0.1" >> .env
+                  echo "DB_PORT=3307" >> .env
+                  echo "DB_DATABASE=gym_tracker_dusk" >> .env
+                  echo "DB_USERNAME=root" >> .env
+                  echo "SESSION_DRIVER=file" >> .env
+                  echo "DUSK_DRIVER_URL=http://127.0.0.1:9515" >> .env
 
                   php artisan config:clear
-                  php artisan route:clear
-                  php artisan view:clear
-                  
                   php artisan migrate:fresh --seed --force
                   
-                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload &
+                  # Start server and capture logs
+                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
                   
-                  # Wait for server to be ready
+                  # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
                   
+                  # Run dusk
                   php artisan dusk
+
+            - name: Dump Server Logs on Failure
+              if: failure()
+              run: cat storage/logs/serve.log || echo "No server logs found"
 
             - name: Upload Test Screenshots
               if: failure()
