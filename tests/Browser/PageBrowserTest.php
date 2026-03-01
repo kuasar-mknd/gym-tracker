@@ -3,10 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Dusk\Browser;
-
-uses(RefreshDatabase::class);
 
 test('unauthenticated users are redirected to login', function (): void {
     $this->browse(function (Browser $browser): void {

@@ -3,10 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Dusk\Browser;
-
-uses(RefreshDatabase::class);
 
 test('user can manage exercises', function (): void {
     $user = User::factory()->create();
