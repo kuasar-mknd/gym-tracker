@@ -27,6 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ConditionalCspHeaders::class,
         ]);
 
+        $middleware->statefulApi();
+
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {

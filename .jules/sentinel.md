@@ -38,3 +38,8 @@
 **Vulnerability:** The `User` model included `current_streak`, `longest_streak`, and `last_workout_at` in the `$fillable` array. This exposed system-managed statistics to mass assignment vulnerabilities if any controller or action used unvalidated input (e.g., `User::create($request->all())`).
 **Learning:** Documentation or memory claiming "strict limits" on mass assignment was incorrect. Defense in Depth requires minimizing `$fillable` even if current usage patterns seem safe.
 **Prevention:** Audit `$fillable` arrays regularly. Remove system-managed fields and use `forceFill()` or direct property assignment in Services/Actions for internal state updates.
+
+## 2026-06-20 - Inconsistent IDOR Protection in Workout and Set API
+**Vulnerability:** API requests for creating Workout Lines and Sets allowed linking to parent resources (Workouts, Workout Lines, Exercises) owned by other users because the `exists` validation rules were not scoped to the authenticated user.
+**Learning:** Even when `authorize()` methods perform ownership checks, they often only check the primary resource being acted upon. Secondary resource IDs in the request body (like foreign keys) must be validated for ownership within the `rules()` method to prevent association-based IDOR.
+**Prevention:** Always scope `exists` validation rules to the authenticated user's records. For hybrid resources (like Exercises), include a nested OR condition for system-owned records (null `user_id`). Move these checks to `rules()` to provide consistent 422 responses.

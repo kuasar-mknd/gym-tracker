@@ -67,7 +67,8 @@ test('store forbids other user workout', function (): void {
         'workout_id' => $workout->id,
         'exercise_id' => $exercise->id,
     ])
-        ->assertForbidden();
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['workout_id']);
 });
 
 test('update updates line', function (): void {

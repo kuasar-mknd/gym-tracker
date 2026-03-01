@@ -59,7 +59,8 @@ test('store validates workout ownership', function (): void {
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ])
-        ->assertForbidden();
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['workout_id']);
 });
 
 test('show returns workout line', function (): void {
