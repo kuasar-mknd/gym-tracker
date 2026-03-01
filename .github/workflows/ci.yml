@@ -178,6 +178,7 @@ jobs:
                   TELESCOPE_ENABLED=false
                   PULSE_ENABLED=false
                   DUSK_DRIVER_URL=http://127.0.0.1:9515
+                  SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
                   EOF
 
                   chmod -R 777 storage bootstrap/cache
