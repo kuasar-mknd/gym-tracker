@@ -32,6 +32,7 @@ jobs:
         runs-on: ubuntu-latest
         if: github.event.pull_request.user.login == 'kuasar-mknd'
         steps:
+            - uses: actions/checkout@v4
             - name: Check contributor count
               id: check_contributors
               run: |
