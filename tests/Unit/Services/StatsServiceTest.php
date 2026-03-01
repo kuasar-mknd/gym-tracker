@@ -63,8 +63,8 @@ class StatsServiceTest extends TestCase
         $dist = $this->statsService->getMuscleDistribution($user);
 
         $this->assertCount(1, $dist);
-        $this->assertEquals('Pectoraux', $dist[0]->category);
-        $this->assertEquals(1000, $dist[0]->volume);
+        $this->assertEquals('Pectoraux', $dist[0]['category']);
+        $this->assertEquals(1000, $dist[0]['volume']);
     }
 
     public function test_can_calculate_monthly_volume_comparison(): void
