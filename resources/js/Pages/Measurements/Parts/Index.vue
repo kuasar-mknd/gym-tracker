@@ -4,7 +4,9 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, defineAsyncComponent } from 'vue'
+
+const BodyPartsRadarChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartsRadarChart.vue'))
 
 const props = defineProps({
     latestMeasurements: Array,
@@ -122,6 +124,20 @@ const selectCommonPart = (part) => {
                         Save
                     </GlassButton>
                 </form>
+            </GlassCard>
+
+            <!-- Radar Chart -->
+            <GlassCard
+                v-if="latestMeasurements && latestMeasurements.length >= 3"
+                class="animate-slide-up"
+                style="animation-delay: 0.1s"
+            >
+                <h3 class="font-display text-vivid-violet mb-4 text-xs font-black tracking-[0.2em] uppercase">
+                    Aperçu Morphologique
+                </h3>
+                <div class="h-64">
+                    <BodyPartsRadarChart :data="latestMeasurements" />
+                </div>
             </GlassCard>
 
             <!-- Grid -->
