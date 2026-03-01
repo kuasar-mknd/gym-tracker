@@ -25,6 +25,7 @@ class SetStoreRequest extends FormRequest
         $workoutLine = WorkoutLine::with('workout')->find($workoutLineId);
 
         // Let validation rules handle non-existent ID
+        // @phpstan-ignore booleanNot.alwaysFalse
         if (! $workoutLine || ! $workoutLine->workout) {
             return true;
         }

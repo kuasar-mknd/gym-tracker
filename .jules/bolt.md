@@ -38,3 +38,13 @@
 **Learning:** When implementing granular cache invalidation (splitting a "nuke all" method), ensure that the consumers (Actions) correctly identify which "scope" of data changed. In this case, updating a workout's *name* only requires clearing metadata caches, not heavy volume aggregations.
 **Also:** Codebase performance optimizations (like `limit(3)` in `FetchDashboardDataAction`) must be reflected in tests. I found `DashboardTest` expecting 5 items when the code explicitly limits to 3. Always verify tests align with optimization constraints.
 **Action:** When refactoring cache logic, define clear boundaries (e.g., `clearMetadata` vs `clearAggregates`) and verify test expectations against these boundaries.
+
+## 2026-03-05 - Database-Level Bucketing for Distributions
+
+**Learning:** Calculating distributions (like workout duration buckets) in PHP by loading full collections leads to O(N) memory usage and hydration overhead. Using SQL `CASE WHEN` with `COUNT(*)` offloads this to the database, resulting in O(1) memory usage and significantly faster execution.
+**Action:** Prefer database-level aggregation and bucketing for statistical distributions over in-memory PHP processing. Ensure cross-database compatibility by using the appropriate date/time functions for the current driver.
+
+## 2026-03-05 - PHPStan PHPDoc Certainty & Nullability
+
+**Learning:** PHPStan with strict rules may flag null-checks on variables that it perceives as non-nullable based on PHPDoc annotations, even if the runtime value could be null (e.g., from a database query). Additionally, using nullsafe property access (`?->`) on the left side of a null-coalescing operator (`??`) is flagged as redundant if the variable is already asserted to be non-null.
+**Action:** When using `toBase()->first()` in Eloquent, ensure PHPDocs correctly reflect that the result can be `stdClass|null`. Avoid redundant nullsafe access when PHPStan can already guarantee a non-null state.
