@@ -4,7 +4,6 @@ use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use App\Models\Set;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
