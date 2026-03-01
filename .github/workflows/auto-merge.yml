@@ -35,7 +35,7 @@ jobs:
             - name: Check contributor count
               id: check_contributors
               run: |
-                  CONTRIBUTORS_COUNT=$(gh pr view "$PR_NUMBER" --json commits --jq '[.commits[].authors[].email] | unique | length')
+                  CONTRIBUTORS_COUNT=$(gh pr view "$PR_NUMBER" -R "${{ github.repository }}" --json commits --jq '[.commits[].authors[].email] | unique | length')
                   echo "count=$CONTRIBUTORS_COUNT" >> $GITHUB_OUTPUT
               env:
                   PR_NUMBER: ${{ github.event.pull_request.number }}
