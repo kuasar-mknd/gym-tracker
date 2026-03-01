@@ -56,7 +56,7 @@ const progressBarColor = computed(() => {
 
 <template>
     <div
-        class="group relative overflow-hidden rounded-3xl border border-white/40 bg-white/60 p-5 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/80 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
+        class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
     >
         <!-- Completion Badge -->
         <div
