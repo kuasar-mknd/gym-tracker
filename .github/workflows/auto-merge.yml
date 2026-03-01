@@ -32,10 +32,11 @@ jobs:
         runs-on: ubuntu-latest
         if: github.event.pull_request.user.login == 'kuasar-mknd'
         steps:
+            - uses: actions/checkout@v4
             - name: Check contributor count
               id: check_contributors
               run: |
-                  CONTRIBUTORS_COUNT=$(gh pr view "$PR_NUMBER" --json participants --jq '.participants | length')
+                  CONTRIBUTORS_COUNT=$(gh pr view "$PR_NUMBER" --json author --jq 'if .author then 1 else 0 end')
                   echo "count=$CONTRIBUTORS_COUNT" >> $GITHUB_OUTPUT
               env:
                   PR_NUMBER: ${{ github.event.pull_request.number }}

@@ -114,7 +114,7 @@ final class GoalService
             ->get()
             ->max('workout_total_volume');
 
-        if ($maxVolume) {
+        if (is_numeric($maxVolume)) {
             $goal->update(['current_value' => (float) $maxVolume]);
         }
     }
