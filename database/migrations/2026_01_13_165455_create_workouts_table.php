@@ -17,7 +17,7 @@ return new class() extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('name')->nullable(); // Nom optionnel de la séance
-            $table->decimal('volume', 15, 2)->default(0);
+            $table->decimal('workout_volume', 15, 2)->default(0);
             $table->dateTime('started_at');
             $table->dateTime('ended_at')->nullable();
             $table->text('notes')->nullable();

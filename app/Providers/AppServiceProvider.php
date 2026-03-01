@@ -190,7 +190,7 @@ class AppServiceProvider extends ServiceProvider
 
         if ($d !== 0.0) {
             $u->increment('total_volume', $d);
-            $workout->increment('volume', $d);
+            $workout->increment('workout_volume', $d);
         }
     }
 
@@ -214,7 +214,7 @@ class AppServiceProvider extends ServiceProvider
         $v = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
         if ($v !== 0.0) {
             $u->decrement('total_volume', $v);
-            $workout->decrement('volume', $v);
+            $workout->decrement('workout_volume', $v);
         }
     }
 }

@@ -184,7 +184,7 @@ class StatsServiceTest extends TestCase
         $history = $this->statsService->getVolumeHistory($user);
 
         $this->assertCount(2, $history);
-        // History is returned oldest first (reversed latest)
+        // History is returned oldest first
         $this->assertEquals('Workout 1', $history[0]['name']);
         $this->assertEquals(1000, $history[0]['volume']);
         $this->assertEquals('Workout 2', $history[1]['name']);
