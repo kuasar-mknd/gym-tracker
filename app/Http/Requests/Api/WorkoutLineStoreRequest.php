@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\Models\Workout;
 use Illuminate\Foundation\Http\FormRequest;
 
 class WorkoutLineStoreRequest extends FormRequest
@@ -14,25 +13,7 @@ class WorkoutLineStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $workoutId = $this->input('workout_id');
-
-        // Let validation rules handle missing ID
-        if (! $workoutId) {
-            return true;
-        }
-
-        /** @var \App\Models\Workout|null $workout */
-        $workout = Workout::find($workoutId);
-
-        // Let validation rules handle non-existent ID
-        if (! $workout) {
-            return true;
-        }
-
-        /** @var \App\Models\User $user */
-        $user = $this->user();
-
-        return $workout->user_id === $user->id;
+        return true;
     }
 
     /**
@@ -45,11 +26,18 @@ class WorkoutLineStoreRequest extends FormRequest
         return [
             'workout_id' => [
                 'required',
-                'exists:workouts,id',
+                \Illuminate\Validation\Rule::exists('workouts', 'id')->where(function ($query): void {
+                    $query->where('user_id', $this->user()?->id);
+                }),
             ],
             'exercise_id' => [
                 'required',
-                'exists:exercises,id',
+                \Illuminate\Validation\Rule::exists('exercises', 'id')->where(function ($query): void {
+                    $query->where(function ($q): void {
+                        $q->whereNull('user_id')
+                            ->orWhere('user_id', $this->user()?->id);
+                    });
+                }),
             ],
             'order' => 'nullable|integer',
             'notes' => 'nullable|string',

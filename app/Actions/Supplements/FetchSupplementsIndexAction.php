@@ -8,7 +8,6 @@ use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 final class FetchSupplementsIndexAction
 {
@@ -56,10 +55,7 @@ final class FetchSupplementsIndexAction
         $days = 30;
         $usageHistoryRaw = SupplementLog::where('user_id', $user->id)
             ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
-            ->select(
-                DB::raw('DATE(consumed_at) as date'),
-                DB::raw('SUM(quantity) as count')
-            )
+            ->selectRaw('DATE(consumed_at) as date, SUM(quantity) as count')
             ->groupBy('date')
             ->get()
             ->pluck('count', 'date');

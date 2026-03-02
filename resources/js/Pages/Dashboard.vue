@@ -7,6 +7,7 @@ import { defineAsyncComponent } from 'vue'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 const DurationDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/DurationDistributionChart.vue'))
+const TimeOfDayChart = defineAsyncComponent(() => import('@/Components/Stats/TimeOfDayChart.vue'))
 
 /**
  * Dashboard - Command Center
@@ -27,6 +28,7 @@ const props = defineProps({
     weeklyVolumeTrend: { type: Array, default: () => [] },
     volumeTrend: { type: Array, default: () => [] },
     durationDistribution: { type: Array, default: () => [] },
+    timeOfDayDistribution: { type: Array, default: () => [] },
 })
 
 const form = useForm({})
@@ -109,7 +111,15 @@ const colorForWorkout = (index) => {
                         <div
                             class="from-electric-orange to-hot-pink flex size-16 items-center justify-center rounded-2xl bg-linear-to-br shadow-lg shadow-orange-500/30 transition-transform duration-300 group-hover:scale-110"
                         >
-                            <span class="material-symbols-outlined text-4xl text-white">fitness_center</span>
+                            <span
+                                v-if="form.processing"
+                                class="material-symbols-outlined animate-spin text-4xl text-white"
+                                aria-hidden="true"
+                                >autorenew</span
+                            >
+                            <span v-else class="material-symbols-outlined text-4xl text-white" aria-hidden="true"
+                                >fitness_center</span
+                            >
                         </div>
                         <span
                             class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic dark:text-white"
@@ -221,6 +231,30 @@ const colorForWorkout = (index) => {
                 </section>
             </div>
 
+            <!-- Time of Day Distribution Chart -->
+            <section
+                class="glass-panel-light animate-slide-up relative overflow-hidden rounded-3xl p-6"
+                style="animation-delay: 0.18s"
+            >
+                <div class="relative z-10 mb-6">
+                    <h3 class="text-hot-pink mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Habitudes</h3>
+                    <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                        Horaire Favori
+                    </p>
+                </div>
+
+                <!-- Time of Day Chart -->
+                <div class="relative -mx-2 mt-2 h-48 w-auto">
+                    <TimeOfDayChart
+                        v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
+                        :data="timeOfDayDistribution"
+                    />
+                    <div v-else class="text-text-muted flex h-full items-center justify-center">
+                        <p class="text-sm">Pas assez de données (90j)</p>
+                    </div>
+                </div>
+            </section>
+
             <!-- Recent Activity -->
             <section class="animate-slide-up" style="animation-delay: 0.2s">
                 <div class="mb-5 flex items-center justify-between px-1">
@@ -235,9 +269,12 @@ const colorForWorkout = (index) => {
 
                 <!-- Empty State -->
                 <div v-if="recentWorkouts.length === 0" class="glass-panel-light rounded-3xl p-8 text-center">
-                    <div class="mb-3 text-5xl">🏋️</div>
+                    <div class="mb-3 text-5xl" aria-hidden="true">🏋️</div>
                     <p class="text-text-main font-bold dark:text-white">Aucune séance pour l'instant</p>
-                    <p class="text-text-muted mt-1 text-sm">Commence ton parcours fitness !</p>
+                    <p class="text-text-muted mt-1 mb-5 text-sm">Commence ton parcours fitness !</p>
+                    <GlassButton variant="primary" @click="startWorkout" :loading="form.processing" class="mx-auto">
+                        Démarrer une séance
+                    </GlassButton>
                 </div>
 
                 <!-- Activity Cards -->

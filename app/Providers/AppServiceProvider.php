@@ -37,13 +37,13 @@ class AppServiceProvider extends ServiceProvider
         // Enforce strict model behavior in non-production environments
         // This prevents N+1 queries (preventLazyLoading) and Mass Assignment vulnerabilities (preventSilentlyDiscardingAttributes).
         // We do NOT enable preventAccessingMissingAttributes to avoid breaking existing tests/logic that rely on lenient attribute access.
-        Model::preventLazyLoading(! $this->app->isProduction());
-        Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
+        Model::preventLazyLoading(! app()->isProduction());
+        Model::preventSilentlyDiscardingAttributes(! app()->isProduction());
 
         Password::defaults(function () {
             $rule = Password::min(8);
 
-            return $this->app->isProduction()
+            return app()->isProduction()
                 ? $rule->mixedCase()->numbers()->symbols()->uncompromised()
                 : $rule;
         });
@@ -167,31 +167,33 @@ class AppServiceProvider extends ServiceProvider
 
     private function updateUserVolume(Set $set): void
     {
-        $workoutLine = $set->workoutLine;
-        if (! $workoutLine) {
-            return;
-        }
+        $u = $set->workoutLine->workout->user;
 
-        $workout = $workoutLine->workout;
-        if (! $workout) {
-            return;
-        }
-
-        $u = $workout->user;
         if (! $u) {
             return;
         }
 
-        $ow = $set->getOriginal('weight');
-        $or = $set->getOriginal('reps');
-        $ov = (is_numeric($ow) ? (float) $ow : 0.0) * (is_numeric($or) ? (int) $or : 0);
-        $nv = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
-        $d = $nv - $ov;
+        $workout = $set->workoutLine->workout;
+        if (! $workout) {
+            return;
+        }
+
+        $d = $this->calculateVolumeDifference($set);
 
         if ($d !== 0.0) {
             $u->increment('total_volume', $d);
             $workout->increment('workout_volume', $d);
         }
+    }
+
+    private function calculateVolumeDifference(Set $set): float
+    {
+        $ow = $set->getOriginal('weight');
+        $or = $set->getOriginal('reps');
+        $ov = (is_numeric($ow) ? (float) $ow : 0.0) * (is_numeric($or) ? (int) $or : 0);
+        $nv = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
+
+        return $nv - $ov;
     }
 
     private function decrementUserVolume(Set $set): void
