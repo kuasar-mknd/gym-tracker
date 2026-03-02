@@ -34,6 +34,17 @@ class Set extends Model
         'is_completed',
     ];
 
+    protected static function booted(): void
+    {
+        static::saved(function (Set $set): void {
+            $set->updateVolumes();
+        });
+
+        static::deleted(function (Set $set): void {
+            $set->decrementVolumes();
+        });
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\WorkoutLine, $this>
      */
@@ -48,6 +59,65 @@ class Set extends Model
     public function personalRecord(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(PersonalRecord::class);
+    }
+
+    /**
+     * Get the volume of the set (weight * reps).
+     */
+    public function getVolume(): float
+    {
+        return (float) ($this->weight ?? 0) * (int) ($this->reps ?? 0);
+    }
+
+    /**
+     * Get the original volume of the set before changes.
+     */
+    public function getOriginalVolume(): float
+    {
+        $weight = $this->getOriginal('weight');
+        $reps = $this->getOriginal('reps');
+
+        return (is_numeric($weight) ? (float) $weight : 0.0) * (is_numeric($reps) ? (int) $reps : 0);
+    }
+
+    /**
+     * Update the total volume for the user and the workout.
+     */
+    public function updateVolumes(): void
+    {
+        $workout = $this->workoutLine->workout;
+        $user = $workout->user;
+
+        if (! $user || ! $workout) {
+            return;
+        }
+
+        $diff = $this->getVolume() - $this->getOriginalVolume();
+
+        if ($diff !== 0.0) {
+            $user->increment('total_volume', $diff);
+            $workout->increment('workout_volume', $diff);
+        }
+    }
+
+    /**
+     * Decrement the total volume for the user and the workout.
+     */
+    public function decrementVolumes(): void
+    {
+        $workout = $this->workoutLine->workout;
+        $user = $workout->user;
+
+        if (! $user || ! $workout) {
+            return;
+        }
+
+        $volume = $this->getVolume();
+
+        if ($volume !== 0.0) {
+            $user->decrement('total_volume', $volume);
+            $workout->decrement('workout_volume', $volume);
+        }
     }
 
     protected function casts(): array

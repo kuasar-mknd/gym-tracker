@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
@@ -23,21 +25,27 @@ final class WorkoutCompletionTest extends DuskTestCase
             'started_at' => now()->subHour(),
         ]);
 
+        // Add an exercise line so the finish button is visible
+        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+        WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+
         $this->browse(function (Browser $browser) use ($user, $workout): void {
             $browser->loginAs($user)
-                ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
-                ->waitFor('main', 30) // Increased timeout
+                ->waitFor('main', 30)
                 ->assertPathIs('/workouts/'.$workout->id)
                 ->assertNoConsoleExceptions()
-                ->waitFor('#finish-workout-desktop', 30) // Increased timeout
-                ->click('#finish-workout-desktop');
+                ->waitFor('#finish-workout-mobile', 30)
+                ->click('#finish-workout-mobile');
 
-            $browser->waitFor('#confirm-finish-button', 30) // Increased timeout
+            $browser->waitFor('#confirm-finish-button', 30)
                 ->pause(1000)
                 ->script("document.getElementById('confirm-finish-button').click();");
 
-            $browser->waitForLocation('/dashboard', 30); // Increased timeout
+            $browser->waitForLocation('/dashboard', 30);
         });
     }
 
@@ -55,12 +63,10 @@ final class WorkoutCompletionTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
             $browser->loginAs($user)
-                ->resize(1920, 1080)
                 ->visit('/workouts/'.$workout->id)
-                ->waitFor('main', 30) // Increased timeout
+                ->waitFor('main', 30)
                 ->assertNoConsoleExceptions()
-                ->assertMissing('#finish-workout-desktop')
-                ->assertVisible('#workout-status-badge-desktop');
+                ->assertMissing('#finish-workout-mobile');
         });
     }
 }

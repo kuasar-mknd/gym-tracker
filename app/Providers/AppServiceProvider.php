@@ -7,22 +7,27 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
+use App\Services\AchievementService;
+use App\Services\GoalService;
 use App\Services\PersonalRecordService;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
-class AppServiceProvider extends ServiceProvider
+final class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
      */
     public function register(): void
     {
+        if ($this->app->environment('testing')) {
+            config(['telescope.enabled' => false]);
+        }
+
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(\App\Providers\TelescopeServiceProvider::class);
@@ -34,189 +39,55 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Enforce strict model behavior in non-production environments
-        // This prevents N+1 queries (preventLazyLoading) and Mass Assignment vulnerabilities (preventSilentlyDiscardingAttributes).
-        // We do NOT enable preventAccessingMissingAttributes to avoid breaking existing tests/logic that rely on lenient attribute access.
-        Model::preventLazyLoading(! app()->isProduction());
-        Model::preventSilentlyDiscardingAttributes(! app()->isProduction());
+        if ($this->app->environment('testing')) {
+            Gate::define('viewPulse', fn ($user = null) => true);
+        }
+
+        Vite::prefetch(concurrency: 3);
+
+        Model::shouldBeStrict(! $this->app->isProduction());
 
         Password::defaults(function () {
             $rule = Password::min(8);
 
-            return app()->isProduction()
-                ? $rule->mixedCase()->numbers()->symbols()->uncompromised()
+            return $this->app->isProduction()
+                ? $rule->mixedCase()->uncompromised()
                 : $rule;
         });
 
-        $this->configureGates();
-        $this->configureVite();
-        $this->configureLivewire();
-        $this->configureSocialite();
-        $this->configureModelHooks();
+        $this->registerSetEvents();
+        $this->registerWorkoutEvents();
+        $this->registerMeasurementEvents();
     }
 
-    private function configureGates(): void
+    private function registerSetEvents(): void
     {
-        Gate::before(function ($user): ?true {
-            $role = config('filament-shield.super_admin.name', 'super_admin');
+        Set::saved(function (Set $set): void {
+            $user = $set->workoutLine->workout->user;
 
-            return $user instanceof \App\Models\Admin && is_string($role) && $user->hasRole($role) ? true : null;
-        });
-
-        Gate::define('viewPulse', function ($user): bool {
-            $role = config('filament-shield.super_admin.name', 'super_admin');
-
-            if ($user instanceof \App\Models\Admin && is_string($role) && $user->hasRole($role)) {
-                return true;
+            if ($set->weight && $set->reps) {
+                app(PersonalRecordService::class)->syncSetPRs($set, $user);
             }
 
-            return is_object($user) && is_string($role) && method_exists($user, 'hasRole') && $user->hasRole($role);
+            app(AchievementService::class)->syncAchievements($user);
+            app(GoalService::class)->syncGoals($user);
         });
     }
 
-    private function configureLivewire(): void
+    private function registerWorkoutEvents(): void
     {
-        if ($this->app->bound('csp-nonce')) {
-            config(['livewire.nonce' => $this->app->make('csp-nonce')]);
-        }
-    }
+        Workout::saved(function (Workout $workout): void {
+            // Streak is only updated when a workout is "finished" or has a date
+            app(StreakService::class)->updateStreak($workout->user, $workout);
 
-    private function configureVite(): void
-    {
-        if ($this->app->bound('csp-nonce')) {
-            Vite::useCspNonce($this->app->make('csp-nonce'));
-        }
-
-        Vite::prefetch(concurrency: 3);
-    }
-
-    private function configureSocialite(): void
-    {
-        Event::listen(
-            \SocialiteProviders\Manager\SocialiteWasCalled::class,
-            \SocialiteProviders\Apple\AppleExtendSocialite::class
-        );
-    }
-
-    private function configureModelHooks(): void
-    {
-        $syncGoals = function (?\App\Models\User $user, bool $debounce = false): void {
-            if (! $user) {
-                return;
-            }
-            if ($debounce) {
-                $key = 'dispatched:sync-goals:'.$user->id;
-                if ($this->app->bound($key)) {
-                    return;
-                }
-                $this->app->instance($key, true);
-            }
-            \App\Jobs\SyncUserGoals::dispatch($user);
-        };
-
-        $syncAchievements = function (?\App\Models\User $user, bool $debounce = false): void {
-            if (! $user) {
-                return;
-            }
-            if ($debounce) {
-                $key = 'dispatched:sync-achievements:'.$user->id;
-                if ($this->app->bound($key)) {
-                    return;
-                }
-                $this->app->instance($key, true);
-            }
-            \App\Jobs\SyncUserAchievements::dispatch($user);
-        };
-
-        // Workouts always trigger (covers creation and completion)
-        Workout::saved(fn (Workout $workout) => $syncGoals($workout->user));
-        Workout::deleted(fn (Workout $workout) => $syncGoals($workout->user));
-        Workout::saved(fn (Workout $workout) => $syncAchievements($workout->user));
-        Workout::deleted(fn (Workout $workout) => $syncAchievements($workout->user));
-        Workout::saved(fn (Workout $workout) => app(StreakService::class)->updateStreak($workout->user, $workout));
-
-        // Sets only trigger if the workout is finished, and they are debounced per request
-        Set::saved(function (Set $set) use ($syncGoals): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
-                $syncGoals($workout->user, true);
-            }
-            $this->updateUserVolume($set);
-            app(PersonalRecordService::class)->syncSetPRs($set);
+            app(AchievementService::class)->syncAchievements($workout->user);
+            app(GoalService::class)->syncGoals($workout->user);
         });
-
-        Set::deleted(function (Set $set) use ($syncGoals): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
-                $syncGoals($workout->user, true);
-            }
-            $this->decrementUserVolume($set);
-        });
-
-        Set::saved(function (Set $set) use ($syncAchievements): void {
-            $workout = $set->workoutLine->workout;
-            if ($workout->ended_at !== null) {
-                $syncAchievements($workout->user, true);
-            }
-        });
-
-        // Body Measurements always trigger
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => $syncGoals($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => $syncGoals($bm->user));
     }
 
-    private function updateUserVolume(Set $set): void
+    private function registerMeasurementEvents(): void
     {
-        $u = $set->workoutLine->workout->user;
-
-        if (! $u) {
-            return;
-        }
-
-        $workout = $set->workoutLine->workout;
-        if (! $workout) {
-            return;
-        }
-
-        $d = $this->calculateVolumeDifference($set);
-
-        if ($d !== 0.0) {
-            $u->increment('total_volume', $d);
-            $workout->increment('workout_volume', $d);
-        }
-    }
-
-    private function calculateVolumeDifference(Set $set): float
-    {
-        $ow = $set->getOriginal('weight');
-        $or = $set->getOriginal('reps');
-        $ov = (is_numeric($ow) ? (float) $ow : 0.0) * (is_numeric($or) ? (int) $or : 0);
-        $nv = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
-
-        return $nv - $ov;
-    }
-
-    private function decrementUserVolume(Set $set): void
-    {
-        $workoutLine = $set->workoutLine;
-        if (! $workoutLine) {
-            return;
-        }
-
-        $workout = $workoutLine->workout;
-        if (! $workout) {
-            return;
-        }
-
-        $u = $workout->user;
-        if (! $u) {
-            return;
-        }
-
-        $v = (float) ($set->weight ?? 0) * (int) ($set->reps ?? 0);
-        if ($v !== 0.0) {
-            $u->decrement('total_volume', $v);
-            $workout->decrement('workout_volume', $v);
-        }
+        BodyMeasurement::saved(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
+        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
     }
 }

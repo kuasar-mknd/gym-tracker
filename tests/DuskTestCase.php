@@ -36,13 +36,17 @@ abstract class DuskTestCase extends BaseTestCase
 
     /**
      * Prepare for Dusk test execution.
+     *
+     * @beforeClass
      */
-    #[BeforeClass]
     public static function prepare(): void
     {
         if (! static::runningInSail()) {
             static::startChromeDriver(['--port=9515']);
         }
+
+        putenv('APP_ENV=testing');
+        $_ENV['APP_ENV'] = 'testing';
     }
 
     /**
@@ -51,7 +55,8 @@ abstract class DuskTestCase extends BaseTestCase
     protected function driver(): RemoteWebDriver
     {
         $options = (new ChromeOptions())->addArguments(collect([
-            $this->shouldStartMaximized() ? '--start-maximized' : '--window-size=1920,1080',
+            '--window-size=393,852',
+            '--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
             '--disable-search-engine-choice-screen',
             '--disable-smooth-scrolling',
         ])->unless($this->hasHeadlessDisabled(), fn (Collection $items) => $items->merge([
@@ -60,15 +65,17 @@ abstract class DuskTestCase extends BaseTestCase
             '--no-sandbox',
             '--disable-dev-shm-usage',
             '--ignore-certificate-errors',
-            '--window-size=1920,1080',
+            '--window-size=393,852',
         ]))->all());
 
         return RemoteWebDriver::create(
             $_ENV['DUSK_DRIVER_URL'] ?? env('DUSK_DRIVER_URL') ?? 'http://127.0.0.1:9515',
-            DesiredCapabilities::chrome()->setCapability(
-                ChromeOptions::CAPABILITY,
-                $options
-            )
+            DesiredCapabilities::chrome()
+                ->setCapability('goog:loggingPrefs', ['browser' => 'ALL'])
+                ->setCapability(
+                    ChromeOptions::CAPABILITY,
+                    $options
+                )
         );
     }
 }

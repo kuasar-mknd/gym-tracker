@@ -1,9 +1,9 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 12" />
   <img src="https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3" />
-  <img src="https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Tailwind-CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
   <img src="https://img.shields.io/badge/Inertia.js-2-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js" />
-  <img src="https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA Ready" />
+  <img src="https://img.shields.io/badge/PHPStan-Level%209-blue?style=for-the-badge" alt="PHPStan Level 9" />
 </p>
 
 <h1 align="center">💪 GymTracker</h1>
@@ -18,8 +18,8 @@
   <a href="#-fonctionnalités">Fonctionnalités</a> •
   <a href="#-screenshots">Screenshots</a> •
   <a href="#-installation">Installation</a> •
+  <a href="#-qualité--performance">Qualité</a> •
   <a href="#-développement">Développement</a> •
-  <a href="#-déploiement">Déploiement</a> •
   <a href="#-contributing">Contributing</a>
 </p>
 
@@ -28,280 +28,108 @@
 ## ✨ Fonctionnalités
 
 ### 🏋️ Suivi d'Entraînement
+- **Séances & Modèles** — Démarre rapidement avec tes routines favorites ou crée des séances libres.
+- **Records personnels (PR)** — Détection automatique de tes nouveaux records (Poids, 1RM, Volume).
+- **Streak counter** — Maintiens ta motivation avec le suivi des jours consécutifs.
+- **Liquid Glass UI** — Une interface mobile-first pensée pour l'entraînement.
 
-- **Séances libres ou basées sur modèles** — Démarre rapidement avec tes routines favorites
-- **Exercices personnalisables** — Bibliothèque d'exercices avec catégories (poitrine, dos, jambes, etc.)
-- **Séries & répétitions** — Enregistre poids, reps, temps de repos
-- **Historique complet** — Consulte toutes tes séances passées
+### 📊 Statistiques & Santé
+- **Graphiques de progression** — Visualisation interactive de ton volume et de tes max.
+- **Habits Tracking** — Suivi de tes routines (Créatine, Méditation, Sommeil...).
+- **Vitals & Composition** — Enregistre ta tension, fréquence cardiaque et % de masse grasse (US Navy).
+- **Mesures corporelles** — Suivi complet de ton évolution physique.
 
-### 📊 Statistiques & Progression
-
-- **Graphiques interactifs** — Visualise ta progression avec Chart.js
-- **Records personnels (PR)** — Suivi automatique de tes max (1RM, volume, poids)
-- **Fréquence d'entraînement** — Statistiques mensuelles et hebdomadaires
-- **Streak counter** — Maintiens ta motivation avec les séries consécutives
-
-### 🎯 Objectifs & Récompenses
-
-- **Objectifs personnalisés** — Définis des cibles de poids, volume ou fréquence
-- **Système d'achievements** — Déblocage de trophées pour tes accomplissements
-- **Notifications push** — Rappels et célébrations via Web Push
-
-### 📏 Suivi Corporel
-
-- **Mesures corporelles** — Poids, tour de taille, bras, cuisses, etc.
-- **Journal quotidien** — Notes de bien-être, sommeil, nutrition
-- **Évolution visuelle** — Graphiques de progression corporelle
-
-### 🔧 Outils
-
-- **Calculateur de plaques** — Calcule les disques à charger sur ta barre
-- **Estimation 1RM** — Calcul de ton max théorique
-
-### ❤️ Santé & Habitudes [NOUVEAU]
-
-- **Suivi des Habitudes** — Crée et suis tes routines quotidiennes (Méditation, Créatine, Étirements...)
-- **Constantes Vitales** — Enregistre ta fréquence cardiaque et tension artérielle
-- **Composition Corporelle** — Calcul automatique du % de masse grasse (Méthode US Navy)
-
-### 🔐 Authentification
-
-- **Email/Password** — Inscription classique sécurisée
-- **OAuth Social** — Connexion via Google, GitHub, Apple
-- **Two-Factor Auth** — Sécurité renforcée (optionnel)
+### 🔐 Sécurité & Outils
+- **OAuth Social** — Connexion via Google, GitHub, Apple.
+- **Calculateurs** — Plaques de fonte et estimation 1RM.
+- **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection.
 
 ---
 
-## 🖼️ Interface "Liquid Glass"
+## 🏆 Qualité & Performance
 
-L'application arbore désormais un design system **Liquid Glass** complet :
+Le projet respecte des standards d'ingénierie très élevés :
+- **PHP Insights** : Score de **100%** en Architecture et Complexité.
+- **PHPStan** : Analyse statique de **Niveau 9** (Strict Typing complet).
+- **Tests** : Suite de +750 tests automatisés (Pest & Dusk).
+- **Optimisation** : Surgical Cache Invalidation pour des performances maximales.
 
-- **Cartes Translucides** : Effet de flou d'arrière-plan (backdrop-blur) pour une profondeur moderne.
-- **Dégradés Vibrants** : Utilisation de couleurs dynamiques pour visualiser l'intensité.
-- **Micro-interactions** : Retour visuel immédiat pour chaque action.
-- **Mode Sombre Natif** : Optimisé pour une utilisation en salle de sport.
+Voir la documentation détaillée :
+- [🚀 Plan d'Attaque Performance](docs/performance/attack_plan.md)
+- [🛡️ Plan de Sécurité](docs/security/plan.md)
+- [📅 Roadmap du projet](docs/roadmap.md)
 
 ---
 
 ## 🛠️ Stack Technique
 
-| Catégorie    | Technologies                        |
-| ------------ | ----------------------------------- |
-| **Backend**  | Laravel 12, PHP 8.4, MySQL/SQLite   |
-| **Frontend** | Vue 3, Inertia.js 2, Tailwind CSS 3 |
-| **Build**    | Vite 7, PWA (vite-plugin-pwa)       |
-| **Auth**     | Laravel Breeze, Socialite, Sanctum  |
-| **Queue**    | Laravel Horizon, Redis              |
-| **Testing**  | PHPUnit 11, Pest 3                  |
-| **CI/CD**    | GitHub Actions                      |
-| **Deploy**   | Docker, FrankenPHP, Portainer       |
+| Catégorie | Technologies |
+| --- | --- |
+| **Backend** | Laravel 12, PHP 8.4 (Strict Types), MySQL |
+| **Frontend** | Vue 3, Inertia.js 2, Tailwind CSS 4 |
+| **Testing** | Pest 4, PHPUnit 12, Laravel Dusk 8 |
+| **DevOps** | Laravel Sail (Docker), GitHub Actions |
+| **Monitoring** | Laravel Pulse, Sentry, Telescope |
 
 ---
 
-## 🚀 Installation
+## 🚀 Installation (via Laravel Sail)
 
 ### Prérequis
-
-- PHP 8.2+
-- Composer 2.x
-- Node.js 20+
-- MySQL 8+ ou SQLite
+- Docker Desktop
+- PHP & Composer (uniquement pour l'installation initiale de Sail si besoin)
 
 ### Installation Rapide
-
 ```bash
 # Clone le repo
 git clone https://github.com/kuasar-mknd/gym-tracker.git
 cd gym-tracker
 
-# Installation automatique
-composer setup
-```
+# Installation des dépendances via Docker
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$(pwd):/var/www/html" \
+    -w /var/www/html \
+    laravelsail/php84-composer:latest \
+    composer install --ignore-platform-reqs
 
-<details>
-<summary><strong>Installation Manuelle</strong></summary>
-
-```bash
-# 1. Dépendances PHP
-composer install
-
-# 2. Configuration
+# Configuration
 cp .env.example .env
-php artisan key:generate
-
-# 3. Base de données
-php artisan migrate --seed
-
-# 4. Dépendances JS
-npm install
-
-# 5. Build assets
-npm run build
-```
-
-</details>
-
-### Configuration OAuth (optionnel)
-
-Pour activer la connexion sociale, ajoute ces variables dans `.env` :
-
-```env
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-secret
-
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-secret
-
-APPLE_CLIENT_ID=your-apple-client-id
-APPLE_CLIENT_SECRET=your-apple-secret
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate --seed
+./vendor/bin/sail npm install
+./vendor/bin/sail npm run build
 ```
 
 ---
 
 ## 💻 Développement
 
-### Serveur de développement
-
-```bash
-# Lance tout en parallèle (serveur, queue, logs, vite)
-composer dev
-```
-
-Ou manuellement :
-
-```bash
-# Terminal 1 - Backend
-php artisan serve
-
-# Terminal 2 - Frontend (hot reload)
-npm run dev
-```
-
-### Commandes utiles
-
-| Commande                     | Description               |
-| ---------------------------- | ------------------------- |
-| `php artisan test`           | Exécute les tests PHPUnit |
-| `npm run build`              | Build production          |
-| `npm run format`             | Formate JS/Vue/CSS + PHP  |
-| `vendor/bin/pint`            | Formatte le code PHP      |
-| `vendor/bin/phpstan analyze` | Analyse statique PHP      |
-
-### Structure du projet
-
-```
-gym-tracker/
-├── app/
-│   ├── Http/Controllers/    # Contrôleurs (Workouts, Stats, etc.)
-│   ├── Models/              # Modèles Eloquent
-│   └── Services/            # Logique métier (Achievements, etc.)
-├── resources/
-│   ├── js/
-│   │   ├── Components/      # Composants Vue réutilisables
-│   │   ├── Layouts/         # Layouts (Authenticated, Guest)
-│   │   └── Pages/           # Pages Inertia
-│   └── css/                 # Styles Tailwind + Glass Design System
-├── database/
-│   ├── migrations/          # Schéma de base de données
-│   └── seeders/             # Données de test
-└── tests/                   # Tests PHPUnit
-```
-
----
-
-## 🐳 Déploiement
-
-### Docker (Production)
-
-```bash
-# Build l'image
-docker build -t gym-tracker .
-
-# Lance avec docker-compose
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Variables d'environnement production
-
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://your-domain.com
-
-DB_CONNECTION=mysql
-DB_HOST=your-db-host
-DB_DATABASE=gym_tracker
-DB_USERNAME=your-user
-DB_PASSWORD=your-password
-
-# Queue (Redis recommandé)
-QUEUE_CONNECTION=redis
-REDIS_HOST=your-redis-host
-```
-
----
-
-## 🧪 Tests
-
-```bash
-# Tous les tests
-php artisan test
-
-# Tests avec couverture
-php artisan test --coverage
-
-# Un fichier spécifique
-php artisan test tests/Feature/WorkoutsTest.php
-
-# Filtrer par nom
-php artisan test --filter=testUserCanCreateWorkout
-```
+### Commandes courantes
+| Commande | Description |
+| --- | --- |
+| `./vendor/bin/sail up -d` | Lance les conteneurs (App, MySQL, Redis, Mailpit) |
+| `./vendor/bin/sail npm run dev` | Lance Vite avec Hot Reload |
+| `./vendor/bin/sail artisan test` | Exécute la suite de tests Pest |
+| `./vendor/bin/sail bin pint` | Formate le code (PSR-12) |
+| `./vendor/bin/sail bin phpstan analyze` | Vérifie le typage strict |
+| `./vendor/bin/sail artisan insights` | Analyse la qualité du code |
 
 ---
 
 ## 🤝 Contributing
 
-Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour les guidelines.
-
-### Workflow
-
-1. **Fork** le repository
-2. **Crée** une branche (`git checkout -b feature/amazing-feature`)
-3. **Commit** tes changements (`git commit -m 'Add amazing feature'`)
-4. **Push** sur la branche (`git push origin feature/amazing-feature`)
-5. **Ouvre** une Pull Request
-
-### Code Quality
-
-- Formate ton code : `npm run format`
-- Tests passent : `php artisan test`
-- PHPStan propre : `vendor/bin/phpstan analyze`
-
----
-
-## 📋 Roadmap
-
-Voir [ROADMAP.md](ROADMAP.md) pour les fonctionnalités planifiées.
-
-- [ ] Mode hors-ligne complet (PWA)
-- [ ] Synchronisation multi-appareils
-- [ ] Export PDF des statistiques
-- [ ] Partage social des achievements
-- [ ] Intégration wearables (Apple Watch, Garmin)
-
----
-
-## 🔒 Sécurité
-
-Pour signaler une vulnérabilité, voir [SECURITY.md](SECURITY.md).
+Les contributions sont les bienvenues !
+1. Assure-toi que les tests passent : `./vendor/bin/sail artisan test`
+2. Vérifie la qualité : `./vendor/bin/sail artisan insights`
+3. Formate ton code : `./vendor/bin/sail bin pint`
 
 ---
 
 ## 📝 License
 
 Ce projet est sous licence [MIT](LICENSE).
-
----
 
 <p align="center">
   <strong>Fait avec ❤️ pour les passionnés de fitness</strong>

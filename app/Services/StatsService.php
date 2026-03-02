@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Service for calculating and retrieving user workout statistics.
  */
-class StatsService
+final class StatsService
 {
     /**
      * @return array<int, array{date: string, full_date: string, name: string, volume: float}>
@@ -661,23 +661,7 @@ class StatsService
             $this->incrementBucket($buckets, (int) abs($workout->started_at->diffInMinutes($workout->ended_at)));
         }
 
-        /** @var array<int, array{label: string, count: int}> */
-        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->toArray();
-    }
-
-    /**
-     * @param  array<string, int>  $buckets
-     */
-    private function incrementBucket(array &$buckets, int $minutes): void
-    {
-        $label = match (true) {
-            $minutes < 30 => '< 30 min',
-            $minutes < 60 => '30-60 min',
-            $minutes < 90 => '60-90 min',
-            default => '90+ min',
-        };
-
-        $buckets[$label]++;
+        return $this->formatBuckets($buckets);
     }
 
     /**
@@ -701,20 +685,44 @@ class StatsService
         ];
 
         foreach ($workouts as $workout) {
-            $hour = (int) $workout->started_at->format('G');
-
-            if ($hour >= 6 && $hour < 12) {
-                $buckets['Matin (06h-12h)']++;
-            } elseif ($hour >= 12 && $hour < 17) {
-                $buckets['Après-midi (12h-17h)']++;
-            } elseif ($hour >= 17 && $hour < 22) {
-                $buckets['Soir (17h-22h)']++;
-            } else {
-                $buckets['Nuit (22h-06h)']++;
-            }
+            $buckets[$this->getBucketForHour((int) $workout->started_at->format('G'))]++;
         }
 
+        return $this->formatBuckets($buckets);
+    }
+
+    /**
+     * @param  array<string, int>  $buckets
+     * @return array<int, array{label: string, count: int}>
+     */
+    private function formatBuckets(array $buckets): array
+    {
         /** @var array<int, array{label: string, count: int}> */
         return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->toArray();
+    }
+
+    private function getBucketForHour(int $hour): string
+    {
+        return match (true) {
+            $hour >= 6 && $hour < 12 => 'Matin (06h-12h)',
+            $hour >= 12 && $hour < 17 => 'Après-midi (12h-17h)',
+            $hour >= 17 && $hour < 22 => 'Soir (17h-22h)',
+            default => 'Nuit (22h-06h)',
+        };
+    }
+
+    /**
+     * @param  array<string, int>  $buckets
+     */
+    private function incrementBucket(array &$buckets, int $minutes): void
+    {
+        $label = match (true) {
+            $minutes < 30 => '< 30 min',
+            $minutes < 60 => '30-60 min',
+            $minutes < 90 => '60-90 min',
+            default => '90+ min',
+        };
+
+        $buckets[$label]++;
     }
 }

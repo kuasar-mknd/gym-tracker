@@ -48,22 +48,26 @@ const submit = () => {
             <GlassInput
                 v-model="form.email"
                 type="email"
+                name="email"
                 label="Email"
                 placeholder="ton@email.com"
                 :error="form.errors.email"
                 autocomplete="username"
                 required
                 autofocus
+                data-testid="email-input"
             />
 
             <GlassInput
                 v-model="form.password"
                 type="password"
+                name="password"
                 label="Mot de passe"
                 placeholder="••••••••"
                 :error="form.errors.password"
                 autocomplete="current-password"
                 required
+                data-testid="password-input"
             />
 
             <div class="flex items-center justify-between">
@@ -73,7 +77,7 @@ const submit = () => {
                 </label>
 
                 <Link
-                    v-if="canResetPassword"
+                    v-if="canResetPassword && $page.props.ziggy.routes['password.request']"
                     :href="route('password.request')"
                     class="text-electric-orange hover:text-vivid-violet text-sm font-semibold transition-colors"
                 >

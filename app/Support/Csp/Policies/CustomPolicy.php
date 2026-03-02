@@ -28,8 +28,11 @@ class CustomPolicy extends Basic
             ->add(Directive::MEDIA, Keyword::SELF)
             ->add(Directive::OBJECT, Keyword::NONE)
             ->add(Directive::SCRIPT, Keyword::SELF)
-            ->add(Directive::STYLE, Keyword::SELF)
-            ->addNonce(Directive::SCRIPT);
+            ->add(Directive::STYLE, Keyword::SELF);
+
+        if (! app()->environment('local', 'testing')) {
+            $policy->addNonce(Directive::SCRIPT);
+        }
 
         if (app()->environment('local', 'testing')) {
             $this->configureLocal($policy);
@@ -44,6 +47,7 @@ class CustomPolicy extends Basic
     {
         $policy
             ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
+            ->add(Directive::SCRIPT, Keyword::UNSAFE_INLINE)
             ->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
     }
 
