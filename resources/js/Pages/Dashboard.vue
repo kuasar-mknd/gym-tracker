@@ -111,7 +111,15 @@ const colorForWorkout = (index) => {
                         <div
                             class="from-electric-orange to-hot-pink flex size-16 items-center justify-center rounded-2xl bg-linear-to-br shadow-lg shadow-orange-500/30 transition-transform duration-300 group-hover:scale-110"
                         >
-                            <span class="material-symbols-outlined text-4xl text-white">fitness_center</span>
+                            <span
+                                v-if="form.processing"
+                                class="material-symbols-outlined animate-spin text-4xl text-white"
+                                aria-hidden="true"
+                                >autorenew</span
+                            >
+                            <span v-else class="material-symbols-outlined text-4xl text-white" aria-hidden="true"
+                                >fitness_center</span
+                            >
                         </div>
                         <span
                             class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic dark:text-white"
@@ -261,9 +269,12 @@ const colorForWorkout = (index) => {
 
                 <!-- Empty State -->
                 <div v-if="recentWorkouts.length === 0" class="glass-panel-light rounded-3xl p-8 text-center">
-                    <div class="mb-3 text-5xl">🏋️</div>
+                    <div class="mb-3 text-5xl" aria-hidden="true">🏋️</div>
                     <p class="text-text-main font-bold dark:text-white">Aucune séance pour l'instant</p>
-                    <p class="text-text-muted mt-1 text-sm">Commence ton parcours fitness !</p>
+                    <p class="text-text-muted mt-1 mb-5 text-sm">Commence ton parcours fitness !</p>
+                    <GlassButton variant="primary" @click="startWorkout" :loading="form.processing" class="mx-auto">
+                        Démarrer une séance
+                    </GlassButton>
                 </div>
 
                 <!-- Activity Cards -->
