@@ -244,6 +244,18 @@ class StatsService
     }
 
     /**
+     * @return array<int, array{label: string, count: int}>
+     */
+    public function getTimeOfDayDistribution(User $user, int $days = 90): array
+    {
+        return Cache::remember(
+            "stats.time_of_day_distribution.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            fn (): array => $this->calculateTimeOfDayDistribution($user, $days)
+        );
+    }
+
+    /**
      * @return array<int, array{month: string, volume: float}>
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
@@ -297,6 +309,7 @@ class StatsService
         Cache::forget("stats.duration_history.{$user->id}.20");
         Cache::forget("stats.monthly_volume_history.{$user->id}.6");
         Cache::forget("stats.duration_distribution.{$user->id}.90");
+        Cache::forget("stats.time_of_day_distribution.{$user->id}.90");
 
         // Invalidate 1RM cache for all exercises (O(1))
         Cache::put("stats.1rm_version.{$user->id}", (string) time(), 86400 * 30);
@@ -666,5 +679,39 @@ class StatsService
         };
 
         $buckets[$label]++;
+    }
+
+    /**
+     * @return array<int, array{label: string, count: int}>
+     */
+    protected function calculateTimeOfDayDistribution(User $user, int $days): array
+    {
+        $workouts = $user->workouts()
+            ->where('started_at', '>=', now()->subDays($days))
+            ->get();
+
+        $buckets = [
+            'Matin (06h-12h)' => 0,
+            'Après-midi (12h-17h)' => 0,
+            'Soir (17h-22h)' => 0,
+            'Nuit (22h-06h)' => 0,
+        ];
+
+        foreach ($workouts as $workout) {
+            $hour = (int) $workout->started_at->format('G');
+
+            if ($hour >= 6 && $hour < 12) {
+                $buckets['Matin (06h-12h)']++;
+            } elseif ($hour >= 12 && $hour < 17) {
+                $buckets['Après-midi (12h-17h)']++;
+            } elseif ($hour >= 17 && $hour < 22) {
+                $buckets['Soir (17h-22h)']++;
+            } else {
+                $buckets['Nuit (22h-06h)']++;
+            }
+        }
+
+        /** @var array<int, array{label: string, count: int}> */
+        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->toArray();
     }
 }
