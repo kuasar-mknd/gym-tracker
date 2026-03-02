@@ -1,0 +1,3 @@
+## 2024-03-02 - Empty State Call to Actions & Async Buttons
+**Learning:** Found an empty state ("Aucune séance pour l'instant") that left users at a dead-end on the primary Dashboard. Additionally, a large call-to-action card executed an async form post without any visual feedback (no spinner). In Inertia/Vue apps, disabling the button isn't enough; the user needs clear visual feedback that their action is processing, especially for major actions like creating a new Workout.
+**Action:** Always provide an actionable CTA within Empty States to prevent "dead ends". Also, always ensure primary action buttons not only disable themselves but also show an explicit loading indicator (like `animate-spin` on an icon) when `form.processing` is true.
