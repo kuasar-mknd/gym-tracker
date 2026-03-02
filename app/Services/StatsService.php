@@ -58,7 +58,7 @@ final class StatsService
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchMuscleDistributionData($user, $days)
-                ->map(fn (object $row): array => [
+                ->map(fn (\stdClass $row): array => [
                     'category' => (string) ($row->category ?? 'Unknown'),
                     'volume' => (float) ($row->volume ?? 0.0),
                 ])
@@ -78,7 +78,7 @@ final class StatsService
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}.v{$version}",
             now()->addMinutes(30),
             fn (): array => $this->fetchExercise1RMData($user, $exerciseId, $days)
-                ->map(fn (object $set): array => $this->formatExercise1RMItem($set))
+                ->map(fn (\stdClass $set): array => $this->formatExercise1RMItem($set))
                 ->toArray()
         );
     }
@@ -537,11 +537,10 @@ final class StatsService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, object{category: string, volume: float|int}>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
     protected function fetchMuscleDistributionData(User $user, int $days): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, object{category: string, volume: float|int}> */
         return DB::table('sets')
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
@@ -554,11 +553,10 @@ final class StatsService
     }
 
     /**
-     * @return \Illuminate\Support\Collection<int, object{started_at: string, epley_1rm: float|int}>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
     protected function fetchExercise1RMData(User $user, int $exerciseId, int $days): \Illuminate\Support\Collection
     {
-        /** @var \Illuminate\Support\Collection<int, object{started_at: string, epley_1rm: float|int}> */
         return DB::table('sets')->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')->where('workouts.user_id', $user->id)->where('workout_lines.exercise_id', $exerciseId)->where('workouts.started_at', '>=', now()->subDays($days))->selectRaw(
             // SECURITY: Static DB::raw - safe. DO NOT concatenate user input here.
             'workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm'
@@ -611,10 +609,9 @@ final class StatsService
     }
 
     /**
-     * @param  object{started_at: string, epley_1rm: float|int}  $set
      * @return array{date: string, full_date: string, one_rep_max: float}
      */
-    protected function formatExercise1RMItem(object $set): array
+    protected function formatExercise1RMItem(\stdClass $set): array
     {
         return [
             'date' => Carbon::parse($set->started_at)->format('d/m'),
@@ -697,8 +694,7 @@ final class StatsService
      */
     private function formatBuckets(array $buckets): array
     {
-        /** @var array<int, array{label: string, count: int}> */
-        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->toArray();
+        return collect($buckets)->map(fn (int $count, string $label): array => ['label' => $label, 'count' => $count])->values()->all();
     }
 
     private function getBucketForHour(int $hour): string

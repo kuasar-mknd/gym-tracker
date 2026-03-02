@@ -68,7 +68,11 @@ final class WorkoutSessionE2ETest extends DuskTestCase
                     ->type('@reps-input-0-0', '5')
                     ->pause(500);
 
-                // 5. Complete set (using JS click)
+                // Hide keyboard/unfocus to ensure visibility
+                $browser->script('document.activeElement.blur();');
+                $browser->pause(1000);
+
+                // 5. Complete set (using JS click for mobile reliability)
                 $browser->waitFor('@complete-set-0-0', 15)
                     ->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
                 $browser->pause(1000);

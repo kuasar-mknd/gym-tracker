@@ -40,7 +40,7 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         if ($this->app->environment('testing')) {
-            Gate::define('viewPulse', fn ($user = null) => true);
+            Gate::define('viewPulse', fn ($user = null): bool => true);
         }
 
         Vite::prefetch(concurrency: 3);
