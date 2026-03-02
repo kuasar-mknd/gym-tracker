@@ -20,7 +20,7 @@ import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -554,12 +554,52 @@ const filteredExercises = computed(() => {
 const hasNoResults = computed(() => {
     return searchQuery.value && filteredExercises.value.length === 0
 })
+
+// --- Workout Duration Timer ---
+
+const workoutDuration = ref('00:00:00')
+let durationInterval = null
+
+const updateWorkoutDuration = () => {
+    const start = new Date(props.workout.started_at)
+    const end = props.workout.ended_at ? new Date(props.workout.ended_at) : new Date()
+    const diff = Math.max(0, Math.floor((end - start) / 1000))
+
+    const h = Math.floor(diff / 3600)
+    const m = Math.floor((diff % 3600) / 60)
+    const s = diff % 60
+    workoutDuration.value = [h, m, s].map((v) => v.toString().padStart(2, '0')).join(':')
+}
+
+onMounted(() => {
+    updateWorkoutDuration()
+    if (!props.workout.ended_at) {
+        durationInterval = setInterval(updateWorkoutDuration, 1000)
+        document.addEventListener('visibilitychange', updateWorkoutDuration)
+    }
+})
+
+onUnmounted(() => {
+    clearInterval(durationInterval)
+    document.removeEventListener('visibilitychange', updateWorkoutDuration)
+})
 </script>
 
 <template>
     <Head :title="workout.name || 'Séance'" />
 
     <AuthenticatedLayout :page-title="workout.name || 'Séance en cours'" show-back back-route="workouts.index">
+        <template #subtitle>
+            <div
+                class="text-electric-orange mt-1 flex items-center gap-1 font-mono text-xs font-bold sm:text-sm"
+                role="timer"
+                aria-live="off"
+            >
+                <span class="material-symbols-outlined text-[14px] sm:text-sm">timer</span>
+                {{ workoutDuration }}
+            </div>
+        </template>
+
         <template #header>
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
@@ -569,9 +609,21 @@ const hasNoResults = computed(() => {
                     >
                         <span class="material-symbols-outlined">arrow_back</span>
                     </Link>
-                    <h1 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
-                        {{ workout.name || 'Séance' }}
-                    </h1>
+                    <div class="flex flex-col">
+                        <h1
+                            class="font-display text-text-main text-2xl leading-none font-black tracking-tight uppercase italic"
+                        >
+                            {{ workout.name || 'Séance' }}
+                        </h1>
+                        <div
+                            class="text-electric-orange mt-1 flex items-center gap-1 font-mono text-sm font-bold"
+                            role="timer"
+                            aria-live="off"
+                        >
+                            <span class="material-symbols-outlined text-sm">timer</span>
+                            {{ workoutDuration }}
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-2">

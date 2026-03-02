@@ -156,12 +156,14 @@ const showingNavigationDropdown = ref(false)
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
-                <h1
-                    v-if="pageTitle"
-                    class="font-display text-text-main truncate text-2xl font-black tracking-tight uppercase italic dark:text-white"
-                >
-                    {{ pageTitle }}
-                </h1>
+                <div v-if="pageTitle" class="flex min-w-0 flex-col">
+                    <h1
+                        class="font-display text-text-main truncate text-2xl leading-none font-black tracking-tight uppercase italic dark:text-white"
+                    >
+                        {{ pageTitle }}
+                    </h1>
+                    <slot name="subtitle" />
+                </div>
             </div>
 
             <div class="flex items-center gap-2">
