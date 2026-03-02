@@ -442,10 +442,7 @@ class StatsService
         return DB::table('workouts')
             ->where('user_id', $user->id)
             ->whereBetween('started_at', [$startOfWeek, $endOfWeek])
-            ->select(
-                DB::raw('DATE(started_at) as date'),
-                DB::raw('SUM(workout_volume) as total_volume')
-            )
+            ->selectRaw('DATE(started_at) as date, SUM(workout_volume) as total_volume')
             ->groupBy('date')
             ->get()->keyBy('date');
     }
@@ -520,10 +517,7 @@ class StatsService
         return DB::table('workouts')
             ->where('user_id', $user->id)
             ->whereBetween('started_at', [$start, now()->endOfDay()])
-            ->select(
-                DB::raw('DATE(started_at) as date'),
-                DB::raw('SUM(workout_volume) as daily_volume')
-            )
+            ->selectRaw('DATE(started_at) as date, SUM(workout_volume) as daily_volume')
             ->groupBy('date')
             ->pluck('daily_volume', 'date')
             ->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
