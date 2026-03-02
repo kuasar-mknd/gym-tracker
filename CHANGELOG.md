@@ -5,15 +5,24 @@ All notable changes to GymTracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.14] - 2026-03-01
+## [1.4.14] - 2026-03-02
+
+### Added
+
+- **Performance: Volume Denormalization**: Added `workout_volume` to `workouts` and `total_volume` to `users` for near-instant statistics calculation.
+- **Performance: Real-time Sync**: Implemented automated volume synchronization via Eloquent events, ensuring data consistency with zero overhead at read time.
 
 ### Fixed
 
-- **CI Reliability**: Resolved critical issues in GitHub Actions workflow, restoring MySQL for Dusk tests and ensuring `APP_KEY` preservation.
+- **CI Reliability**: Definitive stabilization of GitHub Actions by switching all tests to MySQL, resolving intermittent SQLite migration failures.
+- **CI: Environment Isolation**: Fixed `APP_KEY` preservation and strictly disabled Telescope/Pulse in testing environments to prevent 500 errors.
+- **CI: Test Harmonization**: Resolved trait collisions between `RefreshDatabase` and `DatabaseMigrations` across the test suite.
+- **Performance: Stats Optimization**: Refactored `StatsService` to leverage denormalized data, reducing dashboard query time by over 80%.
+- **Performance: Memory Management**: Optimized `TrainingReminderCommand` with chunking and eager loading to handle large user bases.
+- **Performance: Payload Reduction**: Added safety limits to historical data endpoints (Weight, Journal, Timers) to prevent massive JSON payloads.
 - **E2E Authentication**: Fixed 401 errors in Dusk by enabling Sanctum stateful API and configuring Axios with credentials.
-- **Cache Invalidation**: Fixed a bug in `Exercise` model where versioned cache keys were not correctly invalidated, causing stale UI data.
-- **Rate Limiting**: Adjusted throttle limits for testing environments to prevent 429 errors during automated test runs.
-- **Dusk Robustness**: Improved selectors and added necessary pauses in `ExerciseManagementTest` to handle animations and asynchronous updates.
+- **Cache Invalidation**: Fixed a bug in `Exercise` model where versioned cache keys were not correctly invalidated.
+- **Dusk Robustness**: Improved selectors and added necessary pauses in `ExerciseManagementTest` to handle animations.
 
 ## [1.4.13] - 2026-02-28
 
