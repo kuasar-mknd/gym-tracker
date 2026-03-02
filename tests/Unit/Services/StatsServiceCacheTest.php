@@ -40,6 +40,7 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
+        Cache::shouldReceive('forget')->once()->with("stats.time_of_day_distribution.{$user->id}.90");
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_history.{$user->id}.6");
         Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.7");
@@ -82,6 +83,7 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
+        Cache::shouldReceive('forget')->once()->with("stats.time_of_day_distribution.{$user->id}.90");
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_history.{$user->id}.6");
         Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.7");

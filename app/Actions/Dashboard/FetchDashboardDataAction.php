@@ -81,6 +81,14 @@ final class FetchDashboardDataAction
     }
 
     /**
+     * @return array<int, array{label: string, count: int}>
+     */
+    public function getTimeOfDayDistribution(User $user): array
+    {
+        return $this->statsService->getTimeOfDayDistribution($user);
+    }
+
+    /**
      * Legacy method if needed, but we will update the controller.
      *
      * @return array<string, mixed>
@@ -97,6 +105,7 @@ final class FetchDashboardDataAction
                 'weeklyVolumeTrend' => $this->getWeeklyVolumeTrend($user),
                 'volumeTrend' => $this->getVolumeTrend($user),
                 'durationDistribution' => $this->getDurationDistribution($user),
+                'timeOfDayDistribution' => $this->getTimeOfDayDistribution($user),
             ]
         );
     }
