@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
