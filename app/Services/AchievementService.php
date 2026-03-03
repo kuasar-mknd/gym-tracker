@@ -19,7 +19,7 @@ final class AchievementService
     public function syncAchievements(User $user): void
     {
         $unlockedIds = $user->achievements()->pluck('achievements.id')->toArray();
-        $locked = Achievement::whereNotIn('id', $unlockedIds)->get();
+        $locked = Achievement::getCachedAll()->whereNotIn('id', $unlockedIds)->values();
 
         if ($locked->isEmpty()) {
             return;
