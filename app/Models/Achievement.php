@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -52,5 +54,24 @@ class Achievement extends Model
             ->logOnly(['slug', 'name', 'description', 'type', 'category', 'threshold'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    /**
+     * @return Collection<int, Achievement>
+     */
+    public static function getCachedAll(): Collection
+    {
+        // PERFORMANCE OPTIMIZATION:
+        // Cache achievements forever to prevent a database query on every set save (via AchievementService).
+        /** @var Collection<int, Achievement> */
+        return Cache::rememberForever('achievements_all', fn (): Collection => self::all());
+    }
+
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::saved(fn () => Cache::forget('achievements_all'));
+        static::deleted(fn () => Cache::forget('achievements_all'));
     }
 }
