@@ -100,5 +100,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
         }
     });
 })->with([
+    'iPhone Mini' => 'resizeToIphoneMini',
+    'iPhone 15' => 'resizeToIphone15',
     'iPhone Pro Max' => 'resizeToIphoneMax',
 ]);
