@@ -31,7 +31,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
     $this->browse(function (Browser $browser) use ($user, $exercises, $workout, $sizeMacro): void {
         try {
             $browser->loginAs($user)
-                ->{$sizeMacro}() // Redimensionnement (Mini, 15, Max)
+                ->{$sizeMacro}()
                 ->visit("/workouts/{$workout->id}")
                 ->waitFor('main', 30);
 
@@ -62,12 +62,12 @@ test('ultra complete workout session flow on different iphone sizes', function (
 
             // Hide keyboard/unfocus to ensure visibility
             $browser->script('document.activeElement.blur();');
-            $browser->pause(1000);
+            $browser->pause(2000); // EXTRA PAUSE FOR DEBOUNCE
 
             // 5. Complete set (using JS click for mobile reliability)
             $browser->waitFor('@complete-set-0-0', 15)
                 ->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
-            $browser->pause(1000);
+            $browser->pause(2000); // WAIT FOR SET UPDATE
 
             // Skip rest timer
             $browser->script("
@@ -78,16 +78,18 @@ test('ultra complete workout session flow on different iphone sizes', function (
 
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
-                ->pause(1000)
+                ->script("document.querySelector('#finish-workout-mobile').scrollIntoView();");
+            $browser->pause(500)
                 ->script("document.querySelector('#finish-workout-mobile').click();");
 
-            // Wait for modal and confirm button, with a long pause for transitions and event bindings
-            $browser->waitFor('#confirm-finish-button', 15)
-                ->pause(2000)
-                ->script("document.querySelector('#confirm-finish-button').click();");
+            // Wait for modal explicitly with text
+            $browser->waitForText('TERMINER LA SÉANCE', 15)
+                ->waitFor('#confirm-finish-button', 15)
+                ->pause(1000)
+                ->press('#confirm-finish-button'); // Native click!
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 45)
+            $browser->waitForLocation('/dashboard', 30)
                 ->assertPathIs('/dashboard')
                 ->assertSee('FAIT')
                 ->assertNoConsoleExceptions();
