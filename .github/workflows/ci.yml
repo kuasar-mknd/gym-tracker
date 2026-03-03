@@ -138,13 +138,7 @@ jobs:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
-            - name: Install Chrome Driver
-              run: php artisan dusk:chrome-driver --detect
-
-            - name: Start Chrome Driver
-              run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
-
-            - name: Run Dusk Tests
+            - name: Prepare Dusk Environment
               run: |
                   # Create fresh .env
                   rm -f .env.testing .env.dusk.local .env.example
@@ -184,7 +178,15 @@ jobs:
                   
                   # Setup database
                   php artisan migrate:fresh --seed --force
-                  
+
+            - name: Install Chrome Driver
+              run: php artisan dusk:chrome-driver --detect
+
+            - name: Start Chrome Driver
+              run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
+
+            - name: Run Dusk Tests
+              run: |
                   # Start server with ALL env vars
                   TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite APP_ENV=testing php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
                   # Wait for server
