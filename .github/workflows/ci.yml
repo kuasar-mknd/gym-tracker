@@ -21,7 +21,7 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: '8.4'
-                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
 
@@ -114,6 +114,19 @@ jobs:
     browser-tests:
         runs-on: ubuntu-latest
         needs: [setup-php, frontend-build]
+        services:
+            mysql:
+                image: mysql:8.4
+                env:
+                    MYSQL_ALLOW_EMPTY_PASSWORD: yes
+                    MYSQL_DATABASE: gym_tracker_dusk
+                ports:
+                    - 3306:3306
+                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+            selenium:
+                image: selenium/standalone-chromium
+                ports:
+                    - 4444:4444
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -128,7 +141,7 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: '8.4'
-                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
 
@@ -137,12 +150,6 @@ jobs:
               with:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
-
-            - name: Install Chrome Driver
-              run: php artisan dusk:chrome-driver --detect
-
-            - name: Start Chrome Driver
-              run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
 
             - name: Run Dusk Tests
               run: |
@@ -154,8 +161,12 @@ jobs:
                   APP_DEBUG=true
                   APP_URL=http://127.0.0.1:8000
                   
-                  DB_CONNECTION=sqlite
-                  DB_DATABASE=database/dusk.sqlite
+                  DB_CONNECTION=mysql
+                  DB_HOST=127.0.0.1
+                  DB_PORT=3306
+                  DB_DATABASE=gym_tracker_dusk
+                  DB_USERNAME=root
+                  DB_PASSWORD=
                   
                   SESSION_DRIVER=cookie
                   CACHE_STORE=array
@@ -165,13 +176,10 @@ jobs:
                   TELESCOPE_ENABLED=false
                   PULSE_ENABLED=false
                   
-                  DUSK_DRIVER_URL=http://127.0.0.1:9515
+                  DUSK_DRIVER_URL=http://127.0.0.1:4444/wd/hub
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
                   EOF
                   chmod -R 777 storage bootstrap/cache
-                  mkdir -p database
-                  touch database/dusk.sqlite
-                  chmod -R 777 database
                   echo "<?php return ['enabled' => false, 'watchers' => []];" > config/telescope.php
                   php artisan config:clear
                   php artisan view:clear
@@ -180,13 +188,13 @@ jobs:
                   # Setup database
                   php artisan migrate:fresh --seed --force
                   
-                  # Start server with ALL env vars
-                  TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite APP_ENV=testing php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
+                  # Start server
+                  TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
                   # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk
-                  TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite APP_ENV=testing php artisan dusk
+                  TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan dusk
 
             - name: Dump Logs on Failure
               if: failure()
@@ -233,7 +241,7 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: '8.4'
-                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
 
@@ -257,7 +265,7 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: '8.4'
-                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
 
