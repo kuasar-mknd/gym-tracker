@@ -502,7 +502,7 @@ const typeLabel = (type) => {
                                         class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                     >
                                         <button
-                                            @click="startEdit(exercise)"
+                                            @click.stop="startEdit(exercise)"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all sm:hidden"
                                             :aria-label="`Modifier ${exercise.name}`"
                                             data-testid="edit-exercise-button-mobile-icon"
@@ -512,7 +512,7 @@ const typeLabel = (type) => {
 
                                         <!-- Desktop Buttons -->
                                         <button
-                                            @click="startEdit(exercise)"
+                                            @click.stop="startEdit(exercise)"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all sm:flex"
                                             data-testid="edit-exercise-button-desktop"
                                             :aria-label="`Modifier ${exercise.name}`"
@@ -520,7 +520,7 @@ const typeLabel = (type) => {
                                             <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                                         </button>
                                         <button
-                                            @click="deleteExercise(exercise.id)"
+                                            @click.stop="deleteExercise(exercise.id)"
                                             class="text-text-muted hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:flex"
                                             data-testid="delete-exercise-button-desktop"
                                             :aria-label="`Supprimer ${exercise.name}`"
