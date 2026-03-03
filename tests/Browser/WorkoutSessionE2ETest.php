@@ -33,7 +33,13 @@ test('ultra complete workout session flow on different iphone sizes', function (
             $browser->loginAs($user)
                 ->{$sizeMacro}()
                 ->visit("/workouts/{$workout->id}")
-                ->waitFor('main', 30);
+                ->waitFor('main', 30)
+                // Disable CSS transitions for test stability
+                ->script("
+                    const style = document.createElement('style');
+                    style.innerHTML = '* { transition: none !important; animation: none !important; }';
+                    document.head.appendChild(style);
+                ");
 
             // 1. Add exercise
             $browser->waitFor('@add-first-exercise', 15)
