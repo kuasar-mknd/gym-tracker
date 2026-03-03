@@ -160,7 +160,7 @@ jobs:
                   APP_NAME=GymTracker
                   APP_ENV=testing
                   APP_KEY=$(php artisan key:generate --show --no-ansi)
-                  APP_DEBUG=false
+                  APP_DEBUG=true
                   APP_URL=http://127.0.0.1:8000
 
                   DB_CONNECTION=mysql
@@ -177,25 +177,18 @@ jobs:
 
                   TELESCOPE_ENABLED=false
                   PULSE_ENABLED=false
-                  LOG_LEVEL=error
 
                   DUSK_DRIVER_URL=http://127.0.0.1:9515
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
-                  SESSION_DOMAIN=127.0.0.1
                   EOF
                   chmod -R 777 storage bootstrap/cache
                   php artisan config:clear
-                  php artisan view:clear
 
                   # Setup database
                   php artisan migrate:fresh --seed --force
 
-                  # Optimize
-                  php artisan optimize
-
                   # Start server
-                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
-                  # Wait for server
+                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &                  # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk
