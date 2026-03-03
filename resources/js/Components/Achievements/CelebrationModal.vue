@@ -70,7 +70,9 @@ const close = () => {
                 class="to-accent-secondary/20 from-accent-primary/20 absolute inset-0 bg-linear-to-br via-transparent opacity-50"
             ></div>
 
-            <div class="relative flex flex-col items-center rounded-[20px] bg-gray-900/50 p-6 text-center">
+            <div
+                class="relative flex flex-col items-center rounded-3xl border border-white/20 bg-white/10 p-6 text-center backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20"
+            >
                 <!-- Confetti/Burst Animation Background (CSS only) -->
                 <div class="pointer-events-none absolute top-0 left-0 h-full w-full overflow-hidden">
                     <div
