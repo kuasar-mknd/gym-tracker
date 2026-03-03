@@ -203,6 +203,18 @@ jobs:
                   echo "--- Serve Log ---"
                   cat storage/logs/serve.log || echo "No serve log found"
 
+            - name: Sanitize Screenshot Filenames
+              if: failure()
+              run: |
+                  if [ -d "tests/Browser/screenshots" ]; then
+                    find tests/Browser/screenshots -name "*.png" | while read -r file; do
+                      new_file=$(echo "$file" | tr -d '"' | tr ':' '_' | tr '<' '_' | tr '>' '_' | tr '|' '_' | tr '*' '_' | tr '?' '_')
+                      if [ "$file" != "$new_file" ]; then
+                        mv "$file" "$new_file"
+                      fi
+                    done
+                  fi
+
             - name: Upload Test Screenshots
               if: failure()
               uses: actions/upload-artifact@v4
