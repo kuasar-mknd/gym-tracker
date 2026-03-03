@@ -71,6 +71,7 @@ class CustomPolicy extends Basic
             ->add(Directive::STYLE, 'https://fonts.bunny.net')
             ->add(Directive::IMG, 'data:')
             ->add(Directive::IMG, 'https://ui-avatars.com')
+            ->add(Directive::IMG, 'https://www.svgrepo.com')
             ->add(Directive::FONT, 'https://fonts.bunny.net')
             ->add(Directive::FONT, 'https://fonts.gstatic.com')
             ->add(Directive::FONT, 'data:');
