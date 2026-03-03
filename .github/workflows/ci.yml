@@ -174,8 +174,9 @@ jobs:
                   touch database/dusk.sqlite
                   chmod -R 777 database
                   
-                  # DISABLE TELESCOPE GLOBALLY
+                  # KILL TELESCOPE HARD
                   echo "<?php return ['enabled' => false, 'watchers' => []];" > config/telescope.php
+                  sed -i 's/Laravel\\Telescope\\TelescopeServiceProvider::class,//g' bootstrap/providers.php || true
                   
                   php artisan config:clear
                   php artisan view:clear
@@ -184,7 +185,7 @@ jobs:
                   # Setup database
                   php artisan migrate:fresh --seed --force
                   
-                  # Start server with ALL env vars
+                  # Start server
                   TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite APP_ENV=testing php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
                   # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
