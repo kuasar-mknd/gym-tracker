@@ -99,7 +99,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
             $browser->waitForLocation('/dashboard', 120);
 
             $browser->assertPathIs('/dashboard')
-                ->assertSee('FAIT')
+                ->assertSee('BON RETOUR')
                 ->assertNoConsoleExceptions();
 
         } catch (\Exception $e) {
