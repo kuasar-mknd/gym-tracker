@@ -53,6 +53,8 @@ class StatsServiceCacheTest extends TestCase
         $user = User::factory()->make(['id' => 123]);
 
         // Expectation: Body measurement keys are cleared
+        Cache::shouldReceive('forget')->once()->with("stats.latest_metrics.{$user->id}");
+
         foreach ([7, 30, 90, 365] as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.weight_history.{$user->id}.{$days}");
             Cache::shouldReceive('forget')->once()->with("stats.body_fat_history.{$user->id}.{$days}");
@@ -66,6 +68,7 @@ class StatsServiceCacheTest extends TestCase
         $user = User::factory()->make(['id' => 123]);
 
         // Expect everything to be cleared (called from clearUserStatsCache which calls both)
+        Cache::shouldReceive('forget')->once()->with("stats.latest_metrics.{$user->id}");
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
         Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key): bool => str_starts_with((string) $key, "stats.weekly_volume_comparison.{$user->id}")));
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");

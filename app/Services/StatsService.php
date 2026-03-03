@@ -127,17 +127,30 @@ final class StatsService
      */
     public function getLatestBodyMetrics(User $user): array
     {
-        $measurements = $user->bodyMeasurements()->latest('measured_at')->take(2)->get();
-        $latest = $measurements->first();
-        $previous = $measurements->skip(1)->first();
+        return Cache::remember(
+            "stats.latest_metrics.{$user->id}",
+            now()->addMinutes(30),
+            function () use ($user): array {
+                // PERFORMANCE OPTIMIZATION:
+                // Select only required columns to reduce memory usage and Eloquent hydration time.
+                $measurements = $user->bodyMeasurements()
+                    ->select(['id', 'user_id', 'weight', 'body_fat', 'measured_at'])
+                    ->latest('measured_at')
+                    ->take(2)
+                    ->get();
 
-        $weightChange = $latest && $previous ? round($latest->weight - $previous->weight, 1) : 0;
+                $latest = $measurements->first();
+                $previous = $measurements->skip(1)->first();
 
-        return [
-            'latest_weight' => $latest?->weight ? (float) $latest->weight : null,
-            'weight_change' => (float) $weightChange,
-            'latest_body_fat' => $latest?->body_fat ? (float) $latest->body_fat : null,
-        ];
+                $weightChange = $latest && $previous ? round($latest->weight - $previous->weight, 1) : 0;
+
+                return [
+                    'latest_weight' => $latest?->weight ? (float) $latest->weight : null,
+                    'weight_change' => (float) $weightChange,
+                    'latest_body_fat' => $latest?->body_fat ? (float) $latest->body_fat : null,
+                ];
+            }
+        );
     }
 
     /**
@@ -334,6 +347,8 @@ final class StatsService
      */
     public function clearBodyMeasurementStats(User $user): void
     {
+        Cache::forget("stats.latest_metrics.{$user->id}");
+
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.weight_history.{$user->id}.{$days}");
             Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
