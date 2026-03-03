@@ -15,10 +15,6 @@ class ConditionalCspHeaders extends AddCspHeaders
      */
     public function handle(Request $request, \Closure $next, ?string $customPreset = null): Response
     {
-        if (app()->environment('testing')) {
-            return $next($request);
-        }
-
         /** @var string $path */
         $path = config('pulse.path', 'backoffice/pulse');
 

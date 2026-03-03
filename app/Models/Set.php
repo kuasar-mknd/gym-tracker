@@ -34,17 +34,6 @@ class Set extends Model
         'is_completed',
     ];
 
-    protected static function booted(): void
-    {
-        static::saved(function (Set $set): void {
-            $set->updateVolumes();
-        });
-
-        static::deleted(function (Set $set): void {
-            $set->decrementVolumes();
-        });
-    }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\WorkoutLine, $this>
      */
@@ -118,6 +107,17 @@ class Set extends Model
             $user->decrement('total_volume', $volume);
             $workout->decrement('workout_volume', $volume);
         }
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(function (Set $set): void {
+            $set->updateVolumes();
+        });
+
+        static::deleted(function (Set $set): void {
+            $set->decrementVolumes();
+        });
     }
 
     protected function casts(): array

@@ -43,14 +43,15 @@ final class AppServiceProvider extends ServiceProvider
             Gate::define('viewPulse', fn ($user = null): bool => true);
         }
 
+        Vite::useCspNonce();
         Vite::prefetch(concurrency: 3);
 
-        Model::shouldBeStrict(! $this->app->isProduction());
+        Model::shouldBeStrict(! app()->environment('production'));
 
         Password::defaults(function () {
             $rule = Password::min(8);
 
-            return $this->app->isProduction()
+            return app()->environment('production')
                 ? $rule->mixedCase()->uncompromised()
                 : $rule;
         });

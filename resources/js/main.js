@@ -19,7 +19,7 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(ZiggyVue)
+            .use(ZiggyVue, props.initialPage.props.ziggy)
 
         // Sentry disabled for debugging
         if (import.meta.env.VITE_SENTRY_DSN_PUBLIC) {
