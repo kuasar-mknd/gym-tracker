@@ -31,6 +31,10 @@ class HandleInertiaRequests extends Middleware
                 'user' => $this->getUserData($request),
             ],
             'is_testing' => app()->environment('testing'),
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+            ],
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             'ziggy' => function () use ($request): array {
                 $ziggy = new Ziggy();
