@@ -171,12 +171,14 @@ jobs:
                   touch database/dusk.sqlite
                   chmod -R 777 storage bootstrap/cache database
                   php artisan config:clear
+                  php artisan view:clear
+                  php artisan route:clear
 
                   # Setup database
                   php artisan migrate:fresh --seed --force
 
                   # Start server
-                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &                  # Wait for server
+                  TELESCOPE_ENABLED=false php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &                  # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk

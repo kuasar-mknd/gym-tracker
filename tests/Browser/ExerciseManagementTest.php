@@ -55,7 +55,7 @@ test('user can manage exercises on different iphone sizes', function (string $si
             ");
 
         $updatedName = 'UPDATED EXERCISE '.time();
-        $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 20)
+        $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 30)
             ->clear('input[placeholder="Nom de l\'exercice"]')
             ->type('input[placeholder="Nom de l\'exercice"]', $updatedName)
             ->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
