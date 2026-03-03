@@ -43,7 +43,7 @@ test('user can manage exercises on different iphone sizes', function (string $si
             ->assertSee(strtoupper($exerciseName));
 
         // 4. Edit the exercise
-        $browser->waitFor('[data-testid="edit-exercise-button-mobile-icon"], [data-testid="edit-exercise-button-desktop"]', 20)
+        $browser->waitFor('[data-testid="exercise-card"]', 20)
             ->script("
                 const mobileBtn = document.querySelector('[data-testid=\"edit-exercise-button-mobile-icon\"]');
                 const desktopBtn = document.querySelector('[data-testid=\"edit-exercise-button-desktop\"]');
@@ -64,7 +64,7 @@ test('user can manage exercises on different iphone sizes', function (string $si
         $browser->waitForText(strtoupper($updatedName), 15);
 
         // 6. Delete the exercise
-        $browser->waitFor('[data-testid="delete-exercise-button-mobile"], [data-testid="delete-exercise-button-desktop"]', 20)
+        $browser->waitFor('[data-testid="exercise-card"]', 20)
             ->script("
                 const desktopDel = document.querySelector('[data-testid=\"delete-exercise-button-desktop\"]');
                 const mobileDel = document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]');

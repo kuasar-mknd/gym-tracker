@@ -26,6 +26,9 @@ final class AppServiceProvider extends ServiceProvider
     {
         if ($this->app->environment('testing')) {
             config(['telescope.enabled' => false]);
+            if (class_exists(\Laravel\Telescope\Telescope::class)) {
+                \Laravel\Telescope\Telescope::ignore();
+            }
         }
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
