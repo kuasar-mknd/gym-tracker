@@ -30,6 +30,7 @@ Homestead.yaml
 Thumbs.db
 .grepai/
 /grepai
+.gemini/
 _ide_helper.php
 _ide_helper_models.php
 .phpstorm.meta.php

@@ -20,6 +20,7 @@
         "laravel/fortify": "^1.33",
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.42",
+        "laravel/mcp": "^0.5",
         "laravel/octane": "^2.13",
         "laravel/pulse": "^1.5",
         "laravel/sanctum": "^4.0",

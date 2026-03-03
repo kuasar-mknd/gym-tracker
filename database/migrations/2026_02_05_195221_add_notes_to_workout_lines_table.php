@@ -13,9 +13,11 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        Schema::table('workout_lines', function (Blueprint $table) {
-            $table->text('notes')->nullable()->after('order');
-        });
+        if (! Schema::hasColumn('workout_lines', 'notes')) {
+            Schema::table('workout_lines', function (Blueprint $table) {
+                $table->text('notes')->nullable()->after('order');
+            });
+        }
     }
 
     /**

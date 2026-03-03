@@ -29,6 +29,7 @@ final class PersonalRecordService
         }
 
         $user ??= $workout->user;
+        $user->loadMissing('notificationPreferences');
         $exerciseId = $set->workoutLine->exercise_id;
 
         if (! $user || ! $exerciseId) {

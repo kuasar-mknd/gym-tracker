@@ -56,6 +56,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         'provider_id',
         'avatar',
         'default_rest_time',
+        'total_volume',
     ];
 
     /**
@@ -158,6 +159,13 @@ final class User extends Authenticatable implements MustVerifyEmail
 
     public function isNotificationEnabled(string $type): bool
     {
+        if ($this->relationLoaded('notificationPreferences')) {
+            return $this->notificationPreferences
+                ->where('type', $type)
+                ->where('is_enabled', true)
+                ->isNotEmpty();
+        }
+
         return (bool) $this->notificationPreferences()
             ->where('type', $type)
             ->where('is_enabled', true)
@@ -222,6 +230,13 @@ final class User extends Authenticatable implements MustVerifyEmail
 
     public function isPushEnabled(string $type): bool
     {
+        if ($this->relationLoaded('notificationPreferences')) {
+            return $this->notificationPreferences
+                ->where('type', $type)
+                ->where('is_push_enabled', true)
+                ->isNotEmpty();
+        }
+
         return (bool) $this->notificationPreferences()
             ->where('type', $type)
             ->where('is_push_enabled', true)
@@ -268,6 +283,7 @@ final class User extends Authenticatable implements MustVerifyEmail
             'current_streak' => 'integer',
             'longest_streak' => 'integer',
             'last_workout_at' => 'datetime',
+            'total_volume' => 'decimal:2',
         ];
     }
 }
