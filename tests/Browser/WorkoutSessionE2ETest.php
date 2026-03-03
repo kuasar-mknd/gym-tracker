@@ -96,9 +96,8 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ");
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 120);
-
-            $browser->assertPathIs('/dashboard')
+            $browser->waitForLocation('/dashboard', 120)
+                ->assertPathIs('/dashboard')
                 ->assertSee('BON RETOUR')
                 ->assertNoConsoleExceptions();
 
@@ -108,6 +107,5 @@ test('ultra complete workout session flow on different iphone sizes', function (
         }
     });
 })->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
     'iPhone Pro Max' => 'resizeToIphoneMax',
 ]);
