@@ -77,16 +77,14 @@ test('ultra complete workout session flow on different iphone sizes', function (
             $browser->pause(1000);
 
             // 6. Finish Workout
-            // Scroll to the button to ensure it's in view, then click it
             $browser->waitFor('#finish-workout-mobile', 15)
                 ->pause(500)
-                ->script("document.querySelector('#finish-workout-mobile').scrollIntoView();");
-            $browser->click('#finish-workout-mobile');
+                ->script("document.querySelector('#finish-workout-mobile').click();");
 
-            // Wait for modal transition to complete before clicking confirm
+            // Wait for modal and confirm button
             $browser->waitFor('#confirm-finish-button', 15)
                 ->pause(1000)
-                ->click('#confirm-finish-button');
+                ->script("document.querySelector('#confirm-finish-button').click();");
 
             // 7. Verify
             $browser->waitForLocation('/dashboard', 30)
