@@ -117,6 +117,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
 }
 
 const savingTemplate = ref(false)
+const finishingWorkout = ref(false)
 const saveAsTemplate = () => {
     savingTemplate.value = true
     router.post(
@@ -134,6 +135,7 @@ const finishWorkout = () => {
     showFinishModal.value = true
 }
 const confirmFinishWorkout = () => {
+    finishingWorkout.value = true
     router.patch(
         route('workouts.update', { workout: localWorkout.value.id }),
         { is_finished: true },
@@ -142,6 +144,9 @@ const confirmFinishWorkout = () => {
                 triggerHaptic('success')
                 showFinishModal.value = false
                 router.visit(route('dashboard'))
+            },
+            onFinish: () => {
+                finishingWorkout.value = false
             },
         },
     )
@@ -549,6 +554,7 @@ const filteredExercises = computed(() => {
                         variant="primary"
                         id="confirm-finish-button"
                         @click="confirmFinishWorkout"
+                        :loading="finishingWorkout"
                         class="flex-1"
                         >Confirmer</GlassButton
                     >
