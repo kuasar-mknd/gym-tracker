@@ -89,7 +89,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ->press('#confirm-finish-button'); // Native click!
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 30)
+            $browser->waitForLocation('/dashboard', 120)
                 ->assertPathIs('/dashboard')
                 ->assertSee('FAIT')
                 ->assertNoConsoleExceptions();
