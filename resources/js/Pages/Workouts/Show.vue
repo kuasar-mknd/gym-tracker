@@ -30,12 +30,43 @@ const forceUpdate = () => {
     workoutKey.value++
 }
 
-// Sync with props if they change externally (but avoid during active edits if possible)
+// Track what's being edited to avoid overwriting it with props
+const activeEditingId = ref(null)
+const setEditing = (id) => {
+    activeEditingId.value = id
+}
+const clearEditing = () => {
+    // Small delay to ensure any pending debounce finishes
+    setTimeout(() => {
+        activeEditingId.value = null
+    }, 600)
+}
+
+// Sync with props if they change externally
 watch(
     () => props.workout,
     (newW) => {
         if (newW && newW.id === localWorkout.value.id) {
-            localWorkout.value = JSON.parse(JSON.stringify(newW))
+            // Merge logic: keep local values for the set being edited
+            const mergedWorkout = JSON.parse(JSON.stringify(newW))
+
+            if (activeEditingId.value) {
+                mergedWorkout.workout_lines.forEach((line, lIdx) => {
+                    line.sets.forEach((set, sIdx) => {
+                        if (set.id === activeEditingId.value) {
+                            const localSet = localWorkout.value.workout_lines[lIdx]?.sets[sIdx]
+                            if (localSet) {
+                                set.weight = localSet.weight
+                                set.reps = localSet.reps
+                                set.distance_km = localSet.distance_km
+                                set.duration_seconds = localSet.duration_seconds
+                            }
+                        }
+                    })
+                })
+            }
+
+            localWorkout.value = mergedWorkout
             forceUpdate()
         }
     },
@@ -48,6 +79,21 @@ const timerDuration = ref(90)
 const toggleSetCompletion = (set, exerciseRestTime) => {
     const newState = !set.is_completed
     const previousState = set.is_completed
+
+    // Flush any pending updates for this set immediately
+    const timerKey = `${set.id}_weight`
+    const repsKey = `${set.id}_reps`
+    if (updateTimers[timerKey]) {
+        clearTimeout(updateTimers[timerKey])
+        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { weight: set.weight })
+        delete updateTimers[timerKey]
+    }
+    if (updateTimers[repsKey]) {
+        clearTimeout(updateTimers[repsKey])
+        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { reps: set.reps })
+        delete updateTimers[repsKey]
+    }
+
     set.is_completed = newState
     triggerHaptic('tap')
     if (newState) {
@@ -380,6 +426,8 @@ const filteredExercises = computed(() => {
                                 <input
                                     type="number"
                                     :value="set.weight"
+                                    @focus="setEditing(set.id)"
+                                    @blur="clearEditing"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -388,6 +436,8 @@ const filteredExercises = computed(() => {
                                 <input
                                     type="number"
                                     :value="set.reps"
+                                    @focus="setEditing(set.id)"
+                                    @blur="clearEditing"
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
