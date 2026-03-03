@@ -26,13 +26,14 @@ jobs:
                   tools: composer:v2
 
             - name: Cache Vendor Folder
-              id: vendor-cache
+              id: cache-vendor
               uses: actions/cache@v4
               with:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
             - name: Install PHP Dependencies
+              if: steps.cache-vendor.outputs.cache-hit != 'true'
               run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
     frontend-build:
@@ -48,17 +49,23 @@ jobs:
                   cache: 'npm'
 
             - name: Install Node Dependencies
-              run: npm install --legacy-peer-deps
+              run: npm ci
 
             - name: Build Assets
               run: npm run build
+
+            - name: Upload Build Artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: build-assets
+                  path: public/build
+              continue-on-error: true # download might fail if doesn't exist, but we upload next
 
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
               with:
                   name: build-assets
                   path: public/build
-                  retention-days: 1
 
     laravel-tests:
         runs-on: ubuntu-latest
@@ -114,15 +121,6 @@ jobs:
     browser-tests:
         runs-on: ubuntu-latest
         needs: [setup-php, frontend-build]
-        services:
-            mysql:
-                image: mysql:8.4
-                env:
-                    MYSQL_ALLOW_EMPTY_PASSWORD: yes
-                    MYSQL_DATABASE: gym_tracker_dusk
-                ports:
-                    - 3306:3306
-                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -137,7 +135,7 @@ jobs:
               uses: shivammathur/setup-php@v2
               with:
                   php-version: '8.4'
-                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
 
@@ -162,40 +160,41 @@ jobs:
                   APP_KEY=$(TELESCOPE_ENABLED=false php artisan key:generate --show --no-ansi)
                   APP_DEBUG=true
                   APP_URL=http://127.0.0.1:8000
-
-                  DB_CONNECTION=mysql
-                  DB_HOST=127.0.0.1
-                  DB_PORT=3306
-                  DB_DATABASE=gym_tracker_dusk
-                  DB_USERNAME=root
-                  DB_PASSWORD=
-
+                  
+                  DB_CONNECTION=sqlite
+                  DB_DATABASE=database/dusk.sqlite
+                  
                   SESSION_DRIVER=cookie
                   CACHE_STORE=array
                   QUEUE_CONNECTION=sync
                   MAIL_MAILER=array
-
+                  
                   TELESCOPE_ENABLED=false
                   PULSE_ENABLED=false
-
+                  
                   DUSK_DRIVER_URL=http://127.0.0.1:9515
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
                   EOF
                   chmod -R 777 storage bootstrap/cache
+                  mkdir -p database
+                  touch database/dusk.sqlite
+                  chmod -R 777 database
                   echo "<?php return ['enabled' => false, 'watchers' => []];" > config/telescope.php
                   php artisan config:clear
                   php artisan view:clear
                   php artisan route:clear
-
+                  
                   # Setup database
                   php artisan migrate:fresh --seed --force
-
-                  # Start server
-                  TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &                  # Wait for server
+                  
+                  # Start server with ALL env vars
+                  TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite APP_ENV=testing php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
+                  # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk
-                  TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan dusk
+                  TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite APP_ENV=testing php artisan dusk
+
             - name: Dump Logs on Failure
               if: failure()
               run: |
@@ -279,43 +278,35 @@ jobs:
               run: composer audit
 
             - name: PHP Insights
-              run: ./vendor/bin/phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90
+              run: php artisan insights --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90
 
             - name: Larastan Analysis
               run: ./vendor/bin/phpstan analyse --memory-limit=2G
 
             - name: Rector (Dry Run)
-              run: ./vendor/bin/rector process --dry-run --no-progress-bar
+              run: ./vendor/bin/rector process --dry-run
 
-    build:
-        name: Build Image (${{ matrix.platform }})
-        runs-on: ${{ matrix.runner }}
-        needs: [laravel-tests, browser-tests, lint, audit]
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    build-image:
         strategy:
             matrix:
-                include:
-                    - runner: ubuntu-latest
-                      platform: linux/amd64
-                    - runner: ubuntu-24.04-arm
-                      platform: linux/arm64
-        permissions:
-            contents: read
-            packages: write
-        env:
-            REGISTRY: ghcr.io
-            IMAGE_NAME: ${{ github.repository }}
+                platform: [linux/amd64, linux/arm64]
+        runs-on: ubuntu-latest
+        needs: [laravel-tests, browser-tests, audit, lint]
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         steps:
-            - name: Checkout repository
+            - name: Checkout code
               uses: actions/checkout@v4
+
+            - name: Set up QEMU
+              uses: docker/setup-qemu-action@v3
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
 
-            - name: Log in to the Container registry
+            - name: Login to GitHub Container Registry
               uses: docker/login-action@v3
               with:
-                  registry: ${{ env.REGISTRY }}
+                  registry: ghcr.io
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -323,76 +314,40 @@ jobs:
               id: meta
               uses: docker/metadata-action@v5
               with:
-                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                  images: ghcr.io/${{ github.repository }}
 
-            - name: Build and push by digest
-              id: build
-              uses: docker/build-push-action@v6
+            - name: Build and push Docker image
+              uses: docker/build-push-action@v5
               with:
                   context: .
+                  push: true
                   platforms: ${{ matrix.platform }}
+                  tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
-                  outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
-                  cache-from: type=gha,scope=build-${{ matrix.platform }}
-                  cache-to: type=gha,mode=max,scope=build-${{ matrix.platform }}
-
-            - name: Export digest
-              run: |
-                  mkdir -p /tmp/digests
-                  digest="${{ steps.build.outputs.digest }}"
-                  touch "/tmp/digests/${digest#sha256:}"
-
-            - name: Upload digest
-              uses: actions/upload-artifact@v4
-              with:
-                  name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
-                  path: /tmp/digests/*
-                  if-no-files-found: error
-                  retention-days: 1
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
 
     merge:
         runs-on: ubuntu-latest
-        needs: build
-        permissions:
-            contents: read
-            packages: write
+        needs: build-image
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
             REGISTRY: ghcr.io
             IMAGE_NAME: ${{ github.repository }}
         steps:
-            - name: Download digests (amd64)
+            - name: Download digests
               uses: actions/download-artifact@v4
               with:
-                  name: digests-amd64
                   path: /tmp/digests
+                  pattern: digests-*
+                  merge-multiple: true
 
-            - name: Download digests (arm64)
-              uses: actions/download-artifact@v4
-              with:
-                  name: digests-arm64
-                  path: /tmp/digests
-
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3
-
-            - name: Log in to the Container registry
+            - name: Login to GitHub Container Registry
               uses: docker/login-action@v3
               with:
                   registry: ${{ env.REGISTRY }}
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Extract metadata (tags, labels) for Docker
-              id: meta
-              uses: docker/metadata-action@v5
-              with:
-                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-                  tags: |
-                      type=semver,pattern={{version}}
-                      type=semver,pattern={{major}}.{{minor}}
-                      type=semver,pattern=v{{major}}
-                      type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-                      type=sha
 
             - name: Create manifest list and push
               working-directory: /tmp/digests
