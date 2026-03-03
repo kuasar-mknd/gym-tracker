@@ -505,6 +505,7 @@ const typeLabel = (type) => {
                                             @click="startEdit(exercise)"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all sm:hidden"
                                             :aria-label="`Modifier ${exercise.name}`"
+                                            data-testid="edit-exercise-button-mobile-icon"
                                         >
                                             <span class="material-symbols-outlined text-sm opacity-50">edit</span>
                                         </button>
@@ -513,7 +514,7 @@ const typeLabel = (type) => {
                                         <button
                                             @click="startEdit(exercise)"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all sm:flex"
-                                            data-testid="edit-exercise-button"
+                                            data-testid="edit-exercise-button-desktop"
                                             :aria-label="`Modifier ${exercise.name}`"
                                         >
                                             <span class="material-symbols-outlined" aria-hidden="true">edit</span>
@@ -521,7 +522,7 @@ const typeLabel = (type) => {
                                         <button
                                             @click="deleteExercise(exercise.id)"
                                             class="text-text-muted hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:flex"
-                                            data-testid="delete-exercise-button"
+                                            data-testid="delete-exercise-button-desktop"
                                             :aria-label="`Supprimer ${exercise.name}`"
                                         >
                                             <span class="material-symbols-outlined" aria-hidden="true">delete</span>

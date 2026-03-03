@@ -43,25 +43,33 @@ test('user can manage exercises on different iphone sizes', function (string $si
             ->assertSee(strtoupper($exerciseName));
 
         // 4. Edit the exercise
-        // On mobile, the edit button is visible. On desktop, it shows on hover.
-        // Use JS to click the card to avoid interception on small viewports
-        $browser->script("document.querySelector('[data-testid=\"exercise-card\"]').click();");
+        $editSelector = $browser->isVisible('[data-testid="edit-exercise-button-mobile-icon"]')
+            ? '[data-testid="edit-exercise-button-mobile-icon"]'
+            : '[data-testid="edit-exercise-button-desktop"]';
 
-        // Wait for edit button and click it with JS for reliability
-        $browser->pause(1000)
-            ->script("document.querySelector('[aria-label^=\"Modifier\"]').click();");
+        $browser->script("document.querySelector('$editSelector').click();");
 
         $updatedName = 'UPDATED EXERCISE '.time();
         $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 20)
             ->clear('input[placeholder="Nom de l\'exercice"]')
             ->type('input[placeholder="Nom de l\'exercice"]', $updatedName)
             ->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
+
         // 5. Verify update
         $browser->waitForText(strtoupper($updatedName), 15);
 
         // 6. Delete the exercise
-        // Use JS click for the mobile delete button (which is in the SwipeableRow or detail)
-        $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').click();");
+        $deleteSelector = $browser->isVisible('[data-testid="delete-exercise-button-mobile"]')
+            ? '[data-testid="delete-exercise-button-mobile"]' // This one is in the swipe action, might be tricky
+            : '[data-testid="delete-exercise-button-desktop"]';
+
+        // Use JS to click even if hidden or intercepted
+        if ($browser->isVisible('[data-testid="delete-exercise-button-desktop"]')) {
+            $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-desktop\"]').click();");
+        } else {
+            // Mobile: use the mobile-specific delete button (swipe one)
+            $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').click();");
+        }
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
             ->waitFor('main', 15)
