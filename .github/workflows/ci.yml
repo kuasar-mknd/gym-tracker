@@ -182,7 +182,7 @@ jobs:
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
                   EOF
                   chmod -R 777 storage bootstrap/cache
-                  rm -f config/telescope.php
+                  echo "<?php return ['enabled' => false, 'watchers' => []];" > config/telescope.php
                   php artisan config:clear
                   php artisan view:clear
                   php artisan route:clear
@@ -191,8 +191,7 @@ jobs:
                   php artisan migrate:fresh --seed --force
 
                   # Start server
-                  TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
-                  # Wait for server
+                  TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &                  # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk
