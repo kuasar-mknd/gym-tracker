@@ -34,7 +34,7 @@ class CustomPolicy extends Basic
             $policy->addNonce(Directive::SCRIPT);
         }
 
-        if (app()->environment('local', 'testing')) {
+        if (app()->environment('local')) {
             $this->configureLocal($policy);
         } else {
             $this->configureProduction($policy);
