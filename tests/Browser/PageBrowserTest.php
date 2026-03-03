@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
+
+uses(DatabaseTruncation::class);
 
 test('unauthenticated users are redirected to login', function (): void {
     $this->browse(function (Browser $browser): void {
@@ -33,11 +36,12 @@ test('guest pages and registration flow', function (): void {
     });
 });
 
-test('authenticated pages smoke test', function (): void {
+test('authenticated pages smoke test on different iphone sizes', function (string $sizeMacro): void {
     $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user): void {
+    $this->browse(function (Browser $browser) use ($user, $sizeMacro): void {
         $browser->loginAs($user)
+            ->{$sizeMacro}()
             ->visit('/dashboard')
             ->waitFor('main', 30)
             ->assertPathIs('/dashboard');
@@ -64,11 +68,26 @@ test('authenticated pages smoke test', function (): void {
                 ->assertPathIs($path)
                 ->assertNoConsoleExceptions();
         }
-
-        // Mobile check
-        $browser->resize(375, 812)
-            ->visit('/dashboard')
-            ->waitFor('main', 15)
-            ->assertPresent('.glass-nav');
     });
-});
+})->with([
+    'iPhone Mini' => 'resizeToIphoneMini',
+    'iPhone 15' => 'resizeToIphone15',
+    'iPhone Pro Max' => 'resizeToIphoneMax',
+]);
+
+test('mobile navigation is visible on all iphone sizes', function (string $sizeMacro): void {
+    $user = User::factory()->create();
+
+    $this->browse(function (Browser $browser) use ($user, $sizeMacro): void {
+        $browser->loginAs($user)
+            ->{$sizeMacro}()
+            ->visit('/dashboard')
+            ->waitFor('main', 30)
+            ->assertPresent('.glass-nav')
+            ->assertNoConsoleExceptions();
+    });
+})->with([
+    'iPhone Mini' => 'resizeToIphoneMini',
+    'iPhone 15' => 'resizeToIphone15',
+    'iPhone Pro Max' => 'resizeToIphoneMax',
+]);

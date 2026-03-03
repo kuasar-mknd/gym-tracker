@@ -217,7 +217,7 @@ const typeLabel = (type) => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1
-                        class="font-display text-text-main text-5xl leading-none font-black tracking-tighter uppercase italic"
+                        class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-5xl"
                     >
                         La<br />
                         <span class="text-gradient">Bibliothèque</span>

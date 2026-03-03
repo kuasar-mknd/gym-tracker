@@ -12,7 +12,7 @@ import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -51,19 +51,27 @@ watch(
             const mergedWorkout = JSON.parse(JSON.stringify(newW))
 
             if (activeEditingId.value) {
-                mergedWorkout.workout_lines.forEach((line, lIdx) => {
-                    line.sets.forEach((set, sIdx) => {
-                        if (set.id === activeEditingId.value) {
-                            const localSet = localWorkout.value.workout_lines[lIdx]?.sets[sIdx]
-                            if (localSet) {
-                                set.weight = localSet.weight
-                                set.reps = localSet.reps
-                                set.distance_km = localSet.distance_km
-                                set.duration_seconds = localSet.duration_seconds
-                            }
+                console.log('Merge: preserve active editing id', activeEditingId.value)
+                // Find the local set being edited to get its current values
+                let localSetToPreserve = null
+                localWorkout.value.workout_lines.forEach((line) => {
+                    const found = line.sets.find((s) => s.id === activeEditingId.value)
+                    if (found) localSetToPreserve = found
+                })
+
+                if (localSetToPreserve) {
+                    console.log('Merge: found local set to preserve', localSetToPreserve)
+                    mergedWorkout.workout_lines.forEach((line) => {
+                        const setToUpdate = line.sets.find((s) => s.id === activeEditingId.value)
+                        if (setToUpdate) {
+                            console.log('Merge: applying local values to merged set', localSetToPreserve.weight)
+                            setToUpdate.weight = localSetToPreserve.weight
+                            setToUpdate.reps = localSetToPreserve.reps
+                            setToUpdate.distance_km = localSetToPreserve.distance_km
+                            setToUpdate.duration_seconds = localSetToPreserve.duration_seconds
                         }
                     })
-                })
+                }
             }
 
             localWorkout.value = mergedWorkout
@@ -145,7 +153,7 @@ const showCreateForm = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
 const showConfirmModal = ref(false)
 const confirmAction = ref(null)
-const confirmMessage = ref('')
+const confirmMessage = ''
 const showSettingsModal = ref(false)
 
 const settingsForm = useForm({
@@ -238,7 +246,6 @@ const closeModal = () => {
 }
 
 const removeLine = (lineId) => {
-    confirmMessage.value = 'Supprimer cet exercice ?'
     confirmAction.value = () => {
         const workout = JSON.parse(JSON.stringify(localWorkout.value))
         const idx = workout.workout_lines.findIndex((l) => l.id === lineId)
@@ -254,7 +261,6 @@ const removeLine = (lineId) => {
 }
 
 const addSet = (lineId) => {
-    console.log('--- addSet called for:', lineId)
     const workout = JSON.parse(JSON.stringify(localWorkout.value))
     const lineIndex = workout.workout_lines.findIndex((l) => l.id === lineId)
     if (lineIndex === -1) return
@@ -275,7 +281,6 @@ const addSet = (lineId) => {
 
     localWorkout.value = workout
     forceUpdate()
-    console.log('--- localWorkout updated, count:', line.sets.length)
 
     SyncService.post(route('api.v1.sets.store'), { workout_line_id: lineId, is_completed: false, ...data }).then(
         (res) => {
@@ -319,8 +324,8 @@ const removeSet = (setId) => {
 }
 
 const createExerciseForm = useForm({ name: '', type: 'strength', category: '' })
-const categories = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio']
-const types = [
+const categoriesList = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio']
+const typesList = [
     { value: 'strength', label: 'Force' },
     { value: 'cardio', label: 'Cardio' },
     { value: 'timed', label: 'Temps' },
@@ -425,9 +430,10 @@ const filteredExercises = computed(() => {
                             <template v-if="line.exercise.type === 'strength'">
                                 <input
                                     type="number"
-                                    :value="set.weight"
+                                    v-model="set.weight"
                                     @focus="setEditing(set.id)"
                                     @blur="clearEditing"
+                                    @click.stop
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -435,16 +441,16 @@ const filteredExercises = computed(() => {
                                 <span class="text-text-muted text-xs font-bold">kg</span>
                                 <input
                                     type="number"
-                                    :value="set.reps"
+                                    v-model="set.reps"
                                     @focus="setEditing(set.id)"
                                     @blur="clearEditing"
+                                    @click.stop
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
                                 <span class="text-text-muted text-xs font-bold">reps</span>
                             </template>
-                            <!-- other types simplified for brevity in this debug version -->
 
                             <button
                                 v-if="!localWorkout.ended_at"
@@ -493,13 +499,15 @@ const filteredExercises = computed(() => {
                     Ajouter un exercice
                 </h2>
                 <div v-if="!showCreateForm">
-                    <input
-                        v-model="searchQuery"
-                        type="search"
-                        placeholder="Rechercher..."
-                        class="text-text-main mb-6 w-full rounded-2xl border-2 border-slate-100 p-4"
-                    />
-                    <div class="max-h-[50vh] space-y-3 overflow-y-auto">
+                    <div class="sticky top-0 z-10 bg-white/50 pt-1 pb-4 backdrop-blur-sm dark:bg-slate-900/50">
+                        <input
+                            v-model="searchQuery"
+                            type="search"
+                            placeholder="Rechercher..."
+                            class="text-text-main focus:border-electric-orange/50 w-full rounded-2xl border-2 border-slate-100 p-4 shadow-sm focus:ring-0 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        />
+                    </div>
+                    <div class="max-h-[60vh] space-y-3 overflow-y-auto pb-64">
                         <div
                             v-for="exercise in filteredExercises"
                             :key="exercise.id"
@@ -507,7 +515,7 @@ const filteredExercises = computed(() => {
                             :dusk="`select-exercise-${exercise.id}`"
                             class="glass-panel-light hover:border-electric-orange/50 cursor-pointer rounded-2xl p-4 transition-all"
                         >
-                            <h4 class="text-text-main font-bold">{{ exercise.name }}</h4>
+                            <h4 class="text-text-main font-bold dark:text-white">{{ exercise.name }}</h4>
                             <p class="text-text-muted text-xs uppercase">{{ exercise.category }}</p>
                         </div>
                     </div>
@@ -562,6 +570,12 @@ const filteredExercises = computed(() => {
             </div>
         </Modal>
 
-        <RestTimer :show="showTimer" :initial-duration="timerDuration" @close="showTimer = false" />
+        <RestTimer
+            v-if="showTimer"
+            :duration="timerDuration"
+            @finished="showTimer = false"
+            @close="showTimer = false"
+            dusk="rest-timer"
+        />
     </AuthenticatedLayout>
 </template>

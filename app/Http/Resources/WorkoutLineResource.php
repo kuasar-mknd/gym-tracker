@@ -21,6 +21,7 @@ class WorkoutLineResource extends JsonResource
             'notes' => $this->notes,
             'exercise' => new ExerciseResource($this->whenLoaded('exercise')),
             'sets' => SetResource::collection($this->whenLoaded('sets')),
+            'recommended_values' => $this->getRecommendedValues(),
         ];
     }
 }

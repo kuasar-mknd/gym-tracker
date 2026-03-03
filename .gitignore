@@ -45,6 +45,9 @@ frankenphp
 /public/css/filament-spatie-backup
 gym_tracker
 database/database.sqlite
+/public/debug-*.png
+/public/fail-race.png
+/public/screenshot-*.png
 /tests/Browser/screenshots/*.png
 /tests/Browser/console/*.log
 verification.png

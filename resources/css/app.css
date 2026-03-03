@@ -365,7 +365,7 @@
 @utility glass-input-fat {
     /* Large numeric input for workout */
     font-family: 'Archivo Black', sans-serif;
-    font-size: 4.5rem;
+    font-size: 3rem;
     line-height: 1;
     text-align: center;
     background: transparent;
@@ -373,6 +373,10 @@
     color: var(--text-main);
     caret-color: var(--electric-orange);
     padding: 0;
+
+    @media (min-width: 640px) {
+        font-size: 4.5rem;
+    }
 
     &:focus {
         outline: none;
@@ -383,7 +387,7 @@
 @utility glass-nav {
     /* ===== FLOATING BOTTOM NAV ===== */
     position: fixed;
-    bottom: calc(0.75rem + var(--safe-area-bottom));
+    bottom: calc(1rem + var(--safe-area-bottom));
     left: 1rem;
     right: 1rem;
     background: rgba(255, 255, 255, 0.9);
@@ -397,6 +401,9 @@
     align-items: center;
     box-shadow: 0 10px 40px rgba(100, 116, 139, 0.2);
     z-index: 50;
+    transition:
+        transform 0.3s ease,
+        bottom 0.3s ease;
 
     .dark & {
         background: rgba(30, 41, 59, 0.9);

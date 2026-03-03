@@ -48,7 +48,11 @@ class CustomPolicy extends Basic
         $policy
             ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
             ->add(Directive::SCRIPT, Keyword::UNSAFE_INLINE)
-            ->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
+            ->add(Directive::SCRIPT, 'http://localhost:5173')
+            ->add(Directive::STYLE, Keyword::UNSAFE_INLINE)
+            ->add(Directive::STYLE, 'http://localhost:5173')
+            ->add(Directive::CONNECT, 'http://localhost:5173')
+            ->add(Directive::CONNECT, 'ws://localhost:5173');
     }
 
     protected function configureProduction(Policy $policy): void

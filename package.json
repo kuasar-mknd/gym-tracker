@@ -56,6 +56,6 @@
         }
     },
     "optionalDependencies": {
-        "@rollup/rollup-linux-arm64-gnu": "^4.57.0"
+        "@rollup/rollup-linux-arm64-gnu": "^4.59.0"
     }
 }

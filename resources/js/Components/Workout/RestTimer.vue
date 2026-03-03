@@ -28,7 +28,7 @@ const props = defineProps({
     },
     autoStart: {
         type: Boolean,
-        default: false,
+        default: true,
     },
 })
 
@@ -93,8 +93,10 @@ const updateTimer = () => {
 
 /** Pauses the countdown timer. */
 const pauseTimer = () => {
-    clearInterval(timer.value)
-    timer.value = null
+    if (timer.value) {
+        clearInterval(timer.value)
+        timer.value = null
+    }
     isActive.value = false
 }
 
@@ -199,7 +201,7 @@ watch(
 </script>
 
 <template>
-    <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-60 sm:right-4 sm:left-auto sm:w-80">
+    <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-[9999] sm:right-4 sm:left-auto sm:w-80">
         <!-- Liquid Glass Card -->
         <div
             class="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300 dark:bg-black/40"
@@ -220,6 +222,23 @@ watch(
             </div>
 
             <div class="p-4">
+                <!-- Close button (X) top right -->
+                <button
+                    @click="close"
+                    dusk="close-timer-x"
+                    class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                    aria-label="Fermer le minuteur"
+                >
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>
+
                 <div class="flex items-center justify-between">
                     <div>
                         <div class="text-xs font-bold tracking-wider text-slate-900/60 uppercase dark:text-white/60">
@@ -265,12 +284,14 @@ watch(
                     <!-- Custom "Glass" button for skip to ensure style consistency -->
                     <button
                         @click="skipTimer"
+                        dusk="skip-rest-timer"
                         class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                     >
                         Passer
                     </button>
                     <button
                         @click="close"
+                        dusk="close-timer"
                         class="rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
                     >
                         Fermer

@@ -39,7 +39,7 @@
         "barryvdh/laravel-ide-helper": "^3.6",
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.0",
-        "laravel/boost": "^1.8",
+        "laravel/boost": "^2.1",
         "laravel/breeze": "^2.3",
         "laravel/dusk": "^8.3",
         "laravel/pail": "^1.2.2",
