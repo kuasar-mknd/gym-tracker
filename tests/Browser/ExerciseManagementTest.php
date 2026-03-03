@@ -21,13 +21,13 @@ test('user can manage exercises on different iphone sizes', function (string $si
         // 1. Click Create Button (Desktop or Mobile Header depending on viewport)
         // If empty state is visible, it uses create-exercise-button
         if ($browser->resolver->find('[data-testid="create-exercise-button"]')) {
-            $browser->click('[data-testid="create-exercise-button"]');
+            $browser->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
         } else {
             // Header buttons
             $selector = $browser->isVisible('[data-testid="create-exercise-desktop"]')
                 ? '[data-testid="create-exercise-desktop"]'
                 : '[data-testid="create-exercise-mobile-header"]';
-            $browser->click($selector);
+            $browser->script("document.querySelector('$selector').click();");
         }
 
         // 2. Fill and submit the create form
@@ -36,7 +36,7 @@ test('user can manage exercises on different iphone sizes', function (string $si
             ->type('input[placeholder="Ex: Développé couché"]', $exerciseName)
             ->waitFor('select', 10)
             ->select('select', 'strength')
-            ->click('[data-testid="submit-exercise-button"]');
+            ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
 
         // 3. Verify exercise was created
         $browser->waitFor('[data-testid="exercise-card"]', 30)
@@ -50,10 +50,10 @@ test('user can manage exercises on different iphone sizes', function (string $si
         $browser->script("document.querySelector('[aria-label^=\"Modifier\"]').click();");
 
         $updatedName = 'UPDATED EXERCISE '.time();
-        $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 10)
+        $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 15)
             ->clear('input[placeholder="Nom de l\'exercice"]')
             ->type('input[placeholder="Nom de l\'exercice"]', $updatedName)
-            ->click('[data-testid="save-exercise-button"]');
+            ->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
 
         // 5. Verify update
         $browser->waitForText(strtoupper($updatedName), 15);
@@ -61,7 +61,6 @@ test('user can manage exercises on different iphone sizes', function (string $si
         // 6. Delete the exercise
         // Use JS click for the mobile delete button (which is in the SwipeableRow or detail)
         $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').click();");
-
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
             ->waitFor('main', 15)

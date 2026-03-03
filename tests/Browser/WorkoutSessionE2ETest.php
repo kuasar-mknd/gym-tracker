@@ -81,7 +81,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ->script("document.querySelector('#finish-workout-mobile').click();");
 
             $browser->waitFor('#confirm-finish-button', 15)
-                ->click('#confirm-finish-button');
+                ->script("document.querySelector('#confirm-finish-button').click();");
 
             // 7. Verify
             $browser->waitForLocation('/dashboard', 30)

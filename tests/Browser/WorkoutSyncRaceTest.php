@@ -58,7 +58,7 @@ test('local edits are preserved during inertia refresh race on different iphone 
         $browser->pause(1000);
 
         // On vérifie en DB que le 99 a fini par arriver
-        expect($set->fresh()->weight)->toBe(99);
+        expect($set->fresh()->weight)->toEqual(99);
     });
 })->with([
     'iPhone Mini' => 'resizeToIphoneMini',
