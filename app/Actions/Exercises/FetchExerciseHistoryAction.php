@@ -7,10 +7,13 @@ namespace App\Actions\Exercises;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\WorkoutLine;
+use App\Traits\CalculatesOneRepMax;
 use Illuminate\Support\Collection;
 
 class FetchExerciseHistoryAction
 {
+    use CalculatesOneRepMax;
+
     /**
      * @return \Illuminate\Support\Collection<int, array{
      *     id: int,
@@ -41,7 +44,7 @@ class FetchExerciseHistoryAction
                 $sets = $line->sets->map(fn ($set): array => [
                     'weight' => (float) $set->weight,
                     'reps' => (int) $set->reps,
-                    'one_rep_max' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
+                    'one_rep_max' => $this->calculate1RM($set->weight, $set->reps),
                 ]);
 
                 $best1rm = $sets->max('one_rep_max') ?? 0.0;
@@ -65,17 +68,5 @@ class FetchExerciseHistoryAction
 
                 return $item;
             });
-    }
-
-    private function calculate1RM(float $weight, int $reps): float
-    {
-        if ($reps === 0) {
-            return 0.0;
-        }
-        if ($reps === 1) {
-            return $weight;
-        }
-
-        return $weight * (1 + ($reps / 30));
     }
 }

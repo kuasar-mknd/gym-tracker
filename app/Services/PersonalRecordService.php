@@ -8,12 +8,15 @@ use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
 use App\Notifications\PersonalRecordAchieved;
+use App\Traits\CalculatesOneRepMax;
 
 /**
  * Service for managing Personal Records (PRs).
  */
 final class PersonalRecordService
 {
+    use CalculatesOneRepMax;
+
     public function syncSetPRs(Set $set, ?User $user = null): void
     {
         if ($this->shouldSkipSync($set)) {
@@ -66,12 +69,7 @@ final class PersonalRecordService
             ->keyBy('type');
 
         $this->update($user, $exerciseId, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
-        $this->update($user, $exerciseId, 'max_1rm', $this->calculate1RM((float) $set->weight, (int) $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm'));
+        $this->update($user, $exerciseId, 'max_1rm', $this->calculate1RM($set->weight, $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm'));
         $this->update($user, $exerciseId, 'max_volume_set', (float) ($set->weight * $set->reps), null, $set, $existingPRs->get('max_volume_set'));
-    }
-
-    private function calculate1RM(float $weight, int $reps): float
-    {
-        return $reps > 1 ? round($weight * (1 + $reps / 30), 2) : $weight;
     }
 }
