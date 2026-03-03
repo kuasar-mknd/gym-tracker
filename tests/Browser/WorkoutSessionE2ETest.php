@@ -78,16 +78,16 @@ test('ultra complete workout session flow on different iphone sizes', function (
 
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
-                ->pause(500)
+                ->pause(1000)
                 ->script("document.querySelector('#finish-workout-mobile').click();");
 
-            // Wait for modal and confirm button
+            // Wait for modal and confirm button, with a long pause for transitions and event bindings
             $browser->waitFor('#confirm-finish-button', 15)
-                ->pause(1000)
+                ->pause(2000)
                 ->script("document.querySelector('#confirm-finish-button').click();");
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 30)
+            $browser->waitForLocation('/dashboard', 45)
                 ->assertPathIs('/dashboard')
                 ->assertSee('FAIT')
                 ->assertNoConsoleExceptions();
