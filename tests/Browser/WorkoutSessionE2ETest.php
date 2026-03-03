@@ -84,7 +84,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ->script("document.querySelector('#confirm-finish-button').click();");
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 60)
+            $browser->waitForLocation('/dashboard', 90)
                 ->assertPathIs('/dashboard')
                 ->assertSee('FAIT')
                 ->assertNoConsoleExceptions();

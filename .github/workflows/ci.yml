@@ -150,7 +150,7 @@ jobs:
                   cat <<EOF > .env
                   APP_NAME=GymTracker
                   APP_ENV=testing
-                  APP_KEY=$(php artisan key:generate --show --no-ansi)
+                  APP_KEY=$(TELESCOPE_ENABLED=false php artisan key:generate --show --no-ansi)
                   APP_DEBUG=true
                   APP_URL=http://127.0.0.1:8000
 
@@ -178,7 +178,7 @@ jobs:
                   php artisan migrate:fresh --seed --force
 
                   # Start server
-                  TELESCOPE_ENABLED=false php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &                  # Wait for server
+                  TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &                  # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk
