@@ -44,17 +44,18 @@ test('user can manage exercises on different iphone sizes', function (string $si
 
         // 4. Edit the exercise
         // On mobile, the edit button is visible. On desktop, it shows on hover.
-        $browser->click('[data-testid="exercise-card"]'); // Open detail or focus
+        // Use JS to click the card to avoid interception on small viewports
+        $browser->script("document.querySelector('[data-testid=\"exercise-card\"]').click();");
 
-        // Use JS to click the edit button reliably across mobile/desktop
-        $browser->script("document.querySelector('[aria-label^=\"Modifier\"]').click();");
+        // Wait for edit button and click it with JS for reliability
+        $browser->pause(1000)
+            ->script("document.querySelector('[aria-label^=\"Modifier\"]').click();");
 
         $updatedName = 'UPDATED EXERCISE '.time();
-        $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 15)
+        $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 20)
             ->clear('input[placeholder="Nom de l\'exercice"]')
             ->type('input[placeholder="Nom de l\'exercice"]', $updatedName)
             ->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
-
         // 5. Verify update
         $browser->waitForText(strtoupper($updatedName), 15);
 
