@@ -112,6 +112,10 @@ class WorkoutsController extends Controller
         $data = $request->validated();
         $updateWorkout->execute($workout, $data);
 
+        if ($request->wantsJson()) {
+            return redirect()->route('dashboard');
+        }
+
         return back();
     }
 
