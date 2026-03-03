@@ -181,9 +181,8 @@ jobs:
                   # Setup database
                   php artisan migrate:fresh --seed --force
                   
-                  # Start server
+                  # Start server with ALL env vars
                   TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite APP_ENV=testing php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
-                  
                   # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
@@ -250,7 +249,7 @@ jobs:
 
     audit:
         runs-on: ubuntu-latest
-        needs: [setup-php, laravel-tests]
+        needs: [setup-php]
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
