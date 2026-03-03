@@ -63,7 +63,7 @@ test('timer lifecycle on different iphone sizes', function (string $sizeMacro): 
 test('timer add time on different iphone sizes', function (string $sizeMacro): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength', 'default_rest_time' => 30]);
+    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength', 'default_rest_time' => 90]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
     $set = Set::factory()->create(['workout_line_id' => $line->id, 'is_completed' => false, 'weight' => 50, 'reps' => 10]);
 
