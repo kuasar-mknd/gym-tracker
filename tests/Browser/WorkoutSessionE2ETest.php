@@ -84,18 +84,20 @@ test('ultra complete workout session flow on different iphone sizes', function (
 
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
-                ->pause(1000)
                 ->script("document.querySelector('#finish-workout-mobile').click();");
 
             // Wait for modal and confirm button, with a long pause for transitions and event bindings
-            $browser->waitFor('#confirm-finish-button', 15)
+            $browser->waitForText('TERMINER LA SÉANCE', 15)
+                ->waitFor('#confirm-finish-button', 15)
                 ->pause(2000)
-                ->script("document.querySelector('#confirm-finish-button').click();");
+                ->script("
+                    console.log('Final click attempt');
+                    const btn = document.querySelector('#confirm-finish-button');
+                    if (btn) btn.click();
+                ");
 
-            // 7. Verify
-            $browser->waitForLocation('/dashboard', 120);
-
-            $browser->assertPathIs('/dashboard')
+            // 7. Verify - Use very large timeout for final redirect
+            $browser->waitForLocation('/dashboard', 120)
                 ->assertSee('FAIT')
                 ->assertNoConsoleExceptions();
 
