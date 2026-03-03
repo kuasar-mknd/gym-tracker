@@ -160,7 +160,7 @@ jobs:
                   APP_ENV=testing
                   APP_KEY=$(TELESCOPE_ENABLED=false php artisan key:generate --show --no-ansi)
                   APP_DEBUG=true
-                  APP_URL=http://127.0.0.1:8000
+                  APP_URL=http://localhost:8000
                   
                   DB_CONNECTION=mysql
                   DB_HOST=127.0.0.1
@@ -178,7 +178,7 @@ jobs:
                   PULSE_ENABLED=false
                   
                   DUSK_DRIVER_URL=http://localhost:4444/wd/hub
-                  SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
+                  SANCTUM_STATEFUL_DOMAINS=localhost:8000
                   EOF
                   chmod -R 777 storage bootstrap/cache
                   echo "<?php return ['enabled' => false, 'watchers' => []];" > config/telescope.php
@@ -189,10 +189,11 @@ jobs:
                   # Setup database
                   php artisan migrate:fresh --seed --force
                   
-                  # Start server
-                  TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
+                  # Start server with 0.0.0.0 to be reachable
+                  TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan serve --host=0.0.0.0 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
+                  
                   # Wait for server
-                  timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
+                  timeout 30s bash -c 'until curl -s http://localhost:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk
                   TELESCOPE_ENABLED=false DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=gym_tracker_dusk DB_USERNAME=root php artisan dusk
