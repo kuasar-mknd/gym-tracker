@@ -91,13 +91,18 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ->waitFor('#confirm-finish-button', 15)
                 ->pause(2000)
                 ->script("
-                    console.log('Final click attempt');
                     const btn = document.querySelector('#confirm-finish-button');
                     if (btn) btn.click();
                 ");
 
-            // 7. Verify - Use very large timeout for final redirect
-            $browser->waitForLocation('/dashboard', 120)
+            // 7. Verify
+            if ($sizeMacro === 'resizeToIphone15') {
+                $browser->pause(10000); // Super safe pause
+            }
+
+            $browser->waitForLocation('/dashboard', 120);
+
+            $browser->assertPathIs('/dashboard')
                 ->assertSee('FAIT')
                 ->assertNoConsoleExceptions();
 
