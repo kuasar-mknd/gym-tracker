@@ -15,7 +15,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -27,7 +27,7 @@ jobs:
 
             - name: Cache Vendor Folder
               id: cache-vendor
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
@@ -40,10 +40,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: 20
                   cache: 'npm'
@@ -55,7 +55,7 @@ jobs:
               run: npm run build
 
             - name: Upload Build Artifacts
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: build-assets
                   path: public/build
@@ -74,10 +74,10 @@ jobs:
                 options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Download Build Artifacts
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v8
               with:
                   name: build-assets
                   path: public/build
@@ -91,7 +91,7 @@ jobs:
                   tools: composer:v2
 
             - name: Restore Vendor Folder
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
@@ -116,10 +116,10 @@ jobs:
         needs: [setup-php, frontend-build]
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Download Build Artifacts
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v8
               with:
                   name: build-assets
                   path: public/build
@@ -133,7 +133,7 @@ jobs:
                   tools: composer:v2
 
             - name: Restore Vendor Folder
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
@@ -218,14 +218,14 @@ jobs:
 
             - name: Upload Test Screenshots
               if: failure()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: dusk-screenshots
                   path: tests/Browser/screenshots
 
             - name: Upload Test Logs
               if: failure()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                   name: dusk-logs
                   path: tests/Browser/logs
@@ -235,7 +235,7 @@ jobs:
         needs: setup-php
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -246,7 +246,7 @@ jobs:
                   tools: composer:v2
 
             - name: Restore Vendor Folder
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
@@ -259,7 +259,7 @@ jobs:
         needs: [setup-php]
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -270,7 +270,7 @@ jobs:
                   tools: composer:v2
 
             - name: Restore Vendor Folder
-              uses: actions/cache@v4
+              uses: actions/cache@v5
               with:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
@@ -296,7 +296,7 @@ jobs:
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v3
@@ -318,7 +318,7 @@ jobs:
                   images: ghcr.io/${{ github.repository }}
 
             - name: Build and push Docker image
-              uses: docker/build-push-action@v5
+              uses: docker/build-push-action@v6
               with:
                   context: .
                   push: true
@@ -337,7 +337,7 @@ jobs:
             IMAGE_NAME: ${{ github.repository }}
         steps:
             - name: Download digests
-              uses: actions/download-artifact@v4
+              uses: actions/download-artifact@v8
               with:
                   path: /tmp/digests
                   pattern: digests-*
