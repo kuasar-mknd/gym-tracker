@@ -173,7 +173,10 @@ jobs:
                   mkdir -p database
                   touch database/dusk.sqlite
                   chmod -R 777 database
+                  
+                  # DISABLE TELESCOPE GLOBALLY
                   echo "<?php return ['enabled' => false, 'watchers' => []];" > config/telescope.php
+                  
                   php artisan config:clear
                   php artisan view:clear
                   php artisan route:clear
