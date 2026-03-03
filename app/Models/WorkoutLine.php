@@ -112,9 +112,7 @@ class WorkoutLine extends Model
         }
 
         // Find the most frequent combination of values
-        $frequencies = $sets->groupBy(function ($set) {
-            return "{$set->weight}-{$set->reps}-{$set->distance_km}-{$set->duration_seconds}";
-        })->map->count();
+        $frequencies = $sets->groupBy(fn ($set) => "{$set->weight}-{$set->reps}-{$set->distance_km}-{$set->duration_seconds}")->map->count();
 
         $mostFrequentKey = (string) $frequencies->sortDesc()->keys()->first();
         [$weight, $reps, $distance, $duration] = explode('-', $mostFrequentKey);
