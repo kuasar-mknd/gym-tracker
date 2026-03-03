@@ -1,5 +1,5 @@
 <script setup>
-import { computed, useAttrs, getCurrentInstance } from 'vue'
+import { computed, useAttrs, getCurrentInstance, ref } from 'vue'
 import InputError from '@/Components/InputError.vue'
 
 defineOptions({
@@ -55,6 +55,16 @@ const sizeClasses = {
     lg: 'min-h-[56px] text-lg rounded-2xl',
     fat: 'text-[4.5rem] leading-none rounded-[2rem] p-5',
 }
+
+// Password toggle logic
+const isPasswordVisible = ref(false)
+const inputType = computed(() => {
+    if (props.type === 'password') {
+        return isPasswordVisible.value ? 'text' : 'password'
+    }
+    return props.type
+})
+const hasPasswordToggle = computed(() => props.type === 'password')
 
 // Clear button logic
 const hasClearButton = computed(() => {
@@ -132,7 +142,7 @@ const isRequired = computed(() => {
         <div v-else class="relative">
             <input
                 :id="inputId"
-                :type="type"
+                :type="inputType"
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
                 @focus="selectOnFocus ? $event.target.select() : null"
@@ -143,7 +153,7 @@ const isRequired = computed(() => {
                     sizeClasses[size],
                     {
                         'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
-                        'pr-10': hasClearButton, // Add padding for clear button
+                        'pr-10': hasClearButton || hasPasswordToggle, // Add padding for clear/toggle button
                     },
                 ]"
                 v-bind="$attrs"
@@ -159,6 +169,19 @@ const isRequired = computed(() => {
                 tabindex="-1"
             >
                 <span class="material-symbols-outlined text-lg leading-none">cancel</span>
+            </button>
+
+            <!-- Password Toggle Button -->
+            <button
+                v-if="hasPasswordToggle"
+                type="button"
+                @click="isPasswordVisible = !isPasswordVisible"
+                class="text-text-muted hover:text-text-main absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors"
+                :aria-label="isPasswordVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+            >
+                <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">
+                    {{ isPasswordVisible ? 'visibility_off' : 'visibility' }}
+                </span>
             </button>
         </div>
 
