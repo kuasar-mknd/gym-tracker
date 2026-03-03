@@ -141,7 +141,6 @@ const confirmFinishWorkout = () => {
             onSuccess: () => {
                 triggerHaptic('success')
                 showFinishModal.value = false
-                router.visit(route('dashboard'))
             },
         },
     )
