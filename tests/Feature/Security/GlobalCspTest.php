@@ -17,6 +17,7 @@ class GlobalCspTest extends TestCase
     {
         parent::setUp();
         Config::set('csp.enabled', true);
+        \Illuminate\Support\Facades\Vite::useCspNonce('test-nonce-12345');
     }
 
     public function test_dashboard_has_consistent_csp_nonces(): void
