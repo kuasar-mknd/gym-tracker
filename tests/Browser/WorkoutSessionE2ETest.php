@@ -43,7 +43,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ->type('input[placeholder="Rechercher..."]', $exercises[0]->name)
                 ->pause(1500)
                 ->waitFor('@select-exercise-'.$exercises[0]->id, 20)
-                ->click('@select-exercise-'.$exercises[0]->id);
+                ->script("document.querySelector('[dusk=\"select-exercise-{$exercises[0]->id}\"]').click();");
 
             // Wait for card
             $browser->waitFor('@exercise-card-0', 30);

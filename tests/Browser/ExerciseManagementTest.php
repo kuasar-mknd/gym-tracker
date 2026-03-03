@@ -43,15 +43,16 @@ test('user can manage exercises on different iphone sizes', function (string $si
             ->assertSee(strtoupper($exerciseName));
 
         // 4. Edit the exercise
-        $browser->script("
-            const mobileBtn = document.querySelector('[data-testid=\"edit-exercise-button-mobile-icon\"]');
-            const desktopBtn = document.querySelector('[data-testid=\"edit-exercise-button-desktop\"]');
-            if (mobileBtn && getComputedStyle(mobileBtn).display !== 'none') {
-                mobileBtn.click();
-            } else if (desktopBtn) {
-                desktopBtn.click();
-            }
-        ");
+        $browser->waitFor('[data-testid^="edit-exercise-button"]', 20)
+            ->script("
+                const mobileBtn = document.querySelector('[data-testid=\"edit-exercise-button-mobile-icon\"]');
+                const desktopBtn = document.querySelector('[data-testid=\"edit-exercise-button-desktop\"]');
+                if (mobileBtn && getComputedStyle(mobileBtn).display !== 'none') {
+                    mobileBtn.click();
+                } else if (desktopBtn) {
+                    desktopBtn.click();
+                }
+            ");
 
         $updatedName = 'UPDATED EXERCISE '.time();
         $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 20)
@@ -63,15 +64,16 @@ test('user can manage exercises on different iphone sizes', function (string $si
         $browser->waitForText(strtoupper($updatedName), 15);
 
         // 6. Delete the exercise
-        $browser->script("
-            const desktopDel = document.querySelector('[data-testid=\"delete-exercise-button-desktop\"]');
-            const mobileDel = document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]');
-            if (desktopDel && getComputedStyle(desktopDel).display !== 'none') {
-                desktopDel.click();
-            } else if (mobileDel) {
-                mobileDel.click();
-            }
-        ");
+        $browser->waitFor('[data-testid^="delete-exercise-button"]', 20)
+            ->script("
+                const desktopDel = document.querySelector('[data-testid=\"delete-exercise-button-desktop\"]');
+                const mobileDel = document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]');
+                if (desktopDel && getComputedStyle(desktopDel).display !== 'none') {
+                    desktopDel.click();
+                } else if (mobileDel) {
+                    mobileDel.click();
+                }
+            ");
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
             ->waitFor('main', 15)
