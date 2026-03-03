@@ -96,10 +96,6 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ");
 
             // 7. Verify
-            if ($sizeMacro === 'resizeToIphone15') {
-                $browser->pause(10000); // Super safe pause
-            }
-
             $browser->waitForLocation('/dashboard', 120);
 
             $browser->assertPathIs('/dashboard')
