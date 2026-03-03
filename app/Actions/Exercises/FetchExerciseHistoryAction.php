@@ -44,7 +44,7 @@ class FetchExerciseHistoryAction
                 $sets = $line->sets->map(fn ($set): array => [
                     'weight' => (float) $set->weight,
                     'reps' => (int) $set->reps,
-                    'one_rep_max' => $this->calculate1RM($set->weight, $set->reps),
+                    'one_rep_max' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
                 ]);
 
                 $best1rm = $sets->max('one_rep_max') ?? 0.0;

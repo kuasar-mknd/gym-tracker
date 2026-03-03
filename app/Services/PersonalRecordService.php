@@ -69,7 +69,7 @@ final class PersonalRecordService
             ->keyBy('type');
 
         $this->update($user, $exerciseId, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
-        $this->update($user, $exerciseId, 'max_1rm', $this->calculate1RM($set->weight, $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm'));
+        $this->update($user, $exerciseId, 'max_1rm', $this->calculate1RM((float) $set->weight, (int) $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm'));
         $this->update($user, $exerciseId, 'max_volume_set', (float) ($set->weight * $set->reps), null, $set, $existingPRs->get('max_volume_set'));
     }
 }
