@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Http\Requests\Api\StoreAchievementRequest;
 use App\Http\Requests\Api\UpdateAchievementRequest;
 use App\Http\Resources\AchievementResource;
@@ -18,6 +19,8 @@ use OpenApi\Annotations as OA;
  */
 class AchievementController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct()
     {
         $this->authorizeResource(Achievement::class, 'achievement');
