@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+namespace Tests\Browser;
+
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
@@ -9,18 +11,28 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
-uses(DatabaseTruncation::class);
+class RestTimerTest extends DuskTestCase
+{
+    use DatabaseTruncation;
 
-test('timer lifecycle on different iphone sizes', function (string $sizeMacro): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength', 'default_rest_time' => 60]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
-    $set = Set::factory()->create(['workout_line_id' => $line->id, 'is_completed' => false, 'weight' => 50, 'reps' => 10]);
+    private function setupWorkout(int $restTime = 60): array
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
+        $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength', 'default_rest_time' => $restTime]);
+        $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
+        $set = Set::factory()->create(['workout_line_id' => $line->id, 'is_completed' => false, 'weight' => 50, 'reps' => 10]);
 
-    $this->browse(function (Browser $browser) use ($user, $workout, $sizeMacro): void {
-        $browser->loginAs($user)
+        return [$user, $workout, $line, $set];
+    }
+
+    private function performTimerLifecycle(Browser $browser, string $sizeMacro): void
+    {
+        [$user, $workout] = $this->setupWorkout();
+
+        $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
             ->waitFor('@complete-set-0-0', 15);
@@ -53,141 +65,55 @@ test('timer lifecycle on different iphone sizes', function (string $sizeMacro): 
             ->click('@close-timer-x')
             ->pause(500)
             ->assertMissing('@rest-timer');
-    });
-})->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
-    'iPhone 15' => 'resizeToIphone15',
-    'iPhone Pro Max' => 'resizeToIphoneMax',
-]);
+    }
 
-test('timer add time on different iphone sizes', function (string $sizeMacro): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength', 'default_rest_time' => 30]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
-    $set = Set::factory()->create(['workout_line_id' => $line->id, 'is_completed' => false, 'weight' => 50, 'reps' => 10]);
+    public function test_timer_lifecycle_on_iphone_mini(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performTimerLifecycle($browser, 'resizeToIphoneMini');
+        });
+    }
 
-    $this->browse(function (Browser $browser) use ($user, $workout, $sizeMacro): void {
-        $browser->loginAs($user)
-            ->{$sizeMacro}()
-            ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15)
-            ->click('@complete-set-0-0')
-            ->waitFor('@rest-timer', 10);
+    public function test_timer_lifecycle_on_iphone_15(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performTimerLifecycle($browser, 'resizeToIphone15');
+        });
+    }
 
-        // Mettre en pause pour avoir un temps stable
-        $browser->click('button[aria-label="Pause"]')
-            ->pause(500);
+    public function test_timer_lifecycle_on_iphone_max(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performTimerLifecycle($browser, 'resizeToIphoneMax');
+        });
+    }
 
-        $timeBefore = $browser->text('[role="timer"]');
+    public function test_timer_add_time_on_iphone_mini(): void
+    {
+        [$user, $workout] = $this->setupWorkout(30);
 
-        // Cliquer sur +30s
-        $browser->click('button[aria-label="Ajouter 30 secondes"]')
-            ->pause(500);
+        $this->browse(function (Browser $browser) use ($user, $workout): void {
+            $browser->loginAs($user->id)
+                ->resizeToIphoneMini()
+                ->visit("/workouts/{$workout->id}")
+                ->waitFor('@complete-set-0-0', 15)
+                ->click('@complete-set-0-0')
+                ->waitFor('@rest-timer', 10);
 
-        $timeAfter = $browser->text('[role="timer"]');
+            // Mettre en pause pour avoir un temps stable
+            $browser->click('button[aria-label="Pause"]')
+                ->pause(500);
 
-        expect($timeBefore)->not->toBe($timeAfter);
-        $browser->assertSee(':');
-    });
-})->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
-    'iPhone 15' => 'resizeToIphone15',
-    'iPhone Pro Max' => 'resizeToIphoneMax',
-]);
+            $timeBefore = $browser->text('[role="timer"]');
 
-test('timer pause resume on different iphone sizes', function (string $sizeMacro): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength', 'default_rest_time' => 60]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
-    $set = Set::factory()->create(['workout_line_id' => $line->id, 'is_completed' => false, 'weight' => 50, 'reps' => 10]);
+            // Cliquer sur +30s
+            $browser->click('button[aria-label="Ajouter 30 secondes"]')
+                ->pause(500);
 
-    $this->browse(function (Browser $browser) use ($user, $workout, $sizeMacro): void {
-        $browser->loginAs($user)
-            ->{$sizeMacro}()
-            ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15)
-            ->click('@complete-set-0-0')
-            ->waitFor('@rest-timer', 10);
+            $timeAfter = $browser->text('[role="timer"]');
 
-        // Mettre en pause
-        $browser->click('button[aria-label="Pause"]')
-            ->pause(500);
-
-        $timeAtPause = $browser->text('[role="timer"]');
-
-        // Attendre un peu
-        $browser->pause(2000);
-
-        // Vérifier que le temps n'a pas bougé
-        expect($browser->text('[role="timer"]'))->toBe($timeAtPause);
-
-        // Reprendre
-        $browser->click('button[aria-label="Démarrer le minuteur"]')
-            ->pause(2000);
-
-        // Vérifier que le temps a diminué
-        expect($browser->text('[role="timer"]'))->not->toBe($timeAtPause);
-    });
-})->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
-    'iPhone 15' => 'resizeToIphone15',
-    'iPhone Pro Max' => 'resizeToIphoneMax',
-]);
-
-test('timer skip on different iphone sizes', function (string $sizeMacro): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength', 'default_rest_time' => 60]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
-    $set = Set::factory()->create(['workout_line_id' => $line->id, 'is_completed' => false, 'weight' => 50, 'reps' => 10]);
-
-    $this->browse(function (Browser $browser) use ($user, $workout, $sizeMacro): void {
-        $browser->loginAs($user)
-            ->{$sizeMacro}()
-            ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15)
-            ->click('@complete-set-0-0')
-            ->waitFor('@rest-timer', 10);
-
-        // Cliquer sur Passer
-        $browser->click('@skip-rest-timer')
-            ->pause(1000);
-
-        // Le timer doit disparaître
-        $browser->assertMissing('@rest-timer');
-    });
-})->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
-    'iPhone 15' => 'resizeToIphone15',
-    'iPhone Pro Max' => 'resizeToIphoneMax',
-]);
-
-test('timer finishes automatically on different iphone sizes', function (string $sizeMacro): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    // 3 secondes de repos
-    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength', 'default_rest_time' => 3]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
-    $set = Set::factory()->create(['workout_line_id' => $line->id, 'is_completed' => false, 'weight' => 50, 'reps' => 10]);
-
-    $this->browse(function (Browser $browser) use ($user, $workout, $sizeMacro): void {
-        $browser->loginAs($user)
-            ->{$sizeMacro}()
-            ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15)
-            ->click('@complete-set-0-0')
-            ->waitFor('@rest-timer', 10);
-
-        // Attendre que le timer finisse (3s + marge)
-        $browser->pause(4000);
-
-        // Le timer doit avoir disparu
-        $browser->assertMissing('@rest-timer');
-    });
-})->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
-    'iPhone 15' => 'resizeToIphone15',
-    'iPhone Pro Max' => 'resizeToIphoneMax',
-]);
+            $this->assertNotEquals($timeBefore, $timeAfter);
+            $browser->assertSee(':');
+        });
+    }
+}

@@ -2,42 +2,47 @@
 
 declare(strict_types=1);
 
+namespace Tests\Browser;
+
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
-uses(DatabaseTruncation::class);
+class WorkoutSessionE2ETest extends DuskTestCase
+{
+    use DatabaseTruncation;
 
-test('ultra complete workout session flow on different iphone sizes', function (string $sizeMacro): void {
-    $user = User::factory()->create([
-        'name' => 'John Doe',
-        'email' => 'john'.time().'@example.com',
-        'password' => bcrypt('password123'),
-    ]);
+    private function performFullWorkout(Browser $browser, string $sizeMacro): void
+    {
+        $user = User::factory()->create([
+            'name' => 'John Doe',
+            'email' => 'john'.time().random_int(0, 9999).'@example.com',
+            'password' => bcrypt('password123'),
+        ]);
 
-    $exercises = Exercise::factory()->count(2)->create([
-        'user_id' => $user->id,
-        'type' => 'strength',
-    ]);
+        $exercises = Exercise::factory()->count(2)->create([
+            'user_id' => $user->id,
+            'type' => 'strength',
+        ]);
 
-    $workout = Workout::factory()->create([
-        'user_id' => $user->id,
-        'started_at' => now(),
-        'name' => 'Séance Test',
-    ]);
+        $workout = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now(),
+            'name' => 'Séance Test',
+        ]);
 
-    $this->browse(function (Browser $browser) use ($user, $exercises, $workout, $sizeMacro): void {
         try {
-            $browser->loginAs($user)
-                ->{$sizeMacro}() // Redimensionnement (Mini, 15, Max)
+            $browser->loginAs($user->id)
+                ->{$sizeMacro}()
                 ->visit("/workouts/{$workout->id}")
-                ->waitFor('main', 30);
+                ->waitFor('@main-content', 30);
 
             // 1. Add exercise
             $browser->waitFor('@add-first-exercise', 15)
-                ->script("document.querySelector('[dusk=\"add-first-exercise\"]').click();");
+                ->click('@add-first-exercise');
 
             $browser->waitFor('input[placeholder="Rechercher..."]', 15)
                 ->type('input[placeholder="Rechercher..."]', $exercises[0]->name)
@@ -49,7 +54,8 @@ test('ultra complete workout session flow on different iphone sizes', function (
             $browser->waitFor('@exercise-card-0', 30);
 
             // 2. Click Add Set
-            $browser->script("document.querySelector('[dusk=\"add-set-0\"]').click();");
+            $browser->script("document.querySelector('[dusk=\"add-set-0\"]').scrollIntoView();");
+            $browser->click('@add-set-0');
 
             // 3. Wait for the new set
             $browser->waitFor('@weight-input-0-0', 30);
@@ -60,41 +66,61 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ->type('@reps-input-0-0', '5')
                 ->pause(500);
 
-            // Hide keyboard/unfocus to ensure visibility
+            // Hide keyboard/unfocus
             $browser->script('document.activeElement.blur();');
             $browser->pause(1000);
 
-            // 5. Complete set (using JS click for mobile reliability)
+            // 5. Complete set
             $browser->waitFor('@complete-set-0-0', 15)
-                ->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
-            $browser->pause(1000);
+                ->click('@complete-set-0-0');
 
-            // Skip rest timer
-            $browser->script("
-                const skipBtn = document.querySelector('[dusk=\"skip-rest-timer\"]');
-                if (skipBtn) skipBtn.click();
-            ");
-            $browser->pause(1000);
+            // Wait for rest timer to appear and skip it
+            $browser->waitFor('[dusk="skip-rest-timer"]', 15)
+                ->pause(1000)
+                ->click('[dusk="skip-rest-timer"]')
+                ->pause(1000);
 
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
-                ->script("document.querySelector('#finish-workout-mobile').click();");
+                ->pause(1000)
+                ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
 
-            $browser->waitFor('#confirm-finish-button', 15)
+            $browser->click('#finish-workout-mobile');
+
+            // Wait for modal and confirm button
+            $browser->waitForText('Terminer la séance ?', 15)
+                ->waitFor('#confirm-finish-button', 15)
+                ->pause(1000)
                 ->click('#confirm-finish-button');
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 30)
-                ->assertSee('FAIT')
+            $browser->waitFor('@dashboard-welcome', 120)
+                ->assertPathIs('/dashboard')
                 ->assertNoConsoleExceptions();
-
         } catch (\Exception $e) {
             $browser->screenshot('workout-failure-'.$sizeMacro);
             throw $e;
         }
-    });
-})->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
-    'iPhone 15' => 'resizeToIphone15',
-    'iPhone Pro Max' => 'resizeToIphoneMax',
-]);
+    }
+
+    public function test_workout_session_on_iphone_mini(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performFullWorkout($browser, 'resizeToIphoneMini');
+        });
+    }
+
+    public function test_workout_session_on_iphone_15(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performFullWorkout($browser, 'resizeToIphone15');
+        });
+    }
+
+    public function test_workout_session_on_iphone_max(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performFullWorkout($browser, 'resizeToIphoneMax');
+        });
+    }
+}

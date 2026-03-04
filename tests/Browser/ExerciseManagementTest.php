@@ -2,33 +2,30 @@
 
 declare(strict_types=1);
 
+namespace Tests\Browser;
+
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
-uses(DatabaseTruncation::class);
+class ExerciseManagementTest extends DuskTestCase
+{
+    use DatabaseTruncation;
 
-test('user can manage exercises on different iphone sizes', function (string $sizeMacro): void {
-    $user = User::factory()->create();
+    private function performExerciseManagement(Browser $browser, string $sizeMacro): void
+    {
+        $user = User::factory()->create();
 
-    $this->browse(function (Browser $browser) use ($user, $sizeMacro): void {
-        $browser->loginAs($user)
+        $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit('/exercises')
-            ->waitFor('main', 30)
+            ->waitFor('@main-content', 30)
             ->assertPathIs('/exercises');
 
         // 1. Click Create Button (Desktop or Mobile Header depending on viewport)
-        // If empty state is visible, it uses create-exercise-button
-        if ($browser->resolver->find('[data-testid="create-exercise-button"]')) {
-            $browser->click('[data-testid="create-exercise-button"]');
-        } else {
-            // Header buttons
-            $selector = $browser->isVisible('[data-testid="create-exercise-desktop"]')
-                ? '[data-testid="create-exercise-desktop"]'
-                : '[data-testid="create-exercise-mobile-header"]';
-            $browser->click($selector);
-        }
+        $browser->waitFor('[data-testid="create-exercise-mobile-header"]', 15)
+            ->click('[data-testid="create-exercise-mobile-header"]');
 
         // 2. Fill and submit the create form
         $exerciseName = 'DUSK TEST EXERCISE '.time();
@@ -43,11 +40,10 @@ test('user can manage exercises on different iphone sizes', function (string $si
             ->assertSee(strtoupper($exerciseName));
 
         // 4. Edit the exercise
-        // On mobile, the edit button is visible. On desktop, it shows on hover.
-        $browser->click('[data-testid="exercise-card"]'); // Open detail or focus
+        $browser->click('[data-testid="exercise-card"]');
 
-        // Use JS to click the edit button reliably across mobile/desktop
-        $browser->script("document.querySelector('[aria-label^=\"Modifier\"]').click();");
+        $browser->waitFor('[aria-label^="Modifier"]', 15)
+            ->click('[aria-label^="Modifier"]');
 
         $updatedName = 'UPDATED EXERCISE '.time();
         $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 10)
@@ -59,16 +55,33 @@ test('user can manage exercises on different iphone sizes', function (string $si
         $browser->waitForText(strtoupper($updatedName), 15);
 
         // 6. Delete the exercise
-        // Use JS click for the mobile delete button (which is in the SwipeableRow or detail)
-        $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').click();");
+        $browser->waitFor('[data-testid="delete-exercise-button-mobile"]', 15)
+            ->click('[data-testid="delete-exercise-button-mobile"]');
 
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
-            ->waitFor('main', 15)
+            ->waitFor('@main-content', 15)
             ->assertNoConsoleExceptions();
-    });
-})->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
-    'iPhone 15' => 'resizeToIphone15',
-    'iPhone Pro Max' => 'resizeToIphoneMax',
-]);
+    }
+
+    public function test_exercise_management_on_iphone_mini(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseManagement($browser, 'resizeToIphoneMini');
+        });
+    }
+
+    public function test_exercise_management_on_iphone_15(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseManagement($browser, 'resizeToIphone15');
+        });
+    }
+
+    public function test_exercise_management_on_iphone_max(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseManagement($browser, 'resizeToIphoneMax');
+        });
+    }
+}
