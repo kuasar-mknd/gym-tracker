@@ -138,9 +138,11 @@ const confirmFinishWorkout = () => {
         route('workouts.update', { workout: localWorkout.value.id }),
         { is_finished: true },
         {
+            onStart: () => {
+                showFinishModal.value = false
+            },
             onSuccess: () => {
                 triggerHaptic('success')
-                showFinishModal.value = false
                 router.visit(route('dashboard'))
             },
         },

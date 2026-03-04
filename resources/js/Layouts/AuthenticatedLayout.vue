@@ -211,7 +211,7 @@ const showingNavigationDropdown = ref(false)
                 leave-to-class="opacity-0 -translate-y-4"
                 mode="out-in"
             >
-                <div :key="$page.url" class="mx-auto max-w-7xl">
+                <div :key="$page.url" class="mx-auto max-w-7xl" dusk="main-content">
                     <slot />
                 </div>
             </Transition>
