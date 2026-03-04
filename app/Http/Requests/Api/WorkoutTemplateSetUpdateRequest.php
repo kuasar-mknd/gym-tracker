@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\Models\WorkoutTemplateSet;
-use App\Models\WorkoutTemplateLine;
 use Illuminate\Foundation\Http\FormRequest;
 
 class WorkoutTemplateSetUpdateRequest extends FormRequest
