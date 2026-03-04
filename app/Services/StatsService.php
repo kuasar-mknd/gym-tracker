@@ -344,9 +344,30 @@ final class StatsService
 
     /**
      * Clear stats cache related to body measurements.
+     *
+     * @param  array<int, string>|null  $changedFields
      */
-    public function clearBodyMeasurementStats(User $user): void
+    public function clearBodyMeasurementStats(User $user, ?array $changedFields = null): void
     {
+        // PERFORMANCE OPTIMIZATION:
+        // Only clear the cache if fields affecting statistics are modified.
+        // If $changedFields is null (e.g. on creation/deletion), we clear everything.
+        if ($changedFields !== null) {
+            $impactfulFields = ['weight', 'body_fat', 'measured_at'];
+            $hasImpact = false;
+
+            foreach ($impactfulFields as $field) {
+                if (in_array($field, $changedFields, true)) {
+                    $hasImpact = true;
+                    break;
+                }
+            }
+
+            if (! $hasImpact) {
+                return;
+            }
+        }
+
         Cache::forget("stats.latest_metrics.{$user->id}");
 
         foreach ([7, 30, 90, 365] as $days) {
