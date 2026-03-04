@@ -31,3 +31,4 @@ class LoginTest extends DuskTestCase
         });
     }
 }
+// Trigger CI
