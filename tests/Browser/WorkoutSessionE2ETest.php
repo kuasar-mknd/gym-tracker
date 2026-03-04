@@ -88,14 +88,13 @@ test('ultra complete workout session flow on different iphone sizes', function (
             $browser->waitForText('TERMINER LA SÉANCE', 15)
                 ->waitFor('#confirm-finish-button', 15)
                 ->pause(2000)
-                ->script("document.getElementById('confirm-finish-button').click();");
+                ->click('#confirm-finish-button');
 
             // 7. Verify
             $browser->waitForLocation('/dashboard', 120)
                 ->waitForText('BON RETOUR', 30)
                 ->assertPathIs('/dashboard')
                 ->assertNoConsoleExceptions();
-
         } catch (\Exception $e) {
             $browser->screenshot('workout-failure-'.$sizeMacro);
             throw $e;
