@@ -57,7 +57,7 @@ class WorkoutCompletionTest extends DuskTestCase
 
         $browser->click('#finish-workout-mobile');
 
-        $browser->waitForText('Terminer la séance ?', 15)
+        $browser->waitFor('@finish-workout-modal-title', 15)
             ->waitFor('#confirm-finish-button', 30)
             ->pause(1000)
             ->click('#confirm-finish-button');
