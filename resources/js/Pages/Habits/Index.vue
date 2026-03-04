@@ -3,8 +3,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent } from 'vue'
+import { triggerHaptic } from '@/composables/useHaptics'
 const HabitHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HabitHistoryChart.vue'))
 
 const HabitConsistencyChart = defineAsyncComponent(() => import('@/Components/Stats/HabitConsistencyChart.vue'))
@@ -135,6 +137,7 @@ const submit = () => {
  */
 const deleteHabit = (habit) => {
     if (confirm('Voulez-vous vraiment supprimer cette habitude ?')) {
+        triggerHaptic('warning')
         router.delete(route('habits.destroy', habit.id))
     }
 }
@@ -147,6 +150,7 @@ const deleteHabit = (habit) => {
  * @param {string} date - The date to toggle (YYYY-MM-DD).
  */
 const toggleHabit = (habit, date) => {
+    triggerHaptic('tap')
     router.post(
         route('habits.toggle', habit.id),
         {
@@ -199,7 +203,7 @@ const getProgressPercent = (habit) => {
 
     <AuthenticatedLayout page-title="Habitudes">
         <template #header-actions>
-            <GlassButton size="sm" @click="openAddForm">
+            <GlassButton size="sm" @click="openAddForm" aria-label="Ajouter une habitude">
                 <span class="material-symbols-outlined text-sm">add</span>
             </GlassButton>
         </template>
@@ -256,12 +260,15 @@ const getProgressPercent = (habit) => {
             </GlassCard>
 
             <!-- Habits List -->
-            <div v-if="habits.length === 0" class="py-12 text-center">
-                <div class="mb-4 text-5xl">✅</div>
-                <h3 class="text-text-main text-lg font-medium">Aucune habitude</h3>
-                <p class="text-text-muted">Commencez par créer une habitude à suivre.</p>
-                <GlassButton class="mt-4" @click="openAddForm">Créer ma première habitude</GlassButton>
-            </div>
+            <GlassEmptyState
+                v-if="habits.length === 0"
+                title="Aucune habitude"
+                description="Commencez par créer une habitude à suivre."
+                icon="check_circle"
+                action-label="Créer ma première habitude"
+                @action="openAddForm"
+                color="green"
+            />
 
             <div v-else class="space-y-3">
                 <GlassCard
@@ -298,10 +305,18 @@ const getProgressPercent = (habit) => {
 
                             <!-- Actions (Absolute) -->
                             <div class="absolute top-2 right-2 flex opacity-0 transition group-hover:opacity-100">
-                                <button @click="editHabit(habit)" class="text-text-muted hover:text-text-main p-1">
+                                <button
+                                    @click="editHabit(habit)"
+                                    class="text-text-muted hover:text-text-main p-1"
+                                    :aria-label="'Modifier ' + habit.name"
+                                >
                                     <span class="material-symbols-outlined text-sm">edit</span>
                                 </button>
-                                <button @click="deleteHabit(habit)" class="text-text-muted p-1 hover:text-red-500">
+                                <button
+                                    @click="deleteHabit(habit)"
+                                    class="text-text-muted p-1 hover:text-red-500"
+                                    :aria-label="'Supprimer ' + habit.name"
+                                >
                                     <span class="material-symbols-outlined text-sm">delete</span>
                                 </button>
                             </div>
@@ -322,6 +337,13 @@ const getProgressPercent = (habit) => {
                                         ? `${habit.color} text-white shadow-md`
                                         : 'bg-slate-100 text-slate-300 hover:bg-slate-200',
                                 ]"
+                                :aria-label="
+                                    (isCompleted(habit, day.date) ? 'Marquer comme non fait' : 'Marquer comme fait') +
+                                    ' ' +
+                                    habit.name +
+                                    ' le ' +
+                                    day.day_name
+                                "
                             >
                                 <span class="material-symbols-outlined text-lg">check</span>
                             </button>
@@ -339,7 +361,11 @@ const getProgressPercent = (habit) => {
                     <h3 class="text-text-main text-xl font-bold">
                         {{ editingHabit ? 'Modifier' : 'Nouvelle Habitude' }}
                     </h3>
-                    <button @click="showAddForm = false" class="text-text-muted hover:text-text-main">
+                    <button
+                        @click="showAddForm = false"
+                        class="text-text-muted hover:text-text-main"
+                        aria-label="Fermer"
+                    >
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
