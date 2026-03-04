@@ -33,16 +33,26 @@ test('user can finish workout and is redirected on different iphone sizes', func
             ->{$sizeMacro}()
             ->visit('/workouts/'.$workout->id)
             ->waitFor('main', 30)
-            ->assertPathIs('/workouts/'.$workout->id)
-            ->assertNoConsoleExceptions()
-            ->waitFor('#finish-workout-mobile', 30)
+            // Disable CSS transitions for test stability
+            ->script("
+                const style = document.createElement('style');
+                style.innerHTML = '* { transition: none !important; animation: none !important; }';
+                document.head.appendChild(style);
+            ");
+
+        $browser->waitFor('#finish-workout-mobile', 15)
             ->script("document.querySelector('#finish-workout-mobile').click();");
 
-        $browser->waitFor('#confirm-finish-button', 30)
+        // Wait for modal and confirm button
+        $browser->waitForText('TERMINER LA SÉANCE', 15)
+            ->waitFor('#confirm-finish-button', 15)
             ->pause(1000)
             ->script("document.getElementById('confirm-finish-button').click();");
 
-        $browser->waitForLocation('/dashboard', 30);
+        $browser->waitForLocation('/dashboard', 60)
+            ->assertPathIs('/dashboard')
+            ->assertSee('BON RETOUR')
+            ->assertNoConsoleExceptions();
     });
 })->with([
     'iPhone Mini' => 'resizeToIphoneMini',

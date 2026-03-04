@@ -88,21 +88,14 @@ test('ultra complete workout session flow on different iphone sizes', function (
             // Wait for modal and confirm button
             $browser->waitForText('TERMINER LA SÉANCE', 15)
                 ->waitFor('#confirm-finish-button', 15)
+                ->pause(2000)
                 ->script("
-        // Robust polling click to defeat Inertia race conditions
-        window.duskConfirmInterval = setInterval(() => {
-            if (window.location.pathname === '/dashboard') {
-                clearInterval(window.duskConfirmInterval);
-                return;
-            }
-            const btn = document.querySelector('#confirm-finish-button');
-            if (btn) btn.click();
-        }, 1500);
-    ");
+                    const btn = document.querySelector('#confirm-finish-button');
+                    if (btn) btn.click();
+                ");
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 120)
-                ->script('if (window.duskConfirmInterval) clearInterval(window.duskConfirmInterval);');
+            $browser->waitForLocation('/dashboard', 120);
 
             $browser->assertPathIs('/dashboard')
                 ->assertSee('BON RETOUR')
