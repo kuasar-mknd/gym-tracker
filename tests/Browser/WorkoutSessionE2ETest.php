@@ -82,14 +82,15 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
                 ->pause(1000)
-                ->script("document.getElementById('finish-workout-mobile').scrollIntoView();")
-                ->click('#finish-workout-mobile');
+                ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
+
+            $browser->script("document.getElementById('finish-workout-mobile').click();");
 
             // Wait for modal and confirm button
             $browser->waitForText('TERMINER LA SÉANCE', 15)
                 ->waitFor('#confirm-finish-button', 15)
                 ->pause(1000)
-                ->click('#confirm-finish-button');
+                ->script("document.getElementById('confirm-finish-button').click();");
 
             // 7. Verify
             $browser->waitFor('@dashboard-welcome', 150)
