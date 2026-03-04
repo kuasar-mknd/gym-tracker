@@ -134,16 +134,38 @@ const finishWorkout = () => {
     showFinishModal.value = true
 }
 const confirmFinishWorkout = () => {
-    router.patch(
-        route('workouts.update', { workout: localWorkout.value.id }),
-        { is_finished: true },
-        {
-            onSuccess: () => {
-                triggerHaptic('success')
-                showFinishModal.value = false
+    try {
+        // Appends a yellow block to prove the click executed
+        document.body.innerHTML += `<div style="position:fixed;top:0;left:0;width:100%;z-index:999999;background:yellow;color:black;font-size:20px;padding:10px;">Clicked Confirm</div>`
+
+        router.patch(
+            route('workouts.update', { workout: localWorkout.value.id }),
+            { is_finished: true },
+            {
+                onBefore: () => {
+                    document.body.innerHTML += `<div style="position:fixed;top:40px;left:0;width:100%;z-index:999999;background:orange;color:black;font-size:20px;padding:10px;">Inertia onBefore</div>`
+                },
+                onStart: () => {
+                    document.body.innerHTML += `<div style="position:fixed;top:80px;left:0;width:100%;z-index:999999;background:blue;color:white;font-size:20px;padding:10px;">Inertia onStart</div>`
+                },
+                onError: (e) => {
+                    const msg = JSON.stringify(e)
+                    document.body.innerHTML += `<div style="position:fixed;top:120px;left:0;width:100%;z-index:999999;background:red;color:white;font-size:20px;padding:10px;">Inertia onError: ${msg}</div>`
+                },
+                onSuccess: () => {
+                    triggerHaptic('success')
+                    showFinishModal.value = false
+                },
             },
-        },
-    )
+        )
+    } catch (e) {
+        const errorDiv = document.createElement('div')
+        errorDiv.style.cssText =
+            'position:fixed;top:160px;left:0;width:100%;z-index:999999;background:darkred;color:white;font-size:20px;padding:10px;'
+        errorDiv.innerText = e.message || 'Unknown JS Error'
+        document.body.appendChild(errorDiv)
+        throw e
+    }
 }
 
 const showAddExercise = ref(false)
