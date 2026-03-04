@@ -2,10 +2,10 @@ name: CI
 
 on:
     push:
-        branches: ['main']
+        branches: ['main', 'fix/e2e-stability']
         tags: ['v*']
     pull_request:
-        branches: ['main']
+        branches: ['main', 'fix/e2e-stability']
 
 permissions:
     contents: read
