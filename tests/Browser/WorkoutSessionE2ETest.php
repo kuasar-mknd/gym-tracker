@@ -123,3 +123,4 @@ class WorkoutSessionE2ETest extends DuskTestCase
         });
     }
 }
+// satisfy rector
