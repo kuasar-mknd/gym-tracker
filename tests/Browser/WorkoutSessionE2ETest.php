@@ -95,7 +95,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->screenshot('debug-after-confirm-'.$sizeMacro);
 
             // 7. Verify
-            $browser->waitFor('@start-workout-button', 150)
+            $browser->waitForLocation('/dashboard', 120)
+                ->waitFor('@start-workout-button', 30)
                 ->assertSee('BON RETOUR')
                 ->assertPathIs('/dashboard')
                 ->assertNoConsoleExceptions();
