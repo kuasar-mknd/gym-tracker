@@ -91,8 +91,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ->script("document.getElementById('confirm-finish-button').click();");
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 120)
-                ->waitForText('BON RETOUR', 30)
+            $browser->waitForText('BON RETOUR', 120)
                 ->assertPathIs('/dashboard')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
