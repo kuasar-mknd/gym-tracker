@@ -31,7 +31,8 @@ test('guest pages and registration flow', function (): void {
             ->type('input[name="password"]', 'password')
             ->type('input[name="password_confirmation"]', 'password')
             ->click('[data-testid="register-button"]')
-            ->waitForLocation('/verify-email', 30)
+            // Increase timeout slightly and wait for specific element to avoid race condition
+            ->waitForText('Merci de vous être inscrit', 45)
             ->assertPathIs('/verify-email');
     });
 });
