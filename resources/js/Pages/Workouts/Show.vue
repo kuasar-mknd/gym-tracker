@@ -135,7 +135,6 @@ const finishWorkout = () => {
 }
 const confirmFinishWorkout = () => {
     try {
-        // Appends a yellow block to prove the click executed
         document.body.innerHTML += `<div style="position:fixed;top:0;left:0;width:100%;z-index:999999;background:yellow;color:black;font-size:20px;padding:10px;">Clicked Confirm</div>`
 
         router.patch(
@@ -148,20 +147,27 @@ const confirmFinishWorkout = () => {
                 onStart: () => {
                     document.body.innerHTML += `<div style="position:fixed;top:80px;left:0;width:100%;z-index:999999;background:blue;color:white;font-size:20px;padding:10px;">Inertia onStart</div>`
                 },
+                onCancel: () => {
+                    document.body.innerHTML += `<div style="position:fixed;top:120px;left:0;width:100%;z-index:999999;background:magenta;color:white;font-size:20px;padding:10px;">Inertia onCancel!</div>`
+                },
                 onError: (e) => {
                     const msg = JSON.stringify(e)
-                    document.body.innerHTML += `<div style="position:fixed;top:120px;left:0;width:100%;z-index:999999;background:red;color:white;font-size:20px;padding:10px;">Inertia onError: ${msg}</div>`
+                    document.body.innerHTML += `<div style="position:fixed;top:160px;left:0;width:100%;z-index:999999;background:red;color:white;font-size:20px;padding:10px;">Inertia onError: ${msg}</div>`
                 },
                 onSuccess: () => {
+                    document.body.innerHTML += `<div style="position:fixed;top:200px;left:0;width:100%;z-index:999999;background:green;color:white;font-size:20px;padding:10px;">Inertia onSuccess!</div>`
                     triggerHaptic('success')
                     showFinishModal.value = false
+                },
+                onFinish: () => {
+                    document.body.innerHTML += `<div style="position:fixed;top:240px;left:0;width:100%;z-index:999999;background:gray;color:white;font-size:20px;padding:10px;">Inertia onFinish</div>`
                 },
             },
         )
     } catch (e) {
         const errorDiv = document.createElement('div')
         errorDiv.style.cssText =
-            'position:fixed;top:160px;left:0;width:100%;z-index:999999;background:darkred;color:white;font-size:20px;padding:10px;'
+            'position:fixed;top:280px;left:0;width:100%;z-index:999999;background:darkred;color:white;font-size:20px;padding:10px;'
         errorDiv.innerText = e.message || 'Unknown JS Error'
         document.body.appendChild(errorDiv)
         throw e
