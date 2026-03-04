@@ -352,7 +352,7 @@ final class StatsService
         // PERFORMANCE OPTIMIZATION:
         // Only clear the cache if fields affecting statistics are modified.
         // If $changedFields is null (e.g. on creation/deletion), we clear everything.
-        if ($changedFields !== null && $changedFields !== []) {
+        if ($changedFields !== null) {
             $impactfulFields = ['weight', 'body_fat', 'measured_at'];
             $hasImpact = false;
 
