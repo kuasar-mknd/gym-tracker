@@ -1,3 +1,6 @@
 ## 2024-03-02 - Empty State Call to Actions & Async Buttons
 **Learning:** Found an empty state ("Aucune séance pour l'instant") that left users at a dead-end on the primary Dashboard. Additionally, a large call-to-action card executed an async form post without any visual feedback (no spinner). In Inertia/Vue apps, disabling the button isn't enough; the user needs clear visual feedback that their action is processing, especially for major actions like creating a new Workout.
 **Action:** Always provide an actionable CTA within Empty States to prevent "dead ends". Also, always ensure primary action buttons not only disable themselves but also show an explicit loading indicator (like `animate-spin` on an icon) when `form.processing` is true.
+## 2024-03-05 - Add Keyboard Focus Styles to Custom Interactive Elements
+**Learning:** Custom interactive elements built with `div` or `button` tags often miss clear focus states, making them difficult to navigate via keyboard. Applying standard Tailwind focus ring classes (`focus:ring-2`, `focus:ring-white/50`, etc.) significantly improves accessibility while maintaining the design system's aesthetic.
+**Action:** Always ensure custom toggles, icon buttons, and interactive cards have explicit focus styles defined, mirroring the existing `PrimaryButton` implementation.
