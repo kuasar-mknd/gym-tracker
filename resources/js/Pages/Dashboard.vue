@@ -66,7 +66,10 @@ const colorForWorkout = (index) => {
                         </div>
                     </div>
                     <div>
-                        <p class="text-text-muted mb-0.5 text-[10px] font-black tracking-[0.2em] uppercase">
+                        <p
+                            class="text-text-muted mb-0.5 text-[10px] font-black tracking-[0.2em] uppercase"
+                            dusk="dashboard-welcome"
+                        >
                             BON RETOUR
                         </p>
                         <h1
