@@ -87,7 +87,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->script("document.getElementById('finish-workout-mobile').click();");
 
             // Wait for modal and confirm button
-            $browser->waitForText('Terminer la séance ?', 15)
+            $browser->waitFor('@finish-workout-modal-title', 15)
                 ->waitFor('#confirm-finish-button', 15)
                 ->pause(1000)
                 ->script("document.getElementById('confirm-finish-button').click();");
