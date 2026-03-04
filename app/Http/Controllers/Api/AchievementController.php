@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Routing\Controller;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Http\Requests\Api\StoreAchievementRequest;
 use App\Http\Requests\Api\UpdateAchievementRequest;
 use App\Http\Resources\AchievementResource;
 use App\Models\Achievement;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controller;
 use OpenApi\Annotations as OA;
 
 /**
