@@ -13,6 +13,10 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class BodyMeasurementController extends Controller
 {
+    public function __construct(protected \App\Services\StatsService $statsService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -47,6 +51,8 @@ class BodyMeasurementController extends Controller
         $measurement->user_id = $this->user()->id;
         $measurement->save();
 
+        $this->statsService->clearBodyMeasurementStats($this->user());
+
         return new BodyMeasurementResource($measurement);
     }
 
@@ -67,7 +73,11 @@ class BodyMeasurementController extends Controller
     {
         $this->authorize('update', $bodyMeasurement);
 
-        $bodyMeasurement->update($request->validated());
+        $bodyMeasurement->fill($request->validated());
+        $changedFields = array_keys($bodyMeasurement->getDirty());
+        $bodyMeasurement->save();
+
+        $this->statsService->clearBodyMeasurementStats($this->user(), $changedFields);
 
         return new BodyMeasurementResource($bodyMeasurement);
     }
@@ -79,7 +89,10 @@ class BodyMeasurementController extends Controller
     {
         $this->authorize('delete', $bodyMeasurement);
 
+        $user = $this->user();
         $bodyMeasurement->delete();
+
+        $this->statsService->clearBodyMeasurementStats($user);
 
         return response()->noContent();
     }
