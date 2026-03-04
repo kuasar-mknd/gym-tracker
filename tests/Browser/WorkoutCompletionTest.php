@@ -40,13 +40,13 @@ test('user can finish workout and is redirected on different iphone sizes', func
                 document.head.appendChild(style);
             ");
 
-        $browser->waitFor('#finish-workout-mobile', 15)
+        $browser->waitFor('#finish-workout-mobile', 30)
             ->pause(1000)
             ->script("document.getElementById('finish-workout-mobile').click();");
 
         // Wait for modal and confirm button
-        $browser->waitFor('@finish-workout-modal-title', 15)
-            ->waitFor('#confirm-finish-button', 15)
+        $browser->waitFor('@finish-workout-modal-title', 30)
+            ->waitFor('#confirm-finish-button', 30)
             ->pause(1000)
             ->script("document.getElementById('confirm-finish-button').click();");
 

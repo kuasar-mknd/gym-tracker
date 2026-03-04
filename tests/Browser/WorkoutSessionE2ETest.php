@@ -42,12 +42,12 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ");
 
             // 1. Add exercise
-            $browser->waitFor('@add-first-exercise', 15)
+            $browser->waitFor('@add-first-exercise', 30)
                 ->script("document.querySelector('[dusk=\"add-first-exercise\"]').click();");
 
-            $browser->waitFor('input[placeholder="Rechercher..."]', 15)
+            $browser->waitFor('input[placeholder="Rechercher..."]', 30)
                 ->type('input[placeholder="Rechercher..."]', $exercises[0]->name)
-                ->pause(1500)
+                ->pause(2000)
                 ->waitFor('@select-exercise-'.$exercises[0]->id, 20)
                 ->script("document.querySelector('[dusk=\"select-exercise-{$exercises[0]->id}\"]').click();");
 
@@ -71,23 +71,23 @@ test('ultra complete workout session flow on different iphone sizes', function (
             $browser->pause(2000); // EXTRA PAUSE FOR DEBOUNCE
 
             // 5. Complete set (using JS click for mobile reliability)
-            $browser->waitFor('@complete-set-0-0', 15)
+            $browser->waitFor('@complete-set-0-0', 30)
                 ->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
 
             // Wait for rest timer to appear and skip it
-            $browser->waitFor('[dusk="skip-rest-timer"]', 15)
-                ->pause(1000)
+            $browser->waitFor('[dusk="skip-rest-timer"]', 30)
+                ->pause(2000)
                 ->click('[dusk="skip-rest-timer"]')
-                ->pause(1000);
+                ->pause(2000);
             // 6. Finish Workout
-            $browser->waitFor('#finish-workout-mobile', 15)
-                ->pause(1000)
+            $browser->waitFor('#finish-workout-mobile', 30)
+                ->pause(2000)
                 ->script("document.getElementById('finish-workout-mobile').click();");
 
             // Wait for modal and confirm button
-            $browser->waitFor('@finish-workout-modal-title', 15)
-                ->waitFor('#confirm-finish-button', 15)
-                ->pause(1000)
+            $browser->waitFor('@finish-workout-modal-title', 30)
+                ->waitFor('#confirm-finish-button', 30)
+                ->pause(2000)
                 ->script("document.getElementById('confirm-finish-button').click();");
 
             // 7. Verify

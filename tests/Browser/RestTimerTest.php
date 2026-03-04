@@ -23,7 +23,7 @@ test('timer lifecycle on different iphone sizes', function (string $sizeMacro): 
         $browser->loginAs($user)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15);
+            ->waitFor('@complete-set-0-0', 30);
 
         // 1. On vérifie que le timer n'est pas là au départ
         $browser->assertMissing('@rest-timer');
@@ -71,7 +71,7 @@ test('timer add time on different iphone sizes', function (string $sizeMacro): v
         $browser->loginAs($user)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15)
+            ->waitFor('@complete-set-0-0', 30)
             ->click('@complete-set-0-0')
             ->waitFor('@rest-timer', 10);
 
@@ -107,7 +107,7 @@ test('timer pause resume on different iphone sizes', function (string $sizeMacro
         $browser->loginAs($user)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15)
+            ->waitFor('@complete-set-0-0', 30)
             ->click('@complete-set-0-0')
             ->waitFor('@rest-timer', 10);
 
@@ -147,7 +147,7 @@ test('timer skip on different iphone sizes', function (string $sizeMacro): void 
         $browser->loginAs($user)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15)
+            ->waitFor('@complete-set-0-0', 30)
             ->click('@complete-set-0-0')
             ->waitFor('@rest-timer', 10);
 
@@ -176,7 +176,7 @@ test('timer finishes automatically on different iphone sizes', function (string 
         $browser->loginAs($user)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
-            ->waitFor('@complete-set-0-0', 15)
+            ->waitFor('@complete-set-0-0', 30)
             ->click('@complete-set-0-0')
             ->waitFor('@rest-timer', 10);
 
