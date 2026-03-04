@@ -101,7 +101,7 @@ test('ultra complete workout session flow on different iphone sizes', function (
     ");
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 120)
+            $browser->waitForText('BON RETOUR', 120)
                 ->script('if (window.duskConfirmInterval) clearInterval(window.duskConfirmInterval);');
 
             $browser->assertPathIs('/dashboard')

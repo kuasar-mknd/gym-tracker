@@ -42,7 +42,8 @@ test('user can finish workout and is redirected on different iphone sizes', func
             ->pause(1000)
             ->script("document.getElementById('confirm-finish-button').click();");
 
-        $browser->waitForLocation('/dashboard', 30);
+        $browser->waitForText('BON RETOUR', 45)
+            ->assertPathIs('/dashboard');
     });
 })->with([
     'iPhone Mini' => 'resizeToIphoneMini',

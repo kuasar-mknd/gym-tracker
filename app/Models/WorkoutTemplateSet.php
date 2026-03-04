@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -17,6 +18,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 class WorkoutTemplateSet extends Model
 {
+    /** @use HasFactory<\Database\Factories\WorkoutTemplateSetFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'workout_template_line_id',
         'reps',
