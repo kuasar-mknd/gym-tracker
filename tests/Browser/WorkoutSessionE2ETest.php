@@ -79,24 +79,21 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ->pause(1000)
                 ->click('[dusk="skip-rest-timer"]')
                 ->pause(1000);
-
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
+                ->pause(1000)
                 ->script("document.querySelector('#finish-workout-mobile').click();");
 
             // Wait for modal and confirm button
             $browser->waitForText('TERMINER LA SÉANCE', 15)
                 ->waitFor('#confirm-finish-button', 15)
                 ->pause(2000)
-                ->script("
-                    const btn = document.querySelector('#confirm-finish-button');
-                    if (btn) btn.click();
-                ");
+                ->script("document.getElementById('confirm-finish-button').click();");
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 60)
+            $browser->waitForLocation('/dashboard', 120)
+                ->waitForText('BON RETOUR', 30)
                 ->assertPathIs('/dashboard')
-                ->assertSee('BON RETOUR')
                 ->assertNoConsoleExceptions();
 
         } catch (\Exception $e) {

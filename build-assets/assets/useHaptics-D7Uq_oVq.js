@@ -1,0 +1,1 @@
+const t={tap:[5],toggle:[15],success:[50,30,50],error:[100,50,100,50,100],warning:[30,20,30],timer:[200,100,200]};function n(){return"vibrate"in navigator}function e(r="tap"){if(!n())return!1;const a=t[r]||t.tap;return navigator.vibrate(a)}export{e as t};

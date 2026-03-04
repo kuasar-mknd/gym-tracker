@@ -1,0 +1,1 @@
+{"name":"Gym Tracker","short_name":"GymTracker","description":"Suivez vos entraînements et progressez efficacement.","start_url":"/","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","lang":"en","scope":"/","orientation":"portrait","icons":[{"src":"/logo.svg","sizes":"192x192 512x512","type":"image/svg+xml","purpose":"any maskable"}]}
