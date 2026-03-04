@@ -21,10 +21,11 @@ class NotificationPreferenceController extends Controller
     {
         $this->authorize('viewAny', NotificationPreference::class);
 
-        // @phpstan-ignore-next-line
         $preferences = QueryBuilder::for(NotificationPreference::class)
-            ->where('user_id', $this->user()->id)
-            ->allowedSorts(['type', 'created_at']);
+            ->where('user_id', $this->user()->id);
+
+        /** @phpstan-ignore-next-line */
+        $preferences->allowedSorts(['type', 'created_at']);
 
         $preferences = $preferences->get();
 
