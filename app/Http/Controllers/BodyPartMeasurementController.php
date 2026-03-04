@@ -21,7 +21,6 @@ class BodyPartMeasurementController extends Controller
 
     public function show(string $part): \Illuminate\Http\RedirectResponse|\Inertia\Response
     {
-        /** @var \App\Models\User $user */
         $user = $this->user();
 
         $history = $user->bodyPartMeasurements()

@@ -57,32 +57,13 @@
                 </GlassCard>
             </div>
 
-            <!-- Percentages Table -->
+            <!-- Percentages Chart -->
             <div v-if="oneRepMax > 0">
-                <GlassCard class="h-full">
-                    <div class="p-6">
+                <GlassCard class="h-full flex flex-col">
+                    <div class="p-6 flex-1 flex flex-col">
                         <h2 class="text-text-main mb-4 text-xl font-bold">Pourcentages d'Entraînement</h2>
-                        <div class="overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
-                            <table class="text-text-muted w-full text-left text-sm">
-                                <thead class="text-text-main border-b border-white/20 bg-white/10 text-xs uppercase">
-                                    <tr>
-                                        <th class="px-6 py-3 font-medium">Pourcentage</th>
-                                        <th class="px-6 py-3 font-medium">Poids</th>
-                                        <th class="px-6 py-3 font-medium">Reps Est.</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-white/10 bg-transparent">
-                                    <tr
-                                        v-for="p in percentages"
-                                        :key="p.percent"
-                                        class="transition-colors duration-200 hover:bg-white/20"
-                                    >
-                                        <td class="text-text-main px-6 py-4 font-medium">{{ p.percent }}%</td>
-                                        <td class="text-text-main px-6 py-4">{{ formatWeight(p.value) }}</td>
-                                        <td class="px-6 py-4">{{ p.reps }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="flex-1 min-h-[300px] rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md p-4">
+                            <OneRepMaxPercentagesChart :data="percentages" />
                         </div>
                     </div>
                 </GlassCard>
@@ -98,12 +79,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PageHeader from '@/Components/Navigation/PageHeader.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import InputLabel from '@/Components/InputLabel.vue'
+
+const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
 
 const weight = ref('')
 const reps = ref('')

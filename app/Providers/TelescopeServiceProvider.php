@@ -32,7 +32,21 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     protected function registerFilter(): void
     {
-        Telescope::filter(fn (IncomingEntry $entry): bool => $this->shouldFilterEntry($entry));
+        $isLocal = $this->app->environment('local');
+
+        Telescope::filter(function (IncomingEntry $entry) use ($isLocal): bool {
+            if ($isLocal) {
+                return true;
+            }
+
+            return collect([
+                $entry->isReportableException(),
+                $entry->isFailedRequest(),
+                $entry->isFailedJob(),
+                $entry->isScheduledTask(),
+                $entry->hasMonitoredTag(),
+            ])->contains(true);
+        });
     }
 
     /**
@@ -63,21 +77,4 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         Gate::define('viewTelescope', fn ($user): bool => in_array($user->email, []));
     }
 
-    /**
-     * Determine if the given entry should be filtered.
-     */
-    private function shouldFilterEntry(IncomingEntry $entry): bool
-    {
-        if ($this->app->environment('local')) {
-            return true;
-        }
-
-        return collect([
-            $entry->isReportableException(),
-            $entry->isFailedRequest(),
-            $entry->isFailedJob(),
-            $entry->isScheduledTask(),
-            $entry->hasMonitoredTag(),
-        ])->contains(true);
-    }
 }

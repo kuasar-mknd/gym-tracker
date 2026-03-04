@@ -33,7 +33,6 @@ class SetsController extends Controller
 
         $workoutLine->sets()->create($request->validated());
 
-        /** @var \App\Models\User $user */
         $user = $this->user();
         $this->statsService->clearWorkoutRelatedStats($user);
 
@@ -49,7 +48,6 @@ class SetsController extends Controller
 
         $set->update($request->validated());
 
-        /** @var \App\Models\User $user */
         $user = $this->user();
         $this->statsService->clearWorkoutRelatedStats($user);
 
