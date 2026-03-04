@@ -41,17 +41,18 @@ test('user can finish workout and is redirected on different iphone sizes', func
             ");
 
         $browser->waitFor('#finish-workout-mobile', 15)
-            ->script("document.querySelector('#finish-workout-mobile').click();");
+            ->pause(1000)
+            ->click('#finish-workout-mobile');
 
         // Wait for modal and confirm button
         $browser->waitForText('TERMINER LA SÉANCE', 15)
             ->waitFor('#confirm-finish-button', 15)
             ->pause(1000)
-            ->script("document.getElementById('confirm-finish-button').click();");
+            ->click('#confirm-finish-button');
 
         $browser->waitForLocation('/dashboard', 60)
             ->assertPathIs('/dashboard')
-            ->assertSee('BON RETOUR')
+            ->waitForText('BON RETOUR', 30)
             ->assertNoConsoleExceptions();
     });
 })->with([
