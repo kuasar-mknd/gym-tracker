@@ -73,14 +73,13 @@ test('ultra complete workout session flow on different iphone sizes', function (
             // 5. Complete set (using JS click for mobile reliability)
             $browser->waitFor('@complete-set-0-0', 15)
                 ->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
-            $browser->pause(2000); // WAIT FOR SET UPDATE
 
-            // Skip rest timer
-            $browser->script("
-                const skipBtn = document.querySelector('[dusk=\"skip-rest-timer\"]');
-                if (skipBtn) skipBtn.click();
-            ");
-            $browser->pause(1000);
+            // Wait for rest timer to appear and skip it
+            $browser->waitFor('[dusk="skip-rest-timer"]', 15)
+                ->pause(1000)
+                ->click('[dusk="skip-rest-timer"]')
+                ->pause(1000);
+
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
                 ->script("document.querySelector('#finish-workout-mobile').click();");
@@ -95,9 +94,8 @@ test('ultra complete workout session flow on different iphone sizes', function (
                 ");
 
             // 7. Verify
-            $browser->waitForLocation('/dashboard', 120);
-
-            $browser->assertPathIs('/dashboard')
+            $browser->waitForLocation('/dashboard', 60)
+                ->assertPathIs('/dashboard')
                 ->assertSee('BON RETOUR')
                 ->assertNoConsoleExceptions();
 
