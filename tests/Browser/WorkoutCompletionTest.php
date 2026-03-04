@@ -45,10 +45,10 @@ test('user can finish workout and is redirected on different iphone sizes', func
             ->click('#finish-workout-mobile');
 
         // Wait for modal and confirm button
-        $browser->waitForText('TERMINER LA SÉANCE', 15)
+        $browser->waitForText('Terminer la séance ?', 15)
             ->waitFor('#confirm-finish-button', 15)
             ->pause(1000)
-            ->click('#confirm-finish-button');
+            ->press('Confirmer');
 
         $browser->waitForLocation('/dashboard', 60)
             ->assertPathIs('/dashboard')
