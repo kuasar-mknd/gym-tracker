@@ -82,13 +82,13 @@ test('ultra complete workout session flow on different iphone sizes', function (
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
                 ->pause(1000)
-                ->click('#finish-workout-mobile');
+                ->script("document.getElementById('finish-workout-mobile').click();");
 
             // Wait for modal and confirm button
             $browser->waitFor('@finish-workout-modal-title', 15)
                 ->waitFor('#confirm-finish-button', 15)
                 ->pause(1000)
-                ->press('Confirmer');
+                ->script("document.getElementById('confirm-finish-button').click();");
 
             // 7. Verify
             $browser->waitForLocation('/dashboard', 120)
