@@ -19,7 +19,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
     {
         $user = User::factory()->create([
             'name' => 'John Doe',
-            'email' => 'john'.time().rand(0, 9999).'@example.com',
+            'email' => 'john'.time().random_int(0, 9999).'@example.com',
             'password' => bcrypt('password123'),
         ]);
 
@@ -37,9 +37,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
         try {
             $browser->loginAs($user->id)
                 ->{$sizeMacro}()
-                ->visit("/workouts/{$workout->id}")
-                ->screenshot('debug-workout-'.$sizeMacro)
-                ->waitFor('main', 30);
+                ->visit("/workouts/{$workout->id}");
 
             // 1. Add exercise
             $browser->waitFor('@add-first-exercise', 15)
