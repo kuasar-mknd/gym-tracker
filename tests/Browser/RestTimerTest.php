@@ -12,7 +12,6 @@ use Tests\DuskTestCase;
 
 class RestTimerTest extends DuskTestCase
 {
-    use AuthenticatesUser;
     use DatabaseTruncation;
 
     private function performTimerLifecycle(Browser $browser, string $sizeMacro): void
@@ -26,16 +25,11 @@ class RestTimerTest extends DuskTestCase
             'started_at' => now(),
         ]);
 
-        $browser->{$sizeMacro}();
-        $this->loginUser($browser, $user);
-
-        $browser->visit('/workouts/'.$workout->id)
+        $browser->loginAs($user->id)
+            ->{$sizeMacro}()
+            ->visit('/workouts/'.$workout->id)
             ->disableAnimations()
             ->waitFor('#main-content', 30);
-
-        // Simulate a rest timer by clicking skip if visible, or checking if it appears
-        // Since we can't easily trigger a set completion without full workout logic here,
-        // we'll just verify the manual timer trigger if it exists or skip it.
     }
 
     private function performAddTime(Browser $browser, string $sizeMacro): void
@@ -44,10 +38,9 @@ class RestTimerTest extends DuskTestCase
             'email_verified_at' => now(),
         ]);
 
-        $browser->{$sizeMacro}();
-        $this->loginUser($browser, $user);
-
-        $browser->visit('/dashboard')
+        $browser->loginAs($user->id)
+            ->{$sizeMacro}()
+            ->visit('/dashboard')
             ->waitFor('#main-content', 30);
     }
 

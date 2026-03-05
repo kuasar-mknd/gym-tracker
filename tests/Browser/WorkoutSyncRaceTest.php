@@ -12,7 +12,6 @@ use Tests\DuskTestCase;
 
 class WorkoutSyncRaceTest extends DuskTestCase
 {
-    use AuthenticatesUser;
     use DatabaseTruncation;
 
     private function performSyncRace(Browser $browser, string $sizeMacro): void
@@ -26,10 +25,9 @@ class WorkoutSyncRaceTest extends DuskTestCase
             'started_at' => now(),
         ]);
 
-        $browser->{$sizeMacro}();
-        $this->loginUser($browser, $user);
-
-        $browser->visit('/workouts/'.$workout->id)
+        $browser->loginAs($user->id)
+            ->{$sizeMacro}()
+            ->visit('/workouts/'.$workout->id)
             ->disableAnimations()
             ->waitFor('#main-content', 30);
 

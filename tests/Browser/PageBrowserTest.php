@@ -11,7 +11,6 @@ use Tests\DuskTestCase;
 
 class PageBrowserTest extends DuskTestCase
 {
-    use AuthenticatesUser;
     use DatabaseTruncation;
 
     public function test_guest_pages(): void
@@ -35,8 +34,8 @@ class PageBrowserTest extends DuskTestCase
             'email_verified_at' => now(),
         ]);
 
-        $browser->{$sizeMacro}();
-        $this->loginUser($browser, $user);
+        $browser->loginAs($user->id)
+            ->{$sizeMacro}();
 
         $pages = [
             '/dashboard' => 'BON RETOUR',
@@ -83,10 +82,9 @@ class PageBrowserTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user): void {
-            $browser->resizeToIphoneMini();
-            $this->loginUser($browser, $user);
-
-            $browser->visit('/dashboard')
+            $browser->loginAs($user->id)
+                ->resizeToIphoneMini()
+                ->visit('/dashboard')
                 ->waitFor('#main-content', 30)
                 ->click('[dusk="nav-workouts"]')
                 ->waitForLocation('/workouts', 15)

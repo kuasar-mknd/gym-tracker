@@ -11,7 +11,6 @@ use Tests\DuskTestCase;
 
 class ExerciseManagementTest extends DuskTestCase
 {
-    use AuthenticatesUser;
     use DatabaseTruncation;
 
     private function performExerciseManagement(Browser $browser, string $sizeMacro): void
@@ -20,10 +19,9 @@ class ExerciseManagementTest extends DuskTestCase
             'email_verified_at' => now(),
         ]);
 
-        $browser->{$sizeMacro}();
-        $this->loginUser($browser, $user);
-
-        $browser->visit('/exercises')
+        $browser->loginAs($user->id)
+            ->{$sizeMacro}()
+            ->visit('/exercises')
             ->disableAnimations()
             ->waitFor('#main-content', 30)
             ->waitFor('[dusk="create-exercise-btn"]', 30)
