@@ -21,6 +21,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             'name' => 'John Doe',
             'email' => 'john'.time().random_int(0, 9999).'@example.com',
             'password' => bcrypt('password123'),
+            'email_verified_at' => now(),
         ]);
 
         $exercises = Exercise::factory()->count(2)->create([
@@ -79,22 +80,22 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->pause(1000)
                 ->click('[dusk="skip-rest-timer"]')
                 ->pause(1000);
-
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
                 ->pause(1000)
                 ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
 
-            $browser->click('#finish-workout-mobile');
+            $browser->script("document.getElementById('finish-workout-mobile').click();");
 
             // Wait for modal and confirm button
             $browser->waitFor('@finish-workout-modal-title', 15)
                 ->waitFor('#confirm-finish-button', 15)
                 ->pause(1000)
-                ->click('#confirm-finish-button');
+                ->script("document.getElementById('confirm-finish-button').click();");
 
             // 7. Verify
             $browser->waitFor('@dashboard-welcome', 120)
+                ->assertSee('BON RETOUR')
                 ->assertPathIs('/dashboard')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {

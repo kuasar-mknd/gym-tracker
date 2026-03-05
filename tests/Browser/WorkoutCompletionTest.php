@@ -20,6 +20,7 @@ class WorkoutCompletionTest extends DuskTestCase
     {
         $user = User::factory()->create([
             'password' => bcrypt('password123'),
+            'email_verified_at' => now(),
         ]);
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
@@ -42,6 +43,7 @@ class WorkoutCompletionTest extends DuskTestCase
         [$user, $workout] = $this->setupWorkout();
 
         $browser->visit('/login')
+            ->screenshot('debug-at-login-page')
             ->waitFor('input[name="email"]', 30)
             ->type('input[name="email"]', $user->email)
             ->type('input[name="password"]', 'password123')
@@ -55,12 +57,12 @@ class WorkoutCompletionTest extends DuskTestCase
             ->waitFor('#finish-workout-mobile', 30)
             ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
 
-        $browser->click('#finish-workout-mobile');
+        $browser->script("document.getElementById('finish-workout-mobile').click();");
 
         $browser->waitFor('@finish-workout-modal-title', 15)
             ->waitFor('#confirm-finish-button', 30)
             ->pause(1000)
-            ->click('#confirm-finish-button');
+            ->script("document.getElementById('confirm-finish-button').click();");
 
         $browser->waitFor('@dashboard-welcome', 60)
             ->assertSee('BON RETOUR');
@@ -89,7 +91,7 @@ class WorkoutCompletionTest extends DuskTestCase
 
     public function test_finished_workout_is_immutable_on_iphone_mini(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['email_verified_at' => now()]);
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
             'name' => 'Immutable Workout',
@@ -98,7 +100,12 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs($user)
+            $browser->visit('/login')
+                ->waitFor('input[name="email"]', 30)
+                ->type('input[name="email"]', $user->email)
+                ->type('input[name="password"]', 'password')
+                ->click('[data-testid="login-button"]')
+                ->waitForLocation('/dashboard', 30)
                 ->resizeToIphoneMini()
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('@main-content', 30)

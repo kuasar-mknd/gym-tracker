@@ -45,7 +45,7 @@ class PageBrowserTest extends DuskTestCase
 
     private function performSmokeTest(Browser $browser, string $sizeMacro): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['email_verified_at' => now()]);
 
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
@@ -100,7 +100,7 @@ class PageBrowserTest extends DuskTestCase
 
     public function test_mobile_navigation_is_visible_on_iphone_mini(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['email_verified_at' => now()]);
 
         $this->browse(function (Browser $browser) use ($user): void {
             $browser->loginAs($user->id)
