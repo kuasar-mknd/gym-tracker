@@ -105,11 +105,9 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 setTimeout(() => clearInterval(interval), 10000);
             ");
 
-            // Final fallback: just force visit after a bit of pause to be sure
-            $browser->pause(5000)
-                ->visit('/dashboard');
-
-            $browser->waitForText('BON RETOUR', 60)
+            // Final step: ensure we get to the dashboard one way or another
+            $browser->visit('/dashboard')
+                ->waitForText('BON RETOUR', 60)
                 ->waitFor('@start-workout-button', 30)
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
