@@ -90,15 +90,14 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             // Wait for modal and confirm button
             $browser->waitFor('@finish-workout-modal-title', 15)
-                ->waitFor('@confirm-finish-button', 15);
+                ->waitFor('@confirm-finish-button', 15)
+                ->pause(1000);
 
-            $browser->screenshot('before-final-confirm-'.$sizeMacro)
-                ->script("document.getElementById('confirm-finish-button').click();");
+            $browser->script("document.getElementById('confirm-finish-button').click();");
 
-            $browser->pause(5000)
-                ->screenshot('after-final-confirm-'.$sizeMacro)
-                ->waitForText('BON RETOUR', 120)
-                ->assertVisible('@start-workout-button')
+            $browser->waitForLocation('/dashboard', 120)
+                ->waitFor('@start-workout-button', 30)
+                ->assertSee('BON RETOUR')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('workout-failure-'.$sizeMacro);
