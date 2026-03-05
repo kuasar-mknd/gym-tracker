@@ -43,7 +43,7 @@ class ExerciseManagementTest extends DuskTestCase
         $browser->script("document.querySelector('[data-testid=\"exercise-card\"]').scrollIntoView();");
         $browser->click('[data-testid="exercise-card"]');
 
-        $browser->waitForText('MODIFIER', 15)
+        $browser->waitForText('Modifier', 15)
             ->click('[aria-label^="Modifier"]');
 
         $updatedName = 'UPDATED EXERCISE '.time();

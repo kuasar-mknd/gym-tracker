@@ -58,8 +58,8 @@ class WorkoutCompletionTest extends DuskTestCase
             ->pause(1000)
             ->script("document.getElementById('confirm-finish-button').click();");
 
-        $browser->waitForText('BON RETOUR', 60)
-            ->assertVisible('@start-workout-button');
+        $browser->waitFor('@start-workout-button', 60)
+            ->assertSee('BON RETOUR');
     }
 
     public function test_user_can_finish_workout_on_iphone_mini(): void
