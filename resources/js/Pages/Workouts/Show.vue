@@ -357,16 +357,16 @@ const filteredExercises = computed(() => {
             </button>
         </template>
 
-        <div class="space-y-4" :key="workoutKey">
-            <div
+        <div class="space-y-4 pb-48">
+            <GlassCard
                 v-if="localWorkout.workout_lines.length === 0"
-                class="glass-panel-light flex flex-col items-center justify-center p-12 text-center"
+                class="flex flex-col items-center justify-center p-12 text-center"
             >
                 <h3 class="font-display text-text-main mb-4 text-2xl font-black uppercase italic">Séance vide</h3>
                 <GlassButton variant="primary" @click="showAddExercise = true" dusk="add-first-exercise"
                     >Ajouter un exercice</GlassButton
                 >
-            </div>
+            </GlassCard>
 
             <GlassCard
                 v-for="(line, lineIndex) in localWorkout.workout_lines"
@@ -550,6 +550,7 @@ const filteredExercises = computed(() => {
                     <GlassButton
                         variant="primary"
                         id="confirm-finish-button"
+                        dusk="confirm-finish-button"
                         @click="confirmFinishWorkout"
                         class="flex-1"
                         >Confirmer</GlassButton

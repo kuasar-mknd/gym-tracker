@@ -570,7 +570,7 @@ const typeLabel = (type) => {
                 </div>
             </div>
             <!-- List Padding for Mobile Bottom Nav -->
-            <div class="h-24 sm:hidden"></div>
+            <div class="h-48 sm:hidden"></div>
         </div>
     </AuthenticatedLayout>
 </template>
