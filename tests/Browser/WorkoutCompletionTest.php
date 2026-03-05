@@ -59,7 +59,13 @@ class WorkoutCompletionTest extends DuskTestCase
             ->pause(1000)
             ->script("document.getElementById('confirm-finish-button').click();");
 
-        $browser->waitFor('#dashboard-header', 30)
+        // Wait for DB sync
+        $browser->waitUntil(function () use ($workout) {
+            return \App\Models\Workout::find($workout->id)->ended_at !== null;
+        }, 15);
+
+        $browser->visit('/dashboard')
+            ->waitFor('#dashboard-header', 30)
             ->assertSee('BON RETOUR');
     }
 
