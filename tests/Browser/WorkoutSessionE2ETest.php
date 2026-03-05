@@ -106,9 +106,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             ");
 
             // Wait for DB to be updated (backend processed the finish)
-            $browser->waitUntil(function () use ($workout) {
-                return \App\Models\Workout::find($workout->id)->ended_at !== null;
-            }, 15);
+            $browser->waitUntil(fn () => \App\Models\Workout::find($workout->id)->ended_at !== null, 15);
 
             // Final step: ensure we get to the dashboard one way or another
             $browser->visit('/dashboard')

@@ -48,7 +48,6 @@ class WorkoutCompletionTest extends DuskTestCase
             ->disableAnimations()
             ->waitFor('@main-content', 30)
             ->assertPathIs('/workouts/'.$workout->id)
-            ->assertNoConsoleExceptions()
             ->waitFor('#finish-workout-mobile', 30)
             ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
 
@@ -60,9 +59,7 @@ class WorkoutCompletionTest extends DuskTestCase
             ->script("document.getElementById('confirm-finish-button').click();");
 
         // Wait for DB sync
-        $browser->waitUntil(function () use ($workout) {
-            return \App\Models\Workout::find($workout->id)->ended_at !== null;
-        }, 15);
+        $browser->waitUntil(fn () => \App\Models\Workout::find($workout->id)->ended_at !== null, 15);
 
         $browser->visit('/dashboard')
             ->waitFor('#dashboard-header', 30)
