@@ -94,7 +94,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->pause(2000)
                 ->script("document.getElementById('confirm-finish-button').click();");
 
-            $browser->pause(3000);
+            $browser->pause(5000)
+                ->waitUntilMissing('@finish-workout-modal-title', 30);
 
             // 7. Verify
             $browser->waitFor('@start-workout-button', 150)
