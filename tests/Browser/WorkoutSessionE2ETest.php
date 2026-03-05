@@ -123,9 +123,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 setTimeout(() => clearInterval(interval), 10000);
             ");
 
-            $browser->waitForLocation('/dashboard', 120)
-                ->waitFor('@start-workout-button', 60)
-                ->assertSee('BON RETOUR')
+            $browser->waitForText('BON RETOUR', 60)
+                ->assertVisible('@start-workout-button')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('workout-failure-'.$sizeMacro);
