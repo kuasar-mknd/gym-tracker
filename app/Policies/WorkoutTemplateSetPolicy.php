@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\WorkoutTemplateSet;
 use App\Models\WorkoutTemplateLine;
+use App\Models\WorkoutTemplateSet;
 
 final class WorkoutTemplateSetPolicy
 {

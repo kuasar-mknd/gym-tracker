@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\WorkoutTemplateSet;
 use App\Http\Requests\StoreWorkoutTemplateSetRequest;
 use App\Http\Requests\UpdateWorkoutTemplateSetRequest;
 use App\Http\Resources\WorkoutTemplateSetResource;
+use App\Models\WorkoutTemplateSet;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\QueryBuilder;
