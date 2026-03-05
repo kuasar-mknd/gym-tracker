@@ -108,8 +108,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->script("document.getElementById('confirm-finish-button').click();");
 
             $browser->pause(2000)
-                ->waitForText('BON RETOUR', 120)
-                ->assertVisible('@start-workout-button')
+                ->waitForText('BON RETOUR', 60)
+                ->waitFor('@start-workout-button', 30)
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('workout-failure-'.$sizeMacro);
