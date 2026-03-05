@@ -102,7 +102,8 @@ class RestTimerTest extends DuskTestCase
 
             // Mettre en pause pour avoir un temps stable
             $browser->click('button[aria-label="Pause"]')
-                ->pause(500);
+                ->pause(500)
+                ->waitFor('[role="timer"]', 10);
 
             $timeBefore = $browser->text('[role="timer"]');
 
