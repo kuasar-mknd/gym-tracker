@@ -39,6 +39,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->loginAs($user->id)
                 ->{$sizeMacro}()
                 ->visit("/workouts/{$workout->id}")
+                ->disableAnimations()
                 ->waitFor('@main-content', 30);
 
             // 1. Add exercise

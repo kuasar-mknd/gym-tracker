@@ -28,6 +28,7 @@ class WorkoutSyncRaceTest extends DuskTestCase
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
+            ->disableAnimations()
             ->waitFor('@weight-input-0-0', 15)
             ->script("document.querySelector('[dusk=\"weight-input-0-0\"]').scrollIntoView();");
 

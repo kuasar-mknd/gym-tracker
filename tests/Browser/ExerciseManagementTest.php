@@ -20,6 +20,7 @@ class ExerciseManagementTest extends DuskTestCase
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit('/exercises')
+            ->disableAnimations()
             ->waitFor('@main-content', 30)
             ->assertPathIs('/exercises');
 

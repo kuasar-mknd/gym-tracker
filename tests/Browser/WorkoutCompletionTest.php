@@ -45,6 +45,7 @@ class WorkoutCompletionTest extends DuskTestCase
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit('/workouts/'.$workout->id)
+            ->disableAnimations()
             ->waitFor('@main-content', 30)
             ->assertPathIs('/workouts/'.$workout->id)
             ->assertNoConsoleExceptions()

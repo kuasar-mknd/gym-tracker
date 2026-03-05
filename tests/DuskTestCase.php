@@ -24,6 +24,16 @@ abstract class DuskTestCase extends BaseTestCase
 
         Browser::macro('resizeToIphoneMax', fn (): object => $this->resize(430, 932));
 
+        Browser::macro('disableAnimations', function (): object {
+            /** @var Browser $this */
+            return $this->script("
+                const style = document.createElement('style');
+                style.type = 'text/css';
+                style.innerHTML = '* { transition: none !important; animation: none !important; scroll-behavior: auto !important; }';
+                document.head.appendChild(style);
+            ");
+        });
+
         Browser::macro('assertNoConsoleExceptions', function (): object {
             $logs = $this->driver->manage()->getLog('browser');
             $failures = collect($logs)->filter(

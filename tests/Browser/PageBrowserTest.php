@@ -50,6 +50,7 @@ class PageBrowserTest extends DuskTestCase
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit('/dashboard')
+            ->disableAnimations()
             ->waitFor('@main-content', 30)
             ->assertPathIs('/dashboard');
 

@@ -35,6 +35,7 @@ class RestTimerTest extends DuskTestCase
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
+            ->disableAnimations()
             ->waitFor('@complete-set-0-0', 15);
 
         // 1. On vérifie que le timer n'est pas là au départ
@@ -96,6 +97,7 @@ class RestTimerTest extends DuskTestCase
             $browser->loginAs($user->id)
                 ->resizeToIphoneMini()
                 ->visit("/workouts/{$workout->id}")
+                ->disableAnimations()
                 ->waitFor('@complete-set-0-0', 15)
                 ->click('@complete-set-0-0')
                 ->waitFor('@rest-timer', 10);
