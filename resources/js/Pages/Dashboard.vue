@@ -100,6 +100,7 @@ const colorForWorkout = (index) => {
                 <button
                     @click="startWorkout"
                     :disabled="form.processing"
+                    id="start-workout-button"
                     dusk="start-workout-button"
                     class="hover:shadow-glow-orange/70 group shadow-glow-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 active:scale-95"
                 >
