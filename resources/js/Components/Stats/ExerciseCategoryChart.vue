@@ -1,9 +1,7 @@
 <script setup>
+import '@/chartSetup'
 import { Doughnut } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { computed } from 'vue'
-
-ChartJS.register(Title, Tooltip, Legend, ArcElement)
 
 const props = defineProps({
     exercises: {
