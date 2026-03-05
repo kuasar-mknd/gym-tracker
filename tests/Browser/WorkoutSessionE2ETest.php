@@ -90,23 +90,26 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             // Wait for rest timer to appear and skip it
             $browser->waitFor('[dusk="skip-rest-timer"]', 15)
-                ->pause(1000)
-                ->script("document.querySelector('[dusk=\"skip-rest-timer\"]').click();")
                 ->pause(1000);
+
+            $browser->script("document.querySelector('[dusk=\"skip-rest-timer\"]').click();");
+
+            $browser->pause(1000);
 
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
                 ->pause(1000)
-                ->script("document.getElementById('finish-workout-mobile').scrollIntoView();")
-                ->script("document.getElementById('finish-workout-mobile').click();");
+                ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
+
+            $browser->script("document.getElementById('finish-workout-mobile').click();");
 
             // Wait for modal and confirm button
             $browser->waitFor('@finish-workout-modal-title', 15)
                 ->waitFor('@confirm-finish-button', 15)
-                ->pause(2000)
-                ->script("document.querySelector('[dusk=\"confirm-finish-button\"]').click();");
+                ->pause(2000);
 
-            // 7. Verify
+            $browser->script("document.querySelector('[dusk=\"confirm-finish-button\"]').click();");
+
             $browser->waitForLocation('/dashboard', 120)
                 ->waitFor('@start-workout-button', 60)
                 ->assertSee('BON RETOUR')
