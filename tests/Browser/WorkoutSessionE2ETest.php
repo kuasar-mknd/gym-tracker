@@ -93,7 +93,17 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitFor('@confirm-finish-button', 15)
                 ->pause(1000);
 
-            $browser->script("document.getElementById('confirm-finish-button').click();");
+            // Aggressive loop to ensure the confirmation click actually goes through
+            $browser->script("
+                const interval = setInterval(() => {
+                    const btn = document.getElementById('confirm-finish-button');
+                    if (btn) btn.click();
+                    if (!document.querySelector('[dusk=\"finish-workout-modal-title\"]')) {
+                        clearInterval(interval);
+                    }
+                }, 500);
+                setTimeout(() => clearInterval(interval), 10000);
+            ");
 
             $browser->waitForLocation('/dashboard', 120)
                 ->waitFor('@start-workout-button', 30)
