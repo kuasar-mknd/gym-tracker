@@ -48,13 +48,9 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             $browser->waitFor('input[placeholder="Rechercher..."]', 15)
                 ->type('input[placeholder="Rechercher..."]', $exercises[0]->name)
-                ->pause(1500);
+                ->waitFor('@select-exercise-'.$exercises[0]->id, 20);
 
-            $browser->script("
-                const items = document.querySelectorAll('[dusk^=\"select-exercise-\"]');
-                const target = Array.from(items).find(i => i.textContent.includes('".$exercises[0]->name."'));
-                if (target) target.click();
-            ");
+            $browser->script("document.querySelector('[dusk=\"select-exercise-".$exercises[0]->id."\"]').click();");
 
             // Wait for card
             $browser->waitFor('@exercise-card-0', 30);
