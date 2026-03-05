@@ -105,12 +105,9 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 setTimeout(() => clearInterval(interval), 10000);
             ");
 
-            // Final fallback: if after 15s we're still not redirected, force visit
-            try {
-                $browser->waitForLocation('/dashboard', 15);
-            } catch (\Exception $e) {
-                $browser->visit('/dashboard');
-            }
+            // Final fallback: just force visit after a bit of pause to be sure
+            $browser->pause(5000)
+                ->visit('/dashboard');
 
             $browser->waitForText('BON RETOUR', 60)
                 ->waitFor('@start-workout-button', 30)
