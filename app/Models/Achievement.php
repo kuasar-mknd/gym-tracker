@@ -38,14 +38,19 @@ class Achievement extends Model
 
     /**
      * Centralized method to get all achievements with caching.
+     * Caching is disabled in testing to avoid stale data during database truncation.
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, Achievement>
      */
     public static function getCachedAll(): \Illuminate\Database\Eloquent\Collection
     {
+        if (app()->environment('testing')) {
+            return self::all();
+        }
+
         return \Illuminate\Support\Facades\Cache::rememberForever(
             'achievements_all',
-            fn () => self::all()
+            fn (): \Illuminate\Database\Eloquent\Collection => self::all()
         );
     }
 
@@ -71,7 +76,11 @@ class Achievement extends Model
     {
         parent::booted();
 
-        static::saved(fn () => \Illuminate\Support\Facades\Cache::forget('achievements_all'));
-        static::deleted(fn () => \Illuminate\Support\Facades\Cache::forget('achievements_all'));
+        static::saved(function (): void {
+            \Illuminate\Support\Facades\Cache::forget('achievements_all');
+        });
+        static::deleted(function (): void {
+            \Illuminate\Support\Facades\Cache::forget('achievements_all');
+        });
     }
 }
