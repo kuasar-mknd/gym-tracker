@@ -193,6 +193,10 @@ jobs:
                   # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
+                  # Override variables explicitly that might be present in phpunit.dusk.xml to force them to use local environment
+                  sed -i '/<env name=\"DB_/d' phpunit.dusk.xml
+                  sed -i 's|http://laravel.test|http://127.0.0.1:8000|g' phpunit.dusk.xml
+
                   # Run dusk
                   TELESCOPE_ENABLED=false DB_CONNECTION=sqlite DB_DATABASE=database/dusk.sqlite APP_ENV=testing php artisan dusk
 

@@ -1,10 +1,8 @@
 <script setup>
+import '@/chartSetup'
 import { computed } from 'vue'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const props = defineProps({
     workouts: {
