@@ -19,7 +19,8 @@ final class AchievementService
     public function syncAchievements(User $user): void
     {
         $unlockedIds = $user->achievements()->pluck('achievements.id')->toArray();
-        $locked = Achievement::whereNotIn('id', $unlockedIds)->get();
+        $locked = Achievement::getCachedAll()
+            ->filter(fn (Achievement $achievement): bool => ! in_array($achievement->id, $unlockedIds, true));
 
         if ($locked->isEmpty()) {
             return;

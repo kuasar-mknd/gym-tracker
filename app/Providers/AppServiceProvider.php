@@ -7,7 +7,6 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-use App\Services\AchievementService;
 use App\Services\GoalService;
 use App\Services\PersonalRecordService;
 use App\Services\StreakService;
@@ -70,8 +69,8 @@ final class AppServiceProvider extends ServiceProvider
                 app(PersonalRecordService::class)->syncSetPRs($set, $user);
             }
 
-            app(AchievementService::class)->syncAchievements($user);
-            app(GoalService::class)->syncGoals($user);
+            \App\Jobs\SyncUserAchievements::dispatch($user);
+            \App\Jobs\SyncUserGoals::dispatch($user);
         });
     }
 
@@ -81,8 +80,8 @@ final class AppServiceProvider extends ServiceProvider
             // Streak is only updated when a workout is "finished" or has a date
             app(StreakService::class)->updateStreak($workout->user, $workout);
 
-            app(AchievementService::class)->syncAchievements($workout->user);
-            app(GoalService::class)->syncGoals($workout->user);
+            \App\Jobs\SyncUserAchievements::dispatch($workout->user);
+            \App\Jobs\SyncUserGoals::dispatch($workout->user);
         });
     }
 
