@@ -9,8 +9,9 @@ defineProps({
 
 <template>
     <button
+        v-press
         :type="type"
-        class="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold tracking-widest text-white uppercase backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-white/20 focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-25"
+        class="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold tracking-widest text-white uppercase backdrop-blur-md transition-all duration-300 hover:scale-105 hover:bg-white/20 focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent focus:outline-none disabled:cursor-not-allowed disabled:opacity-25"
     >
         <slot />
     </button>

@@ -32,7 +32,7 @@ export const vPress = {
         }
 
         const handlePressEnd = () => {
-            el.style.transform = 'scale(1)'
+            el.style.transform = ''
         }
 
         // Touch events (mobile)

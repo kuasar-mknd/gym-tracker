@@ -1,3 +1,7 @@
 ## 2024-03-02 - Empty State Call to Actions & Async Buttons
 **Learning:** Found an empty state ("Aucune séance pour l'instant") that left users at a dead-end on the primary Dashboard. Additionally, a large call-to-action card executed an async form post without any visual feedback (no spinner). In Inertia/Vue apps, disabling the button isn't enough; the user needs clear visual feedback that their action is processing, especially for major actions like creating a new Workout.
 **Action:** Always provide an actionable CTA within Empty States to prevent "dead ends". Also, always ensure primary action buttons not only disable themselves but also show an explicit loading indicator (like `animate-spin` on an icon) when `form.processing` is true.
+
+## 2024-05-30 - Standardizing Press Interactions
+**Learning:** Mixing JavaScript-based inline transform styles (e.g., in a custom `v-press` directive) with CSS pseudo-classes like Tailwind's `hover:scale-105` causes interaction bugs if the JS explicitly resets the transform to `scale(1)` on pointer up. The inline style overrides the CSS class, preventing the hover state from reapplying when the user releases a click while still hovering.
+**Action:** When creating JS interaction directives, always reset transform properties to an empty string `''` rather than explicitly defining a base state like `scale(1)` so that CSS rules (like hover states) can immediately take over again. Also, always ensure interaction directives are registered synchronously in the main entry file if they affect initial user inputs.
