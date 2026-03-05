@@ -10,7 +10,6 @@ use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Illuminate\Support\Collection;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
-use PHPUnit\Framework\Attributes\BeforeClass;
 
 abstract class DuskTestCase extends BaseTestCase
 {
@@ -37,10 +36,11 @@ abstract class DuskTestCase extends BaseTestCase
         });
 
         Browser::macro('assertNoConsoleExceptions', function (): object {
+            /** @var Browser $this */
             $logs = $this->driver->manage()->getLog('browser');
             $failures = collect($logs)->filter(
-                fn ($log): bool => $log['level'] === 'SEVERE' &&
-                    ! str_contains((string) $log['message'], 'Failed to send logs')
+                fn ($log): bool => ($log['level'] ?? '') === 'SEVERE' &&
+                    ! str_contains((string) ($log['message'] ?? ''), 'Failed to send logs')
             );
 
             \PHPUnit\Framework\Assert::assertTrue(
