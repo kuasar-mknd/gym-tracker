@@ -20,7 +20,7 @@ abstract class DuskTestCase extends BaseTestCase
 
         Browser::macro('resizeToIphoneMini', fn (): object => $this->resize(375, 812));
 
-        Browser::macro('resizeToIphone15', fn (): object => $this->resize(375, 812));
+        Browser::macro('resizeToIphone15', fn (): object => $this->resize(390, 844));
 
         Browser::macro('resizeToIphoneMax', fn (): object => $this->resize(430, 932));
 
