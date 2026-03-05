@@ -26,12 +26,14 @@ abstract class DuskTestCase extends BaseTestCase
 
         Browser::macro('disableAnimations', function (): object {
             /** @var Browser $this */
-            return $this->script("
+            $this->script("
                 const style = document.createElement('style');
                 style.type = 'text/css';
                 style.innerHTML = '* { transition: none !important; animation: none !important; scroll-behavior: auto !important; }';
                 document.head.appendChild(style);
             ");
+
+            return $this;
         });
 
         Browser::macro('assertNoConsoleExceptions', function (): object {
