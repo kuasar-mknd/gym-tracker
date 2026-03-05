@@ -28,8 +28,8 @@ class WorkoutTemplateSetStoreRequest extends FormRequest
             'workout_template_line_id' => [
                 'required',
                 'integer',
-                Rule::exists('workout_template_lines', 'id')->where(function ($query) {
-                    $query->whereIn('workout_template_id', function ($subQuery) {
+                Rule::exists('workout_template_lines', 'id')->where(function ($query): void {
+                    $query->whereIn('workout_template_id', function ($subQuery): void {
                         $subQuery->select('id')
                             ->from('workout_templates')
                             ->where('user_id', $this->user()?->getAuthIdentifier());
