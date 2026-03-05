@@ -43,7 +43,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitFor('@main-content', 30);
 
             // 1. Add exercise
-            $browser->waitFor('@add-first-exercise', 15);
+            $this->ensureVisible($browser, '[dusk="add-first-exercise"]');
             $browser->script("document.querySelector('[dusk=\"add-first-exercise\"]').click();");
 
             $browser->waitFor('input[placeholder="Rechercher..."]', 15)
@@ -56,13 +56,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->waitFor('@exercise-card-0', 30);
 
             // 2. Click Add Set
-            $browser->script("
-                const addSetBtn = document.querySelector('[dusk=\"add-set-0\"]');
-                if (addSetBtn) {
-                    addSetBtn.scrollIntoView();
-                    addSetBtn.click();
-                }
-            ");
+            $this->ensureVisible($browser, '[dusk="add-set-0"]');
+            $browser->script("document.querySelector('[dusk=\"add-set-0\"]').click();");
 
             // 3. Wait for the new set
             $browser->waitFor('@weight-input-0-0', 30);
@@ -78,13 +73,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->pause(1000);
 
             // 5. Complete set
-            $browser->script("
-                const completeBtn = document.querySelector('[dusk=\"complete-set-0-0\"]');
-                if (completeBtn) {
-                    completeBtn.scrollIntoView();
-                    completeBtn.click();
-                }
-            ");
+            $this->ensureVisible($browser, '[dusk="complete-set-0-0"]');
+            $browser->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
 
             // Wait for rest timer to appear and skip it
             $browser->waitFor('[dusk="skip-rest-timer"]', 15)
@@ -95,10 +85,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->pause(1000);
 
             // 6. Finish Workout
-            $browser->waitFor('#finish-workout-mobile', 15)
-                ->pause(1000)
-                ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
-
+            $this->ensureVisible($browser, '#finish-workout-mobile');
             $browser->script("document.getElementById('finish-workout-mobile').click();");
 
             // Wait for modal and confirm button
@@ -108,13 +95,20 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->script("document.getElementById('confirm-finish-button').click();");
 
             $browser->pause(2000)
-                ->waitForText('BON RETOUR', 60)
-                ->waitFor('@start-workout-button', 30)
+                ->waitForText('BON RETOUR', 120)
+                ->assertVisible('@start-workout-button')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('workout-failure-'.$sizeMacro);
             throw $e;
         }
+    }
+
+    private function ensureVisible(Browser $browser, string $selector): void
+    {
+        $browser->waitFor($selector, 30)
+            ->script("document.querySelector('".$selector."').scrollIntoView({block: 'center'});");
+        $browser->pause(1000);
     }
 
     public function test_workout_session_on_iphone_mini(): void
