@@ -7,32 +7,32 @@ use App\Models\Workout;
 use Inertia\Testing\AssertableInertia;
 use Symfony\Component\HttpFoundation\Response;
 
-it('renders index correctly for authenticated user', function () {
+it('renders index correctly for authenticated user', function (): void {
     $user = User::factory()->create();
     Workout::factory(3)->create(['user_id' => $user->id]);
 
     $response = $this->actingAs($user)->get(route('workouts.index'));
 
     $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
+    $response->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
         ->component('Workouts/Index')
     );
 });
 
-it('renders show correctly for workout owner', function () {
+it('renders show correctly for workout owner', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
 
     $response = $this->actingAs($user)->get(route('workouts.show', $workout));
 
     $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
+    $response->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
         ->component('Workouts/Show')
         ->has('workout')
     );
 });
 
-it('returns forbidden on show for unauthorized user', function () {
+it('returns forbidden on show for unauthorized user', function (): void {
     $owner = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $owner->id]);
 
@@ -43,7 +43,7 @@ it('returns forbidden on show for unauthorized user', function () {
     $response->assertStatus(Response::HTTP_FORBIDDEN);
 });
 
-it('stores a new workout and redirects', function () {
+it('stores a new workout and redirects', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('workouts.store'));
@@ -54,7 +54,7 @@ it('stores a new workout and redirects', function () {
     $response->assertRedirect(route('workouts.show', $workout));
 });
 
-it('updates workout and redirects back', function () {
+it('updates workout and redirects back', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id, 'name' => 'Old Name']);
 
@@ -69,7 +69,7 @@ it('updates workout and redirects back', function () {
     $response->assertRedirect(route('workouts.show', $workout));
 });
 
-it('redirects to dashboard when finished during update', function () {
+it('redirects to dashboard when finished during update', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id, 'name' => 'Old Name']);
 
@@ -83,7 +83,7 @@ it('redirects to dashboard when finished during update', function () {
     $response->assertSessionHas('success', 'Séance terminée !');
 });
 
-it('returns validation error on update', function () {
+it('returns validation error on update', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
 
@@ -94,7 +94,7 @@ it('returns validation error on update', function () {
     $response->assertSessionHasErrors('name');
 });
 
-it('returns forbidden on update for unauthorized user', function () {
+it('returns forbidden on update for unauthorized user', function (): void {
     $owner = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $owner->id]);
 
@@ -107,7 +107,7 @@ it('returns forbidden on update for unauthorized user', function () {
     $response->assertStatus(Response::HTTP_FORBIDDEN);
 });
 
-it('destroys workout and redirects', function () {
+it('destroys workout and redirects', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
 
@@ -117,7 +117,7 @@ it('destroys workout and redirects', function () {
     $response->assertRedirect(route('workouts.index'));
 });
 
-it('returns forbidden on destroy for unauthorized user', function () {
+it('returns forbidden on destroy for unauthorized user', function (): void {
     $owner = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $owner->id]);
 
