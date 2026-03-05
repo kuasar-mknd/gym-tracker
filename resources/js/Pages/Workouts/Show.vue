@@ -486,7 +486,12 @@ const filteredExercises = computed(() => {
                     <GlassButton variant="solid" @click="saveAsTemplate" :loading="savingTemplate" class="w-full"
                         >Modèle</GlassButton
                     >
-                    <GlassButton variant="primary" @click="finishWorkout" class="w-full" id="finish-workout-mobile"
+                    <GlassButton
+                        variant="primary"
+                        @click="finishWorkout"
+                        class="w-full"
+                        id="finish-workout-mobile"
+                        dusk="finish-workout-mobile"
                         >Terminer</GlassButton
                     >
                 </div>

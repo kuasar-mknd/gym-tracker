@@ -85,8 +85,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->pause(1000);
 
             // 6. Finish Workout
-            $this->ensureVisible($browser, '#finish-workout-mobile');
-            $browser->script("document.getElementById('finish-workout-mobile').click();");
+            $this->ensureVisible($browser, '[dusk="finish-workout-mobile"]');
+            $browser->script("document.querySelector('[dusk=\"finish-workout-mobile\"]').click();");
 
             // Wait for modal and confirm button
             $browser->waitFor('@finish-workout-modal-title', 15)
