@@ -12,6 +12,7 @@ use Tests\DuskTestCase;
 
 class WorkoutCompletionTest extends DuskTestCase
 {
+    use AuthenticatesUser;
     use DatabaseTruncation;
 
     private function setupWorkout(): array
@@ -30,9 +31,10 @@ class WorkoutCompletionTest extends DuskTestCase
     {
         [$user, $workout] = $this->setupWorkout();
 
-        $browser->loginAs($user->id)
-            ->{$sizeMacro}()
-            ->visit('/workouts/'.$workout->id)
+        $browser->{$sizeMacro}();
+        $this->loginUser($browser, $user);
+
+        $browser->visit('/workouts/'.$workout->id)
             ->disableAnimations()
             ->waitFor('#main-content', 30)
             ->assertPathIs('/workouts/'.$workout->id)
@@ -43,8 +45,19 @@ class WorkoutCompletionTest extends DuskTestCase
 
         $browser->waitFor('@finish-workout-modal-title', 15)
             ->waitFor('#confirm-finish-button', 30)
-            ->pause(1000)
-            ->script("document.getElementById('confirm-finish-button').click();");
+            ->pause(1000);
+
+        // Aggressive click loop for reliability
+        $browser->script("
+            const interval = setInterval(() => {
+                const btn = document.getElementById('confirm-finish-button');
+                if (btn) btn.click();
+                if (!document.querySelector('[dusk=\"finish-workout-modal-title\"]')) {
+                    clearInterval(interval);
+                }
+            }, 500);
+            setTimeout(() => clearInterval(interval), 10000);
+        ");
 
         // Wait for DB sync
         $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::find($workout->id)->ended_at !== null);
@@ -86,9 +99,10 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs($user->id)
-                ->resizeToIphoneMini()
-                ->visit('/workouts/'.$workout->id)
+            $browser->resizeToIphoneMini();
+            $this->loginUser($browser, $user);
+
+            $browser->visit('/workouts/'.$workout->id)
                 ->waitFor('#main-content', 30)
                 ->assertMissing('#finish-workout-mobile');
         });

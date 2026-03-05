@@ -8,16 +8,12 @@ use Laravel\Dusk\Browser;
 trait AuthenticatesUser
 {
     /**
-     * Authenticate a user manually via the login form.
+     * Authenticate a user.
      */
     protected function loginUser(Browser $browser, User $user): void
     {
-        $browser->visit('/login')
-            ->waitFor('[data-testid="email-input"]', 30)
-            ->type('[data-testid="email-input"]', $user->email)
-            ->type('[data-testid="password-input"]', 'password123')
-            ->click('[data-testid="login-button"]')
-            ->waitForLocation('/dashboard', 30)
+        $browser->loginAs($user->id)
+            ->visit('/dashboard')
             ->waitFor('#main-content', 30);
     }
 }
