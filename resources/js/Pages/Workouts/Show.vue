@@ -540,7 +540,10 @@ const filteredExercises = computed(() => {
 
         <Modal :show="showFinishModal" @close="showFinishModal = false" max-width="sm">
             <div class="p-6 text-center">
-                <h3 class="font-display text-text-main mb-6 text-xl font-black uppercase italic">
+                <h3
+                    class="font-display text-text-main mb-6 text-xl font-black uppercase italic"
+                    dusk="finish-workout-modal-title"
+                >
                     Terminer la séance ?
                 </h3>
                 <div class="flex gap-3">

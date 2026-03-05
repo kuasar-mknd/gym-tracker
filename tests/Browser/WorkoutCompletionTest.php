@@ -45,7 +45,7 @@ class WorkoutCompletionTest extends DuskTestCase
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit('/workouts/'.$workout->id)
-            ->waitFor('@main-content', 30)
+            ->waitForText('GymTracker', 30)
             ->assertPathIs('/workouts/'.$workout->id)
             ->assertNoConsoleExceptions()
             ->waitFor('#finish-workout-mobile', 30)

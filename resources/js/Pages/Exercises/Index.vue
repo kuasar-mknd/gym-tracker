@@ -15,6 +15,7 @@ import { ref, computed, defineAsyncComponent } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import Modal from '@/Components/Modal.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
@@ -311,48 +312,50 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Add Form Modal -->
-            <GlassCard v-if="showAddForm" class="animate-scale-in" variant="solid">
-                <h3 class="font-display text-text-main mb-5 text-xl font-black uppercase">Nouvel exercice</h3>
-                <form @submit.prevent="submit" class="space-y-4">
-                    <GlassInput
-                        v-model="form.name"
-                        label="Nom de l'exercice"
-                        placeholder="Ex: Développé couché"
-                        :error="form.errors.name"
-                    />
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Type</label>
-                            <select v-model="form.type" class="glass-input w-full">
-                                <option v-for="t in types" :key="t.value" :value="t.value">
-                                    {{ t.label }}
-                                </option>
-                            </select>
-                            <p v-if="form.errors.type" class="mt-2 text-sm font-medium text-red-600">
-                                {{ form.errors.type }}
-                            </p>
+            <Modal :show="showAddForm" @close="showAddForm = false" max-width="sm">
+                <div class="p-6">
+                    <h3 class="font-display text-text-main mb-5 text-xl font-black uppercase">Nouvel exercice</h3>
+                    <form @submit.prevent="submit" class="space-y-4">
+                        <GlassInput
+                            v-model="form.name"
+                            label="Nom de l'exercice"
+                            placeholder="Ex: Développé couché"
+                            :error="form.errors.name"
+                        />
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="font-display-label text-text-muted mb-2 block">Type</label>
+                                <select v-model="form.type" class="glass-input w-full">
+                                    <option v-for="t in types" :key="t.value" :value="t.value">
+                                        {{ t.label }}
+                                    </option>
+                                </select>
+                                <p v-if="form.errors.type" class="mt-2 text-sm font-medium text-red-600">
+                                    {{ form.errors.type }}
+                                </p>
+                            </div>
+                            <div>
+                                <label class="font-display-label text-text-muted mb-2 block">Catégorie</label>
+                                <select v-model="form.category" class="glass-input w-full">
+                                    <option value="">— Aucune —</option>
+                                    <option v-for="cat in categories" :key="cat" :value="cat">
+                                        {{ cat }}
+                                    </option>
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Catégorie</label>
-                            <select v-model="form.category" class="glass-input w-full">
-                                <option value="">— Aucune —</option>
-                                <option v-for="cat in categories" :key="cat" :value="cat">
-                                    {{ cat }}
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-                    <GlassButton
-                        type="submit"
-                        variant="primary"
-                        class="w-full"
-                        :loading="form.processing"
-                        data-testid="submit-exercise-button"
-                    >
-                        Créer l'exercice
-                    </GlassButton>
-                </form>
-            </GlassCard>
+                        <GlassButton
+                            type="submit"
+                            variant="primary"
+                            class="w-full"
+                            :loading="form.processing"
+                            data-testid="submit-exercise-button"
+                        >
+                            Créer l'exercice
+                        </GlassButton>
+                    </form>
+                </div>
+            </Modal>
 
             <!-- Error display -->
             <GlassCard v-if="$page.props.errors?.exercise" class="border-red-500 bg-red-50">
