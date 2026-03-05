@@ -44,10 +44,6 @@ class Achievement extends Model
      */
     public static function getCachedAll(): \Illuminate\Database\Eloquent\Collection
     {
-        if (app()->environment('testing')) {
-            return self::all();
-        }
-
         return \Illuminate\Support\Facades\Cache::rememberForever(
             'achievements_all',
             fn (): \Illuminate\Database\Eloquent\Collection => self::all()
