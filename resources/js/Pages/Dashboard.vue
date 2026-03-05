@@ -47,7 +47,7 @@ const colorForWorkout = (index) => {
     <Head title="Accueil" />
 
     <AuthenticatedLayout>
-        <div class="space-y-6" dusk="main-content">
+        <div class="space-y-6">
             <!-- Header with Avatar & Streak -->
             <header id="dashboard-header" class="animate-fade-in flex items-center justify-between py-4">
                 <div class="flex items-center gap-4">

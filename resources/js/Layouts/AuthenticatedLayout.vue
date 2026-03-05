@@ -198,7 +198,7 @@ const showingNavigationDropdown = ref(false)
 
         <!-- Page Content -->
         <main
-            dusk="main-content"
+            id="main-content"
             class="relative z-10 px-5 py-6 sm:px-6 lg:px-8"
             :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'sm:pb-main-safe pb-48']"
         >

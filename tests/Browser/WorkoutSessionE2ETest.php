@@ -20,7 +20,6 @@ class WorkoutSessionE2ETest extends DuskTestCase
         $user = User::factory()->create([
             'name' => 'John Doe',
             'email' => 'john'.time().random_int(0, 9999).'@example.com',
-            'password' => bcrypt('password123'),
             'email_verified_at' => now(),
         ]);
 
@@ -40,7 +39,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->{$sizeMacro}()
                 ->visit("/workouts/{$workout->id}")
                 ->disableAnimations()
-                ->waitFor('@main-content', 30);
+                ->waitFor('#main-content', 30);
 
             // 1. Add exercise
             $this->ensureVisible($browser, '[dusk="add-first-exercise"]');

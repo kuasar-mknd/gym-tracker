@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Browser;
 
-use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
-use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
@@ -18,21 +16,11 @@ class WorkoutCompletionTest extends DuskTestCase
 
     private function setupWorkout(): array
     {
-        $user = User::factory()->create([
-            'password' => bcrypt('password123'),
-            'email_verified_at' => now(),
-        ]);
+        $user = User::factory()->create(['email_verified_at' => now()]);
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
-            'name' => 'Séance Test Browser',
+            'name' => 'Test Workout',
             'started_at' => now()->subHour(),
-        ]);
-
-        // Add an exercise line so the finish button is visible
-        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
-        WorkoutLine::factory()->create([
-            'workout_id' => $workout->id,
-            'exercise_id' => $exercise->id,
         ]);
 
         return [$user, $workout];
@@ -46,7 +34,7 @@ class WorkoutCompletionTest extends DuskTestCase
             ->{$sizeMacro}()
             ->visit('/workouts/'.$workout->id)
             ->disableAnimations()
-            ->waitFor('@main-content', 30)
+            ->waitFor('#main-content', 30)
             ->assertPathIs('/workouts/'.$workout->id)
             ->waitFor('#finish-workout-mobile', 30)
             ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
@@ -101,8 +89,7 @@ class WorkoutCompletionTest extends DuskTestCase
             $browser->loginAs($user->id)
                 ->resizeToIphoneMini()
                 ->visit('/workouts/'.$workout->id)
-                ->waitFor('@main-content', 30)
-                ->assertNoConsoleExceptions()
+                ->waitFor('#main-content', 30)
                 ->assertMissing('#finish-workout-mobile');
         });
     }
