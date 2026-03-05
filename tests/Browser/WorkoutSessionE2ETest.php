@@ -125,3 +125,4 @@ class WorkoutSessionE2ETest extends DuskTestCase
         });
     }
 }
+// trigger new run
