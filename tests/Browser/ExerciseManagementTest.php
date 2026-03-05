@@ -15,7 +15,7 @@ class ExerciseManagementTest extends DuskTestCase
 
     private function performExerciseManagement(Browser $browser, string $sizeMacro): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['email_verified_at' => now()]);
 
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
@@ -40,9 +40,10 @@ class ExerciseManagementTest extends DuskTestCase
             ->assertSee(strtoupper($exerciseName));
 
         // 4. Edit the exercise
+        $browser->script("document.querySelector('[data-testid=\"exercise-card\"]').scrollIntoView();");
         $browser->click('[data-testid="exercise-card"]');
 
-        $browser->waitFor('[aria-label^="Modifier"]', 15)
+        $browser->waitForText('MODIFIER', 15)
             ->click('[aria-label^="Modifier"]');
 
         $updatedName = 'UPDATED EXERCISE '.time();
@@ -55,6 +56,7 @@ class ExerciseManagementTest extends DuskTestCase
         $browser->waitForText(strtoupper($updatedName), 15);
 
         // 6. Delete the exercise
+        $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').scrollIntoView();");
         $browser->waitFor('[data-testid="delete-exercise-button-mobile"]', 15)
             ->click('[data-testid="delete-exercise-button-mobile"]');
 

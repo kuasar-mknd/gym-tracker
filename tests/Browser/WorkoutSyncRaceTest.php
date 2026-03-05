@@ -19,7 +19,7 @@ class WorkoutSyncRaceTest extends DuskTestCase
 
     private function performSyncRace(Browser $browser, string $sizeMacro): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['email_verified_at' => now()]);
         $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
         $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
         $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
@@ -28,7 +28,8 @@ class WorkoutSyncRaceTest extends DuskTestCase
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit("/workouts/{$workout->id}")
-            ->waitFor('@weight-input-0-0', 15);
+            ->waitFor('@weight-input-0-0', 15)
+            ->script("document.querySelector('[dusk=\"weight-input-0-0\"]').scrollIntoView();");
 
         // 1. On focus l'input et on change la valeur (50 -> 99)
         $browser->click('@weight-input-0-0')
