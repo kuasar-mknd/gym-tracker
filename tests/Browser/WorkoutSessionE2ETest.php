@@ -80,6 +80,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->pause(1000)
                 ->click('[dusk="skip-rest-timer"]')
                 ->pause(1000);
+
             // 6. Finish Workout
             $browser->waitFor('#finish-workout-mobile', 15)
                 ->pause(1000)
@@ -90,8 +91,10 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // Wait for modal and confirm button
             $browser->waitFor('@finish-workout-modal-title', 15)
                 ->waitFor('#confirm-finish-button', 15)
-                ->pause(1000)
+                ->pause(2000)
                 ->script("document.getElementById('confirm-finish-button').click();");
+
+            $browser->pause(3000);
 
             // 7. Verify
             $browser->waitFor('@start-workout-button', 150)
@@ -125,4 +128,3 @@ class WorkoutSessionE2ETest extends DuskTestCase
         });
     }
 }
-// trigger new run

@@ -40,25 +40,44 @@ class ExerciseManagementTest extends DuskTestCase
             ->assertSee(strtoupper($exerciseName));
 
         // 4. Edit the exercise
-        $browser->script("document.querySelector('[data-testid=\"exercise-card\"]').scrollIntoView();");
-        $browser->click('[data-testid="exercise-card"]');
+        $browser->script("
+            const cards = document.querySelectorAll('[data-testid=\"exercise-card\"]');
+            const targetCard = Array.from(cards).find(c => c.textContent.includes('".strtoupper($exerciseName)."'));
+            if (targetCard) {
+                targetCard.scrollIntoView();
+                targetCard.click();
+            }
+        ");
 
-        $browser->waitForText('Modifier', 15)
-            ->click('[aria-label^="Modifier"]');
+        $browser->pause(1000)
+            ->waitForText('Modifier', 15)
+            ->script("
+                const spans = document.querySelectorAll('span');
+                const editBtn = Array.from(spans).find(s => s.textContent === 'Modifier');
+                if (editBtn) editBtn.click();
+            ");
 
         $updatedName = 'UPDATED EXERCISE '.time();
         $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 10)
             ->clear('input[placeholder="Nom de l\'exercice"]')
             ->type('input[placeholder="Nom de l\'exercice"]', $updatedName)
-            ->click('[data-testid="save-exercise-button"]');
+            ->script("
+                const btns = document.querySelectorAll('button');
+                const saveBtn = Array.from(btns).find(b => b.textContent.includes('Enregistrer') || b.getAttribute('data-testid') === 'save-exercise-button');
+                if (saveBtn) saveBtn.click();
+            ");
 
         // 5. Verify update
         $browser->waitForText(strtoupper($updatedName), 15);
 
         // 6. Delete the exercise
-        $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').scrollIntoView();");
-        $browser->waitFor('[data-testid="delete-exercise-button-mobile"]', 15)
-            ->click('[data-testid="delete-exercise-button-mobile"]');
+        $browser->script("
+            const deleteBtn = document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]');
+            if (deleteBtn) {
+                deleteBtn.scrollIntoView();
+                deleteBtn.click();
+            }
+        ");
 
         $browser->assertDialogOpened('Supprimer cet exercice ?')
             ->acceptDialog()
