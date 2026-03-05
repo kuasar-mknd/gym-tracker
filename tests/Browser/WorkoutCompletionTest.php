@@ -42,13 +42,7 @@ class WorkoutCompletionTest extends DuskTestCase
     {
         [$user, $workout] = $this->setupWorkout();
 
-        $browser->visit('/login')
-            ->screenshot('debug-at-login-page')
-            ->waitFor('input[name="email"]', 30)
-            ->type('input[name="email"]', $user->email)
-            ->type('input[name="password"]', 'password123')
-            ->click('[data-testid="login-button"]')
-            ->waitForLocation('/dashboard', 30)
+        $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit('/workouts/'.$workout->id)
             ->waitFor('@main-content', 30)
@@ -64,8 +58,8 @@ class WorkoutCompletionTest extends DuskTestCase
             ->pause(1000)
             ->script("document.getElementById('confirm-finish-button').click();");
 
-        $browser->waitFor('@dashboard-welcome', 60)
-            ->assertSee('BON RETOUR');
+        $browser->waitForText('BON RETOUR', 60)
+            ->assertVisible('@start-workout-button');
     }
 
     public function test_user_can_finish_workout_on_iphone_mini(): void
@@ -100,12 +94,7 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->visit('/login')
-                ->waitFor('input[name="email"]', 30)
-                ->type('input[name="email"]', $user->email)
-                ->type('input[name="password"]', 'password')
-                ->click('[data-testid="login-button"]')
-                ->waitForLocation('/dashboard', 30)
+            $browser->loginAs($user->id)
                 ->resizeToIphoneMini()
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('@main-content', 30)
