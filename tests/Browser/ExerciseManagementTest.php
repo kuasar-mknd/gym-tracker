@@ -42,18 +42,20 @@ class ExerciseManagementTest extends DuskTestCase
         // 4. Edit the exercise
         $browser->script("
             const cards = document.querySelectorAll('[data-testid=\"exercise-card\"]');
-            const targetCard = Array.from(cards).find(c => c.textContent.includes('".strtoupper($exerciseName)."'));
+            const targetCard = Array.from(cards).find(c => {
+                const text = c.textContent.trim().toUpperCase();
+                return text.includes('".strtoupper($exerciseName)."');
+            });
             if (targetCard) {
                 targetCard.scrollIntoView();
                 targetCard.click();
             }
         ");
 
-        $browser->pause(1000)
-            ->waitForText('Modifier', 15)
+        $browser->pause(1500)
             ->script("
                 const spans = document.querySelectorAll('span');
-                const editBtn = Array.from(spans).find(s => s.textContent === 'Modifier');
+                const editBtn = Array.from(spans).find(s => s.textContent.trim().toUpperCase() === 'MODIFIER');
                 if (editBtn) editBtn.click();
             ");
 
@@ -63,7 +65,10 @@ class ExerciseManagementTest extends DuskTestCase
             ->type('input[placeholder="Nom de l\'exercice"]', $updatedName)
             ->script("
                 const btns = document.querySelectorAll('button');
-                const saveBtn = Array.from(btns).find(b => b.textContent.includes('Enregistrer') || b.getAttribute('data-testid') === 'save-exercise-button');
+                const saveBtn = Array.from(btns).find(b => {
+                    const text = b.textContent.trim().toUpperCase();
+                    return text.includes('ENREGISTRER') || b.getAttribute('data-testid') === 'save-exercise-button';
+                });
                 if (saveBtn) saveBtn.click();
             ");
 

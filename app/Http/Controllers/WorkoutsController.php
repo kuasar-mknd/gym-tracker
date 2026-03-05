@@ -112,6 +112,10 @@ class WorkoutsController extends Controller
         $data = $request->validated();
         $updateWorkout->execute($workout, $data);
 
+        if ($request->boolean('is_finished')) {
+            return redirect()->route('dashboard');
+        }
+
         return back();
     }
 
