@@ -101,29 +101,16 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->pause(1000)
                 ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
 
-            $browser->script("document.getElementById('finish-workout-mobile').click();");
+            $browser->press('Terminer');
 
             // Wait for modal and confirm button
             $browser->waitFor('@finish-workout-modal-title', 15)
                 ->waitFor('@confirm-finish-button', 15)
-                ->pause(2000);
+                ->pause(2000)
+                ->press('Confirmer');
 
-            // Aggressive retry loop for the final click to defeat flakiness
-            $browser->script("
-                const clickFinish = () => {
-                    const btn = document.querySelector('[dusk=\"confirm-finish-button\"]');
-                    if (btn) btn.click();
-                };
-                const interval = setInterval(() => {
-                    clickFinish();
-                    if (!document.querySelector('[dusk=\"finish-workout-modal-title\"]')) {
-                        clearInterval(interval);
-                    }
-                }, 500);
-                setTimeout(() => clearInterval(interval), 10000);
-            ");
-
-            $browser->waitForText('BON RETOUR', 60)
+            $browser->waitForLocation('/dashboard', 120)
+                ->waitForText('BON RETOUR', 60)
                 ->assertVisible('@start-workout-button')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
