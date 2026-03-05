@@ -37,6 +37,19 @@ class Achievement extends Model
     ];
 
     /**
+     * Centralized method to get all achievements with caching.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Achievement>
+     */
+    public static function getCachedAll(): \Illuminate\Database\Eloquent\Collection
+    {
+        return \Illuminate\Support\Facades\Cache::rememberForever(
+            'achievements_all',
+            fn () => self::all()
+        );
+    }
+
+    /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\App\Models\User, $this, \Illuminate\Database\Eloquent\Relations\Pivot, 'pivot'>
      */
     public function users(): BelongsToMany
@@ -52,5 +65,13 @@ class Achievement extends Model
             ->logOnly(['slug', 'name', 'description', 'type', 'category', 'threshold'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::saved(fn () => \Illuminate\Support\Facades\Cache::forget('achievements_all'));
+        static::deleted(fn () => \Illuminate\Support\Facades\Cache::forget('achievements_all'));
     }
 }
