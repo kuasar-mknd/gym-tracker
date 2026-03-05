@@ -110,7 +110,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitFor('@confirm-finish-button', 15)
                 ->pause(2000);
 
-            $browser->script("document.querySelector('[dusk=\"confirm-finish-button\"]').click();");
+            $browser->script("document.getElementById('confirm-finish-button').click();");
 
             $browser->waitForText('BON RETOUR', 120)
                 ->assertVisible('@start-workout-button')
