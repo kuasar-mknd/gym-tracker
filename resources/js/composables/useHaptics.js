@@ -16,6 +16,7 @@ const patterns = {
     error: [100, 50, 100, 50, 100],
     warning: [30, 20, 30],
     timer: [200, 100, 200],
+    selection: [10],
 }
 
 /**
@@ -37,7 +38,7 @@ export function triggerHaptic(type = 'tap') {
     }
 
     try {
-        return navigator.vibrate(pattern)
+        return navigator.vibrate(patterns[type] || patterns.tap)
     } catch (error) {
         console.warn('Haptics ignored/failed:', error)
         return false

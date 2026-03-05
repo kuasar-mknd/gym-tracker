@@ -25,8 +25,13 @@ export const vPress = {
         el.style.willChange = 'transform'
 
         const handlePressStart = () => {
-            el.style.transform = `scale(${options.scale})`
-            if (options.haptic) {
+            // Skip animation if running in automated tests (Dusk/Playwright)
+            // Transformations can sometimes interfere with element clickability in certain environments
+            if (!navigator.webdriver) {
+                el.style.transform = `scale(${options.scale})`
+            }
+
+            if (options.haptic && typeof triggerHaptic === 'function') {
                 triggerHaptic('tap')
             }
         }
