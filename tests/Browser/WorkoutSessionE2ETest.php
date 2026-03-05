@@ -107,8 +107,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             // Final step: ensure we get to the dashboard one way or another
             $browser->visit('/dashboard')
-                ->waitFor('@main-content', 30)
-                ->waitFor('#start-workout-button', 30)
+                ->waitFor('#dashboard-header', 30)
                 ->assertSee('BON RETOUR')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {

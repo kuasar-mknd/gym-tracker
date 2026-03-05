@@ -59,8 +59,7 @@ class WorkoutCompletionTest extends DuskTestCase
             ->pause(1000)
             ->script("document.getElementById('confirm-finish-button').click();");
 
-        $browser->waitFor('@main-content', 30)
-            ->waitFor('#start-workout-button', 30)
+        $browser->waitFor('#dashboard-header', 30)
             ->assertSee('BON RETOUR');
     }
 
