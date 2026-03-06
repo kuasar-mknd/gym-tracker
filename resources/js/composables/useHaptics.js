@@ -23,7 +23,7 @@ const patterns = {
  * @returns {boolean}
  */
 export function isHapticsSupported() {
-    return 'vibrate' in navigator
+    return typeof navigator !== 'undefined' && 'vibrate' in navigator
 }
 
 /**

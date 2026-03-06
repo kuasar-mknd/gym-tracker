@@ -32,7 +32,15 @@ export const vPress = {
         el.style.transition = `${originalTransition ? originalTransition + ', ' : ''}transform ${options.duration}ms ease-out`
         el.style.willChange = 'transform'
 
-        const handlePressStart = () => {
+        let isTouched = false
+
+        const handlePressStart = (e) => {
+            if (el.disabled || el.classList.contains('disabled')) return
+
+            // Prevent double triggering on mobile
+            if (e.type === 'mousedown' && isTouched) return
+            if (e.type === 'touchstart') isTouched = true
+
             el.style.transform = `scale(${options.scale})`
             if (options.haptic) {
                 triggerHaptic(typeof options.haptic === 'string' ? options.haptic : 'tap')
@@ -41,6 +49,12 @@ export const vPress = {
 
         const handlePressEnd = () => {
             el.style.transform = ''
+            // Reset touched flag after a short delay to allow mouse events to be ignored
+            if (isTouched) {
+                setTimeout(() => {
+                    isTouched = false
+                }, 500)
+            }
         }
 
         // Touch events (mobile)
