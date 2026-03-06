@@ -93,7 +93,11 @@ final class AppServiceProvider extends ServiceProvider
 
     private function registerMeasurementEvents(): void
     {
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => SyncUserGoals::dispatch($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::saved(function (BodyMeasurement $bm): void {
+            SyncUserGoals::dispatch($bm->user);
+        });
+        BodyMeasurement::deleted(function (BodyMeasurement $bm): void {
+            SyncUserGoals::dispatch($bm->user);
+        });
     }
 }
