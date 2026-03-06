@@ -7,6 +7,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -35,6 +37,32 @@ class Achievement extends Model
         'threshold',
         'category',
     ];
+
+    /**
+     * ⚡ Bolt Optimization: Cache all achievements to prevent N+1 queries.
+     * Impact: Reduces database queries from O(N) to O(1) on high-traffic pages like Dashboard and Workouts.
+     *
+     * @return Collection<int, Achievement>
+     */
+    public static function getCachedAll(): Collection
+    {
+        return Cache::rememberForever('achievements_all', function (): Collection {
+            return self::all();
+        });
+    }
+
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::saved(function (Achievement $achievement) {
+            Cache::forget('achievements_all');
+        });
+
+        static::deleted(function (Achievement $achievement) {
+            Cache::forget('achievements_all');
+        });
+    }
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\App\Models\User, $this, \Illuminate\Database\Eloquent\Relations\Pivot, 'pivot'>

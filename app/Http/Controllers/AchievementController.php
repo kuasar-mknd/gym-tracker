@@ -15,7 +15,9 @@ class AchievementController extends Controller
     public function index(): \Inertia\Response
     {
         $userAchievements = $this->user()->achievements()->get()->keyBy('id');
-        $achievements = Achievement::all()->map(fn (\App\Models\Achievement $achievement): array => $this->formatAchievement($achievement, $userAchievements));
+        // ⚡ Bolt Optimization: Use the cached all() method to hydrate achievements
+        // Impact: Reduces load time for the achievements index view
+        $achievements = Achievement::getCachedAll()->map(fn (\App\Models\Achievement $achievement): array => $this->formatAchievement($achievement, $userAchievements));
 
         return Inertia::render('Achievements/Index', [
             'achievements' => $achievements,
