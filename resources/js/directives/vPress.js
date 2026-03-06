@@ -10,7 +10,6 @@ import { triggerHaptic } from '@/composables/useHaptics'
 const defaultOptions = {
     scale: 0.95,
     haptic: 'tap',
-    duration: 100,
 }
 
 export const vPress = {
