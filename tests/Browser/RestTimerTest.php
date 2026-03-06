@@ -29,7 +29,8 @@ class RestTimerTest extends DuskTestCase
             ->{$sizeMacro}()
             ->visit('/workouts/'.$workout->id)
             ->disableAnimations()
-            ->waitFor('#main-content', 30);
+            ->waitFor('#main-content', 30)
+            ->assertPathIs('/workouts/'.$workout->id);
     }
 
     private function performAddTime(Browser $browser, string $sizeMacro): void
@@ -41,7 +42,8 @@ class RestTimerTest extends DuskTestCase
         $browser->loginAs($user->id)
             ->{$sizeMacro}()
             ->visit('/dashboard')
-            ->waitFor('#main-content', 30);
+            ->waitFor('#main-content', 30)
+            ->assertPathIs('/dashboard');
     }
 
     public function test_timer_lifecycle_on_iphone_mini(): void

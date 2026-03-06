@@ -12,7 +12,6 @@ use Tests\DuskTestCase;
 
 class WorkoutCompletionTest extends DuskTestCase
 {
-    use AuthenticatesUser;
     use DatabaseTruncation;
 
     private function setupWorkout(): array
@@ -32,7 +31,7 @@ class WorkoutCompletionTest extends DuskTestCase
         [$user, $workout] = $this->setupWorkout();
 
         $browser->{$sizeMacro}();
-        $this->loginUser($browser, $user);
+        $browser->loginAs($user->id);
 
         $browser->visit('/workouts/'.$workout->id)
             ->disableAnimations()
@@ -100,7 +99,7 @@ class WorkoutCompletionTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
             $browser->resizeToIphoneMini();
-            $this->loginUser($browser, $user);
+            $browser->loginAs($user->id);
 
             $browser->visit('/workouts/'.$workout->id)
                 ->waitFor('#main-content', 30)
