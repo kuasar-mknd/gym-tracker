@@ -17,7 +17,8 @@ class PageBrowserTest extends DuskTestCase
     {
         $this->browse(function (Browser $browser): void {
             $browser->visit('/')
-                ->waitFor('#main-content', 15)
+                ->waitFor('#main-content', 30)
+                ->pause(2000)
                 ->assertSee('GymTracker')
                 ->visit('/login')
                 ->waitFor('#main-content', 15)

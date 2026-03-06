@@ -28,6 +28,7 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->{$sizeMacro}()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
+                ->pause(2000)
                 ->waitFor('#main-content', 30);
 
             $browser->waitFor('#finish-workout-mobile', 30)

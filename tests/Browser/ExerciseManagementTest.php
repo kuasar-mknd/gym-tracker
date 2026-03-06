@@ -24,6 +24,7 @@ class ExerciseManagementTest extends DuskTestCase
                 ->{$sizeMacro}()
                 ->visit('/exercises')
                 ->disableAnimations()
+                ->pause(2000)
                 ->waitFor('#main-content', 30)
                 ->waitFor('[dusk="create-exercise-btn"]', 30)
                 ->click('[dusk="create-exercise-btn"]')
