@@ -2,10 +2,10 @@ name: CI
 
 on:
     push:
-        branches: ['main', 'fix/e2e-stability']
+        branches: ['main', 'fix/e2e-stability', 'reboot-main']
         tags: ['v*']
     pull_request:
-        branches: ['main', 'fix/e2e-stability']
+        branches: ['main', 'fix/e2e-stability', 'reboot-main']
 
 permissions:
     contents: read
@@ -76,11 +76,19 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
 
+            - name: Create build directory
+              run: mkdir -p public/build
+
             - name: Download Build Artifacts
-              uses: actions/upload-artifact@v4
+              uses: actions/download-artifact@v4
               with:
                   name: build-assets
                   path: public/build
+
+            - name: Verify Build Assets
+              run: |
+                  ls -la public/build
+                  cat public/build/manifest.json || echo "Manifest not found"
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -128,6 +136,9 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
 
+            - name: Create build directory
+              run: mkdir -p public/build
+
             - name: Download Build Artifacts
               uses: actions/download-artifact@v4
               with:
@@ -135,7 +146,9 @@ jobs:
                   path: public/build
 
             - name: Verify Build Assets
-              run: ls -R public/build
+              run: |
+                  ls -la public/build
+                  cat public/build/manifest.json || echo "Manifest not found"
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
