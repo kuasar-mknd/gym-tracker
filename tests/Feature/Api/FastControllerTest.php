@@ -7,15 +7,13 @@ namespace Tests\Feature\Api;
 use App\Models\Fast;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
-use function Pest\Laravel\postJson;
-use function Pest\Laravel\putJson;
 
 uses(RefreshDatabase::class);
 
-test('index returns only the users fasts', function () {
+test('index returns only the users fasts', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
 
@@ -42,11 +40,11 @@ test('index returns only the users fasts', function () {
         ]);
 });
 
-test('index requires authentication', function () {
+test('index requires authentication', function (): void {
     getJson('/api/v1/fasts')->assertUnauthorized();
 });
 
-test('store creates a new fast', function () {
+test('store creates a new fast', function (): void {
     $user = User::factory()->create();
 
     $data = [
@@ -70,7 +68,7 @@ test('store creates a new fast', function () {
     ]);
 });
 
-test('store validates required fields', function () {
+test('store validates required fields', function (): void {
     $user = User::factory()->create();
 
     $response = actingAs($user)->postJson('/api/v1/fasts', []);
@@ -79,7 +77,7 @@ test('store validates required fields', function () {
         ->assertJsonValidationErrors(['start_time', 'target_duration_minutes', 'type']);
 });
 
-test('store prevents multiple active fasts', function () {
+test('store prevents multiple active fasts', function (): void {
     $user = User::factory()->create();
 
     Fast::factory()->create([
@@ -99,7 +97,7 @@ test('store prevents multiple active fasts', function () {
         ->assertJsonValidationErrors(['base']);
 });
 
-test('show returns the requested fast', function () {
+test('show returns the requested fast', function (): void {
     $user = User::factory()->create();
     $fast = Fast::factory()->create(['user_id' => $user->id]);
 
@@ -109,7 +107,7 @@ test('show returns the requested fast', function () {
         ->assertJsonPath('data.id', $fast->id);
 });
 
-test('show forbids accessing another users fast', function () {
+test('show forbids accessing another users fast', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
@@ -119,7 +117,7 @@ test('show forbids accessing another users fast', function () {
     $response->assertForbidden();
 });
 
-test('update modifies an existing fast', function () {
+test('update modifies an existing fast', function (): void {
     $user = User::factory()->create();
     $fast = Fast::factory()->create([
         'user_id' => $user->id,
@@ -142,7 +140,7 @@ test('update modifies an existing fast', function () {
     ]);
 });
 
-test('update validates status values', function () {
+test('update validates status values', function (): void {
     $user = User::factory()->create();
     $fast = Fast::factory()->create(['user_id' => $user->id]);
 
@@ -154,7 +152,7 @@ test('update validates status values', function () {
         ->assertJsonValidationErrors(['status']);
 });
 
-test('update forbids modifying another users fast', function () {
+test('update forbids modifying another users fast', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
@@ -166,7 +164,7 @@ test('update forbids modifying another users fast', function () {
     $response->assertForbidden();
 });
 
-test('destroy deletes the fast', function () {
+test('destroy deletes the fast', function (): void {
     $user = User::factory()->create();
     $fast = Fast::factory()->create(['user_id' => $user->id]);
 
@@ -177,7 +175,7 @@ test('destroy deletes the fast', function () {
     $this->assertDatabaseMissing('fasts', ['id' => $fast->id]);
 });
 
-test('destroy forbids deleting another users fast', function () {
+test('destroy forbids deleting another users fast', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
