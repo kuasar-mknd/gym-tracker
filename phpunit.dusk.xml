@@ -15,5 +15,6 @@
         <env name="CACHE_STORE" value="array"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="DUSK_DRIVER_URL" value="http://127.0.0.1:9515"/>
     </php>
 </phpunit>
