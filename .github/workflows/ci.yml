@@ -98,7 +98,7 @@ jobs:
 
             - name: Prepare Application
               run: |
-                  cp .env.example .env
+                  cp .env.ci .env || touch .env
                   php artisan key:generate
 
             - name: Execute tests
@@ -141,7 +141,7 @@ jobs:
             - name: Prepare Dusk Environment
               run: |
                   # Create fresh .env
-                  rm -f .env.testing .env.dusk.local .env.example
+                  rm -f .env.testing .env.dusk.local .env.example .env.ci
                   cat <<EOF > .env
                   APP_NAME=GymTracker
                   APP_ENV=testing
