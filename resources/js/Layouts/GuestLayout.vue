@@ -24,11 +24,11 @@ import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
         </div>
 
         <!-- Glass Card -->
-        <div class="animate-slide-up relative z-10 w-full max-w-md">
+        <main id="main-content" class="animate-slide-up relative z-10 w-full max-w-md">
             <div class="glass-panel-light shadow-glass-card rounded-3xl p-8">
                 <slot />
             </div>
-        </div>
+        </main>
 
         <!-- Footer links -->
         <div class="animate-fade-in text-text-muted relative z-10 mt-8 text-center text-sm">

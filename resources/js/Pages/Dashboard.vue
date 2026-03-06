@@ -49,7 +49,7 @@ const colorForWorkout = (index) => {
     <AuthenticatedLayout>
         <div class="space-y-6">
             <!-- Header with Avatar & Streak -->
-            <header class="animate-fade-in flex items-center justify-between py-4">
+            <header id="dashboard-header" class="animate-fade-in flex items-center justify-between py-4">
                 <div class="flex items-center gap-4">
                     <!-- Avatar with gradient border -->
                     <div class="relative">
@@ -100,6 +100,7 @@ const colorForWorkout = (index) => {
                 <button
                     @click="startWorkout"
                     :disabled="form.processing"
+                    id="start-workout-button"
                     dusk="start-workout-button"
                     class="hover:shadow-glow-orange/70 group shadow-glow-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 active:scale-95"
                 >

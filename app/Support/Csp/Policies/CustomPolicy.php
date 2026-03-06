@@ -30,7 +30,7 @@ class CustomPolicy extends Basic
             ->add(Directive::SCRIPT, Keyword::SELF)
             ->add(Directive::STYLE, Keyword::SELF);
 
-        if (app()->environment('production')) {
+        if (! app()->environment('local')) {
             $policy->addNonce(Directive::SCRIPT);
         }
 

@@ -44,6 +44,7 @@ const isActiveRoute = (itemRoute) => {
                 :class="['glass-nav-item group', { active: isActiveRoute(item.route) }]"
                 :aria-label="item.name"
                 :aria-current="isActiveRoute(item.route) ? 'page' : undefined"
+                :dusk="'nav-' + item.route.split('.')[0]"
                 @click="triggerHaptic('tap')"
             >
                 <span

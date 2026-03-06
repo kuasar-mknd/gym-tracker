@@ -33,6 +33,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\ConditionalCspHeaders::class,
         ]);
 
+        $middleware->validateCsrfTokens(except: [
+            'api/*',
+            '_dusk/*',
+        ]);
+
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {

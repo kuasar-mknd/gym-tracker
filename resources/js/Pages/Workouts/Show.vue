@@ -12,7 +12,7 @@ import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -23,63 +23,8 @@ const props = defineProps({
     types: { type: Array, required: true },
 })
 
-// --- State Management ---
-const localWorkout = ref(JSON.parse(JSON.stringify(props.workout)))
-const workoutKey = ref(0)
-const forceUpdate = () => {
-    workoutKey.value++
-}
-
-// Track what's being edited to avoid overwriting it with props
-const activeEditingId = ref(null)
-const setEditing = (id) => {
-    activeEditingId.value = id
-}
-const clearEditing = () => {
-    // Small delay to ensure any pending debounce finishes
-    setTimeout(() => {
-        activeEditingId.value = null
-    }, 600)
-}
-
-// Sync with props if they change externally
-watch(
-    () => props.workout,
-    (newW) => {
-        if (newW && newW.id === localWorkout.value.id) {
-            // Merge logic: keep local values for the set being edited
-            const mergedWorkout = JSON.parse(JSON.stringify(newW))
-
-            if (activeEditingId.value) {
-                console.log('Merge: preserve active editing id', activeEditingId.value)
-                // Find the local set being edited to get its current values
-                let localSetToPreserve = null
-                localWorkout.value.workout_lines.forEach((line) => {
-                    const found = line.sets.find((s) => s.id === activeEditingId.value)
-                    if (found) localSetToPreserve = found
-                })
-
-                if (localSetToPreserve) {
-                    console.log('Merge: found local set to preserve', localSetToPreserve)
-                    mergedWorkout.workout_lines.forEach((line) => {
-                        const setToUpdate = line.sets.find((s) => s.id === activeEditingId.value)
-                        if (setToUpdate) {
-                            console.log('Merge: applying local values to merged set', localSetToPreserve.weight)
-                            setToUpdate.weight = localSetToPreserve.weight
-                            setToUpdate.reps = localSetToPreserve.reps
-                            setToUpdate.distance_km = localSetToPreserve.distance_km
-                            setToUpdate.duration_seconds = localSetToPreserve.duration_seconds
-                        }
-                    })
-                }
-            }
-
-            localWorkout.value = mergedWorkout
-            forceUpdate()
-        }
-    },
-    { deep: true },
-)
+// Use computed directly for data display to ensure perfect sync with Inertia props
+const localWorkout = computed(() => props.workout)
 
 const showTimer = ref(false)
 const timerDuration = ref(90)
@@ -88,32 +33,22 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
     const newState = !set.is_completed
     const previousState = set.is_completed
 
-    // Flush any pending updates for this set immediately
-    const timerKey = `${set.id}_weight`
-    const repsKey = `${set.id}_reps`
-    if (updateTimers[timerKey]) {
-        clearTimeout(updateTimers[timerKey])
-        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { weight: set.weight })
-        delete updateTimers[timerKey]
-    }
-    if (updateTimers[repsKey]) {
-        clearTimeout(updateTimers[repsKey])
-        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { reps: set.reps })
-        delete updateTimers[repsKey]
-    }
-
     set.is_completed = newState
     triggerHaptic('tap')
     if (newState) {
         timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
         showTimer.value = true
     }
-    SyncService.patch(route('api.v1.sets.update', { set: set.id }), { is_completed: newState }).catch((err) => {
-        if (!err.isOffline) {
-            set.is_completed = previousState
-            triggerHaptic('error')
-        }
-    })
+    SyncService.patch(route('api.v1.sets.update', { set: set.id }), { is_completed: newState })
+        .then(() => {
+            router.reload({ preserveScroll: true, only: ['workout'] })
+        })
+        .catch((err) => {
+            if (!err.isOffline) {
+                set.is_completed = previousState
+                triggerHaptic('error')
+            }
+        })
 }
 
 const savingTemplate = ref(false)
@@ -170,9 +105,6 @@ const updateSettings = () => {
             preserveScroll: true,
             onSuccess: () => {
                 showSettingsModal.value = false
-                localWorkout.value.name = settingsForm.name
-                localWorkout.value.notes = settingsForm.notes
-                forceUpdate()
             },
         })
 }
@@ -183,11 +115,9 @@ const addExercise = (exerciseId) => {
         { exercise_id: exerciseId },
         {
             preserveScroll: true,
-            onSuccess: (page) => {
+            onSuccess: () => {
                 showAddExercise.value = false
                 searchQuery.value = ''
-                localWorkout.value = JSON.parse(JSON.stringify(page.props.workout))
-                forceUpdate()
             },
         },
     )
@@ -210,17 +140,18 @@ const createAndAddExercise = async () => {
             }),
         })
         if (response.ok) {
-            const exercise = (await response.json()).data
+            const data = await response.json()
+            const exercise = data.exercise
             localExercises.value.push(exercise)
             router.post(
                 route('workout-lines.store', { workout: localWorkout.value.id }),
                 { exercise_id: exercise.id },
                 {
                     preserveScroll: true,
-                    onSuccess: (page) => {
+                    onSuccess: () => {
                         showCreateForm.value = false
-                        localWorkout.value = JSON.parse(JSON.stringify(page.props.workout))
-                        forceUpdate()
+                        showAddExercise.value = false
+                        searchQuery.value = ''
                     },
                 },
             )
@@ -236,10 +167,6 @@ const quickCreate = () => {
     createExerciseForm.name = searchQuery.value
     showCreateForm.value = true
 }
-const cancelCreate = () => {
-    showCreateForm.value = false
-    createExerciseForm.reset()
-}
 const closeModal = () => {
     showAddExercise.value = false
     showCreateForm.value = false
@@ -248,83 +175,58 @@ const closeModal = () => {
 
 const removeLine = (lineId) => {
     confirmAction.value = () => {
-        const workout = JSON.parse(JSON.stringify(localWorkout.value))
-        const idx = workout.workout_lines.findIndex((l) => l.id === lineId)
-        if (idx !== -1) {
-            workout.workout_lines.splice(idx, 1)
-            localWorkout.value = workout
-            forceUpdate()
-            SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: lineId }))
-        }
-        showConfirmModal.value = false
+        router.delete(route('workout-lines.destroy', { workout_line: lineId }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showConfirmModal.value = false
+            },
+        })
     }
     showConfirmModal.value = true
 }
 
 const addSet = (lineId) => {
-    const workout = JSON.parse(JSON.stringify(localWorkout.value))
-    const lineIndex = workout.workout_lines.findIndex((l) => l.id === lineId)
-    if (lineIndex === -1) return
+    const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
+    const lastSet = line?.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
 
-    const line = workout.workout_lines[lineIndex]
-    const lastSet = line.sets?.at(-1)
-    const data = {
-        weight: lastSet?.weight || 0,
-        reps: lastSet?.reps || 10,
-        distance_km: lastSet?.distance_km || 0,
-        duration_seconds: lastSet?.duration_seconds || 30,
-    }
+    // Use last set values if available (UX), otherwise recommended values from backend, fallback to defaults
+    const weight = lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0)
+    const reps = lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10)
+    const distance = lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0)
+    const duration = lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30)
 
-    const tempId = 'temp_' + Date.now()
-    const optimisticSet = { id: tempId, workout_line_id: lineId, is_completed: false, ...data }
-    if (!line.sets) line.sets = []
-    line.sets.push(optimisticSet)
-
-    localWorkout.value = workout
-    forceUpdate()
-
-    SyncService.post(route('api.v1.sets.store'), { workout_line_id: lineId, is_completed: false, ...data }).then(
-        (res) => {
-            const current = JSON.parse(JSON.stringify(localWorkout.value))
-            const lIdx = current.workout_lines.findIndex((l) => l.id === lineId)
-            if (lIdx !== -1) {
-                const sIdx = current.workout_lines[lIdx].sets.findIndex((s) => s.id === tempId)
-                if (sIdx !== -1) {
-                    current.workout_lines[lIdx].sets[sIdx] = res.data.data
-                    localWorkout.value = current
-                    forceUpdate()
-                }
-            }
-        },
-    )
+    SyncService.post(route('api.v1.sets.store'), {
+        workout_line_id: lineId,
+        is_completed: false,
+        weight: weight,
+        reps: reps,
+        distance_km: distance,
+        duration_seconds: duration,
+    }).then(() => {
+        router.reload({ preserveScroll: true, only: ['workout'] })
+    })
 }
 
+const updateTimers = {}
 const updateSet = (set, field, value) => {
     set[field] = value
     const timerKey = `${set.id}_${field}`
     if (updateTimers[timerKey]) clearTimeout(updateTimers[timerKey])
     updateTimers[timerKey] = setTimeout(() => {
-        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value })
+        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value }).then(() => {
+            router.reload({ preserveScroll: true, only: ['workout'] })
+        })
         delete updateTimers[timerKey]
-    }, 500)
+    }, 1000)
 }
-const updateTimers = {}
 
 const removeSet = (setId) => {
-    const workout = JSON.parse(JSON.stringify(localWorkout.value))
-    for (const line of workout.workout_lines) {
-        const sIdx = line.sets.findIndex((s) => s.id === setId)
-        if (sIdx !== -1) {
-            line.sets.splice(sIdx, 1)
-            localWorkout.value = workout
-            forceUpdate()
-            SyncService.delete(route('api.v1.sets.destroy', { set: setId }))
-            break
-        }
-    }
+    SyncService.delete(route('api.v1.sets.destroy', { set: setId })).then(() => {
+        router.reload({ preserveScroll: true, only: ['workout'] })
+    })
 }
 
-const createExerciseForm = useForm({ name: '', type: 'strength', category: '' })
+const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
 const categoriesList = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio']
 const typesList = [
     { value: 'strength', label: 'Force' },
@@ -347,7 +249,7 @@ const filteredExercises = computed(() => {
 <template>
     <Head :title="localWorkout.name || 'Séance'" />
     <AuthenticatedLayout :page-title="localWorkout.name" :show-back="true" back-route="workouts.index">
-        <template #actions>
+        <template #header-actions>
             <button
                 @click="showSettingsModal = true"
                 class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition-all active:scale-95"
@@ -356,16 +258,16 @@ const filteredExercises = computed(() => {
             </button>
         </template>
 
-        <div class="space-y-4" :key="workoutKey">
-            <div
+        <div class="space-y-4 pb-64">
+            <GlassCard
                 v-if="localWorkout.workout_lines.length === 0"
-                class="glass-panel-light flex flex-col items-center justify-center p-12 text-center"
+                class="flex flex-col items-center justify-center p-12 text-center"
             >
                 <h3 class="font-display text-text-main mb-4 text-2xl font-black uppercase italic">Séance vide</h3>
                 <GlassButton variant="primary" @click="showAddExercise = true" dusk="add-first-exercise"
                     >Ajouter un exercice</GlassButton
                 >
-            </div>
+            </GlassCard>
 
             <GlassCard
                 v-for="(line, lineIndex) in localWorkout.workout_lines"
@@ -379,11 +281,7 @@ const filteredExercises = computed(() => {
                         </h3>
                         <p class="text-text-muted text-xs font-bold uppercase">{{ line.exercise.category }}</p>
                     </div>
-                    <button
-                        v-if="!localWorkout.ended_at"
-                        @click="removeLine(line.id)"
-                        class="text-text-muted transition-colors hover:text-red-500"
-                    >
+                    <button @click="removeLine(line.id)" class="text-text-muted transition-colors hover:text-red-500">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path
                                 stroke-linecap="round"
@@ -396,11 +294,7 @@ const filteredExercises = computed(() => {
                 </div>
 
                 <div class="space-y-2">
-                    <SwipeableRow
-                        v-for="(set, index) in line.sets"
-                        :key="`${set.id}-${index}`"
-                        :disabled="!!localWorkout.ended_at"
-                    >
+                    <SwipeableRow v-for="(set, index) in line.sets" :key="`${set.id}-${index}`">
                         <div
                             class="flex items-center gap-3 rounded-2xl border border-white bg-white/80 p-4 shadow-sm"
                             :class="{ 'opacity-50': set.is_completed }"
@@ -408,7 +302,7 @@ const filteredExercises = computed(() => {
                             <button
                                 @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
                                 :dusk="`complete-set-${lineIndex}-${index}`"
-                                class="group flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-all"
+                                class="group relative flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-all"
                                 :class="
                                     set.is_completed ? 'bg-neon-green text-text-main' : 'bg-slate-100 text-slate-300'
                                 "
@@ -421,6 +315,14 @@ const filteredExercises = computed(() => {
                                         d="M5 13l4 4L19 7"
                                     />
                                 </svg>
+                                <!-- PR Trophy Badge -->
+                                <div
+                                    v-if="set.personal_record || set.personalRecord"
+                                    class="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-sm"
+                                    :dusk="`pr-trophy-${lineIndex}-${index}`"
+                                >
+                                    <span class="material-symbols-outlined text-[12px] font-bold">stars</span>
+                                </div>
                             </button>
                             <div
                                 class="text-text-muted flex h-11 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-black"
@@ -432,9 +334,6 @@ const filteredExercises = computed(() => {
                                 <input
                                     type="number"
                                     v-model="set.weight"
-                                    @focus="setEditing(set.id)"
-                                    @blur="clearEditing"
-                                    @click.stop
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -443,9 +342,6 @@ const filteredExercises = computed(() => {
                                 <input
                                     type="number"
                                     v-model="set.reps"
-                                    @focus="setEditing(set.id)"
-                                    @blur="clearEditing"
-                                    @click.stop
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -453,11 +349,38 @@ const filteredExercises = computed(() => {
                                 <span class="text-text-muted text-xs font-bold">reps</span>
                             </template>
 
-                            <button
-                                v-if="!localWorkout.ended_at"
-                                @click="removeSet(set.id)"
-                                class="ml-auto text-slate-300 hover:text-red-500"
-                            >
+                            <template v-else-if="line.exercise.type === 'cardio'">
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    v-model="set.distance_km"
+                                    @change="(e) => updateSet(set, 'distance_km', e.target.value)"
+                                    :dusk="`distance-input-${lineIndex}-${index}`"
+                                    class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                />
+                                <span class="text-text-muted text-xs font-bold">km</span>
+                                <input
+                                    type="time"
+                                    step="1"
+                                    :value="secondsToTime(set.duration_seconds)"
+                                    @input="(e) => updateDurationFromTime(set, e.target.value)"
+                                    :dusk="`duration-input-${lineIndex}-${index}`"
+                                    class="text-text-main h-11 w-32 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                />
+                            </template>
+
+                            <template v-else-if="line.exercise.type === 'timed'">
+                                <input
+                                    type="time"
+                                    step="1"
+                                    :value="secondsToTime(set.duration_seconds)"
+                                    @input="(e) => updateDurationFromTime(set, e.target.value)"
+                                    :dusk="`duration-input-${lineIndex}-${index}`"
+                                    class="text-text-main h-11 w-full rounded-xl border-2 border-slate-200 text-center font-bold"
+                                />
+                            </template>
+
+                            <button @click="removeSet(set.id)" class="ml-auto text-slate-300 hover:text-red-500">
                                 <span class="material-symbols-outlined">delete</span>
                             </button>
                         </div>
@@ -465,7 +388,6 @@ const filteredExercises = computed(() => {
                 </div>
 
                 <button
-                    v-if="!localWorkout.ended_at"
                     @click="addSet(line.id)"
                     :dusk="`add-set-${lineIndex}`"
                     class="text-text-muted hover:border-neon-green mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 py-3 text-sm font-bold uppercase transition-all"
@@ -474,7 +396,7 @@ const filteredExercises = computed(() => {
                 </button>
             </GlassCard>
 
-            <div v-if="localWorkout.workout_lines.length > 0 && !localWorkout.ended_at" class="mt-8 space-y-3 px-1">
+            <div v-if="localWorkout.workout_lines.length > 0" class="mt-8 space-y-3 px-1">
                 <GlassButton
                     variant="secondary"
                     @click="showAddExercise = true"
@@ -486,7 +408,12 @@ const filteredExercises = computed(() => {
                     <GlassButton variant="solid" @click="saveAsTemplate" :loading="savingTemplate" class="w-full"
                         >Modèle</GlassButton
                     >
-                    <GlassButton variant="primary" @click="finishWorkout" class="w-full" id="finish-workout-mobile"
+                    <GlassButton
+                        variant="primary"
+                        @click="finishWorkout"
+                        class="w-full"
+                        id="finish-workout-mobile"
+                        dusk="finish-workout-mobile"
                         >Terminer</GlassButton
                     >
                 </div>
@@ -510,6 +437,18 @@ const filteredExercises = computed(() => {
                     </div>
                     <div class="max-h-[60vh] space-y-3 overflow-y-auto pb-64">
                         <div
+                            v-if="filteredExercises.length === 0 && searchQuery"
+                            @click="quickCreate"
+                            dusk="quick-create-exercise"
+                            class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center transition-all hover:border-emerald-500"
+                        >
+                            <p class="text-text-muted mb-2 text-sm italic">Aucun résultat pour "{{ searchQuery }}"</p>
+                            <span class="font-bold tracking-wider text-emerald-600 uppercase"
+                                >Créer "{{ searchQuery }}"</span
+                            >
+                        </div>
+
+                        <div
                             v-for="exercise in filteredExercises"
                             :key="exercise.id"
                             @click="addExercise(exercise.id)"
@@ -520,6 +459,55 @@ const filteredExercises = computed(() => {
                             <p class="text-text-muted text-xs uppercase">{{ exercise.category }}</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- Create Form -->
+                <div v-else class="space-y-6">
+                    <div class="flex items-center gap-4">
+                        <button @click="showCreateForm = false" class="text-text-muted hover:text-text-main">
+                            <span class="material-symbols-outlined">arrow_back</span>
+                        </button>
+                        <h3 class="font-display text-text-main text-xl font-black uppercase italic">Nouvel Exercice</h3>
+                    </div>
+
+                    <form @submit.prevent="createAndAddExercise" class="space-y-4">
+                        <GlassInput v-model="createExerciseForm.name" label="Nom" dusk="new-exercise-name" required />
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="font-display-label text-text-muted mb-2 block">Type</label>
+                                <select
+                                    v-model="createExerciseForm.type"
+                                    class="glass-input w-full"
+                                    dusk="new-exercise-type"
+                                >
+                                    <option v-for="t in typesList" :key="t.value" :value="t.value">
+                                        {{ t.label }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="font-display-label text-text-muted mb-2 block">Catégorie</label>
+                                <select
+                                    v-model="createExerciseForm.category"
+                                    class="glass-input w-full"
+                                    dusk="new-exercise-category"
+                                >
+                                    <option v-for="c in categoriesList" :key="c" :value="c">{{ c }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <GlassButton
+                            type="submit"
+                            variant="primary"
+                            class="w-full"
+                            :loading="createExerciseForm.processing"
+                            dusk="submit-new-exercise"
+                        >
+                            Créer et Ajouter
+                        </GlassButton>
+                    </form>
                 </div>
             </div>
         </Modal>
@@ -552,6 +540,7 @@ const filteredExercises = computed(() => {
                     <GlassButton
                         variant="primary"
                         id="confirm-finish-button"
+                        dusk="confirm-finish-button"
                         @click="confirmFinishWorkout"
                         class="flex-1"
                         >Confirmer</GlassButton

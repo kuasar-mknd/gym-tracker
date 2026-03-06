@@ -112,8 +112,8 @@ class WorkoutsController extends Controller
         $data = $request->validated();
         $updateWorkout->execute($workout, $data);
 
-        if ($data['is_finished'] ?? false) {
-            return redirect()->route('dashboard')->with('success', 'Séance terminée !');
+        if ($request->boolean('is_finished')) {
+            return redirect()->route('dashboard');
         }
 
         return back();

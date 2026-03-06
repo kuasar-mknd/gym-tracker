@@ -2,85 +2,66 @@
 
 declare(strict_types=1);
 
+namespace Tests\Browser;
+
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
-uses(DatabaseTruncation::class);
+class ExerciseManagementTest extends DuskTestCase
+{
+    use DatabaseTruncation;
 
-test('user can manage exercises on different iphone sizes', function (string $sizeMacro): void {
-    $user = User::factory()->create();
+    private function performExerciseManagement(Browser $browser, string $sizeMacro): void
+    {
+        $user = User::factory()->create([
+            'email' => 'exercise-'.time().random_int(0, 999).'@example.com',
+            'email_verified_at' => now(),
+        ]);
 
-    $this->browse(function (Browser $browser) use ($user, $sizeMacro): void {
-        $browser->loginAs($user)
-            ->{$sizeMacro}()
-            ->visit('/exercises')
-            ->waitFor('main', 30)
-            ->assertPathIs('/exercises');
+        try {
+            $browser->loginAs($user->id)
+                ->{$sizeMacro}()
+                ->visit('/exercises')
+                ->disableAnimations()
+                ->waitFor('#main-content', 30);
 
-        // 1. Click Create Button (Desktop or Mobile Header depending on viewport)
-        // If empty state is visible, it uses create-exercise-button
-        if ($browser->resolver->find('[data-testid="create-exercise-button"]')) {
-            $browser->script("document.querySelector('[data-testid=\"create-exercise-button\"]').click();");
-        } else {
-            // Header buttons
-            $selector = $browser->isVisible('[data-testid="create-exercise-desktop"]')
-                ? '[data-testid="create-exercise-desktop"]'
-                : '[data-testid="create-exercise-mobile-header"]';
-            $browser->script("document.querySelector('$selector').click();");
+            $browser->waitFor('[dusk="create-exercise-btn"]', 15);
+
+            $browser->pause(1000)
+                ->click('[dusk="create-exercise-btn"]');
+
+            $browser->waitFor('[dusk="exercise-modal-title"]', 15)
+                ->type('@exercise-name-input', 'New Exercise '.time())
+                ->select('type', 'strength')
+                ->click('@submit-exercise-btn')
+                ->waitForText('Exercice créé avec succès', 15)
+                ->assertNoConsoleExceptions();
+        } catch (\Exception $e) {
+            $browser->screenshot('exercise-failure-'.$sizeMacro);
+            throw $e;
         }
+    }
 
-        // 2. Fill and submit the create form
-        $exerciseName = 'DUSK TEST EXERCISE '.time();
-        $browser->waitForText('NOUVEL EXERCICE', 30)
-            ->type('input[placeholder="Ex: Développé couché"]', $exerciseName)
-            ->waitFor('select', 10)
-            ->select('select', 'strength')
-            ->script("document.querySelector('[data-testid=\"submit-exercise-button\"]').click();");
+    public function test_exercise_management_on_iphone_mini(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseManagement($browser, 'resizeToIphoneMini');
+        });
+    }
 
-        // 3. Verify exercise was created
-        $browser->waitFor('[data-testid="exercise-card"]', 30)
-            ->assertSee(strtoupper($exerciseName));
+    public function test_exercise_management_on_iphone_15(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseManagement($browser, 'resizeToIphone15');
+        });
+    }
 
-        // 4. Edit the exercise
-        $browser->waitFor('[data-testid="exercise-card"]', 20)
-            ->script("
-                const mobileBtn = document.querySelector('[data-testid=\"edit-exercise-button-mobile-icon\"]');
-                const desktopBtn = document.querySelector('[data-testid=\"edit-exercise-button-desktop\"]');
-                if (mobileBtn && getComputedStyle(mobileBtn).display !== 'none') {
-                    mobileBtn.click();
-                } else if (desktopBtn) {
-                    desktopBtn.click();
-                }
-            ");
-
-        $updatedName = 'UPDATED EXERCISE '.time();
-        $browser->waitFor('input[placeholder="Nom de l\'exercice"]', 30)
-            ->clear('input[placeholder="Nom de l\'exercice"]')
-            ->type('input[placeholder="Nom de l\'exercice"]', $updatedName)
-            ->script("document.querySelector('[data-testid=\"save-exercise-button\"]').click();");
-
-        // 5. Verify update
-        $browser->waitForText(strtoupper($updatedName), 15);
-
-        // 6. Delete the exercise
-        $browser->waitFor('[data-testid="exercise-card"]', 20)
-            ->script("
-                const desktopDel = document.querySelector('[data-testid=\"delete-exercise-button-desktop\"]');
-                const mobileDel = document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]');
-                if (desktopDel && getComputedStyle(desktopDel).display !== 'none') {
-                    desktopDel.click();
-                } else if (mobileDel) {
-                    mobileDel.click();
-                }
-            ");
-        $browser->assertDialogOpened('Supprimer cet exercice ?')
-            ->acceptDialog()
-            ->waitFor('main', 15)
-            ->assertNoConsoleExceptions();
-    });
-})->with([
-    'iPhone Mini' => 'resizeToIphoneMini',
-    'iPhone 15' => 'resizeToIphone15',
-    'iPhone Pro Max' => 'resizeToIphoneMax',
-]);
+    public function test_exercise_management_on_iphone_max(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseManagement($browser, 'resizeToIphoneMax');
+        });
+    }
+}

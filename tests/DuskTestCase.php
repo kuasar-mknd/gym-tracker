@@ -10,7 +10,6 @@ use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Illuminate\Support\Collection;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
-use PHPUnit\Framework\Attributes\BeforeClass;
 
 abstract class DuskTestCase extends BaseTestCase
 {
@@ -20,16 +19,29 @@ abstract class DuskTestCase extends BaseTestCase
 
         Browser::macro('resizeToIphoneMini', fn (): object => $this->resize(375, 812));
 
-        Browser::macro('resizeToIphone15', fn (): object => $this->resize(393, 852));
+        Browser::macro('resizeToIphone15', fn (): object => $this->resize(390, 844));
 
         Browser::macro('resizeToIphoneMax', fn (): object => $this->resize(430, 932));
 
+        Browser::macro('disableAnimations', function (): object {
+            /** @var Browser $this */
+            $this->script("
+                const style = document.createElement('style');
+                style.type = 'text/css';
+                style.innerHTML = '* { transition: none !important; animation: none !important; scroll-behavior: auto !important; }';
+                document.head.appendChild(style);
+            ");
+
+            return $this;
+        });
+
         Browser::macro('assertNoConsoleExceptions', function (): object {
+            /** @var Browser $this */
             $logs = $this->driver->manage()->getLog('browser');
             $failures = collect($logs)->filter(
-                fn ($log): bool => $log['level'] === 'SEVERE' &&
-                    ! str_contains((string) $log['message'], 'Failed to send logs') &&
-                    ! str_contains((string) $log['message'], 'navigator.vibrate')
+                fn ($log): bool => ($log['level'] ?? '') === 'SEVERE' &&
+                    ! str_contains((string) ($log['message'] ?? ''), 'Failed to send logs') &&
+                    ! str_contains((string) ($log['message'] ?? ''), 'navigator.vibrate')
             );
 
             \PHPUnit\Framework\Assert::assertTrue(
@@ -63,7 +75,9 @@ abstract class DuskTestCase extends BaseTestCase
     {
         $options = (new ChromeOptions())->addArguments(collect([
             '--window-size=393,852',
-            '--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+            '--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-infobars',
             '--disable-search-engine-choice-screen',
             '--disable-smooth-scrolling',
         ])->unless($this->hasHeadlessDisabled(), fn (Collection $items) => $items->merge([

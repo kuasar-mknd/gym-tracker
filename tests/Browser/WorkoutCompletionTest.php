@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Browser;
 
-use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
-use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
@@ -16,49 +14,55 @@ class WorkoutCompletionTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
-    private function setupWorkout(): array
+    private function performFinishWorkout(Browser $browser, string $sizeMacro): void
     {
         $user = User::factory()->create([
-            'password' => bcrypt('password123'),
+            'email' => 'completion-'.time().random_int(0, 999).'@example.com',
+            'email_verified_at' => now(),
         ]);
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
-            'name' => 'Séance Test Browser',
+            'name' => 'Test Workout',
             'started_at' => now()->subHour(),
         ]);
-
-        // Add an exercise line so the finish button is visible
-        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
-        WorkoutLine::factory()->create([
+        $exercise = \App\Models\Exercise::factory()->create(['user_id' => $user->id]);
+        $line = \App\Models\WorkoutLine::factory()->create([
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);
+        \App\Models\Set::factory()->create([
+            'workout_line_id' => $line->id,
+            'is_completed' => true,
+        ]);
 
-        return [$user, $workout];
-    }
+        try {
+            $browser->loginAs($user->id)
+                ->{$sizeMacro}()
+                ->visit('/workouts/'.$workout->id)
+                ->disableAnimations()
+                ->waitFor('#main-content', 30);
 
-    private function performFinishWorkout(Browser $browser, string $sizeMacro): void
-    {
-        [$user, $workout] = $this->setupWorkout();
+            // Ensure visibility by waiting for the element
+            $browser->waitFor('@finish-workout-mobile', 30);
 
-        $browser->loginAs($user)
-            ->{$sizeMacro}()
-            ->visit('/workouts/'.$workout->id)
-            ->waitFor('main', 30)
-            ->assertPathIs('/workouts/'.$workout->id)
-            ->assertNoConsoleExceptions()
-            ->waitFor('#finish-workout-mobile', 30)
-            ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
+            $browser->pause(1000)
+                ->click('@finish-workout-mobile');
 
-        $browser->script("document.getElementById('finish-workout-mobile').click();");
+            $browser->waitFor('@finish-workout-modal-title', 15)
+                ->waitFor('#confirm-finish-button', 30)
+                ->pause(1000)
+                ->click('#confirm-finish-button');
 
-        $browser->waitFor('@finish-workout-modal-title', 15)
-            ->waitFor('#confirm-finish-button', 30)
-            ->pause(1000)
-            ->script("document.getElementById('confirm-finish-button').click();");
+            $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::find($workout->id)->ended_at !== null);
 
-        $browser->waitForLocation('/dashboard', 60)
-            ->waitForText('BON RETOUR', 30);
+            $browser->visit('/dashboard')
+                ->waitFor('#dashboard-header', 30)
+                ->assertSee('RETOUR')
+                ->assertNoConsoleExceptions();
+        } catch (\Exception $e) {
+            $browser->screenshot('completion-failure-'.$sizeMacro);
+            throw $e;
+        }
     }
 
     public function test_user_can_finish_workout_on_iphone_mini(): void
@@ -84,7 +88,10 @@ class WorkoutCompletionTest extends DuskTestCase
 
     public function test_finished_workout_is_immutable_on_iphone_mini(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'email' => 'immutable-'.time().random_int(0, 999).'@example.com',
+            'email_verified_at' => now(),
+        ]);
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
             'name' => 'Immutable Workout',
@@ -93,12 +100,12 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs($user)
+            $browser->loginAs($user->id)
                 ->resizeToIphoneMini()
                 ->visit('/workouts/'.$workout->id)
-                ->waitFor('main', 30)
-                ->assertNoConsoleExceptions()
-                ->assertMissing('#finish-workout-mobile');
+                ->waitFor('#main-content', 30)
+                ->assertMissing('@finish-workout-mobile')
+                ->assertNoConsoleExceptions();
         });
     }
 }

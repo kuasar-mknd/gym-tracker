@@ -19,7 +19,7 @@ class GlobalCspTest extends TestCase
         Config::set('csp.enabled', true);
     }
 
-    public function test_dashboard_has_consistent_csp_headers(): void
+    public function test_dashboard_has_consistent_csp_nonces(): void
     {
         $user = User::factory()->create();
 
@@ -30,9 +30,21 @@ class GlobalCspTest extends TestCase
 
         $csp = $response->headers->get('Content-Security-Policy');
 
-        // Nonces are disabled in 'testing' environment for Dusk stability.
-        // So we only check for basic directives.
-        $this->assertStringContainsString("script-src 'self'", (string) $csp);
-        $this->assertStringContainsString("style-src 'self'", (string) $csp);
+        // Extract nonce from CSP header
+        preg_match("/'nonce-([^']+)'/", (string) $csp, $matches);
+        $this->assertNotEmpty($matches[1], 'Nonce not found in CSP header');
+        $nonce = $matches[1];
+
+        // Verify that the same nonce is used in the HTML for Vite and Sentry
+        $content = (string) $response->getContent();
+
+        // Check meta tag nonce (from app.blade.php line 9)
+        $this->assertStringContainsString('<meta property="csp-nonce" content="'.$nonce.'">', $content);
+
+        // Check Sentry script nonce (from app.blade.php line 30)
+        $this->assertStringContainsString('<script nonce="'.$nonce.'">', $content);
+
+        // Check Ziggy script nonce (from app.blade.php line 38 - @routes)
+        $this->assertStringContainsString('nonce="'.$nonce.'"', $content);
     }
 }
