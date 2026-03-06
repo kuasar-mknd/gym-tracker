@@ -134,6 +134,9 @@ jobs:
                   name: build-assets
                   path: public/build
 
+            - name: Verify Build Assets
+              run: ls -R public/build
+
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
