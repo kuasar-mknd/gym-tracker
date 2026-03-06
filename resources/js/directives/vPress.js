@@ -15,7 +15,7 @@ const defaultOptions = {
 
 export const vPress = {
     mounted(el, binding) {
-        // Support both v-press and v-press="{ scale: 0.9 }"
+        // Support both v-press, v-press="'success'" and v-press="{ scale: 0.9 }"
         const bindingOptions =
             typeof binding.value === 'object'
                 ? binding.value
@@ -25,35 +25,47 @@ export const vPress = {
 
         const options = { ...defaultOptions, ...bindingOptions }
 
-        // Store original transition
-        const originalTransition = el.style.transition
-
-        // Add transition for smooth scale effect
-        el.style.transition = `${originalTransition ? originalTransition + ', ' : ''}transform ${options.duration}ms ease-out`
-        el.style.willChange = 'transform'
-
         let isTouched = false
+        let isPressing = false
+        let touchTimeout = null
 
         const handlePressStart = (e) => {
-            if (el.disabled || el.classList.contains('disabled')) return
+            try {
+                if (el.disabled || el.classList.contains('disabled')) return
 
-            // Prevent double triggering on mobile
-            if (e.type === 'mousedown' && isTouched) return
-            if (e.type === 'touchstart') isTouched = true
+                // Prevent double triggering on mobile (touch + mouse)
+                if (e?.type === 'mousedown' && isTouched) return
+                if (e?.type === 'touchstart') {
+                    isTouched = true
+                    if (touchTimeout) clearTimeout(touchTimeout)
+                }
 
-            el.style.transform = `scale(${options.scale})`
-            if (options.haptic) {
-                triggerHaptic(typeof options.haptic === 'string' ? options.haptic : 'tap')
+                isPressing = true
+                el.style.transform = `scale(${options.scale})`
+
+                if (options.haptic) {
+                    triggerHaptic(typeof options.haptic === 'string' ? options.haptic : 'tap')
+                }
+            } catch (err) {
+                // Ignore directive errors to prevent breaking app mount
             }
         }
 
         const handlePressEnd = () => {
-            el.style.transform = ''
-            // Reset touched flag after a short delay to allow mouse events to be ignored
-            if (isTouched) {
-                setTimeout(() => {
-                    isTouched = false
-                }, 500)
+            try {
+                if (!isPressing) return
+                isPressing = false
+
+                el.style.transform = ''
+
+                // Reset touched flag after a short delay to allow mouse events to be ignored
+                if (isTouched) {
+                    touchTimeout = setTimeout(() => {
+                        isTouched = false
+                    }, 500)
+                }
+            } catch (err) {
+                // Ignore
             }
         }
 
@@ -71,13 +83,12 @@ export const vPress = {
         el._pressHandlers = {
             handlePressStart,
             handlePressEnd,
-            originalTransition,
         }
     },
 
     unmounted(el) {
         if (el._pressHandlers) {
-            const { handlePressStart, handlePressEnd, originalTransition } = el._pressHandlers
+            const { handlePressStart, handlePressEnd } = el._pressHandlers
 
             el.removeEventListener('touchstart', handlePressStart)
             el.removeEventListener('touchend', handlePressEnd)
@@ -85,9 +96,6 @@ export const vPress = {
             el.removeEventListener('mousedown', handlePressStart)
             el.removeEventListener('mouseup', handlePressEnd)
             el.removeEventListener('mouseleave', handlePressEnd)
-
-            el.style.transition = originalTransition
-            el.style.willChange = ''
 
             delete el._pressHandlers
         }
