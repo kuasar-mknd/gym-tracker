@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Jobs\SyncUserAchievements;
+use App\Jobs\SyncUserGoals;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-use App\Services\AchievementService;
-use App\Services\GoalService;
 use App\Services\PersonalRecordService;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
@@ -70,8 +70,11 @@ final class AppServiceProvider extends ServiceProvider
                 app(PersonalRecordService::class)->syncSetPRs($set, $user);
             }
 
-            app(AchievementService::class)->syncAchievements($user);
-            app(GoalService::class)->syncGoals($user);
+            // PERFORMANCE OPTIMIZATION:
+            // Offload achievement and goal synchronization to background jobs.
+            // These jobs are 'ShouldBeUnique' by user ID, providing natural debouncing.
+            SyncUserAchievements::dispatch($user);
+            SyncUserGoals::dispatch($user);
         });
     }
 
@@ -81,14 +84,20 @@ final class AppServiceProvider extends ServiceProvider
             // Streak is only updated when a workout is "finished" or has a date
             app(StreakService::class)->updateStreak($workout->user, $workout);
 
-            app(AchievementService::class)->syncAchievements($workout->user);
-            app(GoalService::class)->syncGoals($workout->user);
+            // PERFORMANCE OPTIMIZATION:
+            // Offload achievement and goal synchronization to background jobs.
+            SyncUserAchievements::dispatch($workout->user);
+            SyncUserGoals::dispatch($workout->user);
         });
     }
 
     private function registerMeasurementEvents(): void
     {
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
+        BodyMeasurement::saved(function (BodyMeasurement $bm): void {
+            SyncUserGoals::dispatch($bm->user);
+        });
+        BodyMeasurement::deleted(function (BodyMeasurement $bm): void {
+            SyncUserGoals::dispatch($bm->user);
+        });
     }
 }
