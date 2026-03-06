@@ -14,7 +14,7 @@ class WorkoutCompletionTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
-    private function setupWorkout(): array
+    private function performFinishWorkout(Browser $browser, string $sizeMacro): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
         $workout = Workout::factory()->create([
@@ -23,47 +23,45 @@ class WorkoutCompletionTest extends DuskTestCase
             'started_at' => now()->subHour(),
         ]);
 
-        return [$user, $workout];
-    }
+        try {
+            $browser->loginAs($user->id)
+                ->{$sizeMacro}()
+                ->visit('/workouts/'.$workout->id)
+                ->disableAnimations()
+                ->waitFor('#main-content', 30);
 
-    private function performFinishWorkout(Browser $browser, string $sizeMacro): void
-    {
-        [$user, $workout] = $this->setupWorkout();
+            $browser->waitFor('#finish-workout-mobile', 30)
+                ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
 
-        $browser->{$sizeMacro}();
-        $browser->loginAs($user->id);
+            $browser->script("document.getElementById('finish-workout-mobile').click();");
 
-        $browser->visit('/workouts/'.$workout->id)
-            ->disableAnimations()
-            ->waitFor('#main-content', 30)
-            ->assertPathIs('/workouts/'.$workout->id)
-            ->waitFor('#finish-workout-mobile', 30)
-            ->script("document.getElementById('finish-workout-mobile').scrollIntoView();");
+            $browser->waitFor('@finish-workout-modal-title', 15)
+                ->waitFor('#confirm-finish-button', 30)
+                ->pause(1000);
 
-        $browser->script("document.getElementById('finish-workout-mobile').click();");
+            // Aggressive click loop for reliability
+            $browser->script("
+                const interval = setInterval(() => {
+                    const btn = document.getElementById('confirm-finish-button');
+                    if (btn) btn.click();
+                    if (!document.querySelector('[dusk=\"finish-workout-modal-title\"]')) {
+                        clearInterval(interval);
+                    }
+                }, 500);
+                setTimeout(() => clearInterval(interval), 10000);
+            ");
 
-        $browser->waitFor('@finish-workout-modal-title', 15)
-            ->waitFor('#confirm-finish-button', 30)
-            ->pause(1000);
+            // Wait for DB sync
+            $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::find($workout->id)->ended_at !== null);
 
-        // Aggressive click loop for reliability
-        $browser->script("
-            const interval = setInterval(() => {
-                const btn = document.getElementById('confirm-finish-button');
-                if (btn) btn.click();
-                if (!document.querySelector('[dusk=\"finish-workout-modal-title\"]')) {
-                    clearInterval(interval);
-                }
-            }, 500);
-            setTimeout(() => clearInterval(interval), 10000);
-        ");
-
-        // Wait for DB sync
-        $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::find($workout->id)->ended_at !== null);
-
-        $browser->visit('/dashboard')
-            ->waitFor('#dashboard-header', 30)
-            ->assertSee('BON RETOUR');
+            $browser->visit('/dashboard')
+                ->waitFor('#dashboard-header', 30)
+                ->assertSee('BON RETOUR')
+                ->assertNoConsoleExceptions();
+        } catch (\Exception $e) {
+            $browser->screenshot('completion-failure-'.$sizeMacro);
+            throw $e;
+        }
     }
 
     public function test_user_can_finish_workout_on_iphone_mini(): void
@@ -98,12 +96,12 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->resizeToIphoneMini();
-            $browser->loginAs($user->id);
-
-            $browser->visit('/workouts/'.$workout->id)
+            $browser->loginAs($user->id)
+                ->resizeToIphoneMini()
+                ->visit('/workouts/'.$workout->id)
                 ->waitFor('#main-content', 30)
-                ->assertMissing('#finish-workout-mobile');
+                ->assertMissing('#finish-workout-mobile')
+                ->assertNoConsoleExceptions();
         });
     }
 }

@@ -19,19 +19,25 @@ class ExerciseManagementTest extends DuskTestCase
             'email_verified_at' => now(),
         ]);
 
-        $browser->loginAs($user->id)
-            ->{$sizeMacro}()
-            ->visit('/exercises')
-            ->disableAnimations()
-            ->waitFor('#main-content', 30)
-            ->waitFor('[dusk="create-exercise-btn"]', 30)
-            ->click('[dusk="create-exercise-btn"]')
-            ->waitFor('[dusk="exercise-modal-title"]', 15)
-            ->type('input[name="name"]', 'New Exercise '.time())
-            ->select('select[name="type"]', 'strength')
-            ->press('CRÉER')
-            ->waitForText('Exercice créé avec succès', 15)
-            ->assertPathIs('/exercises');
+        try {
+            $browser->loginAs($user->id)
+                ->{$sizeMacro}()
+                ->visit('/exercises')
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitFor('[dusk="create-exercise-btn"]', 30)
+                ->click('[dusk="create-exercise-btn"]')
+                ->waitFor('[dusk="exercise-modal-title"]', 15)
+                ->type('input[name="name"]', 'New Exercise '.time())
+                ->select('select[name="type"]', 'strength')
+                ->press('CRÉER')
+                ->waitForText('Exercice créé avec succès', 15)
+                ->assertPathIs('/exercises')
+                ->assertNoConsoleExceptions();
+        } catch (\Exception $e) {
+            $browser->screenshot('exercise-failure-'.$sizeMacro);
+            throw $e;
+        }
     }
 
     public function test_exercise_management_on_iphone_mini(): void

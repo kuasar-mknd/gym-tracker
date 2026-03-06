@@ -24,7 +24,8 @@ class PageBrowserTest extends DuskTestCase
                 ->assertSee('Se connecter')
                 ->visit('/register')
                 ->waitFor('#main-content', 15)
-                ->assertSee('Créer un compte');
+                ->assertSee('Créer un compte')
+                ->assertNoConsoleExceptions();
         });
     }
 
@@ -46,11 +47,17 @@ class PageBrowserTest extends DuskTestCase
             '/profile' => 'Profil',
         ];
 
-        foreach ($pages as $url => $text) {
-            $browser->visit($url)
-                ->disableAnimations()
-                ->waitFor('#main-content', 30)
-                ->assertPathIs($url);
+        try {
+            foreach ($pages as $url => $text) {
+                $browser->visit($url)
+                    ->disableAnimations()
+                    ->waitFor('#main-content', 30)
+                    ->assertPathIs($url);
+            }
+            $browser->assertNoConsoleExceptions();
+        } catch (\Exception $e) {
+            $browser->screenshot('page-failure-'.$sizeMacro);
+            throw $e;
         }
     }
 
@@ -82,16 +89,22 @@ class PageBrowserTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user): void {
-            $browser->loginAs($user->id)
-                ->resizeToIphoneMini()
-                ->visit('/dashboard')
-                ->waitFor('#main-content', 30)
-                ->click('[dusk="nav-workouts"]')
-                ->waitForLocation('/workouts', 15)
-                ->click('[dusk="nav-profile"]')
-                ->waitForLocation('/profile', 15)
-                ->click('[dusk="nav-dashboard"]')
-                ->waitForLocation('/dashboard', 15);
+            try {
+                $browser->loginAs($user->id)
+                    ->resizeToIphoneMini()
+                    ->visit('/dashboard')
+                    ->waitFor('#main-content', 30)
+                    ->click('[dusk="nav-workouts"]')
+                    ->waitForLocation('/workouts', 15)
+                    ->click('[dusk="nav-profile"]')
+                    ->waitForLocation('/profile', 15)
+                    ->click('[dusk="nav-dashboard"]')
+                    ->waitForLocation('/dashboard', 15)
+                    ->assertNoConsoleExceptions();
+            } catch (\Exception $e) {
+                $browser->screenshot('nav-failure');
+                throw $e;
+            }
         });
     }
 }
