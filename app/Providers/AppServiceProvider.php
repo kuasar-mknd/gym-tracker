@@ -9,7 +9,6 @@ use App\Jobs\SyncUserGoals;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-use App\Services\GoalService;
 use App\Services\PersonalRecordService;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;

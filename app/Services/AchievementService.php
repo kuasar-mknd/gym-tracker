@@ -24,7 +24,7 @@ final class AchievementService
         // Use cached achievements collection to avoid repeated database queries
         // and filter in-memory to find locked achievements.
         $locked = Achievement::getCachedAll()
-            ->reject(fn (Achievement $achievement) => in_array($achievement->id, $unlockedIds, true));
+            ->reject(fn (Achievement $achievement): bool => in_array($achievement->id, $unlockedIds, true));
 
         if ($locked->isEmpty()) {
             return;
