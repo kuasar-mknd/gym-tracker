@@ -36,6 +36,8 @@ export function triggerHaptic(type = 'tap') {
         return false
     }
 
+    const pattern = patterns[type] || patterns.tap
+
     try {
         return navigator.vibrate(pattern)
     } catch (error) {

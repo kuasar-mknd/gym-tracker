@@ -9,13 +9,21 @@ import { triggerHaptic } from '@/composables/useHaptics'
 
 const defaultOptions = {
     scale: 0.95,
-    haptic: true,
+    haptic: 'tap',
     duration: 100,
 }
 
 export const vPress = {
     mounted(el, binding) {
-        const options = { ...defaultOptions, ...binding.value }
+        // Support both v-press and v-press="{ scale: 0.9 }"
+        const bindingOptions =
+            typeof binding.value === 'object'
+                ? binding.value
+                : typeof binding.value === 'string'
+                  ? { haptic: binding.value }
+                  : {}
+
+        const options = { ...defaultOptions, ...bindingOptions }
 
         // Store original transition
         const originalTransition = el.style.transition
@@ -27,12 +35,12 @@ export const vPress = {
         const handlePressStart = () => {
             el.style.transform = `scale(${options.scale})`
             if (options.haptic) {
-                triggerHaptic('tap')
+                triggerHaptic(typeof options.haptic === 'string' ? options.haptic : 'tap')
             }
         }
 
         const handlePressEnd = () => {
-            el.style.transform = 'scale(1)'
+            el.style.transform = ''
         }
 
         // Touch events (mobile)
