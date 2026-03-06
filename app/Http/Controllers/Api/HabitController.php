@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Habits\CreateHabitAction;
 use App\Http\Requests\Api\StoreHabitRequest;
 use App\Http\Requests\Api\UpdateHabitRequest;
 use App\Http\Resources\HabitResource;
@@ -54,22 +55,13 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 201, description: 'Created successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function store(StoreHabitRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreHabitRequest $request, CreateHabitAction $action): \Illuminate\Http\JsonResponse
     {
         $this->authorize('create', Habit::class);
 
         $validated = $request->validated();
 
-        if (($validated['color'] ?? null) === null) {
-            $validated['color'] = 'bg-slate-500';
-        }
-        if (($validated['icon'] ?? null) === null) {
-            $validated['icon'] = 'check_circle';
-        }
-
-        $habit = new Habit($validated);
-        $habit->user_id = $this->user()->id;
-        $habit->save();
+        $habit = $action->execute($this->user(), $validated);
 
         return (new HabitResource($habit))
             ->response()
