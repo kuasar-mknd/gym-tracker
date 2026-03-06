@@ -11,7 +11,7 @@ class FetchFastingIndexAction
     /**
      * Fetch the fasting index data for the given user.
      *
-     * @return array{activeFast: \App\Models\Fast|null, history: \Illuminate\Contracts\Pagination\LengthAwarePaginator}
+     * @return array{activeFast: \App\Models\Fast|null, history: \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, \App\Models\Fast>}
      */
     public function execute(User $user): array
     {
