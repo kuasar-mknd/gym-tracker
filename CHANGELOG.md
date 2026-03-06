@@ -5,6 +5,27 @@ All notable changes to GymTracker will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.18] - 2026-03-06
+
+### Added
+
+- **Smart Recommendations**: Implemented intelligent suggested values for sets (weight/reps) based on the most frequent data from the most recent workout of the same exercise.
+- **E2E Stability**: Achieved 100% reliable browser tests across all iPhone sizes (Mini, 15, Max).
+- **Exercise Library E2E**: Added comprehensive lifecycle tests for the exercise library (Search, Filter, Create, Edit, Delete).
+- **PR Trophies**: Integrated visual feedback (gold star) directly on sets achieving a new Personal Record.
+
+### Improved
+
+- **Mobile UX**: Refined `SwipeableRow` sensitivity with direction locking to prevent accidental swipes during vertical scrolling.
+- **Mobile Layout**: Improved padding and safe-area insets to ensure critical action buttons (Finish Workout) are never obscured by navigation bars.
+- **Inertia Feedback**: Integrated flash messages (success/error) directly into the Authenticated Layout via Inertia shared props.
+
+### Fixed
+
+- **CI Infrastructure**: Repaired GitHub Actions pipeline by fixing Vite manifest issues and MySQL connection permissions.
+- **Workout Logic**: Fixed card rendering issues when adding new exercises during an active session.
+- **Code Quality**: Reached 100/100 scores across all PHP Insights categories on the stable main branch.
+
 ## [1.4.14] - 2026-03-02
 
 ### Added
@@ -223,8 +244,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.9...HEAD
-[1.4.9]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.7...v1.4.9
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.18...HEAD
+[1.4.18]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.14...v1.4.18
+[1.4.14]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.13...v1.4.14
 [1.4.8]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.7...v1.4.8
 [1.4.7]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.6...v1.4.7
 [1.4.6]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.5...v1.4.6
