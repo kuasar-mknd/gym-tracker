@@ -46,20 +46,18 @@ class Achievement extends Model
      */
     public static function getCachedAll(): Collection
     {
-        return Cache::rememberForever('achievements_all', function (): Collection {
-            return self::all();
-        });
+        return Cache::rememberForever('achievements_all', fn (): Collection => self::all());
     }
 
     protected static function booted(): void
     {
         parent::booted();
 
-        static::saved(function (Achievement $achievement) {
+        static::saved(function (Achievement $achievement): void {
             Cache::forget('achievements_all');
         });
 
-        static::deleted(function (Achievement $achievement) {
+        static::deleted(function (Achievement $achievement): void {
             Cache::forget('achievements_all');
         });
     }
