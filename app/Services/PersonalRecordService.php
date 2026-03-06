@@ -26,7 +26,6 @@ final class PersonalRecordService
      *
      * @param  \App\Models\Set  $set  The set to evaluate for personal records.
      * @param  \App\Models\User|null  $user  The user to whom the set belongs (optional).
-     * @return void
      */
     public function syncSetPRs(Set $set, ?User $user = null): void
     {
@@ -63,7 +62,6 @@ final class PersonalRecordService
      * @param  float|null  $secondary  A secondary value (like reps) for the PR, if applicable.
      * @param  \App\Models\Set  $set  The set that triggered the PR check.
      * @param  \App\Models\PersonalRecord|null  $pr  The existing personal record to compare against.
-     * @return void
      */
     protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
     {
@@ -96,7 +94,6 @@ final class PersonalRecordService
      * @param  \App\Models\User  $user  The user whose PRs are being updated.
      * @param  int  $exerciseId  The ID of the exercise.
      * @param  \App\Models\Set  $set  The set to evaluate against existing PRs.
-     * @return void
      */
     private function processUpdates(User $user, int $exerciseId, Set $set): void
     {
