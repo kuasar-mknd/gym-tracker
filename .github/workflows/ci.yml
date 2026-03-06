@@ -110,7 +110,7 @@ jobs:
                   DB_USERNAME: root
                   DB_PASSWORD: password
                   TELESCOPE_ENABLED: false
-              run: php artisan test --parallel --processes=4
+              run: php artisan test
 
     browser-tests:
         runs-on: ubuntu-latest
