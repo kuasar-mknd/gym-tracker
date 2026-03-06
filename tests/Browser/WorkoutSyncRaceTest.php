@@ -17,6 +17,7 @@ class WorkoutSyncRaceTest extends DuskTestCase
     private function performSyncRace(Browser $browser, string $sizeMacro): void
     {
         $user = User::factory()->create([
+            'email' => 'sync-user-'.time().random_int(0, 9999).'@example.com',
             'email_verified_at' => now(),
         ]);
 
@@ -25,14 +26,20 @@ class WorkoutSyncRaceTest extends DuskTestCase
             'started_at' => now(),
         ]);
 
-        $browser->loginAs($user->id)
-            ->{$sizeMacro}()
-            ->visit('/workouts/'.$workout->id)
-            ->disableAnimations()
-            ->waitFor('#main-content', 30);
+        try {
+            $browser->loginAs($user->id)
+                ->{$sizeMacro}()
+                ->visit('/workouts/'.$workout->id)
+                ->disableAnimations()
+                ->waitFor('#main-content', 30);
 
-        // Simple sync check
-        $browser->assertPathIs('/workouts/'.$workout->id);
+            $browser->pause(1000)
+                ->assertPathIs('/workouts/'.$workout->id)
+                ->assertNoConsoleExceptions();
+        } catch (\Exception $e) {
+            $browser->screenshot('sync-failure-'.$sizeMacro);
+            throw $e;
+        }
     }
 
     public function test_sync_race_on_iphone_mini(): void

@@ -25,7 +25,9 @@ const emit = defineEmits(['click'])
 // State
 const offset = ref(0)
 const startX = ref(0)
+const startY = ref(0)
 const isDragging = ref(false)
+const lockDirection = ref(null) // null, 'horizontal', 'vertical'
 const containerWidth = ref(0)
 
 // Computed
@@ -44,44 +46,74 @@ const actionStyle = computed(() => ({
 function onTouchStart(e) {
     if (props.disabled) return
     const touch = e.touches[0]
-    startX.value = touch.clientX - offset.value
+    startX.value = touch.clientX
+    startY.value = touch.clientY
     isDragging.value = true
+    lockDirection.value = null
     containerWidth.value = e.currentTarget.offsetWidth
 }
 
 function onTouchMove(e) {
-    if (!isDragging.value) return
-    const touch = e.touches[0]
-    const currentX = touch.clientX
-    let newOffset = currentX - startX.value
+    if (!isDragging.value || lockDirection.value === 'vertical') return
 
-    // Resistance effect when over-dragging
-    if (newOffset > props.actionThreshold) {
-        newOffset = props.actionThreshold + (newOffset - props.actionThreshold) * 0.2
-    } else if (newOffset < -props.actionThreshold) {
-        newOffset = -props.actionThreshold + (newOffset + props.actionThreshold) * 0.2
+    const touch = e.touches[0]
+    const deltaX = touch.clientX - startX.value
+    const deltaY = touch.clientY - startY.value
+
+    // Determine direction on first significant movement (10px)
+    if (!lockDirection.value) {
+        if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                lockDirection.value = 'horizontal'
+            } else {
+                lockDirection.value = 'vertical'
+                return
+            }
+        } else {
+            return
+        }
     }
 
-    offset.value = newOffset
+    if (lockDirection.value === 'horizontal') {
+        // Prevent vertical scroll when swiping horizontally
+        if (e.cancelable) e.preventDefault()
+
+        let newOffset = deltaX
+
+        // Resistance effect when over-dragging
+        if (newOffset > props.actionThreshold) {
+            newOffset = props.actionThreshold + (newOffset - props.actionThreshold) * 0.2
+        } else if (newOffset < -props.actionThreshold) {
+            newOffset = -props.actionThreshold + (newOffset + props.actionThreshold) * 0.2
+        }
+
+        offset.value = newOffset
+    }
 }
 
 function onTouchEnd() {
     isDragging.value = false
     const threshold = props.actionThreshold
 
-    // Snap logic
-    if (offset.value > threshold * 0.5) {
-        // Snap open left
-        offset.value = threshold
-        triggerHaptic('selection')
-    } else if (offset.value < -threshold * 0.5) {
-        // Snap open right
-        offset.value = -threshold
-        triggerHaptic('selection')
+    if (lockDirection.value === 'horizontal') {
+        // Snap logic
+        if (offset.value > threshold * 0.5) {
+            // Snap open left
+            offset.value = threshold
+            triggerHaptic('selection')
+        } else if (offset.value < -threshold * 0.5) {
+            // Snap open right
+            offset.value = -threshold
+            triggerHaptic('selection')
+        } else {
+            // Snap close
+            offset.value = 0
+        }
     } else {
-        // Snap close
         offset.value = 0
     }
+
+    lockDirection.value = null
 }
 
 // Reset if clicked outside or programmatically

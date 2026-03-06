@@ -75,7 +75,9 @@ abstract class DuskTestCase extends BaseTestCase
     {
         $options = (new ChromeOptions())->addArguments(collect([
             '--window-size=393,852',
-            '--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+            '--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-infobars',
             '--disable-search-engine-choice-screen',
             '--disable-smooth-scrolling',
         ])->unless($this->hasHeadlessDisabled(), fn (Collection $items) => $items->merge([

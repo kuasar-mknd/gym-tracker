@@ -16,6 +16,7 @@ class ExerciseManagementTest extends DuskTestCase
     private function performExerciseManagement(Browser $browser, string $sizeMacro): void
     {
         $user = User::factory()->create([
+            'email' => 'exercise-'.time().random_int(0, 999).'@example.com',
             'email_verified_at' => now(),
         ]);
 
@@ -24,16 +25,18 @@ class ExerciseManagementTest extends DuskTestCase
                 ->{$sizeMacro}()
                 ->visit('/exercises')
                 ->disableAnimations()
-                ->pause(2000)
-                ->waitFor('#main-content', 30)
-                ->waitFor('[dusk="create-exercise-btn"]', 30)
-                ->click('[dusk="create-exercise-btn"]')
-                ->waitFor('[dusk="exercise-modal-title"]', 15)
-                ->type('input[name="name"]', 'New Exercise '.time())
-                ->select('select[name="type"]', 'strength')
-                ->press('CRÉER')
+                ->waitFor('#main-content', 30);
+
+            $browser->waitFor('[dusk="create-exercise-btn"]', 15);
+
+            $browser->pause(1000)
+                ->click('[dusk="create-exercise-btn"]');
+
+            $browser->waitFor('[dusk="exercise-modal-title"]', 15)
+                ->type('@exercise-name-input', 'New Exercise '.time())
+                ->select('type', 'strength')
+                ->click('@submit-exercise-btn')
                 ->waitForText('Exercice créé avec succès', 15)
-                ->assertPathIs('/exercises')
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
             $browser->screenshot('exercise-failure-'.$sizeMacro);

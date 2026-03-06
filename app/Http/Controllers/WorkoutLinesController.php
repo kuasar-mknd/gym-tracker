@@ -23,7 +23,7 @@ class WorkoutLinesController extends Controller
             ['order' => $order]
         ));
 
-        return back();
+        return redirect()->route('workouts.show', $workout);
     }
 
     public function destroy(\App\Models\WorkoutLine $workoutLine): \Illuminate\Http\RedirectResponse

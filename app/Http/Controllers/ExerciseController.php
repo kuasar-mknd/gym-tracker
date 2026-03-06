@@ -90,7 +90,7 @@ class ExerciseController extends Controller
             return response()->json(['exercise' => $exercise], 201);
         }
 
-        return redirect()->back();
+        return redirect()->back()->with('success', 'Exercice créé avec succès');
     }
 
     /**

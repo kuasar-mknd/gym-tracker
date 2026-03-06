@@ -36,6 +36,35 @@ const showingNavigationDropdown = ref(false)
         <!-- Liquid Glass Background -->
         <LiquidBackground :variant="liquidVariant" />
 
+        <!-- Success Toast -->
+        <Transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0 -translate-y-4"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 -translate-y-4"
+        >
+            <div
+                v-if="$page.props.flash?.success"
+                class="fixed top-20 right-4 left-4 z-[60] sm:right-6 sm:left-auto sm:w-80"
+            >
+                <div
+                    class="glass-panel-light flex items-center gap-3 rounded-2xl border-l-[6px] border-l-emerald-500 p-4 shadow-lg backdrop-blur-xl"
+                >
+                    <div class="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500">
+                        <span class="material-symbols-outlined">check_circle</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $page.props.flash.success }}</p>
+                    </div>
+                    <button @click="$page.props.flash.success = null" class="text-slate-400 hover:text-slate-600">
+                        <span class="material-symbols-outlined text-base">close</span>
+                    </button>
+                </div>
+            </div>
+        </Transition>
+
         <!-- Desktop Navigation -->
         <nav
             class="bg-pearl-white/80 sticky top-0 z-40 hidden border-b border-white/40 backdrop-blur-xl sm:block dark:border-slate-700/40 dark:bg-slate-900/80"
@@ -200,7 +229,7 @@ const showingNavigationDropdown = ref(false)
         <main
             id="main-content"
             class="relative z-10 px-5 py-6 sm:px-6 lg:px-8"
-            :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'sm:pb-main-safe pb-48']"
+            :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'sm:pb-main-safe pb-64']"
         >
             <Transition
                 enter-active-class="transition ease-out duration-300"

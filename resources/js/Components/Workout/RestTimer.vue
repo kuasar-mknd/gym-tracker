@@ -256,6 +256,7 @@ watch(
                     <div class="flex gap-2">
                         <button
                             @click="addTime(30)"
+                            dusk="add-30s"
                             class="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                             title="Ajouter 30 secondes"
                             aria-label="Ajouter 30 secondes"

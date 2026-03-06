@@ -213,7 +213,7 @@ const typeLabel = (type) => {
                 </span>
             </div>
         </div>
-        <div class="space-y-6">
+        <div class="space-y-6 pb-64">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
@@ -231,6 +231,7 @@ const typeLabel = (type) => {
                     @click="showAddForm = true"
                     class="bg-gradient-main flex size-14 items-center justify-center rounded-2xl text-white shadow-lg shadow-orange-500/20 active:scale-95 sm:hidden"
                     data-testid="create-exercise-mobile-header"
+                    dusk="create-exercise-btn"
                     aria-label="Nouvel exercice"
                 >
                     <span class="material-symbols-outlined text-4xl" aria-hidden="true">add</span>
@@ -240,6 +241,7 @@ const typeLabel = (type) => {
                     variant="primary"
                     class="hidden sm:flex"
                     data-testid="create-exercise-desktop"
+                    dusk="create-exercise-btn-desktop"
                 >
                     <span class="material-symbols-outlined mr-2">add</span>
                     Nouvel Exercice
@@ -271,6 +273,7 @@ const typeLabel = (type) => {
                 <input
                     v-model="searchQuery"
                     type="search"
+                    dusk="search-exercises"
                     placeholder="Recherche exercices..."
                     class="text-text-main placeholder:text-text-muted/50 flex-1 border-none bg-transparent text-lg focus:ring-0 focus:outline-none"
                 />
@@ -286,6 +289,7 @@ const typeLabel = (type) => {
             <div class="hide-scrollbar animate-slide-up flex gap-2 overflow-x-auto pb-2" style="animation-delay: 0.15s">
                 <button
                     @click="activeCategory = 'all'"
+                    dusk="category-pill-all"
                     :class="[
                         'category-pill shrink-0 transition-all',
                         activeCategory === 'all'
@@ -300,6 +304,7 @@ const typeLabel = (type) => {
                     v-for="cat in categories"
                     :key="cat"
                     @click="activeCategory = cat"
+                    :dusk="`category-pill-${cat}`"
                     :class="[
                         'category-pill shrink-0 transition-all',
                         activeCategory === cat
@@ -314,10 +319,17 @@ const typeLabel = (type) => {
             <!-- Add Form Modal -->
             <Modal :show="showAddForm" @close="showAddForm = false" max-width="sm">
                 <div class="p-6">
-                    <h3 class="font-display text-text-main mb-5 text-xl font-black uppercase">Nouvel exercice</h3>
+                    <h3
+                        class="font-display text-text-main mb-5 text-xl font-black uppercase"
+                        dusk="exercise-modal-title"
+                    >
+                        Nouvel exercice
+                    </h3>
                     <form @submit.prevent="submit" class="space-y-4">
                         <GlassInput
                             v-model="form.name"
+                            name="name"
+                            dusk="exercise-name-input"
                             label="Nom de l'exercice"
                             placeholder="Ex: Développé couché"
                             :error="form.errors.name"
@@ -325,7 +337,7 @@ const typeLabel = (type) => {
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="font-display-label text-text-muted mb-2 block">Type</label>
-                                <select v-model="form.type" class="glass-input w-full">
+                                <select v-model="form.type" name="type" class="glass-input w-full">
                                     <option v-for="t in types" :key="t.value" :value="t.value">
                                         {{ t.label }}
                                     </option>
@@ -350,6 +362,7 @@ const typeLabel = (type) => {
                             class="w-full"
                             :loading="form.processing"
                             data-testid="submit-exercise-button"
+                            dusk="submit-exercise-btn"
                         >
                             Créer l'exercice
                         </GlassButton>
@@ -460,6 +473,7 @@ const typeLabel = (type) => {
 
                             <GlassCard
                                 padding="p-4"
+                                :dusk="`exercise-card-${exercise.id}`"
                                 :class="[
                                     'group relative overflow-hidden transition-all duration-300',
                                     'border-l-[6px]',
@@ -505,7 +519,8 @@ const typeLabel = (type) => {
                                         class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                                     >
                                         <button
-                                            @click="startEdit(exercise)"
+                                            @click.stop="startEdit(exercise)"
+                                            :dusk="`edit-exercise-btn-${exercise.id}`"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all sm:hidden"
                                             :aria-label="`Modifier ${exercise.name}`"
                                         >
@@ -514,7 +529,8 @@ const typeLabel = (type) => {
 
                                         <!-- Desktop Buttons -->
                                         <button
-                                            @click="startEdit(exercise)"
+                                            @click.stop="startEdit(exercise)"
+                                            :dusk="`edit-exercise-btn-desktop-${exercise.id}`"
                                             class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all sm:flex"
                                             data-testid="edit-exercise-button"
                                             :aria-label="`Modifier ${exercise.name}`"
@@ -522,7 +538,8 @@ const typeLabel = (type) => {
                                             <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                                         </button>
                                         <button
-                                            @click="deleteExercise(exercise.id)"
+                                            @click.stop="deleteExercise(exercise.id)"
+                                            :dusk="`delete-exercise-btn-${exercise.id}`"
                                             class="text-text-muted hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:flex"
                                             data-testid="delete-exercise-button"
                                             :aria-label="`Supprimer ${exercise.name}`"
@@ -536,16 +553,25 @@ const typeLabel = (type) => {
                                 <form v-else @submit.prevent="updateExercise(exercise)" class="space-y-4">
                                     <GlassInput
                                         v-model="editForm.name"
+                                        dusk="edit-exercise-name"
                                         placeholder="Nom de l'exercice"
                                         :error="editForm.errors.name"
                                     />
                                     <div class="grid grid-cols-2 gap-3">
-                                        <select v-model="editForm.type" class="glass-input text-sm">
+                                        <select
+                                            v-model="editForm.type"
+                                            dusk="edit-exercise-type"
+                                            class="glass-input text-sm"
+                                        >
                                             <option v-for="t in types" :key="t.value" :value="t.value">
                                                 {{ t.label }}
                                             </option>
                                         </select>
-                                        <select v-model="editForm.category" class="glass-input text-sm">
+                                        <select
+                                            v-model="editForm.category"
+                                            dusk="edit-exercise-category"
+                                            class="glass-input text-sm"
+                                        >
                                             <option value="">— Aucune —</option>
                                             <option v-for="cat in categories" :key="cat" :value="cat">
                                                 {{ cat }}
@@ -557,12 +583,19 @@ const typeLabel = (type) => {
                                             type="submit"
                                             variant="primary"
                                             size="sm"
+                                            dusk="save-exercise-btn"
                                             :loading="editForm.processing"
                                             data-testid="save-exercise-button"
                                         >
                                             Sauvegarder
                                         </GlassButton>
-                                        <GlassButton type="button" variant="ghost" size="sm" @click="cancelEdit">
+                                        <GlassButton
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            dusk="cancel-edit-btn"
+                                            @click="cancelEdit"
+                                        >
                                             Annuler
                                         </GlassButton>
                                     </div>
@@ -572,8 +605,6 @@ const typeLabel = (type) => {
                     </div>
                 </div>
             </div>
-            <!-- List Padding for Mobile Bottom Nav -->
-            <div class="h-48 sm:hidden"></div>
         </div>
     </AuthenticatedLayout>
 </template>
