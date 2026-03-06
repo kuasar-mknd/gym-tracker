@@ -45,8 +45,22 @@ class Achievement extends Model
      */
     public static function getCachedAll(): Collection
     {
+        // Skip caching in testing environment to avoid stale cache issues
+        // in multi-process environments like Laravel Dusk.
+        if (app()->environment('testing')) {
+            return self::all();
+        }
+
         /** @var Collection<int, Achievement> */
         return Cache::rememberForever('achievements.all', fn () => self::all());
+    }
+
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::saved(fn () => Cache::forget('achievements.all'));
+        static::deleted(fn () => Cache::forget('achievements.all'));
     }
 
     /**
@@ -65,13 +79,5 @@ class Achievement extends Model
             ->logOnly(['slug', 'name', 'description', 'type', 'category', 'threshold'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
-    }
-
-    protected static function booted(): void
-    {
-        parent::booted();
-
-        static::saved(fn () => Cache::forget('achievements.all'));
-        static::deleted(fn () => Cache::forget('achievements.all'));
     }
 }
