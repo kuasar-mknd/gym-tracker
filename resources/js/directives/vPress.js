@@ -9,30 +9,63 @@ import { triggerHaptic } from '@/composables/useHaptics'
 
 const defaultOptions = {
     scale: 0.95,
-    haptic: true,
-    duration: 100,
+    haptic: 'tap',
 }
 
 export const vPress = {
     mounted(el, binding) {
-        const options = { ...defaultOptions, ...binding.value }
+        // Support both v-press, v-press="'success'" and v-press="{ scale: 0.9 }"
+        const bindingOptions =
+            typeof binding.value === 'object'
+                ? binding.value
+                : typeof binding.value === 'string'
+                  ? { haptic: binding.value }
+                  : {}
 
-        // Store original transition
-        const originalTransition = el.style.transition
+        const options = { ...defaultOptions, ...bindingOptions }
 
-        // Add transition for smooth scale effect
-        el.style.transition = `${originalTransition ? originalTransition + ', ' : ''}transform ${options.duration}ms ease-out`
-        el.style.willChange = 'transform'
+        let isTouched = false
+        let isPressing = false
+        let touchTimeout = null
 
-        const handlePressStart = () => {
-            el.style.transform = `scale(${options.scale})`
-            if (options.haptic) {
-                triggerHaptic('tap')
+        const handlePressStart = (e) => {
+            try {
+                if (el.disabled || el.classList.contains('disabled')) return
+
+                // Prevent double triggering on mobile (touch + mouse)
+                if (e?.type === 'mousedown' && isTouched) return
+                if (e?.type === 'touchstart') {
+                    isTouched = true
+                    if (touchTimeout) clearTimeout(touchTimeout)
+                }
+
+                isPressing = true
+                el.style.transform = `scale(${options.scale})`
+
+                if (options.haptic) {
+                    triggerHaptic(typeof options.haptic === 'string' ? options.haptic : 'tap')
+                }
+            } catch (err) {
+                // Ignore directive errors to prevent breaking app mount
             }
         }
 
         const handlePressEnd = () => {
-            el.style.transform = 'scale(1)'
+            try {
+                if (!isPressing) return
+                isPressing = false
+
+                el.style.transform = ''
+
+                // Reset touched flag after a short delay to allow mouse events to be ignored
+                if (isTouched) {
+                    touchTimeout = setTimeout(() => {
+                        isTouched = false
+                    }, 500)
+                }
+            } catch (err) {
+                // Ignore
+            }
         }
 
         // Touch events (mobile)
@@ -49,13 +82,12 @@ export const vPress = {
         el._pressHandlers = {
             handlePressStart,
             handlePressEnd,
-            originalTransition,
         }
     },
 
     unmounted(el) {
         if (el._pressHandlers) {
-            const { handlePressStart, handlePressEnd, originalTransition } = el._pressHandlers
+            const { handlePressStart, handlePressEnd } = el._pressHandlers
 
             el.removeEventListener('touchstart', handlePressStart)
             el.removeEventListener('touchend', handlePressEnd)
@@ -63,9 +95,6 @@ export const vPress = {
             el.removeEventListener('mousedown', handlePressStart)
             el.removeEventListener('mouseup', handlePressEnd)
             el.removeEventListener('mouseleave', handlePressEnd)
-
-            el.style.transition = originalTransition
-            el.style.willChange = ''
 
             delete el._pressHandlers
         }

@@ -23,7 +23,7 @@ const patterns = {
  * @returns {boolean}
  */
 export function isHapticsSupported() {
-    return 'vibrate' in navigator
+    return typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
 }
 
 /**
@@ -32,14 +32,15 @@ export function isHapticsSupported() {
  * @returns {boolean} - Whether the vibration was triggered
  */
 export function triggerHaptic(type = 'tap') {
-    if (!isHapticsSupported()) {
-        return false
-    }
-
     try {
+        if (!isHapticsSupported()) {
+            return false
+        }
+
+        const pattern = patterns[type] || patterns.tap
         return navigator.vibrate(pattern)
     } catch (error) {
-        console.warn('Haptics ignored/failed:', error)
+        // Silently fail to avoid crashing in test environments
         return false
     }
 }

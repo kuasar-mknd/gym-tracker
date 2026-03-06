@@ -1,3 +1,7 @@
 ## 2024-03-02 - Empty State Call to Actions & Async Buttons
 **Learning:** Found an empty state ("Aucune séance pour l'instant") that left users at a dead-end on the primary Dashboard. Additionally, a large call-to-action card executed an async form post without any visual feedback (no spinner). In Inertia/Vue apps, disabling the button isn't enough; the user needs clear visual feedback that their action is processing, especially for major actions like creating a new Workout.
 **Action:** Always provide an actionable CTA within Empty States to prevent "dead ends". Also, always ensure primary action buttons not only disable themselves but also show an explicit loading indicator (like `animate-spin` on an icon) when `form.processing` is true.
+
+## 2025-03-06 - Unified Interaction Feedback with v-press
+**Learning:** Found that custom Vue directives registered asynchronously in `main.js` can lead to race conditions where the directive is missing on the first render. Also, resetting `el.style.transform` to an empty string `''` instead of `scale(1)` in the `v-press` directive is crucial to prevent JS from locking the transform and breaking CSS-based states like Tailwind's `hover:scale-105`.
+**Action:** Statically import and register global directives in `main.js`. Always reset style properties to `''` when they should return to their CSS-defined state in directives to maintain compatibility with Tailwind's utility classes.
