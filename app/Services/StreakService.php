@@ -8,10 +8,25 @@ use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Carbon;
 
+/**
+ * Service responsible for calculating and updating user workout streaks.
+ *
+ * This service determines the user's current consecutive workout streak,
+ * tracks their longest historical streak, and updates the `last_workout_at`
+ * timestamp. It handles both manual workout entries and historical data updates.
+ */
 final class StreakService
 {
     /**
      * Update user streak based on the latest workout.
+     *
+     * Resolves the effective workout date, compares it to the last recorded
+     * workout date, and calculates the new streak. If the streak is broken,
+     * it resets to 1. If consecutive, it increments. It also updates the
+     * user's `last_workout_at` timestamp.
+     *
+     * @param  \App\Models\User  $user  The user whose streak is being updated.
+     * @param  \App\Models\Workout|null  $workout  The newly completed or updated workout (optional).
      */
     public function updateStreak(User $user, ?Workout $workout = null): void
     {
@@ -44,7 +59,10 @@ final class StreakService
     }
 
     /**
-     * Get the last recorded workout date as Carbon.
+     * Get the user's last recorded workout date as a Carbon instance.
+     *
+     * @param  \App\Models\User  $user  The user model.
+     * @return \Illuminate\Support\Carbon|null The start of the day of the last workout, or null if never recorded.
      */
     protected function getLastRecordedDate(User $user): ?Carbon
     {
@@ -52,7 +70,16 @@ final class StreakService
     }
 
     /**
-     * Calculate and update the user's streak.
+     * Calculate and update the user's current and longest streak values.
+     *
+     * Compares the new workout date against the last recorded date to determine
+     * if the streak should increment (consecutive days), reset to 1 (broken streak),
+     * or remain the same (same day). It also updates the `longest_streak` if
+     * the new current streak exceeds it.
+     *
+     * @param  \App\Models\User  $user  The user whose streak is being calculated.
+     * @param  \Illuminate\Support\Carbon  $workoutDate  The resolved start-of-day date of the current workout.
+     * @param  \Illuminate\Support\Carbon|null  $lastRecordedDate  The start-of-day date of the previously recorded workout.
      */
     protected function calculateNewStreak(User $user, Carbon $workoutDate, ?Carbon $lastRecordedDate): void
     {
@@ -78,7 +105,16 @@ final class StreakService
     }
 
     /**
-     * Resolve the workout date to be processed.
+     * Resolve the correct date of the workout to be processed.
+     *
+     * If a specific workout is provided, its `started_at` date is used.
+     * Otherwise, it queries the database for the user's most recent workout.
+     * The returned date is always normalized to the start of the day to ensure
+     * accurate day-to-day streak calculations.
+     *
+     * @param  \App\Models\User  $user  The user model.
+     * @param  \App\Models\Workout|null  $workout  The explicitly provided workout.
+     * @return \Illuminate\Support\Carbon|null The resolved date normalized to start of day, or null if no workouts exist.
      */
     private function resolveWorkoutDate(User $user, ?Workout $workout): ?Carbon
     {
