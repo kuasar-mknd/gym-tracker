@@ -19,6 +19,7 @@ class WorkoutTemplateSetResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'workout_template_line_id' => $this->workout_template_line_id,
             'reps' => $this->reps,
             'weight' => $this->weight,
             'is_warmup' => $this->is_warmup,
