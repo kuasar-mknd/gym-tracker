@@ -10,6 +10,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, h } from 'vue'
 import { ZiggyVue } from 'ziggy-js'
 import * as Sentry from '@sentry/vue'
+import { vPress } from './directives/vPress'
 
 // Expose router for testing (Dusk)
 window.Inertia = router
@@ -37,9 +38,7 @@ createInertiaApp({
         }
 
         // Register custom directives
-        import('./directives/vPress').then((m) => {
-            app.directive('press', m.vPress)
-        })
+        app.directive('press', vPress)
 
         return app.mount(el)
     },
