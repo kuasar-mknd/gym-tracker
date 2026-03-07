@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests\Api;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreUserRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8'],
+            'provider' => ['nullable', 'string', 'max:255'],
+            'provider_id' => ['nullable', 'string', 'max:255'],
+            'avatar' => ['nullable', 'string', 'max:255'],
+            'default_rest_time' => ['nullable', 'integer', 'min:0'],
+            'total_volume' => ['nullable', 'numeric', 'min:0'],
+        ];
+    }
+}
