@@ -66,8 +66,14 @@ class WorkoutsController extends Controller
 
         $exercises = Exercise::getCachedForUser($this->user()->id);
 
+        $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']);
+
+        // ⚡ Bolt Optimization: Explicitly append recommended_values for the active workout view.
+        // This ensures the UX is preserved while avoiding N+1 queries on index pages.
+        $workout->workoutLines->each->append('recommended_values');
+
         return Inertia::render('Workouts/Show', [
-            'workout' => $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']),
+            'workout' => $workout,
             'exercises' => $exercises,
             'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
             'types' => [

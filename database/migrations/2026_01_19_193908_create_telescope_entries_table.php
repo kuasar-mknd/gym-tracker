@@ -14,6 +14,10 @@ return new class() extends Migration
      */
     public function getConnection(): ?string
     {
+        if (config('database.default') === 'sqlite') {
+            return null;
+        }
+
         /** @var string|null $connection */
         $connection = config('telescope.storage.database.connection');
 

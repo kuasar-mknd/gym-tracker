@@ -56,6 +56,9 @@ class WorkoutLineController extends Controller
             ['order' => $order]
         ));
 
+        // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
+        $workoutLine->append('recommended_values');
+
         return new WorkoutLineResource($workoutLine);
     }
 
@@ -65,6 +68,9 @@ class WorkoutLineController extends Controller
     public function show(WorkoutLine $workoutLine): WorkoutLineResource
     {
         $this->authorize('view', $workoutLine);
+
+        // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
+        $workoutLine->append('recommended_values');
 
         return new WorkoutLineResource($workoutLine);
     }
@@ -77,6 +83,9 @@ class WorkoutLineController extends Controller
         $this->authorize('update', $workoutLine);
 
         $workoutLine->update($request->validated());
+
+        // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
+        $workoutLine->append('recommended_values');
 
         return new WorkoutLineResource($workoutLine);
     }

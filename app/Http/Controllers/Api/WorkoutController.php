@@ -64,6 +64,10 @@ class WorkoutController extends Controller
 
         $workout->load(['workoutLines.exercise', 'workoutLines.sets']);
 
+        // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
+        // Impact: Reduces DB queries on index from O(N) to O(1).
+        $workout->workoutLines->each->append('recommended_values');
+
         return new WorkoutResource($workout);
     }
 
