@@ -311,7 +311,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                             </span>
                                             <span
                                                 v-if="workout.workout_lines.length > 3"
-                                                class="text-text-muted/50 rounded-lg bg-white/50 px-2 py-1 text-xs"
+                                                class="text-text-muted/50 rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/50"
                                             >
                                                 +{{ workout.workout_lines.length - 3 }}
                                             </span>
