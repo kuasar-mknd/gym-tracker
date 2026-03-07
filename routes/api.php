@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->middleware(['auth:sanctum', app()->isProduction() ? 'throttle:60,1' : 'throttle:1000,1'])->as('api.v1.')->group(function (): void {
     Route::get('/user', fn (Request $request): \App\Http\Resources\UserResource => new \App\Http\Resources\UserResource($request->user()));
 
+    Route::apiResource('users', \App\Http\Controllers\Api\UserController::class);
+
     Route::apiResource('achievements', \App\Http\Controllers\Api\AchievementController::class);
     Route::apiResource('user-achievements', \App\Http\Controllers\Api\UserAchievementController::class);
     Route::apiResource('exercises', ExerciseController::class);
