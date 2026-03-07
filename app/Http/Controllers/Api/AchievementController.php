@@ -9,18 +9,29 @@ use App\Http\Requests\Api\StoreAchievementRequest;
 use App\Http\Requests\Api\UpdateAchievementRequest;
 use App\Http\Resources\AchievementResource;
 use App\Models\Achievement;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use OpenApi\Annotations as OA;
 
 /**
  * Controller for managing achievements.
  */
-class AchievementController extends Controller
+class AchievementController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    use AuthorizesRequests;
+
+    public static function middleware(): array
     {
-        $this->authorizeResource(Achievement::class, 'achievement');
+        return [
+            new Middleware('can:viewAny,App\Models\Achievement', only: ['index']),
+            new Middleware('can:view,achievement', only: ['show']),
+            new Middleware('can:create,App\Models\Achievement', only: ['store']),
+            new Middleware('can:update,achievement', only: ['update']),
+            new Middleware('can:delete,achievement', only: ['destroy']),
+        ];
     }
 
     /**
