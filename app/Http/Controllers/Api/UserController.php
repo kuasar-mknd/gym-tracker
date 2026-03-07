@@ -37,7 +37,7 @@ class UserController extends Controller
 
         $validated = $request->validated();
 
-        if (isset($validated['password'])) {
+        if (isset($validated['password']) && is_string($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         }
 
@@ -65,7 +65,7 @@ class UserController extends Controller
 
         $validated = $request->validated();
 
-        if (isset($validated['password'])) {
+        if (isset($validated['password']) && is_string($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         }
 
