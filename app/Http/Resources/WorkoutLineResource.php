@@ -21,7 +21,11 @@ class WorkoutLineResource extends JsonResource
             'notes' => $this->notes,
             'exercise' => new ExerciseResource($this->whenLoaded('exercise')),
             'sets' => SetResource::collection($this->whenLoaded('sets')),
-            'recommended_values' => $this->getRecommendedValues(),
+            /**
+             * ⚡ Bolt Optimization: Only include recommended_values when explicitly appended.
+             * Prevents N+1 queries when serializing large collections of workout lines.
+             */
+            'recommended_values' => $this->whenAppended('recommended_values'),
         ];
     }
 }
