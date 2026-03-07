@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Workouts\CreateWorkoutAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Http\Requests\UpdateWorkoutRequest;
@@ -93,18 +94,11 @@ class WorkoutsController extends Controller
      * @param  \Illuminate\Http\Request  $request  The HTTP request (currently unused for input but part of the signature).
      * @return \Illuminate\Http\RedirectResponse A redirect to the newly created workout.
      */
-    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    public function store(Request $request, CreateWorkoutAction $createWorkout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', Workout::class);
 
-        $workout = new Workout([
-            'started_at' => now(),
-            'name' => 'Séance du '.now()->format('d/m/Y'),
-        ]);
-        $workout->user_id = $this->user()->id;
-        $workout->save();
-
-        $this->statsService->clearWorkoutRelatedStats($this->user());
+        $workout = $createWorkout->execute($this->user());
 
         return redirect()->route('workouts.show', $workout);
     }
