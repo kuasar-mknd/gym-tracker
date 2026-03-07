@@ -9,12 +9,12 @@ use App\Http\Requests\Api\StoreAchievementRequest;
 use App\Http\Requests\Api\UpdateAchievementRequest;
 use App\Http\Resources\AchievementResource;
 use App\Models\Achievement;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use OpenApi\Annotations as OA;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use OpenApi\Annotations as OA;
 
 /**
  * Controller for managing achievements.
