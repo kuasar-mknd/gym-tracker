@@ -1,5 +1,3 @@
-# Bolt's Performance Journal
-
-## 2025-05-15 - Surgical Cache Invalidation and Column Selection
-**Learning:** In a dashboard-heavy application, 'summary' stats are frequently accessed. Using `select()` to limit Eloquent hydration and caching the result significantly reduces database pressure. Furthermore, cache invalidation should be surgical: workout metadata changes (like notes) shouldn't invalidate volume-based trends, and workout updates shouldn't invalidate unrelated body measurement caches.
-**Action:** Always use explicit column selection for summary metrics and implement tiered cache invalidation (Metadata vs. Data) to maximize cache hit rates.
+## 2025-05-22 - [Fix N+1 query in workout lines]
+**Learning:** Globally appended model attributes (using `$appends`) that perform database queries can cause catastrophic N+1 query explosions when serializing collections. A small collection of 5 items with 3 lines each caused 33 queries.
+**Action:** Use conditional attributes in API resources (`$this->whenAppended()`) and remove expensive attributes from the model's global `$appends` array. Explicitly call `->append()` only in specific controllers where the data is actually required.
