@@ -98,11 +98,12 @@ const colorForWorkout = (index) => {
             <section class="animate-slide-up grid grid-cols-2 gap-4" style="animation-delay: 0.1s">
                 <!-- Start Workout -->
                 <button
+                    v-press
                     @click="startWorkout"
                     :disabled="form.processing"
                     id="start-workout-button"
                     dusk="start-workout-button"
-                    class="hover:shadow-glow-orange/70 group shadow-glow-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 active:scale-95"
+                    class="hover:shadow-glow-orange/70 group shadow-glow-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300"
                 >
                     <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md dark:bg-slate-800/60"></div>
                     <div
@@ -135,8 +136,9 @@ const colorForWorkout = (index) => {
 
                 <!-- Templates -->
                 <Link
+                    v-press
                     :href="route('templates.index')"
-                    class="hover:shadow-glow-violet/70 group shadow-glow-violet relative h-52 overflow-hidden rounded-3xl transition-all duration-300 active:scale-95"
+                    class="hover:shadow-glow-violet/70 group shadow-glow-violet relative h-52 overflow-hidden rounded-3xl transition-all duration-300"
                 >
                     <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md dark:bg-slate-800/60"></div>
                     <div

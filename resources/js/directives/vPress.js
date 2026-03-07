@@ -25,6 +25,8 @@ export const vPress = {
         el.style.willChange = 'transform'
 
         const handlePressStart = () => {
+            if (el.disabled || el.classList.contains('disabled')) return
+
             el.style.transform = `scale(${options.scale})`
             if (options.haptic) {
                 triggerHaptic('tap')
@@ -32,7 +34,7 @@ export const vPress = {
         }
 
         const handlePressEnd = () => {
-            el.style.transform = 'scale(1)'
+            el.style.transform = ''
         }
 
         // Touch events (mobile)

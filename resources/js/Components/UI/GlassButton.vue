@@ -36,11 +36,12 @@ const sizeClasses = {
 
 <template>
     <button
+        v-press
         :type="type"
         :disabled="disabled || loading"
         :aria-busy="loading"
         :class="[
-            'glass-button transition-all active:scale-95',
+            'glass-button transition-all',
             sizeClasses[size],
             {
                 'glass-button-primary shadow-glow-orange': variant === 'primary',
