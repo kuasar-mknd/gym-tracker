@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Workouts\CreateWorkoutLineAction;
 use App\Http\Requests\Api\WorkoutLineStoreRequest;
 use App\Http\Requests\Api\WorkoutLineUpdateRequest;
 use App\Http\Resources\WorkoutLineResource;
@@ -38,7 +39,7 @@ class WorkoutLineController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(WorkoutLineStoreRequest $request): WorkoutLineResource
+    public function store(WorkoutLineStoreRequest $request, CreateWorkoutLineAction $action): WorkoutLineResource
     {
         $validated = $request->validated();
 
@@ -47,14 +48,7 @@ class WorkoutLineController extends Controller
 
         $this->authorize('create', [WorkoutLine::class, $workout]);
 
-        // @phpstan-ignore-next-line
-        $order = $validated['order'] ?? (is_null($workout->workoutLines()->max('order')) ? 0 : $workout->workoutLines()->max('order') + 1);
-
-        /** @var \App\Models\WorkoutLine $workoutLine */
-        $workoutLine = $workout->workoutLines()->create(array_merge(
-            collect($validated)->except('workout_id')->toArray(),
-            ['order' => $order]
-        ));
+        $workoutLine = $action->execute($workout, $validated);
 
         // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
         $workoutLine->append('recommended_values');
