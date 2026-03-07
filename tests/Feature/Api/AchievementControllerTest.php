@@ -17,11 +17,11 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 use Illuminate\Support\Facades\Gate;
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->user = User::factory()->create();
 });
 
-test('user can view achievements list', function () {
+test('user can view achievements list', function (): void {
     Sanctum::actingAs($this->user);
 
     Achievement::factory()->count(3)->create();
@@ -49,12 +49,12 @@ test('user can view achievements list', function () {
         ->assertJsonCount(3, 'data');
 });
 
-test('unauthenticated user cannot view achievements list', function () {
+test('unauthenticated user cannot view achievements list', function (): void {
     getJson(route('api.v1.achievements.index'))
         ->assertUnauthorized();
 });
 
-test('user can view a specific achievement', function () {
+test('user can view a specific achievement', function (): void {
     Sanctum::actingAs($this->user);
 
     $achievement = Achievement::factory()->create();
@@ -65,7 +65,7 @@ test('user can view a specific achievement', function () {
         ->assertJsonPath('data.name', $achievement->name);
 });
 
-test('user cannot create an achievement', function () {
+test('user cannot create an achievement', function (): void {
     Sanctum::actingAs($this->user);
 
     $payload = Achievement::factory()->make()->toArray();
@@ -74,13 +74,9 @@ test('user cannot create an achievement', function () {
         ->assertForbidden();
 });
 
-test('admin can create an achievement', function () {
-    Gate::define('Create:Achievement', function () {
-        return true;
-    });
-    Gate::define('ViewAny:Achievement', function () {
-        return true;
-    });
+test('admin can create an achievement', function (): void {
+    Gate::define('Create:Achievement', fn() => true);
+    Gate::define('ViewAny:Achievement', fn() => true);
 
     // API routes use `auth:sanctum`. So we can use a User model instead of Admin if Sanctum is needed
     // The policy just checks $authUser instanceof \App\Models\User.
@@ -105,13 +101,9 @@ test('admin can create an achievement', function () {
     assertDatabaseHas('achievements', ['slug' => 'test-achievement']);
 });
 
-test('create achievement validates required fields', function () {
-    Gate::define('Create:Achievement', function () {
-        return true;
-    });
-    Gate::define('ViewAny:Achievement', function () {
-        return true;
-    });
+test('create achievement validates required fields', function (): void {
+    Gate::define('Create:Achievement', fn() => true);
+    Gate::define('ViewAny:Achievement', fn() => true);
     $adminUser = User::factory()->create();
     Sanctum::actingAs($adminUser);
 
@@ -120,13 +112,9 @@ test('create achievement validates required fields', function () {
         ->assertJsonValidationErrors(['slug', 'name', 'description', 'icon', 'type', 'threshold', 'category']);
 });
 
-test('create achievement validates unique slug', function () {
-    Gate::define('Create:Achievement', function () {
-        return true;
-    });
-    Gate::define('ViewAny:Achievement', function () {
-        return true;
-    });
+test('create achievement validates unique slug', function (): void {
+    Gate::define('Create:Achievement', fn() => true);
+    Gate::define('ViewAny:Achievement', fn() => true);
     $adminUser = User::factory()->create();
     Sanctum::actingAs($adminUser);
 
@@ -139,7 +127,7 @@ test('create achievement validates unique slug', function () {
         ->assertJsonValidationErrors(['slug']);
 });
 
-test('user cannot update an achievement', function () {
+test('user cannot update an achievement', function (): void {
     Sanctum::actingAs($this->user);
 
     $achievement = Achievement::factory()->create();
@@ -148,20 +136,14 @@ test('user cannot update an achievement', function () {
         ->assertForbidden();
 });
 
-test('admin can update an achievement', function () {
-    Gate::define('Update:Achievement', function () {
-        return true;
-    });
-    Gate::define('update', function () {
-        return true;
-    });
+test('admin can update an achievement', function (): void {
+    Gate::define('Update:Achievement', fn() => true);
+    Gate::define('update', fn() => true);
 
     // We can't use an anonymous class for policy replacement in Laravel 11.
     // Instead we bypass Gate authorization checking.
     $adminUser = User::factory()->create();
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn($user, $ability) => true);
 
     Sanctum::actingAs($adminUser);
 
@@ -177,17 +159,11 @@ test('admin can update an achievement', function () {
     ]);
 });
 
-test('update achievement ignores unique slug for current achievement', function () {
-    Gate::define('Update:Achievement', function () {
-        return true;
-    });
-    Gate::define('update', function () {
-        return true;
-    });
+test('update achievement ignores unique slug for current achievement', function (): void {
+    Gate::define('Update:Achievement', fn() => true);
+    Gate::define('update', fn() => true);
 
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn($user, $ability) => true);
 
     $adminUser = User::factory()->create();
     Sanctum::actingAs($adminUser);
@@ -204,17 +180,11 @@ test('update achievement ignores unique slug for current achievement', function 
     ]);
 });
 
-test('update achievement validates unique slug for other achievements', function () {
-    Gate::define('Update:Achievement', function () {
-        return true;
-    });
-    Gate::define('update', function () {
-        return true;
-    });
+test('update achievement validates unique slug for other achievements', function (): void {
+    Gate::define('Update:Achievement', fn() => true);
+    Gate::define('update', fn() => true);
 
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn($user, $ability) => true);
 
     $adminUser = User::factory()->create();
     Sanctum::actingAs($adminUser);
@@ -227,7 +197,7 @@ test('update achievement validates unique slug for other achievements', function
         ->assertJsonValidationErrors(['slug']);
 });
 
-test('user cannot delete an achievement', function () {
+test('user cannot delete an achievement', function (): void {
     Sanctum::actingAs($this->user);
 
     $achievement = Achievement::factory()->create();
@@ -236,17 +206,11 @@ test('user cannot delete an achievement', function () {
         ->assertForbidden();
 });
 
-test('admin can delete an achievement', function () {
-    Gate::define('Delete:Achievement', function () {
-        return true;
-    });
-    Gate::define('delete', function () {
-        return true;
-    });
+test('admin can delete an achievement', function (): void {
+    Gate::define('Delete:Achievement', fn() => true);
+    Gate::define('delete', fn() => true);
 
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn($user, $ability) => true);
 
     $adminUser = User::factory()->create();
     Sanctum::actingAs($adminUser);
