@@ -50,7 +50,7 @@ test('can filter workout template lines by workout_template_id', function (): vo
         'workout_template_id' => $template2->id,
     ]);
 
-    $response = getJson('/api/v1/workout-template-lines?filter[workout_template_id]=' . $template1->id);
+    $response = getJson('/api/v1/workout-template-lines?filter[workout_template_id]='.$template1->id);
 
     $response->assertOk()
         ->assertJsonCount(2, 'data');
@@ -117,7 +117,7 @@ test('can view a specific workout template line', function (): void {
     $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
-    $response = getJson('/api/v1/workout-template-lines/' . $line->id);
+    $response = getJson('/api/v1/workout-template-lines/'.$line->id);
 
     $response->assertOk()
         ->assertJsonPath('data.id', $line->id);
@@ -128,7 +128,7 @@ test('cannot view another user\'s workout template line', function (): void {
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
-    $response = getJson('/api/v1/workout-template-lines/' . $line->id);
+    $response = getJson('/api/v1/workout-template-lines/'.$line->id);
 
     $response->assertForbidden();
 });
@@ -138,7 +138,7 @@ test('can update a workout template line', function (): void {
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
     $newExercise = Exercise::factory()->create(['user_id' => $this->user->id]);
 
-    $response = putJson('/api/v1/workout-template-lines/' . $line->id, [
+    $response = putJson('/api/v1/workout-template-lines/'.$line->id, [
         'exercise_id' => $newExercise->id,
         'order' => 5,
     ]);
@@ -157,7 +157,7 @@ test('cannot update a workout template line with invalid exercise', function ():
     $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
-    $response = putJson('/api/v1/workout-template-lines/' . $line->id, [
+    $response = putJson('/api/v1/workout-template-lines/'.$line->id, [
         'exercise_id' => 999999,
     ]);
 
@@ -171,7 +171,7 @@ test('cannot update another user\'s workout template line', function (): void {
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
     $newExercise = Exercise::factory()->create(['user_id' => $this->user->id]);
 
-    $response = putJson('/api/v1/workout-template-lines/' . $line->id, [
+    $response = putJson('/api/v1/workout-template-lines/'.$line->id, [
         'exercise_id' => $newExercise->id,
         'order' => 5,
     ]);
@@ -183,7 +183,7 @@ test('can delete a workout template line', function (): void {
     $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
-    $response = deleteJson('/api/v1/workout-template-lines/' . $line->id);
+    $response = deleteJson('/api/v1/workout-template-lines/'.$line->id);
 
     $response->assertNoContent();
 
@@ -197,7 +197,7 @@ test('cannot delete another user\'s workout template line', function (): void {
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
-    $response = deleteJson('/api/v1/workout-template-lines/' . $line->id);
+    $response = deleteJson('/api/v1/workout-template-lines/'.$line->id);
 
     $response->assertForbidden();
 
