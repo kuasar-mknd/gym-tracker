@@ -93,6 +93,7 @@ watch(selectedExercise, (newVal) => {
                     <button
                         v-for="period in periods"
                         :key="period.value"
+                        v-press="{ haptic: 'selection' }"
                         @click="handlePeriodChange(period.value)"
                         :class="[
                             'rounded-lg px-3 py-1.5 text-[10px] font-black tracking-wider uppercase transition-all',
@@ -100,6 +101,7 @@ watch(selectedExercise, (newVal) => {
                                 ? 'bg-cyan-pure text-text-main shadow-sm'
                                 : 'text-text-muted hover:text-text-main',
                         ]"
+                        :aria-pressed="currentPeriod === period.value"
                     >
                         {{ period.label }}
                     </button>

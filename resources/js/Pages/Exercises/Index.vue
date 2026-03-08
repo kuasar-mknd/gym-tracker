@@ -275,6 +275,7 @@ const typeLabel = (type) => {
                     type="search"
                     dusk="search-exercises"
                     placeholder="Recherche exercices..."
+                    aria-label="Rechercher des exercices"
                     class="text-text-main placeholder:text-text-muted/50 flex-1 border-none bg-transparent text-lg focus:ring-0 focus:outline-none"
                 />
                 <div
@@ -288,6 +289,7 @@ const typeLabel = (type) => {
             <!-- Category Pills -->
             <div class="hide-scrollbar animate-slide-up flex gap-2 overflow-x-auto pb-2" style="animation-delay: 0.15s">
                 <button
+                    v-press="{ haptic: 'selection' }"
                     @click="activeCategory = 'all'"
                     dusk="category-pill-all"
                     :class="[
@@ -296,6 +298,7 @@ const typeLabel = (type) => {
                             ? 'bg-text-main text-white shadow-lg'
                             : 'text-text-main border border-slate-200 bg-white',
                     ]"
+                    :aria-pressed="activeCategory === 'all'"
                 >
                     <span class="material-symbols-outlined text-lg">apps</span>
                     Tous
@@ -303,6 +306,7 @@ const typeLabel = (type) => {
                 <button
                     v-for="cat in categories"
                     :key="cat"
+                    v-press="{ haptic: 'selection' }"
                     @click="activeCategory = cat"
                     :dusk="`category-pill-${cat}`"
                     :class="[
@@ -311,6 +315,7 @@ const typeLabel = (type) => {
                             ? `${categoryColors[cat] || 'bg-slate-500'} text-white`
                             : 'text-text-main border border-slate-200 bg-white',
                     ]"
+                    :aria-pressed="activeCategory === cat"
                 >
                     {{ cat }}
                 </button>
