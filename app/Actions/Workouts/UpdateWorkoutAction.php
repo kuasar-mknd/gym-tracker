@@ -34,7 +34,9 @@ final class UpdateWorkoutAction
         $workout->save();
 
         if ($needsFullClear) {
+            // started_at/ended_at change affects volume, duration and meta (histories)
             $this->statsService->clearWorkoutRelatedStats($workout->user);
+            $this->statsService->clearWorkoutMetadataStats($workout->user);
         } elseif ($needsMetaClear) {
             $this->statsService->clearWorkoutMetadataStats($workout->user);
         }
