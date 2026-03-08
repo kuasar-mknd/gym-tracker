@@ -9,6 +9,7 @@ use App\Actions\Workouts\FetchWorkoutShowAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Http\Requests\UpdateWorkoutRequest;
+use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
