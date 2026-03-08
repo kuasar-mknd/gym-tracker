@@ -199,7 +199,13 @@ const formatDate = (dateStr) => {
                     <h3 class="text-text-main font-semibold">
                         {{ editingJournal ? "Modifier l'entrée" : 'Nouvelle entrée' }}
                     </h3>
-                    <button @click="showAddForm = false" class="text-text-muted hover:text-text-main">✕</button>
+                    <button
+                        @click="showAddForm = false"
+                        class="text-text-muted hover:text-text-main"
+                        aria-label="Fermer le formulaire"
+                    >
+                        ✕
+                    </button>
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-4">
@@ -420,6 +426,7 @@ const formatDate = (dateStr) => {
                                             <button
                                                 @click="editJournal(journal)"
                                                 class="text-text-muted/50 hover:text-text-main rounded p-1 hover:bg-slate-100/50"
+                                                aria-label="Modifier l'entrée"
                                             >
                                                 <svg
                                                     class="h-4 w-4"
@@ -438,6 +445,7 @@ const formatDate = (dateStr) => {
                                             <button
                                                 @click="deleteJournal(journal.id)"
                                                 class="text-text-muted/50 rounded p-1 hover:bg-slate-100/50 hover:text-red-400"
+                                                aria-label="Supprimer l'entrée"
                                             >
                                                 <svg
                                                     class="h-4 w-4"
