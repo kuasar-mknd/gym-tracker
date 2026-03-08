@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Models\User;
 use App\Models\Admin;
+use App\Models\User;
 use Laravel\Sanctum\Sanctum;
 
 test('regular user cannot list admins', function (): void {
