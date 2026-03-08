@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Fast;
 use App\Models\User;
+
 use function Pest\Laravel\actingAs;
 
 test('authenticated user can view their fasts', function (): void {
