@@ -89,7 +89,7 @@ const showCreateForm = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
 const showConfirmModal = ref(false)
 const confirmAction = ref(null)
-const confirmMessage = ''
+const confirmMessage = ref('')
 const showSettingsModal = ref(false)
 
 const settingsForm = useForm({
@@ -174,6 +174,10 @@ const closeModal = () => {
 }
 
 const removeLine = (lineId) => {
+    const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
+    confirmMessage.value = `Supprimer ${line?.exercise?.name || "l'exercice"} ?`
+    triggerHaptic('warning')
+
     confirmAction.value = () => {
         router.delete(route('workout-lines.destroy', { workout_line: lineId }), {
             preserveScroll: true,
@@ -186,6 +190,7 @@ const removeLine = (lineId) => {
 }
 
 const addSet = (lineId) => {
+    triggerHaptic('tap')
     const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
     const lastSet = line?.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
 
@@ -221,6 +226,7 @@ const updateSet = (set, field, value) => {
 }
 
 const removeSet = (setId) => {
+    triggerHaptic('warning')
     SyncService.delete(route('api.v1.sets.destroy', { set: setId })).then(() => {
         router.reload({ preserveScroll: true, only: ['workout'] })
     })
@@ -556,9 +562,7 @@ const filteredExercises = computed(() => {
                     <GlassButton variant="secondary" @click="showConfirmModal = false" class="flex-1"
                         >Annuler</GlassButton
                     >
-                    <GlassButton variant="solid" @click="confirmAction" class="flex-1 bg-red-500 text-white"
-                        >Supprimer</GlassButton
-                    >
+                    <GlassButton variant="danger" @click="confirmAction" class="flex-1">Supprimer</GlassButton>
                 </div>
             </div>
         </Modal>
