@@ -172,35 +172,7 @@
                         7 derniers jours
                     </h2>
 
-                    <div class="flex h-[300px] items-end justify-between gap-2 pt-4">
-                        <div
-                            v-for="day in history"
-                            :key="day.date"
-                            class="group relative flex flex-1 flex-col items-center justify-end"
-                        >
-                            <!-- Tooltip -->
-                            <div
-                                class="absolute -top-10 z-10 mb-2 rounded bg-slate-800 px-2 py-1 text-xs whitespace-nowrap text-white opacity-0 transition-opacity group-hover:opacity-100"
-                            >
-                                {{ day.total }} ml
-                            </div>
-
-                            <!-- Bar -->
-                            <div
-                                class="relative w-full overflow-hidden rounded-t-lg bg-slate-100 transition-all duration-500 group-hover:bg-blue-100"
-                                :style="{ height: `${Math.min((day.total / goal) * 100, 100)}%` }"
-                            >
-                                <div
-                                    class="absolute top-0 right-0 bottom-0 left-0 bg-blue-500/20 transition-colors group-hover:bg-blue-500/30"
-                                ></div>
-                                <!-- Fill based on goal cap? Actually visual height is mostly useful relative to goal -->
-                            </div>
-
-                            <span class="text-text-muted mt-2 w-full truncate text-center text-xs font-bold uppercase">
-                                {{ day.day_name.substring(0, 3) }}
-                            </span>
-                        </div>
-                    </div>
+                    <WaterHistoryChart :data="history" :goal="goal" />
                 </GlassCard>
             </div>
         </div>
@@ -208,11 +180,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+
+const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
 
 const props = defineProps({
     logs: {
