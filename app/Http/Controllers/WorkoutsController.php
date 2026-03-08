@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Workouts\CreateWorkoutAction;
+use App\Actions\Workouts\FetchWorkoutShowAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Http\Requests\UpdateWorkoutRequest;
-use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -61,28 +61,11 @@ class WorkoutsController extends Controller
      *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized to view the workout (403).
      */
-    public function show(Workout $workout): \Inertia\Response
+    public function show(Workout $workout, FetchWorkoutShowAction $fetchWorkoutShow): \Inertia\Response
     {
         $this->authorize('view', $workout);
 
-        $exercises = Exercise::getCachedForUser($this->user()->id);
-
-        $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']);
-
-        // ⚡ Bolt Optimization: Explicitly append recommended_values for the active workout view.
-        // This ensures the UX is preserved while avoiding N+1 queries on index pages.
-        $workout->workoutLines->each->append('recommended_values');
-
-        return Inertia::render('Workouts/Show', [
-            'workout' => $workout,
-            'exercises' => $exercises,
-            'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
-            'types' => [
-                ['value' => 'strength', 'label' => 'Force'],
-                ['value' => 'cardio', 'label' => 'Cardio'],
-                ['value' => 'timed', 'label' => 'Temps'],
-            ],
-        ]);
+        return Inertia::render('Workouts/Show', $fetchWorkoutShow->execute($this->user(), $workout));
     }
 
     /**
