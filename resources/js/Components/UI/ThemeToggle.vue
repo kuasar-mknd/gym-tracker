@@ -23,7 +23,7 @@ const themeLabels = {
 }
 
 function handleToggle() {
-    triggerHaptic('tap')
+    triggerHaptic('toggle')
     toggleTheme()
 }
 </script>

@@ -6,12 +6,13 @@
  */
 
 /**
- * @typedef {'tap' | 'toggle' | 'success' | 'error' | 'warning' | 'timer'} HapticType
+ * @typedef {'tap' | 'toggle' | 'success' | 'error' | 'warning' | 'timer' | 'selection'} HapticType
  */
 
 const patterns = {
     tap: [5],
     toggle: [15],
+    selection: [3],
     success: [50, 30, 50],
     error: [100, 50, 100, 50, 100],
     warning: [30, 20, 30],

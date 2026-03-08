@@ -29,7 +29,8 @@ export const vPress = {
 
             el.style.transform = `scale(${options.scale})`
             if (options.haptic) {
-                triggerHaptic('tap')
+                const pattern = typeof options.haptic === 'string' ? options.haptic : 'tap'
+                triggerHaptic(pattern)
             }
         }
 

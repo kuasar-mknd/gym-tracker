@@ -540,9 +540,9 @@
     /* ===== MODAL ===== */
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(var(--backdrop-blur-glass-strong));
+    -webkit-backdrop-filter: blur(var(--backdrop-blur-glass-strong));
     z-index: 50;
 }
 
