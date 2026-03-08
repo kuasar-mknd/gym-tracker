@@ -35,7 +35,8 @@ class SetsController extends Controller
 
         /** @var \App\Models\User $user */
         $user = $this->user();
-        $this->statsService->clearWorkoutRelatedStats($user);
+        // Bolt: Only clear volume-related stats for set additions
+        $this->statsService->clearVolumeStats($user);
 
         return back();
     }
@@ -51,7 +52,8 @@ class SetsController extends Controller
 
         /** @var \App\Models\User $user */
         $user = $this->user();
-        $this->statsService->clearWorkoutRelatedStats($user);
+        // Bolt: Only clear volume-related stats for set updates
+        $this->statsService->clearVolumeStats($user);
 
         return back();
     }
@@ -65,7 +67,8 @@ class SetsController extends Controller
 
         $user = $this->user();
         $set->delete();
-        $this->statsService->clearWorkoutRelatedStats($user);
+        // Bolt: Only clear volume-related stats for set deletions
+        $this->statsService->clearVolumeStats($user);
 
         return back();
     }

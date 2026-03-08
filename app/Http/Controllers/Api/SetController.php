@@ -88,7 +88,8 @@ class SetController extends Controller
 
         $set->update($request->validated());
 
-        $this->statsService->clearWorkoutRelatedStats($this->user());
+        // Bolt: Only clear volume-related stats for set updates
+        $this->statsService->clearVolumeStats($this->user());
 
         return new SetResource($set);
     }
@@ -103,7 +104,8 @@ class SetController extends Controller
         $user = $this->user();
         $set->delete();
 
-        $this->statsService->clearWorkoutRelatedStats($user);
+        // Bolt: Only clear volume-related stats for set deletions
+        $this->statsService->clearVolumeStats($user);
 
         return response()->noContent();
     }

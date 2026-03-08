@@ -292,6 +292,7 @@ final class StatsService
     public function clearUserStatsCache(User $user): void
     {
         $this->clearWorkoutRelatedStats($user);
+        $this->clearWorkoutMetadataStats($user);
         $this->clearBodyMeasurementStats($user);
     }
 
@@ -300,6 +301,7 @@ final class StatsService
      */
     public function clearWorkoutMetadataStats(User $user): void
     {
+        // Metadata (name) is used in volume and duration history
         Cache::forget("stats.volume_history.{$user->id}.20");
         Cache::forget("stats.volume_history.{$user->id}.30");
         Cache::forget("stats.duration_history.{$user->id}.20");
@@ -310,19 +312,16 @@ final class StatsService
     }
 
     /**
-     * Clear stats cache related to workouts.
+     * Clear stats cache related to workout volume (sets, weight, reps).
      */
-    public function clearWorkoutRelatedStats(User $user): void
+    public function clearVolumeStats(User $user): void
     {
         $weekKey = now()->startOfWeek()->format('Y-W');
 
         Cache::forget("stats.weekly_volume.{$user->id}");
         Cache::forget("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
         Cache::forget("stats.monthly_volume_comparison.{$user->id}");
-        Cache::forget("stats.duration_history.{$user->id}.20");
         Cache::forget("stats.monthly_volume_history.{$user->id}.6");
-        Cache::forget("stats.duration_distribution.{$user->id}.90");
-        Cache::forget("stats.time_of_day_distribution.{$user->id}.90");
 
         // Invalidate 1RM cache for all exercises (O(1))
         Cache::put("stats.1rm_version.{$user->id}", (string) time(), 86400 * 30);
@@ -340,6 +339,25 @@ final class StatsService
         // Muscle distribution
         Cache::forget("stats.muscle_dist.{$user->id}.30");
         Cache::forget("stats.muscle_dist.{$user->id}.7");
+    }
+
+    /**
+     * Clear stats cache related to workout duration and time of day.
+     */
+    public function clearDurationStats(User $user): void
+    {
+        Cache::forget("stats.duration_history.{$user->id}.20");
+        Cache::forget("stats.duration_distribution.{$user->id}.90");
+        Cache::forget("stats.time_of_day_distribution.{$user->id}.90");
+    }
+
+    /**
+     * Clear all stats cache related to workouts.
+     */
+    public function clearWorkoutRelatedStats(User $user): void
+    {
+        $this->clearVolumeStats($user);
+        $this->clearDurationStats($user);
     }
 
     /**

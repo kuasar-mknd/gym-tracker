@@ -26,7 +26,8 @@ final class CreateSetAction
             collect($data)->except('workout_line_id')->toArray()
         );
 
-        $this->statsService->clearWorkoutRelatedStats($user);
+        // Bolt: Only clear volume-related stats for set additions
+        $this->statsService->clearVolumeStats($user);
 
         return $set;
     }
