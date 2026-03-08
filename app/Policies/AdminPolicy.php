@@ -14,7 +14,7 @@ class AdminPolicy
      */
     public function viewAny(User $user): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -22,7 +22,7 @@ class AdminPolicy
      */
     public function view(User $user, Admin $admin): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -30,7 +30,7 @@ class AdminPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -38,15 +38,15 @@ class AdminPolicy
      */
     public function update(User $user, Admin $admin): bool
     {
-        return true;
+        return false;
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Determine whether the user can delete the user.
      */
     public function delete(User $user, Admin $admin): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -54,7 +54,7 @@ class AdminPolicy
      */
     public function restore(User $user, Admin $admin): bool
     {
-        return true;
+        return false;
     }
 
     /**
@@ -62,6 +62,6 @@ class AdminPolicy
      */
     public function forceDelete(User $user, Admin $admin): bool
     {
-        return true;
+        return false;
     }
 }
