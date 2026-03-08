@@ -1,14 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js'
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { computed } from 'vue'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
@@ -22,7 +14,7 @@ const props = defineProps({
 
 const chartData = computed(() => {
     // Filter out parts with no difference
-    const diffData = props.data.filter(item => item.diff !== 0)
+    const diffData = props.data.filter((item) => item.diff !== 0)
 
     return {
         labels: diffData.map((item) => item.part),
@@ -76,7 +68,7 @@ const chartOptions = {
                     const value = context.parsed.x
                     const sign = value > 0 ? '+' : ''
                     // Find the unit for this part
-                    const partData = props.data.find(d => d.part === context.label)
+                    const partData = props.data.find((d) => d.part === context.label)
                     const unit = partData ? partData.unit : ''
                     return `${sign}${value} ${unit}`
                 },

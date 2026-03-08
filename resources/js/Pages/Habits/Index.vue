@@ -298,10 +298,18 @@ const getProgressPercent = (habit) => {
 
                             <!-- Actions (Absolute) -->
                             <div class="absolute top-2 right-2 flex opacity-0 transition group-hover:opacity-100">
-                                <button @click="editHabit(habit)" class="text-text-muted hover:text-text-main p-1">
+                                <button
+                                    @click="editHabit(habit)"
+                                    class="text-text-muted hover:text-text-main p-1"
+                                    aria-label="Modifier l'habitude"
+                                >
                                     <span class="material-symbols-outlined text-sm">edit</span>
                                 </button>
-                                <button @click="deleteHabit(habit)" class="text-text-muted p-1 hover:text-red-500">
+                                <button
+                                    @click="deleteHabit(habit)"
+                                    class="text-text-muted p-1 hover:text-red-500"
+                                    aria-label="Supprimer l'habitude"
+                                >
                                     <span class="material-symbols-outlined text-sm">delete</span>
                                 </button>
                             </div>
@@ -339,7 +347,11 @@ const getProgressPercent = (habit) => {
                     <h3 class="text-text-main text-xl font-bold">
                         {{ editingHabit ? 'Modifier' : 'Nouvelle Habitude' }}
                     </h3>
-                    <button @click="showAddForm = false" class="text-text-muted hover:text-text-main">
+                    <button
+                        @click="showAddForm = false"
+                        class="text-text-muted hover:text-text-main"
+                        aria-label="Fermer le formulaire"
+                    >
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
