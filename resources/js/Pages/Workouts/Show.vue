@@ -259,6 +259,7 @@ const filteredExercises = computed(() => {
             <button
                 @click="showSettingsModal = true"
                 class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition-all active:scale-95"
+                aria-label="Paramètres de la séance"
             >
                 <span class="material-symbols-outlined">settings</span>
             </button>
@@ -287,7 +288,11 @@ const filteredExercises = computed(() => {
                         </h3>
                         <p class="text-text-muted text-xs font-bold uppercase">{{ line.exercise.category }}</p>
                     </div>
-                    <button @click="removeLine(line.id)" class="text-text-muted transition-colors hover:text-red-500">
+                    <button
+                        @click="removeLine(line.id)"
+                        class="text-text-muted transition-colors hover:text-red-500"
+                        aria-label="Supprimer l'exercice"
+                    >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path
                                 stroke-linecap="round"
@@ -312,6 +317,7 @@ const filteredExercises = computed(() => {
                                 :class="
                                     set.is_completed ? 'bg-neon-green text-text-main' : 'bg-slate-100 text-slate-300'
                                 "
+                                :aria-label="set.is_completed ? 'Annuler la série' : 'Valider la série'"
                             >
                                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path
@@ -386,7 +392,11 @@ const filteredExercises = computed(() => {
                                 />
                             </template>
 
-                            <button @click="removeSet(set.id)" class="ml-auto text-slate-300 hover:text-red-500">
+                            <button
+                                @click="removeSet(set.id)"
+                                class="ml-auto text-slate-300 hover:text-red-500"
+                                aria-label="Supprimer la série"
+                            >
                                 <span class="material-symbols-outlined">delete</span>
                             </button>
                         </div>
@@ -470,7 +480,11 @@ const filteredExercises = computed(() => {
                 <!-- Create Form -->
                 <div v-else class="space-y-6">
                     <div class="flex items-center gap-4">
-                        <button @click="showCreateForm = false" class="text-text-muted hover:text-text-main">
+                        <button
+                            @click="showCreateForm = false"
+                            class="text-text-muted hover:text-text-main"
+                            aria-label="Retour"
+                        >
                             <span class="material-symbols-outlined">arrow_back</span>
                         </button>
                         <h3 class="font-display text-text-main text-xl font-black uppercase italic">Nouvel Exercice</h3>
