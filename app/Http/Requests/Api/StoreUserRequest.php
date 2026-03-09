@@ -31,7 +31,6 @@ class StoreUserRequest extends FormRequest
             'provider_id' => ['nullable', 'string', 'max:255'],
             'avatar' => ['nullable', 'string', 'max:255'],
             'default_rest_time' => ['nullable', 'integer', 'min:0'],
-            'total_volume' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

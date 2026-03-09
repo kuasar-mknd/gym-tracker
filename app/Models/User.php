@@ -56,7 +56,6 @@ final class User extends Authenticatable implements MustVerifyEmail
         'provider_id',
         'avatar',
         'default_rest_time',
-        'total_volume',
     ];
 
     /**
