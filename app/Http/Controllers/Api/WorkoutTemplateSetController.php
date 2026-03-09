@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\WorkoutTemplates\CreateWorkoutTemplateSetAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\WorkoutTemplateSetStoreRequest;
 use App\Http\Requests\Api\WorkoutTemplateSetUpdateRequest;
@@ -39,7 +40,7 @@ class WorkoutTemplateSetController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(WorkoutTemplateSetStoreRequest $request): WorkoutTemplateSetResource
+    public function store(WorkoutTemplateSetStoreRequest $request, CreateWorkoutTemplateSetAction $action): WorkoutTemplateSetResource
     {
         /** @var array{workout_template_line_id: int, reps?: int|null, weight?: float|null, is_warmup: bool, order?: int|null} $validated */
         $validated = $request->validated();
@@ -49,15 +50,7 @@ class WorkoutTemplateSetController extends Controller
 
         $this->authorize('create', [WorkoutTemplateSet::class, $workoutTemplateLine]);
 
-        /** @var int|null $maxOrder */
-        $maxOrder = $workoutTemplateLine->workoutTemplateSets()->max('order');
-        $order = $validated['order'] ?? ($maxOrder === null ? 0 : $maxOrder + 1);
-
-        /** @var \App\Models\WorkoutTemplateSet $workoutTemplateSet */
-        $workoutTemplateSet = $workoutTemplateLine->workoutTemplateSets()->create(array_merge(
-            collect($validated)->except('workout_template_line_id')->toArray(),
-            ['order' => $order]
-        ));
+        $workoutTemplateSet = $action->execute($workoutTemplateLine, $validated);
 
         return new WorkoutTemplateSetResource($workoutTemplateSet);
     }
