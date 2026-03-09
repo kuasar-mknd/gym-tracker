@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\IntervalTimer;
 use App\Models\User;
+
 use function Pest\Laravel\actingAs;
 
 test('index returns user interval timers', function (): void {
