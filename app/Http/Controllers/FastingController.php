@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Fasting\FetchFastingIndexAction;
 use App\Http\Requests\Api\StoreFastRequest;
 use App\Http\Requests\Api\UpdateFastRequest;
 use App\Models\Fast;
@@ -13,27 +14,13 @@ use Inertia\Response;
 
 class FastingController extends Controller
 {
-    public function index(): Response
+    public function index(FetchFastingIndexAction $fetchFastingIndexAction): Response
     {
         $this->authorize('viewAny', Fast::class);
 
-        $user = $this->user();
+        $data = $fetchFastingIndexAction->execute($this->user());
 
-        $activeFast = $user->fasts()
-            ->where('status', 'active')
-            ->latest()
-            ->first();
-
-        $history = $user->fasts()
-            ->where('status', '!=', 'active')
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        return Inertia::render('Tools/Fasting/Index', [
-            'activeFast' => $activeFast,
-            'history' => $history,
-        ]);
+        return Inertia::render('Tools/Fasting/Index', $data);
     }
 
     public function store(StoreFastRequest $request): RedirectResponse
