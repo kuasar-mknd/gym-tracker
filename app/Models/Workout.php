@@ -27,7 +27,6 @@ class Workout extends Model
 
     protected $fillable = [
         'name',
-        'workout_volume',
         'started_at',
         'ended_at',
         'notes',
