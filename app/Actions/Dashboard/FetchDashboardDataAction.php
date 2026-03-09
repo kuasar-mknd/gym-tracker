@@ -29,12 +29,13 @@ final class FetchDashboardDataAction
      */
     public function getImmediateStats(User $user): array
     {
-        $latestMeasurement = $user->bodyMeasurements()->latest('measured_at')->first();
+        // ⚡ Bolt: Use cached latest metrics instead of hitting DB on every dashboard load
+        $latestMetrics = $this->statsService->getLatestBodyMetrics($user);
 
         return [
             'workoutsCount' => $user->workouts()->count(),
             'thisWeekCount' => $this->getThisWeekCount($user),
-            'latestWeight' => $latestMeasurement?->weight,
+            'latestWeight' => $latestMetrics['latest_weight'] ?? null,
             'recentWorkouts' => $this->getRecentWorkouts($user),
             'recentPRs' => $this->getRecentPRs($user),
             'activeGoals' => $this->getActiveGoals($user),

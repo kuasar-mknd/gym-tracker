@@ -123,7 +123,7 @@ final class StatsService
     }
 
     /**
-     * @return array{latest_weight: float|null, weight_change: float, latest_body_fat: float|null}
+     * @return array{latest_weight: float|string|null, weight_change: float, latest_body_fat: float|string|null}
      */
     public function getLatestBodyMetrics(User $user): array
     {
@@ -145,9 +145,9 @@ final class StatsService
                 $weightChange = $latest && $previous ? round($latest->weight - $previous->weight, 1) : 0;
 
                 return [
-                    'latest_weight' => $latest?->weight ? (float) $latest->weight : null,
+                    'latest_weight' => $latest?->weight,
                     'weight_change' => (float) $weightChange,
-                    'latest_body_fat' => $latest?->body_fat ? (float) $latest->body_fat : null,
+                    'latest_body_fat' => $latest?->body_fat,
                 ];
             }
         );
