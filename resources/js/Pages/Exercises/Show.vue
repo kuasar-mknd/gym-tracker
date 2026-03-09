@@ -9,6 +9,7 @@ const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/V
 const WeightDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/WeightDistributionChart.vue'))
 const MaxRepsChart = defineAsyncComponent(() => import('@/Components/Stats/MaxRepsChart.vue'))
 const MaxWeightChart = defineAsyncComponent(() => import('@/Components/Stats/MaxWeightChart.vue'))
+const AverageWeightChart = defineAsyncComponent(() => import('@/Components/Stats/AverageWeightChart.vue'))
 
 /**
  * Component Props
@@ -64,6 +65,19 @@ const maxWeightData = computed(() => {
         date: session.formatted_date.split('/').slice(0, 2).join('/'),
         weight: session.sets.length > 0 ? Math.max(...session.sets.map((s) => parseFloat(s.weight) || 0)) : 0,
     }))
+})
+
+const averageWeightData = computed(() => {
+    if (!props.history || props.history.length === 0) return []
+    return [...props.history].reverse().map((session) => {
+        const setsWithWeight = session.sets.filter((s) => parseFloat(s.weight) > 0)
+        const totalWeight = setsWithWeight.reduce((sum, s) => sum + parseFloat(s.weight), 0)
+        const average = setsWithWeight.length > 0 ? (totalWeight / setsWithWeight.length).toFixed(1) : 0
+        return {
+            date: session.formatted_date.split('/').slice(0, 2).join('/'),
+            weight: average,
+        }
+    })
 })
 
 const weightDistributionData = computed(() => {
@@ -180,6 +194,16 @@ const weightDistributionData = computed(() => {
                     </div>
                     <div class="h-64">
                         <MaxWeightChart :data="maxWeightData" />
+                    </div>
+                </GlassCard>
+
+                <GlassCard>
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charge Moyenne</h3>
+                        <p class="text-text-muted text-xs font-semibold">Poids moyen par série (kg)</p>
+                    </div>
+                    <div class="h-64">
+                        <AverageWeightChart :data="averageWeightData" />
                     </div>
                 </GlassCard>
             </div>
