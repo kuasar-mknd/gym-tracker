@@ -7,8 +7,20 @@ namespace App\Actions\Dashboard;
 use App\Models\User;
 use App\Services\StatsService;
 
+/**
+ * Action class responsible for fetching and aggregating all necessary data
+ * to populate the user dashboard.
+ *
+ * This action separates immediate, lightweight data requirements from
+ * heavier, deferred analytical queries.
+ */
 final class FetchDashboardDataAction
 {
+    /**
+     * Create a new FetchDashboardDataAction instance.
+     *
+     * @param  \App\Services\StatsService  $statsService  The statistics service used to calculate trends and comparisons.
+     */
     public function __construct(
         protected StatsService $statsService
     ) {
@@ -18,6 +30,7 @@ final class FetchDashboardDataAction
      * Fetch immediate dashboard data for the given user.
      * These are lightweight queries or single-row fetches suitable for initial page load.
      *
+     * @param  \App\Models\User  $user  The authenticated user for whom to fetch data.
      * @return array{
      *     workoutsCount: int,
      *     thisWeekCount: int,
@@ -45,7 +58,11 @@ final class FetchDashboardDataAction
     /**
      * Get weekly volume comparison stats.
      *
-     * @return array{current_week_volume: float, percentage: float|int}
+     * Calculates the total workout volume for the current week and compares it
+     * against the previous week to determine a percentage change.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array{current_week_volume: float, percentage: float|int} Array containing the current week's volume and the percentage change.
      */
     public function getWeeklyVolumeStats(User $user): array
     {
@@ -58,7 +75,12 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * @return array<int, array{date: string, day_label: string, volume: float}>
+     * Get the weekly volume trend data for chart visualization.
+     *
+     * Retrieves the daily workout volume for each day of the current week.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array<int, array{date: string, day_label: string, volume: float}> A list of daily volumes formatted for a trend chart.
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
@@ -66,7 +88,12 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * @return array<int, array{date: string, day_name: string, volume: float}>
+     * Get the daily volume trend over the last 7 days.
+     *
+     * Retrieves a rolling 7-day trend of daily workout volume.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array<int, array{date: string, day_name: string, volume: float}> A list of daily volumes for the past week.
      */
     public function getVolumeTrend(User $user): array
     {
@@ -74,7 +101,13 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * @return array<int, array{label: string, count: int}>
+     * Get the distribution of workout durations.
+     *
+     * Groups recent workouts into duration buckets (e.g., '< 30 min', '30-60 min')
+     * to show user habits over time.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array<int, array{label: string, count: int}> The distribution of workout lengths.
      */
     public function getDurationDistribution(User $user): array
     {
@@ -82,7 +115,13 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * @return array<int, array{label: string, count: int}>
+     * Get the distribution of workouts by time of day.
+     *
+     * Groups recent workouts into time-of-day buckets (e.g., 'Matin', 'Soir')
+     * to show when the user typically trains.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array<int, array{label: string, count: int}> The distribution of workouts by time of day.
      */
     public function getTimeOfDayDistribution(User $user): array
     {
@@ -90,9 +129,14 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Legacy method if needed, but we will update the controller.
+     * Execute the action to fetch all dashboard data simultaneously.
      *
-     * @return array<string, mixed>
+     * Legacy method that synchronously loads all dashboard stats, including
+     * heavy analytical queries. Preferred approach is to use individual methods
+     * with Inertia's deferred loading.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array<string, mixed> All dashboard data aggregated into a single array.
      */
     public function execute(User $user): array
     {
@@ -111,6 +155,12 @@ final class FetchDashboardDataAction
         );
     }
 
+    /**
+     * Count the number of workouts started in the current week.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return int The total number of workouts for the current week.
+     */
     private function getThisWeekCount(User $user): int
     {
         return $user->workouts()
@@ -122,7 +172,8 @@ final class FetchDashboardDataAction
      * Get recent Personal Records.
      * Optimized to fetch only the amount displayed on the dashboard (2).
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord> A collection of the most recent personal records.
      */
     private function getRecentPRs(User $user): \Illuminate\Database\Eloquent\Collection
     {
@@ -137,7 +188,8 @@ final class FetchDashboardDataAction
      * Get active goals.
      * Optimized to fetch only the amount displayed on the dashboard (2).
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal> A collection of currently active user goals.
      */
     private function getActiveGoals(User $user): \Illuminate\Database\Eloquent\Collection
     {
@@ -155,7 +207,8 @@ final class FetchDashboardDataAction
      * to avoid loading full collections when only the count is needed for UI logic.
      * Limits to 3 items as per dashboard layout.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout> A collection of the most recent workouts.
      */
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
