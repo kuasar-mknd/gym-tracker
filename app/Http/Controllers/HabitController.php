@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Habits\FetchHabitsIndexAction;
+use App\Actions\Habits\ToggleHabitAction;
 use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
 use App\Http\Requests\ToggleHabitRequest;
@@ -111,11 +112,12 @@ class HabitController extends Controller
      *
      * @param  \App\Http\Requests\ToggleHabitRequest  $request  The HTTP request containing the date.
      * @param  \App\Models\Habit  $habit  The habit to toggle.
+     * @param  \App\Actions\Habits\ToggleHabitAction  $toggleHabitAction  The action to toggle the habit.
      * @return \Illuminate\Http\RedirectResponse Redirects back.
      *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
      */
-    public function toggle(ToggleHabitRequest $request, Habit $habit): \Illuminate\Http\RedirectResponse
+    public function toggle(ToggleHabitRequest $request, Habit $habit, ToggleHabitAction $toggleHabitAction): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $habit);
 
@@ -124,14 +126,7 @@ class HabitController extends Controller
         /** @var string $date */
         $date = $validated['date'];
 
-        /** @var \App\Models\HabitLog|null $log */
-        $log = $habit->logs()->whereDate('date', $date)->first();
-
-        if ($log) {
-            $log->delete();
-        } else {
-            $habit->logs()->create(['date' => $date]);
-        }
+        $toggleHabitAction->execute($habit, $date);
 
         return redirect()->back();
     }
