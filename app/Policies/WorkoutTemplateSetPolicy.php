@@ -22,7 +22,7 @@ final class WorkoutTemplateSetPolicy
      */
     public function view(User $user, WorkoutTemplateSet $workoutTemplateSet): bool
     {
-        return $user->id === $workoutTemplateSet->workoutTemplateLine->workoutTemplate->user_id;
+        return $user->id === $workoutTemplateSet->workoutTemplateLine?->workoutTemplate?->user_id;
     }
 
     /**
@@ -42,7 +42,7 @@ final class WorkoutTemplateSetPolicy
      */
     public function update(User $user, WorkoutTemplateSet $workoutTemplateSet): bool
     {
-        return $user->id === $workoutTemplateSet->workoutTemplateLine->workoutTemplate->user_id;
+        return $user->id === $workoutTemplateSet->workoutTemplateLine?->workoutTemplate?->user_id;
     }
 
     /**
@@ -50,6 +50,6 @@ final class WorkoutTemplateSetPolicy
      */
     public function delete(User $user, WorkoutTemplateSet $workoutTemplateSet): bool
     {
-        return $user->id === $workoutTemplateSet->workoutTemplateLine->workoutTemplate->user_id;
+        return $user->id === $workoutTemplateSet->workoutTemplateLine?->workoutTemplate?->user_id;
     }
 }
