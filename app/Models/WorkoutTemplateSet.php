@@ -15,8 +15,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $order
  * @property-read \App\Models\WorkoutTemplateLine $workoutTemplateLine
  */
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class WorkoutTemplateSet extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'workout_template_line_id',
         'reps',
