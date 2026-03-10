@@ -200,6 +200,7 @@ const formatDate = (dateStr) => {
                         {{ editingJournal ? "Modifier l'entrée" : 'Nouvelle entrée' }}
                     </h3>
                     <button
+                        v-press
                         @click="showAddForm = false"
                         class="text-text-muted hover:text-text-main"
                         aria-label="Fermer le formulaire"
@@ -217,8 +218,10 @@ const formatDate = (dateStr) => {
                             <button
                                 v-for="mood in moods"
                                 :key="mood.value"
+                                v-press="{ haptic: 'selection' }"
                                 type="button"
                                 @click="form.mood_score = mood.value"
+                                :aria-pressed="form.mood_score === mood.value"
                                 :class="[
                                     'flex-1 rounded-lg border border-slate-200 p-2 text-center text-sm transition',
                                     form.mood_score === mood.value
@@ -424,6 +427,7 @@ const formatDate = (dateStr) => {
 
                                         <div class="flex gap-1 opacity-0 transition group-hover:opacity-100">
                                             <button
+                                                v-press
                                                 @click="editJournal(journal)"
                                                 class="text-text-muted/50 hover:text-text-main rounded p-1 hover:bg-slate-100/50"
                                                 aria-label="Modifier l'entrée"
@@ -443,6 +447,7 @@ const formatDate = (dateStr) => {
                                                 </svg>
                                             </button>
                                             <button
+                                                v-press
                                                 @click="deleteJournal(journal.id)"
                                                 class="text-text-muted/50 rounded p-1 hover:bg-slate-100/50 hover:text-red-400"
                                                 aria-label="Supprimer l'entrée"
