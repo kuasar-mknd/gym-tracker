@@ -9,3 +9,11 @@
 ## 2025-05-24 - [Dashboard Cache Bypass]
 **Learning:** Fetching raw models with `first()` on the dashboard (e.g., `$user->bodyMeasurements()->latest()->first()`) directly bypasses caching layers specifically built for those metrics in `StatsService` (e.g., `getLatestBodyMetrics()`). This creates a redundant database query on every dashboard load.
 **Action:** When gathering metrics for the dashboard, always verify if a cached aggregate or getter method already exists in `StatsService` before querying Eloquent relations directly.
+
+## 2026-03-10 - [Asynchronous Goal/Achievement Sync]
+**Learning:** Performing heavy goal and achievement synchronization in synchronous model observers blocks the user's request (e.g. saving a set). For a typical workout with 20-30 sets, this adds significant overhead.
+**Action:** Offload synchronization logic to unique background jobs (`SyncUserAchievements`, `SyncUserGoals`) to keep the main request thread fast.
+
+## 2026-03-10 - [SQL-based Aggregate Calculation]
+**Learning:** Loading all of a user's workout data into PHP memory to find a maximum value (e.g. max volume goal) is inefficient and memory-intensive as data grows.
+**Action:** Always perform aggregate calculations (MAX, SUM, AVG) directly in SQL using database grouping and sorting for maximum performance and minimal memory footprint.
