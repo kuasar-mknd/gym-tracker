@@ -13,7 +13,7 @@ class CreateWorkoutTemplateLineAction
     use AuthorizesRequests;
 
     /**
-     * @param array{workout_template_id: int, exercise_id: int, order?: int|null} $data
+     * @param  array{workout_template_id: int, exercise_id: int, order?: int|null}  $data
      */
     public function execute(array $data): WorkoutTemplateLine
     {
