@@ -23,8 +23,8 @@ final class RecalculateUserStats implements ShouldQueue
      */
     public function handle(\App\Services\StatsService $statsService): void
     {
-        // Invalidate all stats for this user
-        \Illuminate\Support\Facades\Cache::tags(["stats:{$this->user->id}"])->flush();
+        // ⚡ Bolt: Use surgical cache invalidation instead of tags() as database driver doesn't support tags.
+        $statsService->clearUserStatsCache($this->user);
 
         // Warm up critical stats
         $statsService->getVolumeTrend($this->user, 30);

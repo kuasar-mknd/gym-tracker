@@ -104,15 +104,18 @@ final class GoalService
             return;
         }
 
-        // Finds the maximum volume achieved in a single workout for the associated exercise
-        $maxVolume = $goal->user->workouts()
+        // ⚡ Bolt Optimization: Calculate max volume directly in SQL instead of loading into PHP memory.
+        // Impact: Reduces memory usage and improves performance for users with many workouts.
+        $maxVolume = \Illuminate\Support\Facades\DB::table('workouts')
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $goal->user_id)
             ->where('workout_lines.exercise_id', $goal->exercise_id)
-            ->selectRaw('SUM(sets.weight * sets.reps) as workout_total_volume')
+            ->selectRaw('SUM(sets.weight * sets.reps) as total_volume')
             ->groupBy('workouts.id')
-            ->get()
-            ->max('workout_total_volume');
+            ->orderByDesc('total_volume')
+            ->limit(1)
+            ->value('total_volume');
 
         if ($maxVolume !== null && is_numeric($maxVolume)) {
             $goal->update(['current_value' => (float) $maxVolume]);

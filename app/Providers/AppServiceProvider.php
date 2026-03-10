@@ -7,8 +7,6 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-use App\Services\AchievementService;
-use App\Services\GoalService;
 use App\Services\PersonalRecordService;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
@@ -70,8 +68,9 @@ final class AppServiceProvider extends ServiceProvider
                 app(PersonalRecordService::class)->syncSetPRs($set, $user);
             }
 
-            app(AchievementService::class)->syncAchievements($user);
-            app(GoalService::class)->syncGoals($user);
+            // ⚡ Bolt: Offload heavy sync to background jobs
+            \App\Jobs\SyncUserAchievements::dispatch($user);
+            \App\Jobs\SyncUserGoals::dispatch($user);
         });
     }
 
@@ -81,14 +80,16 @@ final class AppServiceProvider extends ServiceProvider
             // Streak is only updated when a workout is "finished" or has a date
             app(StreakService::class)->updateStreak($workout->user, $workout);
 
-            app(AchievementService::class)->syncAchievements($workout->user);
-            app(GoalService::class)->syncGoals($workout->user);
+            // ⚡ Bolt: Offload heavy sync to background jobs
+            \App\Jobs\SyncUserAchievements::dispatch($workout->user);
+            \App\Jobs\SyncUserGoals::dispatch($workout->user);
         });
     }
 
     private function registerMeasurementEvents(): void
     {
-        BodyMeasurement::saved(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
-        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => app(GoalService::class)->syncGoals($bm->user));
+        // ⚡ Bolt: Offload heavy goal sync to background jobs
+        BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
     }
 }
