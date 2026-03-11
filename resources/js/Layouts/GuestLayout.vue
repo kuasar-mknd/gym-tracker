@@ -25,7 +25,9 @@ import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 
         <!-- Glass Card -->
         <main id="main-content" class="animate-slide-up relative z-10 w-full max-w-md">
-            <div class="glass-panel-light shadow-glass-card rounded-3xl p-8">
+            <div
+                class="rounded-3xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/15"
+            >
                 <slot />
             </div>
         </main>
