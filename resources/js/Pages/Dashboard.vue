@@ -2,7 +2,8 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, Link, useForm } from '@inertiajs/vue3'
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { Head, Link, useForm, Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
@@ -179,35 +180,48 @@ const colorForWorkout = (index) => {
                             </p>
                         </div>
                         <div class="text-right">
-                            <p
-                                class="from-electric-orange to-vivid-violet font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
-                            >
-                                {{ weeklyVolume?.toLocaleString() || thisWeekCount * 1000 }}
-                            </p>
-                            <p
-                                v-if="volumeChange !== 0"
-                                :class="[
-                                    'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
-                                    volumeChange > 0 ? 'text-emerald-600' : 'text-red-500',
-                                ]"
-                            >
-                                <span class="material-symbols-outlined text-sm font-bold">
-                                    {{ volumeChange > 0 ? 'trending_up' : 'trending_down' }}
-                                </span>
-                                {{ volumeChange > 0 ? '+' : '' }}{{ volumeChange }}% vs sem. passée
-                            </p>
+                            <Deferred data="weeklyVolume">
+                                <template #fallback>
+                                    <div class="flex flex-col items-end gap-2">
+                                        <GlassSkeleton height="2.5rem" width="6rem" />
+                                        <GlassSkeleton height="1rem" width="8rem" />
+                                    </div>
+                                </template>
+                                <p
+                                    class="from-electric-orange to-vivid-violet font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
+                                >
+                                    {{ weeklyVolume?.toLocaleString() || 0 }}
+                                </p>
+                                <p
+                                    v-if="volumeChange !== 0"
+                                    :class="[
+                                        'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
+                                        volumeChange > 0 ? 'text-emerald-600' : 'text-red-500',
+                                    ]"
+                                >
+                                    <span class="material-symbols-outlined text-sm font-bold">
+                                        {{ volumeChange > 0 ? 'trending_up' : 'trending_down' }}
+                                    </span>
+                                    {{ volumeChange > 0 ? '+' : '' }}{{ volumeChange }}% vs sem. passée
+                                </p>
+                            </Deferred>
                         </div>
                     </div>
 
                     <!-- Weekly Volume Chart -->
                     <div class="relative -mx-2 mt-2 h-48 w-auto">
-                        <WeeklyVolumeChart
-                            v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0"
-                            :data="weeklyVolumeTrend"
-                        />
-                        <div v-else class="text-text-muted flex h-full items-center justify-center">
-                            <p class="text-sm">Pas de données cette semaine</p>
-                        </div>
+                        <Deferred data="weeklyVolumeTrend">
+                            <template #fallback>
+                                <GlassSkeleton height="100%" width="100%" variant="card" />
+                            </template>
+                            <WeeklyVolumeChart
+                                v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0"
+                                :data="weeklyVolumeTrend"
+                            />
+                            <div v-else class="text-text-muted flex h-full items-center justify-center">
+                                <p class="text-sm">Pas de données cette semaine</p>
+                            </div>
+                        </Deferred>
                     </div>
                 </section>
 
@@ -227,13 +241,18 @@ const colorForWorkout = (index) => {
 
                     <!-- Duration Chart -->
                     <div class="relative -mx-2 mt-2 h-48 w-auto">
-                        <DurationDistributionChart
-                            v-if="durationDistribution && durationDistribution.some((d) => d.count > 0)"
-                            :data="durationDistribution"
-                        />
-                        <div v-else class="text-text-muted flex h-full items-center justify-center">
-                            <p class="text-sm">Pas assez de données (90j)</p>
-                        </div>
+                        <Deferred data="durationDistribution">
+                            <template #fallback>
+                                <GlassSkeleton height="100%" width="100%" variant="circle" />
+                            </template>
+                            <DurationDistributionChart
+                                v-if="durationDistribution && durationDistribution.some((d) => d.count > 0)"
+                                :data="durationDistribution"
+                            />
+                            <div v-else class="text-text-muted flex h-full items-center justify-center">
+                                <p class="text-sm">Pas assez de données (90j)</p>
+                            </div>
+                        </Deferred>
                     </div>
                 </section>
             </div>
@@ -252,13 +271,18 @@ const colorForWorkout = (index) => {
 
                 <!-- Time of Day Chart -->
                 <div class="relative -mx-2 mt-2 h-48 w-auto">
-                    <TimeOfDayChart
-                        v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
-                        :data="timeOfDayDistribution"
-                    />
-                    <div v-else class="text-text-muted flex h-full items-center justify-center">
-                        <p class="text-sm">Pas assez de données (90j)</p>
-                    </div>
+                    <Deferred data="timeOfDayDistribution">
+                        <template #fallback>
+                            <GlassSkeleton height="100%" width="100%" variant="circle" />
+                        </template>
+                        <TimeOfDayChart
+                            v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
+                            :data="timeOfDayDistribution"
+                        />
+                        <div v-else class="text-text-muted flex h-full items-center justify-center">
+                            <p class="text-sm">Pas assez de données (90j)</p>
+                        </div>
+                    </Deferred>
                 </div>
             </section>
 

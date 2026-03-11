@@ -17,3 +17,7 @@
 ## 2026-03-10 - [SQL-based Aggregate Calculation]
 **Learning:** Loading all of a user's workout data into PHP memory to find a maximum value (e.g. max volume goal) is inefficient and memory-intensive as data grows.
 **Action:** Always perform aggregate calculations (MAX, SUM, AVG) directly in SQL using database grouping and sorting for maximum performance and minimal memory footprint.
+
+## 2024-05-19 - Dashboard Deferred Loading
+**Learning:** When using Inertia 2.0 `<Deferred>` components on the frontend, the backend controller props are also explicitly wrapped in `Inertia::defer(fn () => ...)`. However, some controllers (like `DashboardController`) might already have their backend props correctly wrapped in `Inertia::defer`, while the frontend might be missing the `<Deferred>` components wrapper, causing them to load instantly when they could be delayed.
+**Action:** Always verify that both the frontend Vue components are using `<Deferred>` appropriately and the backend controller uses `Inertia::defer` when aiming to defer heavy logic to improve the Time to First Byte (TTFB).
