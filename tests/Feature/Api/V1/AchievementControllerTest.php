@@ -53,7 +53,7 @@ describe('GET /api/v1/achievements', function (): void {
 
 describe('POST /api/v1/achievements', function (): void {
     it('creates an achievement when authorized', function (): void {
-        Gate::before(fn () => true);
+        Gate::before(fn (): true => true);
 
         $payload = [
             'slug' => 'test-achievement',
@@ -79,14 +79,14 @@ describe('POST /api/v1/achievements', function (): void {
     });
 
     it('returns validation errors for invalid data', function (): void {
-        Gate::before(fn () => true);
+        Gate::before(fn (): true => true);
 
         $response = actingAs($this->user)
             ->postJson('/api/v1/achievements', []);
 
         $response->assertUnprocessable()
             ->assertJsonValidationErrors([
-                'slug', 'name', 'description', 'icon', 'type', 'threshold', 'category'
+                'slug', 'name', 'description', 'icon', 'type', 'threshold', 'category',
             ]);
     });
 
@@ -143,7 +143,7 @@ describe('GET /api/v1/achievements/{achievement}', function (): void {
 
 describe('PUT /api/v1/achievements/{achievement}', function (): void {
     it('updates an achievement when authorized', function (): void {
-        Gate::before(fn () => true);
+        Gate::before(fn (): true => true);
 
         $achievement = Achievement::factory()->create([
             'name' => 'Old Name',
@@ -166,7 +166,7 @@ describe('PUT /api/v1/achievements/{achievement}', function (): void {
     });
 
     it('returns validation errors for invalid update data', function (): void {
-        Gate::before(fn () => true);
+        Gate::before(fn (): true => true);
 
         $achievement = Achievement::factory()->create();
 
@@ -208,7 +208,7 @@ describe('PUT /api/v1/achievements/{achievement}', function (): void {
 
 describe('DELETE /api/v1/achievements/{achievement}', function (): void {
     it('deletes an achievement when authorized', function (): void {
-        Gate::before(fn () => true);
+        Gate::before(fn (): true => true);
 
         $achievement = Achievement::factory()->create();
 
@@ -243,7 +243,7 @@ describe('DELETE /api/v1/achievements/{achievement}', function (): void {
     });
 
     it('returns 404 for a non-existent achievement on delete', function (): void {
-        Gate::before(fn () => true);
+        Gate::before(fn (): true => true);
 
         $response = actingAs($this->user)
             ->deleteJson('/api/v1/achievements/99999');
