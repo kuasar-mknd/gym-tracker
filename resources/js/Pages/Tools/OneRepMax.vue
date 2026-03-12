@@ -2,96 +2,140 @@
     <Head title="Calculatrice 1RM" />
 
     <AuthenticatedLayout page-title="Calculatrice 1RM" show-back back-route="tools.index">
-        <div class="grid gap-6 lg:grid-cols-2">
-            <!-- Calculator Input -->
-            <div class="space-y-6">
-                <GlassCard>
-                    <div class="space-y-6 p-6">
-                        <h2 class="text-text-main text-xl font-bold">Calculer</h2>
+        <div class="space-y-6">
+            <!-- Header -->
+            <header class="animate-fade-in">
+                <h1
+                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
+                >
+                    Calculatrice<br />
+                    <span class="text-gradient">1RM</span>
+                </h1>
+                <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
+                    Estime ton maximum sur une répétition
+                </p>
+            </header>
 
-                        <div class="space-y-4">
-                            <div class="space-y-2">
-                                <InputLabel value="Poids Soulevé" />
-                                <GlassInput
-                                    type="number"
-                                    v-model="weight"
-                                    placeholder="ex: 100"
-                                    min="0"
-                                    step="0.5"
-                                    class="w-full"
-                                />
+            <div class="grid gap-6 lg:grid-cols-2">
+                <!-- Calculator Input -->
+                <div class="space-y-6">
+                    <div
+                        class="animate-slide-up rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300"
+                        style="animation-delay: 0.05s"
+                    >
+                        <div class="space-y-6 p-6">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="font-display-label text-text-muted mb-2 block">Poids Soulevé</label>
+                                    <div class="relative">
+                                        <input
+                                            type="number"
+                                            v-model="weight"
+                                            placeholder="100"
+                                            min="0"
+                                            step="0.5"
+                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-white/20 bg-white/5 px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:bg-white/10 focus:ring-2"
+                                        />
+                                        <span
+                                            class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
+                                            >kg</span
+                                        >
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="font-display-label text-text-muted mb-2 block">Répétitions</label>
+                                    <div class="relative">
+                                        <input
+                                            type="number"
+                                            v-model="reps"
+                                            placeholder="5"
+                                            min="1"
+                                            max="100"
+                                            step="1"
+                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-white/20 bg-white/5 px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:bg-white/10 focus:ring-2"
+                                        />
+                                        <span
+                                            class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
+                                            >reps</span
+                                        >
+                                    </div>
+                                </div>
                             </div>
-                            <div class="space-y-2">
-                                <InputLabel value="Répétitions" />
-                                <GlassInput
-                                    type="number"
-                                    v-model="reps"
-                                    placeholder="ex: 5"
-                                    min="1"
-                                    max="100"
-                                    step="1"
-                                    class="w-full"
-                                />
-                            </div>
-                        </div>
 
-                        <div class="text-text-muted pt-4 text-sm">
-                            <p>Utilise la formule d'Epley : <span class="font-mono">w * (1 + r / 30)</span></p>
-                            <p v-if="reps > 10" class="mt-2 text-amber-600">
-                                Note : les calculs 1RM sont moins précis pour les séries à hautes répétitions (>10
-                                reps).
-                            </p>
+                            <div class="text-text-muted pt-4 text-sm">
+                                <p>Utilise la formule d'Epley : <span class="font-mono">w * (1 + r / 30)</span></p>
+                                <p v-if="reps > 10" class="mt-2 text-amber-600">
+                                    Note : les calculs 1RM sont moins précis pour les séries à hautes répétitions (>10
+                                    reps).
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </GlassCard>
 
-                <!-- Result Card (Mobile/Desktop split) -->
-                <GlassCard v-if="oneRepMax > 0" class="border-accent-primary/30 bg-accent-primary/10">
-                    <div class="p-6 text-center">
-                        <h3 class="text-text-main/80 text-lg font-medium">1RM Estimé</h3>
-                        <div class="text-text-main mt-2 text-5xl font-bold">
+                    <!-- Result Card -->
+                    <div
+                        v-if="oneRepMax > 0"
+                        class="animate-slide-up mt-6 flex flex-col items-center justify-center rounded-3xl border border-white/20 bg-white/10 p-8 text-center backdrop-blur-md"
+                        style="animation-delay: 0.08s"
+                    >
+                        <p class="text-text-muted text-sm font-bold tracking-wider uppercase">1RM Estimé</p>
+                        <div
+                            class="from-electric-orange to-hot-pink font-display mt-2 bg-linear-to-r bg-clip-text text-6xl font-black tracking-tighter text-transparent italic"
+                        >
                             {{ formatWeight(oneRepMax) }}
                         </div>
-                        <div class="text-text-muted mt-1 text-sm">Basé sur {{ weight }} x {{ reps }}</div>
-                    </div>
-                </GlassCard>
-            </div>
-
-            <!-- Percentages Table -->
-            <div v-if="oneRepMax > 0">
-                <GlassCard class="h-full">
-                    <div class="p-6">
-                        <h2 class="text-text-main mb-4 text-xl font-bold">Pourcentages d'Entraînement</h2>
-                        <div class="overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
-                            <table class="text-text-muted w-full text-left text-sm">
-                                <thead class="text-text-main border-b border-white/20 bg-white/10 text-xs uppercase">
-                                    <tr>
-                                        <th class="px-6 py-3 font-medium">Pourcentage</th>
-                                        <th class="px-6 py-3 font-medium">Poids</th>
-                                        <th class="px-6 py-3 font-medium">Reps Est.</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-white/10 bg-transparent">
-                                    <tr
-                                        v-for="p in percentages"
-                                        :key="p.percent"
-                                        class="transition-colors duration-200 hover:bg-white/20"
-                                    >
-                                        <td class="text-text-main px-6 py-4 font-medium">{{ p.percent }}%</td>
-                                        <td class="text-text-main px-6 py-4">{{ formatWeight(p.value) }}</td>
-                                        <td class="px-6 py-4">{{ p.reps }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
+                            Basé sur {{ weight }} x {{ reps }}
                         </div>
                     </div>
-                </GlassCard>
-            </div>
-            <div
-                v-else
-                class="text-text-muted flex items-center justify-center rounded-3xl border border-dashed border-white/20 bg-white/10 p-12 backdrop-blur-sm"
-            >
-                Entre un poids et des répétitions pour voir les résultats
+                </div>
+
+                <!-- Percentages Table -->
+                <div v-if="oneRepMax > 0">
+                    <div
+                        class="animate-slide-up h-full rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300"
+                        style="animation-delay: 0.1s"
+                    >
+                        <div class="p-6">
+                            <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
+                                Pourcentages d'Entraînement
+                            </h2>
+                            <div
+                                class="overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-inner backdrop-blur-md"
+                            >
+                                <table class="text-text-muted w-full text-left text-sm">
+                                    <thead
+                                        class="text-text-main border-b border-white/20 bg-white/10 text-xs uppercase"
+                                    >
+                                        <tr>
+                                            <th class="px-6 py-3 font-medium">Pourcentage</th>
+                                            <th class="px-6 py-3 font-medium">Poids</th>
+                                            <th class="px-6 py-3 font-medium">Reps Est.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-white/10 bg-transparent">
+                                        <tr
+                                            v-for="p in percentages"
+                                            :key="p.percent"
+                                            class="transition-colors duration-200 hover:bg-white/20"
+                                        >
+                                            <td class="text-text-main px-6 py-4 font-medium">{{ p.percent }}%</td>
+                                            <td class="text-text-main px-6 py-4">{{ formatWeight(p.value) }} kg</td>
+                                            <td class="px-6 py-4">{{ p.reps }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    v-else
+                    class="animate-slide-up mt-8 rounded-3xl border border-white/20 bg-white/10 py-12 text-center shadow-2xl backdrop-blur-md transition-all duration-300"
+                >
+                    <span class="material-symbols-outlined mb-3 text-5xl text-slate-300">calculate</span>
+                    <p class="text-text-muted font-medium">Entre un poids et des répétitions pour voir les résultats</p>
+                </div>
             </div>
         </div>
     </AuthenticatedLayout>
