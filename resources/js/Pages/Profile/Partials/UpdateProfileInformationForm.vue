@@ -21,7 +21,7 @@ const submit = () => {
 </script>
 
 <template>
-    <section>
+    <section class="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95">
         <header>
             <h2 class="text-text-main text-lg font-semibold">Informations du profil</h2>
             <p class="text-text-muted mt-1 text-sm">Modifie tes informations de compte et ton adresse email.</p>
