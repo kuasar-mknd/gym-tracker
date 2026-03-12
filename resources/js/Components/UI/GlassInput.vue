@@ -158,7 +158,7 @@ const isRequired = computed(() => {
                 aria-label="Effacer le texte"
                 tabindex="-1"
             >
-                <span class="material-symbols-outlined text-lg leading-none">cancel</span>
+                <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">cancel</span>
             </button>
         </div>
 
