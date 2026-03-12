@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Actions\Workouts\CreateSetAction;
+use App\Actions\Workouts\StoreSetAction;
 use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
-use App\Models\WorkoutLine;
 use App\Services\StatsService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -44,29 +43,11 @@ class SetController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(SetStoreRequest $request, CreateSetAction $action): SetResource
+    public function store(SetStoreRequest $request, StoreSetAction $action): SetResource
     {
-        $validated = $request->validated();
+        $set = $action->execute($this->user(), $request->validated());
 
-        try {
-            /** @var \App\Models\WorkoutLine $workoutLine */
-            $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
-
-            $this->authorize('create', [Set::class, $workoutLine]);
-
-            $set = $action->execute($this->user(), $workoutLine, $validated);
-
-            return new SetResource($set);
-        } catch (\Exception $e) {
-            \Log::error('Failed to create set in API:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'user_id' => $request->user()?->id,
-                'data' => $validated,
-            ]);
-
-            throw $e;
-        }
+        return new SetResource($set);
     }
 
     /**
