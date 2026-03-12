@@ -52,8 +52,6 @@ test('dashboard page renders with correct props', function (): void {
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Dashboard')
                 ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page)
-                ->has('workoutsCount')
-                ->has('thisWeekCount')
                 ->has('recentWorkouts')
                 ->has('activeGoals')
         );

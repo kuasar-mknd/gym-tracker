@@ -19,8 +19,6 @@ const RecentWorkoutsChart = defineAsyncComponent(() => import('@/Components/Stat
  * Database queries are limited to match the visible items in the UI.
  */
 const props = defineProps({
-    workoutsCount: { type: Number, default: 0 },
-    thisWeekCount: { type: Number, default: 0 },
     latestWeight: { type: Number, default: null },
     recentWorkouts: { type: Array, default: () => [] },
     recentPRs: { type: Array, default: () => [] },

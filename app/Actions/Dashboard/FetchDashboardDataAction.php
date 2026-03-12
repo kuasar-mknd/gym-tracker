@@ -32,8 +32,6 @@ final class FetchDashboardDataAction
      *
      * @param  \App\Models\User  $user  The authenticated user for whom to fetch data.
      * @return array{
-     *     workoutsCount: int,
-     *     thisWeekCount: int,
      *     latestWeight: float|string|null,
      *     recentWorkouts: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
      *     recentPRs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>,
@@ -46,8 +44,7 @@ final class FetchDashboardDataAction
         $latestMetrics = $this->statsService->getLatestBodyMetrics($user);
 
         return [
-            'workoutsCount' => $user->workouts()->count(),
-            'thisWeekCount' => $this->getThisWeekCount($user),
+            // ⚡ Bolt: Removed unused workoutsCount and thisWeekCount queries to prevent 2 unnecessary queries on dashboard load
             'latestWeight' => $latestMetrics['latest_weight'] ?? null,
             'recentWorkouts' => $this->getRecentWorkouts($user),
             'recentPRs' => $this->getRecentPRs($user),
@@ -153,19 +150,6 @@ final class FetchDashboardDataAction
                 'timeOfDayDistribution' => $this->getTimeOfDayDistribution($user),
             ]
         );
-    }
-
-    /**
-     * Count the number of workouts started in the current week.
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return int The total number of workouts for the current week.
-     */
-    private function getThisWeekCount(User $user): int
-    {
-        return $user->workouts()
-            ->where('started_at', '>=', now()->startOfWeek())
-            ->count();
     }
 
     /**
