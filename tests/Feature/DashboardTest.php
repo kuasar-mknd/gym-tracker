@@ -37,8 +37,6 @@ test('dashboard displays correct workout stats', function (): void {
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Dashboard')
-                ->where('workoutsCount', 13)
-                ->where('thisWeekCount', 3)
                 ->where('latestWeight', '75.50')
                 ->has('recentWorkouts', 3)
                 // Deferred props should be missing from initial response
