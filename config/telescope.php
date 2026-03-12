@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'enabled' => env('TELESCOPE_ENABLED', true) && ! (defined('PHPUNIT_RUNNING') || env('APP_ENV') === 'testing'),
+    'enabled' => env('TELESCOPE_ENABLED', true),
 
     /*
     |--------------------------------------------------------------------------
