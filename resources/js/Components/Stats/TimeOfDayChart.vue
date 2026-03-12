@@ -78,7 +78,7 @@ const chartOptions = {
     <div class="relative h-48 w-full">
         <Doughnut :data="chartData" :options="chartOptions" />
         <div class="pointer-events-none absolute inset-0 -ml-[120px] flex items-center justify-center">
-            <span class="material-symbols-outlined text-text-muted/20 text-4xl">schedule</span>
+            <span class="material-symbols-outlined text-text-muted/20 text-4xl" aria-hidden="true">schedule</span>
         </div>
     </div>
 </template>
