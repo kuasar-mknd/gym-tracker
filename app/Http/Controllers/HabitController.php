@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Habits\CreateHabitAction;
 use App\Actions\Habits\FetchHabitsIndexAction;
 use App\Actions\Habits\ToggleHabitAction;
 use App\Http\Requests\HabitStoreRequest;
@@ -48,19 +49,12 @@ class HabitController extends Controller
      * @param  \App\Http\Requests\HabitStoreRequest  $request  The validated request containing habit details.
      * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
      */
-    public function store(HabitStoreRequest $request): \Illuminate\Http\RedirectResponse
+    public function store(HabitStoreRequest $request, CreateHabitAction $createHabitAction): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', Habit::class);
 
         $data = $request->validated();
-        if (! ($data['color'] ?? null)) {
-            $data['color'] = 'bg-slate-500';
-        }
-        if (! ($data['icon'] ?? null)) {
-            $data['icon'] = 'check_circle';
-        }
-
-        $this->user()->habits()->create($data);
+        $createHabitAction->execute($this->user(), $data);
 
         return redirect()->back()->with('success', 'Habitude créée.');
     }
