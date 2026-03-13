@@ -21,3 +21,7 @@
 ## 2024-05-19 - Dashboard Deferred Loading
 **Learning:** When using Inertia 2.0 `<Deferred>` components on the frontend, the backend controller props are also explicitly wrapped in `Inertia::defer(fn () => ...)`. However, some controllers (like `DashboardController`) might already have their backend props correctly wrapped in `Inertia::defer`, while the frontend might be missing the `<Deferred>` components wrapper, causing them to load instantly when they could be delayed.
 **Action:** Always verify that both the frontend Vue components are using `<Deferred>` appropriately and the backend controller uses `Inertia::defer` when aiming to defer heavy logic to improve the Time to First Byte (TTFB).
+
+## 2026-03-13 - [Consolidating Deferred Props]
+**Learning:** Multiple deferred Inertia props that call the same service method result in redundant backend execution and cache lookups during the async request. Consolidating them into a single object prop ensures the heavy computation runs only once.
+**Action:** Always group related deferred data into a single object if they derive from the same source action or service call.
