@@ -6,6 +6,7 @@ namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UpdateUserRequest extends FormRequest
 {
@@ -33,7 +34,7 @@ class UpdateUserRequest extends FormRequest
                 'max:255',
                 Rule::unique('users')->ignore($this->route('user')),
             ],
-            'password' => ['sometimes', 'string', 'min:8'],
+            'password' => ['sometimes', 'string', Password::defaults()],
             'provider' => ['nullable', 'string', 'max:255'],
             'provider_id' => ['nullable', 'string', 'max:255'],
             'avatar' => ['nullable', 'string', 'max:255'],

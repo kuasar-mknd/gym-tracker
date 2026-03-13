@@ -12,7 +12,6 @@ use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -35,13 +34,7 @@ class UserController extends Controller
     {
         $this->authorize('create', User::class);
 
-        $validated = $request->validated();
-
-        if (isset($validated['password']) && is_string($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        }
-
-        $user = User::create($validated);
+        $user = User::create($request->validated());
 
         return new UserResource($user);
     }
@@ -63,13 +56,7 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
-        $validated = $request->validated();
-
-        if (isset($validated['password']) && is_string($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        }
-
-        $user->update($validated);
+        $user->update($request->validated());
 
         return new UserResource($user);
     }
