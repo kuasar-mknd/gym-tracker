@@ -34,7 +34,6 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
     const previousState = set.is_completed
 
     set.is_completed = newState
-    triggerHaptic('tap')
     if (newState) {
         timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
         showTimer.value = true
@@ -176,7 +175,6 @@ const closeModal = () => {
 const removeLine = (lineId) => {
     const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
     confirmMessage.value = `Supprimer ${line?.exercise?.name || "l'exercice"} ?`
-    triggerHaptic('warning')
 
     confirmAction.value = () => {
         router.delete(route('workout-lines.destroy', { workout_line: lineId }), {
@@ -190,7 +188,6 @@ const removeLine = (lineId) => {
 }
 
 const addSet = (lineId) => {
-    triggerHaptic('tap')
     const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
     const lastSet = line?.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
 
@@ -226,7 +223,6 @@ const updateSet = (set, field, value) => {
 }
 
 const removeSet = (setId) => {
-    triggerHaptic('warning')
     SyncService.delete(route('api.v1.sets.destroy', { set: setId })).then(() => {
         router.reload({ preserveScroll: true, only: ['workout'] })
     })
@@ -257,11 +253,12 @@ const filteredExercises = computed(() => {
     <AuthenticatedLayout :page-title="localWorkout.name" :show-back="true" back-route="workouts.index">
         <template #header-actions>
             <button
+                v-press
                 @click="showSettingsModal = true"
-                class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition-all active:scale-95"
+                class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition-all"
                 aria-label="Paramètres de la séance"
             >
-                <span class="material-symbols-outlined">settings</span>
+                <span class="material-symbols-outlined" aria-hidden="true">settings</span>
             </button>
         </template>
 
@@ -289,11 +286,12 @@ const filteredExercises = computed(() => {
                         <p class="text-text-muted text-xs font-bold uppercase">{{ line.exercise.category }}</p>
                     </div>
                     <button
+                        v-press="{ haptic: 'warning' }"
                         @click="removeLine(line.id)"
                         class="text-text-muted transition-colors hover:text-red-500"
                         aria-label="Supprimer l'exercice"
                     >
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
@@ -311,6 +309,7 @@ const filteredExercises = computed(() => {
                             :class="{ 'opacity-50': set.is_completed }"
                         >
                             <button
+                                v-press
                                 @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
                                 :dusk="`complete-set-${lineIndex}-${index}`"
                                 class="group relative flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-all"
@@ -319,7 +318,13 @@ const filteredExercises = computed(() => {
                                 "
                                 :aria-label="set.is_completed ? 'Annuler la série' : 'Valider la série'"
                             >
-                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg
+                                    class="h-6 w-6"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    aria-hidden="true"
+                                >
                                     <path
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
@@ -333,7 +338,9 @@ const filteredExercises = computed(() => {
                                     class="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-sm"
                                     :dusk="`pr-trophy-${lineIndex}-${index}`"
                                 >
-                                    <span class="material-symbols-outlined text-[12px] font-bold">stars</span>
+                                    <span class="material-symbols-outlined text-[12px] font-bold" aria-hidden="true"
+                                        >stars</span
+                                    >
                                 </div>
                             </button>
                             <div
@@ -393,17 +400,19 @@ const filteredExercises = computed(() => {
                             </template>
 
                             <button
+                                v-press="{ haptic: 'warning' }"
                                 @click="removeSet(set.id)"
                                 class="ml-auto text-slate-300 hover:text-red-500"
                                 aria-label="Supprimer la série"
                             >
-                                <span class="material-symbols-outlined">delete</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
                             </button>
                         </div>
                     </SwipeableRow>
                 </div>
 
                 <button
+                    v-press
                     @click="addSet(line.id)"
                     :dusk="`add-set-${lineIndex}`"
                     class="text-text-muted hover:border-neon-green mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 py-3 text-sm font-bold uppercase transition-all"
