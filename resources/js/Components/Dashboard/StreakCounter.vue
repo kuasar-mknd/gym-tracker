@@ -1,6 +1,4 @@
 <script setup>
-import GlassCard from '@/Components/UI/GlassCard.vue'
-
 defineProps({
     count: {
         type: Number,
@@ -10,7 +8,7 @@ defineProps({
 </script>
 
 <template>
-    <GlassCard padding="p-4" class="group relative overflow-hidden">
+    <div class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95">
         <div class="flex items-center gap-3">
             <!-- Icon with Glow -->
             <div class="relative shrink-0">
@@ -46,7 +44,7 @@ defineProps({
             class="absolute -right-4 -bottom-4 h-24 w-24 rounded-full bg-linear-to-tl from-orange-500/10 to-transparent blur-xl transition-opacity duration-300"
             :class="count > 0 ? 'opacity-100' : 'opacity-0'"
         ></div>
-    </GlassCard>
+    </div>
 </template>
 
 <style scoped>
