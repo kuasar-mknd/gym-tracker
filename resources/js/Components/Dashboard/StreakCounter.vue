@@ -8,7 +8,9 @@ defineProps({
 </script>
 
 <template>
-    <div class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95">
+    <div
+        class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+    >
         <div class="flex items-center gap-3">
             <!-- Icon with Glow -->
             <div class="relative shrink-0">
