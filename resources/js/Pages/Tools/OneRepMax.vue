@@ -100,6 +100,12 @@
                             <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
                                 Pourcentages d'Entraînement
                             </h2>
+
+                            <!-- Chart Component -->
+                            <div class="mb-6 h-48 w-full">
+                                <OneRepMaxPercentagesChart :data="percentages" />
+                            </div>
+
                             <div
                                 class="overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-inner backdrop-blur-md"
                             >
@@ -142,12 +148,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PageHeader from '@/Components/Navigation/PageHeader.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import InputLabel from '@/Components/InputLabel.vue'
+
+const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
 
 const weight = ref('')
 const reps = ref('')
