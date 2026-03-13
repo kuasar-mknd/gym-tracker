@@ -40,8 +40,7 @@ test('dashboard displays correct workout stats', function (): void {
                 ->where('latestWeight', '75.50')
                 ->has('recentWorkouts', 3)
                 // Deferred props should be missing from initial response
-                ->missing('weeklyVolume')
-                ->missing('volumeChange')
+                ->missing('weeklyVolumeStats')
                 ->missing('weeklyVolumeTrend')
                 ->missing('volumeTrend')
                 ->missing('durationDistribution')

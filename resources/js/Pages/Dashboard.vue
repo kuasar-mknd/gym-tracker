@@ -23,8 +23,7 @@ const props = defineProps({
     recentWorkouts: { type: Array, default: () => [] },
     recentPRs: { type: Array, default: () => [] },
     activeGoals: { type: Array, default: () => [] },
-    weeklyVolume: { type: Number, default: 0 },
-    volumeChange: { type: Number, default: 0 },
+    weeklyVolumeStats: { type: Object, default: () => ({ current_week_volume: 0, percentage: 0 }) },
     weeklyVolumeTrend: { type: Array, default: () => [] },
     volumeTrend: { type: Array, default: () => [] },
     durationDistribution: { type: Array, default: () => [] },
@@ -178,7 +177,7 @@ const colorForWorkout = (index) => {
                             </p>
                         </div>
                         <div class="text-right">
-                            <Deferred data="weeklyVolume">
+                            <Deferred data="weeklyVolumeStats">
                                 <template #fallback>
                                     <div class="flex flex-col items-end gap-2">
                                         <GlassSkeleton height="2.5rem" width="6rem" />
@@ -188,19 +187,20 @@ const colorForWorkout = (index) => {
                                 <p
                                     class="from-electric-orange to-vivid-violet font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
                                 >
-                                    {{ weeklyVolume?.toLocaleString() || 0 }}
+                                    {{ weeklyVolumeStats.current_week_volume?.toLocaleString() || 0 }}
                                 </p>
                                 <p
-                                    v-if="volumeChange !== 0"
+                                    v-if="weeklyVolumeStats.percentage !== 0"
                                     :class="[
                                         'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
-                                        volumeChange > 0 ? 'text-emerald-600' : 'text-red-500',
+                                        weeklyVolumeStats.percentage > 0 ? 'text-emerald-600' : 'text-red-500',
                                     ]"
                                 >
                                     <span class="material-symbols-outlined text-sm font-bold">
-                                        {{ volumeChange > 0 ? 'trending_up' : 'trending_down' }}
+                                        {{ weeklyVolumeStats.percentage > 0 ? 'trending_up' : 'trending_down' }}
                                     </span>
-                                    {{ volumeChange > 0 ? '+' : '' }}{{ volumeChange }}% vs sem. passée
+                                    {{ weeklyVolumeStats.percentage > 0 ? '+' : '' }}{{ weeklyVolumeStats.percentage }}%
+                                    vs sem. passée
                                 </p>
                             </Deferred>
                         </div>
