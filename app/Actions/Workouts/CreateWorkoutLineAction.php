@@ -19,12 +19,10 @@ class CreateWorkoutLineAction
         $maxOrder = $workout->workoutLines()->max('order');
         $order = $data['order'] ?? (is_null($maxOrder) ? 0 : (int) $maxOrder + 1); // @phpstan-ignore cast.int
 
-        /** @var WorkoutLine $workoutLine */
-        $workoutLine = $workout->workoutLines()->create(array_merge(
+        /** @var WorkoutLine */
+        return $workout->workoutLines()->create(array_merge(
             collect($data)->except('workout_id')->toArray(),
             ['order' => $order]
         ));
-
-        return $workoutLine;
     }
 }

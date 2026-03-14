@@ -74,6 +74,9 @@ class CustomPolicy extends Basic
             ->add(Directive::IMG, 'https://www.svgrepo.com')
             ->add(Directive::FONT, 'https://fonts.bunny.net')
             ->add(Directive::FONT, 'https://fonts.gstatic.com')
-            ->add(Directive::FONT, 'data:');
+            ->add(Directive::FONT, 'data:')
+            ->add(Directive::CONNECT, 'https://fcm.googleapis.com')
+            ->add(Directive::CONNECT, 'https://updates.push.apple.com')
+            ->add(Directive::CONNECT, 'https://*.notify.windows.com');
     }
 }

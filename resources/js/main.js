@@ -11,6 +11,19 @@ import { createApp, h } from 'vue'
 import { ZiggyVue } from 'ziggy-js'
 import * as Sentry from '@sentry/vue'
 import { vPress } from './directives/vPress'
+import { registerSW } from 'virtual:pwa-register'
+
+// Register Service Worker
+if (typeof window !== 'undefined') {
+    registerSW({
+        onNeedRefresh() {
+            console.log('New content available, please refresh.')
+        },
+        onOfflineReady() {
+            console.log('App ready to work offline.')
+        },
+    })
+}
 
 // Expose router for testing (Dusk)
 window.Inertia = router

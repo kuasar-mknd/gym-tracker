@@ -21,12 +21,18 @@ const props = defineProps({
 
 // ⚡ Perf: Use a mutable reactive ref instead of computed to support optimistic UI updates
 const localWorkout = ref(JSON.parse(JSON.stringify(props.workout)))
+if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workout_lines)) {
+    localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
+}
 
 // Sync with Inertia props when they change (e.g. after redirect-based actions)
 watch(
     () => props.workout,
     (newVal) => {
         localWorkout.value = JSON.parse(JSON.stringify(newVal))
+        if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workout_lines)) {
+            localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
+        }
     },
 )
 
@@ -94,6 +100,12 @@ const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id)
 const showConfirmModal = ref(false)
 const confirmAction = ref(null)
 const confirmMessage = ref('')
+
+const executeConfirmAction = () => {
+    if (typeof confirmAction.value === 'function') {
+        confirmAction.value()
+    }
+}
 const showSettingsModal = ref(false)
 
 const settingsForm = useForm({
@@ -198,6 +210,18 @@ const removeLine = (lineId) => {
     confirmMessage.value = `Supprimer ${line?.exercise?.name || "l'exercice"} ?`
 
     confirmAction.value = () => {
+        // Clear any pending updates for sets in this line
+        line.sets?.forEach((set) => {
+            const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
+            fields.forEach((field) => {
+                const timerKey = `${set.id}_${field}`
+                if (updateTimers[timerKey]) {
+                    clearTimeout(updateTimers[timerKey])
+                    delete updateTimers[timerKey]
+                }
+            })
+        })
+
         // ⚡ Perf: Optimistic removal
         const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === lineId)
         const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
@@ -282,6 +306,16 @@ const updateSet = (set, field, value) => {
 
 // ⚡ Perf: Optimistic removeSet — no router.reload
 const removeSet = (setId) => {
+    // Clear any pending updates for this set to prevent 404s
+    const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
+    fields.forEach((field) => {
+        const timerKey = `${setId}_${field}`
+        if (updateTimers[timerKey]) {
+            clearTimeout(updateTimers[timerKey])
+            delete updateTimers[timerKey]
+        }
+    })
+
     // Find the line and set
     for (const line of localWorkout.value.workout_lines) {
         const setIdx = line.sets.findIndex((s) => s.id === setId)
@@ -325,6 +359,7 @@ const filteredExercises = computed(() => {
             <button
                 v-press
                 @click="showSettingsModal = true"
+                dusk="workout-settings-button"
                 class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition-all"
                 aria-label="Paramètres de la séance"
             >
@@ -332,7 +367,7 @@ const filteredExercises = computed(() => {
             </button>
         </template>
 
-        <div class="space-y-4 pb-64">
+        <div class="space-y-4 pb-64" dusk="exercise-list">
             <GlassCard
                 v-if="localWorkout.workout_lines.length === 0"
                 class="flex flex-col items-center justify-center p-12 text-center"
@@ -347,6 +382,8 @@ const filteredExercises = computed(() => {
                 v-for="(line, lineIndex) in localWorkout.workout_lines"
                 :key="line.id"
                 :dusk="`exercise-card-${lineIndex}`"
+                :data-line-id="line.id"
+                :dusk-id="`exercise-line-${line.id}`"
             >
                 <div class="mb-4 flex items-center justify-between">
                     <div>
@@ -358,6 +395,7 @@ const filteredExercises = computed(() => {
                     <button
                         v-press="{ haptic: 'warning' }"
                         @click="removeLine(line.id)"
+                        :dusk="`remove-line-${lineIndex}`"
                         class="text-text-muted transition-colors hover:text-red-500"
                         aria-label="Supprimer l'exercice"
                     >
@@ -472,6 +510,7 @@ const filteredExercises = computed(() => {
                             <button
                                 v-press="{ haptic: 'warning' }"
                                 @click="removeSet(set.id)"
+                                :dusk="`remove-set-${lineIndex}-${index}`"
                                 class="ml-auto text-slate-300 hover:text-red-500"
                                 aria-label="Supprimer la série"
                             >
@@ -615,9 +654,14 @@ const filteredExercises = computed(() => {
             <div class="p-6">
                 <h2 class="font-display text-text-main mb-6 text-2xl font-black uppercase italic">Paramètres</h2>
                 <form @submit.prevent="updateSettings" class="space-y-5">
-                    <GlassInput v-model="settingsForm.name" label="Nom" />
+                    <GlassInput v-model="settingsForm.name" label="Nom" dusk="workout-name-input" />
                     <GlassInput v-model="settingsForm.started_at" type="datetime-local" label="Date" />
-                    <GlassButton type="submit" variant="primary" :loading="settingsForm.processing" class="w-full"
+                    <GlassButton
+                        type="submit"
+                        variant="primary"
+                        :loading="settingsForm.processing"
+                        class="w-full"
+                        dusk="save-settings-button"
                         >Sauvegarder</GlassButton
                     >
                 </form>
@@ -655,7 +699,13 @@ const filteredExercises = computed(() => {
                     <GlassButton variant="secondary" @click="showConfirmModal = false" class="flex-1"
                         >Annuler</GlassButton
                     >
-                    <GlassButton variant="danger" @click="confirmAction" class="flex-1">Supprimer</GlassButton>
+                    <GlassButton
+                        variant="danger"
+                        @click="executeConfirmAction"
+                        class="flex-1"
+                        dusk="confirm-delete-button"
+                        >Supprimer</GlassButton
+                    >
                 </div>
             </div>
         </Modal>
