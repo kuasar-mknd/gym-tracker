@@ -100,6 +100,12 @@ const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id)
 const showConfirmModal = ref(false)
 const confirmAction = ref(null)
 const confirmMessage = ref('')
+
+const executeConfirmAction = () => {
+    if (typeof confirmAction.value === 'function') {
+        confirmAction.value()
+    }
+}
 const showSettingsModal = ref(false)
 
 const settingsForm = useForm({
@@ -204,6 +210,18 @@ const removeLine = (lineId) => {
     confirmMessage.value = `Supprimer ${line?.exercise?.name || "l'exercice"} ?`
 
     confirmAction.value = () => {
+        // Clear any pending updates for sets in this line
+        line.sets?.forEach((set) => {
+            const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
+            fields.forEach((field) => {
+                const timerKey = `${set.id}_${field}`
+                if (updateTimers[timerKey]) {
+                    clearTimeout(updateTimers[timerKey])
+                    delete updateTimers[timerKey]
+                }
+            })
+        })
+
         // ⚡ Perf: Optimistic removal
         const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === lineId)
         const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
@@ -679,7 +697,11 @@ const filteredExercises = computed(() => {
                     <GlassButton variant="secondary" @click="showConfirmModal = false" class="flex-1"
                         >Annuler</GlassButton
                     >
-                    <GlassButton variant="danger" @click="confirmAction" class="flex-1" dusk="confirm-delete-button"
+                    <GlassButton
+                        variant="danger"
+                        @click="executeConfirmAction"
+                        class="flex-1"
+                        dusk="confirm-delete-button"
                         >Supprimer</GlassButton
                     >
                 </div>
