@@ -6,7 +6,6 @@
  * Shows the current mode with an icon and label.
  */
 import { useTheme } from '@/composables/useTheme'
-import { triggerHaptic } from '@/composables/useHaptics'
 
 const { theme, isDark, toggleTheme } = useTheme()
 
@@ -23,15 +22,16 @@ const themeLabels = {
 }
 
 function handleToggle() {
-    triggerHaptic('toggle')
     toggleTheme()
 }
 </script>
 
 <template>
     <button
+        v-press="{ haptic: 'toggle' }"
         @click="handleToggle"
-        class="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:shadow-lg active:scale-95"
+        class="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:shadow-lg"
+        :aria-label="'Changer le thème, mode actuel : ' + themeLabels[theme]"
     >
         <div
             class="flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
@@ -41,7 +41,7 @@ function handleToggle() {
                 {{ themeIcons[theme] }}
             </span>
         </div>
-        <div class="text-left">
+        <div class="text-left" aria-live="polite">
             <div class="text-text-main text-sm font-bold dark:text-white">Thème</div>
             <div class="text-text-muted text-xs dark:text-slate-400">
                 {{ themeLabels[theme] }}
