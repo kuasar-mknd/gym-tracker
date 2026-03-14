@@ -1,4 +1,21 @@
 <script setup>
+/**
+ * Fasting Tracker Component.
+ *
+ * This component provides an interface for users to track their intermittent fasting.
+ * It displays the currently active fast with a live progress timer, allows starting
+ * new fasts by selecting different duration types (e.g., 16:8, 20:4), and shows a
+ * history of past completed fasts.
+ *
+ * Props:
+ * @prop {Object} activeFast - The currently ongoing fast object, if any. Null otherwise.
+ *                             Expected shape: { id, type, start_time, target_duration_minutes, ... }
+ * @prop {Object} history - Paginated object containing historical fasting records.
+ *
+ * Emits:
+ * None directly. Uses Inertia forms for POST/PATCH/DELETE requests.
+ */
+
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
