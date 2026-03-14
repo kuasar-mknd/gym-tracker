@@ -24,8 +24,6 @@ final class CreateHabitAction
         }
 
         /** @var Habit $habit */
-        $habit = $user->habits()->create($data);
-
-        return $habit;
+        return $user->habits()->create($data);
     }
 }

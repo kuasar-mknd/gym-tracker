@@ -21,11 +21,9 @@ class CreateWorkoutTemplateSetAction
         $order = $data['order'] ?? ($maxOrder === null ? 0 : $maxOrder + 1);
 
         /** @var \App\Models\WorkoutTemplateSet $workoutTemplateSet */
-        $workoutTemplateSet = $workoutTemplateLine->workoutTemplateSets()->create(array_merge(
+        return $workoutTemplateLine->workoutTemplateSets()->create(array_merge(
             collect($data)->except('workout_template_line_id')->toArray(),
             ['order' => $order]
         ));
-
-        return $workoutTemplateSet;
     }
 }
