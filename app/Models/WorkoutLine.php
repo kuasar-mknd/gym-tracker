@@ -74,9 +74,9 @@ class WorkoutLine extends Model
     {
         // If pre-loaded via batch method, return directly
         if (isset($this->attributes['recommended_values'])) {
-            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} $cached */
             $cached = json_decode((string) $this->attributes['recommended_values'], true); // @phpstan-ignore cast.string
 
+            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} $cached */
             return $cached;
         }
 
@@ -206,8 +206,9 @@ class WorkoutLine extends Model
     {
         $this->loadMissing('workout');
 
+        $workout = $this->workout;
         // Try cache first
-        $cacheKey = "recommended_values:{$this->workout->user_id}:{$this->exercise_id}:{$this->workout_id}";
+        $cacheKey = "recommended_values:{$workout->user_id}:{$this->exercise_id}:{$this->workout_id}";
         /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null $cached */
         $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
         if ($cached !== null) {
@@ -217,10 +218,10 @@ class WorkoutLine extends Model
         /** @var \App\Models\WorkoutLine|null $lastLine */
         $lastLine = self::query()
             ->where('exercise_id', $this->exercise_id)
-            ->whereHas('workout', function ($query): void {
-                $query->where('user_id', $this->workout->user_id)
+            ->whereHas('workout', function ($query) use ($workout): void {
+                $query->where('user_id', $workout->user_id)
                     ->where('id', '!=', $this->workout_id)
-                    ->where('started_at', '<', $this->workout->started_at);
+                    ->where('started_at', '<', $workout->started_at);
             })
             ->with(['sets', 'workout'])
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
