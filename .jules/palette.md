@@ -1,7 +1,3 @@
-## 2024-03-02 - Empty State Call to Actions & Async Buttons
-**Learning:** Found an empty state ("Aucune séance pour l'instant") that left users at a dead-end on the primary Dashboard. Additionally, a large call-to-action card executed an async form post without any visual feedback (no spinner). In Inertia/Vue apps, disabling the button isn't enough; the user needs clear visual feedback that their action is processing, especially for major actions like creating a new Workout.
-**Action:** Always provide an actionable CTA within Empty States to prevent "dead ends". Also, always ensure primary action buttons not only disable themselves but also show an explicit loading indicator (like `animate-spin` on an icon) when `form.processing` is true.
-
-## 2025-03-12 - Decorative Material Symbols Accessibility
-**Learning:** Found multiple instances where ligature-based `material-symbols-outlined` icons (e.g., `<span class="material-symbols-outlined">cancel</span>`) were missing `aria-hidden="true"`. Without this attribute, screen readers will announce the raw ligature text (like "cancel", "error", or "schedule") which clutters the audio interface and provides confusing or redundant context to users relying on assistive technologies.
-**Action:** Always add `aria-hidden="true"` to ligature-based icon elements when they are decorative or when their meaning is already conveyed through adjacent text or an `aria-label` on the parent button.
+## 2025-02-18 - v-press directive
+**Learning:** `v-press` is actually a valid directive in the project, defined at `resources/js/directives/vPress.js`. It provides scaling effects and haptics for interactive elements, which perfectly aligns with Apple's HIG. Code reviews sometimes mistakenly flag it as undefined if they don't look closely at the project setup.
+**Action:** When asked to implement micro-interactions or Apple HIG effects, `v-press` is the preferred approach for buttons and interactive items in this codebase.
