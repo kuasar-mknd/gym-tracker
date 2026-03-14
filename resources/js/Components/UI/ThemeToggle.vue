@@ -30,7 +30,7 @@ function handleToggle() {
     <button
         v-press="{ haptic: 'toggle' }"
         @click="handleToggle"
-        class="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-lg"
+        class="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:shadow-lg"
         :aria-label="'Changer le thème, mode actuel : ' + themeLabels[theme]"
     >
         <div
