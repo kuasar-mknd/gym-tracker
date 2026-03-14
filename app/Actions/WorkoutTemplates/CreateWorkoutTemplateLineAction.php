@@ -26,7 +26,7 @@ class CreateWorkoutTemplateLineAction
         $maxOrder = $workoutTemplate->workoutTemplateLines()->max('order');
         $order = $data['order'] ?? ($maxOrder === null ? 0 : $maxOrder + 1);
 
-        /** @var \App\Models\WorkoutTemplateLine $workoutTemplateLine */
+        /** @var \App\Models\WorkoutTemplateLine */
         return $workoutTemplate->workoutTemplateLines()->create(array_merge(
             collect($data)->except('workout_template_id')->toArray(),
             ['order' => $order]

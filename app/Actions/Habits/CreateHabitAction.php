@@ -23,7 +23,7 @@ final class CreateHabitAction
             $data['icon'] = 'check_circle';
         }
 
-        /** @var Habit $habit */
+        /** @var Habit */
         return $user->habits()->create($data);
     }
 }

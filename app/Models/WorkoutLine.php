@@ -81,8 +81,10 @@ class WorkoutLine extends Model
     {
         // If pre-loaded via batch method, return directly
         if (isset($this->attributes['recommended_values'])) {
-            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} $cached */
-            return json_decode((string) $this->attributes['recommended_values'], true); // @phpstan-ignore cast.string
+            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} $values */
+            $values = json_decode((string) $this->attributes['recommended_values'], true); // @phpstan-ignore cast.string
+
+            return $values;
         }
 
         return $this->getRecommendedValues();
@@ -218,7 +220,7 @@ class WorkoutLine extends Model
             return null;
         }
 
-        $workoutId = $lines->first()?->workout_id;
+        $workoutId = $lines->first()->workout_id;
         $exerciseIds = $lines->pluck('exercise_id')->unique()->values()->all();
 
         if (count($exerciseIds) === 0 || $workoutId === null) {
