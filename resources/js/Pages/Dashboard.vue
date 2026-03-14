@@ -25,7 +25,6 @@ const props = defineProps({
     activeGoals: { type: Array, default: () => [] },
     weeklyVolumeStats: { type: Object, default: () => ({ current_week_volume: 0, percentage: 0 }) },
     weeklyVolumeTrend: { type: Array, default: () => [] },
-    volumeTrend: { type: Array, default: () => [] },
     durationDistribution: { type: Array, default: () => [] },
     timeOfDayDistribution: { type: Array, default: () => [] },
 })

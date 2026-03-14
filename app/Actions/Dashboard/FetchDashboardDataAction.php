@@ -85,19 +85,6 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Get the daily volume trend over the last 7 days.
-     *
-     * Retrieves a rolling 7-day trend of daily workout volume.
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return array<int, array{date: string, day_name: string, volume: float}> A list of daily volumes for the past week.
-     */
-    public function getVolumeTrend(User $user): array
-    {
-        return $this->statsService->getDailyVolumeTrend($user, 7);
-    }
-
-    /**
      * Get the distribution of workout durations.
      *
      * Groups recent workouts into duration buckets (e.g., '< 30 min', '30-60 min')
@@ -145,7 +132,6 @@ final class FetchDashboardDataAction
                 'weeklyVolume' => $weeklyStats['current_week_volume'],
                 'volumeChange' => $weeklyStats['percentage'],
                 'weeklyVolumeTrend' => $this->getWeeklyVolumeTrend($user),
-                'volumeTrend' => $this->getVolumeTrend($user),
                 'durationDistribution' => $this->getDurationDistribution($user),
                 'timeOfDayDistribution' => $this->getTimeOfDayDistribution($user),
             ]
