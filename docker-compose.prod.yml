@@ -4,6 +4,7 @@ x-app-env: &app-env
     ASSET_URL: ${APP_URL}
     APP_ENV: production
     APP_DEBUG: ${APP_DEBUG:-false}
+    GOMAXPROCS: 2
 
     # Database
     DB_CONNECTION: mysql
