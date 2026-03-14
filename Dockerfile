@@ -65,8 +65,8 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
     && touch storage/logs/laravel.log \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+    && chown -R www-data:www-data storage bootstrap/cache public \
+    && chmod -R 775 storage bootstrap/cache public
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:80/up || exit 1
