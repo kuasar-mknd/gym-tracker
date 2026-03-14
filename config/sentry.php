@@ -39,7 +39,7 @@ return [
     'logs_channel_level' => env('SENTRY_LOG_LEVEL', env('SENTRY_LOGS_LEVEL', env('LOG_LEVEL', 'debug'))),
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#send_default_pii
-    'send_default_pii' => env('SENTRY_SEND_DEFAULT_PII', false),
+    'send_default_pii' => env('SENTRY_SEND_DEFAULT_PII', true),
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_exceptions
     // 'ignore_exceptions' => [],
@@ -65,7 +65,7 @@ return [
         'sql_queries' => env('SENTRY_BREADCRUMBS_SQL_QUERIES_ENABLED', true),
 
         // Capture SQL query bindings (parameters) in SQL query breadcrumbs
-        'sql_bindings' => env('SENTRY_BREADCRUMBS_SQL_BINDINGS_ENABLED', false),
+        'sql_bindings' => env('SENTRY_BREADCRUMBS_SQL_BINDINGS_ENABLED', true),
 
         // Capture queue job information as breadcrumbs
         'queue_info' => env('SENTRY_BREADCRUMBS_QUEUE_INFO_ENABLED', true),
@@ -92,7 +92,7 @@ return [
         'sql_queries' => env('SENTRY_TRACE_SQL_QUERIES_ENABLED', true),
 
         // Capture SQL query bindings (parameters) in SQL query spans
-        'sql_bindings' => env('SENTRY_TRACE_SQL_BINDINGS_ENABLED', false),
+        'sql_bindings' => env('SENTRY_TRACE_SQL_BINDINGS_ENABLED', true),
 
         // Capture where the SQL query originated from on the SQL query spans
         'sql_origin' => env('SENTRY_TRACE_SQL_ORIGIN_ENABLED', true),

@@ -38,16 +38,26 @@ createInertiaApp({
             .use(plugin)
             .use(ZiggyVue, props.initialPage.props.ziggy)
 
-        // Sentry disabled for debugging
+        // Sentry configuration
         if (import.meta.env.VITE_SENTRY_DSN_PUBLIC) {
             Sentry.init({
                 app,
                 dsn: import.meta.env.VITE_SENTRY_DSN_PUBLIC,
                 integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
-                tracesSampleRate: 1.0,
-                replaysSessionSampleRate: 0.1,
-                replaysOnErrorSampleRate: 1.0,
+                tracesSampleRate: 0.1, // 10% sampling for performance to stay in free tier
+                replaysSessionSampleRate: 0.0, // Don't sample normal sessions
+                replaysOnErrorSampleRate: 1.0, // BUT record 100% of sessions that result in an error
             })
+
+            // Set user context if logged in
+            const user = props.initialPage.props.auth?.user
+            if (user) {
+                Sentry.setUser({
+                    id: user.id,
+                    email: user.email,
+                    username: user.name,
+                })
+            }
         }
 
         // Register custom directives
