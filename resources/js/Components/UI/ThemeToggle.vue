@@ -31,7 +31,8 @@ function handleToggle() {
 <template>
     <button
         @click="handleToggle"
-        class="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:shadow-lg active:scale-95"
+        class="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:outline-none active:scale-95"
+        :aria-label="`Changer le thème. Actuel : ${themeLabels[theme]}`"
     >
         <div
             class="flex h-10 w-10 items-center justify-center rounded-lg transition-colors"
