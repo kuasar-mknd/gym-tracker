@@ -15,6 +15,7 @@ RUN install-php-extensions \
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     default-mysql-client \
+    curl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 
@@ -41,6 +42,10 @@ RUN composer dump-autoload --classmap-authoritative --no-dev --no-scripts
 # 4. Final production image
 FROM base AS final
 WORKDIR /app
+
+# Production PHP config with OPcache + JIT
+COPY docker/php-prod.ini /usr/local/etc/php/conf.d/99-prod.ini
+
 ENV SERVER_NAME=:80
 ENV APP_ENV=production
 ENV APP_DEBUG=false
@@ -58,12 +63,16 @@ COPY --from=frontend-builder /app/public/build ./public/build
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-RUN chmod -R 777 storage bootstrap/cache
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 RUN mkdir -p storage/logs && touch storage/logs/laravel.log
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:80/up || exit 1
 
 # Expose production port
 EXPOSE 80
+USER www-data
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=1"]
-
+CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=2"]

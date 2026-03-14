@@ -1,5 +1,5 @@
-#!/bin/sh
-set -e
+#!/bin/bash
+set -euo pipefail
 
 # Wait for database at $DB_HOST:$DB_PORT
 MAX_TRIES=600
@@ -15,7 +15,7 @@ until php -r "try { new PDO(\"mysql:host=\" . getenv(\"DB_HOST\") . \";port=\" .
     sleep 2
 done
 
-# Cache config and routes for performance
+# Cache everything for maximum performance
 echo "Caching configuration..."
 php artisan config:cache
 
@@ -23,6 +23,12 @@ echo "Caching routes..."
 php artisan package:discover --ansi
 php artisan storage:link
 php artisan route:cache
+
+echo "Caching views..."
+php artisan view:cache
+
+echo "Caching events..."
+php artisan event:cache
 
 # Run migrations ONLY for the app service (when command contains octane)
 if echo "$@" | grep -q "octane:frankenphp"; then
