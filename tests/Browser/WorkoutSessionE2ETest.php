@@ -179,12 +179,20 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             // 6e. Delete Cardio exercise (Index 1)
             $browser->script("document.querySelector('[dusk=\"remove-line-1\"]').scrollIntoView({block: 'center'});");
+
+            // Get the stable ID of the cardio line before deleting it
+            $cardioLineId = $browser->attribute('[dusk="exercise-card-1"]', 'data-line-id');
+
             $browser->click('@remove-line-1')
                 ->waitFor('@confirm-delete-button', 15)
                 ->pause(500)
                 ->click('@confirm-delete-button')
-                ->pause(1000)
-                ->assertDontSee('CARDIO EX');
+                ->waitUntilMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]", 15);
+
+            $browser->within('@exercise-list', function (Browser $list) use ($cardioLineId): void {
+                $list->assertDontSee('CARDIO EX');
+                $list->assertMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]");
+            });
 
             // 7. Complete one set and verify PR trophy
             $browser->script("document.querySelector('[dusk=\"exercise-card-0\"]').scrollIntoView({block: 'start'});");
