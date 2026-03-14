@@ -1,7 +1,3 @@
-<!--
-  Workouts/Show.vue - Active Workout Page
-  Mobile-first design with glass cards for exercise logging.
--->
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -12,7 +8,7 @@ import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/Modal.vue'
 import { Head, useForm, router, usePage, Link } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -23,31 +19,40 @@ const props = defineProps({
     types: { type: Array, required: true },
 })
 
-// Use computed directly for data display to ensure perfect sync with Inertia props
-const localWorkout = computed(() => props.workout)
+// ⚡ Perf: Use a mutable reactive ref instead of computed to support optimistic UI updates
+const localWorkout = ref(JSON.parse(JSON.stringify(props.workout)))
+
+// Sync with Inertia props when they change (e.g. after redirect-based actions)
+watch(
+    () => props.workout,
+    (newVal) => {
+        localWorkout.value = JSON.parse(JSON.stringify(newVal))
+    },
+)
 
 const showTimer = ref(false)
 const timerDuration = ref(90)
+
+let tempIdCounter = 0
 
 const toggleSetCompletion = (set, exerciseRestTime) => {
     const newState = !set.is_completed
     const previousState = set.is_completed
 
+    // ⚡ Perf: Optimistic update — no router.reload
     set.is_completed = newState
     if (newState) {
         timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
         showTimer.value = true
     }
-    SyncService.patch(route('api.v1.sets.update', { set: set.id }), { is_completed: newState })
-        .then(() => {
-            router.reload({ preserveScroll: true, only: ['workout'] })
-        })
-        .catch((err) => {
-            if (!err.isOffline) {
-                set.is_completed = previousState
-                triggerHaptic('error')
-            }
-        })
+    SyncService.patch(route('api.v1.sets.update', { set: set.id }), {
+        is_completed: newState,
+    }).catch((err) => {
+        if (!err.isOffline) {
+            set.is_completed = previousState
+            triggerHaptic('error')
+        }
+    })
 }
 
 const savingTemplate = ref(false)
@@ -108,18 +113,44 @@ const updateSettings = () => {
         })
 }
 
+// ⚡ Perf: addExercise via API call + optimistic UI instead of Inertia redirect
 const addExercise = (exerciseId) => {
-    router.post(
-        route('workout-lines.store', { workout: localWorkout.value.id }),
-        { exercise_id: exerciseId },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                showAddExercise.value = false
-                searchQuery.value = ''
-            },
-        },
-    )
+    const exercise = localExercises.value.find((e) => e.id === exerciseId)
+    if (!exercise) return
+
+    // Optimistic: add line immediately
+    const tempLine = {
+        id: `temp-${++tempIdCounter}`,
+        exercise_id: exerciseId,
+        exercise: { ...exercise },
+        sets: [],
+        order: localWorkout.value.workout_lines.length,
+        notes: null,
+        recommended_values: null,
+    }
+    localWorkout.value.workout_lines.push(tempLine)
+    showAddExercise.value = false
+    searchQuery.value = ''
+
+    SyncService.post(route('api.v1.workout-lines.store'), {
+        workout_id: localWorkout.value.id,
+        exercise_id: exerciseId,
+    })
+        .then((response) => {
+            // Replace temp line with server data
+            const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
+            if (idx !== -1 && response.data?.data) {
+                localWorkout.value.workout_lines[idx] = response.data.data
+            }
+        })
+        .catch((err) => {
+            if (!err.isOffline) {
+                // Rollback
+                const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
+                if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
+                triggerHaptic('error')
+            }
+        })
 }
 
 const createAndAddExercise = async () => {
@@ -142,18 +173,8 @@ const createAndAddExercise = async () => {
             const data = await response.json()
             const exercise = data.exercise
             localExercises.value.push(exercise)
-            router.post(
-                route('workout-lines.store', { workout: localWorkout.value.id }),
-                { exercise_id: exercise.id },
-                {
-                    preserveScroll: true,
-                    onSuccess: () => {
-                        showCreateForm.value = false
-                        showAddExercise.value = false
-                        searchQuery.value = ''
-                    },
-                },
-            )
+            addExercise(exercise.id)
+            showCreateForm.value = false
         }
     } catch (e) {
         console.error(e)
@@ -177,25 +198,45 @@ const removeLine = (lineId) => {
     confirmMessage.value = `Supprimer ${line?.exercise?.name || "l'exercice"} ?`
 
     confirmAction.value = () => {
-        router.delete(route('workout-lines.destroy', { workout_line: lineId }), {
-            preserveScroll: true,
-            onSuccess: () => {
-                showConfirmModal.value = false
-            },
+        // ⚡ Perf: Optimistic removal
+        const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === lineId)
+        const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
+        showConfirmModal.value = false
+
+        SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: lineId })).catch((err) => {
+            if (!err.isOffline && removedLine) {
+                localWorkout.value.workout_lines.splice(idx, 0, removedLine)
+                triggerHaptic('error')
+            }
         })
     }
     showConfirmModal.value = true
 }
 
+// ⚡ Perf: Optimistic addSet — no router.reload
 const addSet = (lineId) => {
     const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
-    const lastSet = line?.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
+    if (!line) return
 
-    // Use last set values if available (UX), otherwise recommended values from backend, fallback to defaults
+    const lastSet = line.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
+
     const weight = lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0)
     const reps = lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10)
     const distance = lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0)
     const duration = lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30)
+
+    // Optimistic: add set immediately with temp ID
+    const tempSet = {
+        id: `temp-${++tempIdCounter}`,
+        workout_line_id: lineId,
+        is_completed: false,
+        weight: weight,
+        reps: reps,
+        distance_km: distance,
+        duration_seconds: duration,
+        is_warmup: false,
+    }
+    line.sets.push(tempSet)
 
     SyncService.post(route('api.v1.sets.store'), {
         workout_line_id: lineId,
@@ -204,28 +245,57 @@ const addSet = (lineId) => {
         reps: reps,
         distance_km: distance,
         duration_seconds: duration,
-    }).then(() => {
-        router.reload({ preserveScroll: true, only: ['workout'] })
     })
+        .then((response) => {
+            // Replace temp set with server data
+            const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
+            if (setIdx !== -1 && response.data?.data) {
+                line.sets[setIdx] = response.data.data
+            }
+        })
+        .catch((err) => {
+            if (!err.isOffline) {
+                const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
+                if (setIdx !== -1) line.sets.splice(setIdx, 1)
+                triggerHaptic('error')
+            }
+        })
 }
 
+// ⚡ Perf: Optimistic updateSet — no router.reload
 const updateTimers = {}
 const updateSet = (set, field, value) => {
+    const previousValue = set[field]
     set[field] = value
     const timerKey = `${set.id}_${field}`
     if (updateTimers[timerKey]) clearTimeout(updateTimers[timerKey])
     updateTimers[timerKey] = setTimeout(() => {
-        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value }).then(() => {
-            router.reload({ preserveScroll: true, only: ['workout'] })
+        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value }).catch((err) => {
+            if (!err.isOffline) {
+                set[field] = previousValue
+                triggerHaptic('error')
+            }
         })
         delete updateTimers[timerKey]
     }, 1000)
 }
 
+// ⚡ Perf: Optimistic removeSet — no router.reload
 const removeSet = (setId) => {
-    SyncService.delete(route('api.v1.sets.destroy', { set: setId })).then(() => {
-        router.reload({ preserveScroll: true, only: ['workout'] })
-    })
+    // Find the line and set
+    for (const line of localWorkout.value.workout_lines) {
+        const setIdx = line.sets.findIndex((s) => s.id === setId)
+        if (setIdx !== -1) {
+            const removedSet = line.sets.splice(setIdx, 1)[0]
+            SyncService.delete(route('api.v1.sets.destroy', { set: setId })).catch((err) => {
+                if (!err.isOffline) {
+                    line.sets.splice(setIdx, 0, removedSet)
+                    triggerHaptic('error')
+                }
+            })
+            break
+        }
+    }
 }
 
 const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })

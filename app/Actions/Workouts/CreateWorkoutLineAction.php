@@ -16,8 +16,8 @@ class CreateWorkoutLineAction
      */
     public function execute(Workout $workout, array $data): WorkoutLine
     {
-        // @phpstan-ignore-next-line
-        $order = $data['order'] ?? (is_null($workout->workoutLines()->max('order')) ? 0 : $workout->workoutLines()->max('order') + 1);
+        $maxOrder = $workout->workoutLines()->max('order');
+        $order = $data['order'] ?? (is_null($maxOrder) ? 0 : (int) $maxOrder + 1); // @phpstan-ignore cast.int
 
         /** @var WorkoutLine $workoutLine */
         $workoutLine = $workout->workoutLines()->create(array_merge(

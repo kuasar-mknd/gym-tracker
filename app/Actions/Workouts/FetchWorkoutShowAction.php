@@ -7,6 +7,7 @@ namespace App\Actions\Workouts;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 
 class FetchWorkoutShowAction
 {
@@ -21,9 +22,8 @@ class FetchWorkoutShowAction
 
         $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']);
 
-        // ⚡ Bolt Optimization: Explicitly append recommended_values for the active workout view.
-        // This ensures the UX is preserved while avoiding N+1 queries on index pages.
-        $workout->workoutLines->each->append('recommended_values');
+        // ⚡ Perf: Batch-load recommended values in 1-2 queries instead of N+1
+        WorkoutLine::batchRecommendedValues($workout->workoutLines, $user->id);
 
         return [
             'workout' => $workout,

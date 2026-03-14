@@ -8,6 +8,7 @@ use App\Http\Requests\WorkoutStoreRequest;
 use App\Http\Requests\WorkoutUpdateRequest;
 use App\Http\Resources\WorkoutResource;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use OpenApi\Attributes as OA;
 
@@ -64,9 +65,8 @@ class WorkoutController extends Controller
 
         $workout->load(['workoutLines.exercise', 'workoutLines.sets']);
 
-        // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
-        // Impact: Reduces DB queries on index from O(N) to O(1).
-        $workout->workoutLines->each->append('recommended_values');
+        // ⚡ Perf: Batch-load recommended values in 1-2 queries instead of N+1
+        WorkoutLine::batchRecommendedValues($workout->workoutLines, $this->user()->id);
 
         return new WorkoutResource($workout);
     }

@@ -50,7 +50,7 @@ class WorkoutLineController extends Controller
 
         $workoutLine = $action->execute($workout, $validated);
 
-        // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
+        // ⚡ Perf: Accessor uses cache automatically
         $workoutLine->append('recommended_values');
 
         return new WorkoutLineResource($workoutLine);
@@ -63,7 +63,7 @@ class WorkoutLineController extends Controller
     {
         $this->authorize('view', $workoutLine);
 
-        // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
+        // ⚡ Perf: Accessor uses cache automatically
         $workoutLine->append('recommended_values');
 
         return new WorkoutLineResource($workoutLine);
@@ -78,7 +78,7 @@ class WorkoutLineController extends Controller
 
         $workoutLine->update($request->validated());
 
-        // ⚡ Bolt Optimization: Explicitly append recommended_values for the detailed view.
+        // ⚡ Perf: Accessor uses cache automatically
         $workoutLine->append('recommended_values');
 
         return new WorkoutLineResource($workoutLine);
