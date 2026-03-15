@@ -24,6 +24,10 @@ defineProps({
         type: String,
         default: null,
     },
+    ariaLabel: {
+        type: String,
+        default: null,
+    },
 })
 
 const sizeClasses = {
@@ -40,8 +44,10 @@ const sizeClasses = {
         :type="type"
         :disabled="disabled || loading"
         :aria-busy="loading"
+        :aria-label="ariaLabel || $attrs['aria-label']"
+        :title="ariaLabel"
         :class="[
-            'glass-button transition-all',
+            'glass-button focus-visible:ring-electric-orange transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
             sizeClasses[size],
             {
                 'glass-button-primary shadow-glow-orange': variant === 'primary',
