@@ -23,8 +23,9 @@ defineProps({
             <div class="flex items-center gap-3">
                 <Link
                     v-if="showBack && backRoute"
+                    v-press
                     :href="backRoute.startsWith('http') || backRoute.startsWith('/') ? backRoute : route(backRoute)"
-                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-sm backdrop-blur-md transition-all hover:bg-white/20 hover:shadow-lg active:scale-95"
+                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-sm backdrop-blur-md transition-all hover:bg-white/20 hover:shadow-lg"
                     aria-label="Retour"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
