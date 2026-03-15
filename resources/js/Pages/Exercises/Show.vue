@@ -12,6 +12,7 @@ const MaxWeightChart = defineAsyncComponent(() => import('@/Components/Stats/Max
 const AverageWeightChart = defineAsyncComponent(() => import('@/Components/Stats/AverageWeightChart.vue'))
 const TotalRepsChart = defineAsyncComponent(() => import('@/Components/Stats/TotalRepsChart.vue'))
 const SetsPerSessionChart = defineAsyncComponent(() => import('@/Components/Stats/SetsPerSessionChart.vue'))
+const WeightRepsScatterChart = defineAsyncComponent(() => import('@/Components/Stats/WeightRepsScatterChart.vue'))
 
 /**
  * Component Props
@@ -125,6 +126,17 @@ const weightDistributionData = computed(() => {
     return Object.entries(distribution)
         .map(([label, count]) => ({ label, count }))
         .sort((a, b) => parseFloat(a.label) - parseFloat(b.label))
+})
+
+const scatterData = computed(() => {
+    if (!props.history || props.history.length === 0) return []
+    const allSets = props.history.flatMap((s) => s.sets)
+    return allSets
+        .filter((s) => parseFloat(s.weight) > 0 && parseInt(s.reps) > 0)
+        .map((s) => ({
+            x: parseFloat(s.weight),
+            y: parseInt(s.reps),
+        }))
 })
 </script>
 
@@ -242,6 +254,16 @@ const weightDistributionData = computed(() => {
                     </div>
                     <div class="h-64">
                         <SetsPerSessionChart :data="setsPerSessionData" />
+                    </div>
+                </GlassCard>
+
+                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Poids vs Reps</h3>
+                        <p class="text-text-muted text-xs font-semibold">Répartition de toutes les séries</p>
+                    </div>
+                    <div class="h-64">
+                        <WeightRepsScatterChart :data="scatterData" />
                     </div>
                 </GlassCard>
             </div>
