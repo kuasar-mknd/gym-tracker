@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Actions\Journal\SaveDailyJournalAction;
 use App\Models\DailyJournal;
 use App\Models\User;
-use Illuminate\Support\Carbon;
 
 it('creates a new daily journal entry if none exists for the given date', function (): void {
     $user = User::factory()->create();
