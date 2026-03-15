@@ -14,7 +14,7 @@ $testClass = new class()
     }
 };
 
-it('calculates macros correctly for various scenarios', function (array $input, array $expected) use ($testClass) {
+it('calculates macros correctly for various scenarios', function (array $input, array $expected) use ($testClass): void {
     $result = $testClass->testCalculation($input);
 
     // Convert expected values to float for precise matching as PHP's max/round might return int
