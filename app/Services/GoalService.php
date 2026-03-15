@@ -28,7 +28,25 @@ final class GoalService
     {
         $goals = $user->goals()->whereNull('completed_at')->get();
         foreach ($goals as $goal) {
+            $goal->setRelation('user', $user);
             $this->updateGoalProgress($goal);
+        }
+
+        $dirtyGoals = $goals->filter->isDirty();
+        if ($dirtyGoals->isNotEmpty()) {
+            $now = now();
+            $data = $dirtyGoals->map(function ($goal) use ($now) {
+                $attrs = $goal->getAttributes();
+                $attrs['updated_at'] = $now;
+
+                return $attrs;
+            })->toArray();
+
+            Goal::upsert(
+                $data,
+                ['id'],
+                ['current_value', 'completed_at', 'updated_at']
+            );
         }
     }
 
@@ -72,8 +90,8 @@ final class GoalService
             ->where('workout_lines.exercise_id', $goal->exercise_id)
             ->max('sets.weight');
 
-        if ($maxWeight) {
-            $goal->update(['current_value' => $maxWeight]);
+        if ($maxWeight && is_numeric($maxWeight)) {
+            $goal->current_value = (float) $maxWeight;
         }
     }
 
@@ -87,7 +105,7 @@ final class GoalService
     protected function updateFrequencyGoal(Goal $goal): void
     {
         $count = $goal->user->workouts()->count();
-        $goal->update(['current_value' => $count]);
+        $goal->current_value = $count;
     }
 
     /**
@@ -118,7 +136,7 @@ final class GoalService
             ->value('total_volume');
 
         if ($maxVolume !== null && is_numeric($maxVolume)) {
-            $goal->update(['current_value' => (float) $maxVolume]);
+            $goal->current_value = (float) $maxVolume;
         }
     }
 
@@ -140,7 +158,7 @@ final class GoalService
             ->value($goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type);
 
         if ($latestValue && is_numeric($latestValue)) {
-            $goal->update(['current_value' => (float) $latestValue]);
+            $goal->current_value = (float) $latestValue;
         }
     }
 
@@ -159,13 +177,13 @@ final class GoalService
         $isCompleted = $this->isGoalCriteriaMet($goal);
 
         if ($isCompleted && ! $goal->completed_at) {
-            $goal->update(['completed_at' => now()]);
+            $goal->completed_at = now();
 
             return;
         }
 
         if (! $isCompleted && $goal->completed_at) {
-            $goal->update(['completed_at' => null]);
+            $goal->completed_at = null;
         }
     }
 
