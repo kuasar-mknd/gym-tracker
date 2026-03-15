@@ -13,7 +13,7 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        // Fix: Check if table exists before adding index to avoid errors in tests/CI
+        // Check if table exists before adding index to avoid errors in tests/CI
         if (Schema::hasTable('water_logs')) {
             Schema::table('water_logs', function (Blueprint $table) {
                 if (! Schema::hasIndex('water_logs', 'water_logs_user_id_consumed_at_index')) {
