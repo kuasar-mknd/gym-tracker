@@ -13,6 +13,7 @@ const AverageWeightChart = defineAsyncComponent(() => import('@/Components/Stats
 const TotalRepsChart = defineAsyncComponent(() => import('@/Components/Stats/TotalRepsChart.vue'))
 const SetsPerSessionChart = defineAsyncComponent(() => import('@/Components/Stats/SetsPerSessionChart.vue'))
 const WeightRepsScatterChart = defineAsyncComponent(() => import('@/Components/Stats/WeightRepsScatterChart.vue'))
+const SetWeightProgressionChart = defineAsyncComponent(() => import('@/Components/Stats/SetWeightProgressionChart.vue'))
 
 /**
  * Component Props
@@ -264,6 +265,18 @@ const scatterData = computed(() => {
                     </div>
                     <div class="h-64">
                         <WeightRepsScatterChart :data="scatterData" />
+                    </div>
+                </GlassCard>
+
+                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                            Progression par Série
+                        </h3>
+                        <p class="text-text-muted text-xs font-semibold">Poids des 3 premières séries dans le temps</p>
+                    </div>
+                    <div class="h-64">
+                        <SetWeightProgressionChart :data="history" />
                     </div>
                 </GlassCard>
             </div>
