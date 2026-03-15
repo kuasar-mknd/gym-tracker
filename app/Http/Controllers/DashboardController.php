@@ -48,7 +48,6 @@ class DashboardController extends Controller
             // Defer heavy chart data
             'weeklyVolumeStats' => Inertia::defer(fn (): array => $fetchDashboardData->getWeeklyVolumeStats($user)),
             'weeklyVolumeTrend' => Inertia::defer(fn (): array => $fetchDashboardData->getWeeklyVolumeTrend($user)),
-            'volumeTrend' => Inertia::defer(fn (): array => $fetchDashboardData->getVolumeTrend($user)),
             'durationDistribution' => Inertia::defer(fn (): array => $fetchDashboardData->getDurationDistribution($user)),
             'timeOfDayDistribution' => Inertia::defer(fn (): array => $fetchDashboardData->getTimeOfDayDistribution($user)),
         ]);
