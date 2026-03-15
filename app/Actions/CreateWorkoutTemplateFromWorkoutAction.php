@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
+use App\Models\WorkoutTemplateSet;
 use Illuminate\Support\Facades\DB;
 
 final class CreateWorkoutTemplateFromWorkoutAction
@@ -35,6 +36,9 @@ final class CreateWorkoutTemplateFromWorkoutAction
 
     private function copyExercises(WorkoutTemplate $template, Workout $workout): void
     {
+        $now = now();
+        $setsData = [];
+
         foreach ($workout->workoutLines as $line) {
             /** @var \App\Models\WorkoutTemplateLine $templateLine */
             $templateLine = $template->workoutTemplateLines()->create([
@@ -43,12 +47,22 @@ final class CreateWorkoutTemplateFromWorkoutAction
             ]);
 
             foreach ($line->sets as $set) {
-                $templateLine->workoutTemplateSets()->create([
+                $setsData[] = [
+                    'workout_template_line_id' => $templateLine->id,
                     'reps' => $set->reps,
                     'weight' => $set->weight,
                     'is_warmup' => $set->is_warmup,
                     'order' => $set->id, // Simple order for now
-                ]);
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+        }
+
+        if (! empty($setsData)) {
+            // Chunking to avoid parameter limits in SQL (SQLite max is 999 typically)
+            foreach (array_chunk($setsData, 100) as $chunk) {
+                WorkoutTemplateSet::insert($chunk);
             }
         }
     }
