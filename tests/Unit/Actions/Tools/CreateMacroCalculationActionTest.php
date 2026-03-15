@@ -35,17 +35,21 @@ test('execute maps activity level to multiplier and creates calculation', functi
     expect($calculation->fat)->toBeGreaterThan(0);
     expect($calculation->carbs)->toBeGreaterThan(0);
 
-    // Verify database record using the raw multiplier
+    // Assert using standard database check
     $this->assertDatabaseHas('macro_calculations', [
         'id' => $calculation->id,
         'user_id' => $user->id,
-        'activity_level' => $expectedMultiplier,
         'gender' => 'male',
         'age' => 30,
         'height' => 180.0,
         'weight' => 80.0,
         'goal' => 'maintain',
     ]);
+
+    // Test the float explicitly in PHP with tolerance since DB float formats can drift
+    $dbRecord = DB::table('macro_calculations')->where('id', $calculation->id)->first();
+    expect(round((float) $dbRecord->activity_level, 2))->toBe($roundedMultiplier);
+
 })->with([
     ['sedentary', 1.20],
     ['light', 1.375], // Raw multiplier before decimal:2 casting
