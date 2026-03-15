@@ -7,6 +7,8 @@ use App\Actions\ResolveSocialUserAction;
 use App\Exceptions\SocialAuthException;
 use Laravel\Socialite\Facades\Socialite;
 
+uses(Tests\TestCase::class);
+
 it('throws SocialAuthException when Socialite fails', function (): void {
     // Arrange
     $provider = 'github';
