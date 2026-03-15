@@ -38,6 +38,7 @@ final class GoalService
             $data = $dirtyGoals->map(function ($goal) use ($now) {
                 $attrs = $goal->getAttributes();
                 $attrs['updated_at'] = $now;
+
                 return $attrs;
             })->toArray();
 
@@ -89,8 +90,8 @@ final class GoalService
             ->where('workout_lines.exercise_id', $goal->exercise_id)
             ->max('sets.weight');
 
-        if ($maxWeight) {
-            $goal->current_value = $maxWeight;
+        if ($maxWeight && is_numeric($maxWeight)) {
+            $goal->current_value = (float) $maxWeight;
         }
     }
 
