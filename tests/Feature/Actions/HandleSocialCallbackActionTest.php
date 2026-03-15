@@ -5,15 +5,18 @@ declare(strict_types=1);
 use App\Actions\HandleSocialCallbackAction;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Contracts\Provider;
-use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\User as SocialiteUser;
 
-it('throws exception if socialite driver throws exception', function () {
+uses(RefreshDatabase::class);
+
+it('throws exception if socialite driver throws exception', function (): void {
     Socialite::shouldReceive('driver')
         ->with('google')
-        ->andThrow(new \Exception('Connection failed'));
+        ->andThrow(new Exception('Connection failed'));
 
     $action = app(HandleSocialCallbackAction::class);
 
@@ -21,8 +24,8 @@ it('throws exception if socialite driver throws exception', function () {
         ->toThrow(SocialAuthException::class, 'Erreur lors de la connexion avec Google');
 });
 
-it('throws exception if email is not verified and environment is not local', function () {
-    $socialUser = Mockery::mock(SocialiteUser::class);
+it('throws exception if email is not verified and environment is not local', function (): void {
+    $socialUser = new SocialiteUser();
     $socialUser->user = ['email_verified' => false];
 
     $providerMock = Mockery::mock(Provider::class);
@@ -32,7 +35,8 @@ it('throws exception if email is not verified and environment is not local', fun
         ->with('google')
         ->andReturn($providerMock);
 
-    app()->detectEnvironment(fn () => 'production');
+    // Use app()->detectEnvironment like we originally did to successfully override environment since config('app.env') may not immediately alter app()->environment() in Laravel testing context. Or we can just rebind app('env').
+    app()->detectEnvironment(fn (): string => 'production');
 
     $action = app(HandleSocialCallbackAction::class);
 
@@ -40,14 +44,16 @@ it('throws exception if email is not verified and environment is not local', fun
         ->toThrow(SocialAuthException::class, 'Votre email n\'est pas vérifié par Google');
 });
 
-it('logs warning and proceeds if email is not verified but environment is local', function () {
-    $socialUser = Mockery::mock(SocialiteUser::class);
+it('logs warning and proceeds if email is not verified but environment is local', function (): void {
+    $socialUser = new SocialiteUser();
     $socialUser->user = ['email_verified' => false];
-    $socialUser->shouldReceive('getEmail')->andReturn('test@example.com');
-    // Mocks for ResolveSocialUserAction execution
-    $socialUser->shouldReceive('getId')->andReturn('123');
-    $socialUser->shouldReceive('getAvatar')->andReturn('avatar.jpg');
-    $socialUser->shouldReceive('getName')->andReturn('Test User');
+    $socialUser->map([
+        'id' => '123',
+        'nickname' => 'testuser',
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'avatar' => 'avatar.jpg',
+    ]);
 
     $providerMock = Mockery::mock(Provider::class);
     $providerMock->shouldReceive('user')->andReturn($socialUser);
@@ -56,7 +62,7 @@ it('logs warning and proceeds if email is not verified but environment is local'
         ->with('google')
         ->andReturn($providerMock);
 
-    app()->detectEnvironment(fn () => 'local');
+    app()->detectEnvironment(fn (): string => 'local');
 
     Log::shouldReceive('warning')
         ->once()
@@ -73,13 +79,16 @@ it('logs warning and proceeds if email is not verified but environment is local'
     expect($result->email)->toBe('test@example.com');
 });
 
-it('proceeds if email is verified', function (array $userData) {
-    $socialUser = Mockery::mock(SocialiteUser::class);
+it('proceeds if email is verified', function (array $userData): void {
+    $socialUser = new SocialiteUser();
     $socialUser->user = $userData;
-    $socialUser->shouldReceive('getEmail')->andReturn('test@example.com');
-    $socialUser->shouldReceive('getId')->andReturn('123');
-    $socialUser->shouldReceive('getAvatar')->andReturn('avatar.jpg');
-    $socialUser->shouldReceive('getName')->andReturn('Test User');
+    $socialUser->map([
+        'id' => '123',
+        'nickname' => 'testuser',
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'avatar' => 'avatar.jpg',
+    ]);
 
     $providerMock = Mockery::mock(Provider::class);
     $providerMock->shouldReceive('user')->andReturn($socialUser);
@@ -88,7 +97,7 @@ it('proceeds if email is verified', function (array $userData) {
         ->with('google')
         ->andReturn($providerMock);
 
-    app()->detectEnvironment(fn () => 'production');
+    app()->detectEnvironment(fn (): string => 'production');
 
     $action = app(HandleSocialCallbackAction::class);
 
