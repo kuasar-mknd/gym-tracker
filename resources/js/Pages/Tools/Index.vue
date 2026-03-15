@@ -211,6 +211,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import PageHeader from '@/Components/Navigation/PageHeader.vue'
+
 import GlassCard from '@/Components/UI/GlassCard.vue'
 </script>
