@@ -28,8 +28,6 @@ class StoreUserRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', Password::defaults()],
-            'provider' => ['nullable', 'string', 'max:255'],
-            'provider_id' => ['nullable', 'string', 'max:255'],
             'avatar' => ['nullable', 'string', 'max:255'],
             'default_rest_time' => ['nullable', 'integer', 'min:0'],
         ];

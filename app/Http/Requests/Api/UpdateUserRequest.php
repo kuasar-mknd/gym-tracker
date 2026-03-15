@@ -35,8 +35,6 @@ class UpdateUserRequest extends FormRequest
                 Rule::unique('users')->ignore($this->route('user')),
             ],
             'password' => ['sometimes', 'string', Password::defaults()],
-            'provider' => ['nullable', 'string', 'max:255'],
-            'provider_id' => ['nullable', 'string', 'max:255'],
             'avatar' => ['nullable', 'string', 'max:255'],
             'default_rest_time' => ['nullable', 'integer', 'min:0'],
         ];
