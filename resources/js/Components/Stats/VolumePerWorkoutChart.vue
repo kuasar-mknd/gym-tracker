@@ -2,6 +2,7 @@
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { computed } from 'vue'
+import { commonTooltipOptions, volumeTooltipCallback } from './chartConfig'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
@@ -64,23 +65,9 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            padding: 12,
-            cornerRadius: 12,
-            borderWidth: 0,
+            ...commonTooltipOptions,
             callbacks: {
-                label: function (context) {
-                    let label = context.dataset.label || ''
-                    if (label) {
-                        label += ': '
-                    }
-                    if (context.parsed.y !== null) {
-                        label += context.parsed.y.toLocaleString() + ' kg'
-                    }
-                    return label
-                },
+                label: volumeTooltipCallback,
             },
         },
     },
