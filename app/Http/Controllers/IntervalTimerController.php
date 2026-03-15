@@ -8,7 +8,6 @@ use App\Http\Requests\StoreIntervalTimerRequest;
 use App\Http\Requests\UpdateIntervalTimerRequest;
 use App\Models\IntervalTimer;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,7 +16,7 @@ class IntervalTimerController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): Response
+    public function index(): Response
     {
         return Inertia::render('Tools/IntervalTimer', [
             'timers' => $this->user()->intervalTimers()->latest()->limit(50)->get(),
@@ -53,7 +52,7 @@ class IntervalTimerController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, IntervalTimer $intervalTimer): RedirectResponse
+    public function destroy(IntervalTimer $intervalTimer): RedirectResponse
     {
         $this->authorize('delete', $intervalTimer);
 
