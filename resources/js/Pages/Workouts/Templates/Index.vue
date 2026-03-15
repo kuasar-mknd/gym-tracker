@@ -64,7 +64,9 @@ const deleteTemplate = (templateId) => {
 
         <div class="space-y-6">
             <div v-if="templates.length === 0" class="animate-slide-up">
-                <GlassCard>
+                <GlassCard
+                    class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
+                >
                     <div class="py-12 text-center">
                         <div class="mb-3 text-5xl">📋</div>
                         <h3 class="text-text-main text-lg font-semibold">Aucun modèle</h3>
@@ -77,7 +79,11 @@ const deleteTemplate = (templateId) => {
             </div>
 
             <div v-else class="animate-slide-up grid gap-4 md:grid-cols-2" style="animation-delay: 0.1s">
-                <GlassCard v-for="template in templates" :key="template.id" class="flex flex-col">
+                <GlassCard
+                    v-for="template in templates"
+                    :key="template.id"
+                    class="flex flex-col rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
+                >
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
                             <div>
@@ -89,7 +95,7 @@ const deleteTemplate = (templateId) => {
                             <div class="flex gap-2">
                                 <button
                                     @click="deleteTemplate(template.id)"
-                                    class="text-text-muted rounded-lg p-2 transition hover:bg-red-50 hover:text-red-500"
+                                    class="text-text-muted rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 hover:bg-red-500/10 hover:text-red-500 active:scale-95"
                                     title="Supprimer"
                                 >
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -108,7 +114,7 @@ const deleteTemplate = (templateId) => {
                             <div
                                 v-for="line in template.workout_template_lines"
                                 :key="line.id"
-                                class="text-text-muted flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1 text-xs"
+                                class="text-text-muted flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-xs backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/10 active:scale-95"
                             >
                                 <span class="text-text-main font-medium">{{ line.exercise.name }}</span>
                                 <span class="text-text-muted/50">• {{ line.workout_template_sets.length }} séries</span>
