@@ -92,7 +92,7 @@ class HabitLogController extends Controller
     #[OA\Response(response: 422, description: 'Validation error')]
     public function update(UpdateHabitLogRequest $request, HabitLog $habit_log): HabitLogResource
     {
-        // Authorization handled in UpdateHabitLogRequest
+        $this->authorize('update', $habit_log);
 
         $validated = $request->validated();
 
