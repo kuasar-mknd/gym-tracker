@@ -26,8 +26,6 @@ class GoalController extends Controller
      * Retrieves a paginated list of goals belonging to the authenticated user.
      * Supports sorting and including the related exercise.
      *
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
-     *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     #[OA\Get(
@@ -56,7 +54,6 @@ class GoalController extends Controller
      * Store a newly created goal in storage.
      *
      * @param  GoalStoreRequest  $request  The request containing goal data.
-     * @return GoalResource
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
@@ -89,7 +86,6 @@ class GoalController extends Controller
      * Display the specified goal.
      *
      * @param  Goal  $goal  The goal to display.
-     * @return GoalResource
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
@@ -116,7 +112,6 @@ class GoalController extends Controller
      *
      * @param  GoalUpdateRequest  $request  The request containing updated goal data.
      * @param  Goal  $goal  The goal to update.
-     * @return GoalResource
      */
     #[OA\Put(
         path: '/goals/{goal}',
@@ -143,7 +138,6 @@ class GoalController extends Controller
      * Remove the specified goal from storage.
      *
      * @param  Goal  $goal  The goal to remove.
-     * @return \Illuminate\Http\Response
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
