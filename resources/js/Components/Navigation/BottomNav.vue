@@ -32,7 +32,12 @@ const isActiveRoute = (itemRoute) => {
         <template v-for="item in navItems" :key="item.name">
             <!-- Center FAB -->
             <div v-if="item.isFab" class="relative">
-                <button @click="createWorkout" class="glass-nav-fab" :aria-label="item.name">
+                <button
+                    v-press
+                    @click="createWorkout"
+                    class="glass-nav-fab"
+                    :aria-label="item.name === 'Add' ? 'Nouvelle séance' : item.name"
+                >
                     <span class="material-symbols-outlined text-4xl font-black" aria-hidden="true">{{
                         item.icon
                     }}</span>
@@ -42,12 +47,12 @@ const isActiveRoute = (itemRoute) => {
             <!-- Regular nav item -->
             <Link
                 v-else
+                v-press
                 :href="route(item.route)"
                 :class="['glass-nav-item group', { active: isActiveRoute(item.route) }]"
                 :aria-label="item.name"
                 :aria-current="isActiveRoute(item.route) ? 'page' : undefined"
                 :dusk="'nav-' + item.route.split('.')[0]"
-                @click="triggerHaptic('tap')"
             >
                 <span
                     class="material-symbols-outlined text-[28px] transition-all group-hover:drop-shadow-[0_0_8px_rgba(255,85,0,0.5)]"

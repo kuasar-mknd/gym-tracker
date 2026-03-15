@@ -58,7 +58,12 @@ const showingNavigationDropdown = ref(false)
                     <div class="flex-1">
                         <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $page.props.flash.success }}</p>
                     </div>
-                    <button @click="$page.props.flash.success = null" class="text-slate-400 hover:text-slate-600">
+                    <button
+                        v-press
+                        @click="$page.props.flash.success = null"
+                        class="text-slate-400 hover:text-slate-600"
+                        aria-label="Fermer"
+                    >
                         <span class="material-symbols-outlined text-base">close</span>
                     </button>
                 </div>
@@ -178,9 +183,9 @@ const showingNavigationDropdown = ref(false)
             <div class="flex min-w-0 items-center gap-4">
                 <Link
                     v-if="showBack"
+                    v-press
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
-                    @click="triggerHaptic('tap')"
                     aria-label="Retour"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
@@ -195,8 +200,9 @@ const showingNavigationDropdown = ref(false)
 
             <div class="flex items-center gap-2">
                 <Link
+                    v-press
                     :href="route('notifications.index')"
-                    class="text-text-muted relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all active:scale-95 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
+                    class="text-text-muted relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
                     :aria-label="
                         $page.props.auth.user.unread_notifications_count > 0
                             ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
