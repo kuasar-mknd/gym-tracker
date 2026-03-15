@@ -38,6 +38,10 @@ final class CreateWorkoutFromTemplateAction
         // Optimization: Prime the relationship to prevent N+1 queries in observers
         $workout->setRelation('user', $user);
 
+        $allSets = [];
+        $totalWorkoutVolume = 0.0;
+        $now = now()->toDateTimeString();
+
         foreach ($template->workoutTemplateLines as $templateLine) {
             /** @var \App\Models\WorkoutLine $workoutLine */
             $workoutLine = $workout->workoutLines()->create([
@@ -47,15 +51,28 @@ final class CreateWorkoutFromTemplateAction
             $workoutLine->setRelation('workout', $workout);
 
             foreach ($templateLine->workoutTemplateSets as $templateSet) {
-                // Use make() + save() to set relationships before saving
-                // This prevents N+1 queries in Set::saved observers which access $set->workoutLine->workout->user
-                $set = $workoutLine->sets()->make([
+                $allSets[] = [
+                    'workout_line_id' => $workoutLine->id,
                     'reps' => $templateSet->reps,
                     'weight' => $templateSet->weight,
                     'is_warmup' => $templateSet->is_warmup,
-                ]);
-                $set->setRelation('workoutLine', $workoutLine);
-                $set->save();
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                $volume = (float) ($templateSet->weight ?? 0) * (int) ($templateSet->reps ?? 0);
+                $totalWorkoutVolume += $volume;
+            }
+        }
+
+        if ($allSets !== []) {
+            // Use insert() for bulk insertion to prevent N+1 queries during creation
+            // We manually calculate and apply the volume since Set::saved events won't fire
+            \App\Models\Set::insert($allSets);
+
+            if ($totalWorkoutVolume > 0) {
+                $user->increment('total_volume', $totalWorkoutVolume);
+                $workout->increment('workout_volume', $totalWorkoutVolume);
             }
         }
     }
