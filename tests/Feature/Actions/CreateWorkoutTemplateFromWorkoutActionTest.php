@@ -136,5 +136,5 @@ it('handles missing created_at when formatting description', function (): void {
         ->toBeInstanceOf(WorkoutTemplate::class)
         ->user_id->toBe($user->id)
         ->name->toBe('Legacy Workout (Modèle)')
-        ->description->toBe('Créé à partir de la séance du ' . $expectedDate);
+        ->description->toBe('Créé à partir de la séance du '.$expectedDate);
 });
