@@ -60,8 +60,6 @@ class SyncService {
     async processQueue() {
         if (this.queue.length === 0 || !this.isOnline) return
 
-        console.log(`Processing sync queue: ${this.queue.length} items`)
-
         const tempQueue = [...this.queue]
         this.queue = []
         this.saveQueue()
@@ -73,7 +71,6 @@ class SyncService {
                 // Remove internal queue ID before sending
                 const { id, timestamp, ...axiosConfig } = config
                 await api(axiosConfig)
-                console.log(`Successfully synced: ${config.url}`)
             } catch (error) {
                 console.error(`Failed to sync item: ${config.url}`, error)
                 // If it's a permanent error (not network), we might want to drop it or notify user
