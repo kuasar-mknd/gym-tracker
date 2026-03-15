@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
 
-it('updates macro calculation and maps multiplier correctly', function () {
+it('updates macro calculation and maps multiplier correctly', function (): void {
     $user = User::factory()->create();
 
     // Create initial calculation
