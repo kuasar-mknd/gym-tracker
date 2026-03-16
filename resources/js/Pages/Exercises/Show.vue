@@ -14,6 +14,7 @@ const TotalRepsChart = defineAsyncComponent(() => import('@/Components/Stats/Tot
 const SetsPerSessionChart = defineAsyncComponent(() => import('@/Components/Stats/SetsPerSessionChart.vue'))
 const WeightRepsScatterChart = defineAsyncComponent(() => import('@/Components/Stats/WeightRepsScatterChart.vue'))
 const SetWeightProgressionChart = defineAsyncComponent(() => import('@/Components/Stats/SetWeightProgressionChart.vue'))
+const Estimated1RMHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/Estimated1RMHistoryChart.vue'))
 
 /**
  * Component Props
@@ -98,6 +99,14 @@ const averageWeightData = computed(() => {
             weight: average,
         }
     })
+})
+
+const estimated1rmData = computed(() => {
+    if (!props.history || props.history.length === 0) return []
+    return [...props.history].reverse().map((session) => ({
+        date: session.formatted_date.split('/').slice(0, 2).join('/'),
+        weight: session.best_1rm || 0,
+    }))
 })
 
 const weightDistributionData = computed(() => {
@@ -235,6 +244,16 @@ const scatterData = computed(() => {
                     </div>
                     <div class="h-64">
                         <MaxWeightChart :data="maxWeightData" />
+                    </div>
+                </GlassCard>
+
+                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">1RM Estimé</h3>
+                        <p class="text-text-muted text-xs font-semibold">Meilleur 1RM estimé par séance</p>
+                    </div>
+                    <div class="h-64">
+                        <Estimated1RMHistoryChart :data="estimated1rmData" />
                     </div>
                 </GlassCard>
 
