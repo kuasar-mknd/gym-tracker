@@ -26,17 +26,6 @@ it('renders the templates index page', function (): void {
         );
 });
 
-it('renders the template creation page', function (): void {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)->get(route('templates.create'));
-
-    $response->assertStatus(200)
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-            ->component('Workouts/Templates/Create')
-            ->has('exercises')
-        );
-});
 
 it('stores a new workout template', function (): void {
     $user = User::factory()->create();
@@ -152,4 +141,24 @@ it('forbids deleting another users template (403)', function (): void {
 it('redirects unauthenticated users', function (): void {
     $response = $this->get(route('templates.index'));
     $response->assertRedirect(route('login'));
+});
+
+it('renders the template creation page', function (): void {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get(route('templates.create'));
+
+    $response->assertStatus(200)
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->component('Workouts/Templates/Create')
+            ->has('exercises')
+        );
+});
+
+it('aborts 404 for edit and update', function (): void {
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)->get(route('templates.edit', $template))->assertStatus(404);
+    $this->actingAs($user)->put(route('templates.update', $template), [])->assertStatus(404);
 });

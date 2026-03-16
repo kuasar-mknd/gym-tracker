@@ -133,4 +133,29 @@ class WorkoutTemplatesController extends Controller
 
         return back();
     }
+
+                /**
+     * Show a workout template (Not implemented in UI).
+     */
+    public function show(WorkoutTemplate $template): \Inertia\Response
+    {
+        abort(404);
+    }
+
+    /**
+     * Edit a workout template (Not implemented in UI).
+     */
+    public function edit(WorkoutTemplate $template): \Illuminate\Http\Response
+    {
+        abort(404);
+    }
+
+    /**
+     * Update a workout template (Not implemented in UI).
+     */
+    public function update(\Illuminate\Http\Request $request, WorkoutTemplate $template): \Illuminate\Http\Response
+    {
+        abort(404);
+    }
+
 }
