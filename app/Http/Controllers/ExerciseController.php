@@ -4,13 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Exercises\CreateExerciseAction;
 use App\Actions\Exercises\FetchExerciseHistoryAction;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
 use App\Services\StatsService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * Controller for managing Exercises.
@@ -24,7 +29,7 @@ class ExerciseController extends Controller
 {
     use AuthorizesRequests;
 
-    public function show(Exercise $exercise, StatsService $statsService, FetchExerciseHistoryAction $fetchExerciseHistory): \Inertia\Response
+    public function show(Exercise $exercise, StatsService $statsService, FetchExerciseHistoryAction $fetchExerciseHistory): Response
     {
         $this->authorize('view', $exercise);
 
@@ -44,9 +49,9 @@ class ExerciseController extends Controller
      * Retrieves all exercises for the authenticated user, ordered by category and name.
      * Returns an Inertia response with the exercises list and available metadata (categories, types).
      *
-     * @return \Inertia\Response The Inertia response rendering the Exercises/Index page.
+     * @return Response The Inertia response rendering the Exercises/Index page.
      */
-    public function index(): \Inertia\Response
+    public function index(): Response
     {
         $this->authorize('viewAny', Exercise::class);
 
@@ -70,20 +75,15 @@ class ExerciseController extends Controller
      * Invalidates the 'exercises_list_{userId}' cache.
      * Returns JSON if requested (e.g., from a workout creation modal) or redirects back.
      *
-     * @param  \App\Http\Requests\ExerciseStoreRequest  $request  The validated request containing name, type, and category.
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse JSON response with the created exercise or a redirect back.
+     * @param  ExerciseStoreRequest  $request  The validated request containing name, type, and category.
+     * @return RedirectResponse|JsonResponse JSON response with the created exercise or a redirect back.
      */
-    public function store(ExerciseStoreRequest $request): \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+    public function store(ExerciseStoreRequest $request, CreateExerciseAction $createExerciseAction): RedirectResponse|JsonResponse
     {
         // Auth check handled by middleware/request
 
         $data = $request->validated();
-        $exercise = new Exercise($data);
-        $exercise->user_id = $this->user()->id;
-        $exercise->save();
-
-        // Explicitly invalidate cache to ensure UI updates immediately
-        $exercise->invalidateCache();
+        $exercise = $createExerciseAction->execute($this->user(), $data);
 
         // Return JSON for AJAX requests (from workout page), redirect for regular form submissions
         if ($request->wantsJson() || $request->header('X-Quick-Create')) {
@@ -98,13 +98,13 @@ class ExerciseController extends Controller
      *
      * Updates the exercise details and invalidates the user's exercise cache.
      *
-     * @param  \App\Http\Requests\ExerciseUpdateRequest  $request  The validated request containing updated fields.
-     * @param  \App\Models\Exercise  $exercise  The exercise to update.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
+     * @param  ExerciseUpdateRequest  $request  The validated request containing updated fields.
+     * @param  Exercise  $exercise  The exercise to update.
+     * @return RedirectResponse A redirect back to the previous page.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update this exercise.
+     * @throws AuthorizationException If the user is not authorized to update this exercise.
      */
-    public function update(ExerciseUpdateRequest $request, Exercise $exercise): \Illuminate\Http\RedirectResponse
+    public function update(ExerciseUpdateRequest $request, Exercise $exercise): RedirectResponse
     {
         $this->authorize('update', $exercise);
 
@@ -120,12 +120,12 @@ class ExerciseController extends Controller
      * Deletes the exercise if it is not linked to any existing workout lines.
      * Invalidates the user's exercise cache upon successful deletion.
      *
-     * @param  \App\Models\Exercise  $exercise  The exercise to delete.
-     * @return \Illuminate\Http\RedirectResponse A redirect back with potential error messages if deletion fails.
+     * @param  Exercise  $exercise  The exercise to delete.
+     * @return RedirectResponse A redirect back with potential error messages if deletion fails.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete this exercise.
+     * @throws AuthorizationException If the user is not authorized to delete this exercise.
      */
-    public function destroy(Exercise $exercise): \Illuminate\Http\RedirectResponse
+    public function destroy(Exercise $exercise): RedirectResponse
     {
         $this->authorize('delete', $exercise);
 
