@@ -47,6 +47,9 @@ final class CreateWorkoutTemplateAction
     /** @param array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}> $exercises */
     private function addExercises(WorkoutTemplate $template, array $exercises): void
     {
+        $setsData = [];
+        $now = now()->toDateTimeString();
+
         foreach ($exercises as $index => $ex) {
             $line = $template->workoutTemplateLines()->create([
                 'exercise_id' => $ex['id'],
@@ -55,13 +58,23 @@ final class CreateWorkoutTemplateAction
 
             if (isset($ex['sets'])) {
                 foreach ($ex['sets'] as $setIndex => $set) {
-                    $line->workoutTemplateSets()->create([
+                    $setsData[] = [
+                        'workout_template_line_id' => $line->id,
                         'reps' => $set['reps'] ?? null,
                         'weight' => $set['weight'] ?? null,
                         'is_warmup' => $set['is_warmup'] ?? false,
                         'order' => $setIndex,
-                    ]);
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
                 }
+            }
+        }
+
+        if ($setsData !== []) {
+            // Chunking to avoid parameter limits in SQL (SQLite max is 999 typically)
+            foreach (array_chunk($setsData, 100) as $chunk) {
+                \App\Models\WorkoutTemplateSet::insert($chunk);
             }
         }
     }
