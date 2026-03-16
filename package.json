@@ -39,7 +39,7 @@
         "workbox-strategies": "^7.4.0"
     },
     "dependencies": {
-        "@sentry/vue": "^10.41.0",
+        "@sentry/vue": "^10.43.0",
         "chart.js": "^4.5.1",
         "dayjs": "^1.11.19",
         "lucide-vue-next": "^0.577.0",
