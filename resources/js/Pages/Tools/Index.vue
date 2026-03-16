@@ -14,9 +14,9 @@
 
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <!-- Plate Calculator -->
-            <Link :href="route('plates.index')" class="group">
+            <Link :href="route('plates.index')" class="group block">
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95"
+                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-primary/20 text-accent-primary rounded-full p-4">
@@ -45,9 +45,9 @@
             </Link>
 
             <!-- 1RM Calculator -->
-            <Link :href="route('tools.1rm')" class="group">
+            <Link :href="route('tools.1rm')" class="group block">
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95"
+                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-secondary/20 text-accent-secondary rounded-full p-4">
@@ -76,9 +76,9 @@
             </Link>
 
             <!-- Wilks Calculator -->
-            <Link :href="route('tools.wilks')" class="group">
+            <Link :href="route('tools.wilks')" class="group block">
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95"
+                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-electric-orange/20 text-electric-orange rounded-full p-4">
@@ -107,9 +107,9 @@
             </Link>
 
             <!-- Macro Calculator -->
-            <Link :href="route('tools.macro-calculator')" class="group">
+            <Link :href="route('tools.macro-calculator')" class="group block">
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95"
+                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-emerald-500/20 p-4 text-emerald-500">
@@ -126,9 +126,9 @@
             </Link>
 
             <!-- Warmup Calculator -->
-            <Link :href="route('tools.warmup')" class="group">
+            <Link :href="route('tools.warmup')" class="group block">
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95"
+                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-blue-500/20 p-4 text-blue-500">
@@ -157,9 +157,9 @@
             </Link>
 
             <!-- Water Tracker -->
-            <Link :href="route('tools.water.index')" class="group">
+            <Link :href="route('tools.water.index')" class="group block">
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95"
+                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-cyan-500/20 p-4 text-cyan-500">
@@ -172,9 +172,9 @@
             </Link>
 
             <!-- Interval Timer -->
-            <Link :href="route('tools.interval-timer.index')" class="group">
+            <Link :href="route('tools.interval-timer.index')" class="group block">
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95"
+                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-purple-500/20 p-4 text-purple-500">
@@ -189,9 +189,9 @@
             </Link>
 
             <!-- Fasting Tracker -->
-            <Link :href="route('tools.fasting.index')" class="group">
+            <Link :href="route('tools.fasting.index')" class="group block">
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 active:scale-95"
+                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-violet-500/20 p-4 text-violet-500">
