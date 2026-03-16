@@ -26,7 +26,6 @@ it('renders the templates index page', function (): void {
         );
 });
 
-
 it('stores a new workout template', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();

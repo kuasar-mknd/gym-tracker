@@ -134,7 +134,7 @@ class WorkoutTemplatesController extends Controller
         return back();
     }
 
-                /**
+    /**
      * Show a workout template (Not implemented in UI).
      */
     public function show(WorkoutTemplate $template): \Inertia\Response
@@ -157,5 +157,4 @@ class WorkoutTemplatesController extends Controller
     {
         abort(404);
     }
-
 }
