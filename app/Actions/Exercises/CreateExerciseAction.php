@@ -10,7 +10,7 @@ use App\Models\User;
 final class CreateExerciseAction
 {
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function execute(User $user, array $data): Exercise
     {
