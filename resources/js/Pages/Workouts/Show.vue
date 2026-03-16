@@ -1,4 +1,21 @@
 <script setup>
+/**
+ * Workout Show Page (Active Workout View)
+ *
+ * This is the primary component for tracking an active workout session.
+ * It manages the state of exercises, sets, and rest timers.
+ *
+ * Key Features:
+ * - Optimistic UI updates for immediate feedback when completing sets.
+ * - Background synchronization (`SyncService`) to persist changes to the backend.
+ * - Integrated rest timer that automatically starts when a set is marked complete.
+ * - Haptic feedback integration for a tactile user experience.
+ *
+ * @prop {Object} workout - The workout object containing metadata and nested `workout_lines` (which contain `sets`).
+ * @prop {Array} exercises - List of all available exercises for adding to the workout.
+ * @prop {Array} categories - Distinct list of exercise categories (e.g., Chest, Back, Legs) for filtering.
+ * @prop {Array} types - Distinct list of exercise types (e.g., Barbell, Dumbbell, Machine) for filtering.
+ */
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
