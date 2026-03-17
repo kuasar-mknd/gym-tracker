@@ -311,7 +311,9 @@ const scatterData = computed(() => {
             <div class="animate-slide-up" style="animation-delay: 0.15s">
                 <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Performance Historique</h3>
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                            Performance Historique
+                        </h3>
                         <p class="text-text-muted text-xs font-semibold">Volume et 1RM au fil du temps</p>
                     </div>
                     <div v-if="history.length > 0" class="h-64">
