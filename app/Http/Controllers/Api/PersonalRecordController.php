@@ -9,14 +9,11 @@ use App\Http\Requests\PersonalRecordStoreRequest;
 use App\Http\Requests\PersonalRecordUpdateRequest;
 use App\Http\Resources\PersonalRecordResource;
 use App\Models\PersonalRecord;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PersonalRecordController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of the resource.
      */

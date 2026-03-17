@@ -8,7 +8,6 @@ use App\Http\Requests\GoalStoreRequest;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Services\GoalService;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
 /**
@@ -20,8 +19,6 @@ use Inertia\Inertia;
  */
 class GoalController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Create a new GoalController instance.
      *

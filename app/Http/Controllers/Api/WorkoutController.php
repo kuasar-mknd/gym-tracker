@@ -9,13 +9,10 @@ use App\Http\Requests\WorkoutUpdateRequest;
 use App\Http\Resources\WorkoutResource;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use OpenApi\Attributes as OA;
 
 class WorkoutController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of the resource.
      */

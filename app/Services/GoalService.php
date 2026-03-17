@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\GoalType;
 use App\Models\Goal;
 use App\Models\User;
 
@@ -61,11 +62,10 @@ final class GoalService
     public function updateGoalProgress(Goal $goal): void
     {
         match ($goal->type) {
-            'weight' => $this->updateWeightGoal($goal),
-            'frequency' => $this->updateFrequencyGoal($goal),
-            'volume' => $this->updateVolumeGoal($goal),
-            'measurement' => $this->updateMeasurementGoal($goal),
-            default => null,
+            GoalType::Weight => $this->updateWeightGoal($goal),
+            GoalType::Frequency => $this->updateFrequencyGoal($goal),
+            GoalType::Volume => $this->updateVolumeGoal($goal),
+            GoalType::Measurement => $this->updateMeasurementGoal($goal),
         };
 
         $this->checkCompletion($goal);
@@ -193,7 +193,7 @@ final class GoalService
     protected function isGoalCriteriaMet(Goal $goal): bool
     {
         // Handle "lower is better" for specific measurements (e.g., body weight loss)
-        if ($goal->type === 'measurement' && $goal->target_value < $goal->start_value) {
+        if ($goal->type === GoalType::Measurement && $goal->target_value < $goal->start_value) {
             return $goal->current_value <= $goal->target_value && $goal->current_value > 0;
         }
 

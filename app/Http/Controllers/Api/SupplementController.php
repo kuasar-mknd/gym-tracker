@@ -8,15 +8,12 @@ use App\Http\Requests\Api\SupplementStoreRequest;
 use App\Http\Requests\Api\SupplementUpdateRequest;
 use App\Http\Resources\SupplementResource;
 use App\Models\Supplement;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class SupplementController extends Controller
 {
-    use AuthorizesRequests;
-
     #[OA\Get(
         path: '/supplements',
         summary: 'Get list of supplements',

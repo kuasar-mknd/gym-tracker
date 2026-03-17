@@ -9,7 +9,6 @@ use App\Http\Requests\Api\StoreHabitRequest;
 use App\Http\Requests\Api\UpdateHabitRequest;
 use App\Http\Resources\HabitResource;
 use App\Models\Habit;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
@@ -17,8 +16,6 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class HabitController extends Controller
 {
-    use AuthorizesRequests;
-
     #[OA\Get(
         path: '/habits',
         summary: 'Get list of habits',

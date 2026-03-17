@@ -11,13 +11,10 @@ use App\Http\Requests\Api\WorkoutTemplateStoreRequest;
 use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Resources\WorkoutTemplateResource;
 use App\Models\WorkoutTemplate;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkoutTemplateController extends Controller
 {
-    use AuthorizesRequests;
-
     public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', WorkoutTemplate::class);

@@ -153,7 +153,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PageHeader from '@/Components/Navigation/PageHeader.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import InputLabel from '@/Components/InputLabel.vue'
+import InputLabel from '@/Components/Form/InputLabel.vue'
 
 const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
 

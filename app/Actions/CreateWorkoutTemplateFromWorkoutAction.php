@@ -59,7 +59,7 @@ final class CreateWorkoutTemplateFromWorkoutAction
             }
         }
 
-        if (! empty($setsData)) {
+        if ($setsData !== []) {
             // Chunking to avoid parameter limits in SQL (SQLite max is 999 typically)
             foreach (array_chunk($setsData, 100) as $chunk) {
                 WorkoutTemplateSet::insert($chunk);

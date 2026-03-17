@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\GoalType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int $id
  * @property int $user_id
  * @property string $title
- * @property string $type
+ * @property GoalType $type
  * @property float $target_value
  * @property float $current_value
  * @property float $start_value
@@ -81,10 +82,9 @@ class Goal extends Model
     public function getUnitAttribute(): string
     {
         return match ($this->type) {
-            'weight', 'volume' => 'kg',
-            'frequency' => 'séances',
-            'measurement' => $this->measurement_type === 'body_fat' ? '%' : 'cm',
-            default => '',
+            GoalType::Weight, GoalType::Volume => 'kg',
+            GoalType::Frequency => 'séances',
+            GoalType::Measurement => $this->measurement_type === 'body_fat' ? '%' : 'cm',
         };
     }
 
@@ -99,6 +99,7 @@ class Goal extends Model
     protected function casts(): array
     {
         return [
+            'type' => GoalType::class,
             'target_value' => 'double',
             'current_value' => 'double',
             'start_value' => 'double',

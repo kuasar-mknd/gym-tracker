@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Plate;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
 class PlateController extends Controller
 {
-    use AuthorizesRequests;
-
     public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', Plate::class);

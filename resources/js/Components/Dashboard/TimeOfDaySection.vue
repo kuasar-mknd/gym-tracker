@@ -1,0 +1,42 @@
+<script setup>
+import { Deferred } from '@inertiajs/vue3'
+import { defineAsyncComponent } from 'vue'
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+
+const TimeOfDayChart = defineAsyncComponent(() => import('@/Components/Stats/TimeOfDayChart.vue'))
+
+defineProps({
+    timeOfDayDistribution: { type: Array, required: true },
+})
+</script>
+
+<template>
+    <!-- Time of Day Distribution Chart -->
+    <section
+        class="glass-panel-light animate-slide-up relative overflow-hidden rounded-3xl p-6"
+        style="animation-delay: 0.18s"
+    >
+        <div class="relative z-10 mb-6">
+            <h3 class="text-hot-pink mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Habitudes</h3>
+            <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                Horaire Favori
+            </p>
+        </div>
+
+        <!-- Time of Day Chart -->
+        <div class="relative -mx-2 mt-2 h-48 w-auto">
+            <Deferred data="timeOfDayDistribution">
+                <template #fallback>
+                    <GlassSkeleton height="100%" width="100%" variant="circle" />
+                </template>
+                <TimeOfDayChart
+                    v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
+                    :data="timeOfDayDistribution"
+                />
+                <div v-else class="text-text-muted flex h-full items-center justify-center">
+                    <p class="text-sm">Pas assez de données (90j)</p>
+                </div>
+            </Deferred>
+        </div>
+    </section>
+</template>

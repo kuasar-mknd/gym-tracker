@@ -11,15 +11,12 @@ use App\Http\Requests\Api\WorkoutTemplateSetUpdateRequest;
 use App\Http\Resources\WorkoutTemplateSetResource;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkoutTemplateSetController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of the resource.
      */

@@ -44,7 +44,8 @@ frankenphp
 /storage/app/GymTracker
 /public/css/filament-spatie-backup
 gym_tracker
-database/database.sqlite
+database/*.sqlite
+ci_failure*.log
 /public/debug-*.png
 /public/fail-race.png
 /public/screenshot-*.png

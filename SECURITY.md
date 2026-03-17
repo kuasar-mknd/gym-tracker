@@ -1,67 +1,67 @@
-# Security Policy
+# Politique de Sécurité
 
-## Supported Versions
+## Versions Supportées
 
-| Version | Supported          |
+| Version | Supportée           |
 | ------- | ------------------ |
 | 1.x     | :white_check_mark: |
 | < 1.0   | :x:                |
 
-## Reporting a Vulnerability
+## Signalement d'une Vulnérabilité
 
-We take security seriously. If you discover a security vulnerability, please report it responsibly.
+Nous prenons la sécurité très au sérieux. Si vous découvrez une vulnérabilité de sécurité, merci de la signaler de manière responsable.
 
-### How to Report
+### Comment signaler
 
-**⚠️ Do NOT open a public GitHub issue for security vulnerabilities.**
+**⚠️ Ne pas ouvrir d'issue GitHub publique pour des vulnérabilités de sécurité.**
 
-Instead, please email us at: **[INSERT SECURITY EMAIL]**
+À la place, merci de nous contacter via : [GitHub Issues](https://github.com/kuasar-mknd/gym-tracker/issues)
 
-Include in your report:
+Incluez dans votre rapport :
 
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Any suggested fixes (optional)
+- Description de la vulnérabilité
+- Étapes pour reproduire
+- Impact potentiel
+- Suggestions de correction (optionnel)
 
-### What to Expect
+### À quoi s'attendre
 
-1. **Acknowledgment** — We'll confirm receipt within 48 hours
-2. **Investigation** — We'll investigate and keep you updated
-3. **Fix** — We'll develop and test a fix
-4. **Disclosure** — We'll coordinate disclosure with you
-5. **Credit** — We'll credit you in the release notes (if desired)
+1. **Accusé de réception** — Nous confirmerons la réception sous 48 heures
+2. **Investigation** — Nous enquêterons et vous tiendrons informé
+3. **Correction** — Nous développerons et testerons un correctif
+4. **Divulgation** — Nous coordonnerons la divulgation avec vous
+5. **Crédit** — Nous vous citerons dans les notes de version (si souhaité)
 
-### Scope
+### Périmètre
 
-The following are in scope:
+Les éléments suivants sont dans le périmètre :
 
-- Authentication bypass
-- SQL injection
+- Contournement d'authentification
+- Injection SQL
 - XSS (Cross-Site Scripting)
 - CSRF (Cross-Site Request Forgery)
-- Sensitive data exposure
+- Exposition de données sensibles
 - Server-side request forgery (SSRF)
-- Remote code execution
+- Exécution de code à distance (RCE)
 
-### Out of Scope
+### Hors périmètre
 
-- Rate limiting issues
-- Denial of Service (DoS)
-- Social engineering
-- Physical security
-- Issues in dependencies (report upstream)
+- Problèmes de limitation de débit (rate limiting)
+- Déni de Service (DoS)
+- Ingénierie sociale
+- Sécurité physique
+- Problèmes dans les dépendances (signaler en amont au mainteneur concerné)
 
-## Security Best Practices
+## Bonnes Pratiques de Sécurité
 
-When contributing:
+Lors de vos contributions :
 
-- Never commit secrets or credentials
-- Use environment variables for sensitive config
-- Validate and sanitize all user input
-- Use prepared statements for database queries
-- Follow Laravel security best practices
+- Ne jamais commiter de secrets ou d'identifiants
+- Utiliser les variables d'environnement pour les configurations sensibles
+- Valider et assainir toutes les entrées utilisateur
+- Utiliser des requêtes préparées pour la base de données
+- Suivre les bonnes pratiques de sécurité Laravel
 
 ---
 
-Thank you for helping keep GymTracker secure! 🔒
+Merci de nous aider à garder GymTracker sécurisé ! 🔒

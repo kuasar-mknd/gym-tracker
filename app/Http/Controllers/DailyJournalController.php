@@ -7,13 +7,10 @@ namespace App\Http\Controllers;
 use App\Actions\Journal\SaveDailyJournalAction;
 use App\Http\Requests\DailyJournalStoreRequest;
 use App\Models\DailyJournal;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
 class DailyJournalController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of the resource.
      */

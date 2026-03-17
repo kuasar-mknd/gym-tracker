@@ -7,13 +7,10 @@ namespace App\Http\Controllers;
 use App\Actions\Measurements\FetchBodyPartMeasurementsIndexAction;
 use App\Http\Requests\BodyPartMeasurementStoreRequest;
 use App\Models\BodyPartMeasurement;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
 class BodyPartMeasurementController extends Controller
 {
-    use AuthorizesRequests;
-
     public function index(FetchBodyPartMeasurementsIndexAction $action): \Inertia\Response
     {
         return Inertia::render('Measurements/Parts/Index', $action->execute($this->user()));

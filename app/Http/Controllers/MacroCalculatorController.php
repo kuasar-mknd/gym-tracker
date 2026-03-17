@@ -7,13 +7,10 @@ namespace App\Http\Controllers;
 use App\Actions\Tools\CreateMacroCalculationAction;
 use App\Http\Requests\Api\StoreMacroCalculationRequest;
 use App\Models\MacroCalculation;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
 class MacroCalculatorController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of macro calculations.
      */

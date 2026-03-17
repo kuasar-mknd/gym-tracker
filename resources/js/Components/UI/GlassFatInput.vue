@@ -1,6 +1,6 @@
 <script setup>
 import { computed, useAttrs, getCurrentInstance } from 'vue'
-import InputError from '@/Components/InputError.vue'
+import InputError from '@/Components/Form/InputError.vue'
 
 defineOptions({
     inheritAttrs: false,

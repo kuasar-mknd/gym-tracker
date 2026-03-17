@@ -1,56 +1,43 @@
-# Contributor Covenant Code of Conduct
+# Code de Conduite des Contributeurs
 
-## Our Pledge
+## Notre Engagement
 
-We as members, contributors, and leaders pledge to make participation in our
-community a harassment-free experience for everyone, regardless of age, body
-size, visible or invisible disability, ethnicity, sex characteristics, gender
-identity and expression, level of experience, education, socio-economic status,
-nationality, personal appearance, race, religion, or sexual identity
-and orientation.
+En tant que membres, contributeurs et leaders, nous nous engageons à faire de la participation à notre communauté une expérience sans harcèlement pour tout le monde, quel que soit l'âge, la taille corporelle, le handicap visible ou invisible, l'ethnicité, les caractéristiques sexuelles, l'identité et l'expression de genre, le niveau d'expérience, l'éducation, le statut socio-économique, la nationalité, l'apparence personnelle, la race, la religion, ou l'identité et l'orientation sexuelle.
 
-We pledge to act and interact in ways that contribute to an open, welcoming,
-diverse, inclusive, and healthy community.
+Nous nous engageons à agir et à interagir de manière à contribuer à une communauté ouverte, accueillante, diversifiée, inclusive et saine.
 
-## Our Standards
+## Nos Standards
 
-Examples of behavior that contributes to a positive environment:
+Exemples de comportements qui contribuent à un environnement positif :
 
-- Using welcoming and inclusive language
-- Being respectful of differing viewpoints and experiences
-- Gracefully accepting constructive criticism
-- Focusing on what is best for the community
-- Showing empathy towards other community members
+- Utiliser un langage accueillant et inclusif
+- Être respectueux des points de vue et des expériences divergentes
+- Accepter gracieusement les critiques constructives
+- Se concentrer sur ce qui est le mieux pour la communauté
+- Faire preuve d'empathie envers les autres membres de la communauté
 
-Examples of unacceptable behavior:
+Exemples de comportements inacceptables :
 
-- The use of sexualized language or imagery, and sexual attention or advances
-- Trolling, insulting or derogatory comments, and personal or political attacks
-- Public or private harassment
-- Publishing others' private information without explicit permission
-- Other conduct which could reasonably be considered inappropriate
+- L'utilisation de langage ou d'imagerie sexualisés, et l'attention ou les avances sexuelles
+- Le trolling, les commentaires insultants ou dérogatoires, et les attaques personnelles ou politiques
+- Le harcèlement public ou privé
+- La publication d'informations privées d'autrui sans permission explicite
+- Tout autre comportement qui pourrait raisonnablement être considéré comme inapproprié
 
-## Enforcement Responsibilities
+## Responsabilités d'Application
 
-Community leaders are responsible for clarifying and enforcing our standards of
-acceptable behavior and will take appropriate and fair corrective action in
-response to any behavior that they deem inappropriate, threatening, offensive,
-or harmful.
+Les leaders de la communauté sont responsables de clarifier et d'appliquer nos standards de comportement acceptable et prendront des mesures correctives appropriées et équitables en réponse à tout comportement qu'ils jugent inapproprié, menaçant, offensant ou nuisible.
 
-## Scope
+## Périmètre
 
-This Code of Conduct applies within all community spaces, and also applies when
-an individual is officially representing the community in public spaces.
+Ce Code de Conduite s'applique à tous les espaces de la communauté, et s'applique également lorsqu'un individu représente officiellement la communauté dans des espaces publics.
 
-## Enforcement
+## Application
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-**[INSERT CONTACT EMAIL]**.
+Les cas de comportement abusif, harcelant ou autrement inacceptable peuvent être signalés aux leaders de la communauté responsables de l'application via : [GitHub Issues](https://github.com/kuasar-mknd/gym-tracker/issues).
 
-All complaints will be reviewed and investigated promptly and fairly.
+Toutes les plaintes seront examinées et feront l'objet d'une enquête rapide et équitable.
 
 ## Attribution
 
-This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org),
-version 2.1.
+Ce Code de Conduite est adapté du [Contributor Covenant](https://www.contributor-covenant.org), version 2.1.

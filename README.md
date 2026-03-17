@@ -11,7 +11,7 @@
 <p align="center">
   <strong>Une application de suivi de musculation moderne, élégante et performante.</strong>
   <br />
-  <em>Track your workouts, measure your progress, achieve your goals.</em>
+  <em>Suis tes entraînements, mesure tes progrès, atteins tes objectifs.</em>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
   <a href="#-installation">Installation</a> •
   <a href="#-qualité--performance">Qualité</a> •
   <a href="#-développement">Développement</a> •
-  <a href="#-contributing">Contributing</a>
+  <a href="#-contribution">Contribution</a>
 </p>
 
 ---
@@ -65,7 +65,7 @@ Voir la documentation détaillée :
 
 | Catégorie | Technologies |
 | --- | --- |
-| **Backend** | Laravel 12, PHP 8.4 (Strict Types), MySQL |
+| **Backend** | Laravel 12, PHP 8.5 (Strict Types), MySQL |
 | **Frontend** | Vue 3, Inertia.js 2, Tailwind CSS 4 |
 | **Testing** | Pest 4, PHPUnit 12, Laravel Dusk 8 |
 | **DevOps** | Laravel Sail (Docker), GitHub Actions |
@@ -118,21 +118,10 @@ cp .env.example .env
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contribution
 
 Les contributions sont les bienvenues !
 1. Assure-toi que les tests passent : `./vendor/bin/sail artisan test`
 2. Vérifie la qualité : `./vendor/bin/sail artisan insights`
 3. Formate ton code : `./vendor/bin/sail bin pint`
-
----
-
-## 📝 License
-
-Ce projet est sous licence [MIT](LICENSE).
-
-<p align="center">
-  <strong>Fait avec ❤️ pour les passionnés de fitness</strong>
-  <br />
-  <a href="https://github.com/kuasar-mknd/gym-tracker">⭐ Star ce repo si tu aimes !</a>
-</p>
+4. Voir le [Guide de Contribution](CONTRIBUTING.md) pour plus de détails.

@@ -7,13 +7,10 @@ namespace App\Http\Controllers;
 use App\Actions\Tools\CreateWilksScoreAction;
 use App\Http\Requests\StoreWilksScoreRequest;
 use App\Models\WilksScore;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Inertia\Inertia;
 
 class WilksScoreController extends Controller
 {
-    use AuthorizesRequests;
-
     public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', WilksScore::class);

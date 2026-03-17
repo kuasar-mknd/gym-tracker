@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\ExerciseCategory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,7 +18,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int|null $user_id
  * @property string $name
  * @property string $type
- * @property string $category
+ * @property ExerciseCategory $category
  * @property int|null $default_rest_time
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkoutLine> $workoutLines
  * @property-read \App\Models\User|null $user
@@ -30,6 +31,14 @@ class Exercise extends Model
     use HasFactory, LogsActivity;
 
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
+
+    protected function casts(): array
+    {
+        return [
+            'category' => ExerciseCategory::class,
+            'default_rest_time' => 'integer',
+        ];
+    }
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutLine, $this>

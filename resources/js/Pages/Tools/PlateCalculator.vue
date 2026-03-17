@@ -242,7 +242,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import Modal from '@/Components/Modal.vue'
+import Modal from '@/Components/UI/Modal.vue'
 
 const props = defineProps({
     plates: {

@@ -10,15 +10,12 @@ use App\Http\Requests\Api\WorkoutTemplateLineStoreRequest;
 use App\Http\Requests\Api\WorkoutTemplateLineUpdateRequest;
 use App\Http\Resources\WorkoutTemplateLineResource;
 use App\Models\WorkoutTemplateLine;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkoutTemplateLineController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of the resource.
      */

@@ -10,14 +10,11 @@ use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
 use App\Services\StatsService;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class SetController extends Controller
 {
-    use AuthorizesRequests;
-
     public function __construct(
         protected StatsService $statsService
     ) {

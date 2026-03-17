@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PersonalRecordType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property int $user_id
  * @property int $exercise_id
- * @property string $type
+ * @property PersonalRecordType $type
  * @property float $value
  * @property float|null $secondary_value
  * @property int|null $workout_id
@@ -73,6 +74,7 @@ class PersonalRecord extends Model
     protected function casts(): array
     {
         return [
+            'type' => PersonalRecordType::class,
             'achieved_at' => 'datetime',
             'value' => 'decimal:2',
             'secondary_value' => 'decimal:2',

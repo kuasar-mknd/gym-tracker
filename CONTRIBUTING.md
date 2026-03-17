@@ -4,16 +4,21 @@ Merci de contribuer à GymTracker ! 🎉 Voici comment participer.
 
 ## 🚀 Quick Start
 
+### Prérequis
+- Docker Desktop (indispensable pour l'environnement Sail)
+- PHP & Composer (uniquement pour l'installation initiale)
+
+### Installation
 ```bash
-# Fork & clone
+# Clone le repo
 git clone https://github.com/YOUR_USERNAME/gym-tracker.git
 cd gym-tracker
 
-# Setup
-composer setup
+# Setup initial (génère .env, installe dépendances, migre DB)
+./vendor/bin/sail composer setup
 
-# Dev server
-composer dev
+# Lancer les serveurs de dev (Artisan, Vite, Workers, Pail)
+./vendor/bin/sail composer dev
 ```
 
 ## 📋 Workflow
@@ -29,11 +34,11 @@ composer dev
 4. **Code** ta feature/fix
 5. **Teste** :
     ```bash
-    php artisan test
+    vendor/bin/sail artisan test
     ```
 6. **Formate** :
     ```bash
-    npm run format
+    vendor/bin/sail npm run format
     ```
 7. **Commit** avec un message clair :
     ```bash
@@ -58,7 +63,7 @@ Nous utilisons [Conventional Commits](https://www.conventionalcommits.org/) :
 | `docs:`     | Documentation uniquement                    |
 | `style:`    | Formatage, pas de changement de code        |
 | `refactor:` | Refactoring sans changement de comportement |
-| `test:`     | Ajout ou modification de tests              |
+| `test:`    | Ajout ou modification de tests              |
 | `chore:`    | Maintenance, dépendances, CI                |
 
 **Exemples :**
@@ -77,13 +82,13 @@ test: add coverage for workout deletion
 
 ```bash
 # Tous les tests
-php artisan test
+vendor/bin/sail artisan test
 
 # Tests spécifiques
-php artisan test --filter=WorkoutsTest
+vendor/bin/sail artisan test --filter=WorkoutsTest
 
 # Avec couverture
-php artisan test --coverage
+vendor/bin/sail artisan test --coverage
 ```
 
 **Écrire des tests :**
@@ -96,16 +101,16 @@ php artisan test --coverage
 
 ### PHP (Laravel)
 
-- **Pint** pour le formatage : `vendor/bin/pint`
-- **Rector** pour la modernisation : `vendor/bin/rector process`
-- **PHPStan** (Larastan) niveau Max : `vendor/bin/phpstan analyze`
+- **Pint** pour le formatage : `vendor/bin/sail bin pint`
+- **Rector** pour la modernisation : `vendor/bin/sail bin rector process`
+- **PHPStan** (Larastan) niveau Max : `vendor/bin/sail artisan phpstan:analyse`
 - Suit les conventions Laravel
 - Utilise les type hints PHP 8.4 stricts (`declare(strict_types=1);`)
 - Crée des Form Requests pour la validation
 
 ### JavaScript/Vue
 
-- **Prettier** pour le formatage : `npm run format`
+- **Prettier** pour le formatage : `vendor/bin/sail npm run format`
 - Composants Vue en `<script setup>`
 - Utilise les composants du design system (`GlassCard`, `GlassButton`, etc.)
 
@@ -128,12 +133,13 @@ php artisan test --coverage
 
 ### Avant de soumettre
 
-- [ ] Tests passent (`php artisan test`)
-- [ ] Code formaté (`npm run format` & `vendor/bin/pint`)
-- [ ] Rector appliqué (`vendor/bin/rector process`)
-- [ ] PHPStan propre (`vendor/bin/phpstan analyze`)
+- [ ] Tests passent (`vendor/bin/sail artisan test`)
+- [ ] Code formaté (`vendor/bin/sail npm run format` & `vendor/bin/sail bin pint`)
+- [ ] Rector appliqué (`vendor/bin/sail bin rector process`)
+- [ ] PHPStan propre (`vendor/bin/sail artisan phpstan:analyse`)
 - [ ] Pas de `console.log` ou `dd()` oubliés
 - [ ] Documentation mise à jour si nécessaire
+
 
 ### Template de PR
 

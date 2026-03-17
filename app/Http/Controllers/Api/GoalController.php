@@ -8,7 +8,6 @@ use App\Http\Requests\GoalStoreRequest;
 use App\Http\Requests\GoalUpdateRequest;
 use App\Http\Resources\GoalResource;
 use App\Models\Goal;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -18,8 +17,6 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class GoalController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of the user's goals.
      *

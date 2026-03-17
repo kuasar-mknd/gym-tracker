@@ -16,8 +16,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/achievements', [\App\Http\Controllers\AchievementController::class, 'index'])->name('achievements.index');
-    Route::get('/workouts', [\App\Http\Controllers\WorkoutsController::class, 'index'])->name('workouts.index');
-    Route::get('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'show'])->name('workouts.show');
+    Route::get('/workouts', [\App\Http\Controllers\WorkoutController::class, 'index'])->name('workouts.index');
+    Route::get('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'show'])->name('workouts.show');
     Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/stats', [\App\Http\Controllers\StatsController::class, 'index'])->name('stats.index');
     Route::get('/stats/exercise/{exercise}', [\App\Http\Controllers\StatsController::class, 'exercise'])->name('stats.exercise');
@@ -25,7 +25,7 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['index']);
     Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
     Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index', 'show']);
-
+    Route::resource('templates', \App\Http\Controllers\WorkoutTemplateController::class)->only(['index', 'show', 'create', 'edit']);
     Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index', 'show']);
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
 
@@ -57,37 +57,42 @@ Route::middleware('auth')->group(function (): void {
 
         Route::resource('goals', \App\Http\Controllers\GoalController::class)->except(['index', 'show']);
 
-        Route::post('/workouts', [\App\Http\Controllers\WorkoutsController::class, 'store'])->name('workouts.store');
-        Route::patch('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'update'])->name('workouts.update');
-        Route::delete('/workouts/{workout}', [\App\Http\Controllers\WorkoutsController::class, 'destroy'])->name('workouts.destroy');
+        Route::post('/workouts', [\App\Http\Controllers\WorkoutController::class, 'store'])->name('workouts.store');
+        Route::patch('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'update'])->name('workouts.update');
+        Route::delete('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'destroy'])->name('workouts.destroy');
 
-        Route::resource('templates', \App\Http\Controllers\WorkoutTemplatesController::class)->except(['show']);
-        Route::post('/templates/{template}/execute', [\App\Http\Controllers\WorkoutTemplatesController::class, 'execute'])->name('templates.execute');
-        Route::post('/workouts/{workout}/save-as-template', [\App\Http\Controllers\WorkoutTemplatesController::class, 'saveFromWorkout'])->name('templates.save-from-workout');
+        Route::resource('templates', \App\Http\Controllers\WorkoutTemplateController::class)->except(['index', 'show', 'create', 'edit']);
+        Route::post('/templates/{template}/execute', [\App\Http\Controllers\WorkoutTemplateController::class, 'execute'])->name('templates.execute');
+        Route::post('/workouts/{workout}/save-as-template', [\App\Http\Controllers\WorkoutTemplateController::class, 'saveFromWorkout'])->name('templates.save-from-workout');
 
-        Route::post('/workouts/{workout}/lines', [\App\Http\Controllers\WorkoutLinesController::class, 'store'])->name('workout-lines.store');
-        Route::delete('/workout-lines/{workoutLine}', [\App\Http\Controllers\WorkoutLinesController::class, 'destroy'])->name('workout-lines.destroy');
+        Route::post('/workouts/{workout}/lines', [\App\Http\Controllers\WorkoutLineController::class, 'store'])->name('workout-lines.store');
+        Route::delete('/workout-lines/{workoutLine}', [\App\Http\Controllers\WorkoutLineController::class, 'destroy'])->name('workout-lines.destroy');
 
-        Route::post('/workout-lines/{workoutLine}/sets', [\App\Http\Controllers\SetsController::class, 'store'])->name('sets.store');
-        Route::patch('/sets/{set}', [\App\Http\Controllers\SetsController::class, 'update'])->name('sets.update');
-        Route::delete('/sets/{set}', [\App\Http\Controllers\SetsController::class, 'destroy'])->name('sets.destroy');
+        Route::post('/workout-lines/{workoutLine}/sets', [\App\Http\Controllers\SetController::class, 'store'])->name('sets.store');
+        Route::patch('/sets/{set}', [\App\Http\Controllers\SetController::class, 'update'])->name('sets.update');
+        Route::delete('/sets/{set}', [\App\Http\Controllers\SetController::class, 'destroy'])->name('sets.destroy');
 
+        // Habit routes
         Route::post('/habits/{habit}/toggle', [\App\Http\Controllers\HabitController::class, 'toggle'])->name('habits.toggle');
         Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['store', 'update', 'destroy']);
 
+        // Exercise routes
         Route::get('/exercises/{exercise}', [\App\Http\Controllers\ExerciseController::class, 'show'])->name('exercises.show');
         Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['store', 'update', 'destroy']);
-        Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['store', 'destroy']);
 
+        // Body Measurement routes
+        Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['store', 'destroy']);
         Route::post('/body-metrics', [\App\Http\Controllers\BodyPartMeasurementController::class, 'store'])->name('body-parts.store');
         Route::delete('/body-metrics/{bodyPartMeasurement}', [\App\Http\Controllers\BodyPartMeasurementController::class, 'destroy'])->name('body-parts.destroy');
 
         Route::resource('plates', \App\Http\Controllers\PlateController::class)->only(['store', 'update', 'destroy']);
         Route::resource('daily-journals', \App\Http\Controllers\DailyJournalController::class)->only(['store', 'destroy']);
 
+        // Supplement routes
         Route::post('/supplements/{supplement}/consume', [\App\Http\Controllers\SupplementController::class, 'consume'])->name('supplements.consume');
         Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['store', 'update', 'destroy']);
 
+        // Tools routes
         Route::post('/tools/wilks', [\App\Http\Controllers\WilksScoreController::class, 'store'])->name('tools.wilks.store');
         Route::delete('/tools/wilks/{wilksScore}', [\App\Http\Controllers\WilksScoreController::class, 'destroy'])->name('tools.wilks.destroy');
 

@@ -6,12 +6,11 @@ namespace App\Http\Controllers;
 
 use App\Actions\Exercises\CreateExerciseAction;
 use App\Actions\Exercises\FetchExerciseHistoryAction;
+use App\Enums\ExerciseCategory;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
 use App\Services\StatsService;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -27,8 +26,6 @@ use Inertia\Response;
  */
 class ExerciseController extends Controller
 {
-    use AuthorizesRequests;
-
     public function show(Exercise $exercise, StatsService $statsService, FetchExerciseHistoryAction $fetchExerciseHistory): Response
     {
         $this->authorize('view', $exercise);
@@ -59,7 +56,7 @@ class ExerciseController extends Controller
 
         return Inertia::render('Exercises/Index', [
             'exercises' => $exercises,
-            'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
+            'categories' => collect(ExerciseCategory::cases())->map(fn (ExerciseCategory $case) => $case->value)->toArray(),
             'types' => [
                 ['value' => 'strength', 'label' => 'Force (poids)'],
                 ['value' => 'cardio', 'label' => 'Cardio (distance)'],
@@ -102,7 +99,7 @@ class ExerciseController extends Controller
      * @param  Exercise  $exercise  The exercise to update.
      * @return RedirectResponse A redirect back to the previous page.
      *
-     * @throws AuthorizationException If the user is not authorized to update this exercise.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update this exercise.
      */
     public function update(ExerciseUpdateRequest $request, Exercise $exercise): RedirectResponse
     {
@@ -123,7 +120,7 @@ class ExerciseController extends Controller
      * @param  Exercise  $exercise  The exercise to delete.
      * @return RedirectResponse A redirect back with potential error messages if deletion fails.
      *
-     * @throws AuthorizationException If the user is not authorized to delete this exercise.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete this exercise.
      */
     public function destroy(Exercise $exercise): RedirectResponse
     {

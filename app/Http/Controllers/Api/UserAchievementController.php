@@ -9,7 +9,6 @@ use App\Http\Requests\Api\StoreUserAchievementRequest;
 use App\Http\Requests\Api\UpdateUserAchievementRequest;
 use App\Http\Resources\UserAchievementResource;
 use App\Models\UserAchievement;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -17,8 +16,6 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class UserAchievementController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of the resource.
      */

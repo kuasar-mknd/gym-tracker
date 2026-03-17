@@ -9,7 +9,6 @@ use App\Http\Requests\StoreHabitLogRequest;
 use App\Http\Requests\UpdateHabitLogRequest;
 use App\Http\Resources\HabitLogResource;
 use App\Models\HabitLog;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -17,8 +16,6 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class HabitLogController extends Controller
 {
-    use AuthorizesRequests;
-
     #[OA\Get(
         path: '/habit-logs',
         summary: 'Get list of habit logs',

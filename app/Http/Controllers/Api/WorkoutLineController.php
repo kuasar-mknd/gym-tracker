@@ -10,15 +10,12 @@ use App\Http\Requests\Api\WorkoutLineUpdateRequest;
 use App\Http\Resources\WorkoutLineResource;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkoutLineController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * Display a listing of the resource.
      */

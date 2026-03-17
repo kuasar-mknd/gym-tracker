@@ -1,252 +1,287 @@
-# Changelog
+# Journal des modifications
 
-All notable changes to GymTracker will be documented in this file.
+Toutes les modifications notables de GymTracker seront documentées dans ce fichier.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
+et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.5.0] - 2026-03-17
+
+### Ajouté
+
+- **Architecture 2026** : Introduction d'Enums PHP 8.5 pour les types de records (`PersonalRecordType`), les objectifs (`GoalType`) et les catégories d'exercices (`ExerciseCategory`).
+- **Services Spécialisés** : Décomposition du `StatsService` monolithique en services granulaires : `VolumeStatsService`, `BodyStatsService`, `WorkoutStatsService`, `ExerciseStatsService` et `StatsCacheManager`.
+- **Extraction Logique Métier** : Création de `RecommendedValuesService` pour isoler la logique de calcul des suggestions, allégeant le modèle `WorkoutLine`.
+
+### Modifié
+
+- **Refactorisation du Dashboard** : Décomposition de `Dashboard.vue` en 8 sous-composants spécialisés pour une maintenabilité accrue.
+- **Réorganisation des Composants** : Restructuration complète de `resources/js/Components/` avec des dossiers `UI/`, `Form/` et `Navigation/`.
+- **Organisation des Tests** : Reorganisation des tests Feature dans des sous-dossiers thématiques (`Controllers/`, `Models/`, `Services/`).
+- **Squash des Migrations** : Consolidation de 73 migrations en un seul fichier de schéma (`schema:dump`) pour une initialisation de base de données ultra-rapide.
+
+### Optimisé
+
+- **Nettoyage de la Racine** : Suppression des fichiers de logs CI parasites et mise à jour du `.gitignore`.
+- **Standardisation i18n** : Traduction des dernières chaînes hardcodées dans le backend vers les fichiers de langue JSON.
+- **Modernisation PHP** : Mise à jour de la documentation et des configurations vers PHP 8.5.
 
 ## [1.4.18] - 2026-03-06
 
-### Added
+### Ajouté
 
-- **Smart Recommendations**: Implemented intelligent suggested values for sets (weight/reps) based on the most frequent data from the most recent workout of the same exercise.
-- **E2E Stability**: Achieved 100% reliable browser tests across all iPhone sizes (Mini, 15, Max).
-- **Exercise Library E2E**: Added comprehensive lifecycle tests for the exercise library (Search, Filter, Create, Edit, Delete).
-- **PR Trophies**: Integrated visual feedback (gold star) directly on sets achieving a new Personal Record.
+- **Recommandations Intelligentes** : Implémentation de suggestions de valeurs intelligentes pour les séries (poids/répétitions) basées sur les données les plus fréquentes de la séance la plus récente du même exercice.
+- **Stabilité E2E** : Atteinte de 100 % de fiabilité pour les tests de navigation sur toutes les tailles d'iPhone (Mini, 15, Max).
+- **E2E Bibliothèque d'exercices** : Ajout de tests de cycle de vie complets pour la bibliothèque d'exercices (Recherche, Filtrage, Création, Modification, Suppression).
+- **Trophées PR** : Intégration de retours visuels (étoile dorée) directement sur les séries atteignant un nouveau record personnel (PR).
 
-### Improved
+### Modifié
 
-- **Mobile UX**: Refined `SwipeableRow` sensitivity with direction locking to prevent accidental swipes during vertical scrolling.
-- **Mobile Layout**: Improved padding and safe-area insets to ensure critical action buttons (Finish Workout) are never obscured by navigation bars.
-- **Inertia Feedback**: Integrated flash messages (success/error) directly into the Authenticated Layout via Inertia shared props.
+- **UX Mobile** : Affinement de la sensibilité de `SwipeableRow` avec verrouillage de direction pour éviter les glissements accidentels lors du défilement vertical.
+- **Mise en page mobile** : Amélioration des marges (padding) et des zones de sécurité (safe-area insets) pour garantir que les boutons d'action critiques (Terminer l'entraînement) ne soient jamais masqués par les barres de navigation.
+- **Retours Inertia** : Intégration des messages flash (succès/erreur) directement dans la mise en page authentifiée via les propriétés partagées Inertia.
 
-### Fixed
+### Corrigé
 
-- **CI Infrastructure**: Repaired GitHub Actions pipeline by fixing Vite manifest issues and MySQL connection permissions.
-- **Workout Logic**: Fixed card rendering issues when adding new exercises during an active session.
-- **Code Quality**: Reached 100/100 scores across all PHP Insights categories on the stable main branch.
+- **Infrastructure CI** : Réparation du pipeline GitHub Actions en corrigeant les problèmes de manifeste Vite et les permissions de connexion MySQL.
+- **Logique d'entraînement** : Correction des problèmes de rendu des cartes lors de l'ajout de nouveaux exercices pendant une séance active.
+- **Qualité du code** : Obtention d'un score de 100/100 dans toutes les catégories PHP Insights sur la branche principale stable.
 
 ## [1.4.14] - 2026-03-02
 
-### Added
+### Ajouté
 
-- **Performance: Volume Denormalization**: Added `workout_volume` to `workouts` and `total_volume` to `users` for near-instant statistics calculation.
-- **Performance: Real-time Sync**: Implemented automated volume synchronization via Eloquent events, ensuring data consistency with zero overhead at read time.
+- **Dénormalisation du volume** : Ajout de `workout_volume` aux entraînements (`workouts`) et `total_volume` aux utilisateurs (`users`) pour un calcul des statistiques quasi instantané.
+- **Synchronisation en temps réel** : Implémentation de la synchronisation automatisée du volume via les événements Eloquent, garantissant la cohérence des données sans surcharge lors de la lecture.
 
-### Fixed
+### Optimisé
 
-- **CI Reliability**: Definitive stabilization of GitHub Actions by switching all tests to MySQL, resolving intermittent SQLite migration failures.
-- **CI: Environment Isolation**: Fixed `APP_KEY` preservation and strictly disabled Telescope/Pulse in testing environments to prevent 500 errors.
-- **CI: Test Harmonization**: Resolved trait collisions between `RefreshDatabase` and `DatabaseMigrations` across the test suite.
-- **Performance: Stats Optimization**: Refactored `StatsService` to leverage denormalized data, reducing dashboard query time by over 80%.
-- **Performance: Memory Management**: Optimized `TrainingReminderCommand` with chunking and eager loading to handle large user bases.
-- **Performance: Payload Reduction**: Added safety limits to historical data endpoints (Weight, Journal, Timers) to prevent massive JSON payloads.
-- **E2E Authentication**: Fixed 401 errors in Dusk by enabling Sanctum stateful API and configuring Axios with credentials.
-- **Cache Invalidation**: Fixed a bug in `Exercise` model where versioned cache keys were not correctly invalidated.
-- **Dusk Robustness**: Improved selectors and added necessary pauses in `ExerciseManagementTest` to handle animations.
+- **Optimisation des stats** : Refactorisation de `StatsService` pour exploiter les données dénormalisées, réduisant le temps de requête du tableau de bord de plus de 80 %.
+- **Gestion de la mémoire** : Optimisation de la commande `TrainingReminderCommand` avec un traitement par lots (chunking) et un chargement avide (eager loading) pour gérer les bases d'utilisateurs importantes.
+- **Réduction de la charge utile** : Ajout de limites de sécurité aux points de terminaison de données historiques (Poids, Journal, Chronomètres) pour éviter des charges utiles JSON massives.
+
+### Corrigé
+
+- **Fiabilité CI** : Stabilisation définitive de GitHub Actions en basculant tous les tests sur MySQL, résolvant les échecs intermittents de migration SQLite.
+- **CI : Isolation de l'environnement** : Correction de la préservation de `APP_KEY` et désactivation stricte de Telescope/Pulse dans les environnements de test pour éviter les erreurs 500.
+- **CI : Harmonisation des tests** : Résolution des collisions de traits entre `RefreshDatabase` et `DatabaseMigrations` dans la suite de tests.
+- **Authentification E2E** : Correction des erreurs 401 dans Dusk en activant l'API d'état Sanctum et en configurant Axios avec les identifiants.
+- **Invalidation du cache** : Correction d'un bug dans le modèle `Exercise` où les clés de cache versionnées n'étaient pas correctement invalidées.
+- **Robustesse Dusk** : Amélioration des sélecteurs et ajout des pauses nécessaires dans `ExerciseManagementTest` pour gérer les animations.
 
 ## [1.4.13] - 2026-02-28
 
-### Security
+### Sécurité
 
-- **FormRequests**: Systematically replaced inline controller validation with dedicated FormRequest classes for improved security and type safety.
-- **API Hardening**: Improved validation rules for `PushSubscription`, `WorkoutLine`, and `DailyJournal`.
+- **FormRequests** : Remplacement systématique de la validation en ligne des contrôleurs par des classes FormRequest dédiées pour une sécurité et une robustesse de type accrues.
+- **Renforcement de l'API** : Amélioration des règles de validation pour `PushSubscription`, `WorkoutLine`, et `DailyJournal`.
 
 ## [1.4.12] - 2026-02-26
 
-### Added
+### Ajouté
 
-- **Achievement CRUD**: Implemented full backend support for creating, reading, updating, and deleting user achievements.
-- **E2E Testing**: Introduced comprehensive workout session E2E tests covering the entire training flow.
+- **CRUD Succès** : Implémentation du support backend complet pour la création, la lecture, la mise à jour et la suppression des succès (achievements) des utilisateurs.
+- **Tests E2E** : Introduction de tests E2E complets pour les séances d'entraînement couvrant l'intégralité du flux d'entraînement.
 
 ## [1.4.11] - 2026-02-20
 
-### Improved
+### Modifié
 
-- **Liquid Glass UI**: Refactored `InputLabel` and several form components to strictly adhere to the Liquid Glass design system.
-- **Performance**: Optimized volume history queries and improved database indexing for stats dashboard.
+- **UI Liquid Glass** : Refactorisation de `InputLabel` et de plusieurs composants de formulaire pour adhérer strictement au système de conception Liquid Glass.
+
+### Optimisé
+
+- **Performance** : Optimisation des requêtes d'historique de volume et amélioration de l'indexation de la base de données pour le tableau de bord des statistiques.
 
 ## [1.4.10] - 2026-02-15
 
-### Fixed
+### Corrigé
 
-- **Frontend Dependencies**: Resolved conflicts with Inertia.js and Vue 3 core packages.
-- **Formatting**: Unified code style across the application using Laravel Pint and Prettier.
+- **Dépendances Frontend** : Résolution de conflits avec Inertia.js et les paquets de base de Vue 3.
+- **Formatage** : Unification du style de code dans toute l'application à l'aide de Laravel Pint et Prettier.
 
 ## [1.4.9] - 2026-02-10
 
-### Fixed
+### Corrigé
 
-- **Pulse Dashboard**: Implemented a definitive architectural fix for Content Security Policy (CSP) conflicts using `ConditionalCspHeaders`. This allows Pulse to manage its own security headers without being overridden by the global web policy.
-- **GitHub Actions**: Corrected the ARM64 runner label to `ubuntu-24.04-arm` (from `ubuntu-24.04-arm64`), resolving the "waiting for runner" hang in CI.
+- **Tableau de bord Pulse** : Implémentation d'un correctif architectural définitif pour les conflits de politique de sécurité du contenu (CSP) en utilisant `ConditionalCspHeaders`.
+- **GitHub Actions** : Correction du label du runner ARM64 en `ubuntu-24.04-arm`, résolvant le blocage dans la CI.
 
-### Optimized
+### Modifié
 
-- **Docker Build Performance**: Refactored CI workflow to leverage Native ARM64 runners, slashing build times by ~85% (down to ~2.5 minutes from 15+ minutes).
-- **Dockerfile Layering**: Implemented `--platform=$BUILDPLATFORM` for builder stages and granular copying for better cache utilization.
-- **Multi-Arch Strategy**: Switched to a parallel build and manifest merge strategy, following 2026 industry best practices.
+- **Stratégie Multi-Arch** : Passage à une stratégie de build parallèle et de fusion de manifestes.
 
-## [1.4.8] - 2026-02-10 [DEPRECATED]
+### Optimisé
 
-> [!WARNING]
-> This version contained an incorrect GitHub Actions runner label and a conflicting CSP configuration. Users should upgrade to v1.4.9 immediately.
+- **Performance du build Docker** : Refactorisation du workflow CI pour exploiter les runners natifs ARM64, réduisant les temps de build de ~85 %.
+- **Stratification du Dockerfile** : Implémentation de `--platform=$BUILDPLATFORM` pour les étapes de build et copie granulaire pour une meilleure utilisation du cache.
+
+## [1.4.8] - 2026-02-10
+
+### Obsolète
+
+- Cette version contenait un label de runner GitHub Actions incorrect et une configuration CSP conflictuelle. Les utilisateurs doivent passer à la v1.4.9 immédiatement.
 
 ## [1.4.7] - 2026-02-10
 
-### 🛡️ Ops
+### Corrigé
 
-- **Production Fix**: Removed unsupported `--force` from `filament:upgrade` in `entrypoint.sh` to prevent server crash.
-
----
+- **Correctif Production** : Suppression de l'option `--force` non supportée de `filament:upgrade` dans `entrypoint.sh` pour éviter un crash du serveur.
 
 ## [1.4.6] - 2026-02-10
 
-### ⚡ Performance & Offline
+### Ajouté
 
-- **Axios Migration**: Migrated workout interactions and profile notification preferences to Axios for robust API communication.
-- **SyncService**: Introduced centralized synchronization logic to prepare for full offline support.
+- **SyncService** : Introduction d'une logique de synchronisation centralisée pour préparer le support complet hors ligne.
 
-### 🛡️ Security & Ops
+### Modifié
 
-- **Production Fix**: Resolved critical server startup failure caused by Telescope loading in production.
-- **CI Stability**: Fixed Dusk test failures (white pages) by isolating Vite assets conflict.
+- **Migration Axios** : Migration des interactions d'entraînement et des préférences de notification de profil vers Axios pour une communication API robuste.
+- **Rector & Pint** : Application de la modernisation automatisée du code et imposition du style dans toute la base de code.
 
-### 🧹 Modernization
+### Corrigé
 
-- **Rector & Pint**: Applied automated code modernization and style enforcement across the codebase.
-
----
+- **Correctif Production** : Résolution de l'échec critique du démarrage du serveur causé par le chargement de Telescope en production.
+- **Stabilité CI** : Correction des échecs de test Dusk (pages blanches) en isolant le conflit des actifs Vite.
 
 ## [1.4.5] - 2026-02-05
 
-### 💪 UX & Interaction
+### Ajouté
 
-- **Swipe-to-Action**: Integrated `SwipeableRow` for sets (swipe left to delete, right to duplicate).
-- **Smart Timer**: Added haptic-enabled intelligent rest timer.
-- **Haptic Engine**: Tactile feedback for gesture completion and timer events.
-- **Dynamic Themes**: Added dark/light mode engine with system preference sync.
+- **Swipe-to-Action** : Intégration de `SwipeableRow` pour les séries (glisser à gauche pour supprimer, à droite pour dupliquer).
+- **Chronomètre intelligent** : Ajout d'un chronomètre de repos intelligent avec retour haptique.
+- **Moteur haptique** : Retour tactile pour la complétion des gestes et les événements du chronomètre.
+- **Thèmes dynamiques** : Ajout d'un moteur de mode sombre/clair avec synchronisation des préférences système.
 
-### 🛡️ Security
+### Sécurité
 
-- **Fix IDOR**: Prevented unauthorized exercise association in goals/PRs.
-- **Mass Assignment**: Hardened user statistics models against unauthorized updates.
+- **Correction IDOR** : Prévention de l'association d'exercices non autorisée dans les objectifs/PR.
+- **Assignation de masse** : Renforcement des modèles de statistiques utilisateur contre les mises à jour non autorisées.
 
-### ⚡ Performance
+### Modifié
 
-- **N+1 Fix**: Optimized `PersonalRecordService` to eager-load workout/exercise relations (#395).
-- **Bolt Optimization**: Reduced dashboard payload size and optimized cache invalidation.
+- **Optimisation Bolt** : Réduction de la taille de la charge utile du tableau de bord et optimisation de l'invalidation du cache.
 
-### 🐞 Bug Fixes
+### Corrigé
 
-- Fixed `TypeError` in `SetsController` (#393).
-- Fixed `TypeError` in `Modal.vue` unmount phase for iOS (#394).
-- Resolved Larastan audit failures in PR synchronization service.
-
----
+- **Correction N+1** : Optimisation de `PersonalRecordService` pour charger à l'avance les relations entraînement/exercice (#395).
+- **SetsController** : Correction de `TypeError` (#393).
+- **Modal.vue** : Correction de `TypeError` dans la phase de démontage pour iOS (#394).
+- **Audit Larastan** : Résolution des échecs dans le service de synchronisation des PR.
 
 ## [1.4.0] - 2026-01-30
 
-### 🛡️ Security & Ops
+### Ajouté
 
-- Added Multi-Factor Authentication (MFA) for Filament Admin.
-- Hardened Content Security Policy (CSP) for backoffice routes.
-- Stabilized migration rollbacks for SQLite/CI.
+- **Offline-first** : Implémentation de la synchronisation hors ligne avec Workbox et Dexie.
 
-### 📱 PWA & Mobile
+### Sécurité
 
-- Implemented Offline-first sync with Workbox and Dexie.
-- Refined mobile safe-area insets for superior ergonomics.
+- **MFA** : Ajout de l'authentification multi-facteurs pour l'administration Filament.
+- **CSP** : Renforcement de la politique de sécurité du contenu pour les routes du backoffice.
 
----
+### Modifié
+
+- **Ops** : Stabilisation des retours en arrière (rollbacks) de migration pour SQLite/CI.
+- **PWA & Mobile** : Affinement des marges de sécurité mobile pour une ergonomie supérieure.
 
 ## [1.3.1] - 2026-01-24
 
-### 🐞 Fixed
+### Corrigé
 
-- Corrected cached notification count `TypeError`.
-- Resolved PHP 8.4 deprecation warnings (PDO constants).
-
----
+- **Notifications** : Correction de `TypeError` sur le compte des notifications mises en cache.
+- **PHP 8.4** : Résolution des avertissements d'obsolescence (constantes PDO).
 
 ## [1.3.0] - 2026-01-21
 
-### 🚀 Core Features
+### Ajouté
 
-- **Habit Tracker**: Full implementation of habit creation, logging, and visualization.
-- **Health Vitals**: New modules for Heart Rate, Blood Pressure, and Body Fat tracking.
-- **Glass UI**: Implementation of the "Liquid Glass" design system across all pages.
+- **Suivi des habitudes** : Implémentation complète de la création, de la journalisation et de la visualisation des habitudes.
+- **Signes vitaux** : Nouveaux modules pour le suivi de la fréquence cardiaque, de la tension artérielle et de la graisse corporelle.
 
-### 🛡️ Security & Quality
+### Sécurité
 
-- Achieved Larastan Level 8 compliance.
-- Enforced 100% Laravel Pint style coverage.
-- Optimized database query patterns to reduce overhead.
+- **Qualité** : Atteinte de la conformité Larastan Niveau 8.
 
-### 🐞 Fixes
+### Modifié
 
-- Resolved mobile layout shifts on iOS Safari.
-- Fixed date parsing alignment between API and Frontend.
+- **UI Liquid Glass** : Implémentation du système de conception sur toutes les pages.
+- **Style** : Application d'une couverture de style Laravel Pint à 100 %.
 
----
+### Optimisé
+
+- **Performance** : Optimisation des modèles de requêtes de base de données.
+
+### Corrigé
+
+- **iOS Safari** : Résolution des décalages de mise en page mobile.
+- **Dates** : Correction de l'alignement de l'analyse des dates entre l'API et le Frontend.
 
 ## [1.2.0] - 2026-01-15
 
-### Added
+### Ajouté
 
-- Workout templates system
-- Plate calculator tool
-- Performance optimizations (caching, eager loading)
-- Security hardening (rate limiting, input validation)
+- Système de modèles d'entraînement.
+- Outil de calcul de disques.
 
-### Changed
+### Optimisé
 
-- Dashboard stats now cached for 60 seconds
-- Exercises list cached for 10 minutes
+- **Performance** : Optimisations (mise en cache, chargement avide).
 
-### Fixed
+### Sécurité
 
-- N+1 queries in AchievementService
-- Missing indexes on frequently queried columns
+- **Renforcement** : Limitation du débit, validation des entrées.
 
----
+### Modifié
+
+- **Cache Stats** : Les statistiques du tableau de bord sont désormais mises en cache pendant 60 secondes.
+- **Cache Exercices** : La liste des exercices est mise en cache pendant 10 minutes.
+
+### Corrigé
+
+- **AchievementService** : Correction des requêtes N+1.
+- **Indexation** : Ajout des index manquants sur les colonnes fréquemment interrogées.
 
 ## [1.1.0] - 2026-01-10
 
-### Added
+### Ajouté
 
-- Personal Records (PR) tracking system
-- Achievement/Trophy system with celebrations
-- Streak counter for consecutive workout days
-- Body measurements tracking
-- Daily journal feature
-- Custom goals with progress tracking
-- Web Push notifications
+- Système de suivi des records personnels (PR).
+- Système de succès/trophées avec célébrations.
+- Compteur de série pour les jours d'entraînement consécutifs.
+- Suivi des mesures corporelles.
+- Fonctionnalité de journal quotidien.
+- Objectifs personnalisés avec suivi de la progression.
+- Notifications Web Push.
 
-### Changed
+### Modifié
 
-- Dashboard redesigned with quick stats
-- Improved mobile navigation
-
----
+- **Tableau de bord** : Design repensé avec des statistiques rapides.
+- **Navigation** : Amélioration de la navigation mobile.
 
 ## [1.0.0] - 2026-01-01
 
-### Added
+### Ajouté
 
-- Initial release
-- User authentication (email + OAuth via Google, GitHub, Apple)
-- Workout session management
-- Exercise library with categories
-- Sets and reps logging
-- Workout history
-- Basic statistics
-- Mobile-first PWA design
-
----
+- Sortie initiale.
+- Authentification utilisateur (email + OAuth via Google, GitHub, Apple).
+- Gestion des séances d'entraînement.
+- Bibliothèque d'exercices avec catégories.
+- Journalisation des séries et répétitions.
+- Historique des entraînements.
+- Statistiques de base.
+- Design PWA axé sur le mobile.
 
 [Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.18...HEAD
 [1.4.18]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.14...v1.4.18
 [1.4.14]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.13...v1.4.14
+[1.4.13]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.12...v1.4.13
+[1.4.12]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.11...v1.4.12
+[1.4.11]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.10...v1.4.11
+[1.4.10]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.9...v1.4.10
+[1.4.9]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.8...v1.4.9
 [1.4.8]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.7...v1.4.8
 [1.4.7]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.6...v1.4.7
 [1.4.6]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.5...v1.4.6
