@@ -372,6 +372,7 @@ onUnmounted(() => {
                         <button
                             @click="toggleTimer"
                             class="text-text-main flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+                            :aria-label="status === 'running' ? 'Mettre en pause' : 'Démarrer'"
                         >
                             <span class="material-symbols-outlined text-3xl">
                                 {{ status === 'running' ? 'pause' : 'play_arrow' }}
@@ -381,6 +382,7 @@ onUnmounted(() => {
                         <button
                             @click="resetRunner"
                             class="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-lg backdrop-blur-md transition-transform hover:scale-110 active:scale-95"
+                            aria-label="Réinitialiser"
                         >
                             <span class="material-symbols-outlined text-3xl">restart_alt</span>
                         </button>
@@ -489,18 +491,21 @@ onUnmounted(() => {
                                 @click="loadTimer(timer)"
                                 class="text-text-muted hover:text-electric-orange p-2 transition-colors"
                                 title="Charger & Lancer"
+                                aria-label="Charger et lancer"
                             >
                                 <span class="material-symbols-outlined">play_circle</span>
                             </button>
                             <button
                                 @click="editTimer(timer)"
                                 class="text-text-muted p-2 transition-colors hover:text-blue-500"
+                                aria-label="Modifier"
                             >
                                 <span class="material-symbols-outlined">edit</span>
                             </button>
                             <button
                                 @click="deleteTimer(timer)"
                                 class="text-text-muted p-2 transition-colors hover:text-red-500"
+                                aria-label="Supprimer"
                             >
                                 <span class="material-symbols-outlined">delete</span>
                             </button>
