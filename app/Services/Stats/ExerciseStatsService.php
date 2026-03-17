@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace App\Services\Stats;
 
+use App\DTOs\Stats\Exercise1RMProgressPoint;
+use App\DTOs\Stats\MuscleDistributionStat;
+use App\Models\Set;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 final class ExerciseStatsService
 {
     /**
-     * @return array<int, array{category: string, volume: float}>
+     * @return array<int, MuscleDistributionStat>
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
         return Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => DB::table('sets')
+            fn (): array => Set::query()
+                ->toBase()
                 ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
                 ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
                 ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
@@ -28,16 +31,16 @@ final class ExerciseStatsService
                 ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
                 ->groupBy('exercises.category')
                 ->get()
-                ->map(fn (\stdClass $row): array => [
-                    'category' => (string) ($row->category ?? 'Unknown'),
-                    'volume' => (float) ($row->volume ?? 0.0),
-                ])
+                ->map(fn (\stdClass $row): MuscleDistributionStat => new MuscleDistributionStat(
+                    (string) ($row->category ?? 'Unknown'),
+                    (float) ($row->volume ?? 0.0),
+                ))
                 ->toArray()
         );
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, one_rep_max: float}>
+     * @return array<int, Exercise1RMProgressPoint>
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
@@ -47,7 +50,8 @@ final class ExerciseStatsService
         return Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}.v{$version}",
             now()->addMinutes(30),
-            fn (): array => DB::table('sets')
+            fn (): array => Set::query()
+                ->toBase()
                 ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
                 ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
                 ->where('workouts.user_id', $user->id)
@@ -57,11 +61,11 @@ final class ExerciseStatsService
                 ->groupBy('workouts.started_at')
                 ->orderBy('workouts.started_at')
                 ->get()
-                ->map(fn (\stdClass $set): array => [
-                    'date' => Carbon::parse($set->started_at)->format('d/m'),
-                    'full_date' => Carbon::parse($set->started_at)->format('Y-m-d'),
-                    'one_rep_max' => (float) $set->epley_1rm,
-                ])
+                ->map(fn (\stdClass $set): Exercise1RMProgressPoint => new Exercise1RMProgressPoint(
+                    Carbon::parse($set->started_at)->format('d/m'),
+                    Carbon::parse($set->started_at)->format('Y-m-d'),
+                    (float) $set->epley_1rm,
+                ))
                 ->toArray()
         );
     }

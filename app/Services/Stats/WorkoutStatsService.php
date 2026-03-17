@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Stats;
 
+use App\DTOs\Stats\DistributionStat;
+use App\DTOs\Stats\DurationHistoryPoint;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Facades\Cache;
@@ -11,7 +13,7 @@ use Illuminate\Support\Facades\Cache;
 final class WorkoutStatsService
 {
     /**
-     * @return array<int, array{date: string, duration: int, name: string}>
+     * @return array<int, DurationHistoryPoint>
      */
     public function getDurationHistory(User $user, int $limit = 20): array
     {
@@ -24,17 +26,17 @@ final class WorkoutStatsService
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn (Workout $workout): array => [
-                    'date' => $workout->started_at->format('d/m'),
-                    'duration' => $workout->ended_at ? (int) abs($workout->started_at->diffInMinutes($workout->ended_at)) : 0,
-                    'name' => $workout->name ?? __('Workout'),
-                ])
+                ->map(fn (Workout $workout): DurationHistoryPoint => new DurationHistoryPoint(
+                    $workout->started_at->format('d/m'),
+                    $workout->ended_at ? (int) abs($workout->started_at->diffInMinutes($workout->ended_at)) : 0,
+                    $workout->name ?? __('Workout'),
+                ))
                 ->reverse()->values()->toArray()
         );
     }
 
     /**
-     * @return array<int, array{label: string, count: int}>
+     * @return array<int, DistributionStat>
      */
     public function getDurationDistribution(User $user, int $days = 90): array
     {
@@ -67,7 +69,7 @@ final class WorkoutStatsService
                 }
 
                 return collect($buckets)
-                    ->map(fn (int $count, string $label): array => ['label' => __($label), 'count' => $count])
+                    ->map(fn (int $count, string $label): DistributionStat => new DistributionStat(__($label), $count))
                     ->values()
                     ->all();
             }
@@ -75,7 +77,7 @@ final class WorkoutStatsService
     }
 
     /**
-     * @return array<int, array{label: string, count: int}>
+     * @return array<int, DistributionStat>
      */
     public function getTimeOfDayDistribution(User $user, int $days = 90): array
     {
@@ -107,7 +109,7 @@ final class WorkoutStatsService
                 }
 
                 return collect($buckets)
-                    ->map(fn (int $count, string $label): array => ['label' => __($label), 'count' => $count])
+                    ->map(fn (int $count, string $label): DistributionStat => new DistributionStat(__($label), $count))
                     ->values()
                     ->all();
             }

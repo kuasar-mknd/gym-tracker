@@ -13,6 +13,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 test('authenticated user can view stats page', function (): void {
+    $this->withoutExceptionHandling();
     $user = User::factory()->create();
 
     actingAs($user)
@@ -113,8 +114,8 @@ test('stats page calculates muscle distribution correctly', function (): void {
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->has('muscleDistribution', 2)
                 ->where('muscleDistribution', function ($distribution): bool {
-                    $chest = collect($distribution)->firstWhere('category', 'Pectoraux');
-                    $back = collect($distribution)->firstWhere('category', 'Dos');
+                    $chest = collect($distribution)->first(fn ($d) => $d['category'] === 'Pectoraux');
+                    $back = collect($distribution)->first(fn ($d) => $d['category'] === 'Dos');
 
                     return $chest['volume'] == 1000 && $back['volume'] == 500;
                 })
@@ -158,8 +159,8 @@ test('stats page calculates monthly comparison correctly', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                ->where('monthlyComparison.current_month_volume', fn ($val): bool => $val == 1000)
-                ->where('monthlyComparison.previous_month_volume', fn ($val): bool => $val == 500)
+                ->where('monthlyComparison.current_volume', fn ($val): bool => $val == 1000)
+                ->where('monthlyComparison.previous_volume', fn ($val): bool => $val == 500)
                 ->where('monthlyComparison.percentage', fn ($val): bool => $val == 100)
             )
         );

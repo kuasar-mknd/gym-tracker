@@ -4,6 +4,19 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DTOs\Stats\BodyFatHistoryPoint;
+use App\DTOs\Stats\DailyVolumeTrendPoint;
+use App\DTOs\Stats\DistributionStat;
+use App\DTOs\Stats\DurationHistoryPoint;
+use App\DTOs\Stats\Exercise1RMProgressPoint;
+use App\DTOs\Stats\LatestBodyMetrics;
+use App\DTOs\Stats\MonthlyVolumePoint;
+use App\DTOs\Stats\MuscleDistributionStat;
+use App\DTOs\Stats\VolumeComparison;
+use App\DTOs\Stats\VolumeHistoryPoint;
+use App\DTOs\Stats\VolumeTrendPoint;
+use App\DTOs\Stats\WeeklyVolumeTrendPoint;
+use App\DTOs\Stats\WeightHistoryPoint;
 use App\Models\User;
 use App\Services\Stats\BodyStatsService;
 use App\Services\Stats\ExerciseStatsService;
@@ -27,7 +40,7 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, name: string, volume: float}>
+     * @return array<int, VolumeTrendPoint>
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
@@ -35,7 +48,7 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, day_name: string, volume: float}>
+     * @return array<int, DailyVolumeTrendPoint>
      */
     public function getDailyVolumeTrend(User $user, int $days = 7): array
     {
@@ -43,7 +56,7 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{category: string, volume: float}>
+     * @return array<int, MuscleDistributionStat>
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
@@ -51,39 +64,33 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, one_rep_max: float}>
+     * @return array<int, Exercise1RMProgressPoint>
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
         return $this->exerciseStats->getExercise1RMProgress($user, $exerciseId, $days);
     }
 
-    /**
-     * @return array{current_month_volume: float, previous_month_volume: float, difference: float, percentage: float}
-     */
-    public function getMonthlyVolumeComparison(User $user): array
+    public function getMonthlyVolumeComparison(User $user): VolumeComparison
     {
         return $this->volumeStats->getMonthlyVolumeComparison($user);
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, weight: float}>
+     * @return array<int, WeightHistoryPoint>
      */
     public function getWeightHistory(User $user, int $days = 90): array
     {
         return $this->bodyStats->getWeightHistory($user, $days);
     }
 
-    /**
-     * @return array{latest_weight: float|string|null, weight_change: float, latest_body_fat: float|string|null}
-     */
-    public function getLatestBodyMetrics(User $user): array
+    public function getLatestBodyMetrics(User $user): LatestBodyMetrics
     {
         return $this->bodyStats->getLatestBodyMetrics($user);
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, body_fat: float}>
+     * @return array<int, BodyFatHistoryPoint>
      */
     public function getBodyFatHistory(User $user, int $days = 90): array
     {
@@ -91,23 +98,20 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, day_label: string, volume: float}>
+     * @return array<int, WeeklyVolumeTrendPoint>
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
         return $this->volumeStats->getWeeklyVolumeTrend($user);
     }
 
-    /**
-     * @return array{current_week_volume: float, previous_week_volume: float, difference: float, percentage: float}
-     */
-    public function getWeeklyVolumeComparison(User $user): array
+    public function getWeeklyVolumeComparison(User $user): VolumeComparison
     {
         return $this->volumeStats->getWeeklyVolumeComparison($user);
     }
 
     /**
-     * @return array<int, array{date: string, duration: int, name: string}>
+     * @return array<int, DurationHistoryPoint>
      */
     public function getDurationHistory(User $user, int $limit = 20): array
     {
@@ -115,7 +119,7 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{date: string, volume: float, name: string}>
+     * @return array<int, VolumeHistoryPoint>
      */
     public function getVolumeHistory(User $user, int $limit = 20): array
     {
@@ -123,7 +127,7 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{label: string, count: int}>
+     * @return array<int, DistributionStat>
      */
     public function getDurationDistribution(User $user, int $days = 90): array
     {
@@ -131,7 +135,7 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{label: string, count: int}>
+     * @return array<int, DistributionStat>
      */
     public function getTimeOfDayDistribution(User $user, int $days = 90): array
     {
@@ -139,7 +143,7 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, array{month: string, volume: float}>
+     * @return array<int, MonthlyVolumePoint>
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {

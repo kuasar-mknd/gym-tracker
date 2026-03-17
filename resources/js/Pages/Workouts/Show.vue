@@ -24,6 +24,8 @@ import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/UI/Modal.vue'
+import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
+import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import { Head, useForm, router, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
@@ -667,47 +669,14 @@ const filteredExercises = computed(() => {
             </div>
         </Modal>
 
-        <Modal :show="showSettingsModal" @close="showSettingsModal = false" max-width="lg">
-            <div class="p-6">
-                <h2 class="font-display text-text-main mb-6 text-2xl font-black uppercase italic">Paramètres</h2>
-                <form @submit.prevent="updateSettings" class="space-y-5">
-                    <GlassInput v-model="settingsForm.name" label="Nom" dusk="workout-name-input" />
-                    <GlassInput v-model="settingsForm.started_at" type="datetime-local" label="Date" />
-                    <GlassButton
-                        type="submit"
-                        variant="primary"
-                        :loading="settingsForm.processing"
-                        class="w-full"
-                        dusk="save-settings-button"
-                        >Sauvegarder</GlassButton
-                    >
-                </form>
-            </div>
-        </Modal>
+        <WorkoutSettingsModal
+            :show="showSettingsModal"
+            :form="settingsForm"
+            @close="showSettingsModal = false"
+            @submit="updateSettings"
+        />
 
-        <Modal :show="showFinishModal" @close="showFinishModal = false" max-width="sm">
-            <div class="p-6 text-center">
-                <h3
-                    class="font-display text-text-main mb-6 text-xl font-black uppercase italic"
-                    dusk="finish-workout-modal-title"
-                >
-                    Terminer la séance ?
-                </h3>
-                <div class="flex gap-3">
-                    <GlassButton variant="secondary" @click="showFinishModal = false" class="flex-1"
-                        >Annuler</GlassButton
-                    >
-                    <GlassButton
-                        variant="primary"
-                        id="confirm-finish-button"
-                        dusk="confirm-finish-button"
-                        @click="confirmFinishWorkout"
-                        class="flex-1"
-                        >Confirmer</GlassButton
-                    >
-                </div>
-            </div>
-        </Modal>
+        <WorkoutFinishModal :show="showFinishModal" @close="showFinishModal = false" @confirm="confirmFinishWorkout" />
 
         <Modal :show="showConfirmModal" @close="showConfirmModal = false" max-width="sm">
             <div class="p-6 text-center">

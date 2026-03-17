@@ -26,13 +26,15 @@ it('calculates volume history correctly', function (): void {
     Set::factory()->create(['workout_line_id' => $line1->id, 'weight' => 10, 'reps' => 10]);
     Set::factory()->create(['workout_line_id' => $line1->id, 'weight' => 5, 'reps' => 5]);
 
-    // Workout 2: 0 volume (empty)
+    // Workout 2: 300 volume
     $workout2 = Workout::factory()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::now()->subDays(1),
         'ended_at' => Carbon::now()->subDays(1)->addHour(),
         'name' => 'Workout 2',
     ]);
+    $line2 = WorkoutLine::factory()->create(['workout_id' => $workout2->id]);
+    Set::factory()->create(['workout_line_id' => $line2->id, 'weight' => 20, 'reps' => 15]);
 
     // Workout 3: Ongoing (should be excluded from volume history per current logic checks 'ended_at'?)
     // Checking code: ->whereNotNull('ended_at')
@@ -57,10 +59,10 @@ it('calculates volume history correctly', function (): void {
     // So it should be chronological (oldest to newest).
 
     // Workout 1 (Oldest)
-    expect($volumeHistory[0]['name'])->toBe('Workout 1');
-    expect($volumeHistory[0]['volume'])->toBe(125.0); // 10*10 + 5*5
+    expect($volumeHistory[0]->name)->toBe('Workout 1');
+    expect($volumeHistory[0]->volume)->toBe(125.0); // 10*10 + 5*5
 
     // Workout 2 (Newest)
-    expect($volumeHistory[1]['name'])->toBe('Workout 2');
-    expect($volumeHistory[1]['volume'])->toEqual(0); // or 0
+    expect($volumeHistory[1]->name)->toBe('Workout 2');
+    expect($volumeHistory[1]->volume)->toBe(300.0); // 20*15
 });

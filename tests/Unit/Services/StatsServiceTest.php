@@ -42,7 +42,7 @@ class StatsServiceTest extends TestCase
         $trend = $this->statsService->getVolumeTrend($user);
 
         $this->assertCount(1, $trend);
-        $this->assertEquals(1000, $trend[0]['volume']);
+        $this->assertEquals(1000, $trend[0]->volume);
     }
 
     public function test_can_calculate_muscle_distribution(): void
@@ -63,8 +63,8 @@ class StatsServiceTest extends TestCase
         $dist = $this->statsService->getMuscleDistribution($user);
 
         $this->assertCount(1, $dist);
-        $this->assertEquals('Pectoraux', $dist[0]['category']);
-        $this->assertEquals(1000, $dist[0]['volume']);
+        $this->assertEquals('Pectoraux', $dist[0]->category);
+        $this->assertEquals(1000, $dist[0]->volume);
     }
 
     public function test_can_calculate_monthly_volume_comparison(): void
@@ -89,10 +89,10 @@ class StatsServiceTest extends TestCase
 
         $comparison = $this->statsService->getMonthlyVolumeComparison($user);
 
-        $this->assertEquals(500, $comparison['current_month_volume']);
-        $this->assertEquals(400, $comparison['previous_month_volume']);
-        $this->assertEquals(100, $comparison['difference']);
-        $this->assertEquals(25.0, $comparison['percentage']);
+        $this->assertEquals(500, $comparison->current_volume);
+        $this->assertEquals(400, $comparison->previous_volume);
+        $this->assertEquals(100, $comparison->difference);
+        $this->assertEquals(25.0, $comparison->percentage);
     }
 
     public function test_can_calculate_weekly_volume_trend(): void
@@ -119,11 +119,11 @@ class StatsServiceTest extends TestCase
         $found = false;
 
         foreach ($trend as $day) {
-            if ($day['date'] === $targetDateStr) {
-                $this->assertEquals(1000, $day['volume']);
+            if ($day->date === $targetDateStr) {
+                $this->assertEquals(1000, $day->volume);
                 $found = true;
             } else {
-                $this->assertEquals(0, $day['volume']);
+                $this->assertEquals(0, $day->volume);
             }
         }
         $this->assertTrue($found);
@@ -151,10 +151,10 @@ class StatsServiceTest extends TestCase
 
         $comparison = $this->statsService->getWeeklyVolumeComparison($user);
 
-        $this->assertEquals(500, $comparison['current_week_volume']);
-        $this->assertEquals(400, $comparison['previous_week_volume']);
-        $this->assertEquals(100, $comparison['difference']);
-        $this->assertEquals(25.0, $comparison['percentage']);
+        $this->assertEquals(500, $comparison->current_volume);
+        $this->assertEquals(400, $comparison->previous_volume);
+        $this->assertEquals(100, $comparison->difference);
+        $this->assertEquals(25.0, $comparison->percentage);
     }
 
     public function test_can_get_volume_history(): void
@@ -185,10 +185,10 @@ class StatsServiceTest extends TestCase
 
         $this->assertCount(2, $history);
         // History is returned oldest first
-        $this->assertEquals('Workout 1', $history[0]['name']);
-        $this->assertEquals(1000, $history[0]['volume']);
-        $this->assertEquals('Workout 2', $history[1]['name']);
-        $this->assertEquals(500, $history[1]['volume']);
+        $this->assertEquals('Workout 1', $history[0]->name);
+        $this->assertEquals(1000, $history[0]->volume);
+        $this->assertEquals('Workout 2', $history[1]->name);
+        $this->assertEquals(500, $history[1]->volume);
     }
 
     public function test_can_retrieve_duration_history(): void
@@ -221,8 +221,8 @@ class StatsServiceTest extends TestCase
         $this->assertCount(3, $history);
 
         // Check order (oldest first due to reverse())
-        $this->assertEquals(60, $history[0]['duration']);
-        $this->assertEquals(90, $history[1]['duration']);
-        $this->assertEquals(45, $history[2]['duration']); // Should be absolute difference
+        $this->assertEquals(60, $history[0]->duration);
+        $this->assertEquals(90, $history[1]->duration);
+        $this->assertEquals(45, $history[2]->duration); // Should be absolute difference
     }
 }

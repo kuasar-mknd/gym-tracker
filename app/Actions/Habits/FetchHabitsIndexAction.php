@@ -6,7 +6,6 @@ namespace App\Actions\Habits;
 
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 final class FetchHabitsIndexAction
 {
@@ -34,7 +33,7 @@ final class FetchHabitsIndexAction
 
         // Calculate consistency for the last 30 days
         $past30Days = Carbon::now()->subDays(29)->startOfDay();
-        $consistencyStats = DB::table('habit_logs')
+        $consistencyStats = \App\Models\HabitLog::query()
             ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
             ->where('habits.user_id', $user->id)
             ->where('habit_logs.date', '>=', $past30Days)

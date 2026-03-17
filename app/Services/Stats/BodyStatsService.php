@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Stats;
 
+use App\DTOs\Stats\BodyFatHistoryPoint;
+use App\DTOs\Stats\LatestBodyMetrics;
+use App\DTOs\Stats\WeightHistoryPoint;
 use App\Models\BodyMeasurement;
 use App\Models\User;
 use Carbon\Carbon;
@@ -12,7 +15,7 @@ use Illuminate\Support\Facades\Cache;
 final class BodyStatsService
 {
     /**
-     * @return array<int, array{date: string, full_date: string, weight: float}>
+     * @return array<int, WeightHistoryPoint>
      */
     public function getWeightHistory(User $user, int $days = 90): array
     {
@@ -23,24 +26,21 @@ final class BodyStatsService
                 ->where('measured_at', '>=', now()->subDays($days))
                 ->orderBy('measured_at', 'asc')
                 ->get()
-                ->map(fn (BodyMeasurement $m): array => [
-                    'date' => Carbon::parse($m->measured_at)->format('d/m'),
-                    'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
-                    'weight' => (float) $m->weight,
-                ])
+                ->map(fn (BodyMeasurement $m): WeightHistoryPoint => new WeightHistoryPoint(
+                    Carbon::parse($m->measured_at)->format('d/m'),
+                    Carbon::parse($m->measured_at)->format('Y-m-d'),
+                    (float) $m->weight,
+                ))
                 ->toArray()
         );
     }
 
-    /**
-     * @return array{latest_weight: float|string|null, weight_change: float, latest_body_fat: float|string|null}
-     */
-    public function getLatestBodyMetrics(User $user): array
+    public function getLatestBodyMetrics(User $user): LatestBodyMetrics
     {
         return Cache::remember(
             "stats.latest_metrics.{$user->id}",
             now()->addMinutes(30),
-            function () use ($user): array {
+            function () use ($user): LatestBodyMetrics {
                 $measurements = $user->bodyMeasurements()
                     ->select(['id', 'user_id', 'weight', 'body_fat', 'measured_at'])
                     ->latest('measured_at')
@@ -52,17 +52,17 @@ final class BodyStatsService
 
                 $weightChange = $latest && $previous ? round($latest->weight - $previous->weight, 1) : 0;
 
-                return [
-                    'latest_weight' => $latest?->weight,
-                    'weight_change' => (float) $weightChange,
-                    'latest_body_fat' => $latest?->body_fat,
-                ];
+                return new LatestBodyMetrics(
+                    $latest?->weight,
+                    (float) $weightChange,
+                    $latest?->body_fat,
+                );
             }
         );
     }
 
     /**
-     * @return array<int, array{date: string, full_date: string, body_fat: float}>
+     * @return array<int, BodyFatHistoryPoint>
      */
     public function getBodyFatHistory(User $user, int $days = 90): array
     {
@@ -74,11 +74,11 @@ final class BodyStatsService
                 ->whereNotNull('body_fat')
                 ->orderBy('measured_at', 'asc')
                 ->get()
-                ->map(fn (BodyMeasurement $m): array => [
-                    'date' => Carbon::parse($m->measured_at)->format('d/m'),
-                    'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'),
-                    'body_fat' => (float) $m->body_fat,
-                ])
+                ->map(fn (BodyMeasurement $m): BodyFatHistoryPoint => new BodyFatHistoryPoint(
+                    Carbon::parse($m->measured_at)->format('d/m'),
+                    Carbon::parse($m->measured_at)->format('Y-m-d'),
+                    (float) $m->body_fat,
+                ))
                 ->toArray()
         );
     }

@@ -45,7 +45,7 @@ final class FetchDashboardDataAction
 
         return [
             // ⚡ Bolt: Removed unused workoutsCount and thisWeekCount queries to prevent 2 unnecessary queries on dashboard load
-            'latestWeight' => $latestMetrics['latest_weight'] ?? null,
+            'latestWeight' => $latestMetrics->latest_weight ?? null,
             'recentWorkouts' => $this->getRecentWorkouts($user),
             'recentPRs' => $this->getRecentPRs($user),
             'activeGoals' => $this->getActiveGoals($user),
@@ -66,8 +66,8 @@ final class FetchDashboardDataAction
         $stats = $this->statsService->getWeeklyVolumeComparison($user);
 
         return [
-            'current_week_volume' => $stats['current_week_volume'],
-            'percentage' => $stats['percentage'],
+            'current_week_volume' => $stats->current_volume,
+            'percentage' => $stats->percentage,
         ];
     }
 

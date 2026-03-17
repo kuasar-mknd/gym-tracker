@@ -16,6 +16,7 @@ import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import Modal from '@/Components/UI/Modal.vue'
+import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
@@ -443,170 +444,23 @@ const typeLabel = (type) => {
                     </div>
 
                     <div class="space-y-3">
-                        <SwipeableRow
+                        <ExerciseCard
                             v-for="exercise in exercisesInCat"
                             :key="exercise.id"
-                            :disabled="editingExercise === exercise.id"
-                            :action-threshold="80"
-                            class="mb-3 block"
-                        >
-                            <template #action-left>
-                                <button
-                                    @click="startEdit(exercise)"
-                                    class="flex h-full w-full items-center justify-start bg-blue-500 pl-6 text-white"
-                                    data-testid="edit-exercise-button-mobile"
-                                >
-                                    <div class="flex flex-col items-center">
-                                        <span class="material-symbols-outlined text-2xl">edit</span>
-                                        <span class="text-[10px] font-bold tracking-wider uppercase">Modifier</span>
-                                    </div>
-                                </button>
-                            </template>
-
-                            <template #action-right>
-                                <button
-                                    @click="deleteExercise(exercise.id)"
-                                    class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
-                                    data-testid="delete-exercise-button-mobile"
-                                >
-                                    <div class="flex flex-col items-center">
-                                        <span class="material-symbols-outlined text-2xl">delete</span>
-                                        <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
-                                    </div>
-                                </button>
-                            </template>
-
-                            <GlassCard
-                                padding="p-4"
-                                :dusk="`exercise-card-${exercise.id}`"
-                                :class="[
-                                    'group relative overflow-hidden transition-all duration-300',
-                                    'border-l-[6px]',
-                                    categoryBorderColors[category] || 'border-l-slate-300',
-                                ]"
-                                data-testid="exercise-card"
-                            >
-                                <!-- View Mode -->
-                                <div
-                                    v-if="editingExercise !== exercise.id"
-                                    class="flex cursor-pointer items-center justify-between"
-                                    @click="router.visit(route('exercises.show', { exercise: exercise.id }))"
-                                >
-                                    <div class="flex items-center gap-4">
-                                        <div
-                                            :class="[
-                                                'flex size-14 items-center justify-center rounded-2xl',
-                                                exercise.type === 'strength'
-                                                    ? 'bg-electric-orange/10 text-electric-orange'
-                                                    : exercise.type === 'cardio'
-                                                      ? 'bg-neon-green/30 text-text-main'
-                                                      : 'bg-cyan-pure/10 text-cyan-pure',
-                                            ]"
-                                        >
-                                            <span class="material-symbols-outlined text-3xl">
-                                                {{ typeIcons[exercise.type] || 'fitness_center' }}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <div
-                                                class="font-display text-text-main text-lg leading-tight font-bold uppercase italic"
-                                            >
-                                                {{ exercise.name }}
-                                            </div>
-                                            <div
-                                                class="text-text-muted mt-1 text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                {{ typeLabel(exercise.type) }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div
-                                        class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
-                                    >
-                                        <button
-                                            @click.stop="startEdit(exercise)"
-                                            :dusk="`edit-exercise-btn-${exercise.id}`"
-                                            class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all sm:hidden"
-                                            :aria-label="`Modifier ${exercise.name}`"
-                                        >
-                                            <span class="material-symbols-outlined text-sm opacity-50">edit</span>
-                                        </button>
-
-                                        <!-- Desktop Buttons -->
-                                        <button
-                                            @click.stop="startEdit(exercise)"
-                                            :dusk="`edit-exercise-btn-desktop-${exercise.id}`"
-                                            class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all sm:flex"
-                                            data-testid="edit-exercise-button"
-                                            :aria-label="`Modifier ${exercise.name}`"
-                                        >
-                                            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                                        </button>
-                                        <button
-                                            @click.stop="deleteExercise(exercise.id)"
-                                            :dusk="`delete-exercise-btn-${exercise.id}`"
-                                            class="text-text-muted hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:flex"
-                                            data-testid="delete-exercise-button"
-                                            :aria-label="`Supprimer ${exercise.name}`"
-                                        >
-                                            <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Edit Mode -->
-                                <form v-else @submit.prevent="updateExercise(exercise)" class="space-y-4">
-                                    <GlassInput
-                                        v-model="editForm.name"
-                                        dusk="edit-exercise-name"
-                                        placeholder="Nom de l'exercice"
-                                        :error="editForm.errors.name"
-                                    />
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <select
-                                            v-model="editForm.type"
-                                            dusk="edit-exercise-type"
-                                            class="glass-input text-sm"
-                                        >
-                                            <option v-for="t in types" :key="t.value" :value="t.value">
-                                                {{ t.label }}
-                                            </option>
-                                        </select>
-                                        <select
-                                            v-model="editForm.category"
-                                            dusk="edit-exercise-category"
-                                            class="glass-input text-sm"
-                                        >
-                                            <option value="">— Aucune —</option>
-                                            <option v-for="cat in categories" :key="cat" :value="cat">
-                                                {{ cat }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <GlassButton
-                                            type="submit"
-                                            variant="primary"
-                                            size="sm"
-                                            dusk="save-exercise-btn"
-                                            :loading="editForm.processing"
-                                            data-testid="save-exercise-button"
-                                        >
-                                            Sauvegarder
-                                        </GlassButton>
-                                        <GlassButton
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            dusk="cancel-edit-btn"
-                                            @click="cancelEdit"
-                                        >
-                                            Annuler
-                                        </GlassButton>
-                                    </div>
-                                </form>
-                            </GlassCard>
-                        </SwipeableRow>
+                            :exercise="exercise"
+                            :is-editing="editingExercise === exercise.id"
+                            :edit-form="editForm"
+                            :category="category"
+                            :types="types"
+                            :categories="categories"
+                            :category-border-colors="categoryBorderColors"
+                            :type-icons="typeIcons"
+                            :type-label="typeLabel"
+                            @start-edit="startEdit"
+                            @cancel-edit="cancelEdit"
+                            @update="updateExercise"
+                            @delete="deleteExercise"
+                        />
                     </div>
                 </div>
             </div>

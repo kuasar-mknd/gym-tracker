@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\HasFitnessData;
+use App\Models\Traits\HasToolsData;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -39,7 +40,9 @@ final class User extends Authenticatable implements MustVerifyEmail
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
 
+    use HasFitnessData;
     use HasPushSubscriptions;
+    use HasToolsData;
     use LogsActivity;
     use Notifiable;
 
@@ -65,93 +68,11 @@ final class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * @return HasMany<Workout, $this>
-     */
-    public function workouts(): HasMany
-    {
-        return $this->hasMany(Workout::class);
-    }
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasManyThrough<WorkoutLine, Workout, $this>
-     */
-    public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
-    {
-        return $this->hasManyThrough(WorkoutLine::class, Workout::class);
-    }
-
-    /**
-     * @return HasMany<BodyMeasurement, $this>
-     */
-    public function bodyMeasurements(): HasMany
-    {
-        return $this->hasMany(BodyMeasurement::class);
-    }
-
-    /**
-     * @return HasMany<BodyPartMeasurement, $this>
-     */
-    public function bodyPartMeasurements(): HasMany
-    {
-        return $this->hasMany(BodyPartMeasurement::class);
-    }
-
-    /**
-     * @return HasMany<PersonalRecord, $this>
-     */
-    public function personalRecords(): HasMany
-    {
-        return $this->hasMany(PersonalRecord::class);
-    }
-
-    /**
-     * @return HasMany<DailyJournal, $this>
-     */
-    public function dailyJournals(): HasMany
-    {
-        return $this->hasMany(DailyJournal::class);
-    }
-
-    /**
-     * @return HasMany<Plate, $this>
-     */
-    public function plates(): HasMany
-    {
-        return $this->hasMany(Plate::class);
-    }
-
-    /**
-     * @return HasMany<WilksScore, $this>
-     */
-    public function wilksScores(): HasMany
-    {
-        return $this->hasMany(WilksScore::class);
-    }
-
-    /**
      * @return HasMany<NotificationPreference, $this>
      */
     public function notificationPreferences(): HasMany
     {
         return $this->hasMany(NotificationPreference::class);
-    }
-
-    /**
-     * @return HasMany<Goal, $this>
-     */
-    public function goals(): HasMany
-    {
-        return $this->hasMany(Goal::class);
-    }
-
-    /**
-     * @return BelongsToMany<Achievement, $this, \Illuminate\Database\Eloquent\Relations\Pivot, 'pivot'>
-     */
-    public function achievements(): BelongsToMany
-    {
-        return $this->belongsToMany(Achievement::class, 'user_achievements')
-            ->withPivot('achieved_at')
-            ->withTimestamps();
     }
 
     public function isNotificationEnabled(string $type): bool
@@ -167,62 +88,6 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->where('type', $type)
             ->where('is_enabled', true)
             ->exists();
-    }
-
-    /**
-     * @return HasMany<WorkoutTemplate, $this>
-     */
-    public function workoutTemplates(): HasMany
-    {
-        return $this->hasMany(WorkoutTemplate::class);
-    }
-
-    /**
-     * @return HasMany<MacroCalculation, $this>
-     */
-    public function macroCalculations(): HasMany
-    {
-        return $this->hasMany(MacroCalculation::class);
-    }
-
-    /**
-     * @return HasMany<Habit, $this>
-     */
-    public function habits(): HasMany
-    {
-        return $this->hasMany(Habit::class);
-    }
-
-    /**
-     * @return HasMany<WaterLog, $this>
-     */
-    public function waterLogs(): HasMany
-    {
-        return $this->hasMany(WaterLog::class);
-    }
-
-    /**
-     * @return HasMany<IntervalTimer, $this>
-     */
-    public function intervalTimers(): HasMany
-    {
-        return $this->hasMany(IntervalTimer::class);
-    }
-
-    /**
-     * @return HasMany<Fast, $this>
-     */
-    public function fasts(): HasMany
-    {
-        return $this->hasMany(Fast::class);
-    }
-
-    /**
-     * @return HasMany<SupplementLog, $this>
-     */
-    public function supplementLogs(): HasMany
-    {
-        return $this->hasMany(SupplementLog::class);
     }
 
     public function isPushEnabled(string $type): bool

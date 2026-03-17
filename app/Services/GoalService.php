@@ -124,7 +124,7 @@ final class GoalService
 
         // ⚡ Bolt Optimization: Calculate max volume directly in SQL instead of loading into PHP memory.
         // Impact: Reduces memory usage and improves performance for users with many workouts.
-        $maxVolume = \Illuminate\Support\Facades\DB::table('workouts')
+        $maxVolume = \App\Models\Workout::query()
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $goal->user_id)

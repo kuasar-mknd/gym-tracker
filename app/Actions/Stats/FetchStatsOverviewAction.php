@@ -24,9 +24,9 @@ class FetchStatsOverviewAction
         $bodyMetrics = $this->statsService->getLatestBodyMetrics($user);
 
         return [
-            'latestWeight' => $bodyMetrics['latest_weight'],
-            'weightChange' => $bodyMetrics['weight_change'],
-            'bodyFat' => $bodyMetrics['latest_body_fat'],
+            'latestWeight' => $bodyMetrics->latest_weight,
+            'weightChange' => $bodyMetrics->weight_change,
+            'bodyFat' => $bodyMetrics->latest_body_fat,
             'exercises' => $this->getFilteredExercises($user->id),
             'selectedPeriod' => $period,
         ];
