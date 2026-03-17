@@ -117,7 +117,15 @@ const deleteTemplate = (templateId) => {
                                 class="text-text-muted flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-xs backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/10 active:scale-95"
                             >
                                 <span class="text-text-main font-medium">{{ line.exercise.name }}</span>
-                                <span class="text-text-muted/50">• {{ line.workout_template_sets.length }} séries</span>
+                                <span class="text-text-muted/50"
+                                    >• {{ line.workout_template_sets_count || 0 }} séries</span
+                                >
+                            </div>
+                            <div
+                                v-if="template.workout_template_lines_count > 3"
+                                class="text-text-muted/50 mt-2 ml-1 text-xs font-bold italic"
+                            >
+                                + {{ template.workout_template_lines_count - 3 }} exercices
                             </div>
                         </div>
                     </div>

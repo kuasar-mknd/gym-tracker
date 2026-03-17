@@ -22,12 +22,14 @@ defineProps({
                 <GlassCard :hover="true" padding="p-4">
                     <div class="mb-2 flex items-center justify-between">
                         <span class="text-text-main line-clamp-1 text-sm font-bold">{{ goal.title }}</span>
-                        <span class="text-electric-orange text-xs font-black">{{ Math.round(goal.progress) }}%</span>
+                        <span class="text-electric-orange text-xs font-black"
+                            >{{ Math.round(goal.progress_pct) }}%</span
+                        >
                     </div>
                     <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
                         <div
                             class="glow-orange bg-gradient-main h-full transition-all duration-1000"
-                            :style="{ width: goal.progress + '%' }"
+                            :style="{ width: goal.progress_pct + '%' }"
                         ></div>
                     </div>
                 </GlassCard>

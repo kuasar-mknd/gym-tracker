@@ -21,6 +21,12 @@ final class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(\App\Services\StatsService::class);
+        $this->app->singleton(\App\Services\GoalService::class);
+        $this->app->singleton(\App\Services\AchievementService::class);
+        $this->app->singleton(\App\Services\NotificationService::class);
+        $this->app->singleton(\App\Services\PersonalRecordService::class);
+
         if ($this->app->environment('testing')) {
             config(['telescope.enabled' => false]);
         }

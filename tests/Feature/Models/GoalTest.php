@@ -81,7 +81,7 @@ class GoalTest extends TestCase
         ]);
 
         $this->assertNotNull($goal->fresh()->completed_at);
-        $this->assertEquals(100, $goal->fresh()->progress);
+        $this->assertEquals(100, $goal->fresh()->progress_pct);
     }
 
     public function test_measurement_goal_updates_on_measurement_save(): void
@@ -102,6 +102,6 @@ class GoalTest extends TestCase
         ]);
 
         $this->assertEquals(85, $goal->fresh()->current_value);
-        $this->assertEquals(50, $goal->fresh()->progress); // (90-85)/(90-80) = 5/10 = 50%
+        $this->assertEquals(50, $goal->fresh()->progress_pct); // (90-85)/(90-80) = 5/10 = 50%
     }
 }

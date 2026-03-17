@@ -29,7 +29,7 @@ class GoalResource extends JsonResource
             'measurement_type' => $this->measurement_type,
             'deadline' => $this->deadline?->format('Y-m-d'),
             'completed_at' => $this->completed_at,
-            'progress' => $this->progress,
+            'progress' => $this->progress_pct,
             'unit' => $this->unit,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

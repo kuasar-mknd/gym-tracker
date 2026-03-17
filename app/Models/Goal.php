@@ -23,7 +23,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property string|null $measurement_type
  * @property \Illuminate\Support\Carbon|null $deadline
  * @property \Illuminate\Support\Carbon|null $completed_at
- * @property-read float $progress
+ * @property float $progress_pct
  * @property-read string $unit
  * @property-read \App\Models\User $user
  * @property-read \App\Models\Exercise|null $exercise
@@ -39,6 +39,7 @@ class Goal extends Model
         'target_value',
         'current_value',
         'start_value',
+        'progress_pct',
         'exercise_id',
         'measurement_type',
         'deadline',
@@ -59,24 +60,6 @@ class Goal extends Model
     public function exercise(): BelongsTo
     {
         return $this->belongsTo(Exercise::class);
-    }
-
-    public function getProgressAttribute(): float
-    {
-        if ($this->target_value === $this->start_value) {
-            return $this->current_value >= $this->target_value ? 100 : 0;
-        }
-
-        $totalDiff = abs($this->target_value - $this->start_value);
-        $currentDiff = abs($this->current_value - $this->start_value);
-
-        if ($totalDiff === 0.0) {
-            return 0;
-        }
-
-        $progress = $currentDiff / $totalDiff * 100;
-
-        return min(max($progress, 0), 100);
     }
 
     public function getUnitAttribute(): string

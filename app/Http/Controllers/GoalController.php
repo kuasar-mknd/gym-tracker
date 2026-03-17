@@ -44,7 +44,7 @@ class GoalController extends Controller
                 ->with('exercise')
                 ->latest()
                 ->get()
-                ->append(['progress', 'unit']),
+                ->append(['unit']),
             'exercises' => Exercise::getCachedForUser($this->user()->id),
             'measurementTypes' => [
                 ['value' => 'weight', 'label' => 'Poids de corps'],

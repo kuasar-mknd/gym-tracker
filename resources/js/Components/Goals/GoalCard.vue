@@ -8,7 +8,7 @@ const props = defineProps({
     },
 })
 
-const progress = computed(() => props.goal.progress || 0)
+const progress = computed(() => props.goal.progress_pct || 0)
 const isCompleted = computed(() => !!props.goal.completed_at)
 
 const typeIcon = computed(() => {

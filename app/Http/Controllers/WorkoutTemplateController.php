@@ -33,8 +33,16 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
+        // ⚡ Bolt Optimization: Only load the line counts and the first few exercises for preview
         return Inertia::render('Workouts/Templates/Index', [
-            'templates' => WorkoutTemplate::with(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets'])
+            'templates' => WorkoutTemplate::withCount('workoutTemplateLines')
+                ->with(['workoutTemplateLines' => function ($query) {
+                    $query->select('id', 'workout_template_id', 'exercise_id')
+                        ->orderBy('order')
+                        ->limit(3)
+                        ->withCount('workoutTemplateSets')
+                        ->with('exercise:id,name');
+                }])
                 ->where('user_id', $this->user()->id)
                 ->latest()
                 ->get(),

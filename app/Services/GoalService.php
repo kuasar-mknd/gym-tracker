@@ -46,7 +46,7 @@ final class GoalService
             Goal::upsert(
                 $data,
                 ['id'],
-                ['current_value', 'completed_at', 'updated_at']
+                ['current_value', 'progress_pct', 'completed_at', 'updated_at']
             );
         }
     }
@@ -69,6 +69,31 @@ final class GoalService
         };
 
         $this->checkCompletion($goal);
+        $this->updateProgressPercentage($goal);
+    }
+
+    /**
+     * Calculate and update the progress percentage.
+     */
+    protected function updateProgressPercentage(Goal $goal): void
+    {
+        if ($goal->target_value === $goal->start_value) {
+            $goal->progress_pct = $goal->current_value >= $goal->target_value ? 100.0 : 0.0;
+
+            return;
+        }
+
+        $totalDiff = abs($goal->target_value - $goal->start_value);
+        $currentDiff = abs($goal->current_value - $goal->start_value);
+
+        if ($totalDiff === 0.0) {
+            $goal->progress_pct = 0.0;
+
+            return;
+        }
+
+        $progress = $currentDiff / $totalDiff * 100;
+        $goal->progress_pct = min(max($progress, 0), 100);
     }
 
     /**

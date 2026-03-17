@@ -182,7 +182,7 @@ final class FetchDashboardDataAction
             ->latest()
             ->take(2)
             ->get()
-            ->append(['progress', 'unit']);
+            ->append(['unit']);
     }
 
     /**
