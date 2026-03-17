@@ -7,7 +7,6 @@ namespace App\Providers;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\Workout;
-use App\Services\PersonalRecordService;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
@@ -65,7 +64,8 @@ final class AppServiceProvider extends ServiceProvider
             $user = $set->workoutLine->workout->user;
 
             if ($set->weight && $set->reps) {
-                app(PersonalRecordService::class)->syncSetPRs($set, $user);
+                // ⚡ Bolt: Offload PR sync to background job
+                \App\Jobs\SyncPersonalRecord::dispatch($set, $user);
             }
 
             // ⚡ Bolt: Offload heavy sync to background jobs

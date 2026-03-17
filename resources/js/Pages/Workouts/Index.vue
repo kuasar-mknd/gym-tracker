@@ -17,6 +17,7 @@ const VolumePerWorkoutChart = defineAsyncComponent(() => import('@/Components/St
 
 const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
+    totalExercises: Number,
     exercises: Array,
     monthlyFrequency: Array,
     monthlyVolume: Array,
@@ -154,7 +155,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     <GlassCard padding="p-4">
                         <div class="text-center">
                             <div class="text-accent-success text-2xl font-bold">
-                                {{ workouts.data?.reduce((acc, w) => acc + w.workout_lines.length, 0) || 0 }}
+                                {{ totalExercises || 0 }}
                             </div>
                             <div class="text-text-muted mt-1 text-xs">Exercices</div>
                         </div>

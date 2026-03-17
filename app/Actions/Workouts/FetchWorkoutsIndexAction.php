@@ -7,7 +7,6 @@ namespace App\Actions\Workouts;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StatsService;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -53,6 +52,7 @@ final class FetchWorkoutsIndexAction
 
         return [
             'workouts' => $this->getWorkouts($user),
+            'totalExercises' => $user->workoutLines()->count(),
             'monthlyFrequency' => $this->getMonthlyFrequency($user),
             'durationHistory' => $durationHistory,
             'volumeHistory' => $volumeHistory,
@@ -84,26 +84,26 @@ final class FetchWorkoutsIndexAction
     ): Collection {
         $startDate = now()->subMonths(5)->startOfMonth();
 
-        // 1. Fetch Data (Simple Query)
-        $rawWorkouts = Workout::query()
-            ->select('started_at')
+        // ⚡ Bolt Optimization: Group and count directly in SQL to reduce memory usage and CPU cycles in PHP.
+        $results = Workout::query()
             ->where('user_id', $user->id)
             ->where('started_at', '>=', $startDate)
-            ->orderBy('started_at')
-            ->toBase() // Keep performance optimization
-            ->get();
+            ->selectRaw("DATE_FORMAT(started_at, '%Y-%m') as month, COUNT(*) as count")
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->keyBy('month');
 
-        // 2. Group and Map
-        return $rawWorkouts->groupBy(
-            fn (object $row): string => substr((string) $row->started_at, 0, 7)
-        )
-            ->map(fn ($rows, string $month): array => [
-                'month' => ($date = Carbon::createFromFormat('Y-m', $month))
-                    instanceof Carbon
-                    ? $date->format('M')
-                    : '',
-                'count' => count($rows),
-            ])->values();
+        return collect(range(0, 5))->map(function (int $i) use ($results): array {
+            $date = now()->subMonths(5 - $i);
+            $monthKey = $date->format('Y-m');
+            $data = $results->get($monthKey);
+
+            return [
+                'month' => $date->translatedFormat('M'),
+                'count' => $data ? (int) $data->count : 0,
+            ];
+        });
     }
 
     /** @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout> */
