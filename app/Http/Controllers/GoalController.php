@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Goals\CreateGoalAction;
 use App\Http\Requests\GoalStoreRequest;
 use App\Models\Exercise;
 use App\Models\Goal;
@@ -70,21 +71,14 @@ class GoalController extends Controller
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a goal.
      */
-    public function store(GoalStoreRequest $request): \Illuminate\Http\RedirectResponse
+    public function store(GoalStoreRequest $request, CreateGoalAction $createGoalAction): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', Goal::class);
 
+        /** @var array<string, mixed> $data */
         $data = $request->validated();
-        if (! isset($data['start_value'])) {
-            $data['start_value'] = 0;
-        }
 
-        $goal = new Goal();
-        $goal->fill($data);
-        $goal->user_id = $this->user()->id;
-        $goal->save();
-
-        $this->goalService->updateGoalProgress($goal);
+        $createGoalAction->execute($this->user(), $data);
 
         return redirect()->route('goals.index')->with('success', 'Objectif créé avec succès.');
     }
