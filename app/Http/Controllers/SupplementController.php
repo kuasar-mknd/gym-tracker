@@ -8,7 +8,6 @@ use App\Actions\Supplements\FetchSupplementsIndexAction;
 use App\Http\Requests\SupplementStoreRequest;
 use App\Http\Requests\SupplementUpdateRequest;
 use App\Models\Supplement;
-use App\Models\SupplementLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -115,21 +114,11 @@ class SupplementController extends Controller
      *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
      */
-    public function consume(Request $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
+    public function consume(Request $request, Supplement $supplement, \App\Actions\Supplements\ConsumeSupplementAction $action): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $supplement);
 
-        // Create log
-        SupplementLog::create([
-            'user_id' => $this->user()->id,
-            'supplement_id' => $supplement->id,
-            'quantity' => 1,
-            'consumed_at' => now(),
-        ]);
-
-        if ($supplement->servings_remaining > 0) {
-            $supplement->decrement('servings_remaining');
-        }
+        $action->execute($this->user(), $supplement);
 
         return redirect()->back()->with('success', 'Consommation enregistrée.');
     }

@@ -65,11 +65,7 @@ final class RecommendedValuesService
         $workoutId = $lines->first()->workout_id;
         $exerciseIds = $lines->pluck('exercise_id')->unique()->values()->all();
 
-        if (count($exerciseIds) === 0 || $workoutId === null) {
-            return [];
-        }
-
-        $workout = Workout::find($workoutId);
+        $workout = $this->resolveWorkout($workoutId, $exerciseIds);
         if (! $workout) {
             return [];
         }
@@ -77,11 +73,33 @@ final class RecommendedValuesService
         $defaults = $this->getDefaultValues();
         $results = $this->getResultsFromCacheOrFetch($exerciseIds, $userId, (int) $workoutId, $workout, $defaults);
 
+        $this->applyRecommendedValuesToLines($lines, $results, $defaults);
+
+        return $results;
+    }
+
+    /**
+     * @param  array<int, mixed>  $exerciseIds
+     */
+    private function resolveWorkout(?int $workoutId, array $exerciseIds): ?Workout
+    {
+        if ($workoutId === null || count($exerciseIds) === 0) {
+            return null;
+        }
+
+        return Workout::find($workoutId);
+    }
+
+    /**
+     * @param  Collection<int, WorkoutLine>  $lines
+     * @param  array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>  $results
+     * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults
+     */
+    private function applyRecommendedValuesToLines(Collection $lines, array $results, array $defaults): void
+    {
         foreach ($lines as $line) {
             $line->setRecommendedValuesAttribute($results[$line->exercise_id] ?? $defaults);
         }
-
-        return $results;
     }
 
     /**

@@ -47,12 +47,7 @@ final class UpdateWorkoutTemplateAction
     /** @param array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}> $exercises */
     private function updateExercises(WorkoutTemplate $template, array $exercises): void
     {
-        // Delete existing lines and sets using optimized queries
-        $lineIds = $template->workoutTemplateLines()->pluck('id');
-        if ($lineIds->isNotEmpty()) {
-            \App\Models\WorkoutTemplateSet::whereIn('workout_template_line_id', $lineIds)->delete();
-            $template->workoutTemplateLines()->delete();
-        }
+        $this->deleteExistingLines($template);
 
         $setsData = [];
         $now = now()->toDateTimeString();
@@ -64,25 +59,51 @@ final class UpdateWorkoutTemplateAction
             ]);
 
             if (isset($ex['sets'])) {
-                foreach ($ex['sets'] as $setIndex => $set) {
-                    $setsData[] = [
-                        'workout_template_line_id' => $line->id,
-                        'reps' => $set['reps'] ?? null,
-                        'weight' => $set['weight'] ?? null,
-                        'is_warmup' => $set['is_warmup'] ?? false,
-                        'order' => $setIndex,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                }
+                $this->appendSetsData($setsData, $ex['sets'], $line->id, $now);
             }
         }
 
-        if ($setsData !== []) {
-            // Chunking to avoid parameter limits in SQL (SQLite max is 999 typically)
-            foreach (array_chunk($setsData, 100) as $chunk) {
-                \App\Models\WorkoutTemplateSet::insert($chunk);
-            }
+        $this->insertSetsData($setsData);
+    }
+
+    private function deleteExistingLines(WorkoutTemplate $template): void
+    {
+        $lineIds = $template->workoutTemplateLines()->pluck('id');
+        if ($lineIds->isNotEmpty()) {
+            \App\Models\WorkoutTemplateSet::whereIn('workout_template_line_id', $lineIds)->delete();
+            $template->workoutTemplateLines()->delete();
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $setsData
+     * @param  array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>  $sets
+     */
+    private function appendSetsData(array &$setsData, array $sets, int $lineId, string $now): void
+    {
+        foreach ($sets as $setIndex => $set) {
+            $setsData[] = [
+                'workout_template_line_id' => $lineId,
+                'reps' => $set['reps'] ?? null,
+                'weight' => $set['weight'] ?? null,
+                'is_warmup' => $set['is_warmup'] ?? false,
+                'order' => $setIndex,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+    }
+
+    /** @param array<int, array<string, mixed>> $setsData */
+    private function insertSetsData(array $setsData): void
+    {
+        if ($setsData === []) {
+            return;
+        }
+
+        // Chunking to avoid parameter limits in SQL (SQLite max is 999 typically)
+        foreach (array_chunk($setsData, 100) as $chunk) {
+            \App\Models\WorkoutTemplateSet::insert($chunk);
         }
     }
 }

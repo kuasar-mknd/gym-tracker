@@ -32,14 +32,6 @@ class Exercise extends Model
 
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
 
-    protected function casts(): array
-    {
-        return [
-            'category' => ExerciseCategory::class,
-            'default_rest_time' => 'integer',
-        ];
-    }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutLine, $this>
      */
@@ -111,6 +103,14 @@ class Exercise extends Model
         } else {
             Cache::forever('exercises_global_version', (string) time());
         }
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'category' => ExerciseCategory::class,
+            'default_rest_time' => 'integer',
+        ];
     }
 
     protected static function booted(): void
