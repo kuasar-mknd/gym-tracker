@@ -152,7 +152,7 @@ const formatHistoryDuration = (start, end) => {
         <div class="space-y-6">
             <!-- Active Fast Section -->
             <div v-if="activeFast" class="flex justify-center">
-                <GlassCard class="relative flex w-full max-w-md flex-col items-center overflow-hidden p-8 text-center">
+                <GlassCard class="relative flex w-full max-w-md flex-col items-center overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40">
                     <!-- Circular Progress -->
                     <div class="relative mb-6 h-64 w-64">
                         <svg class="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
@@ -203,7 +203,7 @@ const formatHistoryDuration = (start, end) => {
             </div>
 
             <!-- Start Fast Section -->
-            <GlassCard v-else class="mx-auto max-w-md p-6">
+            <GlassCard v-else class="mx-auto max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40">
                 <h3 class="text-text-main mb-6 text-lg font-semibold">Démarrer un jeûne</h3>
 
                 <form @submit.prevent="startFast" class="space-y-4">
@@ -231,7 +231,7 @@ const formatHistoryDuration = (start, end) => {
             </GlassCard>
 
             <!-- History Section -->
-            <GlassCard class="p-6">
+            <GlassCard class="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40">
                 <h3 class="text-text-main mb-4 text-lg font-semibold">Historique</h3>
                 <div v-if="history.data.length === 0" class="text-text-muted py-4 text-center">
                     Aucun historique de jeûne.
@@ -240,7 +240,7 @@ const formatHistoryDuration = (start, end) => {
                     <div
                         v-for="fast in history.data"
                         :key="fast.id"
-                        class="flex items-center justify-between rounded-xl bg-white/5 p-3 transition-colors hover:bg-white/10"
+                        class="flex items-center justify-between rounded-2xl border border-white/20 bg-white/5 p-3 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/10 hover:shadow-lg active:scale-95"
                     >
                         <div>
                             <p class="text-text-main font-medium">{{ fast.type }}</p>
