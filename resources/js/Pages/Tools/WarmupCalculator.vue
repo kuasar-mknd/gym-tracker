@@ -28,7 +28,7 @@
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="font-display text-text-main focus:border-white/50 focus:ring-white/20 h-16 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:ring-2 active:scale-95"
+                                    class="font-display text-text-main h-16 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/20 active:scale-95"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -42,7 +42,7 @@
                                     type="number"
                                     v-model="form.bar_weight"
                                     placeholder="20"
-                                    class="font-display text-text-main focus:border-white/50 focus:ring-white/20 h-16 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:ring-2 active:scale-95"
+                                    class="font-display text-text-main h-16 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:border-white/50 focus:ring-2 focus:ring-white/20 active:scale-95"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -121,7 +121,7 @@
                                     <input
                                         type="number"
                                         v-model="step.percent"
-                                        class="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-text-main backdrop-blur-md transition-all outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95 hover:bg-white/20"
+                                        class="text-text-main w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -132,7 +132,7 @@
                                 <input
                                     type="number"
                                     v-model="step.reps"
-                                    class="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-text-main backdrop-blur-md transition-all outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95 hover:bg-white/20"
+                                    class="text-text-main w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -140,7 +140,7 @@
                                     type="text"
                                     v-model="step.label"
                                     placeholder="ex: Barre vide"
-                                    class="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-text-main placeholder-slate-400 backdrop-blur-md transition-all outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95 hover:bg-white/20"
+                                    class="text-text-main w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm placeholder-slate-400 backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95"
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">
@@ -166,11 +166,11 @@
                                 v-for="inc in [0.5, 1, 2.5, 5]"
                                 :key="inc"
                                 @click="form.rounding_increment = inc"
-                                class="flex-1 rounded-xl border py-2 text-sm font-bold transition-all backdrop-blur-md active:scale-95"
+                                class="flex-1 rounded-xl border py-2 text-sm font-bold backdrop-blur-md transition-all active:scale-95"
                                 :class="
                                     form.rounding_increment === inc
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,107,0,0.3)]'
-                                        : 'border-white/20 bg-white/10 text-text-muted hover:bg-white/20 hover:text-text-main'
+                                        : 'text-text-muted hover:text-text-main border-white/20 bg-white/10 hover:bg-white/20'
                                 "
                             >
                                 {{ inc }}
