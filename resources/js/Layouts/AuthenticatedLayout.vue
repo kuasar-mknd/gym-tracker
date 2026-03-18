@@ -114,6 +114,7 @@ const showingNavigationDropdown = ref(false)
                     <div class="hidden gap-3 sm:ms-6 sm:flex sm:items-center">
                         <!-- Notification Bell -->
                         <Link
+                            v-press
                             :href="route('notifications.index')"
                             class="text-text-muted hover:text-electric-orange relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-700"
                             :aria-label="
@@ -136,6 +137,7 @@ const showingNavigationDropdown = ref(false)
                             <Dropdown align="right" width="48">
                                 <template #trigger>
                                     <button
+                                        v-press="{ haptic: 'toggle' }"
                                         type="button"
                                         class="text-text-main inline-flex items-center gap-2 rounded-xl border border-white bg-white/60 px-4 py-2 text-sm font-bold transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:hover:bg-slate-700"
                                     >
