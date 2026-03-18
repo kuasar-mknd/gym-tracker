@@ -117,7 +117,7 @@ final class StatsService
             "stats.weight_history.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchWeightHistoryData($user, $days)
-                ->map(fn (BodyMeasurement $m): array => $this->formatWeightHistoryItem($m))
+                ->map(fn (object $m): array => $this->formatWeightHistoryItem($m))
                 ->toArray()
         );
     }
@@ -131,23 +131,28 @@ final class StatsService
             "stats.latest_metrics.{$user->id}",
             now()->addMinutes(30),
             function () use ($user): array {
-                // PERFORMANCE OPTIMIZATION:
-                // Select only required columns to reduce memory usage and Eloquent hydration time.
-                $measurements = $user->bodyMeasurements()
-                    ->select(['id', 'user_id', 'weight', 'body_fat', 'measured_at'])
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Replaced Eloquent relation with DB facade to completely bypass model hydration.
+                $measurements = DB::table('body_measurements')
+                    ->where('user_id', $user->id)
+                    ->select(['weight', 'body_fat', 'measured_at'])
                     ->latest('measured_at')
                     ->take(2)
                     ->get();
 
+                /** @var \stdClass|null $latest */
                 $latest = $measurements->first();
+                /** @var \stdClass|null $previous */
                 $previous = $measurements->skip(1)->first();
 
-                $weightChange = $latest && $previous ? round($latest->weight - $previous->weight, 1) : 0;
+                $latestWeight = $latest ? (float) $latest->weight : null;
+                $previousWeight = $previous ? (float) $previous->weight : null;
+                $weightChange = $latestWeight !== null && $previousWeight !== null ? round($latestWeight - $previousWeight, 1) : 0;
 
                 return [
-                    'latest_weight' => $latest?->weight,
+                    'latest_weight' => $latestWeight,
                     'weight_change' => (float) $weightChange,
-                    'latest_body_fat' => $latest?->body_fat,
+                    'latest_body_fat' => $latest ? (float) $latest->body_fat : null,
                 ];
             }
         );
@@ -162,7 +167,7 @@ final class StatsService
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $this->fetchBodyFatHistoryData($user, $days)
-                ->map(fn (BodyMeasurement $m): array => $this->formatBodyFatHistoryItem($m))
+                ->map(fn (object $m): array => $this->formatBodyFatHistoryItem($m))
                 ->toArray()
         );
     }
@@ -597,35 +602,62 @@ final class StatsService
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Collection<int, BodyMeasurement>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    protected function fetchWeightHistoryData(User $user, int $days): \Illuminate\Database\Eloquent\Collection
+    protected function fetchWeightHistoryData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return $user->bodyMeasurements()->where('measured_at', '>=', now()->subDays($days))->orderBy('measured_at', 'asc')->get();
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Replaced Eloquent hydration with DB facade for statistical data fetch.
+        /** @var \Illuminate\Support\Collection<int, \stdClass> */
+        return DB::table('body_measurements')
+            ->where('user_id', $user->id)
+            ->where('measured_at', '>=', now()->subDays($days))
+            ->orderBy('measured_at', 'asc')
+            ->get();
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Collection<int, BodyMeasurement>
+     * @return \Illuminate\Support\Collection<int, \stdClass>
      */
-    protected function fetchBodyFatHistoryData(User $user, int $days): \Illuminate\Database\Eloquent\Collection
+    protected function fetchBodyFatHistoryData(User $user, int $days): \Illuminate\Support\Collection
     {
-        return $user->bodyMeasurements()->where('measured_at', '>=', now()->subDays($days))->whereNotNull('body_fat')->orderBy('measured_at', 'asc')->get();
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Replaced Eloquent hydration with DB facade for statistical data fetch.
+        /** @var \Illuminate\Support\Collection<int, \stdClass> */
+        return DB::table('body_measurements')
+            ->where('user_id', $user->id)
+            ->where('measured_at', '>=', now()->subDays($days))
+            ->whereNotNull('body_fat')
+            ->orderBy('measured_at', 'asc')
+            ->get();
     }
 
     /**
      * @return array{date: string, full_date: string, weight: float}
      */
-    protected function formatWeightHistoryItem(BodyMeasurement $m): array
+    protected function formatWeightHistoryItem(\stdClass $m): array
     {
-        return ['date' => Carbon::parse($m->measured_at)->format('d/m'), 'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'), 'weight' => (float) $m->weight];
+        $measuredAt = (string) $m->measured_at;
+
+        return [
+            'date' => Carbon::parse($measuredAt)->format('d/m'),
+            'full_date' => Carbon::parse($measuredAt)->format('Y-m-d'),
+            'weight' => (float) $m->weight,
+        ];
     }
 
     /**
      * @return array{date: string, full_date: string, body_fat: float}
      */
-    protected function formatBodyFatHistoryItem(BodyMeasurement $m): array
+    protected function formatBodyFatHistoryItem(\stdClass $m): array
     {
-        return ['date' => Carbon::parse($m->measured_at)->format('d/m'), 'full_date' => Carbon::parse($m->measured_at)->format('Y-m-d'), 'body_fat' => (float) $m->body_fat];
+        $measuredAt = (string) $m->measured_at;
+
+        return [
+            'date' => Carbon::parse($measuredAt)->format('d/m'),
+            'full_date' => Carbon::parse($measuredAt)->format('Y-m-d'),
+            'body_fat' => (float) $m->body_fat,
+        ];
     }
 
     /**

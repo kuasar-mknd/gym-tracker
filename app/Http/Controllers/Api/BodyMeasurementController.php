@@ -8,11 +8,16 @@ use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Http\Requests\BodyMeasurementUpdateRequest;
 use App\Http\Resources\BodyMeasurementResource;
 use App\Models\BodyMeasurement;
+use App\Services\StatsService;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class BodyMeasurementController extends Controller
 {
+    public function __construct(protected StatsService $statsService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -47,6 +52,8 @@ class BodyMeasurementController extends Controller
         $measurement->user_id = $this->user()->id;
         $measurement->save();
 
+        $this->statsService->clearBodyMeasurementStats($this->user());
+
         return new BodyMeasurementResource($measurement);
     }
 
@@ -69,6 +76,8 @@ class BodyMeasurementController extends Controller
 
         $bodyMeasurement->update($request->validated());
 
+        $this->statsService->clearBodyMeasurementStats($this->user());
+
         return new BodyMeasurementResource($bodyMeasurement);
     }
 
@@ -79,7 +88,10 @@ class BodyMeasurementController extends Controller
     {
         $this->authorize('delete', $bodyMeasurement);
 
+        $user = $this->user();
         $bodyMeasurement->delete();
+
+        $this->statsService->clearBodyMeasurementStats($user);
 
         return response()->noContent();
     }
