@@ -72,6 +72,7 @@ const errorId = computed(() => {
                     class="text-text-main active:bg-neon-green flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold shadow-sm transition-transform hover:scale-110"
                     :aria-label="`Diminuer ${label || 'la valeur'}`"
                     @click="$emit('update:modelValue', Math.max(0, Number(modelValue) - 2.5))"
+                    v-press
                 >
                     -
                 </button>
@@ -80,6 +81,7 @@ const errorId = computed(() => {
                     class="text-text-main active:bg-neon-green flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold shadow-sm transition-transform hover:scale-110"
                     :aria-label="`Augmenter ${label || 'la valeur'}`"
                     @click="$emit('update:modelValue', Number(modelValue) + 2.5)"
+                    v-press
                 >
                     +
                 </button>
