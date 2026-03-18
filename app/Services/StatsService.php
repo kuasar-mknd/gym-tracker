@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\BodyMeasurement;
 use App\Models\User;
 use App\Models\Workout;
 use Carbon\Carbon;
@@ -150,9 +149,9 @@ final class StatsService
                 $weightChange = $latestWeight !== null && $previousWeight !== null ? round($latestWeight - $previousWeight, 1) : 0;
 
                 return [
-                    'latest_weight' => $latestWeight,
+                    'latest_weight' => $latestWeight !== null ? number_format($latestWeight, 2, '.', '') : null,
                     'weight_change' => (float) $weightChange,
-                    'latest_body_fat' => $latest ? (float) $latest->body_fat : null,
+                    'latest_body_fat' => $latest ? number_format((float) $latest->body_fat, 2, '.', '') : null,
                 ];
             }
         );
