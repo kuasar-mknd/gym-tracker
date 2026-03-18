@@ -28,7 +28,7 @@
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-white/50 focus:ring-white/20 h-16 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:ring-2 active:scale-95"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -42,7 +42,7 @@
                                     type="number"
                                     v-model="form.bar_weight"
                                     placeholder="20"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-white/50 focus:ring-white/20 h-16 w-full rounded-2xl border border-white/20 bg-white/10 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/20 focus:ring-2 active:scale-95"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -52,7 +52,7 @@
                     </div>
 
                     <!-- Warmup Sets -->
-                    <div class="mt-6 rounded-3xl border border-slate-100 bg-slate-50 p-6">
+                    <div class="mt-6 rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
                         <h3 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
                             Séries d'échauffement
                         </h3>
@@ -61,7 +61,7 @@
                             <div
                                 v-for="(set, index) in calculatedSets"
                                 :key="index"
-                                class="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm"
+                                class="flex items-center justify-between rounded-xl border border-white/20 bg-white/5 p-4 shadow-sm backdrop-blur-md transition-all hover:-translate-y-1 hover:bg-white/10 hover:shadow-xl active:scale-95"
                             >
                                 <div class="flex items-center gap-4">
                                     <div
@@ -121,7 +121,7 @@
                                     <input
                                         type="number"
                                         v-model="step.percent"
-                                        class="focus:border-electric-orange w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold outline-none"
+                                        class="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-text-main backdrop-blur-md transition-all outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95 hover:bg-white/20"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -132,7 +132,7 @@
                                 <input
                                     type="number"
                                     v-model="step.reps"
-                                    class="focus:border-electric-orange w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold outline-none"
+                                    class="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-text-main backdrop-blur-md transition-all outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95 hover:bg-white/20"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -140,13 +140,13 @@
                                     type="text"
                                     v-model="step.label"
                                     placeholder="ex: Barre vide"
-                                    class="focus:border-electric-orange w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none"
+                                    class="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-text-main placeholder-slate-400 backdrop-blur-md transition-all outline-none focus:border-white/50 focus:ring-1 focus:ring-white/50 active:scale-95 hover:bg-white/20"
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">
                                 <button
                                     @click="removeStep(index)"
-                                    class="text-slate-400 transition-colors hover:text-red-500"
+                                    class="text-slate-400 transition-colors hover:text-red-500 active:scale-95"
                                     :disabled="form.steps.length <= 1"
                                 >
                                     <span class="material-symbols-outlined text-lg">delete</span>
@@ -159,18 +159,18 @@
                         </GlassButton>
                     </div>
 
-                    <div class="border-t border-slate-100 pt-4">
+                    <div class="border-t border-white/20 pt-4">
                         <label class="font-display-label text-text-muted mb-2 block">Arrondi (kg)</label>
                         <div class="flex gap-2">
                             <button
                                 v-for="inc in [0.5, 1, 2.5, 5]"
                                 :key="inc"
                                 @click="form.rounding_increment = inc"
-                                class="flex-1 rounded-xl border py-2 text-sm font-bold transition-all"
+                                class="flex-1 rounded-xl border py-2 text-sm font-bold transition-all backdrop-blur-md active:scale-95"
                                 :class="
                                     form.rounding_increment === inc
-                                        ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                        : 'text-text-muted border-slate-200 hover:border-slate-300'
+                                        ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,107,0,0.3)]'
+                                        : 'border-white/20 bg-white/10 text-text-muted hover:bg-white/20 hover:text-text-main'
                                 "
                             >
                                 {{ inc }}
