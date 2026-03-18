@@ -63,7 +63,10 @@ const selectCommonPart = (part) => {
 
         <div class="space-y-6">
             <!-- Add Form -->
-            <GlassCard v-if="showAddForm" class="animate-slide-up rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40">
+            <GlassCard
+                v-if="showAddForm"
+                class="animate-slide-up rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+            >
                 <h3 class="text-text-main mb-4 font-semibold">New Measurement</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>
@@ -146,7 +149,9 @@ const selectCommonPart = (part) => {
                     :href="route('body-parts.show', { part: item.part })"
                     class="block"
                 >
-                    <GlassCard class="h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40">
+                    <GlassCard
+                        class="h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
+                    >
                         <div class="flex items-start justify-between">
                             <div>
                                 <h3 class="text-text-main font-bold">{{ item.part }}</h3>
