@@ -7,10 +7,12 @@ import { Head, useForm } from '@inertiajs/vue3'
 import { computed, ref, defineAsyncComponent } from 'vue'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
+const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
 
 const props = defineProps({
     measurements: Array,
     weightHistory: Array,
+    bodyFatHistory: Array,
 })
 
 const showAddForm = ref(false)
@@ -237,16 +239,34 @@ const chartOptions = {
                 </form>
             </GlassCard>
 
-            <!-- Chart -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">Évolution</h3>
-                <div class="h-64">
-                    <WeightHistoryChart v-if="weightHistory && weightHistory.length > 0" :data="weightHistory" />
-                    <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                        Aucune donnée disponible
+            <!-- Charts -->
+            <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
+                <!-- Weight Chart -->
+                <GlassCard>
+                    <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">
+                        Évolution Poids
+                    </h3>
+                    <div class="h-64">
+                        <WeightHistoryChart v-if="weightHistory && weightHistory.length > 0" :data="weightHistory" />
+                        <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
+                            Aucune donnée disponible
+                        </div>
                     </div>
-                </div>
-            </GlassCard>
+                </GlassCard>
+
+                <!-- Body Fat Chart -->
+                <GlassCard>
+                    <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-pink-600 uppercase">
+                        Évolution Masse Grasse
+                    </h3>
+                    <div class="h-64">
+                        <BodyFatLineChart v-if="bodyFatHistory && bodyFatHistory.length > 0" :data="bodyFatHistory" />
+                        <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
+                            Aucune donnée disponible
+                        </div>
+                    </div>
+                </GlassCard>
+            </div>
 
             <!-- History -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
