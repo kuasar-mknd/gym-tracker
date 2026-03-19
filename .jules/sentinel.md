@@ -17,3 +17,8 @@
 **Vulnerability:** Found that API user creation and update endpoints enforced only a minimum length of 8 characters, bypassing the stricter production rules defined in `Password::defaults()`. Additionally, controllers were manually hashing passwords despite the `User` model using a `hashed` cast.
 **Learning:** Hardcoding validation rules in FormRequests leads to security gaps when global policies change. Redundant manual hashing in controllers is a "bad smell" that increases the risk of double-hashing bugs and architectural leakage.
 **Prevention:** Always utilize `Password::defaults()` in all authentication-related FormRequests to enforce a consistent security posture. Rely on Model attribute casting (`hashed`) to centralize hashing logic and maintain a clean separation of concerns.
+
+## 2026-03-19 - Redundant Hashing & Modern Security Headers
+**Vulnerability:** Multiple controllers and actions were manually calling `Hash::make()` on passwords before saving models that already had the `hashed` attribute cast. Also, legacy `X-XSS-Protection: 1; mode=block` was used.
+**Learning:** Redundant manual hashing is a "bad smell" that can lead to confusion and is unnecessary in modern Laravel (10+) when using the `hashed` cast, which is smart enough to avoid double-hashing. Legacy XSS auditors in browsers have been deprecated as they can be exploited; `0` is now the recommended value when a CSP is present.
+**Prevention:** Centralize hashing logic in the model using the `hashed` cast and disable legacy XSS auditors in favor of a robust Content Security Policy.
