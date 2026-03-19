@@ -102,7 +102,6 @@ const pauseTimer = () => {
 
 /** Toggles between start and pause states. */
 const toggleTimer = () => {
-    triggerHaptic('toggle')
     if (isActive.value) {
         pauseTimer()
     } else {
@@ -115,7 +114,6 @@ const toggleTimer = () => {
  * @param {Number} seconds - Amount of seconds to add.
  */
 const addTime = (seconds) => {
-    triggerHaptic('tap')
     timeLeft.value += seconds
     if (isActive.value && endTime.value) {
         endTime.value += seconds * 1000
@@ -124,7 +122,6 @@ const addTime = (seconds) => {
 
 /** Immediately finishes the timer. */
 const skipTimer = () => {
-    triggerHaptic('tap')
     finishTimer()
 }
 
@@ -164,7 +161,6 @@ const finishTimer = () => {
 
 /** Closes the timer component. */
 const close = () => {
-    triggerHaptic('tap')
     pauseTimer()
     emit('close')
 }
@@ -224,9 +220,10 @@ watch(
             <div class="p-4">
                 <!-- Close button (X) top right -->
                 <button
+                    v-press
                     @click="close"
                     dusk="close-timer-x"
-                    class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                    class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
                     aria-label="Fermer le minuteur"
                 >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -255,9 +252,10 @@ watch(
 
                     <div class="flex gap-2">
                         <button
+                            v-press
                             @click="addTime(30)"
                             dusk="add-30s"
-                            class="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                            class="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                             title="Ajouter 30 secondes"
                             aria-label="Ajouter 30 secondes"
                         >
@@ -265,8 +263,9 @@ watch(
                         </button>
 
                         <button
+                            v-press="{ haptic: 'toggle' }"
                             @click="toggleTimer"
-                            class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
+                            class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
                             :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
                         >
@@ -284,16 +283,18 @@ watch(
                 <div class="mt-4 flex gap-2">
                     <!-- Custom "Glass" button for skip to ensure style consistency -->
                     <button
+                        v-press
                         @click="skipTimer"
                         dusk="skip-rest-timer"
-                        class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                        class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                     >
                         Passer
                     </button>
                     <button
+                        v-press
                         @click="close"
                         dusk="close-timer"
-                        class="rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                        class="rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
                     >
                         Fermer
                     </button>
