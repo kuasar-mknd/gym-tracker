@@ -6,7 +6,6 @@ namespace App\Actions;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Hash;
 
 final class CreateUserAction
 {
@@ -20,7 +19,7 @@ final class CreateUserAction
         $user = User::create([
             'name' => $input['name'],
             'email' => $input['email'],
-            'password' => Hash::make($input['password']),
+            'password' => $input['password'],
         ]);
 
         event(new Registered($user));
