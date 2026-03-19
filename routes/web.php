@@ -118,4 +118,6 @@ Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthCo
     ->name('social.callback');
 
 require __DIR__.'/auth.php';
-Route::get('/test-responsive-nav', function () { return Inertia\Inertia::render('TestPage'); });
+Route::get('/test-responsive-nav', function () {
+    return Inertia\Inertia::render('TestPage');
+});

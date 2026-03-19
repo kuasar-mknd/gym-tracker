@@ -21,6 +21,7 @@ class PulseCspTest extends TestCase
         // Enable CSP and Pulse for testing
         Config::set('csp.enabled', true);
         Config::set('pulse.enabled', true);
+        Config::set('app.debug', false);
     }
 
     public function test_pulse_dashboard_has_secure_csp_headers_and_nonces_in_content(): void
