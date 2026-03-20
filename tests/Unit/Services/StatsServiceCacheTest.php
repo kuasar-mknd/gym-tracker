@@ -53,6 +53,7 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
         Cache::shouldReceive('forget')->once()->with("stats.time_of_day_distribution.{$user->id}.90");
+        Cache::shouldReceive('forget')->once()->with("stats.workout_distributions.{$user->id}.90");
 
         $this->statsService->clearDurationStats($user);
     }
