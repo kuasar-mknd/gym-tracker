@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link, Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
@@ -205,24 +205,28 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <div class="animate-slide-up" style="animation-delay: 0.1s">
                 <h3 class="text-text-main mb-3 font-semibold dark:text-white">Exercices disponibles</h3>
 
-                <!-- Loading State -->
-                <div v-if="!exercises" class="flex gap-2 overflow-x-hidden pb-2">
-                    <div v-for="i in 5" :key="i" class="shrink-0">
-                        <GlassSkeleton width="120px" height="60px" class="rounded-xl" />
-                    </div>
-                </div>
+                <Deferred data="exercises">
+                    <template #fallback>
+                        <!-- Loading State -->
+                        <div class="flex gap-2 overflow-x-hidden pb-2">
+                            <div v-for="i in 5" :key="i" class="shrink-0">
+                                <GlassSkeleton width="120px" height="60px" class="rounded-xl" />
+                            </div>
+                        </div>
+                    </template>
 
-                <!-- Data State -->
-                <div v-else class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
-                    <div
-                        v-for="exercise in exercises"
-                        :key="exercise.id"
-                        class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800/50"
-                    >
-                        <div class="text-text-main font-medium dark:text-white">{{ exercise.name }}</div>
-                        <div class="text-text-muted text-xs">{{ exercise.category }}</div>
+                    <!-- Data State -->
+                    <div v-if="exercises" class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
+                        <div
+                            v-for="exercise in exercises"
+                            :key="exercise.id"
+                            class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800/50"
+                        >
+                            <div class="text-text-main font-medium dark:text-white">{{ exercise.name }}</div>
+                            <div class="text-text-muted text-xs">{{ exercise.category }}</div>
+                        </div>
                     </div>
-                </div>
+                </Deferred>
             </div>
 
             <!-- Workouts List -->
