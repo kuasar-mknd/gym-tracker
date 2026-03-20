@@ -53,6 +53,36 @@ final class FetchDashboardDataAction
     }
 
     /**
+     * Get consolidated weekly volume data (stats + trend).
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, array{date: string, day_label: string, volume: float}>}
+     */
+    public function getWeeklyVolumeData(User $user): array
+    {
+        $stats = $this->statsService->getWeeklyVolumeComparison($user);
+
+        return [
+            'stats' => [
+                'current_week_volume' => $stats['current_week_volume'],
+                'percentage' => $stats['percentage'],
+            ],
+            'trend' => $this->statsService->getWeeklyVolumeTrend($user),
+        ];
+    }
+
+    /**
+     * Get consolidated workout distributions (duration + time of day).
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array{duration: array<int, array{label: string, count: int}>, time_of_day: array<int, array{label: string, count: int}>}
+     */
+    public function getWorkoutDistributions(User $user): array
+    {
+        return $this->statsService->getWorkoutDistributions($user);
+    }
+
+    /**
      * Get weekly volume comparison stats.
      *
      * Calculates the total workout volume for the current week and compares it
