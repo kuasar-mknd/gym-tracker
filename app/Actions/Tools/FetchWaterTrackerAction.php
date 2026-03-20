@@ -12,7 +12,7 @@ class FetchWaterTrackerAction
     /**
      * Get the today's water logs and total amount for the user.
      *
-     * @return array{logs: \Illuminate\Database\Eloquent\Collection, todayTotal: float|int}
+     * @return array{logs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\WaterLog>, todayTotal: float|int}
      */
     public function execute(User $user): array
     {
@@ -21,9 +21,12 @@ class FetchWaterTrackerAction
             ->orderByDesc('consumed_at')
             ->get();
 
+        /** @var float|int $todayTotal */
+        $todayTotal = $todayLogs->sum('amount');
+
         return [
             'logs' => $todayLogs,
-            'todayTotal' => $todayLogs->sum('amount'),
+            'todayTotal' => $todayTotal,
         ];
     }
 }
