@@ -26,10 +26,12 @@ const props = defineProps({
     recentWorkouts: { type: Array, default: () => [] },
     recentPRs: { type: Array, default: () => [] },
     activeGoals: { type: Array, default: () => [] },
-    weeklyVolumeStats: { type: Object, default: () => ({ current_week_volume: 0, percentage: 0 }) },
-    weeklyVolumeTrend: { type: Array, default: () => [] },
-    durationDistribution: { type: Array, default: () => [] },
-    timeOfDayDistribution: { type: Array, default: () => [] },
+    // ⚡ Bolt: Consolidated deferred props
+    weeklyVolume: {
+        type: Object,
+        default: () => ({ stats: { current_week_volume: 0, percentage: 0 }, trend: [] }),
+    },
+    workoutDistributions: { type: Object, default: () => ({ duration: [], time_of_day: [] }) },
 })
 
 const form = useForm({})
@@ -179,7 +181,7 @@ const colorForWorkout = (index) => {
                             </p>
                         </div>
                         <div class="text-right">
-                            <Deferred data="weeklyVolumeStats">
+                            <Deferred data="weeklyVolume">
                                 <template #fallback>
                                     <div class="flex flex-col items-end gap-2">
                                         <GlassSkeleton height="2.5rem" width="6rem" />
@@ -189,20 +191,20 @@ const colorForWorkout = (index) => {
                                 <p
                                     class="from-electric-orange to-vivid-violet font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
                                 >
-                                    {{ weeklyVolumeStats.current_week_volume?.toLocaleString() || 0 }}
+                                    {{ weeklyVolume.stats.current_week_volume?.toLocaleString() || 0 }}
                                 </p>
                                 <p
-                                    v-if="weeklyVolumeStats.percentage !== 0"
+                                    v-if="weeklyVolume.stats.percentage !== 0"
                                     :class="[
                                         'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
-                                        weeklyVolumeStats.percentage > 0 ? 'text-emerald-600' : 'text-red-500',
+                                        weeklyVolume.stats.percentage > 0 ? 'text-emerald-600' : 'text-red-500',
                                     ]"
                                 >
                                     <span class="material-symbols-outlined text-sm font-bold">
-                                        {{ weeklyVolumeStats.percentage > 0 ? 'trending_up' : 'trending_down' }}
+                                        {{ weeklyVolume.stats.percentage > 0 ? 'trending_up' : 'trending_down' }}
                                     </span>
-                                    {{ weeklyVolumeStats.percentage > 0 ? '+' : '' }}{{ weeklyVolumeStats.percentage }}%
-                                    vs sem. passée
+                                    {{ weeklyVolume.stats.percentage > 0 ? '+' : ''
+                                    }}{{ weeklyVolume.stats.percentage }}% vs sem. passée
                                 </p>
                             </Deferred>
                         </div>
@@ -210,13 +212,13 @@ const colorForWorkout = (index) => {
 
                     <!-- Weekly Volume Chart -->
                     <div class="relative -mx-2 mt-2 h-48 w-auto">
-                        <Deferred data="weeklyVolumeTrend">
+                        <Deferred data="weeklyVolume">
                             <template #fallback>
                                 <GlassSkeleton height="100%" width="100%" variant="card" />
                             </template>
                             <WeeklyVolumeChart
-                                v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0"
-                                :data="weeklyVolumeTrend"
+                                v-if="weeklyVolume.trend && weeklyVolume.trend.length > 0"
+                                :data="weeklyVolume.trend"
                             />
                             <div v-else class="text-text-muted flex h-full items-center justify-center">
                                 <p class="text-sm">Pas de données cette semaine</p>
@@ -241,13 +243,16 @@ const colorForWorkout = (index) => {
 
                     <!-- Duration Chart -->
                     <div class="relative -mx-2 mt-2 h-48 w-auto">
-                        <Deferred data="durationDistribution">
+                        <Deferred data="workoutDistributions">
                             <template #fallback>
                                 <GlassSkeleton height="100%" width="100%" variant="circle" />
                             </template>
                             <DurationDistributionChart
-                                v-if="durationDistribution && durationDistribution.some((d) => d.count > 0)"
-                                :data="durationDistribution"
+                                v-if="
+                                    workoutDistributions.duration &&
+                                    workoutDistributions.duration.some((d) => d.count > 0)
+                                "
+                                :data="workoutDistributions.duration"
                             />
                             <div v-else class="text-text-muted flex h-full items-center justify-center">
                                 <p class="text-sm">Pas assez de données (90j)</p>
@@ -271,13 +276,16 @@ const colorForWorkout = (index) => {
 
                 <!-- Time of Day Chart -->
                 <div class="relative -mx-2 mt-2 h-48 w-auto">
-                    <Deferred data="timeOfDayDistribution">
+                    <Deferred data="workoutDistributions">
                         <template #fallback>
                             <GlassSkeleton height="100%" width="100%" variant="circle" />
                         </template>
                         <TimeOfDayChart
-                            v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
-                            :data="timeOfDayDistribution"
+                            v-if="
+                                workoutDistributions.time_of_day &&
+                                workoutDistributions.time_of_day.some((d) => d.count > 0)
+                            "
+                            :data="workoutDistributions.time_of_day"
                         />
                         <div v-else class="text-text-muted flex h-full items-center justify-center">
                             <p class="text-sm">Pas assez de données (90j)</p>

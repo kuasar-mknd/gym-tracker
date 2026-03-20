@@ -249,6 +249,58 @@ final class StatsService
     }
 
     /**
+     * @return array{duration: array<int, array{label: string, count: int}>, time_of_day: array<int, array{label: string, count: int}>}
+     */
+    public function getWorkoutDistributions(User $user, int $days = 90): array
+    {
+        return Cache::remember(
+            "stats.workout_distributions.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $days): array {
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Consolidate two analytical queries into one. Fetches all workouts in the period
+                // once and computes both duration and time-of-day distributions in a single loop.
+                $workouts = DB::table('workouts')
+                    ->select(['started_at', 'ended_at'])
+                    ->where('user_id', $user->id)
+                    ->where('started_at', '>=', now()->subDays($days))
+                    ->get();
+
+                $durationBuckets = [
+                    '< 30 min' => 0,
+                    '30-60 min' => 0,
+                    '60-90 min' => 0,
+                    '90+ min' => 0,
+                ];
+
+                $timeOfDayBuckets = [
+                    'Matin (06h-12h)' => 0,
+                    'Après-midi (12h-17h)' => 0,
+                    'Soir (17h-22h)' => 0,
+                    'Nuit (22h-06h)' => 0,
+                ];
+
+                foreach ($workouts as $workout) {
+                    // Time of day calculation
+                    $hour = (int) substr((string) $workout->started_at, 11, 2);
+                    $timeOfDayBuckets[$this->getBucketForHour($hour)]++;
+
+                    // Duration calculation (only if workout is ended)
+                    if ($workout->ended_at) {
+                        $minutes = (int) (abs(strtotime((string) $workout->ended_at) - strtotime((string) $workout->started_at)) / 60);
+                        $this->incrementBucket($durationBuckets, $minutes);
+                    }
+                }
+
+                return [
+                    'duration' => $this->formatBuckets($durationBuckets),
+                    'time_of_day' => $this->formatBuckets($timeOfDayBuckets),
+                ];
+            }
+        );
+    }
+
+    /**
      * @return array<int, array{label: string, count: int}>
      */
     public function getDurationDistribution(User $user, int $days = 90): array
@@ -353,6 +405,7 @@ final class StatsService
         Cache::forget("stats.duration_history.{$user->id}.20");
         Cache::forget("stats.duration_distribution.{$user->id}.90");
         Cache::forget("stats.time_of_day_distribution.{$user->id}.90");
+        Cache::forget("stats.workout_distributions.{$user->id}.90");
     }
 
     /**
