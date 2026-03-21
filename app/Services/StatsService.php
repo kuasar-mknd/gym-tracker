@@ -739,20 +739,21 @@ final class StatsService
     }
 
     /**
-     * @param  object{started_at: string, ended_at: string|null, name: string|null}  $workout
+     * @param  object  $workout
      * @return array{date: string, duration: int, name: string}
      */
     protected function formatDurationHistoryItem(object $workout): array
     {
-        $startedAt = strtotime((string) $workout->started_at);
-        $endedAt = $workout->ended_at ? strtotime((string) $workout->ended_at) : null;
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Replaced Eloquent model hydration with DB facade.
+        // Using Carbon::parse here for correctness with timezones, as the overhead
+        // of instantiating 20 objects is negligible compared to full model hydration.
+        $startedAt = Carbon::parse((string) ($workout->started_at ?? 'now'));
+        $endedAt = ! empty($workout->ended_at) ? Carbon::parse((string) $workout->ended_at) : null;
 
         return [
-            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-            // Replaced Carbon format() and diffInMinutes() with native PHP date() and strtotime()
-            // to bypass model hydration and heavy object instantiation overhead.
-            'date' => date('d/m', $startedAt),
-            'duration' => $endedAt ? (int) (abs($endedAt - $startedAt) / 60) : 0,
+            'date' => $startedAt->format('d/m'),
+            'duration' => $endedAt ? (int) abs($startedAt->diffInMinutes($endedAt)) : 0,
             'name' => (string) ($workout->name ?? 'Séance'),
         ];
     }
