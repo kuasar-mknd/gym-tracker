@@ -739,7 +739,6 @@ final class StatsService
     }
 
     /**
-     * @param  object  $workout
      * @return array{date: string, duration: int, name: string}
      */
     protected function formatDurationHistoryItem(object $workout): array
