@@ -225,13 +225,14 @@ final class StatsService
         return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
+            fn (): array => DB::table('workouts')
+                ->select(['name', 'started_at', 'ended_at'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn (Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->map(fn (object $workout): array => $this->formatDurationHistoryItem($workout))
                 ->reverse()->values()->toArray()
         );
     }
@@ -738,14 +739,21 @@ final class StatsService
     }
 
     /**
+     * @param  object{started_at: string, ended_at: string|null, name: string|null}  $workout
      * @return array{date: string, duration: int, name: string}
      */
-    protected function formatDurationHistoryItem(Workout $workout): array
+    protected function formatDurationHistoryItem(object $workout): array
     {
+        $startedAt = strtotime((string) $workout->started_at);
+        $endedAt = $workout->ended_at ? strtotime((string) $workout->ended_at) : null;
+
         return [
-            'date' => $workout->started_at->format('d/m'),
-            'duration' => $workout->ended_at ? (int) abs($workout->started_at->diffInMinutes($workout->ended_at)) : 0,
-            'name' => $workout->name ?? 'Séance',
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // Replaced Carbon format() and diffInMinutes() with native PHP date() and strtotime()
+            // to bypass model hydration and heavy object instantiation overhead.
+            'date' => date('d/m', $startedAt),
+            'duration' => $endedAt ? (int) (abs($endedAt - $startedAt) / 60) : 0,
+            'name' => (string) ($workout->name ?? 'Séance'),
         ];
     }
 
