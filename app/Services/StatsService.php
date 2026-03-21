@@ -225,13 +225,14 @@ final class StatsService
         return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => Workout::select(['name', 'started_at', 'ended_at'])
+            fn (): array => DB::table('workouts')
+                ->select(['name', 'started_at', 'ended_at'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(fn (Workout $workout): array => $this->formatDurationHistoryItem($workout))
+                ->map(fn (object $workout): array => $this->formatDurationHistoryItem($workout))
                 ->reverse()->values()->toArray()
         );
     }
@@ -740,12 +741,19 @@ final class StatsService
     /**
      * @return array{date: string, duration: int, name: string}
      */
-    protected function formatDurationHistoryItem(Workout $workout): array
+    protected function formatDurationHistoryItem(object $workout): array
     {
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Replaced Eloquent model hydration with DB facade.
+        // Using Carbon::parse here for correctness with timezones, as the overhead
+        // of instantiating 20 objects is negligible compared to full model hydration.
+        $startedAt = Carbon::parse((string) ($workout->started_at ?? 'now'));
+        $endedAt = ! empty($workout->ended_at) ? Carbon::parse((string) $workout->ended_at) : null;
+
         return [
-            'date' => $workout->started_at->format('d/m'),
-            'duration' => $workout->ended_at ? (int) abs($workout->started_at->diffInMinutes($workout->ended_at)) : 0,
-            'name' => $workout->name ?? 'Séance',
+            'date' => $startedAt->format('d/m'),
+            'duration' => $endedAt ? (int) abs($startedAt->diffInMinutes($endedAt)) : 0,
+            'name' => (string) ($workout->name ?? 'Séance'),
         ];
     }
 
