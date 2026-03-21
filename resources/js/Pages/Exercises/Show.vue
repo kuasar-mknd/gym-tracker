@@ -16,6 +16,7 @@ const WeightRepsScatterChart = defineAsyncComponent(() => import('@/Components/S
 const SetWeightProgressionChart = defineAsyncComponent(() => import('@/Components/Stats/SetWeightProgressionChart.vue'))
 const Estimated1RMHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/Estimated1RMHistoryChart.vue'))
 const SessionPerformanceChart = defineAsyncComponent(() => import('@/Components/Stats/SessionPerformanceChart.vue'))
+const SessionVolumeLineChart = defineAsyncComponent(() => import('@/Components/Stats/SessionVolumeLineChart.vue'))
 
 /**
  * Component Props
@@ -321,6 +322,25 @@ const scatterData = computed(() => {
                     </div>
                     <div v-else class="flex h-64 flex-col items-center justify-center text-center">
                         <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                        <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
+                    </div>
+                </GlassCard>
+            </div>
+
+            <!-- Session Volume Line Chart -->
+            <div class="animate-slide-up" style="animation-delay: 0.18s">
+                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                            Évolution du Volume
+                        </h3>
+                        <p class="text-text-muted text-xs font-semibold">Volume total par séance</p>
+                    </div>
+                    <div v-if="volumeData.length > 0" class="h-64">
+                        <SessionVolumeLineChart :data="volumeData" />
+                    </div>
+                    <div v-else class="flex h-64 flex-col items-center justify-center text-center">
+                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">show_chart</span>
                         <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                     </div>
                 </GlassCard>
