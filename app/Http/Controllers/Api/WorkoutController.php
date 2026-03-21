@@ -73,6 +73,8 @@ class WorkoutController extends Controller
     #[OA\Response(response: 422, description: 'Validation error')]
     public function store(WorkoutStoreRequest $request): WorkoutResource
     {
+        $this->authorize('create', Workout::class);
+
         $validated = $request->validated();
 
         $workout = new Workout($validated);
