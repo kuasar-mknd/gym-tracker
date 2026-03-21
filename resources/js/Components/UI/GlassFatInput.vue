@@ -68,6 +68,7 @@ const errorId = computed(() => {
                 class="mt-3 flex w-full justify-between px-4 opacity-30 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
             >
                 <button
+                    v-press="{ haptic: 'tap' }"
                     type="button"
                     class="text-text-main active:bg-neon-green flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold shadow-sm transition-transform hover:scale-110"
                     :aria-label="`Diminuer ${label || 'la valeur'}`"
@@ -76,6 +77,7 @@ const errorId = computed(() => {
                     -
                 </button>
                 <button
+                    v-press="{ haptic: 'tap' }"
                     type="button"
                     class="text-text-main active:bg-neon-green flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-2xl font-bold shadow-sm transition-transform hover:scale-110"
                     :aria-label="`Augmenter ${label || 'la valeur'}`"
