@@ -9,11 +9,11 @@ use Illuminate\Support\Carbon;
 
 covers(StreakService::class);
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->streakService = app(StreakService::class);
 });
 
-it('initializes streak to 1 on the first workout', function () {
+it('initializes streak to 1 on the first workout', function (): void {
     $user = User::factory()->create([
         'current_streak' => 0,
         'longest_streak' => 0,
@@ -34,7 +34,7 @@ it('initializes streak to 1 on the first workout', function () {
         ->and(Carbon::parse($user->last_workout_at)->startOfDay()->equalTo(Carbon::parse($workout->started_at)->startOfDay()))->toBeTrue();
 });
 
-it('increments streak on consecutive workouts', function () {
+it('increments streak on consecutive workouts', function (): void {
     $user = User::factory()->create([
         'current_streak' => 1,
         'longest_streak' => 1,
@@ -55,7 +55,7 @@ it('increments streak on consecutive workouts', function () {
         ->and(Carbon::parse($user->last_workout_at)->startOfDay()->equalTo(Carbon::parse($workout->started_at)->startOfDay()))->toBeTrue();
 });
 
-it('resets streak if more than one day passes', function () {
+it('resets streak if more than one day passes', function (): void {
     $user = User::factory()->create([
         'current_streak' => 5,
         'longest_streak' => 5,
@@ -76,7 +76,7 @@ it('resets streak if more than one day passes', function () {
         ->and(Carbon::parse($user->last_workout_at)->startOfDay()->equalTo(Carbon::parse($workout->started_at)->startOfDay()))->toBeTrue();
 });
 
-it('does not increment streak on same day workouts', function () {
+it('does not increment streak on same day workouts', function (): void {
     $user = User::factory()->create([
         'current_streak' => 3,
         'longest_streak' => 3,
@@ -97,7 +97,7 @@ it('does not increment streak on same day workouts', function () {
         ->and(Carbon::parse($user->last_workout_at)->startOfDay()->equalTo(Carbon::parse($workout->started_at)->startOfDay()))->toBeTrue();
 });
 
-it('updates longest streak if current streak surpasses it', function () {
+it('updates longest streak if current streak surpasses it', function (): void {
     $user = User::factory()->create([
         'current_streak' => 5,
         'longest_streak' => 5,
@@ -117,7 +117,7 @@ it('updates longest streak if current streak surpasses it', function () {
         ->and($user->longest_streak)->toBe(6);
 });
 
-it('updates streak correctly without passing workout parameter', function () {
+it('updates streak correctly without passing workout parameter', function (): void {
     $user = User::factory()->create([
         'current_streak' => 1,
         'longest_streak' => 1,

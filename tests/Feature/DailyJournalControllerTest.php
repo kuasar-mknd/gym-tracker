@@ -7,25 +7,25 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
-it('renders the daily journal index page', function () {
+it('renders the daily journal index page', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->get('/daily-journals')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page) => $page
+            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Journal/Index')
                 ->has('journals')
         );
 });
 
-it('prevents unauthenticated users from viewing journals', function () {
+it('prevents unauthenticated users from viewing journals', function (): void {
     $this->get('/daily-journals')
         ->assertRedirect('/login');
 });
 
-it('creates a new daily journal entry', function () {
+it('creates a new daily journal entry', function (): void {
     $user = User::factory()->create();
     $date = Carbon::today()->format('Y-m-d');
 
@@ -47,7 +47,7 @@ it('creates a new daily journal entry', function () {
     ]);
 });
 
-it('updates an existing daily journal entry on the same date', function () {
+it('updates an existing daily journal entry on the same date', function (): void {
     $user = User::factory()->create();
     $date = Carbon::today()->format('Y-m-d');
 
@@ -73,7 +73,7 @@ it('updates an existing daily journal entry on the same date', function () {
     ]);
 });
 
-it('fails to create a journal entry with missing date', function () {
+it('fails to create a journal entry with missing date', function (): void {
     $user = User::factory()->create();
 
     $this->actingAs($user)
@@ -84,7 +84,7 @@ it('fails to create a journal entry with missing date', function () {
         ->assertSessionHasErrors(['date']);
 });
 
-it('fails to create a journal entry with invalid mood score', function () {
+it('fails to create a journal entry with invalid mood score', function (): void {
     $user = User::factory()->create();
     $date = Carbon::today()->format('Y-m-d');
 
@@ -97,25 +97,25 @@ it('fails to create a journal entry with invalid mood score', function () {
         ->assertSessionHasErrors(['mood_score']);
 });
 
-it('deletes a daily journal entry', function () {
+it('deletes a daily journal entry', function (): void {
     $user = User::factory()->create();
     $journal = DailyJournal::factory()->create(['user_id' => $user->id]);
 
     $this->actingAs($user)
-        ->delete('/daily-journals/' . $journal->id)
+        ->delete('/daily-journals/'.$journal->id)
         ->assertRedirect();
 
     $this->assertDatabaseMissing('daily_journals', ['id' => $journal->id]);
 });
 
-it('prevents a user from deleting another user\'s journal entry', function () {
+it('prevents a user from deleting another user\'s journal entry', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
 
     $journal = DailyJournal::factory()->create(['user_id' => $user1->id]);
 
     $this->actingAs($user2)
-        ->delete('/daily-journals/' . $journal->id)
+        ->delete('/daily-journals/'.$journal->id)
         ->assertStatus(403);
 
     $this->assertDatabaseHas('daily_journals', ['id' => $journal->id]);
