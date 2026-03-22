@@ -104,6 +104,7 @@ const isRequired = computed(() => {
             <!-- Clear Button -->
             <button
                 v-if="showClearButton"
+                v-press
                 type="button"
                 @click="$emit('update:modelValue', '')"
                 class="text-text-muted hover:text-text-main absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors"

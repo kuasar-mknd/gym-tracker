@@ -1,7 +1,6 @@
 <script setup>
 import { Link, usePage, router } from '@inertiajs/vue3'
 import { computed } from 'vue'
-import { triggerHaptic } from '@/composables/useHaptics'
 
 const page = usePage()
 
@@ -14,7 +13,6 @@ const navItems = [
 ]
 
 const createWorkout = () => {
-    triggerHaptic('toggle')
     router.post(route('workouts.store'))
 }
 
@@ -33,7 +31,7 @@ const isActiveRoute = (itemRoute) => {
             <!-- Center FAB -->
             <div v-if="item.isFab" class="relative">
                 <button
-                    v-press
+                    v-press="{ haptic: 'toggle' }"
                     @click="createWorkout"
                     class="glass-nav-fab"
                     :aria-label="item.name === 'Add' ? 'Nouvelle séance' : item.name"
