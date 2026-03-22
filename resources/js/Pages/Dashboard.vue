@@ -13,6 +13,9 @@ const RecentWorkoutsChart = defineAsyncComponent(() => import('@/Components/Stat
 const RecentWorkoutsDurationChart = defineAsyncComponent(
     () => import('@/Components/Stats/RecentWorkoutsDurationChart.vue'),
 )
+const RecentWorkoutsExercisesChart = defineAsyncComponent(
+    () => import('@/Components/Stats/RecentWorkoutsExercisesChart.vue'),
+)
 
 /**
  * Dashboard - Command Center
@@ -340,6 +343,30 @@ const colorForWorkout = (index) => {
                     />
                     <div v-else class="text-text-muted flex h-full items-center justify-center">
                         <p class="text-sm">Pas assez de données de durée</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Workouts Exercises Chart -->
+            <section
+                class="glass-panel-light animate-slide-up relative overflow-hidden rounded-3xl p-6"
+                style="animation-delay: 0.198s"
+            >
+                <div class="relative z-10 mb-6">
+                    <h3 class="text-neon-green mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Diversité</h3>
+                    <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                        Exercices Récents
+                    </p>
+                </div>
+
+                <!-- Recent Workouts Exercises Bar Chart -->
+                <div class="relative -mx-2 mt-2 h-48 w-auto">
+                    <RecentWorkoutsExercisesChart
+                        v-if="recentWorkouts && recentWorkouts.length > 0"
+                        :data="recentWorkouts"
+                    />
+                    <div v-else class="text-text-muted flex h-full items-center justify-center">
+                        <p class="text-sm">Pas assez de données d'exercices</p>
                     </div>
                 </div>
             </section>
