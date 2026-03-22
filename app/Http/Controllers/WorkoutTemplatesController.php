@@ -74,6 +74,8 @@ class WorkoutTemplatesController extends Controller
      */
     public function store(\App\Http\Requests\StoreWorkoutTemplateRequest $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('create', WorkoutTemplate::class);
+
         /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $validated */
         $validated = $request->validated();
         $createWorkoutTemplateAction->execute($this->user(), $validated);

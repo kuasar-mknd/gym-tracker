@@ -27,3 +27,13 @@
 **Vulnerability:** Found `WorkoutController@store` (and potentially others like `PlateController`) missing an explicit `$this->authorize('create', ...)` call. These controllers relied on `FormRequest::authorize()` which returned `true`, effectively bypassing the `create` ability in their respective Policies.
 **Learning:** Relying solely on the `authorize` method of a `FormRequest` is dangerous if it doesn't actually check the policy. It creates a gap where resource creation is not governed by the central Policy logic, which might include important business rules or permission checks beyond simple ownership.
 **Prevention:** Always include an explicit `$this->authorize('create', Model::class)` call in controller `store` methods. Ensure Policies are the single source of truth for authorization logic.
+
+## 2026-03-23 - Broken Function Level Authorization in Resource Controllers (Continued)
+**Vulnerability:** Found  (both web and API) and  missing explicit `$this->authorize('create', ...)` calls. These controllers relied on `FormRequest::authorize()` which returned `true`, bypassing the `create` ability in their respective Policies.
+**Learning:** This is a recurring issue. Relying solely on the `authorize` method of a `FormRequest` is a consistent vulnerability pattern in this codebase.
+**Prevention:** We must always include an explicit `$this->authorize('create', Model::class)` call in controller `store` methods, even if a FormRequest is used.
+
+## 2026-03-23 - Broken Function Level Authorization in Resource Controllers (Continued)
+**Vulnerability:** Found `PlateController@store` (both web and API) and `WorkoutTemplatesController@store` missing explicit `$this->authorize('create', ...)` calls. These controllers relied on `FormRequest::authorize()` which returned `true`, bypassing the `create` ability in their respective Policies.
+**Learning:** This is a recurring issue. Relying solely on the `authorize` method of a `FormRequest` is a consistent vulnerability pattern in this codebase.
+**Prevention:** We must always include an explicit `$this->authorize('create', Model::class)` call in controller `store` methods, even if a FormRequest is used.

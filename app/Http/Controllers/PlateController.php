@@ -44,6 +44,8 @@ class PlateController extends Controller
      */
     public function store(\App\Http\Requests\StorePlateRequest $request): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('create', Plate::class);
+
         $validated = $request->validated();
 
         $plate = new Plate($validated);
