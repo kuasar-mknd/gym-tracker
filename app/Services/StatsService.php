@@ -302,30 +302,6 @@ final class StatsService
     }
 
     /**
-     * @return array<int, array{label: string, count: int}>
-     */
-    public function getDurationDistribution(User $user, int $days = 90): array
-    {
-        return Cache::remember(
-            "stats.duration_distribution.{$user->id}.{$days}",
-            now()->addMinutes(30),
-            fn (): array => $this->calculateDurationDistribution($user, $days)
-        );
-    }
-
-    /**
-     * @return array<int, array{label: string, count: int}>
-     */
-    public function getTimeOfDayDistribution(User $user, int $days = 90): array
-    {
-        return Cache::remember(
-            "stats.time_of_day_distribution.{$user->id}.{$days}",
-            now()->addMinutes(30),
-            fn (): array => $this->calculateTimeOfDayDistribution($user, $days)
-        );
-    }
-
-    /**
      * @return array<int, array{month: string, volume: float}>
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
@@ -755,68 +731,6 @@ final class StatsService
             'duration' => $endedAt ? (int) abs($startedAt->diffInMinutes($endedAt)) : 0,
             'name' => (string) ($workout->name ?? 'Séance'),
         ];
-    }
-
-    /**
-     * @return array<int, array{label: string, count: int}>
-     */
-    protected function calculateDurationDistribution(User $user, int $days): array
-    {
-        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-        // Replaced Eloquent $user->workouts() with DB facade and native PHP datetime parsing
-        // to completely bypass model hydration and Carbon instantiation overhead.
-        // Benchmark impact: Loop execution time reduced from ~4800ms to ~380ms (1000 records).
-        $workouts = DB::table('workouts')
-            ->select(['started_at', 'ended_at'])
-            ->where('user_id', $user->id)
-            ->whereNotNull('ended_at')
-            ->where('started_at', '>=', now()->subDays($days))
-            ->get();
-
-        $buckets = [
-            '< 30 min' => 0,
-            '30-60 min' => 0,
-            '60-90 min' => 0,
-            '90+ min' => 0,
-        ];
-
-        foreach ($workouts as $workout) {
-            $minutes = (int) (abs(strtotime((string) $workout->ended_at) - strtotime((string) $workout->started_at)) / 60);
-            $this->incrementBucket($buckets, $minutes);
-        }
-
-        return $this->formatBuckets($buckets);
-    }
-
-    /**
-     * @return array<int, array{label: string, count: int}>
-     */
-    protected function calculateTimeOfDayDistribution(User $user, int $days): array
-    {
-        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-        // Replaced Eloquent $user->workouts() with DB facade and native PHP string parsing
-        // to completely bypass model hydration and Carbon instantiation overhead.
-        // Benchmark impact: Loop execution time reduced from ~3400ms to ~110ms (1000 records).
-        $workouts = DB::table('workouts')
-            ->select('started_at')
-            ->where('user_id', $user->id)
-            ->where('started_at', '>=', now()->subDays($days))
-            ->get();
-
-        $buckets = [
-            'Matin (06h-12h)' => 0,
-            'Après-midi (12h-17h)' => 0,
-            'Soir (17h-22h)' => 0,
-            'Nuit (22h-06h)' => 0,
-        ];
-
-        foreach ($workouts as $workout) {
-            // standard SQL timestamp format 'YYYY-MM-DD HH:MM:SS', hour starts at pos 11
-            $hour = (int) substr((string) $workout->started_at, 11, 2);
-            $buckets[$this->getBucketForHour($hour)]++;
-        }
-
-        return $this->formatBuckets($buckets);
     }
 
     /**

@@ -128,34 +128,6 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Get the distribution of workout durations.
-     *
-     * Groups recent workouts into duration buckets (e.g., '< 30 min', '30-60 min')
-     * to show user habits over time.
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return array<int, array{label: string, count: int}> The distribution of workout lengths.
-     */
-    public function getDurationDistribution(User $user): array
-    {
-        return $this->statsService->getDurationDistribution($user);
-    }
-
-    /**
-     * Get the distribution of workouts by time of day.
-     *
-     * Groups recent workouts into time-of-day buckets (e.g., 'Matin', 'Soir')
-     * to show when the user typically trains.
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return array<int, array{label: string, count: int}> The distribution of workouts by time of day.
-     */
-    public function getTimeOfDayDistribution(User $user): array
-    {
-        return $this->statsService->getTimeOfDayDistribution($user);
-    }
-
-    /**
      * Execute the action to fetch all dashboard data simultaneously.
      *
      * Legacy method that synchronously loads all dashboard stats, including
@@ -176,8 +148,7 @@ final class FetchDashboardDataAction
                 'volumeChange' => $weeklyStats['percentage'],
                 'weeklyVolumeTrend' => $this->getWeeklyVolumeTrend($user),
                 'volumeTrend' => $this->getVolumeTrend($user),
-                'durationDistribution' => $this->getDurationDistribution($user),
-                'timeOfDayDistribution' => $this->getTimeOfDayDistribution($user),
+                'workoutDistributions' => $this->getWorkoutDistributions($user),
             ]
         );
     }

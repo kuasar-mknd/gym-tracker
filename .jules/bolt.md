@@ -29,3 +29,7 @@
 ## 2024-03-24 - Eloquent Hydration vs DB Builder for Statistical Aggregation
 **Learning:** Hydrating Eloquent models (`$user->workouts()->get()`) and instantiating Carbon objects purely to calculate date/time differences for charts introduces massive performance overhead. In a local benchmark on 1000 records, the Eloquent+Carbon approach took ~4800ms, while using `DB::table()->get()` with native `strtotime()` and `substr()` string parsing took ~110-380ms—a 90%+ reduction in loop execution time.
 **Action:** For purely statistical loops where relationships, mutators, and model logic are unnecessary, bypass Eloquent entirely. Use the `DB` facade to fetch `stdClass` objects and rely on native PHP string/datetime functions for aggregation parsing.
+
+## 2026-03-22 - [Removing Unused Legacy Performance Methods]
+**Learning:** When refactoring multiple analytical queries into a single consolidated query (like combining `getDurationDistribution` and `getTimeOfDayDistribution` into `getWorkoutDistributions`), it's crucial to remove the old, unused methods to prevent them from being accidentally called later, which would reintroduce the performance bottleneck.
+**Action:** Always do a codebase search (`grep`) for the methods being replaced and remove them from services and actions if they have zero active calls after refactoring.
