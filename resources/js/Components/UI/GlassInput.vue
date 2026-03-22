@@ -102,17 +102,21 @@ const isRequired = computed(() => {
             />
 
             <!-- Clear Button -->
-            <button
+            <div
                 v-if="showClearButton"
-                v-press
-                type="button"
-                @click="$emit('update:modelValue', '')"
-                class="text-text-muted hover:text-text-main absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors"
-                aria-label="Effacer le texte"
-                tabindex="-1"
+                class="absolute top-1/2 right-3 flex -translate-y-1/2 items-center justify-center"
             >
-                <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">cancel</span>
-            </button>
+                <button
+                    v-press
+                    type="button"
+                    @click="$emit('update:modelValue', '')"
+                    class="text-text-muted hover:text-text-main rounded-full p-1 transition-colors"
+                    aria-label="Effacer le texte"
+                    tabindex="-1"
+                >
+                    <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">cancel</span>
+                </button>
+            </div>
         </div>
 
         <InputError :message="error" :id="errorId" />
