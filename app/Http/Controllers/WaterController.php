@@ -13,8 +13,22 @@ use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Controller for managing user water tracking.
+ *
+ * This controller handles logging daily water intake and viewing historical data.
+ */
 class WaterController extends Controller
 {
+    /**
+     * Display the user's water tracker and history.
+     *
+     * @param  \App\Actions\Tools\FetchWaterHistoryAction  $fetchWaterHistory  Action to fetch historical water data.
+     * @param  \App\Actions\Tools\FetchWaterTrackerAction  $fetchWaterTracker  Action to fetch today's water data.
+     * @return \Inertia\Response The Inertia response rendering the Tools/WaterTracker page.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
     public function index(FetchWaterHistoryAction $fetchWaterHistory, FetchWaterTrackerAction $fetchWaterTracker): Response
     {
         $this->authorize('viewAny', WaterLog::class);
@@ -31,6 +45,14 @@ class WaterController extends Controller
         ]);
     }
 
+    /**
+     * Store a new water log entry.
+     *
+     * @param  \App\Http\Requests\StoreWaterLogRequest  $request  The validated request containing the water log amount.
+     * @return \Illuminate\Http\RedirectResponse Redirects back to the water tracker page.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
     public function store(StoreWaterLogRequest $request): RedirectResponse
     {
         $this->authorize('create', WaterLog::class);
@@ -46,6 +68,14 @@ class WaterController extends Controller
         return redirect()->back();
     }
 
+    /**
+     * Delete an existing water log entry.
+     *
+     * @param  \App\Models\WaterLog  $waterLog  The water log entry to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirects back to the water tracker page.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     */
     public function destroy(WaterLog $waterLog): RedirectResponse
     {
         $this->authorize('delete', $waterLog);
