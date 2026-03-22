@@ -43,8 +43,10 @@ class WorkoutsMonthlyVolumeTest extends TestCase
             ->assertInertia(
                 fn (Assert $page): Assert => $page
                     ->component('Workouts/Index')
-                    ->has('monthlyVolume')
-                    ->where('monthlyVolume.4.volume', 1000) // 4th index is last month (5 months ago to current month = 6 items. Index 0=5 months ago, 5=current. Last month=4)
+                    ->loadDeferredProps(fn (Assert $page): Assert => $page
+                        ->has('chartData')
+                        ->where('chartData.monthly_volume.4.volume', 1000) // 4th index is last month (5 months ago to current month = 6 items. Index 0=5 months ago, 5=current. Last month=4)
+                    )
             );
     }
 }

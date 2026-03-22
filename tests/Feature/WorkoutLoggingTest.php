@@ -85,8 +85,11 @@ class WorkoutLoggingTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('Workouts/Index')
-            ->has('monthlyFrequency')
-            ->has('volumeHistory')
+            ->loadDeferredProps(fn ($page) => $page
+                ->has('chartData')
+                ->has('chartData.monthly_frequency')
+                ->has('chartData.volume_history')
+            )
         );
     }
 }
