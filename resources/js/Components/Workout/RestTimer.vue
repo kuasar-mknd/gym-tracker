@@ -283,7 +283,7 @@ watch(
                 <div class="mt-4 flex gap-2">
                     <!-- Custom "Glass" button for skip to ensure style consistency -->
                     <button
-                        v-press
+                        v-press="{ haptic: false }"
                         @click="skipTimer"
                         dusk="skip-rest-timer"
                         class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"

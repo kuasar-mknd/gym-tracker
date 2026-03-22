@@ -38,7 +38,12 @@ export function triggerHaptic(type = 'tap') {
     }
 
     const pattern = patterns[type] || patterns.tap
-    return navigator.vibrate(pattern)
+    try {
+        return navigator.vibrate(pattern)
+    } catch (e) {
+        // Silently fail if vibration is blocked (e.g. not triggered by user gesture)
+        return false
+    }
 }
 
 /**
