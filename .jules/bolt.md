@@ -33,3 +33,7 @@
 ## 2026-03-22 - [Removing Unused Legacy Performance Methods]
 **Learning:** When refactoring multiple analytical queries into a single consolidated query (like combining `getDurationDistribution` and `getTimeOfDayDistribution` into `getWorkoutDistributions`), it's crucial to remove the old, unused methods to prevent them from being accidentally called later, which would reintroduce the performance bottleneck.
 **Action:** Always do a codebase search (`grep`) for the methods being replaced and remove them from services and actions if they have zero active calls after refactoring.
+
+## 2026-03-23 - [Consolidating Statistics & Deferred Props]
+**Learning:** When a page requires multiple independent statistics (like frequency, volume, and duration trends), fetching them through separate service calls results in multiple database queries and potentially redundant data grouping in PHP. Consolidating these into grouped analytical methods (e.g., `getMonthlyWorkoutStats`) allows for a single database query and a single loop over the results, significantly reducing overhead. Grouping these results into a single deferred Inertia prop further optimizes the frontend by reducing the number of XHR requests and ensuring consistent loading states.
+**Action:** Identify pages with multiple deferred props or statistics and consolidate their underlying data-fetching logic into grouped service methods and single deferred props.

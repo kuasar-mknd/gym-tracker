@@ -302,6 +302,88 @@ final class StatsService
     }
 
     /**
+     * @return array{monthly_frequency: array<int, array{month: string, count: int}>, monthly_volume: array<int, array{month: string, volume: float}>}
+     */
+    public function getMonthlyWorkoutStats(User $user, int $months = 6): array
+    {
+        return Cache::remember(
+            "stats.monthly_workout_stats.{$user->id}.{$months}",
+            now()->addMinutes(30),
+            function () use ($user, $months): array {
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Combine frequency and volume history into a single DB query and loop.
+                $data = DB::table('workouts')
+                    ->where('user_id', $user->id)
+                    ->where('started_at', '>=', now()->subMonths($months - 1)->startOfMonth())
+                    ->select('started_at', 'workout_volume as volume')
+                    ->get();
+
+                /** @var \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<int, object{volume: float|int}>> $grouped */
+                $grouped = $data->groupBy(fn (object $row): string => Carbon::parse($row->started_at ?? (string) now())->format('Y-m'));
+
+                $monthlyVolume = $this->fillMonthlyVolumeHistory($months, $grouped);
+
+                /** @var array<int, array{month: string, count: int}> $monthlyFrequency */
+                $monthlyFrequency = collect(range($months - 1, 0))
+                    ->map(function (int $i) use ($grouped): array {
+                        $monthKey = now()->subMonths($i)->format('Y-m');
+                        /** @var \Illuminate\Support\Collection<int, object{volume: float|int}>|null $monthData */
+                        $monthData = $grouped->get($monthKey);
+
+                        return [
+                            'month' => now()->subMonths($i)->translatedFormat('M'),
+                            'count' => $monthData ? $monthData->count() : 0,
+                        ];
+                    })
+                    ->all();
+
+                return [
+                    'monthly_frequency' => $monthlyFrequency,
+                    'monthly_volume' => $monthlyVolume,
+                ];
+            }
+        );
+    }
+
+    /**
+     * @return array{duration_history: array<int, array{date: string, duration: int, name: string}>, volume_history: array<int, array{date: string, volume: float, name: string}>}
+     */
+    public function getRecentWorkoutsAnalytics(User $user, int $limit = 20): array
+    {
+        return Cache::remember(
+            "stats.recent_workouts_analytics.{$user->id}.{$limit}",
+            now()->addMinutes(30),
+            function () use ($user, $limit): array {
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Fetch both duration and volume history in a single DB query for the recent workouts.
+                $workouts = DB::table('workouts')
+                    ->select(['name', 'started_at', 'ended_at', 'workout_volume as volume'])
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('ended_at')
+                    ->latest('started_at')
+                    ->take($limit)
+                    ->get()
+                    ->reverse()
+                    ->values();
+
+                /** @var array<int, array{date: string, duration: int, name: string}> $durationHistory */
+                $durationHistory = $workouts->map(fn (object $w): array => $this->formatDurationHistoryItem($w))->all();
+                /** @var array<int, array{date: string, volume: float, name: string}> $volumeHistory */
+                $volumeHistory = $workouts->map(fn (object $w): array => [
+                    'date' => Carbon::parse((string) ($w->started_at ?? 'now'))->format('d/m'),
+                    'volume' => (float) ($w->volume ?? 0.0),
+                    'name' => (string) ($w->name ?? 'Séance'),
+                ])->all();
+
+                return [
+                    'duration_history' => $durationHistory,
+                    'volume_history' => $volumeHistory,
+                ];
+            }
+        );
+    }
+
+    /**
      * @return array<int, array{month: string, volume: float}>
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
@@ -338,6 +420,7 @@ final class StatsService
         Cache::forget("stats.volume_history.{$user->id}.20");
         Cache::forget("stats.volume_history.{$user->id}.30");
         Cache::forget("stats.duration_history.{$user->id}.20");
+        Cache::forget("stats.recent_workouts_analytics.{$user->id}.20");
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.volume_trend.{$user->id}.{$days}");
@@ -355,6 +438,8 @@ final class StatsService
         Cache::forget("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
         Cache::forget("stats.monthly_volume_comparison.{$user->id}");
         Cache::forget("stats.monthly_volume_history.{$user->id}.6");
+        Cache::forget("stats.monthly_workout_stats.{$user->id}.6");
+        Cache::forget("stats.monthly_frequency.{$user->id}");
 
         // Invalidate 1RM cache for all exercises (O(1))
         Cache::put("stats.1rm_version.{$user->id}", (string) time(), 86400 * 30);
@@ -368,6 +453,7 @@ final class StatsService
         // Clear volume history
         Cache::forget("stats.volume_history.{$user->id}.20");
         Cache::forget("stats.volume_history.{$user->id}.30");
+        Cache::forget("stats.recent_workouts_analytics.{$user->id}.20");
 
         // Muscle distribution
         Cache::forget("stats.muscle_dist.{$user->id}.30");
@@ -380,6 +466,7 @@ final class StatsService
     public function clearDurationStats(User $user): void
     {
         Cache::forget("stats.duration_history.{$user->id}.20");
+        Cache::forget("stats.recent_workouts_analytics.{$user->id}.20");
         Cache::forget("stats.duration_distribution.{$user->id}.90");
         Cache::forget("stats.time_of_day_distribution.{$user->id}.90");
         Cache::forget("stats.workout_distributions.{$user->id}.90");

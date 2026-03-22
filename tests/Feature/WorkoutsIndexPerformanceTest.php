@@ -27,4 +27,19 @@ class WorkoutsIndexPerformanceTest extends TestCase
                     ->missing('exercises')
             );
     }
+
+    public function test_workouts_index_has_deferred_chart_data_prop(): void
+    {
+        $user = User::factory()->create();
+
+        // Initial Load: chartData should be deferred (missing from initial props)
+        $this->actingAs($user)
+            ->get('/workouts')
+            ->assertStatus(200)
+            ->assertInertia(
+                fn (Assert $page): Assert => $page
+                    ->component('Workouts/Index')
+                    ->missing('chartData')
+            );
+    }
 }

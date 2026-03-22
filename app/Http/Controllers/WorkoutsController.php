@@ -42,11 +42,16 @@ class WorkoutsController extends Controller
     {
         $this->authorize('viewAny', Workout::class);
 
-        $data = $fetchWorkouts->execute($this->user());
-        $userId = $this->user()->id;
+        $user = $this->user();
+        $data = $fetchWorkouts->execute($user);
+        $userId = $user->id;
 
         return Inertia::render('Workouts/Index', [
             ...$data,
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // Consolidate heavy chart data into a single deferred prop to reduce the number
+            // of XHR requests and ensure consistent loading states on the frontend.
+            'chartData' => Inertia::defer(fn (): array => $fetchWorkouts->getChartData($user)),
             'exercises' => Inertia::defer(fn (): \Illuminate\Database\Eloquent\Collection => Exercise::getCachedForUser($userId)),
         ]);
     }
