@@ -29,6 +29,8 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key): bool => str_starts_with((string) $key, "stats.weekly_volume_comparison.{$user->id}")));
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_history.{$user->id}.6");
+        Cache::shouldReceive('forget')->once()->with("stats.monthly_workout_stats.{$user->id}.6");
+        Cache::shouldReceive('forget')->once()->with("stats.monthly_frequency.{$user->id}");
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
@@ -39,6 +41,7 @@ class StatsServiceCacheTest extends TestCase
 
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
+        Cache::shouldReceive('forget')->once()->with("stats.recent_workouts_analytics.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.7");
 
@@ -51,6 +54,7 @@ class StatsServiceCacheTest extends TestCase
 
         // Expectation: Duration related keys are cleared
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
+        Cache::shouldReceive('forget')->once()->with("stats.recent_workouts_analytics.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
         Cache::shouldReceive('forget')->once()->with("stats.time_of_day_distribution.{$user->id}.90");
         Cache::shouldReceive('forget')->once()->with("stats.workout_distributions.{$user->id}.90");
@@ -95,5 +99,21 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('put')->atLeast()->once();
 
         $this->statsService->clearUserStatsCache($user);
+    }
+
+    public function test_clear_workout_metadata_stats_clears_correct_keys(): void
+    {
+        $user = User::factory()->make(['id' => 123]);
+
+        Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
+        Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
+        Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
+        Cache::shouldReceive('forget')->once()->with("stats.recent_workouts_analytics.{$user->id}.20");
+
+        foreach ([7, 30, 90, 365] as $days) {
+            Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
+        }
+
+        $this->statsService->clearWorkoutMetadataStats($user);
     }
 }

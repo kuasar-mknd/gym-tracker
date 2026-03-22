@@ -7,9 +7,6 @@ namespace App\Actions\Workouts;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StatsService;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 final class FetchWorkoutsIndexAction
 {
@@ -22,88 +19,39 @@ final class FetchWorkoutsIndexAction
      * Fetch workouts and related statistics for the index page.
      *
      * @return array{
-     *     workouts: \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>,
-     *     monthlyFrequency: Collection<int, array{month: string, count: int}>,
-     *     durationHistory: array<int, array{
-     *         date: string,
-     *         duration: int,
-     *         name: string
-     *     }>,
-     *     volumeHistory: array<int, array{
-     *         date: string,
-     *         volume: float,
-     *         name: string
-     *     }>,
-     *     monthlyVolume: array<int, array{
-     *         month: string,
-     *         volume: float
-     *     }>
+     *     workouts: \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>
      * }
      */
     public function execute(User $user): array
     {
-        /** @var array<int, array{date: string, duration: int, name: string}> $durationHistory */
-        $durationHistory = $this->statsService->getDurationHistory($user, 20);
-
-        /** @var array<int, array{date: string, volume: float, name: string}> $volumeHistory */
-        $volumeHistory = $this->statsService->getVolumeHistory($user, 20);
-
-        /** @var array<int, array{month: string, volume: float}> $monthlyVolume */
-        $monthlyVolume = $this->statsService->getMonthlyVolumeHistory($user, 6);
-
         return [
             'workouts' => $this->getWorkouts($user),
-            'monthlyFrequency' => $this->getMonthlyFrequency($user),
-            'durationHistory' => $durationHistory,
-            'volumeHistory' => $volumeHistory,
-            'monthlyVolume' => $monthlyVolume,
         ];
     }
 
     /**
-     * @return Collection<int, array{month: string, count: int}>
+     * Get heavy chart data for deferred loading.
+     *
+     * @return array{
+     *     monthly_frequency: array<int, array{month: string, count: int}>,
+     *     monthly_volume: array<int, array{month: string, volume: float}>,
+     *     duration_history: array<int, array{date: string, duration: int, name: string}>,
+     *     volume_history: array<int, array{date: string, volume: float, name: string}>
+     * }
      */
-    protected function getMonthlyFrequency(
-        User $user
-    ): Collection {
-        return Cache::remember(
-            "stats.monthly_frequency.{$user->id}",
-            now()->addHour(),
-            fn (): Collection => $this->calculateMonthlyFrequency($user)
-        );
-    }
+    public function getChartData(User $user): array
+    {
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Consolidate multiple service calls into two efficient grouped calls.
+        $monthlyStats = $this->statsService->getMonthlyWorkoutStats($user, 6);
+        $recentAnalytics = $this->statsService->getRecentWorkoutsAnalytics($user, 20);
 
-    /**
-     * @return Collection<
-     *     int,
-     *     array{month: string, count: int}
-     * >
-     */
-    private function calculateMonthlyFrequency(
-        User $user
-    ): Collection {
-        $startDate = now()->subMonths(5)->startOfMonth();
-
-        // 1. Fetch Data (Simple Query)
-        $rawWorkouts = Workout::query()
-            ->select('started_at')
-            ->where('user_id', $user->id)
-            ->where('started_at', '>=', $startDate)
-            ->orderBy('started_at')
-            ->toBase() // Keep performance optimization
-            ->get();
-
-        // 2. Group and Map
-        return $rawWorkouts->groupBy(
-            fn (object $row): string => substr((string) $row->started_at, 0, 7)
-        )
-            ->map(fn ($rows, string $month): array => [
-                'month' => ($date = Carbon::createFromFormat('Y-m', $month))
-                    instanceof Carbon
-                    ? $date->format('M')
-                    : '',
-                'count' => count($rows),
-            ])->values();
+        return [
+            'monthly_frequency' => $monthlyStats['monthly_frequency'],
+            'monthly_volume' => $monthlyStats['monthly_volume'],
+            'duration_history' => $recentAnalytics['duration_history'],
+            'volume_history' => $recentAnalytics['volume_history'],
+        ];
     }
 
     /** @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout> */
