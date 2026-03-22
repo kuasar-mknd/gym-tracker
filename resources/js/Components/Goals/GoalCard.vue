@@ -55,7 +55,9 @@ const statusColor = computed(() => {
         class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
     >
         <!-- Liquid Glow Background behind the card (subtle) -->
-        <div class="absolute inset-0 z-0 bg-white/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+        <div
+            class="absolute inset-0 z-0 bg-white/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        ></div>
 
         <!-- Completion Badge -->
         <div
@@ -67,31 +69,47 @@ const statusColor = computed(() => {
 
         <div class="relative z-10 mb-4 flex items-start justify-between">
             <div class="flex items-center gap-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-2xl shadow-sm backdrop-blur-md transition-transform duration-300 group-hover:scale-110 group-hover:bg-white/20">
+                <div
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-2xl shadow-sm backdrop-blur-md transition-transform duration-300 group-hover:scale-110 group-hover:bg-white/20"
+                >
                     {{ typeIcon }}
                 </div>
                 <div>
-                    <h4 class="font-display text-text-main line-clamp-1 text-lg font-black italic uppercase dark:text-white">{{ goal.title }}</h4>
+                    <h4
+                        class="font-display text-text-main line-clamp-1 text-lg font-black uppercase italic dark:text-white"
+                    >
+                        {{ goal.title }}
+                    </h4>
                     <span class="text-text-muted text-[10px] font-bold tracking-wider uppercase">{{ typeLabel }}</span>
                 </div>
             </div>
 
             <div class="text-right">
-                <div class="font-display text-lg font-black italic drop-shadow-sm" :class="statusColor">{{ Math.round(progress) }}%</div>
+                <div class="font-display text-lg font-black italic drop-shadow-sm" :class="statusColor">
+                    {{ Math.round(progress) }}%
+                </div>
             </div>
         </div>
 
         <div class="relative z-10 space-y-4">
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
-                <div class="flex justify-between text-[10px] font-bold tracking-widest text-slate-500 uppercase dark:text-white/60">
+                <div
+                    class="flex justify-between text-[10px] font-bold tracking-widest text-slate-500 uppercase dark:text-white/60"
+                >
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
-                <div class="h-2 w-full overflow-hidden rounded-full border border-white/20 bg-white/10 shadow-inner backdrop-blur-md">
+                <div
+                    class="h-2 w-full overflow-hidden rounded-full border border-white/20 bg-white/10 shadow-inner backdrop-blur-md"
+                >
                     <div
                         class="relative h-full transition-all duration-1000 ease-out"
-                        :class="isCompleted ? 'bg-green-500 shadow-glow-green' : 'from-electric-orange to-hot-pink bg-linear-to-r shadow-glow-orange'"
+                        :class="
+                            isCompleted
+                                ? 'shadow-glow-green bg-green-500'
+                                : 'from-electric-orange to-hot-pink shadow-glow-orange bg-linear-to-r'
+                        "
                         :style="{ width: progress + '%' }"
                     >
                         <div class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent to-white/30"></div>
@@ -101,20 +119,30 @@ const statusColor = computed(() => {
 
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-3">
-                <div class="rounded-2xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md transition-colors group-hover:bg-white/20">
+                <div
+                    class="rounded-2xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md transition-colors group-hover:bg-white/20"
+                >
                     <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-white/60">
                         Actuel
                     </p>
-                    <p class="font-display mt-0.5 text-lg font-black italic text-slate-900 dark:text-white">
+                    <p class="font-display mt-0.5 text-lg font-black text-slate-900 italic dark:text-white">
                         {{ goal.current_value }}
-                        <span class="text-[10px] font-bold not-italic text-slate-500 dark:text-white/60">{{ goal.unit }}</span>
+                        <span class="text-[10px] font-bold text-slate-500 not-italic dark:text-white/60">{{
+                            goal.unit
+                        }}</span>
                     </p>
                 </div>
-                <div class="rounded-2xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md transition-colors group-hover:bg-white/20">
-                    <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-white/60">Cible</p>
-                    <p class="font-display mt-0.5 text-lg font-black italic text-slate-900 dark:text-white">
+                <div
+                    class="rounded-2xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md transition-colors group-hover:bg-white/20"
+                >
+                    <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-white/60">
+                        Cible
+                    </p>
+                    <p class="font-display mt-0.5 text-lg font-black text-slate-900 italic dark:text-white">
                         {{ goal.target_value }}
-                        <span class="text-[10px] font-bold not-italic text-slate-500 dark:text-white/60">{{ goal.unit }}</span>
+                        <span class="text-[10px] font-bold text-slate-500 not-italic dark:text-white/60">{{
+                            goal.unit
+                        }}</span>
                     </p>
                 </div>
             </div>
