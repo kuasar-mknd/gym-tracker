@@ -37,3 +37,8 @@
 **Vulnerability:** Found `PlateController@store` (both web and API) and `WorkoutTemplatesController@store` missing explicit `$this->authorize('create', ...)` calls. These controllers relied on `FormRequest::authorize()` which returned `true`, bypassing the `create` ability in their respective Policies.
 **Learning:** This is a recurring issue. Relying solely on the `authorize` method of a `FormRequest` is a consistent vulnerability pattern in this codebase.
 **Prevention:** We must always include an explicit `$this->authorize('create', Model::class)` call in controller `store` methods, even if a FormRequest is used.
+
+## 2026-03-24 - Broken Function Level Authorization in Resource Controllers (Continued)
+**Vulnerability:** Found `WorkoutsController@update` and `ExerciseController@store` (both web and API) missing explicit `$this->authorize()` calls. They relied on `FormRequest` authorization which, if misconfigured or bypassed, could allow unauthorized resource manipulation.
+**Learning:** This pattern of missing explicit controller-level authorization remains a common source of potential BOLA/BFLA in this project.
+**Prevention:** Enforce defense-in-depth by always calling `$this->authorize()` at the start of every resource controller action, regardless of `FormRequest` checks.

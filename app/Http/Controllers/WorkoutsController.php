@@ -97,6 +97,8 @@ class WorkoutsController extends Controller
      */
     public function update(UpdateWorkoutRequest $request, Workout $workout, UpdateWorkoutAction $updateWorkout): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('update', $workout);
+
         /** @var array{started_at?: string|null, name?: string|null, notes?: string|null, is_finished?: bool} $data */
         $data = $request->validated();
         $updateWorkout->execute($workout, $data);

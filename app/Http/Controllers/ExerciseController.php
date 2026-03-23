@@ -80,7 +80,7 @@ class ExerciseController extends Controller
      */
     public function store(ExerciseStoreRequest $request, CreateExerciseAction $createExerciseAction): RedirectResponse|JsonResponse
     {
-        // Auth check handled by middleware/request
+        $this->authorize('create', Exercise::class);
 
         $data = $request->validated();
         $exercise = $createExerciseAction->execute($this->user(), $data);
