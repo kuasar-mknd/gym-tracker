@@ -59,7 +59,7 @@ const close = () => {
 
         <!-- Modal -->
         <div
-            class="animate-bounce-in bg-glass-strong relative w-full max-w-sm overflow-hidden rounded-3xl p-1 shadow-2xl ring-1 ring-white/10"
+            class="animate-bounce-in relative w-full max-w-sm rounded-3xl border border-white/20 bg-white/10 p-6 text-center shadow-2xl backdrop-blur-md transition-all duration-300 hover:bg-white/20 dark:bg-black/40"
             role="dialog"
             aria-modal="true"
             aria-labelledby="achievement-title"
@@ -67,12 +67,10 @@ const close = () => {
         >
             <!-- Glow Effect -->
             <div
-                class="to-accent-secondary/20 from-accent-primary/20 absolute inset-0 bg-linear-to-br via-transparent opacity-50"
+                class="to-accent-secondary/20 from-accent-primary/20 pointer-events-none absolute inset-0 rounded-3xl bg-linear-to-br via-transparent opacity-50"
             ></div>
 
-            <div
-                class="relative flex flex-col items-center rounded-3xl border border-white/20 bg-white/10 p-6 text-center backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20"
-            >
+            <div class="relative z-10 flex flex-col items-center">
                 <!-- Confetti/Burst Animation Background (CSS only) -->
                 <div class="pointer-events-none absolute top-0 left-0 h-full w-full overflow-hidden">
                     <div
@@ -83,16 +81,16 @@ const close = () => {
                 <!-- Icon -->
                 <div class="relative mb-4" aria-hidden="true">
                     <div
-                        class="animate-wobble flex h-24 w-24 items-center justify-center rounded-3xl border border-white/10 bg-linear-to-br from-white/10 to-white/5 text-6xl shadow-lg"
+                        class="animate-wobble flex h-24 w-24 items-center justify-center rounded-3xl border border-white/20 bg-white/10 text-6xl shadow-lg backdrop-blur-md"
                     >
                         {{ achievement.icon }}
                     </div>
                 </div>
 
                 <!-- Text -->
-                <h2 class="mb-1 text-xl font-bold text-white" id="achievement-title">Badge Débloqué !</h2>
+                <h2 class="text-text-main mb-1 text-xl font-bold dark:text-white" id="achievement-title">Badge Débloqué !</h2>
                 <h3 class="text-accent-primary mb-3 text-lg font-bold">{{ achievement.name }}</h3>
-                <p class="mb-6 text-sm text-white/70" id="achievement-description">
+                <p class="text-text-muted mb-6 text-sm dark:text-white/70" id="achievement-description">
                     {{
                         achievement.message?.replace('Nouveau badge débloqué : ' + achievement.name + ' !', '') ||
                         'Félicitations pour cet exploit !'
@@ -101,8 +99,9 @@ const close = () => {
 
                 <!-- Action -->
                 <button
+                    v-press
                     @click="close"
-                    class="hover:bg-accent-primary-hover bg-accent-primary shadow-accent-primary/25 w-full rounded-xl py-3 font-bold text-white shadow-lg transition-all active:scale-95"
+                    class="w-full rounded-2xl border border-white/20 bg-white/10 py-3 font-bold text-slate-800 shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 dark:text-white"
                 >
                     Génial ! 🤩
                 </button>
