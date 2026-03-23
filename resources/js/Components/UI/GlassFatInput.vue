@@ -1,4 +1,15 @@
 <script setup>
+/**
+ * GlassFatInput.vue
+ *
+ * A specialized numeric input component designed with a "Glass" aesthetic.
+ * It features a large, centered input field with integrated increment (+) and
+ * decrement (-) buttons that appear on hover or focus. It's intended for
+ * numeric values where quick adjustments are common, like weight or repetitions.
+ *
+ * The component supports custom validation error display, haptic feedback on
+ * button presses, and automatic input selection on focus.
+ */
 import { computed, useAttrs, getCurrentInstance } from 'vue'
 import InputError from '@/Components/InputError.vue'
 
@@ -6,6 +17,15 @@ defineOptions({
     inheritAttrs: false,
 })
 
+/**
+ * Component Props
+ *
+ * @property {String|Number} modelValue - The current value of the input.
+ * @property {String} type - The HTML input type (default: 'text'). Often set to 'number'.
+ * @property {String} label - The text label displayed above the input.
+ * @property {String} error - An error message to display below the input if validation fails.
+ * @property {Boolean} selectOnFocus - Whether to automatically select all text when the input is focused.
+ */
 const props = defineProps({
     modelValue: {
         type: [String, Number],
@@ -29,6 +49,11 @@ const props = defineProps({
     },
 })
 
+/**
+ * Component Emits
+ *
+ * @event update:modelValue - Fired when the input value changes, either by direct typing or clicking the +/- buttons.
+ */
 defineEmits(['update:modelValue'])
 
 const attrs = useAttrs()
