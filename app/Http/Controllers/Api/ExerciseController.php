@@ -47,6 +47,8 @@ class ExerciseController extends Controller
      */
     public function store(ExerciseStoreRequest $request): ExerciseResource
     {
+        $this->authorize('create', Exercise::class);
+
         $validated = $request->validated();
 
         $exercise = new Exercise($validated);
