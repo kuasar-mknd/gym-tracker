@@ -141,9 +141,8 @@ test('stats page renders without cache errors', function (): void {
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Stats/Index')
                 ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                    ->has('volumeTrend')
-                    ->has('muscleDistribution')
-                    ->has('monthlyComparison')
+                    ->has('workoutStats')
+                    ->has('bodyStats')
                 )
                 ->has('exercises')
         );
