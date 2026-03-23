@@ -1,3 +1,5 @@
-## 2025-02-18 - v-press directive
-**Learning:** `v-press` is actually a valid directive in the project, defined at `resources/js/directives/vPress.js`. It provides scaling effects and haptics for interactive elements, which perfectly aligns with Apple's HIG. Code reviews sometimes mistakenly flag it as undefined if they don't look closely at the project setup.
-**Action:** When asked to implement micro-interactions or Apple HIG effects, `v-press` is the preferred approach for buttons and interactive items in this codebase.
+## 2025-05-15 - Standardizing Micro-interactions with v-press
+
+**Learning:** The GymTracker design system uses a custom `v-press` directive to centralize scaling and haptic feedback. Manually implementing these (e.g., with `active:scale-95` and `triggerHaptic`) leads to inconsistent UX and "double-haptic" bugs when both the directive and manual calls are present on the same element.
+
+**Action:** Always prefer the `v-press` directive for interactive elements. When a button triggers an action that has its own specialized haptic pattern (like a timer completion), use `v-press="{ haptic: false }"` to prevent overlapping vibrations while still benefiting from the standard scaling animation.
