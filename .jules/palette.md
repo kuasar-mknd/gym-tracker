@@ -1,4 +1,4 @@
-## 2025-05-15 - Standardizing Micro-interactions with v-press
+## 2026-03-23 - Standardizing Micro-interactions with v-press
 
 **Learning:** The GymTracker design system uses a custom `v-press` directive to centralize scaling and haptic feedback. Manually implementing these (e.g., with `active:scale-95` and `triggerHaptic`) leads to inconsistent UX and "double-haptic" bugs when both the directive and manual calls are present on the same element.
 
