@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Goals\CreateGoalAction;
+use App\Actions\Goals\FetchGoalsIndexAction;
 use App\Http\Requests\GoalStoreRequest;
-use App\Models\Exercise;
 use App\Models\Goal;
 use App\Services\GoalService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -41,23 +41,9 @@ class GoalController extends Controller
      *
      * @return \Inertia\Response The Inertia response rendering the 'Goals/Index' page.
      */
-    public function index(): \Inertia\Response
+    public function index(FetchGoalsIndexAction $fetchGoalsIndexAction): \Inertia\Response
     {
-        return Inertia::render('Goals/Index', [
-            'goals' => $this->user()->goals()
-                ->with('exercise')
-                ->latest()
-                ->get()
-                ->append(['progress', 'unit']),
-            'exercises' => Exercise::getCachedForUser($this->user()->id),
-            'measurementTypes' => [
-                ['value' => 'weight', 'label' => 'Poids de corps'],
-                ['value' => 'waist', 'label' => 'Tour de taille'],
-                ['value' => 'body_fat', 'label' => 'Masse grasse (%)'],
-                ['value' => 'chest', 'label' => 'Tour de poitrine'],
-                ['value' => 'arms', 'label' => 'Tour de bras'],
-            ],
-        ]);
+        return Inertia::render('Goals/Index', $fetchGoalsIndexAction->execute($this->user()));
     }
 
     /**
