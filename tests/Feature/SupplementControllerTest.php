@@ -7,10 +7,7 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
-use function Pest\Laravel\post;
-use function Pest\Laravel\patch;
 
 test('authenticated user can view supplements page', function (): void {
     $user = User::factory()->create();
