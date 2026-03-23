@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\Workout;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -302,7 +301,12 @@ final class StatsService
     }
 
     /**
-     * @return array{volume_trend: array, muscle_distribution: array, monthly_comparison: array, duration_history: array}
+     * @return array{
+     *     volume_trend: array<int, array{date: string, full_date: string, name: string, volume: float}>,
+     *     muscle_distribution: array<int, array{category: string, volume: float}>,
+     *     monthly_comparison: array{current_month_volume: float, previous_month_volume: float, difference: float, percentage: float},
+     *     duration_history: array<int, array{date: string, duration: int, name: string}>
+     * }
      */
     public function getWorkoutPerformanceOverview(User $user, int $days = 30, int $durationLimit = 30): array
     {
@@ -319,7 +323,10 @@ final class StatsService
     }
 
     /**
-     * @return array{weight_history: array, body_fat_history: array}
+     * @return array{
+     *     weight_history: array<int, array{date: string, full_date: string, weight: float}>,
+     *     body_fat_history: array<int, array{date: string, full_date: string, body_fat: float}>
+     * }
      */
     public function getBodyMetricsHistoryOverview(User $user, int $days = 90): array
     {
@@ -330,15 +337,18 @@ final class StatsService
                 // ⚡ Bolt: PERFORMANCE OPTIMIZATION
                 // Fetch all body measurements for the period in a single query
                 // and split them into weight and body fat histories in PHP.
+                /** @var \Illuminate\Support\Collection<int, \stdClass> $measurements */
                 $measurements = DB::table('body_measurements')
                     ->where('user_id', $user->id)
                     ->where('measured_at', '>=', now()->subDays($days))
                     ->orderBy('measured_at', 'asc')
                     ->get();
 
-                $weightHistory = $measurements->map(fn (object $m): array => $this->formatWeightHistoryItem($m))->toArray();
-                $bodyFatHistory = $measurements->filter(fn (object $m): bool => ! empty($m->body_fat))
-                    ->map(fn (object $m): array => $this->formatBodyFatHistoryItem($m))
+                /** @var array<int, array{date: string, full_date: string, weight: float}> $weightHistory */
+                $weightHistory = $measurements->map(fn (\stdClass $m): array => $this->formatWeightHistoryItem($m))->toArray();
+                /** @var array<int, array{date: string, full_date: string, body_fat: float}> $bodyFatHistory */
+                $bodyFatHistory = $measurements->filter(fn (\stdClass $m): bool => ($m->body_fat ?? null) !== null && ($m->body_fat ?? '') !== '')
+                    ->map(fn (\stdClass $m): array => $this->formatBodyFatHistoryItem($m))
                     ->values()
                     ->toArray();
 
@@ -867,7 +877,7 @@ final class StatsService
         // Using Carbon::parse here for correctness with timezones, as the overhead
         // of instantiating 20 objects is negligible compared to full model hydration.
         $startedAt = Carbon::parse((string) ($workout->started_at ?? 'now'));
-        $endedAt = ! empty($workout->ended_at) ? Carbon::parse((string) $workout->ended_at) : null;
+        $endedAt = ($workout->ended_at ?? null) !== null ? Carbon::parse((string) $workout->ended_at) : null;
 
         return [
             'date' => $startedAt->format('d/m'),
