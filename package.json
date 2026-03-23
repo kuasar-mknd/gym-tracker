@@ -29,7 +29,7 @@
         "postcss": "^8.4.31",
         "prettier": "^3.8.0",
         "prettier-plugin-tailwindcss": "^0.7.2",
-        "tailwindcss": "^4.1.18",
+        "tailwindcss": "^4.2.2",
         "vite": "^7.0.7",
         "vite-plugin-pwa": "^1.2.0",
         "workbox-window": "^7.4.0",
