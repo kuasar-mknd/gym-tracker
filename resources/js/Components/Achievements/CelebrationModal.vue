@@ -88,9 +88,7 @@ const close = () => {
                 </div>
 
                 <!-- Text -->
-                <h2 class="text-text-main mb-1 text-xl font-bold dark:text-white" id="achievement-title">
-                    Badge Débloqué !
-                </h2>
+                <h2 class="text-text-main mb-1 text-xl font-bold dark:text-white" id="achievement-title">Badge Débloqué !</h2>
                 <h3 class="text-accent-primary mb-3 text-lg font-bold">{{ achievement.name }}</h3>
                 <p class="text-text-muted mb-6 text-sm dark:text-white/70" id="achievement-description">
                     {{
@@ -103,7 +101,7 @@ const close = () => {
                 <button
                     v-press
                     @click="close"
-                    class="w-full rounded-2xl border border-white/20 bg-white/10 py-3 font-bold text-slate-800 shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 dark:text-white"
+                    class="w-full rounded-2xl border border-white/20 bg-white/10 py-3 font-bold text-slate-800 shadow-lg backdrop-blur-md transition-all hover:bg-white/20 dark:text-white"
                 >
                     Génial ! 🤩
                 </button>
