@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\Workout;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -302,6 +301,66 @@ final class StatsService
     }
 
     /**
+     * @return array{
+     *     volume_trend: array<int, array{date: string, full_date: string, name: string, volume: float}>,
+     *     muscle_distribution: array<int, array{category: string, volume: float}>,
+     *     monthly_comparison: array{current_month_volume: float, previous_month_volume: float, difference: float, percentage: float},
+     *     duration_history: array<int, array{date: string, duration: int, name: string}>
+     * }
+     */
+    public function getWorkoutPerformanceOverview(User $user, int $days = 30, int $durationLimit = 30): array
+    {
+        return Cache::remember(
+            "stats.workout_performance_overview.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            fn (): array => [
+                'volume_trend' => $this->getVolumeTrend($user, $days),
+                'muscle_distribution' => $this->getMuscleDistribution($user, $days),
+                'monthly_comparison' => $this->getMonthlyVolumeComparison($user),
+                'duration_history' => $this->getDurationHistory($user, $durationLimit),
+            ]
+        );
+    }
+
+    /**
+     * @return array{
+     *     weight_history: array<int, array{date: string, full_date: string, weight: float}>,
+     *     body_fat_history: array<int, array{date: string, full_date: string, body_fat: float}>
+     * }
+     */
+    public function getBodyMetricsHistoryOverview(User $user, int $days = 90): array
+    {
+        return Cache::remember(
+            "stats.body_metrics_history.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $days): array {
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Fetch all body measurements for the period in a single query
+                // and split them into weight and body fat histories in PHP.
+                /** @var \Illuminate\Support\Collection<int, \stdClass> $measurements */
+                $measurements = DB::table('body_measurements')
+                    ->where('user_id', $user->id)
+                    ->where('measured_at', '>=', now()->subDays($days))
+                    ->orderBy('measured_at', 'asc')
+                    ->get();
+
+                /** @var array<int, array{date: string, full_date: string, weight: float}> $weightHistory */
+                $weightHistory = $measurements->map(fn (\stdClass $m): array => $this->formatWeightHistoryItem($m))->toArray();
+                /** @var array<int, array{date: string, full_date: string, body_fat: float}> $bodyFatHistory */
+                $bodyFatHistory = $measurements->filter(fn (\stdClass $m): bool => ($m->body_fat ?? null) !== null && ($m->body_fat ?? '') !== '')
+                    ->map(fn (\stdClass $m): array => $this->formatBodyFatHistoryItem($m))
+                    ->values()
+                    ->toArray();
+
+                return [
+                    'weight_history' => $weightHistory,
+                    'body_fat_history' => $bodyFatHistory,
+                ];
+            }
+        );
+    }
+
+    /**
      * @return array{monthly_frequency: array<int, array{month: string, count: int}>, monthly_volume: array<int, array{month: string, volume: float}>}
      */
     public function getMonthlyWorkoutStats(User $user, int $months = 6): array
@@ -448,6 +507,7 @@ final class StatsService
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.volume_trend.{$user->id}.{$days}");
             Cache::forget("stats.daily_volume.{$user->id}.{$days}");
+            Cache::forget("stats.workout_performance_overview.{$user->id}.{$days}");
         }
 
         // Clear volume history
@@ -466,10 +526,15 @@ final class StatsService
     public function clearDurationStats(User $user): void
     {
         Cache::forget("stats.duration_history.{$user->id}.20");
+        Cache::forget("stats.duration_history.{$user->id}.30");
         Cache::forget("stats.recent_workouts_analytics.{$user->id}.20");
         Cache::forget("stats.duration_distribution.{$user->id}.90");
         Cache::forget("stats.time_of_day_distribution.{$user->id}.90");
         Cache::forget("stats.workout_distributions.{$user->id}.90");
+
+        foreach ([7, 30, 90, 365] as $days) {
+            Cache::forget("stats.workout_performance_overview.{$user->id}.{$days}");
+        }
     }
 
     /**
@@ -491,6 +556,7 @@ final class StatsService
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.weight_history.{$user->id}.{$days}");
             Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
+            Cache::forget("stats.body_metrics_history.{$user->id}.{$days}");
         }
     }
 
@@ -811,7 +877,7 @@ final class StatsService
         // Using Carbon::parse here for correctness with timezones, as the overhead
         // of instantiating 20 objects is negligible compared to full model hydration.
         $startedAt = Carbon::parse((string) ($workout->started_at ?? 'now'));
-        $endedAt = ! empty($workout->ended_at) ? Carbon::parse((string) $workout->ended_at) : null;
+        $endedAt = ($workout->ended_at ?? null) !== null ? Carbon::parse((string) $workout->ended_at) : null;
 
         return [
             'date' => $startedAt->format('d/m'),

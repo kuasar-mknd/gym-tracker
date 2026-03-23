@@ -21,9 +21,8 @@ test('authenticated user can view stats page', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                ->has('volumeTrend')
-                ->has('muscleDistribution')
-                ->has('monthlyComparison')
+                ->has('workoutStats')
+                ->has('bodyStats')
             )
             ->has('exercises')
         );
@@ -67,8 +66,8 @@ test('stats page calculates volume trend correctly', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                ->where('volumeTrend.0.volume', 1500)
-                ->where('volumeTrend.0.name', $workout->name)
+                ->where('workoutStats.volume_trend.0.volume', 1500)
+                ->where('workoutStats.volume_trend.0.name', $workout->name)
             )
         );
 });
@@ -111,8 +110,8 @@ test('stats page calculates muscle distribution correctly', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                ->has('muscleDistribution', 2)
-                ->where('muscleDistribution', function ($distribution): bool {
+                ->has('workoutStats.muscle_distribution', 2)
+                ->where('workoutStats.muscle_distribution', function ($distribution): bool {
                     $chest = collect($distribution)->firstWhere('category', 'Pectoraux');
                     $back = collect($distribution)->firstWhere('category', 'Dos');
 
@@ -158,9 +157,9 @@ test('stats page calculates monthly comparison correctly', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                ->where('monthlyComparison.current_month_volume', fn ($val): bool => $val == 1000)
-                ->where('monthlyComparison.previous_month_volume', fn ($val): bool => $val == 500)
-                ->where('monthlyComparison.percentage', fn ($val): bool => $val == 100)
+                ->where('workoutStats.monthly_comparison.current_month_volume', fn ($val): bool => $val == 1000)
+                ->where('workoutStats.monthly_comparison.previous_month_volume', fn ($val): bool => $val == 500)
+                ->where('workoutStats.monthly_comparison.percentage', fn ($val): bool => $val == 100)
             )
         );
 });
@@ -232,7 +231,7 @@ test('stats do not include other users data', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                ->where('volumeTrend', []) // Should be empty for this user
+                ->where('workoutStats.volume_trend', []) // Should be empty for this user
             )
         );
 });
@@ -253,9 +252,9 @@ test('stats page provides duration history', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                ->has('durationHistory')
-                ->where('durationHistory.0.duration', 60)
-                ->where('durationHistory.0.name', $workout->name)
+                ->has('workoutStats.duration_history')
+                ->where('workoutStats.duration_history.0.duration', 60)
+                ->where('workoutStats.duration_history.0.name', $workout->name)
             )
         );
 });

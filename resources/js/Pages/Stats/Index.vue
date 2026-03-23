@@ -14,12 +14,8 @@ const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
 
 const props = defineProps({
-    volumeTrend: Array,
-    muscleDistribution: Array,
-    monthlyComparison: Object,
-    weightHistory: Array,
-    bodyFatHistory: Array,
-    durationHistory: Array,
+    workoutStats: Object,
+    bodyStats: Object,
     exercises: Array,
     latestWeight: [Number, String],
     weightChange: Number,
@@ -40,7 +36,7 @@ const periods = [
 ]
 
 const totalVolume = computed(() => {
-    return props.volumeTrend?.reduce((acc, curr) => acc + curr.volume, 0) || 0
+    return props.workoutStats?.volume_trend?.reduce((acc, curr) => acc + curr.volume, 0) || 0
 })
 
 const handlePeriodChange = (period) => {
@@ -136,13 +132,16 @@ watch(selectedExercise, (newVal) => {
 
                 <!-- Real Weight Chart (Deferred) -->
                 <div class="relative -mx-2 h-40 w-full">
-                    <Deferred data="weightHistory">
+                    <Deferred data="bodyStats">
                         <template #fallback>
                             <div class="flex h-full items-center justify-center px-4">
                                 <GlassSkeleton height="h-32" width="w-full" class="rounded-xl" />
                             </div>
                         </template>
-                        <WeightHistoryChart v-if="props.weightHistory?.length > 0" :data="props.weightHistory" />
+                        <WeightHistoryChart
+                            v-if="props.bodyStats?.weight_history?.length > 0"
+                            :data="props.bodyStats.weight_history"
+                        />
                         <div v-else class="flex h-full items-center justify-center text-center">
                             <p class="text-text-muted/50 text-sm italic">Pas encore de données de poids</p>
                         </div>
@@ -179,11 +178,14 @@ watch(selectedExercise, (newVal) => {
 
                     <!-- Real Body Fat Chart (Deferred) -->
                     <div class="mt-4 h-32 w-full">
-                        <Deferred data="bodyFatHistory">
+                        <Deferred data="bodyStats">
                             <template #fallback>
                                 <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
                             </template>
-                            <BodyFatChart v-if="props.bodyFatHistory?.length > 0" :data="props.bodyFatHistory" />
+                            <BodyFatChart
+                                v-if="props.bodyStats?.body_fat_history?.length > 0"
+                                :data="props.bodyStats.body_fat_history"
+                            />
                             <div v-else class="flex h-full items-center justify-center">
                                 <p class="text-text-muted/30 text-[10px] italic">Pas de données historiques</p>
                             </div>
@@ -193,7 +195,7 @@ watch(selectedExercise, (newVal) => {
 
                 <!-- This Month Volume -->
                 <GlassCard padding="p-5">
-                    <Deferred data="monthlyComparison">
+                    <Deferred data="workoutStats">
                         <template #fallback>
                             <div class="space-y-4">
                                 <GlassSkeleton height="h-4" width="w-24" />
@@ -207,23 +209,31 @@ watch(selectedExercise, (newVal) => {
                                     Volume Mois
                                 </h4>
                                 <p class="font-display text-text-main text-3xl font-black">
-                                    {{ Math.round(monthlyComparison?.current_month_volume || 0).toLocaleString() }}
+                                    {{
+                                        Math.round(
+                                            workoutStats?.monthly_comparison?.current_month_volume || 0
+                                        ).toLocaleString()
+                                    }}
                                     <span class="text-text-muted text-sm">kg</span>
                                 </p>
                             </div>
                             <div
                                 :class="[
                                     'flex items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold',
-                                    (monthlyComparison?.percentage || 0) >= 0
+                                    (workoutStats?.monthly_comparison?.percentage || 0) >= 0
                                         ? 'bg-emerald-50 text-emerald-600'
                                         : 'bg-red-50 text-red-600',
                                 ]"
                             >
                                 <span class="material-symbols-outlined text-sm">
-                                    {{ (monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down' }}
+                                    {{
+                                        (workoutStats?.monthly_comparison?.percentage || 0) >= 0
+                                            ? 'trending_up'
+                                            : 'trending_down'
+                                    }}
                                 </span>
-                                {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
-                                }}{{ monthlyComparison?.percentage || 0 }}%
+                                {{ (workoutStats?.monthly_comparison?.percentage || 0) >= 0 ? '+' : ''
+                                }}{{ workoutStats?.monthly_comparison?.percentage || 0 }}%
                             </div>
                         </div>
                     </Deferred>
@@ -259,12 +269,12 @@ watch(selectedExercise, (newVal) => {
                     </div>
                 </div>
                 <div class="h-48">
-                    <Deferred data="volumeTrend">
+                    <Deferred data="workoutStats">
                         <template #fallback>
                             <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
                         </template>
-                        <div v-if="volumeTrend && volumeTrend.length > 0" class="h-full">
-                            <VolumeTrendChart :data="volumeTrend" />
+                        <div v-if="workoutStats?.volume_trend?.length > 0" class="h-full">
+                            <VolumeTrendChart :data="workoutStats.volume_trend" />
                         </div>
                         <div v-else class="flex h-full flex-col items-center justify-center text-center">
                             <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
@@ -285,12 +295,12 @@ watch(selectedExercise, (newVal) => {
                     </div>
                 </div>
                 <div class="h-48">
-                    <Deferred data="durationHistory">
+                    <Deferred data="workoutStats">
                         <template #fallback>
                             <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
                         </template>
-                        <div v-if="durationHistory && durationHistory.length > 0" class="h-full">
-                            <DurationHistoryChart :data="durationHistory" />
+                        <div v-if="workoutStats?.duration_history?.length > 0" class="h-full">
+                            <DurationHistoryChart :data="workoutStats.duration_history" />
                         </div>
                         <div v-else class="flex h-full flex-col items-center justify-center text-center">
                             <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">timer_off</span>
@@ -311,12 +321,12 @@ watch(selectedExercise, (newVal) => {
                         <p class="text-text-muted text-xs font-semibold">Volume par groupe musculaire</p>
                     </div>
                     <div class="h-52">
-                        <Deferred data="muscleDistribution">
+                        <Deferred data="workoutStats">
                             <template #fallback>
                                 <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
                             </template>
-                            <div v-if="muscleDistribution && muscleDistribution.length > 0" class="h-full">
-                                <MuscleDistributionChart :data="muscleDistribution" />
+                            <div v-if="workoutStats?.muscle_distribution?.length > 0" class="h-full">
+                                <MuscleDistributionChart :data="workoutStats.muscle_distribution" />
                             </div>
                             <div v-else class="flex h-full flex-col items-center justify-center text-center">
                                 <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl"
@@ -368,23 +378,23 @@ watch(selectedExercise, (newVal) => {
             <div class="animate-slide-up grid grid-cols-4 gap-3" style="animation-delay: 0.25s">
                 <GlassCard padding="p-4" class="text-center">
                     <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
-                    <Deferred data="volumeTrend">
+                    <Deferred data="workoutStats">
                         <template #fallback>
                             <GlassSkeleton height="h-8" width="w-8" class="mx-auto mt-1" />
                         </template>
                         <div class="font-display text-text-main mt-1 text-2xl font-black">
-                            {{ volumeTrend?.length || 0 }}
+                            {{ workoutStats?.volume_trend?.length || 0 }}
                         </div>
                     </Deferred>
                 </GlassCard>
                 <GlassCard padding="p-4" class="text-center">
                     <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
-                    <Deferred data="muscleDistribution">
+                    <Deferred data="workoutStats">
                         <template #fallback>
                             <GlassSkeleton height="h-8" width="w-8" class="mx-auto mt-1" />
                         </template>
                         <div class="font-display text-text-main mt-1 text-2xl font-black">
-                            {{ muscleDistribution?.length || 0 }}
+                            {{ workoutStats?.muscle_distribution?.length || 0 }}
                         </div>
                     </Deferred>
                 </GlassCard>
@@ -396,18 +406,19 @@ watch(selectedExercise, (newVal) => {
                 </GlassCard>
                 <GlassCard padding="p-4" class="text-center">
                     <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
-                    <Deferred data="monthlyComparison">
+                    <Deferred data="workoutStats">
                         <template #fallback>
                             <GlassSkeleton height="h-8" width="w-12" class="mx-auto mt-1" />
                         </template>
                         <div
+                            v-if="workoutStats?.monthly_comparison"
                             :class="[
                                 'font-display mt-1 text-2xl font-black',
-                                (monthlyComparison?.percentage || 0) >= 0 ? 'text-emerald-500' : 'text-red-500',
+                                workoutStats.monthly_comparison.percentage >= 0 ? 'text-emerald-500' : 'text-red-500',
                             ]"
                         >
-                            {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
-                            }}{{ monthlyComparison?.percentage || 0 }}%
+                            {{ workoutStats.monthly_comparison.percentage >= 0 ? '+' : ''
+                            }}{{ workoutStats.monthly_comparison.percentage }}%
                         </div>
                     </Deferred>
                 </GlassCard>
