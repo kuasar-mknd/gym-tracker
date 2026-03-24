@@ -17,6 +17,7 @@ const SetWeightProgressionChart = defineAsyncComponent(() => import('@/Component
 const Estimated1RMHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/Estimated1RMHistoryChart.vue'))
 const SessionPerformanceChart = defineAsyncComponent(() => import('@/Components/Stats/SessionPerformanceChart.vue'))
 const SessionVolumeLineChart = defineAsyncComponent(() => import('@/Components/Stats/SessionVolumeLineChart.vue'))
+const HistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HistoryChart.vue'))
 
 /**
  * Component Props
@@ -346,63 +347,23 @@ const scatterData = computed(() => {
                 </GlassCard>
             </div>
 
-            <!-- History List -->
+            <!-- History Chart -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">Historique</h3>
-
-                <div v-if="history.length === 0" class="py-8 text-center">
-                    <p class="text-text-muted">Aucune donnée historique trouvée.</p>
-                </div>
-
-                <div v-else class="space-y-4">
-                    <GlassCard v-for="session in history" :key="session.id" padding="p-0" class="overflow-hidden">
-                        <!-- Header -->
-                        <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 p-3">
-                            <div class="text-text-main font-bold">
-                                {{ session.formatted_date }}
-                            </div>
-                            <Link
-                                :href="route('workouts.show', { workout: session.workout_id })"
-                                class="text-electric-orange text-xs font-bold tracking-wider uppercase hover:underline"
-                            >
-                                {{ session.workout_name }}
-                            </Link>
-                        </div>
-
-                        <!-- Sets -->
-                        <div class="space-y-2 p-3">
-                            <div
-                                v-for="(set, index) in session.sets"
-                                :key="index"
-                                class="flex items-center justify-between text-sm"
-                            >
-                                <div class="flex items-center gap-3">
-                                    <span class="text-text-muted w-4 font-mono text-xs">{{ index + 1 }}</span>
-                                    <span class="text-text-main font-bold"
-                                        >{{ set.weight }}
-                                        <span class="text-text-muted text-xs font-normal">kg</span></span
-                                    >
-                                    <span class="text-text-muted">x</span>
-                                    <span class="text-text-main font-bold"
-                                        >{{ set.reps }}
-                                        <span class="text-text-muted text-xs font-normal">reps</span></span
-                                    >
-                                </div>
-                                <div class="text-text-muted text-xs font-semibold">
-                                    1RM: {{ Math.round(set['1rm']) }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Footer Best 1RM -->
-                        <div
-                            class="text-text-muted border-t border-slate-100 bg-slate-50/30 p-2 text-center text-xs font-medium"
-                        >
-                            Meilleur 1RM estimé:
-                            <span class="text-text-main font-bold">{{ Math.round(session.best_1rm) }} kg</span>
-                        </div>
-                    </GlassCard>
-                </div>
+                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                            Historique du 1RM
+                        </h3>
+                        <p class="text-text-muted text-xs font-semibold">Évolution du meilleur 1RM estimé</p>
+                    </div>
+                    <div v-if="history.length > 0" class="h-64">
+                        <HistoryChart :data="history" />
+                    </div>
+                    <div v-else class="flex h-64 flex-col items-center justify-center text-center">
+                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">show_chart</span>
+                        <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
+                    </div>
+                </GlassCard>
             </div>
         </div>
     </AuthenticatedLayout>
