@@ -29,7 +29,10 @@ const colorForWorkout = (index) => {
         </div>
 
         <!-- Empty State -->
-        <div v-if="recentWorkouts.length === 0" class="glass-panel-light rounded-3xl p-8 text-center">
+        <div
+            v-if="recentWorkouts.length === 0"
+            class="rounded-3xl border border-white/20 bg-white/10 p-8 text-center backdrop-blur-md"
+        >
             <div class="mb-3 text-5xl" aria-hidden="true">🏋️</div>
             <p class="text-text-main font-bold dark:text-white">Aucune séance pour l'instant</p>
             <p class="text-text-muted mt-1 mb-5 text-sm">Commence ton parcours fitness !</p>
@@ -43,10 +46,26 @@ const colorForWorkout = (index) => {
             <Link
                 v-for="(workout, index) in recentWorkouts"
                 :key="workout.id"
+                v-press
                 :href="route('workouts.show', { workout: workout.id })"
-                class="activity-card"
-                :data-color="colorForWorkout(index)"
+                class="group relative flex items-center justify-between rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
             >
+                <!-- Color indicator -->
+                <div
+                    class="absolute top-1/2 left-0 h-10 w-1.5 -translate-y-1/2 rounded-r-md"
+                    :class="[
+                        index === 0
+                            ? 'bg-vivid-violet'
+                            : index === 1
+                              ? 'bg-electric-orange'
+                              : index === 2
+                                ? 'bg-hot-pink'
+                                : index === 3
+                                  ? 'bg-cyan-pure'
+                                  : 'bg-green-500',
+                    ]"
+                ></div>
+
                 <div class="flex items-center gap-4 pl-3">
                     <div
                         :class="[
