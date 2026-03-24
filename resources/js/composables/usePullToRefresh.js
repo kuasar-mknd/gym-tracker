@@ -63,7 +63,7 @@ export function usePullToRefresh(options = {}) {
         if (pullDistance.value > threshold) {
             isRefreshing.value = true
             pullDistance.value = threshold // Snap to threshold
-            triggerHaptic('time') // Haptic feedback on trigger
+            triggerHaptic('timer') // Haptic feedback on trigger
 
             try {
                 await onRefresh()

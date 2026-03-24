@@ -37,6 +37,12 @@ export function triggerHaptic(type = 'tap') {
         return false
     }
 
+    // Browsers intervene and block vibrations without a user gesture (e.g. naturally ending timer).
+    // This check avoids [Intervention] console warnings that cause Dusk tests to fail.
+    if (navigator.userActivation && !navigator.userActivation.isActive) {
+        return false
+    }
+
     const pattern = patterns[type] || patterns.tap
     try {
         return navigator.vibrate(pattern)
