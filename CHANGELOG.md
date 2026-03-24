@@ -7,7 +7,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.5.1] - 2026-03-24
+## [1.4.24] - 2026-03-24
 
 ### Ajouté
 - **Visualisations Avancées** : Introduction de nouveaux graphiques Chart.js pour le volume de session, l'historique du 1RM estimé, la distribution des muscles et la progression du poids des séries.
@@ -34,7 +34,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Stabilité Dusk** : Correction du crash du seeder sur les Enums et ajustement des zones de sécurité pour les écrans iPhone Max.
 - **Qualité Code** : Application systématique des règles Rector et obtention d'un score de 100/100 sur les métriques PHP Insights.
 
-## [1.5.0] - 2026-03-17
+## [1.4.23] - 2026-03-17
 
 ### Ajouté
 - **Architecture 2026** : Introduction d'Enums PHP 8.5 pour les types de records (`PersonalRecordType`), les objectifs (`GoalType`) et les catégories d'exercices (`ExerciseCategory`).
@@ -258,9 +258,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.1...HEAD
-[1.5.1]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.0...v1.5.1
-[1.5.0]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.18...v1.5.0
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.24...HEAD
+[1.4.24]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.23...v1.4.24
+[1.4.23]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.18...v1.4.23
 [1.4.18]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.14...v1.4.18
 [1.4.14]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.13...v1.4.14
 [1.4.13]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.12...v1.4.13
