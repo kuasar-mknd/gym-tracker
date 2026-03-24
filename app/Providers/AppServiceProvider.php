@@ -27,11 +27,11 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\NotificationService::class);
         $this->app->singleton(\App\Services\PersonalRecordService::class);
 
-        if ($this->app->environment('testing')) {
+        if (config('app.env') === 'testing') {
             config(['telescope.enabled' => false]);
         }
 
-        if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
+        if (config('app.env') === 'local' && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(\App\Providers\TelescopeServiceProvider::class);
         }
@@ -42,19 +42,19 @@ final class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->environment('testing')) {
+        if (config('app.env') === 'testing') {
             Gate::define('viewPulse', fn ($user = null): bool => true);
         }
 
         Vite::useCspNonce();
         Vite::prefetch(concurrency: 3);
 
-        Model::shouldBeStrict(! app()->environment('production'));
+        Model::shouldBeStrict(config('app.env') !== 'production');
 
         Password::defaults(function () {
             $rule = Password::min(8);
 
-            return app()->environment('production')
+            return config('app.env') === 'production'
                 ? $rule->mixedCase()->uncompromised()
                 : $rule;
         });
@@ -70,7 +70,7 @@ final class AppServiceProvider extends ServiceProvider
             $user = $set->workoutLine->workout->user;
 
             if ($set->weight && $set->reps) {
-                if (app()->environment('testing') || config('database.connections.mysql.database') === 'gym_tracker_testing') {
+                if (config('app.env') === 'testing' || config('database.connections.mysql.database') === 'gym_tracker_testing') {
                     \App\Jobs\SyncPersonalRecord::dispatchSync($set, $user);
                 } else {
                     // ⚡ Bolt: Offload PR sync to background job
