@@ -1,6 +1,16 @@
 <script setup>
 import { computed } from 'vue'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend } from 'chart.js'
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    LineElement,
+    PointElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js'
 import { Bar } from 'vue-chartjs'
 import { commonTooltipOptions } from './chartConfig'
 
@@ -20,7 +30,7 @@ const chartData = computed(() => {
     const labels = chronologicalData.map((session) => session.formatted_date.split('/').slice(0, 2).join('/'))
 
     const volumeData = chronologicalData.map((session) =>
-        session.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0)
+        session.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0),
     )
 
     const oneRmData = chronologicalData.map((session) => session.best_1rm || 0)
@@ -53,7 +63,7 @@ const chartData = computed(() => {
                 borderRadius: { topLeft: 6, topRight: 6 },
                 yAxisID: 'y',
                 order: 2,
-            }
+            },
         ],
     }
 })
@@ -77,7 +87,7 @@ const chartOptions = {
                     weight: 'bold',
                 },
                 color: '#64748b', // slate-500
-            }
+            },
         },
         tooltip: {
             ...commonTooltipOptions,
@@ -123,17 +133,17 @@ const chartOptions = {
                     weight: 'bold',
                 },
                 color: '#94a3b8',
-                callback: function(value) {
+                callback: function (value) {
                     if (value >= 1000) {
                         return (value / 1000).toFixed(1) + 'k'
                     }
                     return value
-                }
+                },
             },
             title: {
                 display: false,
-                text: 'Volume'
-            }
+                text: 'Volume',
+            },
         },
         y1: {
             type: 'linear',
@@ -151,8 +161,8 @@ const chartOptions = {
             },
             title: {
                 display: false,
-                text: '1RM'
-            }
+                text: '1RM',
+            },
         },
     },
 }

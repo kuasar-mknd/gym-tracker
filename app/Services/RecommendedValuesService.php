@@ -63,7 +63,8 @@ final class RecommendedValuesService
         }
 
         $workoutId = $lines->first()->workout_id;
-        $exerciseIds = $lines->pluck('exercise_id')->unique()->values()->all();
+        /** @var array<int, int> $exerciseIds */
+        $exerciseIds = $lines->pluck('exercise_id')->unique()->map(fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)->values()->all();
 
         $workout = $this->resolveWorkout($workoutId, $exerciseIds);
         if (! $workout) {
@@ -79,7 +80,7 @@ final class RecommendedValuesService
     }
 
     /**
-     * @param  array<int, mixed>  $exerciseIds
+     * @param  array<int, int>  $exerciseIds
      */
     private function resolveWorkout(?int $workoutId, array $exerciseIds): ?Workout
     {
@@ -126,7 +127,7 @@ final class RecommendedValuesService
 
         $sets = $lastLine->sets;
         $frequencies = $sets->groupBy(fn ($set): string => "{$set->weight}-{$set->reps}-{$set->distance_km}-{$set->duration_seconds}")
-            ->map->count();
+            ->map(fn ($group) => $group->count());
 
         $mostFrequentKey = (string) $frequencies->sortDesc()->keys()->first();
         [$weight, $reps, $distance, $duration] = explode('-', $mostFrequentKey);
@@ -140,7 +141,7 @@ final class RecommendedValuesService
     }
 
     /**
-     * @param  array<int, mixed>  $exerciseIds
+     * @param  array<int, int>  $exerciseIds
      * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
      */

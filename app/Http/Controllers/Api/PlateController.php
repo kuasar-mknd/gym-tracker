@@ -34,6 +34,8 @@ class PlateController extends Controller
      */
     public function store(StorePlateRequest $request): PlateResource
     {
+        $this->authorize('create', Plate::class);
+
         $validated = $request->validated();
 
         $plate = new Plate($validated);

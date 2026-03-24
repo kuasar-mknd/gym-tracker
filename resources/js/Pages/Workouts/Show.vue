@@ -72,12 +72,18 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
     }
     SyncService.patch(route('api.v1.sets.update', { set: set.id }), {
         is_completed: newState,
-    }).catch((err) => {
-        if (!err.isOffline) {
-            set.is_completed = previousState
-            triggerHaptic('error')
-        }
     })
+        .then((response) => {
+            if (response.data?.data) {
+                Object.assign(set, response.data.data)
+            }
+        })
+        .catch((err) => {
+            if (!err.isOffline) {
+                set.is_completed = previousState
+                triggerHaptic('error')
+            }
+        })
 }
 
 const savingTemplate = ref(false)
@@ -313,12 +319,18 @@ const updateSet = (set, field, value) => {
     const timerKey = `${set.id}_${field}`
     if (updateTimers[timerKey]) clearTimeout(updateTimers[timerKey])
     updateTimers[timerKey] = setTimeout(() => {
-        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value }).catch((err) => {
-            if (!err.isOffline) {
-                set[field] = previousValue
-                triggerHaptic('error')
-            }
-        })
+        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value })
+            .then((response) => {
+                if (response.data?.data) {
+                    Object.assign(set, response.data.data)
+                }
+            })
+            .catch((err) => {
+                if (!err.isOffline) {
+                    set[field] = previousValue
+                    triggerHaptic('error')
+                }
+            })
         delete updateTimers[timerKey]
     }, 1000)
 }

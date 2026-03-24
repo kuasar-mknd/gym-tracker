@@ -17,6 +17,8 @@ class GlobalCspTest extends TestCase
     {
         parent::setUp();
         Config::set('csp.enabled', true);
+        Config::set('csp.nonce_enabled', true);
+        Config::set('app.debug', false);
     }
 
     public function test_dashboard_has_consistent_csp_nonces(): void

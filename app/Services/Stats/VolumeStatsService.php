@@ -33,7 +33,7 @@ final class VolumeStatsService
                     Carbon::parse($row->started_at)->format('d/m'),
                     Carbon::parse($row->started_at)->format('Y-m-d'),
                     (string) $row->name,
-                    (float) $row->volume,
+                    is_numeric($row->getAttribute('volume')) ? (float) $row->getAttribute('volume') : 0.0,
                 ))
                 ->values()
                 ->toArray()
@@ -100,7 +100,7 @@ final class VolumeStatsService
                     $trend[] = new WeeklyVolumeTrendPoint(
                         $date,
                         ucfirst($dateObj->translatedFormat('D')),
-                        $workoutData ? (float) $workoutData->total_volume : 0.0,
+                        $workoutData && is_numeric($workoutData->getAttribute('total_volume')) ? (float) $workoutData->getAttribute('total_volume') : 0.0,
                     );
                 }
 
@@ -125,7 +125,7 @@ final class VolumeStatsService
                 ->get()
                 ->map(fn (object $row): VolumeHistoryPoint => new VolumeHistoryPoint(
                     Carbon::parse($row->started_at)->format('d/m'),
-                    (float) $row->volume,
+                    is_numeric($row->getAttribute('volume')) ? (float) $row->getAttribute('volume') : 0.0,
                     (string) $row->name,
                 ))
                 ->toArray()
@@ -197,7 +197,7 @@ final class VolumeStatsService
 
                         return new MonthlyVolumePoint(
                             $date->translatedFormat('M'),
-                            (float) $sum,
+                            is_numeric($sum) ? (float) $sum : 0.0,
                         );
                     })
                     ->toArray();

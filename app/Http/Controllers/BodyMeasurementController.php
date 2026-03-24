@@ -48,10 +48,12 @@ class BodyMeasurementController extends Controller
             ->get();
 
         $weightHistory = $this->statsService->getWeightHistory($this->user(), 365);
+        $bodyFatHistory = $this->statsService->getBodyFatHistory($this->user(), 365);
 
         return Inertia::render('Measurements/Index', [
             'measurements' => $measurements,
             'weightHistory' => $weightHistory,
+            'bodyFatHistory' => $bodyFatHistory,
         ]);
     }
 

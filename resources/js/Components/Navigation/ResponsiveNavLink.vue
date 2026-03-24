@@ -14,13 +14,13 @@ const props = defineProps({
 
 const classes = computed(() =>
     props.active
-        ? 'block w-full rounded-2xl border border-electric-orange/30 bg-electric-orange/10 px-4 py-3 text-start text-base font-black uppercase tracking-wide text-electric-orange shadow-glow-orange backdrop-blur-md transition-all duration-300'
-        : 'block w-full rounded-2xl border border-transparent px-4 py-3 text-start text-base font-bold text-text-muted transition-all duration-300 hover:scale-[1.02] hover:border-white/20 hover:bg-white/10 hover:text-text-main hover:shadow-lg focus:outline-none',
+        ? 'block w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-start text-base font-black uppercase tracking-wide text-electric-orange shadow-glow-orange backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:shadow-lg focus:outline-none'
+        : 'block w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-start text-base font-bold text-text-muted backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:text-text-main hover:shadow-lg focus:outline-none',
 )
 </script>
 
 <template>
-    <Link :href="href" :class="classes">
+    <Link v-press :href="href" :class="classes">
         <slot />
     </Link>
 </template>

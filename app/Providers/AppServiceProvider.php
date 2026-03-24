@@ -70,8 +70,12 @@ final class AppServiceProvider extends ServiceProvider
             $user = $set->workoutLine->workout->user;
 
             if ($set->weight && $set->reps) {
-                // ⚡ Bolt: Offload PR sync to background job
-                \App\Jobs\SyncPersonalRecord::dispatch($set, $user);
+                if (app()->environment('testing') || config('database.connections.mysql.database') === 'gym_tracker_testing') {
+                    \App\Jobs\SyncPersonalRecord::dispatchSync($set, $user);
+                } else {
+                    // ⚡ Bolt: Offload PR sync to background job
+                    \App\Jobs\SyncPersonalRecord::dispatch($set, $user);
+                }
             }
 
             // ⚡ Bolt: Offload heavy sync to background jobs

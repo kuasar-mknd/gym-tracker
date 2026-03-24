@@ -44,7 +44,7 @@ class SetController extends Controller
     {
         $set = $action->execute($this->user(), $request->validated());
 
-        return new SetResource($set);
+        return new SetResource($set->loadMissing('personalRecord'));
     }
 
     /**
@@ -69,7 +69,7 @@ class SetController extends Controller
         // Bolt: Only clear volume-related stats for set updates
         $this->statsService->clearVolumeStats($this->user());
 
-        return new SetResource($set);
+        return new SetResource($set->loadMissing('personalRecord'));
     }
 
     /**

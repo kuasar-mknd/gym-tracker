@@ -17,3 +17,28 @@
 **Vulnerability:** Found that API user creation and update endpoints enforced only a minimum length of 8 characters, bypassing the stricter production rules defined in `Password::defaults()`. Additionally, controllers were manually hashing passwords despite the `User` model using a `hashed` cast.
 **Learning:** Hardcoding validation rules in FormRequests leads to security gaps when global policies change. Redundant manual hashing in controllers is a "bad smell" that increases the risk of double-hashing bugs and architectural leakage.
 **Prevention:** Always utilize `Password::defaults()` in all authentication-related FormRequests to enforce a consistent security posture. Rely on Model attribute casting (`hashed`) to centralize hashing logic and maintain a clean separation of concerns.
+
+## 2026-03-19 - Redundant Hashing & Modern Security Headers
+**Vulnerability:** Multiple controllers and actions were manually calling `Hash::make()` on passwords before saving models that already had the `hashed` attribute cast. Also, legacy `X-XSS-Protection: 1; mode=block` was used.
+**Learning:** Redundant manual hashing is a "bad smell" that can lead to confusion and is unnecessary in modern Laravel (10+) when using the `hashed` cast, which is smart enough to avoid double-hashing. Legacy XSS auditors in browsers have been deprecated as they can be exploited; `0` is now the recommended value when a CSP is present.
+**Prevention:** Centralize hashing logic in the model using the `hashed` cast and disable legacy XSS auditors in favor of a robust Content Security Policy.
+
+## 2026-03-22 - Broken Function Level Authorization in Resource Controllers
+**Vulnerability:** Found `WorkoutController@store` (and potentially others like `PlateController`) missing an explicit `$this->authorize('create', ...)` call. These controllers relied on `FormRequest::authorize()` which returned `true`, effectively bypassing the `create` ability in their respective Policies.
+**Learning:** Relying solely on the `authorize` method of a `FormRequest` is dangerous if it doesn't actually check the policy. It creates a gap where resource creation is not governed by the central Policy logic, which might include important business rules or permission checks beyond simple ownership.
+**Prevention:** Always include an explicit `$this->authorize('create', Model::class)` call in controller `store` methods. Ensure Policies are the single source of truth for authorization logic.
+
+## 2026-03-23 - Broken Function Level Authorization in Resource Controllers (Continued)
+**Vulnerability:** Found  (both web and API) and  missing explicit `$this->authorize('create', ...)` calls. These controllers relied on `FormRequest::authorize()` which returned `true`, bypassing the `create` ability in their respective Policies.
+**Learning:** This is a recurring issue. Relying solely on the `authorize` method of a `FormRequest` is a consistent vulnerability pattern in this codebase.
+**Prevention:** We must always include an explicit `$this->authorize('create', Model::class)` call in controller `store` methods, even if a FormRequest is used.
+
+## 2026-03-23 - Broken Function Level Authorization in Resource Controllers (Continued)
+**Vulnerability:** Found `PlateController@store` (both web and API) and `WorkoutTemplatesController@store` missing explicit `$this->authorize('create', ...)` calls. These controllers relied on `FormRequest::authorize()` which returned `true`, bypassing the `create` ability in their respective Policies.
+**Learning:** This is a recurring issue. Relying solely on the `authorize` method of a `FormRequest` is a consistent vulnerability pattern in this codebase.
+**Prevention:** We must always include an explicit `$this->authorize('create', Model::class)` call in controller `store` methods, even if a FormRequest is used.
+
+## 2026-03-24 - Broken Function Level Authorization in Resource Controllers (Continued)
+**Vulnerability:** Found `WorkoutsController@update` and `ExerciseController@store` (both web and API) missing explicit `$this->authorize()` calls. They relied on `FormRequest` authorization which, if misconfigured or bypassed, could allow unauthorized resource manipulation.
+**Learning:** This pattern of missing explicit controller-level authorization remains a common source of potential BOLA/BFLA in this project.
+**Prevention:** Enforce defense-in-depth by always calling `$this->authorize()` at the start of every resource controller action, regardless of `FormRequest` checks.

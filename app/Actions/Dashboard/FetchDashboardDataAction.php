@@ -53,6 +53,39 @@ final class FetchDashboardDataAction
     }
 
     /**
+     * Get consolidated weekly volume data (stats + trend).
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
+     */
+    public function getWeeklyVolumeData(User $user): array
+    {
+        $stats = $this->statsService->getWeeklyVolumeComparison($user);
+
+        return [
+            'stats' => [
+                'current_week_volume' => $stats->current_volume,
+                'percentage' => $stats->percentage,
+            ],
+            'trend' => $this->statsService->getWeeklyVolumeTrend($user),
+        ];
+    }
+
+    /**
+     * Get consolidated workout distributions (duration + time of day).
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
+     */
+    public function getWorkoutDistributions(User $user): array
+    {
+        return [
+            'duration' => $this->statsService->getDurationDistribution($user, 90),
+            'time_of_day' => $this->statsService->getTimeOfDayDistribution($user, 90),
+        ];
+    }
+
+    /**
      * Get weekly volume comparison stats.
      *
      * Calculates the total workout volume for the current week and compares it
@@ -77,7 +110,7 @@ final class FetchDashboardDataAction
      * Retrieves the daily workout volume for each day of the current week.
      *
      * @param  \App\Models\User  $user  The authenticated user.
-     * @return array<int, array{date: string, day_label: string, volume: float}> A list of daily volumes formatted for a trend chart.
+     * @return array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint> A list of daily volumes formatted for a trend chart.
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
@@ -90,39 +123,11 @@ final class FetchDashboardDataAction
      * Retrieves a rolling 7-day trend of daily workout volume.
      *
      * @param  \App\Models\User  $user  The authenticated user.
-     * @return array<int, array{date: string, day_name: string, volume: float}> A list of daily volumes for the past week.
+     * @return array<int, \App\DTOs\Stats\DailyVolumeTrendPoint> A list of daily volumes for the past week.
      */
     public function getVolumeTrend(User $user): array
     {
         return $this->statsService->getDailyVolumeTrend($user, 7);
-    }
-
-    /**
-     * Get the distribution of workout durations.
-     *
-     * Groups recent workouts into duration buckets (e.g., '< 30 min', '30-60 min')
-     * to show user habits over time.
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return array<int, array{label: string, count: int}> The distribution of workout lengths.
-     */
-    public function getDurationDistribution(User $user): array
-    {
-        return $this->statsService->getDurationDistribution($user);
-    }
-
-    /**
-     * Get the distribution of workouts by time of day.
-     *
-     * Groups recent workouts into time-of-day buckets (e.g., 'Matin', 'Soir')
-     * to show when the user typically trains.
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return array<int, array{label: string, count: int}> The distribution of workouts by time of day.
-     */
-    public function getTimeOfDayDistribution(User $user): array
-    {
-        return $this->statsService->getTimeOfDayDistribution($user);
     }
 
     /**
@@ -146,8 +151,7 @@ final class FetchDashboardDataAction
                 'volumeChange' => $weeklyStats['percentage'],
                 'weeklyVolumeTrend' => $this->getWeeklyVolumeTrend($user),
                 'volumeTrend' => $this->getVolumeTrend($user),
-                'durationDistribution' => $this->getDurationDistribution($user),
-                'timeOfDayDistribution' => $this->getTimeOfDayDistribution($user),
+                'workoutDistributions' => $this->getWorkoutDistributions($user),
             ]
         );
     }

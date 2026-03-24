@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link, Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
@@ -19,10 +19,17 @@ const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     totalExercises: Number,
     exercises: Array,
-    monthlyFrequency: Array,
-    monthlyVolume: Array,
-    durationHistory: Array,
-    volumeHistory: Array,
+    // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+    // Consolidated chart data for deferred loading.
+    chartData: {
+        type: Object,
+        default: () => ({
+            monthly_frequency: [],
+            monthly_volume: [],
+            duration_history: [],
+            volume_history: [],
+        }),
+    },
 })
 
 const form = useForm({})
@@ -162,68 +169,87 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </GlassCard>
                 </div>
 
-                <!-- Charts Grid -->
-                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <!-- Frequency Chart -->
-                    <GlassCard v-if="monthlyFrequency && monthlyFrequency.length > 0">
-                        <div class="mb-4">
-                            <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence</h3>
-                            <p class="text-text-muted text-xs">Séances par mois</p>
+                <!-- ⚡ Bolt: Consolidated Deferred Chart Loading -->
+                <Deferred data="chartData">
+                    <template #fallback>
+                        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                            <GlassCard v-for="i in 4" :key="i">
+                                <div class="mb-4">
+                                    <GlassSkeleton width="120px" height="1.5rem" />
+                                    <GlassSkeleton width="180px" height="0.8rem" class="mt-2" />
+                                </div>
+                                <GlassSkeleton height="200px" width="100%" variant="card" />
+                            </GlassCard>
                         </div>
-                        <WorkoutsPerMonthChart :data="monthlyFrequency" />
-                    </GlassCard>
+                    </template>
 
-                    <!-- Monthly Volume Chart -->
-                    <GlassCard v-if="monthlyVolume && monthlyVolume.length > 0">
-                        <div class="mb-4">
-                            <h3 class="text-text-main text-lg font-bold dark:text-white">Volume Mensuel</h3>
-                            <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
-                        </div>
-                        <MonthlyVolumeChart :data="monthlyVolume" />
-                    </GlassCard>
+                    <!-- Charts Grid -->
+                    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <!-- Frequency Chart -->
+                        <GlassCard v-if="chartData.monthly_frequency?.length > 0">
+                            <div class="mb-4">
+                                <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence</h3>
+                                <p class="text-text-muted text-xs">Séances par mois</p>
+                            </div>
+                            <WorkoutsPerMonthChart :data="chartData.monthly_frequency" />
+                        </GlassCard>
 
-                    <!-- Duration Chart -->
-                    <GlassCard v-if="durationHistory && durationHistory.length > 0">
-                        <div class="mb-4">
-                            <h3 class="text-text-main text-lg font-bold dark:text-white">Durée</h3>
-                            <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
-                        </div>
-                        <WorkoutDurationChart :data="durationHistory" />
-                    </GlassCard>
+                        <!-- Monthly Volume Chart -->
+                        <GlassCard v-if="chartData.monthly_volume?.length > 0">
+                            <div class="mb-4">
+                                <h3 class="text-text-main text-lg font-bold dark:text-white">Volume Mensuel</h3>
+                                <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
+                            </div>
+                            <MonthlyVolumeChart :data="chartData.monthly_volume" />
+                        </GlassCard>
 
-                    <!-- Volume per Workout Chart -->
-                    <GlassCard v-if="volumeHistory && volumeHistory.length > 0">
-                        <div class="mb-4">
-                            <h3 class="text-text-main text-lg font-bold dark:text-white">Volume par Séance</h3>
-                            <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
-                        </div>
-                        <VolumePerWorkoutChart :data="volumeHistory" />
-                    </GlassCard>
-                </div>
+                        <!-- Duration Chart -->
+                        <GlassCard v-if="chartData.duration_history?.length > 0">
+                            <div class="mb-4">
+                                <h3 class="text-text-main text-lg font-bold dark:text-white">Durée</h3>
+                                <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
+                            </div>
+                            <WorkoutDurationChart :data="chartData.duration_history" />
+                        </GlassCard>
+
+                        <!-- Volume per Workout Chart -->
+                        <GlassCard v-if="chartData.volume_history?.length > 0">
+                            <div class="mb-4">
+                                <h3 class="text-text-main text-lg font-bold dark:text-white">Volume par Séance</h3>
+                                <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
+                            </div>
+                            <VolumePerWorkoutChart :data="chartData.volume_history" />
+                        </GlassCard>
+                    </div>
+                </Deferred>
             </div>
 
             <!-- Available Exercises -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
                 <h3 class="text-text-main mb-3 font-semibold dark:text-white">Exercices disponibles</h3>
 
-                <!-- Loading State -->
-                <div v-if="!exercises" class="flex gap-2 overflow-x-hidden pb-2">
-                    <div v-for="i in 5" :key="i" class="shrink-0">
-                        <GlassSkeleton width="120px" height="60px" class="rounded-xl" />
-                    </div>
-                </div>
+                <Deferred data="exercises">
+                    <template #fallback>
+                        <!-- Loading State -->
+                        <div class="flex gap-2 overflow-x-hidden pb-2">
+                            <div v-for="i in 5" :key="i" class="shrink-0">
+                                <GlassSkeleton width="120px" height="60px" class="rounded-xl" />
+                            </div>
+                        </div>
+                    </template>
 
-                <!-- Data State -->
-                <div v-else class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
-                    <div
-                        v-for="exercise in exercises"
-                        :key="exercise.id"
-                        class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800/50"
-                    >
-                        <div class="text-text-main font-medium dark:text-white">{{ exercise.name }}</div>
-                        <div class="text-text-muted text-xs">{{ exercise.category }}</div>
+                    <!-- Data State -->
+                    <div v-if="exercises" class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
+                        <div
+                            v-for="exercise in exercises"
+                            :key="exercise.id"
+                            class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800/50"
+                        >
+                            <div class="text-text-main font-medium dark:text-white">{{ exercise.name }}</div>
+                            <div class="text-text-muted text-xs">{{ exercise.category }}</div>
+                        </div>
                     </div>
-                </div>
+                </Deferred>
             </div>
 
             <!-- Workouts List -->

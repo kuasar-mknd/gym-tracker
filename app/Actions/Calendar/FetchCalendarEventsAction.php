@@ -40,12 +40,14 @@ final class FetchCalendarEventsAction
         return Workout::where('user_id', $user->id)
             ->whereBetween('started_at', [$start, $end])
             ->withCount('workoutLines')
-            ->with(['workoutLines' => function ($query) {
-                $query->select('id', 'workout_id', 'exercise_id')
-                    ->orderBy('order')
-                    ->limit(3)
-                    ->with('exercise:id,name');
-            }])
+            ->with([
+                'workoutLines' => function ($query) {
+                    $query->select('id', 'workout_id', 'exercise_id')
+                        ->orderBy('order')
+                        ->limit(3)
+                        ->with('exercise:id,name');
+                },
+            ])
             ->get()
             ->map(function ($workout): array {
                 /** @var array<int, string> $preview */

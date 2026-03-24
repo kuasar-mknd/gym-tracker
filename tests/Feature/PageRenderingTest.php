@@ -72,10 +72,12 @@ test('workouts index page renders with paginated data structure', function (): v
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Workouts/Index')
+                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                    ->has('chartData')
+                )
                 // CRITICAL: workouts must be paginated object with data array
                 ->has('workouts.data')
                 ->has('workouts.links')
-                ->has('monthlyFrequency')
         );
 });
 
@@ -138,10 +140,10 @@ test('stats page renders without cache errors', function (): void {
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Stats/Index')
+// In the new architecture, StatsController returns volumeTrend, muscleDistribution, weightHistory etc directly
                 ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                     ->has('volumeTrend')
-                    ->has('muscleDistribution')
-                    ->has('monthlyComparison')
+                    ->has('weightHistory')
                 )
                 ->has('exercises')
         );

@@ -25,3 +25,19 @@
 ## 2026-03-13 - [Consolidating Deferred Props]
 **Learning:** Multiple deferred Inertia props that call the same service method result in redundant backend execution and cache lookups during the async request. Consolidating them into a single object prop ensures the heavy computation runs only once.
 **Action:** Always group related deferred data into a single object if they derive from the same source action or service call.
+
+## 2024-03-24 - Eloquent Hydration vs DB Builder for Statistical Aggregation
+**Learning:** Hydrating Eloquent models (`$user->workouts()->get()`) and instantiating Carbon objects purely to calculate date/time differences for charts introduces massive performance overhead. In a local benchmark on 1000 records, the Eloquent+Carbon approach took ~4800ms, while using `DB::table()->get()` with native `strtotime()` and `substr()` string parsing took ~110-380ms—a 90%+ reduction in loop execution time.
+**Action:** For purely statistical loops where relationships, mutators, and model logic are unnecessary, bypass Eloquent entirely. Use the `DB` facade to fetch `stdClass` objects and rely on native PHP string/datetime functions for aggregation parsing.
+
+## 2026-03-22 - [Removing Unused Legacy Performance Methods]
+**Learning:** When refactoring multiple analytical queries into a single consolidated query (like combining `getDurationDistribution` and `getTimeOfDayDistribution` into `getWorkoutDistributions`), it's crucial to remove the old, unused methods to prevent them from being accidentally called later, which would reintroduce the performance bottleneck.
+**Action:** Always do a codebase search (`grep`) for the methods being replaced and remove them from services and actions if they have zero active calls after refactoring.
+
+## 2026-03-23 - [Consolidating Statistics & Deferred Props]
+**Learning:** When a page requires multiple independent statistics (like frequency, volume, and duration trends), fetching them through separate service calls results in multiple database queries and potentially redundant data grouping in PHP. Consolidating these into grouped analytical methods (e.g., `getMonthlyWorkoutStats`) allows for a single database query and a single loop over the results, significantly reducing overhead. Grouping these results into a single deferred Inertia prop further optimizes the frontend by reducing the number of XHR requests and ensuring consistent loading states.
+**Action:** Identify pages with multiple deferred props or statistics and consolidate their underlying data-fetching logic into grouped service methods and single deferred props.
+
+## 2026-03-24 - [Consolidating Stats Page Props]
+**Learning:** Having multiple independent deferred Inertia props (e.g., 6 separate charts) leads to an equal number of asynchronous XHR requests on page load. This increases HTTP overhead and can lead to a "pop-in" effect where charts load at different times.
+**Action:** Consolidate related deferred props into logical groups (e.g., `workoutStats`, `bodyStats`) at the controller level. This reduces the number of requests and ensures related visualizations appear together. Always update the corresponding cache invalidation logic to include these new consolidated keys.

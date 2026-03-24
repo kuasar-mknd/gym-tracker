@@ -63,12 +63,16 @@ class WorkoutLine extends Model
      */
     public function getRecommendedValuesAttribute(): array
     {
-        if (isset($this->attributes['recommended_values'])) {
-            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} $values */
-            return json_decode((string) $this->attributes['recommended_values'], true);
+        if (! isset($this->attributes['recommended_values'])) {
+            return app(RecommendedValuesService::class)->getRecommendedValues($this);
         }
 
-        return app(RecommendedValuesService::class)->getRecommendedValues($this);
+        /** @var string|null $val */
+        $val = $this->attributes['recommended_values'];
+        $decoded = json_decode((string) $val, true);
+
+        /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} */
+        return is_array($decoded) ? $decoded : ['weight' => 0.0, 'reps' => 0, 'distance_km' => 0.0, 'duration_seconds' => 0];
     }
 
     /**

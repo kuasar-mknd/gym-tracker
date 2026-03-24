@@ -95,4 +95,19 @@ class StatsServiceCacheTest extends TestCase
 
         $this->statsService->clearUserStatsCache($user);
     }
+
+    public function test_clear_workout_metadata_stats_clears_correct_keys(): void
+    {
+        $user = User::factory()->make(['id' => 123]);
+
+        Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
+        Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
+        Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
+
+        foreach ([7, 30, 90, 365] as $days) {
+            Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
+        }
+
+        $this->statsService->clearWorkoutMetadataStats($user);
+    }
 }

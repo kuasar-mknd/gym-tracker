@@ -22,41 +22,36 @@ final class FetchWorkoutsIndexAction
      *
      * @return array{
      *     workouts: \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>,
-     *     monthlyFrequency: Collection<int, array{month: string, count: int}>,
-     *     durationHistory: array<int, array{
-     *         date: string,
-     *         duration: int,
-     *         name: string
-     *     }>,
-     *     volumeHistory: array<int, array{
-     *         date: string,
-     *         volume: float,
-     *         name: string
-     *     }>,
-     *     monthlyVolume: array<int, array{
-     *         month: string,
-     *         volume: float
-     *     }>
+     *     totalExercises: int,
+     *     monthlyFrequency: Collection<int, array{month: string, count: int}>
      * }
      */
     public function execute(User $user): array
     {
-        /** @var array<int, array{date: string, duration: int, name: string}> $durationHistory */
-        $durationHistory = $this->statsService->getDurationHistory($user, 20);
-
-        /** @var array<int, array{date: string, volume: float, name: string}> $volumeHistory */
-        $volumeHistory = $this->statsService->getVolumeHistory($user, 20);
-
-        /** @var array<int, array{month: string, volume: float}> $monthlyVolume */
-        $monthlyVolume = $this->statsService->getMonthlyVolumeHistory($user, 6);
-
         return [
             'workouts' => $this->getWorkouts($user),
             'totalExercises' => $user->workoutLines()->count(),
             'monthlyFrequency' => $this->getMonthlyFrequency($user),
-            'durationHistory' => $durationHistory,
-            'volumeHistory' => $volumeHistory,
-            'monthlyVolume' => $monthlyVolume,
+        ];
+    }
+
+    /**
+     * Get deferred chart data.
+     *
+     * @return array{
+     *     monthly_frequency: Collection<int, array{month: string, count: int}>,
+     *     monthly_volume: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
+     *     duration_history: array<int, \App\DTOs\Stats\DurationHistoryPoint>,
+     *     volume_history: array<int, \App\DTOs\Stats\VolumeHistoryPoint>
+     * }
+     */
+    public function getChartData(User $user): array
+    {
+        return [
+            'monthly_frequency' => $this->getMonthlyFrequency($user),
+            'monthly_volume' => $this->statsService->getMonthlyVolumeHistory($user, 6),
+            'duration_history' => $this->statsService->getDurationHistory($user, 20),
+            'volume_history' => $this->statsService->getVolumeHistory($user, 20),
         ];
     }
 
@@ -101,7 +96,7 @@ final class FetchWorkoutsIndexAction
 
             return [
                 'month' => $date->translatedFormat('M'),
-                'count' => $data ? (int) $data->count : 0,
+                'count' => $data && is_numeric($data->getAttribute('count')) ? (int) $data->getAttribute('count') : 0,
             ];
         });
     }

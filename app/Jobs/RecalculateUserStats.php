@@ -23,8 +23,10 @@ final class RecalculateUserStats implements ShouldQueue
      */
     public function handle(\App\Services\StatsService $statsService): void
     {
-        // ⚡ Bolt: Use surgical cache invalidation instead of tags() as database driver doesn't support tags.
-        $statsService->clearUserStatsCache($this->user);
+        // ⚡ Bolt: Use surgical cache invalidation instead of broad clearUserStatsCache
+        // to prevent unnecessary invalidation of body measurement statistics when workout data changes.
+        $statsService->clearWorkoutRelatedStats($this->user);
+        $statsService->clearWorkoutMetadataStats($this->user);
 
         // Warm up critical stats
         $statsService->getVolumeTrend($this->user, 30);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Actions\Habits\CreateHabitAction;
+use App\Actions\Habits\FetchHabitsIndexApiAction;
 use App\Http\Requests\Api\StoreHabitRequest;
 use App\Http\Requests\Api\UpdateHabitRequest;
 use App\Http\Resources\HabitResource;
@@ -12,7 +13,6 @@ use App\Models\Habit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class HabitController extends Controller
 {
@@ -23,24 +23,15 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(Request $request, FetchHabitsIndexApiAction $fetchHabitsIndexApiAction): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Habit::class);
-
-        $query = QueryBuilder::for(Habit::class)
-            ->allowedIncludes(['logs'])
-            ->allowedSorts(['name', 'created_at', 'goal_times_per_week'])
-            ->defaultSort('name')
-            ->where('user_id', $this->user()->id);
 
         $validated = $request->validate([
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
-        /** @var int $perPage */
-        $perPage = $validated['per_page'] ?? 15;
-
-        $habits = $query->paginate($perPage);
+        $habits = $fetchHabitsIndexApiAction->execute($this->user(), $validated);
 
         return HabitResource::collection($habits);
     }

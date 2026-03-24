@@ -36,13 +36,15 @@ class WorkoutTemplateController extends Controller
         // ⚡ Bolt Optimization: Only load the line counts and the first few exercises for preview
         return Inertia::render('Workouts/Templates/Index', [
             'templates' => WorkoutTemplate::withCount('workoutTemplateLines')
-                ->with(['workoutTemplateLines' => function ($query) {
-                    $query->select('id', 'workout_template_id', 'exercise_id')
-                        ->orderBy('order')
-                        ->limit(3)
-                        ->withCount('workoutTemplateSets')
-                        ->with('exercise:id,name');
-                }])
+                ->with([
+                    'workoutTemplateLines' => function ($query) {
+                        $query->select('id', 'workout_template_id', 'exercise_id')
+                            ->orderBy('order')
+                            ->limit(3)
+                            ->withCount('workoutTemplateSets')
+                            ->with('exercise:id,name');
+                    },
+                ])
                 ->where('user_id', $this->user()->id)
                 ->latest()
                 ->get(),
@@ -79,6 +81,8 @@ class WorkoutTemplateController extends Controller
      */
     public function store(\App\Http\Requests\StoreWorkoutTemplateRequest $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('create', WorkoutTemplate::class);
+
         /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $validated */
         $validated = $request->validated();
         $createWorkoutTemplateAction->execute($this->user(), $validated);

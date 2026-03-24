@@ -26,6 +26,7 @@ class SetResource extends JsonResource
             'is_completed' => (bool) $this->is_completed,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+            'personal_record' => new PersonalRecordResource($this->whenLoaded('personalRecord')),
         ];
     }
 }

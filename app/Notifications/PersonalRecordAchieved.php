@@ -53,9 +53,9 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     public function toArray(object $_notifiable): array
     {
         $typeLabel = match ($this->personalRecord->type) {
-            'max_weight' => 'Poids Maximum',
-            'max_1rm' => '1RM Estimé',
-            'max_volume_set' => 'Volume par Série',
+            \App\Enums\PersonalRecordType::MaxWeight => 'Poids Maximum',
+            \App\Enums\PersonalRecordType::Max1RM => '1RM Estimé',
+            \App\Enums\PersonalRecordType::MaxVolumeSet => 'Volume par Série',
             default => 'Record Personnel',
         };
 
