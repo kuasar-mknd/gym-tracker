@@ -110,7 +110,7 @@ final class BodyStatsService
                 ))->toArray();
 
                 /** @var array<int, BodyFatHistoryPoint> $bodyFatHistory */
-                $bodyFatHistory = $measurements->filter(fn (BodyMeasurement $m) => $m->body_fat !== null)
+                $bodyFatHistory = $measurements->filter(fn (BodyMeasurement $m): bool => $m->body_fat !== null)
                     ->map(fn (BodyMeasurement $m): BodyFatHistoryPoint => new BodyFatHistoryPoint(
                         Carbon::parse($m->measured_at)->format('d/m'),
                         Carbon::parse($m->measured_at)->format('Y-m-d'),
