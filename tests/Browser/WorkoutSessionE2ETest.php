@@ -197,8 +197,11 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // 7. Complete one set and verify PR trophy
             $browser->script("document.querySelector('[dusk=\"complete-set-0-0\"]').scrollIntoView({block: 'center'});");
             $browser->pause(1000);
-            $browser->click('[dusk="complete-set-0-0"]')
-                ->pause(3000) // Give more time for the async PR job and UI update
+
+            // Use JS click to be sure it's triggered even if something overlaps slightly
+            $browser->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
+
+            $browser->pause(3000) // Give more time for the async PR job and UI update
                 ->waitFor('@pr-trophy-0-0', 30)
                 ->waitFor('[dusk="skip-rest-timer"]', 20)
                 ->click('[dusk="skip-rest-timer"]');
