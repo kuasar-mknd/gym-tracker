@@ -72,7 +72,7 @@ final class RecommendedValuesService
         }
 
         $defaults = $this->getDefaultValues();
-        $results = $this->getResultsFromCacheOrFetch($exerciseIds, $userId, (int) $workoutId, $workout, $defaults);
+        $results = $this->getResultsFromCacheOrFetch($exerciseIds, $userId, (int) $workoutId, $workout);
 
         $this->applyRecommendedValuesToLines($lines, $results, $defaults);
 
@@ -142,10 +142,9 @@ final class RecommendedValuesService
 
     /**
      * @param  array<int, int>  $exerciseIds
-     * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
      */
-    private function getResultsFromCacheOrFetch(array $exerciseIds, int $userId, int $workoutId, Workout $workout, array $defaults): array
+    private function getResultsFromCacheOrFetch(array $exerciseIds, int $userId, int $workoutId, Workout $workout): array
     {
         $results = [];
         $uncachedExerciseIds = [];
