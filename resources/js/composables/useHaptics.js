@@ -24,7 +24,7 @@ const patterns = {
  * @returns {boolean}
  */
 export function isHapticsSupported() {
-    return 'vibrate' in navigator
+    return typeof navigator !== 'undefined' && 'vibrate' in navigator
 }
 
 /**
@@ -38,7 +38,11 @@ export function triggerHaptic(type = 'tap') {
     }
 
     const pattern = patterns[type] || patterns.tap
-    return navigator.vibrate(pattern)
+    try {
+        return navigator.vibrate(pattern)
+    } catch (e) {
+        return false
+    }
 }
 
 /**
@@ -49,7 +53,11 @@ export function stopVibration() {
     if (!isHapticsSupported()) {
         return false
     }
-    return navigator.vibrate(0)
+    try {
+        return navigator.vibrate(0)
+    } catch (e) {
+        return false
+    }
 }
 
 /**
