@@ -24,8 +24,8 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_DATABASE" value="gym_tracker_testing"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value="storage/framework/testing/database.sqlite"/>
         <env name="DB_USERNAME" value="sail"/>
         <env name="DB_PASSWORD" value="password"/>
         <env name="DB_HOST" value="mysql"/>
