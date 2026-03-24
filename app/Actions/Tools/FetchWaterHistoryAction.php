@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Actions\Tools;
 
 use App\Models\User;
-use App\Models\WaterLog;
 use Carbon\Carbon;
 
 class FetchWaterHistoryAction
@@ -18,24 +17,22 @@ class FetchWaterHistoryAction
     public function execute(User $user): array
     {
         $startDate = Carbon::now()->subDays(6)->startOfDay();
+
+        // ⚡ Bolt Optimization: Calculate daily totals in the database using GROUP BY
+        // instead of loading all logs into memory and calculating in PHP.
+        // Impact: Reduces memory usage and CPU time for users with many water entries.
         $historyLogs = $user->waterLogs()
             ->where('consumed_at', '>=', $startDate)
-            ->get();
+            ->selectRaw('DATE(consumed_at) as date, SUM(amount) as total')
+            ->groupBy('date')
+            ->pluck('total', 'date');
 
         $history = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
             $dateString = $date->format('Y-m-d');
 
-            /** @var float|int $dayTotal */
-            $dayTotal = $historyLogs->filter(function (WaterLog $log) use ($dateString): bool {
-                /** @var \Carbon\Carbon $consumedAt */
-                $consumedAt = $log->consumed_at;
-
-                return $consumedAt->format('Y-m-d') === $dateString;
-            })->sum('amount');
-
-            $dayTotalValue = (float) $dayTotal;
+            $dayTotalValue = (float) ($historyLogs[$dateString] ?? 0);
 
             $history[] = [
                 'date' => $dateString,
