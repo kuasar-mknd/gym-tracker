@@ -142,7 +142,7 @@ test('authenticated user cannot update system exercise', function (): void {
 
     actingAs($user)
         ->putJson(route('api.v1.exercises.update', $systemExercise), [
-            'name' => 'Hacked Name',
+            'name' => 'Updated Name',
             'type' => 'cardio',
         ])
         ->assertForbidden();
@@ -154,7 +154,7 @@ test('authenticated user cannot update other user exercise', function (): void {
 
     actingAs($user)
         ->putJson(route('api.v1.exercises.update', $otherUserExercise), [
-            'name' => 'Hacked Name',
+            'name' => 'Updated Name',
             'type' => 'cardio',
         ])
         ->assertForbidden();
