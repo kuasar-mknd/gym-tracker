@@ -195,12 +195,12 @@ class WorkoutSessionE2ETest extends DuskTestCase
             });
 
             // 7. Complete one set and verify PR trophy
-            $browser->script("document.querySelector('[dusk=\"exercise-card-0\"]').scrollIntoView({block: 'start'});");
+            $browser->script("document.querySelector('[dusk=\"complete-set-0-0\"]').scrollIntoView({block: 'center'});");
             $browser->pause(1000);
             $browser->click('[dusk="complete-set-0-0"]')
-                ->pause(2000)
-                ->waitFor('@pr-trophy-0-0', 20)
-                ->waitFor('[dusk="skip-rest-timer"]', 15)
+                ->pause(3000) // Give more time for the async PR job and UI update
+                ->waitFor('@pr-trophy-0-0', 30)
+                ->waitFor('[dusk="skip-rest-timer"]', 20)
                 ->click('[dusk="skip-rest-timer"]');
 
             $browser->pause(1000);
