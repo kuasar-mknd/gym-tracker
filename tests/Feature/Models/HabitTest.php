@@ -100,7 +100,7 @@ test('user cannot update other users habits', function (): void {
 
     $this->actingAs($user)
         ->put(route('habits.update', $habit), [
-            'name' => 'Hacked',
+            'name' => 'Updated Name',
             'goal_times_per_week' => 5,
         ])
         ->assertForbidden();
