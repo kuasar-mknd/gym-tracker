@@ -112,7 +112,7 @@ describe('Authenticated', function (): void {
             $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
             putJson(route('api.v1.interval-timers.update', $timer), [
-                'name' => 'Hacked',
+                'name' => 'Updated Timer Name',
                 'work_seconds' => 30,
                 'rest_seconds' => 30,
                 'rounds' => 3,
