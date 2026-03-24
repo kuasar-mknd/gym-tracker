@@ -8,10 +8,7 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
-use function Pest\Laravel\post;
-use function Pest\Laravel\put;
 
 it('displays the goals index page for an authenticated user', function (): void {
     $user = User::factory()->create();
