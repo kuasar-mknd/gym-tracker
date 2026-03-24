@@ -202,6 +202,7 @@ CREATE TABLE `goals` (
   `target_value` double NOT NULL,
   `current_value` double NOT NULL DEFAULT '0',
   `start_value` double NOT NULL DEFAULT '0',
+  `progress_pct` double NOT NULL DEFAULT '0',
   `exercise_id` bigint unsigned DEFAULT NULL,
   `measurement_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `deadline` date DEFAULT NULL,
