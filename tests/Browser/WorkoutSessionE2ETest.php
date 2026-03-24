@@ -206,9 +206,12 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->pause(1000);
 
             // 8. Finish Workout
-            $browser->waitFor('@finish-workout-mobile', 15)
-                ->script("document.querySelector('[dusk=\"finish-workout-mobile\"]').scrollIntoView({block: 'center'});");
-            $browser->pause(500)
+            $browser->waitFor('@finish-workout-mobile', 20)
+                ->script([
+                    "document.querySelector('[dusk=\"finish-workout-mobile\"]').scrollIntoView({block: 'center'});",
+                    'window.scrollBy(0, 100);', // Extra scroll to ensure it's not behind a sticky footer or notch
+                ]);
+            $browser->pause(1000)
                 ->click('@finish-workout-mobile');
 
             $browser->waitFor('@finish-workout-modal-title', 15)
