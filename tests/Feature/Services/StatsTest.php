@@ -114,8 +114,8 @@ test('stats page calculates muscle distribution correctly', function (): void {
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->has('muscleDistribution', 2)
                 ->where('muscleDistribution', function ($distribution): bool {
-                    $chest = collect($distribution)->first(fn ($d) => $d['category'] === 'Pectoraux');
-                    $back = collect($distribution)->first(fn ($d) => $d['category'] === 'Dos');
+                    $chest = collect($distribution)->first(fn ($d): bool => $d['category'] === 'Pectoraux');
+                    $back = collect($distribution)->first(fn ($d): bool => $d['category'] === 'Dos');
 
                     return $chest['volume'] == 1000 && $back['volume'] == 500;
                 })

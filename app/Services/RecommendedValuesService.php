@@ -127,7 +127,7 @@ final class RecommendedValuesService
 
         $sets = $lastLine->sets;
         $frequencies = $sets->groupBy(fn ($set): string => "{$set->weight}-{$set->reps}-{$set->distance_km}-{$set->duration_seconds}")
-            ->map(fn ($group) => $group->count());
+            ->map(fn ($group): int => $group->count());
 
         $mostFrequentKey = (string) $frequencies->sortDesc()->keys()->first();
         [$weight, $reps, $distance, $duration] = explode('-', $mostFrequentKey);
@@ -164,7 +164,7 @@ final class RecommendedValuesService
         }
 
         if (count($uncachedExerciseIds) > 0) {
-            $uncachedResults = $this->fetchUncachedRecommendedValues($uncachedExerciseIds, $workoutId, $userId, $workout, $defaults);
+            $uncachedResults = $this->fetchUncachedRecommendedValues($uncachedExerciseIds, $workoutId, $userId, $workout);
             foreach ($uncachedResults as $exerciseIdInt => $values) {
                 $results[$exerciseIdInt] = $values;
             }
@@ -175,10 +175,9 @@ final class RecommendedValuesService
 
     /**
      * @param  array<int>  $uncachedExerciseIds
-     * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
      */
-    private function fetchUncachedRecommendedValues(array $uncachedExerciseIds, int $workoutId, int $userId, Workout $workout, array $defaults): array
+    private function fetchUncachedRecommendedValues(array $uncachedExerciseIds, int $workoutId, int $userId, Workout $workout): array
     {
         $results = [];
 

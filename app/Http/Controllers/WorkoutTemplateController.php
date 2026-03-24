@@ -37,7 +37,7 @@ class WorkoutTemplateController extends Controller
         return Inertia::render('Workouts/Templates/Index', [
             'templates' => WorkoutTemplate::withCount('workoutTemplateLines')
                 ->with([
-                    'workoutTemplateLines' => function ($query) {
+                    'workoutTemplateLines' => function ($query): void {
                         $query->select('id', 'workout_template_id', 'exercise_id')
                             ->orderBy('order')
                             ->limit(3)

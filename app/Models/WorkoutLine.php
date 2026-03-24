@@ -71,7 +71,6 @@ class WorkoutLine extends Model
         $val = $this->attributes['recommended_values'];
         $decoded = json_decode((string) $val, true);
 
-        /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} */
         return is_array($decoded) ? $decoded : ['weight' => 0.0, 'reps' => 0, 'distance_km' => 0.0, 'duration_seconds' => 0];
     }
 

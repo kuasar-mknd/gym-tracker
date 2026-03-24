@@ -41,7 +41,7 @@ final class FetchCalendarEventsAction
             ->whereBetween('started_at', [$start, $end])
             ->withCount('workoutLines')
             ->with([
-                'workoutLines' => function ($query) {
+                'workoutLines' => function ($query): void {
                     $query->select('id', 'workout_id', 'exercise_id')
                         ->orderBy('order')
                         ->limit(3)
