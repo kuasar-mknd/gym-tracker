@@ -205,7 +205,7 @@ test('user cannot update other user habit log', function (): void {
 
     actingAs($user, 'sanctum')
         ->putJson(route('api.v1.habit-logs.update', $log), [
-            'notes' => 'Hacked',
+            'notes' => 'Unauthorized Update',
         ])
         ->assertForbidden();
 });

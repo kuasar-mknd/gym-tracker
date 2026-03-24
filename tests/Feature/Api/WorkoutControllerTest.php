@@ -146,7 +146,7 @@ test('update returns 403 for other user workout', function (): void {
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
     Sanctum::actingAs($user);
 
-    $response = $this->putJson(route('api.v1.workouts.update', $workout), ['name' => 'Hacked']);
+    $response = $this->putJson(route('api.v1.workouts.update', $workout), ['name' => 'Unauthorized Update']);
 
     $response->assertForbidden();
 });
