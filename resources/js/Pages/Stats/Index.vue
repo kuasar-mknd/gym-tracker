@@ -12,12 +12,10 @@ import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SummaryStatsGrid from '@/Components/Stats/SummaryStatsGrid.vue'
 
 const props = defineProps({
-    volumeTrend: Array,
-    muscleDistribution: Array,
-    monthlyComparison: Object,
-    weightHistory: Array,
-    bodyFatHistory: Array,
-    durationHistory: Array,
+    // ⚡ Bolt: Consolidated props
+    performanceStats: Object,
+    bodyStats: Object,
+
     exercises: Array,
     latestWeight: [Number, String],
     weightChange: Number,
@@ -83,30 +81,30 @@ const handlePeriodChange = (period) => {
             <WeightEvolutionCard
                 :latest-weight="latestWeight"
                 :weight-change="weightChange"
-                :weight-history="weightHistory"
+                :weight-history="bodyStats?.weightHistory"
             />
 
             <BodyMetricsGrid
                 :body-fat="bodyFat"
-                :body-fat-history="bodyFatHistory"
-                :monthly-comparison="monthlyComparison"
+                :body-fat-history="bodyStats?.bodyFatHistory"
+                :monthly-comparison="performanceStats?.monthlyComparison"
             />
 
-            <VolumeTrendCard :volume-trend="volumeTrend" :current-period="currentPeriod" />
+            <VolumeTrendCard :volume-trend="performanceStats?.volumeTrend" :current-period="currentPeriod" />
 
-            <DurationHistoryCard :duration-history="durationHistory" />
+            <DurationHistoryCard :duration-history="performanceStats?.durationHistory" />
 
             <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.2s">
-                <MuscleDistributionCard :muscle-distribution="muscleDistribution" />
+                <MuscleDistributionCard :muscle-distribution="performanceStats?.muscleDistribution" />
 
                 <ExerciseProgressCard :exercises="exercises" />
             </div>
 
             <SummaryStatsGrid
-                :volume-trend="volumeTrend"
-                :muscle-distribution="muscleDistribution"
+                :volume-trend="performanceStats?.volumeTrend"
+                :muscle-distribution="performanceStats?.muscleDistribution"
                 :exercises="exercises"
-                :monthly-comparison="monthlyComparison"
+                :monthly-comparison="performanceStats?.monthlyComparison"
             />
         </div>
     </AuthenticatedLayout>

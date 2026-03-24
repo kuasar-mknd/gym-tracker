@@ -40,7 +40,7 @@ defineProps({
 
         <!-- Real Weight Chart (Deferred) -->
         <div class="relative -mx-2 h-40 w-full">
-            <Deferred data="weightHistory">
+            <Deferred data="bodyStats">
                 <template #fallback>
                     <div class="flex h-full items-center justify-center px-4">
                         <GlassSkeleton height="h-32" width="w-full" class="rounded-xl" />

@@ -41,3 +41,7 @@
 ## 2026-03-24 - [Consolidating Stats Page Props]
 **Learning:** Having multiple independent deferred Inertia props (e.g., 6 separate charts) leads to an equal number of asynchronous XHR requests on page load. This increases HTTP overhead and can lead to a "pop-in" effect where charts load at different times.
 **Action:** Consolidate related deferred props into logical groups (e.g., `workoutStats`, `bodyStats`) at the controller level. This reduces the number of requests and ensures related visualizations appear together. Always update the corresponding cache invalidation logic to include these new consolidated keys.
+
+## 2026-03-25 - [Optimizing Consolidated Body Metrics Query]
+**Learning:** Consolidation of deferred props at the controller level provides a great opportunity to also consolidate the underlying database queries. Fetching weight and body fat history separately caused two queries to the same `body_measurements` table for the same timeframe.
+**Action:** Fetch the shared model collection once in the service and use PHP-side filtering/mapping to populate the DTOs, reducing database load while improving frontend responsiveness.

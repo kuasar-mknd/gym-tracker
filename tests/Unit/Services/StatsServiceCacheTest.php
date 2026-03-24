@@ -33,6 +33,7 @@ class StatsServiceCacheTest extends TestCase
         foreach ([7, 30, 90, 365] as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
             Cache::shouldReceive('forget')->once()->with("stats.daily_volume.{$user->id}.{$days}");
+            Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");
         }
 
         Cache::shouldReceive('put')->once()->with("stats.1rm_version.{$user->id}", Mockery::any(), Mockery::any());
@@ -53,6 +54,10 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
         Cache::shouldReceive('forget')->once()->with("stats.time_of_day_distribution.{$user->id}.90");
+
+        foreach ([7, 30, 90, 365] as $days) {
+            Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");
+        }
 
         $this->statsService->clearDurationStats($user);
     }
@@ -78,6 +83,7 @@ class StatsServiceCacheTest extends TestCase
         foreach ([7, 30, 90, 365] as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.weight_history.{$user->id}.{$days}");
             Cache::shouldReceive('forget')->once()->with("stats.body_fat_history.{$user->id}.{$days}");
+            Cache::shouldReceive('forget')->once()->with("stats.body_progress.{$user->id}.{$days}");
         }
 
         $this->statsService->clearBodyMeasurementStats($user);

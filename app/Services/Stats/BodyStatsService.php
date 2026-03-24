@@ -82,4 +82,44 @@ final class BodyStatsService
                 ->toArray()
         );
     }
+
+    /**
+     * Get consolidated body progress data (weight and body fat history).
+     * ⚡ Bolt: Reduces 2 database queries to 1 and uses a single cache key.
+     *
+     * @param  User  $user  The user to fetch stats for.
+     * @param  int  $days  The number of days to look back.
+     * @return array{weightHistory: array<int, WeightHistoryPoint>, bodyFatHistory: array<int, BodyFatHistoryPoint>}
+     */
+    public function getBodyProgressOverview(User $user, int $days = 90): array
+    {
+        return Cache::remember(
+            "stats.body_progress.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            function () use ($user, $days): array {
+                $measurements = $user->bodyMeasurements()
+                    ->where('measured_at', '>=', now()->subDays($days))
+                    ->orderBy('measured_at', 'asc')
+                    ->get();
+
+                $weightHistory = $measurements->map(fn (BodyMeasurement $m): WeightHistoryPoint => new WeightHistoryPoint(
+                    Carbon::parse($m->measured_at)->format('d/m'),
+                    Carbon::parse($m->measured_at)->format('Y-m-d'),
+                    (float) $m->weight,
+                ))->toArray();
+
+                $bodyFatHistory = $measurements->filter(fn (BodyMeasurement $m) => $m->body_fat !== null)
+                    ->map(fn (BodyMeasurement $m): BodyFatHistoryPoint => new BodyFatHistoryPoint(
+                        Carbon::parse($m->measured_at)->format('d/m'),
+                        Carbon::parse($m->measured_at)->format('Y-m-d'),
+                        (float) $m->body_fat,
+                    ))->values()->toArray();
+
+                return [
+                    'weightHistory' => $weightHistory,
+                    'bodyFatHistory' => $bodyFatHistory,
+                ];
+            }
+        );
+    }
 }

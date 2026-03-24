@@ -19,7 +19,7 @@ defineProps({
             <p class="text-text-muted text-xs font-semibold">Volume par groupe musculaire</p>
         </div>
         <div class="h-52">
-            <Deferred data="muscleDistribution">
+            <Deferred data="performanceStats">
                 <template #fallback>
                     <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
                 </template>
