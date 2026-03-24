@@ -219,7 +219,7 @@ test('user cannot update another users goal', function (): void {
 
     actingAs($user)
         ->patch(route('goals.update', $goal), [
-            'title' => 'Hacked',
+            'title' => 'Unauthorized',
             'type' => 'weight',
             'target_value' => 100,
             'exercise_id' => $exercise->id,

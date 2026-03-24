@@ -105,8 +105,8 @@ describe('Authenticated', function (): void {
             Gate::before(fn (): false => false);
 
             $response = postJson(route('api.v1.users.store'), [
-                'name' => 'Hacker',
-                'email' => 'hacker@example.com',
+                'name' => 'Unauthorized User',
+                'email' => 'unauthorized@example.com',
                 'password' => 'password',
             ]);
 
@@ -185,7 +185,7 @@ describe('Authenticated', function (): void {
 
             $userToUpdate = User::factory()->create();
 
-            putJson(route('api.v1.users.update', $userToUpdate), ['name' => 'Hacked Name'])
+            putJson(route('api.v1.users.update', $userToUpdate), ['name' => 'Unauthorized Name'])
                 ->assertForbidden();
         });
 

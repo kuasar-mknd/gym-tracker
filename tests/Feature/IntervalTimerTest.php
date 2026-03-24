@@ -92,7 +92,7 @@ test('user cannot update others timer', function (): void {
     ]);
 
     $response = $this->actingAs($user2)->patch(route('tools.interval-timer.update', $timer), [
-        'name' => 'Hacked Timer',
+        'name' => 'Unauthorized Timer',
         'work_seconds' => 40,
         'rest_seconds' => 20,
         'rounds' => 4,

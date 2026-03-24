@@ -197,7 +197,7 @@ describe('Authenticated', function (): void {
             $otherUser = User::factory()->create();
             $goal = Goal::factory()->create(['user_id' => $otherUser->id]);
 
-            putJson(route('api.v1.goals.update', $goal), ['title' => 'Hacked'])
+            putJson(route('api.v1.goals.update', $goal), ['title' => 'Unauthorized'])
                 ->assertForbidden();
         });
 

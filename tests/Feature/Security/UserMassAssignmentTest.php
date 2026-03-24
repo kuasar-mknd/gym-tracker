@@ -23,7 +23,7 @@ class UserMassAssignmentTest extends TestCase
         ])->save();
 
         $payload = [
-            'name' => 'Hacker Name',
+            'name' => 'Unauthorized Name',
             'current_streak' => 999,
             'longest_streak' => 999,
             'last_workout_at' => '2025-01-01 12:00:00',

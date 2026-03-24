@@ -69,7 +69,7 @@ it('ignores workout_template_line_id from data array to prevent mass assignment 
     $data = [
         'reps' => 12,
         'weight' => 20,
-        'workout_template_line_id' => $line2->id, // Maliciously try to assign to different line
+        'workout_template_line_id' => $line2->id, // Attempt to assign to different line without authorization
     ];
 
     $action = app(CreateWorkoutTemplateSetAction::class);

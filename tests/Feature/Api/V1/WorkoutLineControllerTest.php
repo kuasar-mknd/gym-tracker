@@ -228,7 +228,7 @@ test('it cannot update another user\'s workout line', function (): void {
     ]);
 
     $response = putJson("/api/v1/workout-lines/{$workoutLine->id}", [
-        'notes' => 'Hacked notes',
+        'notes' => 'Unauthorized notes',
     ]);
 
     $response->assertForbidden();

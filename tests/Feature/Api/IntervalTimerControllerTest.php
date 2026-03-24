@@ -120,7 +120,7 @@ test('user cannot update another users interval timer', function (): void {
     $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
     $data = [
-        'name' => 'Hacked Timer',
+        'name' => 'Unauthorized Timer',
         'work_seconds' => 30,
         'rest_seconds' => 15,
         'rounds' => 10,

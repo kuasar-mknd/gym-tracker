@@ -184,14 +184,14 @@ describe('PUT /api/v1/achievements/{achievement}', function (): void {
 
         $response = actingAs($this->user)
             ->putJson("/api/v1/achievements/{$achievement->id}", [
-                'name' => 'Hacked Name',
+                'name' => 'Unauthorized Name',
             ]);
 
         $response->assertForbidden();
 
         assertDatabaseMissing('achievements', [
             'id' => $achievement->id,
-            'name' => 'Hacked Name',
+            'name' => 'Unauthorized Name',
         ]);
     });
 

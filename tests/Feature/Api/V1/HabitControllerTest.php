@@ -82,7 +82,7 @@ describe('Habits API', function (): void {
         $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
 
         getJson(route('api.v1.habits.show', $habit))->assertForbidden();
-        putJson(route('api.v1.habits.update', $habit), ['name' => 'Hack'])->assertForbidden();
+        putJson(route('api.v1.habits.update', $habit), ['name' => 'Unauthorized Update'])->assertForbidden();
         deleteJson(route('api.v1.habits.destroy', $habit))->assertForbidden();
     });
 

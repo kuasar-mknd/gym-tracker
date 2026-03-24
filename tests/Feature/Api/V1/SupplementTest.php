@@ -112,7 +112,7 @@ test('users cannot update others supplements', function (): void {
 
     actingAs($user)
         ->putJson(route('api.v1.supplements.update', $supplement), [
-            'name' => 'Hacked',
+            'name' => 'Unauthorized',
             'servings_remaining' => 10,
             'low_stock_threshold' => 5,
         ])

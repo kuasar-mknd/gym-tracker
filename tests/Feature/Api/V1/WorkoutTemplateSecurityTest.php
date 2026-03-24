@@ -24,7 +24,7 @@ test('user cannot create workout template with other users private exercise even
     $privateExercise = Exercise::factory()->create(['user_id' => $this->otherUser->id]);
 
     $data = [
-        'name' => 'Malicious Template',
+        'name' => 'Unauthorized Template',
         'exercises' => [
             [
                 'id' => $privateExercise->id,
@@ -50,7 +50,7 @@ test('user cannot update workout template with other users private exercise even
     $privateExercise = Exercise::factory()->create(['user_id' => $this->otherUser->id]);
 
     $data = [
-        'name' => 'Updated Malicious Template',
+        'name' => 'Updated Unauthorized Template',
         'exercises' => [
             [
                 'id' => $privateExercise->id,

@@ -142,7 +142,7 @@ test('user cannot update another users habit log', function (): void {
     $log = HabitLog::factory()->create(['habit_id' => $habit->id]);
 
     actingAs($user)
-        ->putJson(route('api.v1.habit-logs.update', $log), ['notes' => 'Hacked'])
+        ->putJson(route('api.v1.habit-logs.update', $log), ['notes' => 'Unauthorized'])
         ->assertForbidden();
 });
 

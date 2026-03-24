@@ -158,7 +158,7 @@ test('user cannot update other users workout template', function (): void {
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
 
-    $this->putJson(route('api.v1.workout-templates.update', $template), ['name' => 'Hacked'])
+    $this->putJson(route('api.v1.workout-templates.update', $template), ['name' => 'Unauthorized'])
         ->assertForbidden();
 });
 
