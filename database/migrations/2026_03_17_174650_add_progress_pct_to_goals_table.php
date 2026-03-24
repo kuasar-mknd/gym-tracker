@@ -13,14 +13,13 @@ return new class() extends Migration
      */
     public function up(): void
     {
-        Schema::table('goals', function (Blueprint $table) {
-            // Using a simpler formula to avoid complex MySQL/SQLite cross-compatibility issues,
-            // or we just define it as a standard double column updated by the service.
-            // Since the problem suggested "MySQL Virtual Columns", we will use virtualAs.
-            // IF is MySQL specific, SQLite uses IIF or CASE WHEN. Let's use a standard column updated on save
-            // for maximum stability across test environments (SQLite) and prod (MySQL).
-            $table->double('progress_pct')->default(0.0)->after('start_value');
-        });
+        if (Schema::hasTable("goals")) {
+            Schema::table("goals", function (Blueprint $table) {
+                if (!Schema::hasColumn("goals", "progress_pct")) {
+                    $table->double("progress_pct")->default(0.0)->after("start_value");
+                }
+            });
+        }
     }
 
     /**
@@ -28,8 +27,12 @@ return new class() extends Migration
      */
     public function down(): void
     {
-        Schema::table('goals', function (Blueprint $table) {
-            $table->dropColumn('progress_pct');
-        });
+        if (Schema::hasTable("goals")) {
+            Schema::table("goals", function (Blueprint $table) {
+                if (Schema::hasColumn("goals", "progress_pct")) {
+                    $table->dropColumn("progress_pct");
+                }
+            });
+        }
     }
 };
