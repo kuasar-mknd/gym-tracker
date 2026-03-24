@@ -102,12 +102,14 @@ final class BodyStatsService
                     ->orderBy('measured_at', 'asc')
                     ->get();
 
+                /** @var array<int, WeightHistoryPoint> $weightHistory */
                 $weightHistory = $measurements->map(fn (BodyMeasurement $m): WeightHistoryPoint => new WeightHistoryPoint(
                     Carbon::parse($m->measured_at)->format('d/m'),
                     Carbon::parse($m->measured_at)->format('Y-m-d'),
                     (float) $m->weight,
                 ))->toArray();
 
+                /** @var array<int, BodyFatHistoryPoint> $bodyFatHistory */
                 $bodyFatHistory = $measurements->filter(fn (BodyMeasurement $m) => $m->body_fat !== null)
                     ->map(fn (BodyMeasurement $m): BodyFatHistoryPoint => new BodyFatHistoryPoint(
                         Carbon::parse($m->measured_at)->format('d/m'),
