@@ -99,7 +99,7 @@ test('user cannot update other user workout template', function (): void {
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
 
     $data = [
-        'name' => 'Hacked Name',
+        'name' => 'Updated Name',
     ];
 
     actingAs($user)
