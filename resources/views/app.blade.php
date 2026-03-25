@@ -30,7 +30,7 @@
     <script nonce="{{ Vite::cspNonce() }}">
         window.SENTRY_CONFIG = {
             dsn: '{{ config('sentry.dsn') }}',
-            environment: '{{ app()->environment() }}'
+            environment: '{{ config('app.env') }}'
         };
     </script>
 
