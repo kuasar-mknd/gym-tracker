@@ -14,16 +14,8 @@ enum ExerciseCategory: string
     case Abdominaux = 'Abdominaux';
     case Cardio = 'Cardio';
 
-    // Legacy/Test values
-    case Legs = 'Legs';
-    case Test = 'Test';
-    case A = 'A';
-
     public function label(): string
     {
-        return match ($this) {
-            self::Legs, self::Jambes => 'Jambes',
-            default => $this->value,
-        };
+        return $this->value;
     }
 }

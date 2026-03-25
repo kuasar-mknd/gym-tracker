@@ -77,7 +77,7 @@ class ExerciseTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/exercises', [
             'name' => 'New Exercise',
             'type' => 'strength',
-            'category' => 'Test',
+            'category' => 'Pectoraux',
         ]);
 
         $response->assertCreated()
