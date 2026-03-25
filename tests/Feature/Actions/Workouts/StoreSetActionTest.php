@@ -51,11 +51,9 @@ it('logs and rethrows exception when set creation fails', function (): void {
     // Assert Log::error was called
     Log::shouldHaveReceived('error')->once()->with(
         'Failed to create set in API:',
-        \Mockery::on(function (array $context) use ($user, $data): bool {
-            return isset($context['error'])
-                && isset($context['trace'])
-                && $context['user_id'] === $user->id
-                && $context['data'] === $data;
-        })
+        \Mockery::on(fn(array $context): bool => isset($context['error'])
+            && isset($context['trace'])
+            && $context['user_id'] === $user->id
+            && $context['data'] === $data)
     );
 });
