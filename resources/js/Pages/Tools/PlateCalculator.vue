@@ -196,6 +196,9 @@
                                 </div>
                                 <button
                                     @click="deletePlate(plate)"
+                                    type="button"
+                                    aria-label="Supprimer la plaque"
+                                    title="Supprimer la plaque"
                                     class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all group-hover:opacity-100 hover:bg-red-600"
                                 >
                                     <span class="material-symbols-outlined text-sm">close</span>

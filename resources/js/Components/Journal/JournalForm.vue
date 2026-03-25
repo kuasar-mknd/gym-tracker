@@ -42,7 +42,7 @@ const emit = defineEmits(['close', 'submit'])
                         @click="form.mood_score = mood.value"
                         :aria-pressed="form.mood_score === mood.value"
                         :class="[
-                            'flex-1 rounded-2xl border border-white/20 p-2 text-center text-sm transition-all duration-300 backdrop-blur-md',
+                            'flex-1 rounded-2xl border border-white/20 p-2 text-center text-sm backdrop-blur-md transition-all duration-300',
                             form.mood_score === mood.value
                                 ? 'bg-accent-primary border-transparent text-white shadow-lg'
                                 : 'text-text-muted bg-white/10 hover:bg-white/20 hover:text-white',
