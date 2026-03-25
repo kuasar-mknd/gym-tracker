@@ -49,6 +49,19 @@ class Achievement extends Model
         return Cache::rememberForever('achievements_all', fn (): Collection => self::all());
     }
 
+    protected static function booted(): void
+    {
+        parent::booted();
+
+        static::saved(function (Achievement $achievement): void {
+            Cache::forget('achievements_all');
+        });
+
+        static::deleted(function (Achievement $achievement): void {
+            Cache::forget('achievements_all');
+        });
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\App\Models\User, $this, \Illuminate\Database\Eloquent\Relations\Pivot, 'pivot'>
      */
@@ -65,18 +78,5 @@ class Achievement extends Model
             ->logOnly(['slug', 'name', 'description', 'type', 'category', 'threshold'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
-    }
-
-    protected static function booted(): void
-    {
-        parent::booted();
-
-        static::saved(function (Achievement $achievement): void {
-            Cache::forget('achievements_all');
-        });
-
-        static::deleted(function (Achievement $achievement): void {
-            Cache::forget('achievements_all');
-        });
     }
 }

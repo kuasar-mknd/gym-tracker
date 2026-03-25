@@ -28,10 +28,8 @@ class SyncService {
             return Promise.reject({ isOffline: true, message: 'Offline: Request queued' })
         }
 
-        const api = window.axios || axios
-
         try {
-            return await api(config)
+            return await axios(config)
         } catch (error) {
             if (!navigator.onLine || error.code === 'ERR_NETWORK') {
                 this.addToQueue(config)
@@ -66,13 +64,11 @@ class SyncService {
         this.queue = []
         this.saveQueue()
 
-        const api = window.axios || axios
-
         for (const config of tempQueue) {
             try {
                 // Remove internal queue ID before sending
                 const { id, timestamp, ...axiosConfig } = config
-                await api(axiosConfig)
+                await axios(axiosConfig)
                 console.log(`Successfully synced: ${config.url}`)
             } catch (error) {
                 console.error(`Failed to sync item: ${config.url}`, error)

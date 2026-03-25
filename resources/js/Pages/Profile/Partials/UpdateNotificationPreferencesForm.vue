@@ -39,7 +39,6 @@ const recentlySuccessful = ref(false)
 const errors = ref({})
 
 const urlBase64ToUint8Array = (base64String) => {
-    if (!base64String) return new Uint8Array(0)
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
     const rawData = window.atob(base64)
@@ -51,10 +50,7 @@ const urlBase64ToUint8Array = (base64String) => {
 }
 
 const enablePush = async () => {
-    if (!pushSupported || !vapidPublicKey) {
-        console.error('Push notifications not supported or VAPID key missing')
-        return
-    }
+    if (!pushSupported) return
 
     isSubscribing.value = true
     try {
@@ -62,30 +58,18 @@ const enablePush = async () => {
         pushPermission.value = permission
 
         if (permission === 'granted') {
-            // Force registration update to ensure we have the latest SW
             const registration = await navigator.serviceWorker.ready
-
-            // Unsubscribe existing if any to avoid stale subscriptions
-            const existingSub = await registration.pushManager.getSubscription()
-            if (existingSub) {
-                await existingSub.unsubscribe()
-            }
-
             const subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
             })
 
-            // Save subscription to backend using window.axios for CSRF/auth
-            const api = window.axios || axios
-            await api.post(route('push-subscriptions.update'), subscription)
+            // Save subscription to backend
+            await axios.post(route('push-subscriptions.update'), subscription)
 
             // Enable push toggles by default if just activated
             form.push_preferences.personal_record = true
             form.push_preferences.training_reminder = true
-
-            // Save preferences immediately
-            updatePreferences()
         }
     } catch (error) {
         console.error('Push subscription failed:', error)
@@ -134,7 +118,7 @@ const updatePreferences = () => {
             <div class="space-y-4">
                 <!-- Web Push Banner -->
                 <div
-                    v-if="pushSupported && pushPermission !== 'granted' && vapidPublicKey"
+                    v-if="pushSupported && pushPermission !== 'granted'"
                     class="border-accent-primary/20 bg-accent-primary/10 mb-6 rounded-xl border p-4"
                 >
                     <div class="flex items-center justify-between gap-4">
@@ -153,10 +137,6 @@ const updatePreferences = () => {
 
                 <div v-else-if="!pushSupported" class="text-text-muted/50 mb-6 text-xs italic">
                     Les notifications push ne sont pas supportées par votre navigateur.
-                </div>
-
-                <div v-else-if="pushSupported && !vapidPublicKey" class="mb-6 text-xs text-amber-400/80 italic">
-                    Le service de notifications n'est pas encore configuré sur le serveur.
                 </div>
 
                 <!-- Personal Record Toggle -->

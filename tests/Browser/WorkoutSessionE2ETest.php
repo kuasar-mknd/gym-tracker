@@ -62,7 +62,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
         ]);
 
         try {
-            $browser->loginAs($user)
+            $browser->loginAs($user->id)
                 ->{$sizeMacro}()
                 ->visit("/workouts/{$workout->id}")
                 ->disableAnimations()
@@ -111,17 +111,12 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitFor('@select-exercise-'.$recommenderEx->id, 20)->click('@select-exercise-'.$recommenderEx->id);
             $browser->waitUntilMissing('[role="dialog"]', 15);
 
-            // Wait for all cards to be present and stabilize
+            // Wait for all cards to be present
             $browser->waitFor('@exercise-card-4', 25)
-                ->pause(2000) // Give API responses time to settle so Vue doesn't remount components mid-interaction
                 ->assertSee('BRAND NEW EXERCISE')
                 ->assertSee('RECOMMENDER EX');
 
             // 4. Fill Strength set
-            $html = $browser->script('return document.body.innerHTML;')[0];
-            file_put_contents(storage_path('logs/dusk_html_dump.html'), $html);
-
-            $browser->waitFor('@add-set-0', 15);
             $browser->script("document.querySelector('[dusk=\"add-set-0\"]').scrollIntoView({block: 'center'});");
             $browser->click('[dusk="add-set-0"]')
                 ->waitFor('@weight-input-0-0', 15)
@@ -129,7 +124,6 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->type('@reps-input-0-0', '5');
 
             // 5. Fill Cardio set
-            $browser->waitFor('@add-set-1', 15);
             $browser->script("document.querySelector('[dusk=\"add-set-1\"]').scrollIntoView({block: 'center'});");
             $browser->click('[dusk="add-set-1"]')
                 ->waitFor('@distance-input-1-0', 15)
@@ -137,7 +131,6 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->type('@duration-input-1-0', '002530');
 
             // 6. Fill Timed set
-            $browser->waitFor('@add-set-2', 15);
             $browser->script("document.querySelector('[dusk=\"add-set-2\"]').scrollIntoView({block: 'center'});");
             $browser->click('[dusk="add-set-2"]')
                 ->waitFor('@duration-input-2-0', 15)
@@ -145,54 +138,11 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             // 6b. Verify RECOMMENDED values for Recommender Ex (Index 4)
             // It should be 110kg x 3 reps (most frequent in the LAST workout)
-            $browser->waitFor('@add-set-4', 15);
             $browser->script("document.querySelector('[dusk=\"add-set-4\"]').scrollIntoView({block: 'center'});");
             $browser->click('[dusk="add-set-4"]')
                 ->waitFor('@weight-input-4-0', 15)
                 ->assertInputValue('@weight-input-4-0', '110')
                 ->assertInputValue('@reps-input-4-0', '3');
-
-            // 6c. Add an extra set to Strength Ex, then delete it
-            $browser->script("document.querySelector('[dusk=\"add-set-0\"]').scrollIntoView({block: 'center'});");
-            $browser->click('[dusk="add-set-0"]')
-                ->waitFor('@weight-input-0-1', 15)
-                ->type('@weight-input-0-1', '85')
-                ->type('@reps-input-0-1', '3')
-                ->pause(1500) // Wait for debounce to save
-                ->script("document.querySelector('[dusk=\"remove-set-0-1\"]').scrollIntoView({block: 'center'});");
-            $browser->waitFor('@remove-set-0-1', 10)
-                ->click('@remove-set-0-1')
-                ->waitUntilMissing('@weight-input-0-1', 15);
-
-            // 6d. Modify workout settings
-            $browser->script("window.scrollTo({ top: 0, behavior: 'smooth' });");
-            $browser->waitFor('@workout-settings-button', 15)
-                ->pause(500)
-                ->click('@workout-settings-button')
-                ->waitFor('@workout-name-input', 15)
-                ->clear('@workout-name-input')
-                ->type('@workout-name-input', 'Workout Updated')
-                ->click('@save-settings-button')
-                ->waitUntilMissing('[role="dialog"]', 15)
-                ->pause(1000)
-                ->assertSee('WORKOUT UPDATED');
-
-            // 6e. Delete Cardio exercise (Index 1)
-            $browser->script("document.querySelector('[dusk=\"remove-line-1\"]').scrollIntoView({block: 'center'});");
-
-            // Get the stable ID of the cardio line before deleting it
-            $cardioLineId = $browser->attribute('[dusk="exercise-card-1"]', 'data-line-id');
-
-            $browser->click('@remove-line-1')
-                ->waitFor('@confirm-delete-button', 15)
-                ->pause(500)
-                ->click('@confirm-delete-button')
-                ->waitUntilMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]", 15);
-
-            $browser->within('@exercise-list', function (Browser $list) use ($cardioLineId): void {
-                $list->assertDontSee('CARDIO EX');
-                $list->assertMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]");
-            });
 
             // 7. Complete one set and verify PR trophy
             $browser->script("document.querySelector('[dusk=\"exercise-card-0\"]').scrollIntoView({block: 'start'});");

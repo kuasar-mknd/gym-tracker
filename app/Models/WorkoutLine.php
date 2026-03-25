@@ -40,13 +40,6 @@ class WorkoutLine extends Model
      */
     protected $appends = [];
 
-    protected function casts(): array
-    {
-        return [
-            'order' => 'integer',
-        ];
-    }
-
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Workout, $this>
      */
@@ -81,10 +74,10 @@ class WorkoutLine extends Model
     {
         // If pre-loaded via batch method, return directly
         if (isset($this->attributes['recommended_values'])) {
-            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} $values */
-            $values = json_decode((string) $this->attributes['recommended_values'], true); // @phpstan-ignore cast.string
+            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int} $cached */
+            $cached = json_decode((string) $this->attributes['recommended_values'], true); // @phpstan-ignore cast.string
 
-            return $values;
+            return $cached;
         }
 
         return $this->getRecommendedValues();
@@ -109,15 +102,6 @@ class WorkoutLine extends Model
      */
     public static function batchRecommendedValues(\Illuminate\Database\Eloquent\Collection $lines, int $userId): array
     {
-        $deps = self::getBatchDependencies($lines);
-
-        if ($deps === null) {
-            return [];
-        }
-
-        /** @var array{0: int, 1: array<int, mixed>, 2: \App\Models\Workout} $deps */
-        [$workoutId, $exerciseIds, $workout] = $deps;
-
         $defaults = [
             'weight' => 0,
             'reps' => 10,
@@ -125,9 +109,87 @@ class WorkoutLine extends Model
             'duration_seconds' => 30,
         ];
 
-        $results = self::getResultsFromCacheOrFetch($exerciseIds, $userId, $workoutId, $workout, $defaults);
+        if ($lines->isEmpty()) {
+            return [];
+        }
 
-        foreach ($lines as $line) {
+        /** @var \Illuminate\Database\Eloquent\Collection<int, WorkoutLine> $currentLines */
+        $currentLines = $lines;
+        $workoutId = $currentLines->first()?->workout_id;
+        $exerciseIds = $currentLines->pluck('exercise_id')->unique()->values()->all();
+
+        if (empty($exerciseIds) || $workoutId === null) {
+            return [];
+        }
+
+        $workout = Workout::find($workoutId);
+        if (! $workout) {
+            return [];
+        }
+
+        // Check cache for each exercise, collect uncached IDs
+        /** @var array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}> $results */
+        $results = [];
+        $uncachedExerciseIds = [];
+
+        foreach ($exerciseIds as $exerciseId) {
+            $exerciseIdInt = (int) $exerciseId; // @phpstan-ignore cast.int
+            $cacheKey = "recommended_values:{$userId}:{$exerciseIdInt}:{$workoutId}";
+            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null $cached */
+            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if ($cached !== null) {
+                $results[$exerciseIdInt] = $cached;
+            } else {
+                $uncachedExerciseIds[] = $exerciseId;
+            }
+        }
+
+        // Fetch uncached exercise recommended values in batch
+        if (! empty($uncachedExerciseIds)) {
+            // Get the most recent previous workout line per exercise in ONE query
+            $latestSubquery = self::query()
+                ->selectRaw('MAX(workout_lines.id) as latest_line_id')
+                ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+                ->whereIn('workout_lines.exercise_id', $uncachedExerciseIds)
+                ->where('workouts.user_id', $userId)
+                ->where('workouts.id', '!=', $workoutId)
+                ->where('workouts.started_at', '<', $workout->started_at)
+                ->groupBy('workout_lines.exercise_id');
+
+            $lastLines = self::query()
+                ->whereIn('id', $latestSubquery)
+                ->with('sets')
+                ->get()
+                ->keyBy('exercise_id');
+
+            foreach ($uncachedExerciseIds as $exerciseId) {
+                $exerciseIdInt = (int) $exerciseId; // @phpstan-ignore cast.int
+                $lastLine = $lastLines->get($exerciseIdInt);
+
+                if (! $lastLine || $lastLine->sets->isEmpty()) {
+                    $values = $defaults;
+                } else {
+                    $sets = $lastLine->sets;
+                    $frequencies = $sets->groupBy(fn ($set): string => "{$set->weight}-{$set->reps}-{$set->distance_km}-{$set->duration_seconds}")->map->count();
+                    $mostFrequentKey = (string) $frequencies->sortDesc()->keys()->first();
+                    [$weight, $reps, $distance, $duration] = explode('-', $mostFrequentKey);
+
+                    $values = [
+                        'weight' => (float) $weight,
+                        'reps' => (int) $reps,
+                        'distance_km' => (float) $distance,
+                        'duration_seconds' => (int) $duration,
+                    ];
+                }
+
+                $cacheKey = "recommended_values:{$userId}:{$exerciseIdInt}:{$workoutId}";
+                \Illuminate\Support\Facades\Cache::put($cacheKey, $values, 300);
+                $results[$exerciseIdInt] = $values;
+            }
+        }
+
+        // Apply results to lines
+        foreach ($currentLines as $line) {
             $line->recommended_values = $results[$line->exercise_id] ?? $defaults;
         }
 
@@ -210,113 +272,10 @@ class WorkoutLine extends Model
         return $values;
     }
 
-    /**
-     * @param  \Illuminate\Database\Eloquent\Collection<int, WorkoutLine>  $lines
-     * @return array{0: int, 1: array<int, mixed>, 2: \App\Models\Workout}|null
-     */
-    private static function getBatchDependencies(\Illuminate\Database\Eloquent\Collection $lines): ?array
+    protected function casts(): array
     {
-        if ($lines->isEmpty()) {
-            return null;
-        }
-
-        $workoutId = $lines->first()->workout_id;
-        $exerciseIds = $lines->pluck('exercise_id')->unique()->values()->all();
-
-        if (count($exerciseIds) === 0 || $workoutId === null) {
-            return null;
-        }
-
-        /** @var \App\Models\Workout|null $workout */
-        $workout = Workout::find($workoutId);
-        if (! $workout) {
-            return null;
-        }
-
-        return [$workoutId, $exerciseIds, $workout];
-    }
-
-    /**
-     * @param  array<int, mixed>  $exerciseIds
-     * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults
-     * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
-     */
-    private static function getResultsFromCacheOrFetch(array $exerciseIds, int $userId, int $workoutId, Workout $workout, array $defaults): array
-    {
-        $results = [];
-        $uncachedExerciseIds = [];
-
-        foreach ($exerciseIds as $exerciseId) {
-            $exerciseIdInt = (int) $exerciseId; // @phpstan-ignore cast.int
-            $cacheKey = "recommended_values:{$userId}:{$exerciseIdInt}:{$workoutId}";
-            /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null $cached */
-            $cached = \Illuminate\Support\Facades\Cache::get($cacheKey);
-            if ($cached !== null) {
-                $results[$exerciseIdInt] = $cached;
-            } else {
-                $uncachedExerciseIds[] = $exerciseId;
-            }
-        }
-
-        if (count($uncachedExerciseIds) > 0) {
-            $uncachedResults = self::fetchUncachedRecommendedValues($uncachedExerciseIds, $workoutId, $userId, $workout, $defaults);
-            foreach ($uncachedResults as $exerciseIdInt => $values) {
-                $results[$exerciseIdInt] = $values;
-            }
-        }
-
-        return $results;
-    }
-
-    /**
-     * @param  array<int, mixed>  $uncachedExerciseIds
-     * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults
-     * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
-     */
-    private static function fetchUncachedRecommendedValues(array $uncachedExerciseIds, int $workoutId, int $userId, Workout $workout, array $defaults): array
-    {
-        $results = [];
-
-        $latestSubquery = self::query()
-            ->selectRaw('MAX(workout_lines.id) as latest_line_id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->whereIn('workout_lines.exercise_id', $uncachedExerciseIds)
-            ->where('workouts.user_id', $userId)
-            ->where('workouts.id', '!=', $workoutId)
-            ->where('workouts.started_at', '<', $workout->started_at)
-            ->groupBy('workout_lines.exercise_id');
-
-        $lastLines = self::query()
-            ->whereIn('id', $latestSubquery)
-            ->with('sets')
-            ->get()
-            ->keyBy('exercise_id');
-
-        foreach ($uncachedExerciseIds as $exerciseId) {
-            $exerciseIdInt = (int) $exerciseId; // @phpstan-ignore cast.int
-            $lastLine = $lastLines->get($exerciseIdInt);
-
-            if (! $lastLine || $lastLine->sets->isEmpty()) {
-                $values = $defaults;
-            } else {
-                $sets = $lastLine->sets;
-                $frequencies = $sets->groupBy(fn ($set): string => "{$set->weight}-{$set->reps}-{$set->distance_km}-{$set->duration_seconds}")->map->count();
-                $mostFrequentKey = (string) $frequencies->sortDesc()->keys()->first();
-                [$weight, $reps, $distance, $duration] = explode('-', $mostFrequentKey);
-
-                $values = [
-                    'weight' => (float) $weight,
-                    'reps' => (int) $reps,
-                    'distance_km' => (float) $distance,
-                    'duration_seconds' => (int) $duration,
-                ];
-            }
-
-            $cacheKey = "recommended_values:{$userId}:{$exerciseIdInt}:{$workoutId}";
-            \Illuminate\Support\Facades\Cache::put($cacheKey, $values, 300);
-            $results[$exerciseIdInt] = $values;
-        }
-
-        return $results;
+        return [
+            'order' => 'integer',
+        ];
     }
 }

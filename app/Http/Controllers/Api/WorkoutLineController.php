@@ -50,8 +50,6 @@ class WorkoutLineController extends Controller
 
         $workoutLine = $action->execute($workout, $validated);
 
-        $workoutLine->load(['exercise', 'sets']);
-
         // ⚡ Perf: Accessor uses cache automatically
         $workoutLine->append('recommended_values');
 
