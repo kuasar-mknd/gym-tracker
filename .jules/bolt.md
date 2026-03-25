@@ -45,3 +45,7 @@
 ## 2026-03-25 - [Optimizing Consolidated Body Metrics Query]
 **Learning:** Consolidation of deferred props at the controller level provides a great opportunity to also consolidate the underlying database queries. Fetching weight and body fat history separately caused two queries to the same `body_measurements` table for the same timeframe.
 **Action:** Fetch the shared model collection once in the service and use PHP-side filtering/mapping to populate the DTOs, reducing database load while improving frontend responsiveness.
+
+## 2026-03-26 - [Removing Redundant Immediate Props]
+**Learning:** Returning the same data in both an immediate Inertia prop and a deferred prop (e.g., `monthlyFrequency` vs `chartData.monthly_frequency`) causes redundant backend execution and increases the initial HTML payload size without benefit.
+**Action:** Audit Inertia controllers and actions to ensure data used in deferred frontend components is ONLY provided through deferred props, reducing the Time to First Byte (TTFB) and overall request overhead.
