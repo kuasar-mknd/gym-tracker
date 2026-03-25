@@ -19,7 +19,7 @@ describe('Goal Security', function (): void {
         $privateExercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
 
         $data = [
-            'title' => 'Hacked Goal',
+            'title' => 'Updated Goal',
             'type' => 'weight',
             'target_value' => 100,
             'exercise_id' => $privateExercise->id,
@@ -41,7 +41,7 @@ describe('Goal Security', function (): void {
         $privateExercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
 
         $data = [
-            'title' => 'Hacked Goal 2',
+            'title' => 'Updated Goal 2',
             'type' => 'weight',
             'target_value' => 100,
             'exercise_id' => $privateExercise->id,
