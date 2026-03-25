@@ -48,7 +48,11 @@ class TrainingReminderCommand extends Command
                     $query->where('type', 'training_reminder');
                 },
             ])
-
+            ->addSelect(['last_workout_started_at' => \App\Models\Workout::select('started_at')
+                ->whereColumn('user_id', 'users.id')
+                ->orderByDesc('started_at')
+                ->limit(1),
+            ])
             ->chunkById(100, function ($users) use (&$count): void {
                 foreach ($users as $user) {
                     /** @var NotificationPreference|null $preference */
@@ -62,10 +66,10 @@ class TrainingReminderCommand extends Command
                     $days = $preference->value ?? 3;
                     $threshold = Carbon::now()->subDays($days);
 
-                    // Still one query per user for the workout, but filtered users is much smaller
-                    $lastWorkout = $user->workouts()->latest('started_at')->first();
+                    $lastWorkoutStartedAtStr = $user->getAttribute('last_workout_started_at');
+                    $lastWorkoutStartedAt = is_string($lastWorkoutStartedAtStr) ? Carbon::parse($lastWorkoutStartedAtStr) : null;
 
-                    if (! $lastWorkout || $lastWorkout->started_at->lt($threshold)) {
+                    if (! $lastWorkoutStartedAt || $lastWorkoutStartedAt->lt($threshold)) {
                         $user->notify(new TrainingReminder());
                         $count++;
                     }
