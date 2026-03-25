@@ -30,8 +30,6 @@ final class StreakService
      */
     public function updateStreak(User $user, ?Workout $workout = null): void
     {
-        $user->refresh();
-
         $workoutDate = $this->resolveWorkoutDate($user, $workout);
 
         if (! $workoutDate) {
@@ -41,6 +39,12 @@ final class StreakService
         $lastRecordedDate = $this->getLastRecordedDate($user);
 
         if ($lastRecordedDate?->equalTo($workoutDate)) {
+            // Ensure last_workout_at is updated if the new workout is more recent on the same day
+            if ($workout && (! $user->last_workout_at || $workout->started_at->greaterThan($user->last_workout_at))) {
+                $user->last_workout_at = $workout->started_at;
+                $user->save();
+            }
+
             return;
         }
 
@@ -54,7 +58,7 @@ final class StreakService
             $latestStartedAtCarbon = Carbon::parse((string) $latestStartedAt);
         }
 
-        $user->last_workout_at = $workout->started_at ?? $latestStartedAtCarbon;
+        $user->last_workout_at = ($workout !== null) ? $workout->started_at : $latestStartedAtCarbon;
         $user->save();
     }
 
@@ -66,7 +70,13 @@ final class StreakService
      */
     protected function getLastRecordedDate(User $user): ?Carbon
     {
-        return $user->last_workout_at ? Carbon::parse($user->last_workout_at)->startOfDay() : null;
+        $lastWorkoutAt = $user->last_workout_at;
+
+        if ($lastWorkoutAt instanceof Carbon) {
+            return $lastWorkoutAt->copy()->startOfDay();
+        }
+
+        return $lastWorkoutAt ? Carbon::parse((string) $lastWorkoutAt)->startOfDay() : null;
     }
 
     /**
@@ -87,7 +97,9 @@ final class StreakService
             // First workout ever
             $user->current_streak = 1;
         } else {
-            $diffInDays = (int) $lastRecordedDate->diffInDays($workoutDate);
+            // Use diffInDays with absolute parameter as false to ensure forward-only calculation if needed,
+            // but here we just need the difference between start-of-day dates.
+            $diffInDays = (int) $lastRecordedDate->diffInDays($workoutDate, false);
 
             if ($diffInDays === 1) {
                 // Consecutive day
@@ -95,6 +107,9 @@ final class StreakService
             } elseif ($diffInDays > 1) {
                 // Streak broken
                 $user->current_streak = 1;
+            } elseif ($diffInDays < 0) {
+                // Backdated workout - we don't handle historical streak recalculation here yet
+                // For now, don't increment or reset.
             }
         }
 

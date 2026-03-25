@@ -88,7 +88,9 @@ final class AppServiceProvider extends ServiceProvider
     {
         Workout::saved(function (Workout $workout): void {
             // Streak is only updated when a workout is "finished" or has a date
-            app(StreakService::class)->updateStreak($workout->user, $workout);
+            if ($workout->wasRecentlyCreated || $workout->wasChanged('started_at')) {
+                app(StreakService::class)->updateStreak($workout->user, $workout);
+            }
 
             // ⚡ Bolt: Offload heavy sync to background jobs
             \App\Jobs\SyncUserAchievements::dispatch($workout->user);
