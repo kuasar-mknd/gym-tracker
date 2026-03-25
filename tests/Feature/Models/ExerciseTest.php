@@ -102,7 +102,7 @@ class ExerciseTest extends TestCase
         ]);
 
         $response = $this->actingAs($user)->put("/exercises/{$exercise->id}", [
-            'name' => 'Hacked Name',
+            'name' => 'Updated Name',
             'type' => 'strength',
         ]);
 

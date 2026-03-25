@@ -119,7 +119,7 @@ test('user cannot update another users supplement', function (): void {
 
     actingAs($user2)
         ->patch(route('supplements.update', $supplement), [
-            'name' => 'Hacked Name',
+            'name' => 'Updated Name',
             'servings_remaining' => 10,
             'low_stock_threshold' => 5,
         ])
@@ -127,7 +127,7 @@ test('user cannot update another users supplement', function (): void {
 
     $this->assertDatabaseMissing('supplements', [
         'id' => $supplement->id,
-        'name' => 'Hacked Name',
+        'name' => 'Updated Name',
     ]);
 });
 

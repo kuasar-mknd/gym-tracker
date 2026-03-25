@@ -110,3 +110,17 @@ it('proceeds if email is verified', function (array $userData): void {
     'verified_email key' => [['verified_email' => true]],
     'verified key' => [['verified' => true]],
 ]);
+
+it('throws exception if socialite user throws exception', function (): void {
+    $providerMock = Mockery::mock(Provider::class);
+    $providerMock->shouldReceive('user')->andThrow(new Exception('Connection failed'));
+
+    Socialite::shouldReceive('driver')
+        ->with('google')
+        ->andReturn($providerMock);
+
+    $action = app(HandleSocialCallbackAction::class);
+
+    expect(fn () => $action->execute('google'))
+        ->toThrow(SocialAuthException::class, 'Erreur lors de la connexion avec Google');
+});
