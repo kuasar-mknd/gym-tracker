@@ -47,11 +47,6 @@ export function usePullToRefresh(options = {}) {
         if (delta > 0) {
             // Add resistance
             pullDistance.value = Math.pow(delta, 0.8)
-
-            // Prevent default only if we are significantly pulling
-            if (delta > 20 && e.cancelable) {
-                // e.preventDefault() // Careful with this, might block normal scroll sometimes
-            }
         } else {
             pullDistance.value = 0
         }
@@ -83,7 +78,7 @@ export function usePullToRefresh(options = {}) {
     onMounted(() => {
         const target = containerRef?.value || window
         target.addEventListener('touchstart', onTouchStart, { passive: true })
-        target.addEventListener('touchmove', onTouchMove, { passive: false }) // passive: false needed for preventDefault if used
+        target.addEventListener('touchmove', onTouchMove, { passive: true })
         target.addEventListener('touchend', onTouchEnd)
     })
 
