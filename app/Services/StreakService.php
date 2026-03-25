@@ -58,7 +58,7 @@ final class StreakService
             $latestStartedAtCarbon = Carbon::parse((string) $latestStartedAt);
         }
 
-        $user->last_workout_at = $workout?->started_at ?? $latestStartedAtCarbon;
+        $user->last_workout_at = ($workout !== null) ? $workout->started_at : $latestStartedAtCarbon;
         $user->save();
     }
 
