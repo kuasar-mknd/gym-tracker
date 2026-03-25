@@ -57,10 +57,14 @@ class CustomPolicy extends Basic
 
     protected function configureProduction(Policy $policy): void
     {
-        // Fix for AlpineJS (needs strict nonce AND unsafe-eval)
+        // Deliberate security tradeoff: AlpineJS requires 'unsafe-eval' to execute
+        // inline scripts. Refactoring to the CSP build of Alpine is not feasible
+        // as it is bundled and managed internally by Filament.
         $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
 
-        // Fix for Filament Style Attributes (needs unsafe-inline WITHOUT nonce)
+        // Deliberate security tradeoff: Filament requires 'unsafe-inline' for style
+        // attributes on various components (e.g., grids, color pickers) which cannot
+        // use nonces since they are inline style attributes.
         $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
     }
 
