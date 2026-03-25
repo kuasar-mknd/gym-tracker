@@ -130,7 +130,7 @@ jobs:
                     MYSQL_ROOT_PASSWORD: password
                     MYSQL_DATABASE: gym_tracker_dusk
                 ports:
-                    - 3307:3306
+                    - 3306:3306
                 options: --health-cmd="mysqladmin ping -ppassword" --health-interval=10s --health-timeout=5s --health-retries=3
         steps:
             - name: Checkout code
@@ -182,7 +182,7 @@ jobs:
 
                   DB_CONNECTION=mysql
                   DB_HOST=127.0.0.1
-                  DB_PORT=3307
+                  DB_PORT=3306
                   DB_DATABASE=gym_tracker_dusk
                   DB_USERNAME=root
                   DB_PASSWORD=password
