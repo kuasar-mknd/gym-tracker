@@ -32,7 +32,9 @@ class FetchWaterHistoryAction
             $date = Carbon::now()->subDays($i);
             $dateString = $date->format('Y-m-d');
 
-            $dayTotalValue = (float) ($historyLogs[$dateString] ?? 0);
+            /** @var mixed $rawTotal */
+            $rawTotal = $historyLogs[$dateString] ?? 0;
+            $dayTotalValue = is_numeric($rawTotal) ? (float) $rawTotal : 0.0;
 
             $history[] = [
                 'date' => $dateString,
