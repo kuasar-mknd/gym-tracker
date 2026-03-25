@@ -11,6 +11,12 @@ covers(StreakService::class);
 
 beforeEach(function (): void {
     $this->streakService = app(StreakService::class);
+    $this->now = Carbon::parse('2026-03-24 10:00:00');
+    Carbon::setTestNow($this->now);
+});
+
+afterEach(function (): void {
+    Carbon::setTestNow();
 });
 
 it('initializes streak to 1 on the first workout', function (): void {
@@ -22,7 +28,7 @@ it('initializes streak to 1 on the first workout', function (): void {
 
     $workout = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => Carbon::now()->subDays(1),
+        'started_at' => $this->now->copy()->subDays(1),
     ]);
 
     $this->streakService->updateStreak($user, $workout);
@@ -38,12 +44,12 @@ it('increments streak on consecutive workouts', function (): void {
     $user = User::factory()->create([
         'current_streak' => 1,
         'longest_streak' => 1,
-        'last_workout_at' => Carbon::now()->subDays(1),
+        'last_workout_at' => $this->now->copy()->subDays(1),
     ]);
 
     $workout = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => Carbon::now(),
+        'started_at' => $this->now,
     ]);
 
     $this->streakService->updateStreak($user, $workout);
@@ -59,12 +65,12 @@ it('resets streak if more than one day passes', function (): void {
     $user = User::factory()->create([
         'current_streak' => 5,
         'longest_streak' => 5,
-        'last_workout_at' => Carbon::now()->subDays(3),
+        'last_workout_at' => $this->now->copy()->subDays(3),
     ]);
 
     $workout = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => Carbon::now(),
+        'started_at' => $this->now,
     ]);
 
     $this->streakService->updateStreak($user, $workout);
@@ -80,12 +86,12 @@ it('does not increment streak on same day workouts', function (): void {
     $user = User::factory()->create([
         'current_streak' => 3,
         'longest_streak' => 3,
-        'last_workout_at' => Carbon::now(),
+        'last_workout_at' => $this->now,
     ]);
 
     $workout = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => Carbon::now()->addHours(2),
+        'started_at' => $this->now->copy()->addHours(2),
     ]);
 
     $this->streakService->updateStreak($user, $workout);
@@ -101,12 +107,12 @@ it('updates longest streak if current streak surpasses it', function (): void {
     $user = User::factory()->create([
         'current_streak' => 5,
         'longest_streak' => 5,
-        'last_workout_at' => Carbon::now()->subDays(1),
+        'last_workout_at' => $this->now->copy()->subDays(1),
     ]);
 
     $workout = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => Carbon::now(),
+        'started_at' => $this->now,
     ]);
 
     $this->streakService->updateStreak($user, $workout);
@@ -121,12 +127,13 @@ it('updates streak correctly without passing workout parameter', function (): vo
     $user = User::factory()->create([
         'current_streak' => 1,
         'longest_streak' => 1,
-        'last_workout_at' => Carbon::now()->subDays(1),
+        'last_workout_at' => $this->now->copy()->subDays(1),
     ]);
 
-    $workout = Workout::factory()->create([
+    // Create a workout so updateStreak() can find it via latest()
+    Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => Carbon::now(),
+        'started_at' => $this->now,
     ]);
 
     $this->streakService->updateStreak($user);
@@ -135,5 +142,5 @@ it('updates streak correctly without passing workout parameter', function (): vo
 
     expect($user->current_streak)->toBe(2)
         ->and($user->longest_streak)->toBe(2)
-        ->and(Carbon::parse($user->last_workout_at)->startOfDay()->equalTo(Carbon::parse($workout->started_at)->startOfDay()))->toBeTrue();
+        ->and(Carbon::parse($user->last_workout_at)->startOfDay()->equalTo($this->now->copy()->startOfDay()))->toBeTrue();
 });
