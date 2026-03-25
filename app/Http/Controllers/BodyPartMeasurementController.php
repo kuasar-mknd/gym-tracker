@@ -13,11 +13,15 @@ class BodyPartMeasurementController extends Controller
 {
     public function index(FetchBodyPartMeasurementsIndexAction $action): \Inertia\Response
     {
+        $this->authorize('viewAny', BodyPartMeasurement::class);
+
         return Inertia::render('Measurements/Parts/Index', $action->execute($this->user()));
     }
 
     public function show(string $part): \Illuminate\Http\RedirectResponse|\Inertia\Response
     {
+        $this->authorize('viewAny', BodyPartMeasurement::class);
+
         /** @var \App\Models\User $user */
         $user = $this->user();
 
@@ -38,6 +42,8 @@ class BodyPartMeasurementController extends Controller
 
     public function store(BodyPartMeasurementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
+        $this->authorize('create', BodyPartMeasurement::class);
+
         /** @var \App\Models\User $user */
         $user = $request->user();
         $user->bodyPartMeasurements()->create($request->validated());

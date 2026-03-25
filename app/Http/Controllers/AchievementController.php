@@ -29,6 +29,8 @@ class AchievementController extends Controller
      */
     public function index(): Response
     {
+        $this->authorize('viewAny', Achievement::class);
+
         $userAchievements = $this->user()->achievements()->get()->keyBy('id');
         // ⚡ Bolt Optimization: Use the cached all() method to hydrate achievements
         // Impact: Reduces load time for the achievements index view
