@@ -49,17 +49,39 @@ final class UpdateWorkoutTemplateAction
     {
         $this->deleteExistingLines($template);
 
-        $setsData = [];
+        if ($exercises === []) {
+            return;
+        }
+
         $now = now()->toDateTimeString();
 
+        $linesData = [];
         foreach ($exercises as $index => $ex) {
-            $line = $template->workoutTemplateLines()->create([
+            $linesData[] = [
+                'workout_template_id' => $template->id,
                 'exercise_id' => $ex['id'],
                 'order' => $index,
-            ]);
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
 
+        \App\Models\WorkoutTemplateLine::insert($linesData);
+
+        // Fetch the generated lines to get their IDs
+        $lines = \App\Models\WorkoutTemplateLine::where('workout_template_id', $template->id)
+            ->orderBy('order')
+            ->get();
+
+        $setsData = [];
+        foreach ($exercises as $index => $ex) {
             if (isset($ex['sets'])) {
-                $this->appendSetsData($setsData, $ex['sets'], $line->id, $now);
+                /** @var \App\Models\WorkoutTemplateLine $line */
+                $line = $lines[$index] ?? null;
+
+                if ($line !== null) {
+                    $this->appendSetsData($setsData, $ex['sets'], $line->id, $now);
+                }
             }
         }
 
