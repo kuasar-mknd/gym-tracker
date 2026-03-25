@@ -36,7 +36,7 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         try {
-            $browser->loginAs($user->id)
+            $browser->loginAs(User::find($user->id))
                 ->{$sizeMacro}()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -100,7 +100,7 @@ class WorkoutCompletionTest extends DuskTestCase
         ]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs($user->id)
+            $browser->loginAs(User::find($user->id))
                 ->resizeToIphoneMini()
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('#main-content', 30)

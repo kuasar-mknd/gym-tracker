@@ -27,7 +27,7 @@ class WorkoutSyncRaceTest extends DuskTestCase
         ]);
 
         try {
-            $browser->loginAs($user->id)
+            $browser->loginAs(User::find($user->id))
                 ->{$sizeMacro}()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()

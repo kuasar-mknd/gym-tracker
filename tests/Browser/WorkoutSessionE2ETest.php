@@ -62,7 +62,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
         ]);
 
         try {
-            $browser->loginAs($user)
+            $browser->loginAs(User::find($user->id))
                 ->{$sizeMacro}()
                 ->visit("/workouts/{$workout->id}")
                 ->disableAnimations()

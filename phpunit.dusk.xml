@@ -17,7 +17,7 @@
         <env name="DB_HOST" value="127.0.0.1"/>
         <env name="DB_PORT" value="3306"/>
         <env name="DB_USERNAME" value="root"/>
-        <env name="DB_PASSWORD" value="password"/>
+        <env name="DB_PASSWORD" value=""/>
         <env name="SESSION_DRIVER" value="database"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="MAIL_MAILER" value="array"/>
