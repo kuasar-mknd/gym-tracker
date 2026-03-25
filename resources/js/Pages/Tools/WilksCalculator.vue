@@ -190,6 +190,9 @@
 
                             <button
                                 @click="deleteEntry(entry)"
+                                type="button"
+                                aria-label="Supprimer l'entrée"
+                                title="Supprimer l'entrée"
                                 class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
