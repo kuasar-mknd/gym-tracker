@@ -11,26 +11,26 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
 
-it('renders the index page for authenticated user', function () {
+it('renders the index page for authenticated user', function (): void {
     $user = User::factory()->create();
     Habit::factory()->count(3)->create(['user_id' => $user->id]);
 
     actingAs($user)
         ->get(route('habits.index'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page
+        ->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Habits/Index')
             ->has('habits')
             ->has('weekDates')
         );
 });
 
-it('prevents guests from accessing the index page', function () {
+it('prevents guests from accessing the index page', function (): void {
     $this->get(route('habits.index'))
         ->assertRedirect(route('login'));
 });
 
-it('creates a new habit', function () {
+it('creates a new habit', function (): void {
     $user = User::factory()->create();
 
     $payload = [
@@ -57,7 +57,7 @@ it('creates a new habit', function () {
     ]);
 });
 
-it('validates habit creation payload', function () {
+it('validates habit creation payload', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -65,7 +65,7 @@ it('validates habit creation payload', function () {
         ->assertSessionHasErrors(['name', 'goal_times_per_week']);
 });
 
-it('updates an existing habit', function () {
+it('updates an existing habit', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create([
         'user_id' => $user->id,
@@ -93,7 +93,7 @@ it('updates an existing habit', function () {
     ]);
 });
 
-it('forbids updating another users habit', function () {
+it('forbids updating another users habit', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user1->id]);
@@ -106,7 +106,7 @@ it('forbids updating another users habit', function () {
         ->assertForbidden();
 });
 
-it('deletes a habit', function () {
+it('deletes a habit', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
@@ -118,7 +118,7 @@ it('deletes a habit', function () {
     assertDatabaseMissing('habits', ['id' => $habit->id]);
 });
 
-it('forbids deleting another users habit', function () {
+it('forbids deleting another users habit', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user1->id]);
@@ -130,7 +130,7 @@ it('forbids deleting another users habit', function () {
     assertDatabaseHas('habits', ['id' => $habit->id]);
 });
 
-it('toggles a habit (creates log)', function () {
+it('toggles a habit (creates log)', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
     $date = '2023-10-25';
@@ -145,7 +145,7 @@ it('toggles a habit (creates log)', function () {
     ]);
 });
 
-it('toggles a habit (deletes log)', function () {
+it('toggles a habit (deletes log)', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
     $date = '2023-10-25';
@@ -165,7 +165,7 @@ it('toggles a habit (deletes log)', function () {
     ]);
 });
 
-it('validates toggle payload requires date', function () {
+it('validates toggle payload requires date', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
@@ -174,7 +174,7 @@ it('validates toggle payload requires date', function () {
         ->assertSessionHasErrors(['date']);
 });
 
-it('forbids toggling another users habit', function () {
+it('forbids toggling another users habit', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user1->id]);
