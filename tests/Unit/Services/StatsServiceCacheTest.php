@@ -54,6 +54,7 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.duration_distribution.{$user->id}.90");
         Cache::shouldReceive('forget')->once()->with("stats.time_of_day_distribution.{$user->id}.90");
+        Cache::shouldReceive('forget')->once()->with("stats.monthly_frequency.{$user->id}");
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");

@@ -7,7 +7,6 @@ namespace App\Actions\Workouts;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StatsService;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 final class FetchWorkoutsIndexAction
