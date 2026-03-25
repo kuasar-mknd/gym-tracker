@@ -48,7 +48,7 @@ defineProps({
         <!-- Number of Sessions Card -->
         <GlassCard padding="p-4" class="text-center">
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
-            <Deferred data="volumeTrend">
+            <Deferred data="performanceStats">
                 <template #fallback>
                     <GlassSkeleton height="h-8" width="w-8" class="mx-auto mt-1" />
                 </template>
@@ -61,7 +61,7 @@ defineProps({
         <!-- Number of Muscles Targeted Card -->
         <GlassCard padding="p-4" class="text-center">
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
-            <Deferred data="muscleDistribution">
+            <Deferred data="performanceStats">
                 <template #fallback>
                     <GlassSkeleton height="h-8" width="w-8" class="mx-auto mt-1" />
                 </template>
@@ -82,7 +82,7 @@ defineProps({
         <!-- Monthly Comparison Volume Change Card -->
         <GlassCard padding="p-4" class="text-center">
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
-            <Deferred data="monthlyComparison">
+            <Deferred data="performanceStats">
                 <template #fallback>
                     <GlassSkeleton height="h-8" width="w-12" class="mx-auto mt-1" />
                 </template>

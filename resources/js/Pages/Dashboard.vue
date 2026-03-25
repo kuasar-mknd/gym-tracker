@@ -20,10 +20,10 @@ defineProps({
     recentWorkouts: { type: Array, default: () => [] },
     recentPRs: { type: Array, default: () => [] },
     activeGoals: { type: Array, default: () => [] },
-    weeklyVolumeStats: { type: Object, default: () => ({ current_week_volume: 0, percentage: 0 }) },
-    weeklyVolumeTrend: { type: Array, default: () => [] },
-    durationDistribution: { type: Array, default: () => [] },
-    timeOfDayDistribution: { type: Array, default: () => [] },
+
+    // ⚡ Bolt: Consolidated deferred props
+    weeklyVolume: { type: Object, default: () => ({ stats: { current_week_volume: 0, percentage: 0 }, trend: [] }) },
+    workoutDistributions: { type: Object, default: () => ({ duration: [], time_of_day: [] }) },
 })
 
 const form = useForm({})
@@ -44,14 +44,14 @@ const startWorkout = () => {
 
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <WeeklyVolumeSection
-                    :weekly-volume-stats="weeklyVolumeStats"
-                    :weekly-volume-trend="weeklyVolumeTrend"
+                    :weekly-volume-stats="weeklyVolume?.stats"
+                    :weekly-volume-trend="weeklyVolume?.trend"
                 />
 
-                <DurationSection :duration-distribution="durationDistribution" />
+                <DurationSection :duration-distribution="workoutDistributions?.duration" />
             </div>
 
-            <TimeOfDaySection :time-of-day-distribution="timeOfDayDistribution" />
+            <TimeOfDaySection :time-of-day-distribution="workoutDistributions?.time_of_day" />
 
             <RecentVolumeSection :recent-workouts="recentWorkouts" />
 

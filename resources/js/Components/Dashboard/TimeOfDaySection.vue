@@ -25,7 +25,7 @@ defineProps({
 
         <!-- Time of Day Chart -->
         <div class="relative -mx-2 mt-2 h-48 w-auto">
-            <Deferred data="timeOfDayDistribution">
+            <Deferred data="workoutDistributions">
                 <template #fallback>
                     <GlassSkeleton height="100%" width="100%" variant="circle" />
                 </template>

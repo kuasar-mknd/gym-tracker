@@ -21,7 +21,7 @@ defineProps({
             </div>
         </div>
         <div class="h-48">
-            <Deferred data="durationHistory">
+            <Deferred data="performanceStats">
                 <template #fallback>
                     <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
                 </template>

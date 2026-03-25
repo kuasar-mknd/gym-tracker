@@ -48,13 +48,11 @@ class StatsController extends Controller
 
         return Inertia::render('Stats/Index', [
             ...$immediateData,
-            // Defer heavy data
-            'volumeTrend' => Inertia::defer(fn (): array => $this->statsService->getVolumeTrend($user, $days)),
-            'muscleDistribution' => Inertia::defer(fn (): array => $this->statsService->getMuscleDistribution($user, $days)),
-            'monthlyComparison' => Inertia::defer(fn (): \App\DTOs\Stats\VolumeComparison => $this->statsService->getMonthlyVolumeComparison($user)),
-            'weightHistory' => Inertia::defer(fn (): array => $this->statsService->getWeightHistory($user, $days)),
-            'bodyFatHistory' => Inertia::defer(fn (): array => $this->statsService->getBodyFatHistory($user, $days)),
-            'durationHistory' => Inertia::defer(fn (): array => $this->statsService->getDurationHistory($user, 30)),
+            // ⚡ Bolt: Consolidate deferred props to reduce the number of async requests.
+            // Performance Stats: volumeTrend, muscleDistribution, monthlyComparison, durationHistory
+            'performanceStats' => Inertia::defer(fn (): array => $this->statsService->getPerformanceOverview($user, $days)),
+            // Body Stats: weightHistory, bodyFatHistory
+            'bodyStats' => Inertia::defer(fn (): array => $this->statsService->getBodyProgressOverview($user, $days)),
         ]);
     }
 

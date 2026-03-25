@@ -98,6 +98,16 @@ final readonly class StatsService
     }
 
     /**
+     * @param  User  $user  The user to fetch stats for.
+     * @param  int  $days  The number of days to look back.
+     * @return array{weightHistory: array<int, WeightHistoryPoint>, bodyFatHistory: array<int, BodyFatHistoryPoint>}
+     */
+    public function getBodyProgressOverview(User $user, int $days = 90): array
+    {
+        return $this->bodyStats->getBodyProgressOverview($user, $days);
+    }
+
+    /**
      * @return array<int, WeeklyVolumeTrendPoint>
      */
     public function getWeeklyVolumeTrend(User $user): array
@@ -148,6 +158,33 @@ final readonly class StatsService
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {
         return $this->volumeStats->getMonthlyVolumeHistory($user, $months);
+    }
+
+    /**
+     * Get consolidated workout performance data (volume trend, muscle distribution, monthly comparison, and duration history).
+     * ⚡ Bolt: Reduces 4 deferred prop XHR requests to 1 and uses a single cache key.
+     *
+     * @param  User  $user  The user to fetch stats for.
+     * @param  int  $days  The number of days to look back.
+     * @return array{
+     *     volumeTrend: array<int, \App\DTOs\Stats\VolumeTrendPoint>,
+     *     muscleDistribution: array<int, \App\DTOs\Stats\MuscleDistributionStat>,
+     *     monthlyComparison: \App\DTOs\Stats\VolumeComparison,
+     *     durationHistory: array<int, \App\DTOs\Stats\DurationHistoryPoint>
+     * }
+     */
+    public function getPerformanceOverview(User $user, int $days = 30): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.performance_overview.{$user->id}.{$days}",
+            now()->addMinutes(30),
+            fn (): array => [
+                'volumeTrend' => $this->getVolumeTrend($user, $days),
+                'muscleDistribution' => $this->getMuscleDistribution($user, $days),
+                'monthlyComparison' => $this->getMonthlyVolumeComparison($user),
+                'durationHistory' => $this->getDurationHistory($user, 30),
+            ]
+        );
     }
 
     /**
