@@ -129,8 +129,9 @@ final class GoalService
      */
     protected function updateFrequencyGoal(Goal $goal): void
     {
-        // ⚡ Bolt Optimization: Use loadCount with null coalescing to cache the workouts count on the User model natively.
+        // ⚡ Bolt Optimization: Cache the workouts count on the User model natively.
         // Impact: Reduces queries from N to 1 when a user has multiple frequency goals.
+        /** @phpstan-ignore assign.propertyReadOnly */
         $goal->user->workouts_count ??= $goal->user->workouts()->count();
 
         $goal->current_value = $goal->user->workouts_count;
