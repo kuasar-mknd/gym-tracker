@@ -39,7 +39,7 @@ test('authenticated user can create an exercise', function (): void {
     $data = [
         'name' => 'My New Exercise',
         'type' => 'strength',
-        'category' => 'Legs',
+        'category' => 'Jambes',
     ];
 
     $response = actingAs($user)
