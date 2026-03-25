@@ -41,3 +41,7 @@
 ## 2026-03-24 - [Consolidating Stats Page Props]
 **Learning:** Having multiple independent deferred Inertia props (e.g., 6 separate charts) leads to an equal number of asynchronous XHR requests on page load. This increases HTTP overhead and can lead to a "pop-in" effect where charts load at different times.
 **Action:** Consolidate related deferred props into logical groups (e.g., `workoutStats`, `bodyStats`) at the controller level. This reduces the number of requests and ensures related visualizations appear together. Always update the corresponding cache invalidation logic to include these new consolidated keys.
+
+## $(date +%Y-%m-%d) - Optimize N+1 Inserts in CreateWorkoutTemplateAction
+**Learning:** In Laravel, loops that individually `create()` related models (like `$template->workoutTemplateLines()->create(...)`) can severely impact performance by executing N queries.
+**Action:** Replace looped `create()` calls with bulk `insert()`. For nested relationships (e.g., Template -> Lines -> Sets), prepare a parent data array, use `insert()`, then retrieve the newly created models ordered sequentially (`get()->keyBy('order')` or `orderBy('order')->get()`) to correctly obtain their IDs for mapping the next layer of child records, reducing N queries to 2.

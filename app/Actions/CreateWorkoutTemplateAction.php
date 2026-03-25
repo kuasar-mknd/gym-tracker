@@ -50,14 +50,24 @@ final class CreateWorkoutTemplateAction
         $setsData = [];
         $now = now()->toDateTimeString();
 
+        $linesData = [];
         foreach ($exercises as $index => $ex) {
-            $line = $template->workoutTemplateLines()->create([
+            $linesData[] = [
+                'workout_template_id' => $template->id,
                 'exercise_id' => $ex['id'],
                 'order' => $index,
-            ]);
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
 
-            if (isset($ex['sets'])) {
-                $this->appendSetsData($setsData, $ex['sets'], $line->id, $now);
+        if ($linesData !== []) {
+            \App\Models\WorkoutTemplateLine::insert($linesData);
+            $lines = $template->workoutTemplateLines()->get()->keyBy('order');
+            foreach ($exercises as $index => $ex) {
+                if (isset($ex['sets'])) {
+                    $this->appendSetsData($setsData, $ex['sets'], $lines[$index]->id, $now);
+                }
             }
         }
 
