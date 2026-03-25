@@ -13,10 +13,13 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 
 uses(RefreshDatabase::class);
 
-it('throws exception if socialite driver throws exception', function (): void {
+it('throws exception if socialite user throws exception', function (): void {
+    $providerMock = Mockery::mock(Provider::class);
+    $providerMock->shouldReceive('user')->andThrow(new Exception('Connection failed'));
+
     Socialite::shouldReceive('driver')
         ->with('google')
-        ->andThrow(new Exception('Connection failed'));
+        ->andReturn($providerMock);
 
     $action = app(HandleSocialCallbackAction::class);
 
