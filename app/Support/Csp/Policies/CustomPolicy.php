@@ -34,34 +34,58 @@ class CustomPolicy extends Basic
             $policy->addNonce(Directive::SCRIPT);
         }
 
+        $requiresUnsafeInlineStyles = $this->requiresUnsafeInlineStyles();
+
         if (app()->environment('local', 'testing')) {
-            $this->configureLocal($policy);
+            $this->configureLocal($policy, $requiresUnsafeInlineStyles);
         } else {
-            $this->configureProduction($policy);
+            $this->configureProduction($policy, $requiresUnsafeInlineStyles);
         }
 
         $this->configureExternalResources($policy);
     }
 
-    protected function configureLocal(Policy $policy): void
+    protected function requiresUnsafeInlineStyles(): bool
+    {
+        $request = request();
+        if (! $request) {
+            return false;
+        }
+
+        $isFilament = $request->is('backoffice') || $request->is('backoffice/*');
+        $isPulse = $request->is('backoffice/pulse') || $request->is('backoffice/pulse/*');
+
+        return $isFilament && ! $isPulse;
+    }
+
+    protected function configureLocal(Policy $policy, bool $requiresUnsafeInlineStyles = false): void
     {
         $policy
             ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
             ->add(Directive::SCRIPT, Keyword::UNSAFE_INLINE)
             ->add(Directive::SCRIPT, 'http://localhost:5173')
-            ->add(Directive::STYLE, Keyword::UNSAFE_INLINE)
             ->add(Directive::STYLE, 'http://localhost:5173')
             ->add(Directive::CONNECT, 'http://localhost:5173')
             ->add(Directive::CONNECT, 'ws://localhost:5173');
+
+        if ($requiresUnsafeInlineStyles) {
+            $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
+        } else {
+            $policy->addNonce(Directive::STYLE);
+        }
     }
 
-    protected function configureProduction(Policy $policy): void
+    protected function configureProduction(Policy $policy, bool $requiresUnsafeInlineStyles = false): void
     {
         // Fix for AlpineJS (needs strict nonce AND unsafe-eval)
         $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
 
-        // Fix for Filament Style Attributes (needs unsafe-inline WITHOUT nonce)
-        $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
+        if ($requiresUnsafeInlineStyles) {
+            // Fix for Filament Style Attributes (needs unsafe-inline WITHOUT nonce)
+            $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
+        } else {
+            $policy->addNonce(Directive::STYLE);
+        }
     }
 
     protected function configureExternalResources(Policy $policy): void
