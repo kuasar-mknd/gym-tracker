@@ -42,10 +42,10 @@ const emit = defineEmits(['close', 'submit'])
                         @click="form.mood_score = mood.value"
                         :aria-pressed="form.mood_score === mood.value"
                         :class="[
-                            'flex-1 rounded-lg border border-slate-200 p-2 text-center text-sm transition',
+                            'flex-1 rounded-2xl border border-white/20 p-2 text-center text-sm transition-all duration-300 backdrop-blur-md',
                             form.mood_score === mood.value
-                                ? 'bg-accent-primary border-transparent text-white'
-                                : 'text-text-muted bg-white/50 hover:bg-slate-50',
+                                ? 'bg-accent-primary border-transparent text-white shadow-lg'
+                                : 'text-text-muted bg-white/10 hover:bg-white/20 hover:text-white',
                         ]"
                     >
                         <div class="text-xl">{{ mood.label.split(' ')[0] }}</div>
@@ -124,7 +124,7 @@ const emit = defineEmits(['close', 'submit'])
                 <textarea
                     v-model="form.content"
                     rows="4"
-                    class="text-text-main placeholder-text-muted/30 focus:border-accent-primary focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2 backdrop-blur-md focus:ring-1 focus:outline-none"
+                    class="text-text-main placeholder-text-muted/50 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/15 focus:border-white/50 focus:bg-white/20 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none active:scale-[0.98]"
                     placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
                 ></textarea>
                 <div v-if="form.errors.content" class="mt-1 text-xs text-red-400">
