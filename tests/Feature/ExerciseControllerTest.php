@@ -118,7 +118,7 @@ test('user cannot update an exercise owned by another user', function (): void {
 
     actingAs($user)
         ->put(route('exercises.update', $exercise), [
-            'name' => 'Hacked Name',
+            'name' => 'Updated Name',
             'type' => 'strength',
             'category' => 'Dos',
         ])

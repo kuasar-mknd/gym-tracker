@@ -185,7 +185,7 @@ describe('Authenticated', function (): void {
 
             $userToUpdate = User::factory()->create();
 
-            putJson(route('api.v1.users.update', $userToUpdate), ['name' => 'Hacked Name'])
+            putJson(route('api.v1.users.update', $userToUpdate), ['name' => 'Updated Name'])
                 ->assertForbidden();
         });
 
