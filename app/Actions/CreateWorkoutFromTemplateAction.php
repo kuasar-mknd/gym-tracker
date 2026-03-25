@@ -38,16 +38,38 @@ final class CreateWorkoutFromTemplateAction
         // Optimization: Prime the relationship to prevent N+1 queries in observers
         $workout->setRelation('user', $user);
 
-        $allSets = [];
-        $totalWorkoutVolume = 0.0;
+        $allLines = [];
         $now = now()->toDateTimeString();
 
         foreach ($template->workoutTemplateLines as $templateLine) {
-            /** @var \App\Models\WorkoutLine $workoutLine */
-            $workoutLine = $workout->workoutLines()->create([
+            $allLines[] = [
+                'workout_id' => $workout->id,
                 'exercise_id' => $templateLine->exercise_id,
                 'order' => $templateLine->order,
-            ]);
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if ($allLines !== []) {
+            \App\Models\WorkoutLine::insert($allLines);
+        }
+
+        // Fetch the newly inserted lines ordered by their 'order' field to match them with template lines
+        $insertedLines = $workout->workoutLines()->orderBy('order')->get();
+        $linesMapByOrder = $insertedLines->keyBy('order');
+
+        $allSets = [];
+        $totalWorkoutVolume = 0.0;
+
+        foreach ($template->workoutTemplateLines as $templateLine) {
+            /** @var \App\Models\WorkoutLine|null $workoutLine */
+            $workoutLine = $linesMapByOrder->get($templateLine->order);
+
+            if ($workoutLine === null) {
+                continue;
+            }
+
             $workoutLine->setRelation('workout', $workout);
 
             foreach ($templateLine->workoutTemplateSets as $templateSet) {
