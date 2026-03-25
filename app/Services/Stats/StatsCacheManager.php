@@ -56,6 +56,7 @@ final class StatsCacheManager
         Cache::forget("stats.duration_history.{$user->id}.20");
         Cache::forget("stats.duration_distribution.{$user->id}.90");
         Cache::forget("stats.time_of_day_distribution.{$user->id}.90");
+        Cache::forget("stats.monthly_frequency.{$user->id}");
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.performance_overview.{$user->id}.{$days}");

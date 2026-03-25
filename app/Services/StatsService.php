@@ -161,6 +161,14 @@ final readonly class StatsService
     }
 
     /**
+     * @return \Illuminate\Support\Collection<int, array{month: string, count: int}>
+     */
+    public function getMonthlyFrequency(User $user): \Illuminate\Support\Collection
+    {
+        return $this->workoutStats->getMonthlyFrequency($user);
+    }
+
+    /**
      * Get consolidated workout performance data (volume trend, muscle distribution, monthly comparison, and duration history).
      * ⚡ Bolt: Reduces 4 deferred prop XHR requests to 1 and uses a single cache key.
      *

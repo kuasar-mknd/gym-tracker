@@ -8,10 +8,46 @@ use App\DTOs\Stats\DistributionStat;
 use App\DTOs\Stats\DurationHistoryPoint;
 use App\Models\User;
 use App\Models\Workout;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
 final class WorkoutStatsService
 {
+    /**
+     * @return Collection<int, array{month: string, count: int}>
+     */
+    public function getMonthlyFrequency(User $user): Collection
+    {
+        return Cache::remember(
+            "stats.monthly_frequency.{$user->id}",
+            now()->addHour(),
+            function () use ($user): Collection {
+                $startDate = now()->subMonths(5)->startOfMonth();
+
+                // ⚡ Bolt Optimization: Group and count directly in SQL to reduce memory usage and CPU cycles in PHP.
+                $results = Workout::query()
+                    ->where('user_id', $user->id)
+                    ->where('started_at', '>=', $startDate)
+                    ->selectRaw("DATE_FORMAT(started_at, '%Y-%m') as month, COUNT(*) as count")
+                    ->groupBy('month')
+                    ->orderBy('month')
+                    ->get()
+                    ->keyBy('month');
+
+                return collect(range(0, 5))->map(function (int $i) use ($results): array {
+                    $date = now()->subMonths(5 - $i);
+                    $monthKey = $date->format('Y-m');
+                    $data = $results->get($monthKey);
+
+                    return [
+                        'month' => $date->translatedFormat('M'),
+                        'count' => $data && is_numeric($data->getAttribute('count')) ? (int) $data->getAttribute('count') : 0,
+                    ];
+                });
+            }
+        );
+    }
+
     /**
      * @return array<int, DurationHistoryPoint>
      */
