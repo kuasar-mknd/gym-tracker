@@ -46,8 +46,8 @@ class PrecorExerciseSeeder extends Seeder
             ['name' => 'Triceps Extension', 'type' => 'strength', 'category' => 'Bras'],
 
             // Abdominaux
-            ['name' => 'Abdominal Crunch', 'type' => 'strength', 'category' => 'Abdos'],
-            ['name' => 'Rotary Torso', 'type' => 'strength', 'category' => 'Abdos'],
+            ['name' => 'Abdominal Crunch', 'type' => 'strength', 'category' => 'Abdominaux'],
+            ['name' => 'Rotary Torso', 'type' => 'strength', 'category' => 'Abdominaux'],
 
             // Cardio
             ['name' => 'Tapis de Course', 'type' => 'cardio', 'category' => 'Cardio'],

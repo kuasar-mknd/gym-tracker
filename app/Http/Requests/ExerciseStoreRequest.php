@@ -35,7 +35,7 @@ class ExerciseStoreRequest extends FormRequest
                 })),
             ],
             'type' => ['required', Rule::in(['strength', 'cardio', 'timed'])],
-            'category' => ['nullable', 'string', 'max:255'],
+            'category' => ['nullable', Rule::enum(\App\Enums\ExerciseCategory::class)],
         ];
     }
 

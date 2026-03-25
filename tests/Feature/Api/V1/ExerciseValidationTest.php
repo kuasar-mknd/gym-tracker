@@ -21,7 +21,7 @@ class ExerciseValidationTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/exercises', [
             'name' => 'Existing Exercise',
             'type' => 'strength',
-            'category' => 'Test',
+            'category' => 'Pectoraux',
         ]);
 
         $response->assertStatus(422)

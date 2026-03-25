@@ -38,7 +38,7 @@ class ExerciseUpdateRequest extends FormRequest
                     })),
             ],
             'type' => ['sometimes', 'required', Rule::in(['strength', 'cardio', 'timed'])],
-            'category' => ['nullable', 'string', 'max:255'],
+            'category' => ['nullable', Rule::enum(\App\Enums\ExerciseCategory::class)],
         ];
     }
 
