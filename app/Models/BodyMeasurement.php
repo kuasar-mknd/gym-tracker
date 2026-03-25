@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $id
@@ -17,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $notes
  * @property-read \App\Models\User $user
  */
-class BodyMeasurement extends Model
+class BodyMeasurement extends BaseMeasurement
 {
     /** @use HasFactory<\Database\Factories\BodyMeasurementFactory> */
     use HasFactory;
@@ -28,14 +26,6 @@ class BodyMeasurement extends Model
         'measured_at',
         'notes',
     ];
-
-    /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
 
     protected function casts(): array
     {
