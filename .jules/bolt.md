@@ -41,3 +41,7 @@
 ## 2026-03-24 - [Consolidating Stats Page Props]
 **Learning:** Having multiple independent deferred Inertia props (e.g., 6 separate charts) leads to an equal number of asynchronous XHR requests on page load. This increases HTTP overhead and can lead to a "pop-in" effect where charts load at different times.
 **Action:** Consolidate related deferred props into logical groups (e.g., `workoutStats`, `bodyStats`) at the controller level. This reduces the number of requests and ensures related visualizations appear together. Always update the corresponding cache invalidation logic to include these new consolidated keys.
+
+## 2024-05-17 - Eliminate N+1 Query in syncGoals
+**Learning:** In services that iterate over user data like `syncGoals`, running database queries inside a `foreach` loop creates an N+1 problem.
+**Action:** Use `whereIn` and `groupBy` queries *before* the loop to fetch all required aggregated data (like max weight or volume for specific exercises) in bulk. Pass this precomputed data into the individual methods to bypass their internal queries, significantly reducing database load (e.g., from 52 queries to 6).

@@ -28,9 +28,101 @@ final class GoalService
     public function syncGoals(User $user): void
     {
         $goals = $user->goals()->whereNull('completed_at')->get();
+
+        if ($goals->isEmpty()) {
+            return;
+        }
+
+        // Precompute values for all goals to avoid N+1 queries
+
+        $weightGoals = $goals->where('type', GoalType::Weight);
+        $volumeGoals = $goals->where('type', GoalType::Volume);
+        $frequencyGoals = $goals->where('type', GoalType::Frequency);
+        $measurementGoals = $goals->where('type', GoalType::Measurement);
+
+        // 1. Precompute workout count (Frequency)
+        $workoutCount = null;
+        if ($frequencyGoals->isNotEmpty()) {
+            $workoutCount = $user->workouts()->count();
+        }
+
+        // 2. Precompute latest body measurements
+        $measurements = [];
+        if ($measurementGoals->isNotEmpty()) {
+            /** @var \Illuminate\Support\Collection<int, string> $types */
+            $types = $measurementGoals->pluck('measurement_type')->unique()->filter();
+            foreach ($types as $type) {
+                $column = $type === 'weight' ? 'weight' : $type;
+                $latest = $user->bodyMeasurements()
+                    ->latest('measured_at')
+                    ->value($column);
+                if ($latest !== null && is_numeric($latest)) {
+                    $measurements[$type] = (float) $latest;
+                }
+            }
+        }
+
+        // 3. Precompute max weights per exercise
+        $maxWeights = [];
+        if ($weightGoals->isNotEmpty()) {
+            $exerciseIds = $weightGoals->pluck('exercise_id')->unique()->filter()->toArray();
+            if (! empty($exerciseIds)) {
+                $maxWeightsData = $user->workouts()
+                    ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                    ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                    ->whereIn('workout_lines.exercise_id', $exerciseIds)
+                    ->groupBy('workout_lines.exercise_id')
+                    ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
+                    ->pluck('max_weight', 'exercise_id');
+
+                foreach ($maxWeightsData as $exerciseId => $maxWeight) {
+                    if ($maxWeight !== null && is_numeric($maxWeight)) {
+                        $maxWeights[$exerciseId] = (float) $maxWeight;
+                    }
+                }
+            }
+        }
+
+        // 4. Precompute max volume per exercise
+        $maxVolumes = [];
+        if ($volumeGoals->isNotEmpty()) {
+            $exerciseIds = $volumeGoals->pluck('exercise_id')->unique()->filter()->toArray();
+            if (! empty($exerciseIds)) {
+                $maxVolumesData = \Illuminate\Support\Facades\DB::table('workouts')
+                    ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                    ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                    ->where('workouts.user_id', $user->id)
+                    ->whereIn('workout_lines.exercise_id', $exerciseIds)
+                    ->selectRaw('workout_lines.exercise_id, workouts.id as workout_id, SUM(sets.weight * sets.reps) as total_volume')
+                    ->groupBy('workout_lines.exercise_id', 'workouts.id')
+                    ->get();
+
+                foreach ($maxVolumesData as $data) {
+                    /** @var object{exercise_id: int, total_volume: numeric} $data */
+                    $exerciseId = (int) $data->exercise_id;
+                    $volume = (float) $data->total_volume;
+                    if (! isset($maxVolumes[$exerciseId]) || $volume > $maxVolumes[$exerciseId]) {
+                        $maxVolumes[$exerciseId] = $volume;
+                    }
+                }
+            }
+        }
+
+        // Update all goals with precomputed data
         foreach ($goals as $goal) {
             $goal->setRelation('user', $user);
-            $this->updateGoalProgress($goal);
+
+            $precomputedMaxWeight = $goal->type === GoalType::Weight && $goal->exercise_id && isset($maxWeights[$goal->exercise_id]) ? $maxWeights[$goal->exercise_id] : null;
+            $precomputedMaxVolume = $goal->type === GoalType::Volume && $goal->exercise_id && isset($maxVolumes[$goal->exercise_id]) ? $maxVolumes[$goal->exercise_id] : null;
+            $precomputedMeasurement = $goal->type === GoalType::Measurement && $goal->measurement_type && isset($measurements[$goal->measurement_type]) ? $measurements[$goal->measurement_type] : null;
+
+            $this->updateGoalProgress(
+                $goal,
+                precomputedMaxWeight: $precomputedMaxWeight,
+                precomputedWorkoutCount: $workoutCount,
+                precomputedMaxVolume: $precomputedMaxVolume,
+                precomputedMeasurement: $precomputedMeasurement
+            );
         }
 
         $dirtyGoals = $goals->filter->isDirty();
@@ -59,13 +151,18 @@ final class GoalService
      *
      * @param  Goal  $goal  The goal to update.
      */
-    public function updateGoalProgress(Goal $goal): void
-    {
+    public function updateGoalProgress(
+        Goal $goal,
+        ?float $precomputedMaxWeight = null,
+        ?int $precomputedWorkoutCount = null,
+        ?float $precomputedMaxVolume = null,
+        ?float $precomputedMeasurement = null
+    ): void {
         match ($goal->type) {
-            GoalType::Weight => $this->updateWeightGoal($goal),
-            GoalType::Frequency => $this->updateFrequencyGoal($goal),
-            GoalType::Volume => $this->updateVolumeGoal($goal),
-            GoalType::Measurement => $this->updateMeasurementGoal($goal),
+            GoalType::Weight => $this->updateWeightGoal($goal, $precomputedMaxWeight),
+            GoalType::Frequency => $this->updateFrequencyGoal($goal, $precomputedWorkoutCount),
+            GoalType::Volume => $this->updateVolumeGoal($goal, $precomputedMaxVolume),
+            GoalType::Measurement => $this->updateMeasurementGoal($goal, $precomputedMeasurement),
         };
 
         $this->checkCompletion($goal);
@@ -103,9 +200,15 @@ final class GoalService
      *
      * @param  Goal  $goal  The weight goal to update.
      */
-    protected function updateWeightGoal(Goal $goal): void
+    protected function updateWeightGoal(Goal $goal, ?float $precomputedMaxWeight = null): void
     {
         if (! $goal->exercise_id) {
+            return;
+        }
+
+        if ($precomputedMaxWeight !== null) {
+            $goal->current_value = $precomputedMaxWeight;
+
             return;
         }
 
@@ -115,7 +218,7 @@ final class GoalService
             ->where('workout_lines.exercise_id', $goal->exercise_id)
             ->max('sets.weight');
 
-        if ($maxWeight && is_numeric($maxWeight)) {
+        if ($maxWeight !== null && is_numeric($maxWeight)) {
             $goal->current_value = (float) $maxWeight;
         }
     }
@@ -127,9 +230,9 @@ final class GoalService
      *
      * @param  Goal  $goal  The frequency goal to update.
      */
-    protected function updateFrequencyGoal(Goal $goal): void
+    protected function updateFrequencyGoal(Goal $goal, ?int $precomputedWorkoutCount = null): void
     {
-        $count = $goal->user->workouts()->count();
+        $count = $precomputedWorkoutCount ?? $goal->user->workouts()->count();
         $goal->current_value = $count;
     }
 
@@ -141,9 +244,15 @@ final class GoalService
      *
      * @param  Goal  $goal  The volume goal to update.
      */
-    protected function updateVolumeGoal(Goal $goal): void
+    protected function updateVolumeGoal(Goal $goal, ?float $precomputedMaxVolume = null): void
     {
         if (! $goal->exercise_id) {
+            return;
+        }
+
+        if ($precomputedMaxVolume !== null) {
+            $goal->current_value = $precomputedMaxVolume;
+
             return;
         }
 
@@ -172,9 +281,15 @@ final class GoalService
      *
      * @param  Goal  $goal  The measurement goal to update.
      */
-    protected function updateMeasurementGoal(Goal $goal): void
+    protected function updateMeasurementGoal(Goal $goal, ?float $precomputedMeasurement = null): void
     {
         if (! $goal->measurement_type) {
+            return;
+        }
+
+        if ($precomputedMeasurement !== null) {
+            $goal->current_value = $precomputedMeasurement;
+
             return;
         }
 
@@ -182,7 +297,7 @@ final class GoalService
             ->latest('measured_at')
             ->value($goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type);
 
-        if ($latestValue && is_numeric($latestValue)) {
+        if ($latestValue !== null && is_numeric($latestValue)) {
             $goal->current_value = (float) $latestValue;
         }
     }
