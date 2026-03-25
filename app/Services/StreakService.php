@@ -41,6 +41,8 @@ final class StreakService
         $lastRecordedDate = $this->getLastRecordedDate($user);
 
         if ($lastRecordedDate?->equalTo($workoutDate)) {
+            $user->last_workout_at = $workout->started_at ?? $user->last_workout_at;
+            $user->save();
             return;
         }
 
