@@ -30,7 +30,7 @@ class ExerciseLibraryTest extends DuskTestCase
             Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Squat', 'category' => 'Jambes']);
             Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Deadlift', 'category' => 'Dos']);
 
-            $browser->loginAs($user->id)
+            $browser->loginAs(User::find($user->id))
                 ->resizeToIphoneMini()
                 ->visit('/exercises')
                 ->disableAnimations()
@@ -115,7 +115,7 @@ class ExerciseLibraryTest extends DuskTestCase
             $sizes = ['resizeToIphoneMini', 'resizeToIphone15', 'resizeToIphoneMax'];
 
             foreach ($sizes as $size) {
-                $browser->loginAs($user->id)
+                $browser->loginAs(User::find($user->id))
                     ->{$size}()
                     ->visit('/exercises')
                     ->waitFor('#main-content', 30)
