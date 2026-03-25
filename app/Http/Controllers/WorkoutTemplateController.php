@@ -29,25 +29,12 @@ class WorkoutTemplateController extends Controller
      *
      * @return \Inertia\Response The Inertia response rendering the Templates index page.
      */
-    public function index(): \Inertia\Response
+    public function index(\App\Actions\FetchWorkoutTemplatesAction $fetchWorkoutTemplatesAction): \Inertia\Response
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
-        // ⚡ Bolt Optimization: Only load the line counts and the first few exercises for preview
         return Inertia::render('Workouts/Templates/Index', [
-            'templates' => WorkoutTemplate::withCount('workoutTemplateLines')
-                ->with([
-                    'workoutTemplateLines' => function ($query): void {
-                        $query->select('id', 'workout_template_id', 'exercise_id')
-                            ->orderBy('order')
-                            ->limit(3)
-                            ->withCount('workoutTemplateSets')
-                            ->with('exercise:id,name');
-                    },
-                ])
-                ->where('user_id', $this->user()->id)
-                ->latest()
-                ->get(),
+            'templates' => $fetchWorkoutTemplatesAction->execute($this->user()),
         ]);
     }
 
