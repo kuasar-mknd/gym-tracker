@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Measurements\FetchBodyPartMeasurementShowAction;
 use App\Actions\Measurements\FetchBodyPartMeasurementsIndexAction;
 use App\Http\Requests\BodyPartMeasurementStoreRequest;
 use App\Models\BodyPartMeasurement;
@@ -18,26 +19,20 @@ class BodyPartMeasurementController extends Controller
         return Inertia::render('Measurements/Parts/Index', $action->execute($this->user()));
     }
 
-    public function show(string $part): \Illuminate\Http\RedirectResponse|\Inertia\Response
+    public function show(string $part, FetchBodyPartMeasurementShowAction $action): \Illuminate\Http\RedirectResponse|\Inertia\Response
     {
         $this->authorize('viewAny', BodyPartMeasurement::class);
 
         /** @var \App\Models\User $user */
         $user = $this->user();
 
-        $history = $user->bodyPartMeasurements()
-            ->where('part', $part)
-            ->orderBy('measured_at', 'asc')
-            ->get();
+        $data = $action->execute($user, $part);
 
-        if ($history->isEmpty()) {
+        if ($data === null) {
             return redirect()->route('body-parts.index');
         }
 
-        return Inertia::render('Measurements/Parts/Show', [
-            'part' => $part,
-            'history' => $history,
-        ]);
+        return Inertia::render('Measurements/Parts/Show', $data);
     }
 
     public function store(BodyPartMeasurementStoreRequest $request): \Illuminate\Http\RedirectResponse
