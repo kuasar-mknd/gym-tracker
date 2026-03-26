@@ -1,5 +1,5 @@
 <script setup>
-import { computed, useAttrs, getCurrentInstance } from 'vue'
+import { computed, useAttrs, getCurrentInstance, ref } from 'vue'
 import InputError from '@/Components/Form/InputError.vue'
 
 defineOptions({
@@ -51,6 +51,16 @@ const sizeClasses = {
     lg: 'min-h-[56px] text-lg rounded-2xl',
 }
 
+// Password toggle logic
+const isPassword = computed(() => props.type === 'password')
+const showPassword = ref(false)
+const inputType = computed(() => {
+    if (isPassword.value) {
+        return showPassword.value ? 'text' : 'password'
+    }
+    return props.type
+})
+
 // Clear button logic
 const hasClearButton = computed(() => {
     return ['text', 'search', 'email', 'url', 'tel'].includes(props.type)
@@ -84,7 +94,7 @@ const isRequired = computed(() => {
         <div class="relative">
             <input
                 :id="inputId"
-                :type="type"
+                :type="inputType"
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
                 @focus="selectOnFocus ? $event.target.select() : null"
@@ -95,7 +105,7 @@ const isRequired = computed(() => {
                     sizeClasses[size],
                     {
                         'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
-                        'pr-10': hasClearButton, // Add padding for clear button
+                        'pr-10': hasClearButton || isPassword, // Add padding for clear or toggle button
                     },
                 ]"
                 v-bind="$attrs"
@@ -111,6 +121,21 @@ const isRequired = computed(() => {
                 tabindex="-1"
             >
                 <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">cancel</span>
+            </button>
+
+            <!-- Password Toggle -->
+            <button
+                v-if="isPassword"
+                type="button"
+                @click="showPassword = !showPassword"
+                class="text-text-muted hover:text-text-main absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors"
+                :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                :title="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                v-press
+            >
+                <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">
+                    {{ showPassword ? 'visibility_off' : 'visibility' }}
+                </span>
             </button>
         </div>
 
