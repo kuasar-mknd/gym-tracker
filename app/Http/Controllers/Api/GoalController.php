@@ -122,7 +122,7 @@ class GoalController extends Controller
     #[OA\Response(response: 422, description: 'Validation error')]
     public function update(GoalUpdateRequest $request, Goal $goal): GoalResource
     {
-        // Authorization handled in GoalUpdateRequest::authorize()
+        $this->authorize('update', $goal);
 
         $validated = $request->validated();
 
