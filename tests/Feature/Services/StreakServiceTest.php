@@ -77,6 +77,8 @@ it('resets streak if more than one day passes', function (): void {
 });
 
 it('does not increment streak on same day workouts', function (): void {
+    Carbon::setTestNow(Carbon::create(2026, 3, 26, 12, 0, 0));
+
     $user = User::factory()->create([
         'current_streak' => 3,
         'longest_streak' => 3,

@@ -496,7 +496,15 @@ onUnmounted(() => {
                         :key="timer.id"
                         class="group relative flex items-center justify-between overflow-hidden p-4"
                     >
-                        <div class="relative z-10 cursor-pointer" @click="loadTimer(timer)">
+                        <div
+                            class="focus-visible:ring-electric-orange relative z-10 cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                            @click="loadTimer(timer)"
+                            @keydown.enter="loadTimer(timer)"
+                            @keydown.space.prevent="loadTimer(timer)"
+                            role="button"
+                            tabindex="0"
+                            :aria-label="`Charger le minuteur ${timer.name}`"
+                        >
                             <h4 class="text-text-main group-hover:text-electric-orange font-bold transition-colors">
                                 {{ timer.name }}
                             </h4>
