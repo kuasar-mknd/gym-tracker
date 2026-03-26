@@ -17,21 +17,21 @@ class ExerciseLibraryTest extends DuskTestCase
     /**
      * Test the full lifecycle of exercise management in the library.
      */
-    public function test_exercise_library_full_lifecycle(): void
+    private function performExerciseLibraryLifecycle(Browser $browser, string $sizeMacro): void
     {
-        $this->browse(function (Browser $browser): void {
-            $user = User::factory()->create([
-                'email' => 'library-'.time().'@example.com',
-                'password' => bcrypt('password'),
-            ]);
+        $user = User::factory()->create([
+            'email' => 'library-'.time().random_int(0, 999).'@example.com',
+            'password' => bcrypt('password'),
+        ]);
 
-            // Create some initial exercises
-            Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Bench Press', 'category' => 'Pectoraux']);
-            Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Squat', 'category' => 'Jambes']);
-            Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Deadlift', 'category' => 'Dos']);
+        // Create some initial exercises
+        Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Bench Press', 'category' => 'Pectoraux']);
+        Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Squat', 'category' => 'Jambes']);
+        Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Deadlift', 'category' => 'Dos']);
 
+        try {
             $browser->loginAs(User::find($user->id))
-                ->resizeToIphoneMini()
+                ->{$sizeMacro}()
                 ->visit('/exercises')
                 ->disableAnimations()
                 ->waitFor('#main-content', 30);
@@ -65,7 +65,7 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->assertSee('BENCH PRESS');
 
             // 4. Create Exercise
-            $newExerciseName = 'Pull Up '.time();
+            $newExerciseName = 'Pull Up '.time().random_int(0, 999);
             $browser->click('@create-exercise-btn')
                 ->waitFor('@exercise-modal-title', 15)
                 ->type('@exercise-name-input', $newExerciseName)
@@ -77,7 +77,7 @@ class ExerciseLibraryTest extends DuskTestCase
 
             // 5. Edit Exercise (Inline)
             $exercise = Exercise::where('name', $newExerciseName)->first();
-            $updatedName = 'Updated Pull Up '.time();
+            $updatedName = 'Updated Pull Up '.time().random_int(0, 999);
 
             // Ensure card is visible
             $browser->script("document.querySelector('[dusk=\"exercise-card-{$exercise->id}\"]').scrollIntoView({block: 'center'});");
@@ -100,6 +100,30 @@ class ExerciseLibraryTest extends DuskTestCase
             $browser->acceptDialog()
                 ->pause(1000)
                 ->assertDontSee(strtoupper($updatedName));
+        } catch (\Exception $e) {
+            $browser->screenshot('exercise-library-lifecycle-failure-'.$sizeMacro);
+            throw $e;
+        }
+    }
+
+    public function test_exercise_library_full_lifecycle_on_iphone_mini(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseLibraryLifecycle($browser, 'resizeToIphoneMini');
+        });
+    }
+
+    public function test_exercise_library_full_lifecycle_on_iphone_15(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseLibraryLifecycle($browser, 'resizeToIphone15');
+        });
+    }
+
+    public function test_exercise_library_full_lifecycle_on_iphone_max(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performExerciseLibraryLifecycle($browser, 'resizeToIphoneMax');
         });
     }
 
