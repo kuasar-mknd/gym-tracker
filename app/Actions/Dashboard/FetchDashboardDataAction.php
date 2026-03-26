@@ -79,10 +79,7 @@ final class FetchDashboardDataAction
      */
     public function getWorkoutDistributions(User $user): array
     {
-        return [
-            'duration' => $this->statsService->getDurationDistribution($user, 90),
-            'time_of_day' => $this->statsService->getTimeOfDayDistribution($user, 90),
-        ];
+        return $this->statsService->getWorkoutDistributions($user, 90);
     }
 
     /**
