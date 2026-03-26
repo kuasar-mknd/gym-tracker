@@ -49,8 +49,8 @@ it('calculates volume history correctly', function (): void {
     $line3 = WorkoutLine::factory()->create(['workout_id' => $workout3->id]);
     Set::factory()->create(['workout_line_id' => $line3->id, 'weight' => 100, 'reps' => 1]);
 
-    $result = $action->getChartData($user);
-    $volumeHistory = $result['volume_history'];
+    $result = $action->getDeferredData($user);
+    $volumeHistory = $result['charts']['volume_history'];
 
     expect($volumeHistory)->toHaveCount(2); // Workout 1 and 2
 

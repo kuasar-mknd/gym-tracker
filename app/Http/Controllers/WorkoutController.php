@@ -9,7 +9,6 @@ use App\Actions\Workouts\FetchWorkoutShowAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Http\Requests\UpdateWorkoutRequest;
-use App\Models\Exercise;
 use App\Models\Workout;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,15 +40,14 @@ class WorkoutController extends Controller
 
         $user = $this->user();
         $data = $fetchWorkouts->execute($user);
-        $userId = $user->id;
 
         return Inertia::render('Workouts/Index', [
             ...$data,
             // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-            // Consolidate heavy chart data into a single deferred prop to reduce the number
-            // of XHR requests and ensure consistent loading states on the frontend.
-            'chartData' => Inertia::defer(fn (): array => $fetchWorkouts->getChartData($user)),
-            'exercises' => Inertia::defer(fn (): \Illuminate\Database\Eloquent\Collection => Exercise::getCachedForUser($userId)),
+            // Consolidate heavy chart data and exercise list into a single deferred prop
+            // to reduce the number of XHR requests (from 2 to 1) and ensure consistent
+            // loading states on the frontend.
+            'deferredData' => Inertia::defer(fn (): array => $fetchWorkouts->getDeferredData($user)),
         ]);
     }
 
