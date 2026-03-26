@@ -188,7 +188,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     <!-- Charts Grid -->
                     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <!-- Frequency Chart -->
-                        <GlassCard v-if="deferredData.charts.monthly_frequency?.length > 0">
+                        <GlassCard v-if="deferredData?.charts?.monthly_frequency?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence</h3>
                                 <p class="text-text-muted text-xs">Séances par mois</p>
@@ -197,7 +197,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         </GlassCard>
 
                         <!-- Monthly Volume Chart -->
-                        <GlassCard v-if="deferredData.charts.monthly_volume?.length > 0">
+                        <GlassCard v-if="deferredData?.charts?.monthly_volume?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold dark:text-white">Volume Mensuel</h3>
                                 <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
@@ -206,7 +206,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         </GlassCard>
 
                         <!-- Duration Chart -->
-                        <GlassCard v-if="deferredData.charts.duration_history?.length > 0">
+                        <GlassCard v-if="deferredData?.charts?.duration_history?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold dark:text-white">Durée</h3>
                                 <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
@@ -215,7 +215,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         </GlassCard>
 
                         <!-- Volume per Workout Chart -->
-                        <GlassCard v-if="deferredData.charts.volume_history?.length > 0">
+                        <GlassCard v-if="deferredData?.charts?.volume_history?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold dark:text-white">Volume par Séance</h3>
                                 <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
@@ -241,7 +241,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </template>
 
                     <!-- Data State -->
-                    <div v-if="deferredData.exercises" class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
+                    <div v-if="deferredData?.exercises" class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
                         <div
                             v-for="exercise in deferredData.exercises"
                             :key="exercise.id"
