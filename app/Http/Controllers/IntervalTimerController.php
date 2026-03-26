@@ -18,6 +18,8 @@ class IntervalTimerController extends Controller
      */
     public function index(): Response
     {
+        $this->authorize('viewAny', IntervalTimer::class);
+
         return Inertia::render('Tools/IntervalTimer', [
             'timers' => $this->user()->intervalTimers()->latest()->limit(50)->get(),
         ]);
@@ -28,6 +30,8 @@ class IntervalTimerController extends Controller
      */
     public function store(StoreIntervalTimerRequest $request): RedirectResponse
     {
+        $this->authorize('create', IntervalTimer::class);
+
         $validated = $request->validated();
 
         $this->user()->intervalTimers()->create($validated);
@@ -41,6 +45,8 @@ class IntervalTimerController extends Controller
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): RedirectResponse
     {
+        $this->authorize('update', $intervalTimer);
+
         $validated = $request->validated();
 
         $intervalTimer->update($validated);
