@@ -11,6 +11,12 @@ covers(StreakService::class);
 
 beforeEach(function (): void {
     $this->streakService = app(StreakService::class);
+    // 🧪 Testing Pattern/Time: Use setTestNow for deterministic streak tests
+    Carbon::setTestNow(Carbon::parse('2025-03-25 12:00:00'));
+});
+
+afterEach(function (): void {
+    Carbon::setTestNow();
 });
 
 it('initializes streak to 1 on the first workout', function (): void {
