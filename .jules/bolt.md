@@ -45,3 +45,7 @@
 ## 2026-03-25 - [Optimizing Consolidated Body Metrics Query]
 **Learning:** Consolidation of deferred props at the controller level provides a great opportunity to also consolidate the underlying database queries. Fetching weight and body fat history separately caused two queries to the same `body_measurements` table for the same timeframe.
 **Action:** Fetch the shared model collection once in the service and use PHP-side filtering/mapping to populate the DTOs, reducing database load while improving frontend responsiveness.
+
+## 2026-03-26 - [Consolidating Mixed Deferred Props]
+**Learning:** Even when deferred data comes from different sources (e.g., cached exercise lists and analytical charts), consolidating them into a single deferred Inertia prop provides a significant performance win. It reduces the number of XHR requests, cutting down on HTTP overhead and TLS handshakes, which is critical for mobile performance. It also ensures the UI transitions from "loading" to "ready" in a single, synchronized step rather than multiple staggered "pops."
+**Action:** Always look for opportunities to merge all deferred props on a page into a single `deferredData` object, even if they represent different logical domains.

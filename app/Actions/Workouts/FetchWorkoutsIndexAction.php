@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Workouts;
 
+use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StatsService;
@@ -22,8 +23,7 @@ final class FetchWorkoutsIndexAction
      *
      * @return array{
      *     workouts: \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>,
-     *     totalExercises: int,
-     *     monthlyFrequency: Collection<int, array{month: string, count: int}>
+     *     totalExercises: int
      * }
      */
     public function execute(User $user): array
@@ -31,27 +31,33 @@ final class FetchWorkoutsIndexAction
         return [
             'workouts' => $this->getWorkouts($user),
             'totalExercises' => $user->workoutLines()->count(),
-            'monthlyFrequency' => $this->getMonthlyFrequency($user),
         ];
     }
 
     /**
-     * Get deferred chart data.
+     * Get consolidated deferred data (charts and exercises).
+     * ⚡ Bolt: Reduces 2 deferred prop XHR requests to 1.
      *
      * @return array{
-     *     monthly_frequency: Collection<int, array{month: string, count: int}>,
-     *     monthly_volume: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
-     *     duration_history: array<int, \App\DTOs\Stats\DurationHistoryPoint>,
-     *     volume_history: array<int, \App\DTOs\Stats\VolumeHistoryPoint>
+     *     charts: array{
+     *         monthly_frequency: Collection<int, array{month: string, count: int}>,
+     *         monthly_volume: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
+     *         duration_history: array<int, \App\DTOs\Stats\DurationHistoryPoint>,
+     *         volume_history: array<int, \App\DTOs\Stats\VolumeHistoryPoint>
+     *     },
+     *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>
      * }
      */
-    public function getChartData(User $user): array
+    public function getDeferredData(User $user): array
     {
         return [
-            'monthly_frequency' => $this->getMonthlyFrequency($user),
-            'monthly_volume' => $this->statsService->getMonthlyVolumeHistory($user, 6),
-            'duration_history' => $this->statsService->getDurationHistory($user, 20),
-            'volume_history' => $this->statsService->getVolumeHistory($user, 20),
+            'charts' => [
+                'monthly_frequency' => $this->getMonthlyFrequency($user),
+                'monthly_volume' => $this->statsService->getMonthlyVolumeHistory($user, 6),
+                'duration_history' => $this->statsService->getDurationHistory($user, 20),
+                'volume_history' => $this->statsService->getVolumeHistory($user, 20),
+            ],
+            'exercises' => Exercise::getCachedForUser($user->id),
         ];
     }
 

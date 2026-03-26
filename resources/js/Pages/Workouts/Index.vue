@@ -18,16 +18,18 @@ const VolumePerWorkoutChart = defineAsyncComponent(() => import('@/Components/St
 const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
     totalExercises: Number,
-    exercises: Array,
     // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-    // Consolidated chart data for deferred loading.
-    chartData: {
+    // Consolidated deferred data (charts + exercises) to reduce XHR requests.
+    deferredData: {
         type: Object,
         default: () => ({
-            monthly_frequency: [],
-            monthly_volume: [],
-            duration_history: [],
-            volume_history: [],
+            charts: {
+                monthly_frequency: [],
+                monthly_volume: [],
+                duration_history: [],
+                volume_history: [],
+            },
+            exercises: [],
         }),
     },
 })
@@ -169,8 +171,8 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </GlassCard>
                 </div>
 
-                <!-- ⚡ Bolt: Consolidated Deferred Chart Loading -->
-                <Deferred data="chartData">
+                <!-- ⚡ Bolt: Consolidated Deferred Loading -->
+                <Deferred data="deferredData">
                     <template #fallback>
                         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                             <GlassCard v-for="i in 4" :key="i">
@@ -186,39 +188,39 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     <!-- Charts Grid -->
                     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <!-- Frequency Chart -->
-                        <GlassCard v-if="chartData.monthly_frequency?.length > 0">
+                        <GlassCard v-if="deferredData.charts.monthly_frequency?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence</h3>
                                 <p class="text-text-muted text-xs">Séances par mois</p>
                             </div>
-                            <WorkoutsPerMonthChart :data="chartData.monthly_frequency" />
+                            <WorkoutsPerMonthChart :data="deferredData.charts.monthly_frequency" />
                         </GlassCard>
 
                         <!-- Monthly Volume Chart -->
-                        <GlassCard v-if="chartData.monthly_volume?.length > 0">
+                        <GlassCard v-if="deferredData.charts.monthly_volume?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold dark:text-white">Volume Mensuel</h3>
                                 <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
                             </div>
-                            <MonthlyVolumeChart :data="chartData.monthly_volume" />
+                            <MonthlyVolumeChart :data="deferredData.charts.monthly_volume" />
                         </GlassCard>
 
                         <!-- Duration Chart -->
-                        <GlassCard v-if="chartData.duration_history?.length > 0">
+                        <GlassCard v-if="deferredData.charts.duration_history?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold dark:text-white">Durée</h3>
                                 <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
                             </div>
-                            <WorkoutDurationChart :data="chartData.duration_history" />
+                            <WorkoutDurationChart :data="deferredData.charts.duration_history" />
                         </GlassCard>
 
                         <!-- Volume per Workout Chart -->
-                        <GlassCard v-if="chartData.volume_history?.length > 0">
+                        <GlassCard v-if="deferredData.charts.volume_history?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold dark:text-white">Volume par Séance</h3>
                                 <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
                             </div>
-                            <VolumePerWorkoutChart :data="chartData.volume_history" />
+                            <VolumePerWorkoutChart :data="deferredData.charts.volume_history" />
                         </GlassCard>
                     </div>
                 </Deferred>
@@ -228,7 +230,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <div class="animate-slide-up" style="animation-delay: 0.1s">
                 <h3 class="text-text-main mb-3 font-semibold dark:text-white">Exercices disponibles</h3>
 
-                <Deferred data="exercises">
+                <Deferred data="deferredData">
                     <template #fallback>
                         <!-- Loading State -->
                         <div class="flex gap-2 overflow-x-hidden pb-2">
@@ -239,9 +241,9 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </template>
 
                     <!-- Data State -->
-                    <div v-if="exercises" class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
+                    <div v-if="deferredData.exercises" class="hide-scrollbar flex gap-2 overflow-x-auto pb-2">
                         <div
-                            v-for="exercise in exercises"
+                            v-for="exercise in deferredData.exercises"
                             :key="exercise.id"
                             class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800/50"
                         >
