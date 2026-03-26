@@ -12,8 +12,6 @@ class FetchBodyPartMeasurementShowAction
     /**
      * Fetch the body part measurement history for a specific part.
      *
-     * @param  User  $user
-     * @param  string  $part
      * @return array{part: string, history: Collection<int, \App\Models\BodyPartMeasurement>}|null
      */
     public function execute(User $user, string $part): ?array
