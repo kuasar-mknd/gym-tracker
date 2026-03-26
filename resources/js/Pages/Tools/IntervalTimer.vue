@@ -1,4 +1,22 @@
 <script setup>
+/**
+ * Interval Timer Component
+ *
+ * This component provides a highly customizable interval timer designed for
+ * high-intensity interval training (HIIT), Tabata, and other time-based workouts.
+ * It features a dual-tab interface for running the timer and configuring presets.
+ *
+ * Key Features:
+ * - Configurable phases: Warmup, Work, and Rest.
+ * - Visual phase indicators with distinct color-coding.
+ * - Audio cues: Beeps for phase transitions and countdowns (3, 2, 1).
+ * - Preset Management: Users can create, save, edit, and delete their own custom timers.
+ * - Precise Timekeeping: Uses `setInterval` for accurate tracking.
+ *
+ * @prop {Array} timers - An array of user-saved timer configuration objects.
+ *                        Each object contains: `id`, `name`, `work_seconds`,
+ *                        `rest_seconds`, `rounds`, and `warmup_seconds`.
+ */
 import { ref, computed, onUnmounted, onMounted } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
