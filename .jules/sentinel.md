@@ -42,3 +42,8 @@
 **Vulnerability:** Found `WorkoutsController@update` and `ExerciseController@store` (both web and API) missing explicit `$this->authorize()` calls. They relied on `FormRequest` authorization which, if misconfigured or bypassed, could allow unauthorized resource manipulation.
 **Learning:** This pattern of missing explicit controller-level authorization remains a common source of potential BOLA/BFLA in this project.
 **Prevention:** Enforce defense-in-depth by always calling `$this->authorize()` at the start of every resource controller action, regardless of `FormRequest` checks.
+
+## 2026-03-26 - Insecure Direct Object Reference (IDOR) on API Updates
+**Vulnerability:** Multiple API endpoints (`PersonalRecordController@update`, `IntervalTimerController@update`, `GoalController@update`) were missing explicit `$this->authorize('update', $model)` calls, relying solely on `FormRequest::authorize()`.
+**Learning:** Relying exclusively on FormRequest authorization is a recurring weakness that bypasses the centralized Policy logic if the FormRequest is not correctly implemented or is bypassed by other middlewares.
+**Prevention:** Always call `$this->authorize()` at the beginning of controller actions for all destructive or modification operations to ensure consistent ownership and permission checks.

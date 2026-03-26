@@ -52,6 +52,8 @@ class IntervalTimerController extends Controller
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): IntervalTimerResource
     {
+        $this->authorize('update', $intervalTimer);
+
         $intervalTimer->update($request->validated());
 
         return new IntervalTimerResource($intervalTimer);

@@ -72,6 +72,8 @@ class PersonalRecordController extends Controller
      */
     public function update(PersonalRecordUpdateRequest $request, PersonalRecord $personalRecord): PersonalRecordResource
     {
+        $this->authorize('update', $personalRecord);
+
         $validated = $request->validated();
 
         $personalRecord->update($validated);
