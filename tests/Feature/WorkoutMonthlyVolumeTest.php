@@ -44,8 +44,8 @@ class WorkoutMonthlyVolumeTest extends TestCase
                 fn (Assert $page): Assert => $page
                     ->component('Workouts/Index')
                     ->loadDeferredProps(fn (Assert $page): Assert => $page
-                        ->has('chartData')
-                        ->where('chartData.monthly_volume.4.volume', 1000) // 4th index is last month (5 months ago to current month = 6 items. Index 0=5 months ago, 5=current. Last month=4)
+                        ->has('deferredData.charts')
+                        ->where('deferredData.charts.monthly_volume.4.volume', 1000) // 4th index is last month (5 months ago to current month = 6 items. Index 0=5 months ago, 5=current. Last month=4)
                     )
             );
     }
