@@ -36,61 +36,32 @@ final class WorkoutStatsService
     }
 
     /**
-     * @return array<int, DistributionStat>
+     * Get consolidated workout distributions (duration + time of day).
+     * ⚡ Bolt: Reduces 2 database queries to 1 and uses a single cache key.
+     *
+     * @param  User  $user  The user to fetch stats for.
+     * @param  int  $days  The number of days to look back.
+     * @return array{duration: array<int, DistributionStat>, time_of_day: array<int, DistributionStat>}
      */
-    public function getDurationDistribution(User $user, int $days = 90): array
+    public function getWorkoutDistributions(User $user, int $days = 90): array
     {
         return Cache::remember(
-            "stats.duration_distribution.{$user->id}.{$days}",
+            "stats.workout_distributions.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days): array {
                 $workouts = $user->workouts()
                     ->select(['id', 'user_id', 'started_at', 'ended_at'])
-                    ->whereNotNull('ended_at')
                     ->where('started_at', '>=', now()->subDays($days))
                     ->get();
 
-                $buckets = [
+                $durationBuckets = [
                     '< 30 min' => 0,
                     '30-60 min' => 0,
                     '60-90 min' => 0,
                     '90+ min' => 0,
                 ];
 
-                foreach ($workouts as $workout) {
-                    $minutes = (int) abs($workout->started_at->diffInMinutes($workout->ended_at));
-                    $label = match (true) {
-                        $minutes < 30 => '< 30 min',
-                        $minutes < 60 => '30-60 min',
-                        $minutes < 90 => '60-90 min',
-                        default => '90+ min',
-                    };
-                    $buckets[$label]++;
-                }
-
-                return collect($buckets)
-                    ->map(fn (int $count, string $label): DistributionStat => new DistributionStat(__($label), $count))
-                    ->values()
-                    ->all();
-            }
-        );
-    }
-
-    /**
-     * @return array<int, DistributionStat>
-     */
-    public function getTimeOfDayDistribution(User $user, int $days = 90): array
-    {
-        return Cache::remember(
-            "stats.time_of_day_distribution.{$user->id}.{$days}",
-            now()->addMinutes(30),
-            function () use ($user, $days): array {
-                $workouts = $user->workouts()
-                    ->select(['id', 'user_id', 'started_at'])
-                    ->where('started_at', '>=', now()->subDays($days))
-                    ->get();
-
-                $buckets = [
+                $timeBuckets = [
                     'Morning (06h-12h)' => 0,
                     'Afternoon (12h-17h)' => 0,
                     'Evening (17h-22h)' => 0,
@@ -98,20 +69,39 @@ final class WorkoutStatsService
                 ];
 
                 foreach ($workouts as $workout) {
+                    // Time of day calculation
                     $hour = (int) $workout->started_at->format('G');
-                    $label = match (true) {
+                    $timeLabel = match (true) {
                         $hour >= 6 && $hour < 12 => 'Morning (06h-12h)',
                         $hour >= 12 && $hour < 17 => 'Afternoon (12h-17h)',
                         $hour >= 17 && $hour < 22 => 'Evening (17h-22h)',
                         default => 'Night (22h-06h)',
                     };
-                    $buckets[$label]++;
+                    $timeBuckets[$timeLabel]++;
+
+                    // Duration calculation
+                    if ($workout->ended_at) {
+                        $minutes = (int) abs($workout->started_at->diffInMinutes($workout->ended_at));
+                        $durationLabel = match (true) {
+                            $minutes < 30 => '< 30 min',
+                            $minutes < 60 => '30-60 min',
+                            $minutes < 90 => '60-90 min',
+                            default => '90+ min',
+                        };
+                        $durationBuckets[$durationLabel]++;
+                    }
                 }
 
-                return collect($buckets)
-                    ->map(fn (int $count, string $label): DistributionStat => new DistributionStat(__($label), $count))
-                    ->values()
-                    ->all();
+                return [
+                    'duration' => collect($durationBuckets)
+                        ->map(fn (int $count, string $label): DistributionStat => new DistributionStat(__($label), $count))
+                        ->values()
+                        ->all(),
+                    'time_of_day' => collect($timeBuckets)
+                        ->map(fn (int $count, string $label): DistributionStat => new DistributionStat(__($label), $count))
+                        ->values()
+                        ->all(),
+                ];
             }
         );
     }

@@ -137,19 +137,15 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, DistributionStat>
+     * Get consolidated workout distributions (duration + time of day).
+     *
+     * @param  User  $user  The user to fetch stats for.
+     * @param  int  $days  The number of days to look back.
+     * @return array{duration: array<int, DistributionStat>, time_of_day: array<int, DistributionStat>}
      */
-    public function getDurationDistribution(User $user, int $days = 90): array
+    public function getWorkoutDistributions(User $user, int $days = 90): array
     {
-        return $this->workoutStats->getDurationDistribution($user, $days);
-    }
-
-    /**
-     * @return array<int, DistributionStat>
-     */
-    public function getTimeOfDayDistribution(User $user, int $days = 90): array
-    {
-        return $this->workoutStats->getTimeOfDayDistribution($user, $days);
+        return $this->workoutStats->getWorkoutDistributions($user, $days);
     }
 
     /**

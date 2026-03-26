@@ -54,8 +54,7 @@ final class StatsCacheManager
     public function clearDurationStats(User $user): void
     {
         Cache::forget("stats.duration_history.{$user->id}.20");
-        Cache::forget("stats.duration_distribution.{$user->id}.90");
-        Cache::forget("stats.time_of_day_distribution.{$user->id}.90");
+        Cache::forget("stats.workout_distributions.{$user->id}.90");
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.performance_overview.{$user->id}.{$days}");
