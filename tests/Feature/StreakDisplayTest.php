@@ -14,6 +14,19 @@ class StreakDisplayTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // 🧪 Testing Pattern/Time: Use setTestNow for deterministic streak tests
+        Carbon::setTestNow(Carbon::parse('2025-03-25 12:00:00'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
     public function test_dashboard_shows_zero_streak_when_day_missed(): void
     {
         $user = User::factory()->create();
