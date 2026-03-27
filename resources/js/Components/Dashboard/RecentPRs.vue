@@ -1,5 +1,8 @@
 <script setup>
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import { defineAsyncComponent } from 'vue'
+
+const RecentPRsChart = defineAsyncComponent(() => import('@/Components/Stats/RecentPRsChart.vue'))
 
 defineProps({
     recentPRs: { type: Array, required: true },
@@ -12,6 +15,15 @@ defineProps({
         <div class="mb-4 flex items-center justify-between px-1">
             <h3 class="text-text-muted text-xs font-black tracking-[0.2em] uppercase">Records personnels</h3>
         </div>
+
+        <GlassCard class="mb-4" padding="p-4">
+            <div class="mb-2">
+                <h4 class="font-display text-text-main text-sm font-black uppercase italic dark:text-white">
+                    Aperçu des performances
+                </h4>
+            </div>
+            <RecentPRsChart :data="recentPRs" />
+        </GlassCard>
 
         <div class="space-y-3">
             <GlassCard v-for="pr in recentPRs" :key="pr.id" padding="p-4">
