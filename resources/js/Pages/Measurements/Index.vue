@@ -3,7 +3,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
 import { computed, ref, defineAsyncComponent } from 'vue'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
@@ -11,8 +12,14 @@ const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/B
 
 const props = defineProps({
     measurements: Array,
-    weightHistory: Array,
-    bodyFatHistory: Array,
+    // ⚡ Bolt: Consolidated deferred body stats
+    bodyStats: {
+        type: Object,
+        default: () => ({
+            weightHistory: [],
+            bodyFatHistory: [],
+        }),
+    },
 })
 
 const showAddForm = ref(false)
@@ -35,18 +42,18 @@ const submit = () => {
 
 const deleteMeasurement = (id) => {
     if (confirm('Supprimer cette entrée ?')) {
-        useForm({}).delete(route('body-measurements.destroy', { body_measurement: id }))
+        router.delete(route('body-measurements.destroy', { body_measurement: id }))
     }
 }
 
 const latestWeight = computed(() => {
     if (props.measurements.length === 0) return null
-    return props.measurements[props.measurements.length - 1].weight
+    return props.measurements[0].weight
 })
 
 const previousWeight = computed(() => {
     if (props.measurements.length < 2) return null
-    return props.measurements[props.measurements.length - 2].weight
+    return props.measurements[1].weight
 })
 
 const weightDiff = computed(() => {
@@ -56,69 +63,9 @@ const weightDiff = computed(() => {
 
 const latestBodyFat = computed(() => {
     if (props.measurements.length === 0) return null
-    const latest = [...props.measurements].reverse().find((m) => m.body_fat !== null)
+    const latest = props.measurements.find((m) => m.body_fat !== null)
     return latest ? latest.body_fat : null
 })
-
-const bodyFatDiff = computed(() => {
-    const measurementsWithFat = props.measurements.filter((m) => m.body_fat !== null)
-    if (measurementsWithFat.length < 2) return null
-    const latest = measurementsWithFat[measurementsWithFat.length - 1].body_fat
-    const previous = measurementsWithFat[measurementsWithFat.length - 2].body_fat
-    return (latest - previous).toFixed(1)
-})
-
-const chartData = computed(() => {
-    const sorted = [...props.measurements].sort((a, b) => new Date(a.measured_at) - new Date(b.measured_at))
-    return {
-        labels: sorted.map((m) =>
-            new Date(m.measured_at + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
-        ),
-        datasets: [
-            {
-                label: 'Poids',
-                backgroundColor: 'rgba(129, 140, 248, 0.1)',
-                borderColor: '#818cf8',
-                pointBackgroundColor: '#818cf8',
-                pointBorderColor: '#818cf8',
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                data: sorted.map((m) => m.weight),
-                tension: 0.4,
-                fill: true,
-            },
-        ],
-    }
-})
-
-const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#0F172A',
-            bodyColor: '#0F172A',
-            borderColor: 'rgba(0, 0, 0, 0.1)',
-            borderWidth: 1,
-            cornerRadius: 12,
-            padding: 12,
-        },
-    },
-    scales: {
-        x: {
-            ticks: { color: '#64748B', font: { size: 10, weight: 'bold' } },
-            grid: { display: false },
-            border: { display: false },
-        },
-        y: {
-            ticks: { color: '#64748B', font: { size: 10, weight: 'bold' } },
-            grid: { color: 'rgba(0, 0, 0, 0.05)' },
-            border: { display: false },
-        },
-    },
-}
 </script>
 
 <template>
@@ -240,33 +187,52 @@ const chartOptions = {
             </GlassCard>
 
             <!-- Charts -->
-            <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
-                <!-- Weight Chart -->
-                <GlassCard>
-                    <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">
-                        Évolution Poids
-                    </h3>
-                    <div class="h-64">
-                        <WeightHistoryChart v-if="weightHistory && weightHistory.length > 0" :data="weightHistory" />
-                        <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                            Aucune donnée disponible
-                        </div>
+            <Deferred data="bodyStats">
+                <template #fallback>
+                    <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
+                        <GlassCard v-for="i in 2" :key="i">
+                            <GlassSkeleton width="120px" height="1rem" class="mb-4" />
+                            <div class="h-64">
+                                <GlassSkeleton height="100%" width="100%" variant="card" />
+                            </div>
+                        </GlassCard>
                     </div>
-                </GlassCard>
+                </template>
 
-                <!-- Body Fat Chart -->
-                <GlassCard>
-                    <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-pink-600 uppercase">
-                        Évolution Masse Grasse
-                    </h3>
-                    <div class="h-64">
-                        <BodyFatLineChart v-if="bodyFatHistory && bodyFatHistory.length > 0" :data="bodyFatHistory" />
-                        <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                            Aucune donnée disponible
+                <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
+                    <!-- Weight Chart -->
+                    <GlassCard>
+                        <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">
+                            Évolution Poids
+                        </h3>
+                        <div class="h-64">
+                            <WeightHistoryChart
+                                v-if="bodyStats?.weightHistory && bodyStats.weightHistory.length > 0"
+                                :data="bodyStats.weightHistory"
+                            />
+                            <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
+                                Aucune donnée disponible
+                            </div>
                         </div>
-                    </div>
-                </GlassCard>
-            </div>
+                    </GlassCard>
+
+                    <!-- Body Fat Chart -->
+                    <GlassCard>
+                        <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-pink-600 uppercase">
+                            Évolution Masse Grasse
+                        </h3>
+                        <div class="h-64">
+                            <BodyFatLineChart
+                                v-if="bodyStats?.bodyFatHistory && bodyStats.bodyFatHistory.length > 0"
+                                :data="bodyStats.bodyFatHistory"
+                            />
+                            <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
+                                Aucune donnée disponible
+                            </div>
+                        </div>
+                    </GlassCard>
+                </div>
+            </Deferred>
 
             <!-- History -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
@@ -282,12 +248,7 @@ const chartOptions = {
                 </div>
 
                 <div v-else class="space-y-2">
-                    <GlassCard
-                        v-for="measurement in [...measurements].reverse()"
-                        :key="measurement.id"
-                        padding="p-4"
-                        class="group"
-                    >
+                    <GlassCard v-for="measurement in measurements" :key="measurement.id" padding="p-4" class="group">
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="flex items-baseline gap-2">
@@ -300,12 +261,15 @@ const chartOptions = {
                                 </div>
                                 <div class="text-text-muted text-sm font-medium">
                                     {{
-                                        new Date(measurement.measured_at + 'T00:00:00').toLocaleDateString('fr-FR', {
-                                            weekday: 'short',
-                                            day: 'numeric',
-                                            month: 'short',
-                                            year: 'numeric',
-                                        })
+                                        new Date(measurement.measured_at.substring(0, 10) + 'T00:00:00').toLocaleDateString(
+                                            'fr-FR',
+                                            {
+                                                weekday: 'short',
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                            },
+                                        )
                                     }}
                                 </div>
                                 <div v-if="measurement.notes" class="text-text-muted/70 mt-1 text-xs italic">
