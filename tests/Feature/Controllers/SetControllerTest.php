@@ -8,13 +8,10 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use App\Services\StatsService;
-use Mockery\MockInterface;
-use Illuminate\Support\Facades\Cache;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->user = User::factory()->create();
 
     $this->workout = Workout::factory()->create([
@@ -36,7 +33,7 @@ beforeEach(function () {
 
 // Happy Path Tests
 
-it('can store a new set', function () {
+it('can store a new set', function (): void {
     $data = [
         'weight' => 50.5,
         'reps' => 12,
@@ -56,7 +53,7 @@ it('can store a new set', function () {
     ]);
 });
 
-it('can update an existing set', function () {
+it('can update an existing set', function (): void {
     $data = [
         'weight' => 110,
         'reps' => 8,
@@ -76,7 +73,7 @@ it('can update an existing set', function () {
     ]);
 });
 
-it('can destroy a set', function () {
+it('can destroy a set', function (): void {
     $response = $this->actingAs($this->user)
         ->delete(route('sets.destroy', $this->set));
 
@@ -89,7 +86,7 @@ it('can destroy a set', function () {
 
 // Validation Tests
 
-it('cannot store a set with negative weight', function () {
+it('cannot store a set with negative weight', function (): void {
     $data = [
         'weight' => -10,
         'reps' => 10,
@@ -101,7 +98,7 @@ it('cannot store a set with negative weight', function () {
     $response->assertSessionHasErrors(['weight']);
 });
 
-it('cannot store a set with negative reps', function () {
+it('cannot store a set with negative reps', function (): void {
     $data = [
         'weight' => 100,
         'reps' => -5,
@@ -113,7 +110,7 @@ it('cannot store a set with negative reps', function () {
     $response->assertSessionHasErrors(['reps']);
 });
 
-it('cannot update a set with negative weight', function () {
+it('cannot update a set with negative weight', function (): void {
     $data = [
         'weight' => -10,
     ];
@@ -126,7 +123,7 @@ it('cannot update a set with negative weight', function () {
 
 // Authorization Tests
 
-it('cannot store a set for another user\'s workout', function () {
+it('cannot store a set for another user\'s workout', function (): void {
     $otherUser = User::factory()->create();
 
     $data = [
@@ -140,7 +137,7 @@ it('cannot store a set for another user\'s workout', function () {
     $response->assertForbidden();
 });
 
-it('cannot update a set for another user\'s workout', function () {
+it('cannot update a set for another user\'s workout', function (): void {
     $otherUser = User::factory()->create();
 
     $data = [
@@ -153,7 +150,7 @@ it('cannot update a set for another user\'s workout', function () {
     $response->assertForbidden();
 });
 
-it('cannot destroy a set for another user\'s workout', function () {
+it('cannot destroy a set for another user\'s workout', function (): void {
     $otherUser = User::factory()->create();
 
     $response = $this->actingAs($otherUser)
@@ -162,7 +159,7 @@ it('cannot destroy a set for another user\'s workout', function () {
     $response->assertForbidden();
 });
 
-it('cannot store a set if workout is ended', function () {
+it('cannot store a set if workout is ended', function (): void {
     $this->workout->update(['ended_at' => now()]);
 
     $data = [
@@ -176,7 +173,7 @@ it('cannot store a set if workout is ended', function () {
     $response->assertForbidden();
 });
 
-it('cannot update a set if workout is ended', function () {
+it('cannot update a set if workout is ended', function (): void {
     $this->workout->update(['ended_at' => now()]);
 
     $data = [
@@ -189,7 +186,7 @@ it('cannot update a set if workout is ended', function () {
     $response->assertForbidden();
 });
 
-it('cannot destroy a set if workout is ended', function () {
+it('cannot destroy a set if workout is ended', function (): void {
     $this->workout->update(['ended_at' => now()]);
 
     $response = $this->actingAs($this->user)
