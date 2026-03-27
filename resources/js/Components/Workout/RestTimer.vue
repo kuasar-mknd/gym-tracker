@@ -228,6 +228,7 @@ watch(
                     dusk="close-timer-x"
                     class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
                     aria-label="Fermer le minuteur"
+                    title="Fermer le minuteur"
                 >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path
@@ -287,6 +288,8 @@ watch(
                         @click="skipTimer"
                         dusk="skip-rest-timer"
                         class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                        title="Passer le repos"
+                        aria-label="Passer le repos"
                     >
                         Passer
                     </button>
@@ -294,6 +297,8 @@ watch(
                         @click="close"
                         dusk="close-timer"
                         class="rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                        title="Fermer le minuteur"
+                        aria-label="Fermer le minuteur"
                     >
                         Fermer
                     </button>
