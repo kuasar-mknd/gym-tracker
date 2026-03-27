@@ -35,7 +35,7 @@ defineProps({
             <div class="mt-4 h-32 w-full">
                 <Deferred data="bodyStats">
                     <template #fallback>
-                        <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
+                        <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                     </template>
                     <BodyFatChart v-if="bodyFatHistory?.length > 0" :data="bodyFatHistory" />
                     <div v-else class="flex h-full items-center justify-center">
@@ -50,9 +50,9 @@ defineProps({
             <Deferred data="performanceStats">
                 <template #fallback>
                     <div class="space-y-4">
-                        <GlassSkeleton height="h-4" width="w-24" />
-                        <GlassSkeleton height="h-10" width="w-32" />
-                        <GlassSkeleton height="h-6" width="w-16" class="rounded-lg" />
+                        <GlassSkeleton height="1rem" width="6rem" />
+                        <GlassSkeleton height="2.5rem" width="8rem" />
+                        <GlassSkeleton height="1.5rem" width="4rem" class="rounded-lg" />
                     </div>
                 </template>
                 <div class="flex items-start justify-between">

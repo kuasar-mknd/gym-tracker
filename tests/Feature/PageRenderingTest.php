@@ -218,6 +218,10 @@ test('body measurements index page renders with correct props', function (): voi
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Measurements/Index')
                 ->has('measurements')
+                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                    ->has('bodyStats.weightHistory')
+                    ->has('bodyStats.bodyFatHistory')
+                )
         );
 });
 

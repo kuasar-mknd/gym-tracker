@@ -43,7 +43,7 @@ defineProps({
             <Deferred data="bodyStats">
                 <template #fallback>
                     <div class="flex h-full items-center justify-center px-4">
-                        <GlassSkeleton height="h-32" width="w-full" class="rounded-xl" />
+                        <GlassSkeleton height="8rem" width="100%" class="rounded-xl" />
                     </div>
                 </template>
                 <WeightHistoryChart v-if="weightHistory?.length > 0" :data="weightHistory" />
