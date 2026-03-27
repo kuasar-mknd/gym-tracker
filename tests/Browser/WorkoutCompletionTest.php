@@ -86,7 +86,7 @@ class WorkoutCompletionTest extends DuskTestCase
         });
     }
 
-    public function test_finished_workout_is_immutable_on_iphone_mini(): void
+    private function performImmutableWorkoutCheck(Browser $browser, string $sizeMacro): void
     {
         $user = User::factory()->create([
             'email' => 'immutable-'.time().random_int(0, 999).'@example.com',
@@ -99,13 +99,37 @@ class WorkoutCompletionTest extends DuskTestCase
             'ended_at' => now(),
         ]);
 
-        $this->browse(function (Browser $browser) use ($user, $workout): void {
+        try {
             $browser->loginAs(User::find($user->id))
-                ->resizeToIphoneMini()
+                ->{$sizeMacro}()
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('#main-content', 30)
                 ->assertMissing('@finish-workout-mobile')
                 ->assertNoConsoleExceptions();
+        } catch (\Exception $e) {
+            $browser->screenshot('immutable-failure-'.$sizeMacro);
+            throw $e;
+        }
+    }
+
+    public function test_finished_workout_is_immutable_on_iphone_mini(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performImmutableWorkoutCheck($browser, 'resizeToIphoneMini');
+        });
+    }
+
+    public function test_finished_workout_is_immutable_on_iphone_15(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performImmutableWorkoutCheck($browser, 'resizeToIphone15');
+        });
+    }
+
+    public function test_finished_workout_is_immutable_on_iphone_max(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performImmutableWorkoutCheck($browser, 'resizeToIphoneMax');
         });
     }
 }
