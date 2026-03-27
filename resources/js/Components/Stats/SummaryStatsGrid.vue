@@ -50,7 +50,7 @@ defineProps({
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
             <Deferred data="performanceStats">
                 <template #fallback>
-                    <GlassSkeleton height="h-8" width="w-8" class="mx-auto mt-1" />
+                    <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
                 <div class="font-display text-text-main mt-1 text-2xl font-black">
                     {{ volumeTrend?.length || 0 }}
@@ -63,7 +63,7 @@ defineProps({
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
             <Deferred data="performanceStats">
                 <template #fallback>
-                    <GlassSkeleton height="h-8" width="w-8" class="mx-auto mt-1" />
+                    <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
                 <div class="font-display text-text-main mt-1 text-2xl font-black">
                     {{ muscleDistribution?.length || 0 }}
@@ -84,7 +84,7 @@ defineProps({
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
             <Deferred data="performanceStats">
                 <template #fallback>
-                    <GlassSkeleton height="h-8" width="w-12" class="mx-auto mt-1" />
+                    <GlassSkeleton height="2rem" width="3rem" class="mx-auto mt-1" />
                 </template>
                 <div
                     :class="[

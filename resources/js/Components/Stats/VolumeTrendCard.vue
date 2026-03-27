@@ -46,7 +46,7 @@ const totalVolume = computed(() => {
         <div class="h-48">
             <Deferred data="performanceStats">
                 <template #fallback>
-                    <GlassSkeleton height="h-full" width="w-full" class="rounded-xl" />
+                    <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                 </template>
                 <div v-if="volumeTrend && volumeTrend.length > 0" class="h-full">
                     <VolumeTrendChart :data="volumeTrend" />
