@@ -167,9 +167,6 @@ jobs:
             - name: Install Chrome Driver
               run: php artisan dusk:chrome-driver --detect
 
-            - name: Start Chrome Driver
-              run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
-
             - name: Run Dusk Tests
               run: |
                   # Create fresh .env
@@ -187,6 +184,13 @@ jobs:
                   DB_USERNAME=root
                   DB_PASSWORD=password
 
+                  DB_CONNECTION_DUSK=mysql
+                  DB_HOST_DUSK=127.0.0.1
+                  DB_PORT_DUSK=3306
+                  DB_DATABASE_DUSK=gym_tracker_dusk
+                  DB_USERNAME_DUSK=root
+                  DB_PASSWORD_DUSK=password
+
                   SESSION_DRIVER=cookie
                   CACHE_STORE=array
                   QUEUE_CONNECTION=sync
@@ -194,7 +198,6 @@ jobs:
 
                   TELESCOPE_ENABLED=false
                   PULSE_ENABLED=false
-                  DUSK_DRIVER_URL=http://127.0.0.1:9515
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
                   EOF
 
