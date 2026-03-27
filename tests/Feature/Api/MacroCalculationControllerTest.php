@@ -51,4 +51,27 @@ class MacroCalculationControllerTest extends TestCase
             'age' => 25,
         ]);
     }
+
+    public function test_unauthenticated_user_cannot_list_macro_calculations(): void
+    {
+        $response = $this->getJson(route('api.v1.macro-calculations.index'));
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_unauthenticated_user_cannot_create_macro_calculation(): void
+    {
+        $data = [
+            'gender' => 'male',
+            'age' => 25,
+            'height' => 180,
+            'weight' => 75,
+            'activity_level' => 'moderate',
+            'goal' => 'maintain',
+        ];
+
+        $response = $this->postJson(route('api.v1.macro-calculations.store'), $data);
+
+        $response->assertUnauthorized();
+    }
 }

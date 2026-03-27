@@ -47,3 +47,8 @@
 **Vulnerability:** Multiple API endpoints (`PersonalRecordController@update`, `IntervalTimerController@update`, `GoalController@update`) were missing explicit `$this->authorize('update', $model)` calls, relying solely on `FormRequest::authorize()`.
 **Learning:** Relying exclusively on FormRequest authorization is a recurring weakness that bypasses the centralized Policy logic if the FormRequest is not correctly implemented or is bypassed by other middlewares.
 **Prevention:** Always call `$this->authorize()` at the beginning of controller actions for all destructive or modification operations to ensure consistent ownership and permission checks.
+
+## 2026-03-27 - Missing Function Level Authorization in API Controllers
+**Vulnerability:** Found `MacroCalculationController` (API) missing explicit `$this->authorize()` calls in `index()` and `store()` methods, unlike its web counterpart and other API resource controllers.
+**Learning:** Even when queries are scoped to the authenticated user (e.g., `$user->macroCalculations()`), missing explicit authorization bypasses the central Policy logic. This can lead to security gaps if the Policy is intended to enforce broader restrictions (e.g., account status, feature flags, or global "deny" rules) beyond simple ownership.
+**Prevention:** Enforce defense-in-depth by always calling `$this->authorize()` at the start of every resource controller action (including `index` and `store`), regardless of relationship scoping or `FormRequest` checks.

@@ -22,6 +22,8 @@ class MacroCalculationController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', MacroCalculation::class);
+
         $calculations = $this->user()->macroCalculations()
             ->orderByDesc('created_at')
             ->paginate(20);
@@ -34,6 +36,8 @@ class MacroCalculationController extends Controller
      */
     public function store(StoreMacroCalculationRequest $request, CreateMacroCalculationAction $action): MacroCalculationResource
     {
+        $this->authorize('create', MacroCalculation::class);
+
         /** @var array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string} $validated */
         $validated = $request->validated();
 
