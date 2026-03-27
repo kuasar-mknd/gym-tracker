@@ -184,6 +184,13 @@ jobs:
                   DB_USERNAME=root
                   DB_PASSWORD=password
 
+                  DB_CONNECTION_DUSK=mysql
+                  DB_HOST_DUSK=127.0.0.1
+                  DB_PORT_DUSK=3306
+                  DB_DATABASE_DUSK=gym_tracker_dusk
+                  DB_USERNAME_DUSK=root
+                  DB_PASSWORD_DUSK=password
+
                   SESSION_DRIVER=cookie
                   CACHE_STORE=array
                   QUEUE_CONNECTION=sync
