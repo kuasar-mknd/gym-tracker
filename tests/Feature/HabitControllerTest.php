@@ -7,31 +7,28 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
-use function Pest\Laravel\post;
-use function Pest\Laravel\put;
 
-it('displays the habits index page for the user', function () {
+it('displays the habits index page for the user', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
     actingAs($user)
         ->get(route('habits.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Habits/Index')
             ->has('habits', 1)
             ->where('habits.0.id', $habit->id)
         );
 });
 
-it('cannot view habits if not authenticated', function () {
+it('cannot view habits if not authenticated', function (): void {
     get(route('habits.index'))
         ->assertRedirect(route('login'));
 });
 
-it('can store a new habit', function () {
+it('can store a new habit', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -53,7 +50,7 @@ it('can store a new habit', function () {
     ]);
 });
 
-it('fails to store habit with invalid data', function () {
+it('fails to store habit with invalid data', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
@@ -64,7 +61,7 @@ it('fails to store habit with invalid data', function () {
         ->assertSessionHasErrors(['name', 'goal_times_per_week']);
 });
 
-it('can update an existing habit', function () {
+it('can update an existing habit', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id, 'name' => 'Old Name']);
 
@@ -81,7 +78,7 @@ it('can update an existing habit', function () {
     ]);
 });
 
-it('fails to update habit with invalid data', function () {
+it('fails to update habit with invalid data', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
@@ -92,7 +89,7 @@ it('fails to update habit with invalid data', function () {
         ->assertSessionHasErrors(['goal_times_per_week']);
 });
 
-it('cannot update someone elses habit', function () {
+it('cannot update someone elses habit', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user2->id]);
@@ -104,7 +101,7 @@ it('cannot update someone elses habit', function () {
         ->assertForbidden();
 });
 
-it('can delete a habit', function () {
+it('can delete a habit', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
@@ -118,7 +115,7 @@ it('can delete a habit', function () {
     ]);
 });
 
-it('cannot delete someone elses habit', function () {
+it('cannot delete someone elses habit', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user2->id]);
@@ -132,7 +129,7 @@ it('cannot delete someone elses habit', function () {
     ]);
 });
 
-it('can toggle a habit for a date', function () {
+it('can toggle a habit for a date', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
@@ -148,7 +145,7 @@ it('can toggle a habit for a date', function () {
     ]);
 });
 
-it('cannot toggle someone elses habit', function () {
+it('cannot toggle someone elses habit', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user2->id]);
@@ -165,7 +162,7 @@ it('cannot toggle someone elses habit', function () {
     ]);
 });
 
-it('fails to toggle habit without a date', function () {
+it('fails to toggle habit without a date', function (): void {
     $user = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $user->id]);
 
