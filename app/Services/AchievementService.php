@@ -35,7 +35,11 @@ final class AchievementService
     }
 
     /**
-     * @param  array<string, int|float>  $metrics
+     * Check if an achievement is unlocked based on calculated metrics and unlock it if so.
+     *
+     * @param  User  $user  The user to check the achievement for.
+     * @param  Achievement  $achievement  The achievement to check.
+     * @param  array<string, int|float>  $metrics  The pre-calculated metrics.
      */
     private function checkAndUnlock(User $user, Achievement $achievement, array $metrics): void
     {
@@ -54,8 +58,11 @@ final class AchievementService
     }
 
     /**
-     * @param  Collection<int, Achievement>  $achievements
-     * @return array<string, int|float>
+     * Pre-calculate metrics required for checking multiple achievements efficiently.
+     *
+     * @param  User  $user  The user to calculate metrics for.
+     * @param  Collection<int, Achievement>  $achievements  The achievements that need metrics.
+     * @return array<string, int|float> A dictionary of pre-calculated metrics.
      */
     private function preCalculateMetrics(User $user, Collection $achievements): array
     {
@@ -81,6 +88,12 @@ final class AchievementService
         return $metrics;
     }
 
+    /**
+     * Calculate the maximum weight lifted by a user.
+     *
+     * @param  User  $user  The user to calculate the max weight for.
+     * @return float The maximum weight lifted.
+     */
     private function calculateMaxWeight(User $user): float
     {
         /** @var float|null $maxWeight */
@@ -91,13 +104,23 @@ final class AchievementService
         return (float) ($maxWeight ?? 0.0);
     }
 
+    /**
+     * Calculate the total volume lifted by a user.
+     *
+     * @param  User  $user  The user to calculate the total volume for.
+     * @return float The total volume lifted.
+     */
     private function calculateTotalVolume(User $user): float
     {
         return (float) $user->total_volume;
     }
 
     /**
-     * @param  Collection<int, Achievement>  $achievements
+     * Calculate the relevant streak metric based on the highest streak threshold in the achievements collection.
+     *
+     * @param  User  $user  The user to calculate the streak for.
+     * @param  Collection<int, Achievement>  $achievements  The achievements to determine the maximum threshold from.
+     * @return int The max streak up to the required threshold, or 0 if none exist.
      */
     private function calculateStreakMetric(User $user, Collection $achievements): int
     {
@@ -111,6 +134,13 @@ final class AchievementService
         return $this->calculateStreakForThreshold($user, (int) $maxStreakThreshold);
     }
 
+    /**
+     * Calculate the user's max streak over a given threshold of days.
+     *
+     * @param  User  $user  The user to calculate the streak for.
+     * @param  int  $threshold  The threshold of days to evaluate the streak over.
+     * @return int The max streak for the threshold.
+     */
     private function calculateStreakForThreshold(User $user, int $threshold): int
     {
         $workoutDates = $this->getUniqueWorkoutDates($user, $threshold);
@@ -123,7 +153,11 @@ final class AchievementService
     }
 
     /**
-     * @return array<int, string>
+     * Get an array of unique dates the user worked out within a specific timeframe.
+     *
+     * @param  User  $user  The user to get the dates for.
+     * @param  int  $days  The number of days to look back for workouts.
+     * @return array<int, string> An array of unique 'Y-m-d' date strings.
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
@@ -145,7 +179,10 @@ final class AchievementService
     }
 
     /**
-     * @param  array<int, string>  $dates
+     * Calculate the maximum consecutive streak from an array of consecutive dates.
+     *
+     * @param  array<int, string>  $dates  The dates to calculate the streak from.
+     * @return int The max consecutive streak found in the dates array.
      */
     private function calculateMaxStreak(array $dates): int
     {
