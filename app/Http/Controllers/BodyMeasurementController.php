@@ -47,13 +47,12 @@ class BodyMeasurementController extends Controller
             ->limit(100)
             ->get();
 
-        $weightHistory = $this->statsService->getWeightHistory($this->user(), 365);
-        $bodyFatHistory = $this->statsService->getBodyFatHistory($this->user(), 365);
-
         return Inertia::render('Measurements/Index', [
             'measurements' => $measurements,
-            'weightHistory' => $weightHistory,
-            'bodyFatHistory' => $bodyFatHistory,
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // Consolidate deferred body stats to reduce the number of async requests (from 2 to 1)
+            // and use a single database query and cache key for both weight and body fat history.
+            'bodyStats' => Inertia::defer(fn (): array => $this->statsService->getBodyProgressOverview($this->user(), 365)),
         ]);
     }
 

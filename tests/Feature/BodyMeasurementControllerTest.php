@@ -23,7 +23,9 @@ test('user can view body measurements index', function (): void {
         ->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Measurements/Index')
             ->has('measurements', 3)
-            ->has('weightHistory')
+            ->loadDeferredProps(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+                ->has('bodyStats')
+            )
         );
 });
 

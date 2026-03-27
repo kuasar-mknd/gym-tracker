@@ -3,7 +3,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { Head, useForm, Deferred } from '@inertiajs/vue3'
 import { computed, ref, defineAsyncComponent } from 'vue'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
@@ -11,8 +12,14 @@ const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/B
 
 const props = defineProps({
     measurements: Array,
-    weightHistory: Array,
-    bodyFatHistory: Array,
+    // ⚡ Bolt: Consolidated deferred body stats
+    bodyStats: {
+        type: Object,
+        default: () => ({
+            weightHistory: [],
+            bodyFatHistory: [],
+        }),
+    },
 })
 
 const showAddForm = ref(false)
@@ -240,33 +247,52 @@ const chartOptions = {
             </GlassCard>
 
             <!-- Charts -->
-            <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
-                <!-- Weight Chart -->
-                <GlassCard>
-                    <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">
-                        Évolution Poids
-                    </h3>
-                    <div class="h-64">
-                        <WeightHistoryChart v-if="weightHistory && weightHistory.length > 0" :data="weightHistory" />
-                        <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                            Aucune donnée disponible
-                        </div>
+            <Deferred data="bodyStats">
+                <template #fallback>
+                    <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
+                        <GlassCard v-for="i in 2" :key="i">
+                            <GlassSkeleton width="120px" height="1rem" class="mb-4" />
+                            <div class="h-64">
+                                <GlassSkeleton height="100%" width="100%" variant="card" />
+                            </div>
+                        </GlassCard>
                     </div>
-                </GlassCard>
+                </template>
 
-                <!-- Body Fat Chart -->
-                <GlassCard>
-                    <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-pink-600 uppercase">
-                        Évolution Masse Grasse
-                    </h3>
-                    <div class="h-64">
-                        <BodyFatLineChart v-if="bodyFatHistory && bodyFatHistory.length > 0" :data="bodyFatHistory" />
-                        <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                            Aucune donnée disponible
+                <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
+                    <!-- Weight Chart -->
+                    <GlassCard>
+                        <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">
+                            Évolution Poids
+                        </h3>
+                        <div class="h-64">
+                            <WeightHistoryChart
+                                v-if="bodyStats?.weightHistory && bodyStats.weightHistory.length > 0"
+                                :data="bodyStats.weightHistory"
+                            />
+                            <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
+                                Aucune donnée disponible
+                            </div>
                         </div>
-                    </div>
-                </GlassCard>
-            </div>
+                    </GlassCard>
+
+                    <!-- Body Fat Chart -->
+                    <GlassCard>
+                        <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-pink-600 uppercase">
+                            Évolution Masse Grasse
+                        </h3>
+                        <div class="h-64">
+                            <BodyFatLineChart
+                                v-if="bodyStats?.bodyFatHistory && bodyStats.bodyFatHistory.length > 0"
+                                :data="bodyStats.bodyFatHistory"
+                            />
+                            <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
+                                Aucune donnée disponible
+                            </div>
+                        </div>
+                    </GlassCard>
+                </div>
+            </Deferred>
 
             <!-- History -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
