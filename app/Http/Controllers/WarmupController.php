@@ -26,6 +26,8 @@ class WarmupController extends Controller
      */
     public function index(): \Inertia\Response
     {
+        $this->authorize('viewAny', WarmupPreference::class);
+
         $preference = $this->user()->warmupPreference ?? new WarmupPreference([
             'bar_weight' => 20,
             'rounding_increment' => 2.5,
@@ -53,6 +55,14 @@ class WarmupController extends Controller
      */
     public function update(UpdateWarmupPreferenceRequest $request): \Illuminate\Http\RedirectResponse
     {
+        $preference = $this->user()->warmupPreference;
+
+        if ($preference) {
+            $this->authorize('update', $preference);
+        } else {
+            $this->authorize('create', WarmupPreference::class);
+        }
+
         $validated = $request->validated();
 
         $this->user()->warmupPreference()->updateOrCreate(
