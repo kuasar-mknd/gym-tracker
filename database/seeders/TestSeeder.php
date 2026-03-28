@@ -1,8 +1,9 @@
 <?php
+
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Fast;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
@@ -10,7 +11,12 @@ class TestSeeder extends Seeder
 {
     public function run(): void
     {
+        /** @var User|null $user */
         $user = User::where('email', 'test@example.com')->first();
+
+        if (! $user) {
+            return;
+        }
 
         // Add past completed fasts to ensure chart has data
         for ($i = 5; $i >= 1; $i--) {
@@ -23,7 +29,7 @@ class TestSeeder extends Seeder
                 'end_time' => $end,
                 'target_duration_minutes' => 16 * 60,
                 'status' => 'completed',
-                'type' => '16:8'
+                'type' => '16:8',
             ]);
         }
 
@@ -34,7 +40,7 @@ class TestSeeder extends Seeder
             'end_time' => Carbon::now()->subDays(5)->setHour(16)->setMinute(0),
             'target_duration_minutes' => 20 * 60,
             'status' => 'completed',
-            'type' => '20:4'
+            'type' => '20:4',
         ]);
     }
 }
