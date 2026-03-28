@@ -3,12 +3,18 @@ defineProps({
     message: {
         type: String,
     },
+    id: {
+        type: String,
+        default: null,
+    },
 })
 </script>
 
 <template>
     <div
         v-show="message"
+        :id="id"
+        role="alert"
         class="animate-fade-in mt-2 flex w-full cursor-default items-start gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:bg-red-500/20"
     >
         <span class="material-symbols-outlined mt-0.5 text-lg text-red-500 dark:text-red-400" aria-hidden="true"

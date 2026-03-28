@@ -134,11 +134,16 @@ final class VolumeStatsService
 
     public function getMonthlyVolumeComparison(User $user): VolumeComparison
     {
+        $now = now();
+        $currentStart = $now->copy()->startOfMonth();
+        $prevStart = $now->copy()->subMonthNoOverflow()->startOfMonth();
+        $prevEnd = $now->copy()->subMonthNoOverflow()->endOfMonth();
+
         $comparison = $this->calculateComparison(
             $user,
-            now()->startOfMonth(),
-            now()->subMonth()->startOfMonth(),
-            now()->subMonth()->endOfMonth()
+            $currentStart,
+            $prevStart,
+            $prevEnd
         );
 
         return new VolumeComparison(
@@ -225,12 +230,13 @@ final class VolumeStatsService
 
     private function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
     {
-        $query = $user->workouts();
+        $query = $user->workouts()
+            ->where('user_id', $user->id);
 
         if ($end) {
-            $query->whereBetween('started_at', [$start, $end]);
+            $query->whereBetween('started_at', [$start->toDateTimeString(), $end->toDateTimeString()]);
         } else {
-            $query->where('started_at', '>=', $start);
+            $query->where('started_at', '>=', $start->toDateTimeString());
         }
 
         return (float) $query->sum('workout_volume');

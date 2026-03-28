@@ -82,7 +82,7 @@ class StatsServiceTest extends TestCase
         // Previous month workout
         $workoutPrev = Workout::factory()->create([
             'user_id' => $user->id,
-            'started_at' => now()->subMonth()->startOfMonth(),
+            'started_at' => now()->subMonthNoOverflow()->startOfMonth(),
         ]);
         $linePrev = WorkoutLine::factory()->create(['workout_id' => $workoutPrev->id]);
         Set::factory()->create(['workout_line_id' => $linePrev->id, 'weight' => 40, 'reps' => 10]); // 400
