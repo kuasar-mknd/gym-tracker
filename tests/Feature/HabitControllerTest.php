@@ -7,12 +7,12 @@ use App\Models\HabitLog;
 use App\Models\User;
 use Carbon\Carbon;
 
-beforeEach(function () {
+beforeEach(function (): void {
     $this->user = User::factory()->create();
 });
 
-describe('HabitController Index', function () {
-    it('allows an authenticated user to view their habits', function () {
+describe('HabitController Index', function (): void {
+    it('allows an authenticated user to view their habits', function (): void {
         Habit::factory()->count(3)->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)->get(route('habits.index'));
@@ -20,15 +20,15 @@ describe('HabitController Index', function () {
         $response->assertOk();
     });
 
-    it('prevents guests from viewing habits', function () {
+    it('prevents guests from viewing habits', function (): void {
         $response = $this->get(route('habits.index'));
 
         $response->assertRedirect(route('login'));
     });
 });
 
-describe('HabitController Store', function () {
-    it('allows a user to create a habit', function () {
+describe('HabitController Store', function (): void {
+    it('allows a user to create a habit', function (): void {
         $habitData = [
             'name' => 'Drink Water',
             'description' => 'Drink 2L of water daily',
@@ -50,7 +50,7 @@ describe('HabitController Store', function () {
         ]);
     });
 
-    it('returns validation error if name is missing', function () {
+    it('returns validation error if name is missing', function (): void {
         $habitData = [
             'goal_times_per_week' => 7,
         ];
@@ -61,7 +61,7 @@ describe('HabitController Store', function () {
         $this->assertDatabaseCount('habits', 0);
     });
 
-    it('returns validation error if goal_times_per_week is invalid', function () {
+    it('returns validation error if goal_times_per_week is invalid', function (): void {
         $habitData = [
             'name' => 'Test Habit',
             'goal_times_per_week' => 8, // Over max 7
@@ -74,8 +74,8 @@ describe('HabitController Store', function () {
     });
 });
 
-describe('HabitController Update', function () {
-    it('allows a user to update their own habit', function () {
+describe('HabitController Update', function (): void {
+    it('allows a user to update their own habit', function (): void {
         $habit = Habit::factory()->create(['user_id' => $this->user->id]);
 
         $updateData = [
@@ -95,7 +95,7 @@ describe('HabitController Update', function () {
         ]);
     });
 
-    it('returns validation error if updated goal_times_per_week is invalid', function () {
+    it('returns validation error if updated goal_times_per_week is invalid', function (): void {
         $habit = Habit::factory()->create(['user_id' => $this->user->id]);
 
         $updateData = [
@@ -107,7 +107,7 @@ describe('HabitController Update', function () {
         $response->assertInvalid(['goal_times_per_week']);
     });
 
-    it('prevents a user from updating another user\'s habit', function () {
+    it('prevents a user from updating another user\'s habit', function (): void {
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
 
@@ -126,8 +126,8 @@ describe('HabitController Update', function () {
     });
 });
 
-describe('HabitController Destroy', function () {
-    it('allows a user to delete their own habit', function () {
+describe('HabitController Destroy', function (): void {
+    it('allows a user to delete their own habit', function (): void {
         $habit = Habit::factory()->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)->delete(route('habits.destroy', $habit));
@@ -140,7 +140,7 @@ describe('HabitController Destroy', function () {
         ]);
     });
 
-    it('prevents a user from deleting another user\'s habit', function () {
+    it('prevents a user from deleting another user\'s habit', function (): void {
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
 
@@ -154,8 +154,8 @@ describe('HabitController Destroy', function () {
     });
 });
 
-describe('HabitController Toggle', function () {
-    it('creates a log if it does not exist for the date (checks the habit)', function () {
+describe('HabitController Toggle', function (): void {
+    it('creates a log if it does not exist for the date (checks the habit)', function (): void {
         $habit = Habit::factory()->create(['user_id' => $this->user->id]);
         $date = Carbon::today()->format('Y-m-d');
 
@@ -171,7 +171,7 @@ describe('HabitController Toggle', function () {
         ]);
     });
 
-    it('deletes a log if it exists for the date (unchecks the habit)', function () {
+    it('deletes a log if it exists for the date (unchecks the habit)', function (): void {
         $habit = Habit::factory()->create(['user_id' => $this->user->id]);
         $date = Carbon::today()->format('Y-m-d');
 
@@ -192,7 +192,7 @@ describe('HabitController Toggle', function () {
         ]);
     });
 
-    it('returns validation error for toggle if date is missing or invalid', function () {
+    it('returns validation error for toggle if date is missing or invalid', function (): void {
         $habit = Habit::factory()->create(['user_id' => $this->user->id]);
 
         $response = $this->actingAs($this->user)->post(route('habits.toggle', $habit), [
@@ -202,7 +202,7 @@ describe('HabitController Toggle', function () {
         $response->assertInvalid(['date']);
     });
 
-    it('prevents a user from toggling another user\'s habit', function () {
+    it('prevents a user from toggling another user\'s habit', function (): void {
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
         $date = Carbon::today()->format('Y-m-d');
