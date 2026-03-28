@@ -14,7 +14,7 @@ class FetchBodyPartMeasurementShowAction
      *
      * @param  \App\Models\User  $user
      * @param  string  $part
-     * @return \Illuminate\Database\Eloquent\Collection
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\BodyPartMeasurement>
      */
     public function execute(User $user, string $part): Collection
     {

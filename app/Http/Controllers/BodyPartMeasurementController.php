@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\Measurements\FetchBodyPartMeasurementsIndexAction;
 use App\Actions\Measurements\FetchBodyPartMeasurementShowAction;
+use App\Actions\Measurements\FetchBodyPartMeasurementsIndexAction;
 use App\Http\Requests\BodyPartMeasurementStoreRequest;
 use App\Models\BodyPartMeasurement;
 use Inertia\Inertia;
