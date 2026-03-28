@@ -64,6 +64,8 @@ class StatsController extends Controller
      */
     public function exercise(Exercise $exercise): \Illuminate\Http\JsonResponse
     {
+        $this->authorize('view', $exercise);
+
         return response()->json([
             'progress' => $this->statsService->getExercise1RMProgress($this->user(), $exercise->id),
         ]);
