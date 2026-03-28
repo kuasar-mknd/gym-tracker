@@ -21,7 +21,9 @@ import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+
+const FastingHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/FastingHistoryChart.vue'))
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import duration from 'dayjs/plugin/duration'
@@ -235,11 +237,27 @@ const formatHistoryDuration = (start, end) => {
                 </form>
             </GlassCard>
 
-            <!-- History Section -->
+            <!-- History Analytics Chart Section -->
+            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
+                <div class="mb-4">
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Durée des jeûnes</h3>
+                    <p class="text-text-muted text-xs font-semibold">Historique récent (heures)</p>
+                </div>
+
+                <div v-if="history.data.filter((f) => f.end_time).length === 0" class="py-8 text-center">
+                    <span class="material-symbols-outlined mb-2 text-4xl text-slate-200">show_chart</span>
+                    <p class="text-text-muted text-sm font-medium">Pas assez de données pour afficher le graphique.</p>
+                </div>
+                <div v-else>
+                    <FastingHistoryChart :data="history.data" />
+                </div>
+            </GlassCard>
+
+            <!-- History Details Section -->
             <GlassCard
                 class="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
             >
-                <h3 class="text-text-main mb-4 text-lg font-semibold">Historique</h3>
+                <h3 class="text-text-main mb-4 text-lg font-semibold">Historique détaillé</h3>
                 <div v-if="history.data.length === 0" class="text-text-muted py-4 text-center">
                     Aucun historique de jeûne.
                 </div>

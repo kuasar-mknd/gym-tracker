@@ -261,15 +261,14 @@ const latestBodyFat = computed(() => {
                                 </div>
                                 <div class="text-text-muted text-sm font-medium">
                                     {{
-                                        new Date(measurement.measured_at.substring(0, 10) + 'T00:00:00').toLocaleDateString(
-                                            'fr-FR',
-                                            {
-                                                weekday: 'short',
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric',
-                                            },
-                                        )
+                                        new Date(
+                                            measurement.measured_at.substring(0, 10) + 'T00:00:00',
+                                        ).toLocaleDateString('fr-FR', {
+                                            weekday: 'short',
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: 'numeric',
+                                        })
                                     }}
                                 </div>
                                 <div v-if="measurement.notes" class="text-text-muted/70 mt-1 text-xs italic">
