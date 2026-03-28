@@ -141,7 +141,7 @@ test('stats page calculates monthly comparison correctly', function (): void {
     // Previous Month Workout
     $prevWorkout = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => now()->subMonth()->startOfMonth()->addDay(),
+        'started_at' => now()->subMonthNoOverflow()->startOfMonth()->addDay(),
     ]);
     $prevLine = WorkoutLine::factory()->create(['workout_id' => $prevWorkout->id]);
     Set::factory()->create([
