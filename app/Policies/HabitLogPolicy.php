@@ -28,9 +28,13 @@ final class HabitLogPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(): bool
+    public function create(User $user, ?\App\Models\Habit $habit = null): bool
     {
-        return true;
+        if ($habit === null) {
+            return true;
+        }
+
+        return $user->id === $habit->user_id;
     }
 
     /**

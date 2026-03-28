@@ -69,9 +69,10 @@ class StatsServiceTest extends TestCase
 
     public function test_can_calculate_monthly_volume_comparison(): void
     {
+        \Carbon\Carbon::setTestNow('2024-03-15 12:00:00');
         $user = User::factory()->create();
 
-        // Current month workout
+        // Current month workout (March)
         $workoutCurrent = Workout::factory()->create([
             'user_id' => $user->id,
             'started_at' => now()->startOfMonth(),
@@ -79,7 +80,7 @@ class StatsServiceTest extends TestCase
         $lineCurrent = WorkoutLine::factory()->create(['workout_id' => $workoutCurrent->id]);
         Set::factory()->create(['workout_line_id' => $lineCurrent->id, 'weight' => 50, 'reps' => 10]); // 500
 
-        // Previous month workout
+        // Previous month workout (February)
         $workoutPrev = Workout::factory()->create([
             'user_id' => $user->id,
             'started_at' => now()->subMonth()->startOfMonth(),
@@ -93,6 +94,8 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(400, $comparison->previous_volume);
         $this->assertEquals(100, $comparison->difference);
         $this->assertEquals(25.0, $comparison->percentage);
+
+        \Carbon\Carbon::setTestNow();
     }
 
     public function test_can_calculate_weekly_volume_trend(): void
