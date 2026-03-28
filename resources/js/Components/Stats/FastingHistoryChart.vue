@@ -15,7 +15,7 @@ const props = defineProps({
 const chartData = computed(() => {
     // We only want completed fasts with an end_time, sorted chronologically by start_time
     const completedFasts = [...props.data]
-        .filter((fast) => fast.end_time)
+        .filter(fast => fast.end_time)
         .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
 
     return {
