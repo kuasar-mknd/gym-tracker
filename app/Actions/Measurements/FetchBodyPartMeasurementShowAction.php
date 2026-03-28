@@ -12,8 +12,6 @@ class FetchBodyPartMeasurementShowAction
     /**
      * Fetch the measurement history for a specific body part.
      *
-     * @param  \App\Models\User  $user
-     * @param  string  $part
      * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\BodyPartMeasurement>
      */
     public function execute(User $user, string $part): Collection
