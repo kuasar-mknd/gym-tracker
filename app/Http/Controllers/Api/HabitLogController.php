@@ -52,9 +52,12 @@ class HabitLogController extends Controller
     #[OA\Response(response: 422, description: 'Validation error')]
     public function store(StoreHabitLogRequest $request): \Illuminate\Http\JsonResponse
     {
-        $this->authorize('create', HabitLog::class);
-
         $validated = $request->validated();
+
+        /** @var \App\Models\Habit $habit */
+        $habit = \App\Models\Habit::findOrFail($validated['habit_id']);
+
+        $this->authorize('create', [HabitLog::class, $habit]);
 
         /** @var HabitLog $log */
         $log = HabitLog::create($validated);
