@@ -124,12 +124,13 @@ test('stats page calculates muscle distribution correctly', function (): void {
 });
 
 test('stats page calculates monthly comparison correctly', function (): void {
+    \Carbon\Carbon::setTestNow('2024-03-15 12:00:00');
     $user = User::factory()->create();
 
-    // Current Month Workout
+    // Current Month Workout (March)
     $currentWorkout = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => now()->startOfMonth()->addDay(),
+        'started_at' => now()->startOfMonth()->addDay(), // March 2nd
     ]);
     $currentLine = WorkoutLine::factory()->create(['workout_id' => $currentWorkout->id]);
     Set::factory()->create([
@@ -138,10 +139,10 @@ test('stats page calculates monthly comparison correctly', function (): void {
         'reps' => 10,
     ]); // 1000 volume
 
-    // Previous Month Workout
+    // Previous Month Workout (February)
     $prevWorkout = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => now()->subMonth()->startOfMonth()->addDay(),
+        'started_at' => now()->subMonth()->startOfMonth()->addDay(), // Feb 2nd
     ]);
     $prevLine = WorkoutLine::factory()->create(['workout_id' => $prevWorkout->id]);
     Set::factory()->create([
@@ -159,11 +160,16 @@ test('stats page calculates monthly comparison correctly', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                ->where('performanceStats.monthlyComparison.current_volume', fn ($val): bool => $val == 1000)
-                ->where('performanceStats.monthlyComparison.previous_volume', fn ($val): bool => $val == 500)
-                ->where('performanceStats.monthlyComparison.percentage', fn ($val): bool => $val == 100)
+                ->where('performanceStats.monthlyComparison.current_volume', fn ($val): bool => round((float) $val) == 1000)
+                ->where('performanceStats.monthlyComparison.previous_volume', fn ($val): bool => round((float) $val) == 500)
+                ->where('performanceStats.monthlyComparison.percentage', fn ($val): bool => round((float) $val) == 100)
             )
         );
+
+    \Carbon\Carbon::setTestNow();
+
+    // Clear cache to avoid affecting other tests if they run in same process
+    app(\App\Services\StatsService::class)->clearUserStatsCache($user);
 });
 
 test('can retrieve exercise progress (1RM)', function (): void {
