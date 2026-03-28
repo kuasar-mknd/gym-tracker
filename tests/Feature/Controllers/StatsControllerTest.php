@@ -15,7 +15,7 @@ test('authenticated user can view stats dashboard', function (): void {
         ->get(route('stats.index'))
         ->assertStatus(200)
         ->assertInertia(
-            fn(Assert $page): Assert => $page
+            fn (Assert $page): Assert => $page
                 ->component('Stats/Index')
                 ->has('latestWeight')
                 ->has('weightChange')
@@ -32,12 +32,12 @@ test('stats dashboard loads deferred performance and body stats props', function
         ->get(route('stats.index'))
         ->assertStatus(200)
         ->assertInertia(
-            fn(Assert $page): Assert => $page
+            fn (Assert $page): Assert => $page
                 ->component('Stats/Index')
                 ->loadDeferredProps(
-                    fn(Assert $page): Assert => $page
-                    ->has('performanceStats')
-                    ->has('bodyStats')
+                    fn (Assert $page): Assert => $page
+                        ->has('performanceStats')
+                        ->has('bodyStats')
                 )
         );
 });
@@ -54,7 +54,7 @@ test('stats dashboard accepts invalid period and passes it through to view while
         ->get(route('stats.index', ['period' => 'invalid-period']))
         ->assertStatus(200)
         ->assertInertia(
-            fn(Assert $page): Assert => $page
+            fn (Assert $page): Assert => $page
                 ->component('Stats/Index')
                 ->where('selectedPeriod', 'invalid-period')
         );
