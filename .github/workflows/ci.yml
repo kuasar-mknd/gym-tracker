@@ -164,10 +164,7 @@ jobs:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
-            - name: Install Chrome Driver
-              run: php artisan dusk:chrome-driver --detect
-
-            - name: Run Dusk Tests
+            - name: Setup Environment
               run: |
                   # Create fresh .env
                   cat <<EOF > .env
@@ -200,6 +197,11 @@ jobs:
                   cp .env .env.testing
                   cp .env .env.dusk.local
 
+            - name: Install Chrome Driver
+              run: php artisan dusk:chrome-driver --detect
+
+            - name: Run Dusk Tests
+              run: |
                   chmod -R 777 storage bootstrap/cache
                   php artisan config:clear
 
