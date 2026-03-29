@@ -85,6 +85,8 @@ const errorId = computed(() => {
                 :value="modelValue"
                 @input="$emit('update:modelValue', $event.target.value)"
                 @focus="selectOnFocus ? $event.target.select() : null"
+                :aria-invalid="!!error"
+                :aria-describedby="errorId"
                 class="glass-input-fat w-full"
                 inputmode="decimal"
                 v-bind="$attrs"
