@@ -13,7 +13,7 @@ defineProps({
 <template>
     <!-- Duration Distribution Chart -->
     <section
-        class="glass-panel-light animate-slide-up relative overflow-hidden rounded-3xl p-6"
+        class="animate-slide-up relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
         style="animation-delay: 0.17s"
     >
         <div class="relative z-10 mb-6">
