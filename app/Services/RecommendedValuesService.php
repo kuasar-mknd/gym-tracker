@@ -31,15 +31,16 @@ final class RecommendedValuesService
             return $cached;
         }
 
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Replaced redundant whereHas('workout') subquery with direct WHERE clauses
+        // on the already joined 'workouts' table to prevent an unnecessary EXISTS subquery execution.
         $lastLine = WorkoutLine::query()
-            ->where('exercise_id', $line->exercise_id)
-            ->whereHas('workout', function ($query) use ($workout): void {
-                $query->where('user_id', $workout->user_id)
-                    ->where('id', '!=', $workout->id)
-                    ->where('started_at', '<', $workout->started_at);
-            })
             ->with(['sets'])
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+            ->where('workout_lines.exercise_id', $line->exercise_id)
+            ->where('workouts.user_id', $workout->user_id)
+            ->where('workouts.id', '!=', $workout->id)
+            ->where('workouts.started_at', '<', $workout->started_at)
             ->orderByDesc('workouts.started_at')
             ->select('workout_lines.*')
             ->first();
