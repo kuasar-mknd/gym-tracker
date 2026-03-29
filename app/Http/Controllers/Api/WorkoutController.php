@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\CreateWorkoutAction;
 use App\Http\Requests\WorkoutStoreRequest;
 use App\Http\Requests\WorkoutUpdateRequest;
 use App\Http\Resources\WorkoutResource;
@@ -68,17 +69,11 @@ class WorkoutController extends Controller
     )]
     #[OA\Response(response: 201, description: 'Created successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function store(WorkoutStoreRequest $request): WorkoutResource
+    public function store(WorkoutStoreRequest $request, CreateWorkoutAction $createWorkoutAction): WorkoutResource
     {
         $this->authorize('create', Workout::class);
 
-        $validated = $request->validated();
-
-        $workout = new Workout($validated);
-        $workout->user_id = $this->user()->id;
-        $workout->save();
-
-        \App\Jobs\RecalculateUserStats::dispatch($this->user());
+        $workout = $createWorkoutAction->execute($this->user(), $request->validated());
 
         return new WorkoutResource($workout);
     }
