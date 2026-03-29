@@ -49,3 +49,7 @@
 ## 2026-03-26 - [Consolidating Mixed Deferred Props]
 **Learning:** Even when deferred data comes from different sources (e.g., cached exercise lists and analytical charts), consolidating them into a single deferred Inertia prop provides a significant performance win. It reduces the number of XHR requests, cutting down on HTTP overhead and TLS handshakes, which is critical for mobile performance. It also ensures the UI transitions from "loading" to "ready" in a single, synchronized step rather than multiple staggered "pops."
 **Action:** Always look for opportunities to merge all deferred props on a page into a single `deferredData` object, even if they represent different logical domains.
+
+## 2025-03-30 - Redundant whereHas with join
+**Learning:** Found a case where Eloquent `whereHas` was used alongside a direct `join` to the exact same related table in order to sort. This caused a costly redundant `EXISTS()` subquery.
+**Action:** When a query already has an `INNER JOIN` to a related table (e.g., for ordering), avoid using `whereHas` for filtering. Instead, apply direct `where` clauses onto the joined table's columns to eliminate the subquery execution and significantly improve performance.
