@@ -9,9 +9,24 @@ use App\Models\WorkoutLine;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Service for calculating and managing recommended workout values.
+ *
+ * This service determines the optimal weight, reps, distance, and duration
+ * for a specific exercise within a workout line, based on the user's past
+ * performance data. It uses caching to improve performance for frequently
+ * requested recommendations.
+ */
 final class RecommendedValuesService
 {
     /**
+     * Get the recommended values for a given workout line.
+     *
+     * Analyzes previous workout history for the same exercise and user to
+     * suggest the most likely weight, repetitions, distance, and duration.
+     * Caches the result to minimize database queries.
+     *
+     * @param  WorkoutLine  $line  The workout line requiring recommended values.
      * @return array{weight: float, reps: int, distance_km: float, duration_seconds: int}
      */
     public function getRecommendedValues(WorkoutLine $line): array
@@ -54,8 +69,13 @@ final class RecommendedValuesService
     /**
      * Batch-load recommended values for a collection of workout lines.
      *
-     * @param  Collection<int, WorkoutLine>  $lines
-     * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
+     * Efficiently resolves recommended values for multiple workout lines
+     * simultaneously, utilizing caching and minimizing database lookups.
+     * Automatically applies these resolved values back onto the provided models.
+     *
+     * @param  Collection<int, WorkoutLine>  $lines  A collection of workout lines to populate.
+     * @param  int  $userId  The ID of the user the lines belong to.
+     * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}> A dictionary mapping exercise IDs to their recommended values.
      */
     public function batchRecommendedValues(Collection $lines, int $userId): array
     {
@@ -81,7 +101,14 @@ final class RecommendedValuesService
     }
 
     /**
-     * @param  array<int, int>  $exerciseIds
+     * Resolve the Workout model associated with the given ID.
+     *
+     * Ensures that the workout ID is valid and that there are related
+     * exercise IDs before attempting to retrieve the model.
+     *
+     * @param  int|null  $workoutId  The ID of the workout to resolve.
+     * @param  array<int, int>  $exerciseIds  The array of associated exercise IDs.
+     * @return Workout|null The resolved Workout model, or null if invalid or missing.
      */
     private function resolveWorkout(?int $workoutId, array $exerciseIds): ?Workout
     {
@@ -93,9 +120,15 @@ final class RecommendedValuesService
     }
 
     /**
-     * @param  Collection<int, WorkoutLine>  $lines
-     * @param  array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>  $results
-     * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults
+     * Apply calculated recommended values directly to the WorkoutLine models.
+     *
+     * Sets a non-persisted 'recommended_values' attribute on each line,
+     * falling back to default values if no recommendation is found.
+     *
+     * @param  Collection<int, WorkoutLine>  $lines  The lines to update.
+     * @param  array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>  $results  The calculated results keyed by exercise ID.
+     * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults  The default fallback values.
+     * @return void
      */
     private function applyRecommendedValuesToLines(Collection $lines, array $results, array $defaults): void
     {
@@ -105,7 +138,9 @@ final class RecommendedValuesService
     }
 
     /**
-     * @return array{weight: float, reps: int, distance_km: float, duration_seconds: int}
+     * Get the default baseline values for a workout line.
+     *
+     * @return array{weight: float, reps: int, distance_km: float, duration_seconds: int} Default set parameters.
      */
     private function getDefaultValues(): array
     {
@@ -118,7 +153,13 @@ final class RecommendedValuesService
     }
 
     /**
-     * @return array{weight: float, reps: int, distance_km: float, duration_seconds: int}
+     * Calculate recommended values based on a previous workout line's sets.
+     *
+     * Determines the most frequent combination of weight, reps, distance,
+     * and duration used across all sets in that previous line.
+     *
+     * @param  WorkoutLine|null  $lastLine  The most recent previous workout line for the exercise.
+     * @return array{weight: float, reps: int, distance_km: float, duration_seconds: int} The most commonly used set parameters.
      */
     private function calculateFromLine(?WorkoutLine $lastLine): array
     {
@@ -142,8 +183,17 @@ final class RecommendedValuesService
     }
 
     /**
-     * @param  array<int, int>  $exerciseIds
-     * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
+     * Retrieve recommended values from cache, or fetch them if missing.
+     *
+     * Iterates through required exercise IDs. Yields cached results if available;
+     * otherwise, delegates to fetch the uncached values from the database and
+     * merges them into the final result set.
+     *
+     * @param  array<int, int>  $exerciseIds  The list of exercise IDs to retrieve values for.
+     * @param  int  $userId  The user ID associated with the recommendations.
+     * @param  int  $workoutId  The current workout ID.
+     * @param  Workout  $workout  The current workout instance.
+     * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}> Results mapped by exercise ID.
      */
     private function getResultsFromCacheOrFetch(array $exerciseIds, int $userId, int $workoutId, Workout $workout): array
     {
@@ -174,8 +224,17 @@ final class RecommendedValuesService
     }
 
     /**
-     * @param  array<int>  $uncachedExerciseIds
-     * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
+     * Fetch un-cached recommended values directly from the database.
+     *
+     * Performs a single query to find the latest previous workout line for each
+     * requested exercise, calculates the recommended values from those lines,
+     * caches the individual results, and returns them.
+     *
+     * @param  array<int, int>  $uncachedExerciseIds  Exercise IDs lacking cached data.
+     * @param  int  $workoutId  The current workout ID (to exclude from search).
+     * @param  int  $userId  The user ID to constrain the search.
+     * @param  Workout  $workout  The current workout to establish the timeline limit.
+     * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}> Newly calculated results mapped by exercise ID.
      */
     private function fetchUncachedRecommendedValues(array $uncachedExerciseIds, int $workoutId, int $userId, Workout $workout): array
     {
