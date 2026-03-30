@@ -3,10 +3,11 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent } from 'vue'
-const HabitHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HabitHistoryChart.vue'))
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { Head, useForm, router, Deferred } from '@inertiajs/vue3'
+import { ref, defineAsyncComponent } from 'vue'
 
+const HabitHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HabitHistoryChart.vue'))
 const HabitConsistencyChart = defineAsyncComponent(() => import('@/Components/Stats/HabitConsistencyChart.vue'))
 
 /**
@@ -31,8 +32,11 @@ const props = defineProps({
      * @type {Array<{date: string, day: string, day_name: string, day_short: string, day_num: number, is_today: boolean}>}
      */
     weekDates: Array,
-    consistencyData: Array,
-    history: Array,
+    /**
+     * Consolidated statistical data (Deferred Loading).
+     * @type {{consistencyData: Array, history: Array}}
+     */
+    stats: Object,
 })
 
 const showAddForm = ref(false)
@@ -215,27 +219,54 @@ const getProgressPercent = (habit) => {
         </template>
 
         <div class="space-y-6">
-            <!-- Consistency Chart -->
-            <GlassCard v-if="consistencyData && consistencyData.some((d) => d.count > 0)" class="animate-slide-up">
-                <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Régularité</h3>
-                    <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
-                </div>
-                <HabitConsistencyChart :data="consistencyData" />
-            </GlassCard>
+            <!-- Deferred Analytical Stats -->
+            <Deferred data="stats">
+                <template #fallback>
+                    <div class="space-y-6">
+                        <GlassCard class="animate-pulse">
+                            <div class="mb-4">
+                                <GlassSkeleton width="120px" height="1.5rem" class="mb-2" />
+                                <GlassSkeleton width="80px" height="0.75rem" />
+                            </div>
+                            <GlassSkeleton width="100%" height="200px" border-radius="1rem" />
+                        </GlassCard>
+                        <GlassCard class="animate-pulse">
+                            <div class="mb-4">
+                                <GlassSkeleton width="120px" height="1.5rem" class="mb-2" />
+                                <GlassSkeleton width="150px" height="0.75rem" />
+                            </div>
+                            <GlassSkeleton width="100%" height="250px" border-radius="1rem" />
+                        </GlassCard>
+                    </div>
+                </template>
 
-            <!-- Stats Chart -->
-            <GlassCard
-                v-if="history && history.some((d) => d.count > 0)"
-                class="animate-slide-up"
-                style="animation-delay: 0.1s"
-            >
-                <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Constance</h3>
-                    <p class="text-text-muted text-xs font-semibold">Habitudes complétées (30 jours)</p>
+                <div class="space-y-6">
+                    <!-- Consistency Chart -->
+                    <GlassCard
+                        v-if="stats.consistencyData && stats.consistencyData.some((d) => d.count > 0)"
+                        class="animate-slide-up"
+                    >
+                        <div class="mb-4">
+                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Régularité</h3>
+                            <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
+                        </div>
+                        <HabitConsistencyChart :data="stats.consistencyData" />
+                    </GlassCard>
+
+                    <!-- Stats Chart -->
+                    <GlassCard
+                        v-if="stats.history && stats.history.some((d) => d.count > 0)"
+                        class="animate-slide-up"
+                        style="animation-delay: 0.1s"
+                    >
+                        <div class="mb-4">
+                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Constance</h3>
+                            <p class="text-text-muted text-xs font-semibold">Habitudes complétées (30 jours)</p>
+                        </div>
+                        <HabitHistoryChart :data="stats.history" />
+                    </GlassCard>
                 </div>
-                <HabitHistoryChart :data="history" />
-            </GlassCard>
+            </Deferred>
 
             <!-- Weekly Calendar Header -->
             <GlassCard class="overflow-hidden p-0">

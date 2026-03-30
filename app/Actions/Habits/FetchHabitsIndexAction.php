@@ -10,14 +10,15 @@ use Carbon\Carbon;
 final class FetchHabitsIndexAction
 {
     /**
+     * Get immediate data for fast initial rendering of the habits page.
+     * ⚡ Bolt: Fast queries only.
+     *
      * @return array{
      *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
-     *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>,
-     *     consistencyData: array<int, array{date: string, count: int}>,
-     *     history: array<int, array{date: string, full_date: string, count: int}>
+     *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
      * }
      */
-    public function execute(User $user): array
+    public function getImmediateData(User $user): array
     {
         $startOfWeek = Carbon::now()->startOfWeek();
         $endOfWeek = Carbon::now()->endOfWeek();
@@ -31,8 +32,27 @@ final class FetchHabitsIndexAction
             ])
             ->get();
 
+        return [
+            'habits' => $habits,
+            'weekDates' => $this->getWeekDates(),
+        ];
+    }
+
+    /**
+     * Get heavy statistical data for the habits dashboard.
+     * ⚡ Bolt: Consolidated into a single deferred prop to reduce XHR requests.
+     *
+     * @return array{
+     *     consistencyData: array<int, array{date: string, count: int}>,
+     *     history: array<int, array{date: string, full_date: string, count: int}>
+     * }
+     */
+    public function getStatsData(User $user): array
+    {
         // Calculate consistency for the last 30 days
-        $past30Days = Carbon::now()->subDays(29)->startOfDay();
+        $now = Carbon::now();
+        $past30Days = $now->copy()->subDays(29)->startOfDay();
+
         $consistencyStats = \App\Models\HabitLog::query()
             ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
             ->where('habits.user_id', $user->id)
@@ -45,7 +65,7 @@ final class FetchHabitsIndexAction
         $history = []; // For Bar Chart
 
         for ($i = 29; $i >= 0; $i--) {
-            $dateObj = Carbon::now()->subDays($i);
+            $dateObj = $now->copy()->subDays($i);
             $dateStr = $dateObj->format('Y-m-d');
             // @phpstan-ignore-next-line
             $count = (int) ($consistencyStats[$dateStr] ?? 0);
@@ -65,11 +85,27 @@ final class FetchHabitsIndexAction
         }
 
         return [
-            'habits' => $habits,
-            'weekDates' => $this->getWeekDates(),
             'consistencyData' => $consistencyData,
             'history' => $history,
         ];
+    }
+
+    /**
+     * Legacy method for backward compatibility if needed, but should be replaced by deferred loading.
+     *
+     * @return array{
+     *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
+     *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>,
+     *     consistencyData: array<int, array{date: string, count: int}>,
+     *     history: array<int, array{date: string, full_date: string, count: int}>
+     * }
+     */
+    public function execute(User $user): array
+    {
+        return array_merge(
+            $this->getImmediateData($user),
+            $this->getStatsData($user)
+        );
     }
 
     /**

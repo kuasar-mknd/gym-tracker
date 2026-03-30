@@ -36,8 +36,13 @@ class HabitController extends Controller
     public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
     {
         $this->authorize('viewAny', Habit::class);
+        $user = $this->user();
 
-        return Inertia::render('Habits/Index', $fetchHabits->execute($this->user()));
+        return Inertia::render('Habits/Index', [
+            ...$fetchHabits->getImmediateData($user),
+            // ⚡ Bolt: Consolidate deferred props to reduce the number of async requests and backend executions.
+            'stats' => Inertia::defer(fn (): array => $fetchHabits->getStatsData($user)),
+        ]);
     }
 
     /**
