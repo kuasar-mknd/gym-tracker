@@ -167,13 +167,16 @@ jobs:
             - name: Install Chrome Driver
               run: php artisan dusk:chrome-driver --detect
 
+            - name: Start Chrome Driver
+              run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
+
             - name: Run Dusk Tests
               run: |
                   # Create fresh .env
                   cat <<EOF > .env
                   APP_NAME=GymTracker
                   APP_ENV=testing
-                  APP_KEY=$(php artisan key:generate --show --no-ansi)
+                  APP_KEY=
                   APP_DEBUG=true
                   APP_URL=http://127.0.0.1:8000
 
@@ -191,8 +194,12 @@ jobs:
 
                   TELESCOPE_ENABLED=false
                   PULSE_ENABLED=false
+                  DUSK_DRIVER_URL=http://127.0.0.1:9515
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
                   EOF
+
+                  # Generate the application key after the file is fully written
+                  php artisan key:generate
 
                   # Dusk automatically uses .env.testing if present, we must override it
                   cp .env .env.testing
