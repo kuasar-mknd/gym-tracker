@@ -6,12 +6,10 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
-use function Pest\Laravel\delete;
-use function Pest\Laravel\patch;
-use function Pest\Laravel\post;
 
 describe('SetController Store', function (): void {
     it('allows user to add a set to their active workout', function (): void {

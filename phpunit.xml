@@ -28,7 +28,7 @@
         <env name="DB_DATABASE" value="gym_tracker_testing"/>
         <env name="DB_USERNAME" value="sail"/>
         <env name="DB_PASSWORD" value="password"/>
-        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_HOST" value="mysql"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
