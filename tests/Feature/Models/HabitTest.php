@@ -16,7 +16,10 @@ test('user can view habits page', function (): void {
             ->component('Habits/Index')
             ->has('habits')
             ->has('weekDates')
-            ->has('consistencyData')
+            ->loadDeferredProps(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+                ->has('stats.consistencyData')
+                ->has('stats.history')
+            )
         );
 });
 
