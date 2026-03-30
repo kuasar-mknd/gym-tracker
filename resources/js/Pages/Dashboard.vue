@@ -1,7 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, Deferred } from '@inertiajs/vue3'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
+import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import QuickActions from '@/Components/Dashboard/QuickActions.vue'
 import WeeklyVolumeSection from '@/Components/Dashboard/WeeklyVolumeSection.vue'
 import DurationSection from '@/Components/Dashboard/DurationSection.vue'
@@ -42,16 +43,26 @@ const startWorkout = () => {
 
             <QuickActions :processing="form.processing" @start-workout="startWorkout" />
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <WeeklyVolumeSection
-                    :weekly-volume-stats="weeklyVolume?.stats"
-                    :weekly-volume-trend="weeklyVolume?.trend"
-                />
+            <Deferred data="weeklyVolume,workoutDistributions">
+                <template #fallback>
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <GlassSkeleton class="h-64 w-full" />
+                        <GlassSkeleton class="h-64 w-full" />
+                    </div>
+                    <GlassSkeleton class="mt-4 h-64 w-full" />
+                </template>
 
-                <DurationSection :duration-distribution="workoutDistributions?.duration" />
-            </div>
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <WeeklyVolumeSection
+                        :weekly-volume-stats="weeklyVolume?.stats"
+                        :weekly-volume-trend="weeklyVolume?.trend"
+                    />
 
-            <TimeOfDaySection :time-of-day-distribution="workoutDistributions?.time_of_day" />
+                    <DurationSection :duration-distribution="workoutDistributions?.duration" />
+                </div>
+
+                <TimeOfDaySection :time-of-day-distribution="workoutDistributions?.time_of_day" />
+            </Deferred>
 
             <RecentVolumeSection :recent-workouts="recentWorkouts" />
 
