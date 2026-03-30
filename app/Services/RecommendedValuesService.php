@@ -128,7 +128,6 @@ final class RecommendedValuesService
      * @param  Collection<int, WorkoutLine>  $lines  The lines to update.
      * @param  array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>  $results  The calculated results keyed by exercise ID.
      * @param  array{weight: float, reps: int, distance_km: float, duration_seconds: int}  $defaults  The default fallback values.
-     * @return void
      */
     private function applyRecommendedValuesToLines(Collection $lines, array $results, array $defaults): void
     {
