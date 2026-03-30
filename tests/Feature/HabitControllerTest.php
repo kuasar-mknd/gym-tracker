@@ -17,7 +17,16 @@ describe('HabitController Index', function (): void {
 
         $response = $this->actingAs($this->user)->get(route('habits.index'));
 
-        $response->assertOk();
+        $response->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Habits/Index')
+                ->has('habits')
+                ->has('weekDates')
+                ->loadDeferredProps(fn ($page) => $page
+                    ->has('stats.consistencyData')
+                    ->has('stats.history')
+                )
+            );
     });
 
     it('prevents guests from viewing habits', function (): void {
