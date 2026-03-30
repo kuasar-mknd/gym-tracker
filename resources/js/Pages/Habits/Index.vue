@@ -36,7 +36,10 @@ const props = defineProps({
      * Consolidated statistical data (Deferred Loading).
      * @type {{consistencyData: Array, history: Array}}
      */
-    stats: Object,
+    stats: {
+        type: Object,
+        default: () => ({ consistencyData: [], history: [] }),
+    },
 })
 
 const showAddForm = ref(false)
@@ -243,7 +246,7 @@ const getProgressPercent = (habit) => {
                 <div class="space-y-6">
                     <!-- Consistency Chart -->
                     <GlassCard
-                        v-if="stats.consistencyData && stats.consistencyData.some((d) => d.count > 0)"
+                        v-if="stats?.consistencyData && stats.consistencyData.some((d) => d.count > 0)"
                         class="animate-slide-up"
                     >
                         <div class="mb-4">
@@ -255,7 +258,7 @@ const getProgressPercent = (habit) => {
 
                     <!-- Stats Chart -->
                     <GlassCard
-                        v-if="stats.history && stats.history.some((d) => d.count > 0)"
+                        v-if="stats?.history && stats.history.some((d) => d.count > 0)"
                         class="animate-slide-up"
                         style="animation-delay: 0.1s"
                     >
