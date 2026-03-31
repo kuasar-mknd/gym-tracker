@@ -53,3 +53,7 @@
 ## 2025-03-30 - Redundant whereHas with join
 **Learning:** Found a case where Eloquent `whereHas` was used alongside a direct `join` to the exact same related table in order to sort. This caused a costly redundant `EXISTS()` subquery.
 **Action:** When a query already has an `INNER JOIN` to a related table (e.g., for ordering), avoid using `whereHas` for filtering. Instead, apply direct `where` clauses onto the joined table's columns to eliminate the subquery execution and significantly improve performance.
+
+## 2026-03-31 - [Collection Filtering inside Loops]
+**Learning:** Performing `$collection->filter()` inside a loop (like a 7-day or 30-day date loop) evaluates the closure on the entire collection every iteration, creating an O(N * D) complexity where N is the number of records and D is the number of days.
+**Action:** Always pre-process collections before the loop using `$collection->groupBy()` based on the loop's key (e.g., date string). This turns the data preparation into an O(N) operation and the loop lookups into O(1) operations.
