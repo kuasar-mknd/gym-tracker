@@ -72,6 +72,28 @@ final class FetchDashboardDataAction
     }
 
     /**
+     * Get consolidated analytical stats for the dashboard.
+     * ⚡ Bolt: Reduces 2 deferred prop XHR requests to 1 and uses a single cache key.
+     *
+     * @param  User  $user  The authenticated user.
+     * @return array{
+     *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>},
+     *     workoutDistributions: array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
+     * }
+     */
+    public function getAnalyticalStats(User $user): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "stats.dashboard_analytical.{$user->id}",
+            now()->addMinutes(10),
+            fn (): array => [
+                'weeklyVolume' => $this->getWeeklyVolumeData($user),
+                'workoutDistributions' => $this->getWorkoutDistributions($user),
+            ]
+        );
+    }
+
+    /**
      * Get consolidated workout distributions (duration + time of day).
      *
      * @param  \App\Models\User  $user  The authenticated user.

@@ -49,8 +49,12 @@ final class WorkoutStatsService
             "stats.workout_distributions.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days): array {
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
+                // This significantly reduces memory usage and execution time for large datasets.
                 $workouts = $user->workouts()
-                    ->select(['id', 'user_id', 'started_at', 'ended_at'])
+                    ->toBase()
+                    ->select(['id', 'started_at', 'ended_at'])
                     ->where('started_at', '>=', now()->subDays($days))
                     ->get();
 
@@ -69,8 +73,15 @@ final class WorkoutStatsService
                 ];
 
                 foreach ($workouts as $workout) {
-                    // Time of day calculation
-                    $hour = (int) $workout->started_at->format('G');
+                    // Time of day calculation using native PHP string/date parsing
+                    /** @var int|false $startedAtTimestamp */
+                    $startedAtTimestamp = is_string($workout->started_at) ? strtotime($workout->started_at) : false;
+
+                    if ($startedAtTimestamp === false) {
+                        continue;
+                    }
+
+                    $hour = (int) date('G', $startedAtTimestamp);
                     $timeLabel = match (true) {
                         $hour >= 6 && $hour < 12 => 'Morning (06h-12h)',
                         $hour >= 12 && $hour < 17 => 'Afternoon (12h-17h)',
@@ -79,16 +90,21 @@ final class WorkoutStatsService
                     };
                     $timeBuckets[$timeLabel]++;
 
-                    // Duration calculation
+                    // Duration calculation using native timestamp differences
                     if ($workout->ended_at) {
-                        $minutes = (int) abs($workout->started_at->diffInMinutes($workout->ended_at));
-                        $durationLabel = match (true) {
-                            $minutes < 30 => '< 30 min',
-                            $minutes < 60 => '30-60 min',
-                            $minutes < 90 => '60-90 min',
-                            default => '90+ min',
-                        };
-                        $durationBuckets[$durationLabel]++;
+                        /** @var int|false $endedAtTimestamp */
+                        $endedAtTimestamp = is_string($workout->ended_at) ? strtotime($workout->ended_at) : false;
+
+                        if ($endedAtTimestamp !== false) {
+                            $minutes = (int) floor(abs($endedAtTimestamp - $startedAtTimestamp) / 60);
+                            $durationLabel = match (true) {
+                                $minutes < 30 => '< 30 min',
+                                $minutes < 60 => '30-60 min',
+                                $minutes < 90 => '60-90 min',
+                                default => '90+ min',
+                            };
+                            $durationBuckets[$durationLabel]++;
+                        }
                     }
                 }
 

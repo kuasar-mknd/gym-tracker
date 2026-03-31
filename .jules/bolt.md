@@ -57,3 +57,7 @@
 ## 2026-03-31 - [Collection Filtering inside Loops]
 **Learning:** Performing `$collection->filter()` inside a loop (like a 7-day or 30-day date loop) evaluates the closure on the entire collection every iteration, creating an O(N * D) complexity where N is the number of records and D is the number of days.
 **Action:** Always pre-process collections before the loop using `$collection->groupBy()` based on the loop's key (e.g., date string). This turns the data preparation into an O(N) operation and the loop lookups into O(1) operations.
+
+## 2026-04-01 - [Consolidating & Optimizing Dashboard Stats]
+**Learning:** Consolidating multiple deferred Inertia props (e.g., weekly volume and workout distributions) into a single analytical prop significantly reduces HTTP overhead and XHR requests. Furthermore, combining this with `toBase()` queries and native PHP date parsing (`strtotime`) instead of Eloquent models and Carbon objects inside analytical loops provides a massive boost in memory efficiency and execution speed.
+**Action:** Always look to merge deferred props that load simultaneously and ensure their underlying queries use `toBase()` to avoid unnecessary model hydration in analytical paths.

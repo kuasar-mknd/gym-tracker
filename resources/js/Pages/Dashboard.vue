@@ -23,8 +23,13 @@ defineProps({
     activeGoals: { type: Array, default: () => [] },
 
     // ⚡ Bolt: Consolidated deferred props
-    weeklyVolume: { type: Object, default: () => ({ stats: { current_week_volume: 0, percentage: 0 }, trend: [] }) },
-    workoutDistributions: { type: Object, default: () => ({ duration: [], time_of_day: [] }) },
+    analyticalStats: {
+        type: Object,
+        default: () => ({
+            weeklyVolume: { stats: { current_week_volume: 0, percentage: 0 }, trend: [] },
+            workoutDistributions: { duration: [], time_of_day: [] },
+        }),
+    },
 })
 
 const form = useForm({})
@@ -43,7 +48,7 @@ const startWorkout = () => {
 
             <QuickActions :processing="form.processing" @start-workout="startWorkout" />
 
-            <Deferred data="weeklyVolume,workoutDistributions">
+            <Deferred data="analyticalStats">
                 <template #fallback>
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <GlassSkeleton class="h-64 w-full" />
@@ -54,14 +59,14 @@ const startWorkout = () => {
 
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <WeeklyVolumeSection
-                        :weekly-volume-stats="weeklyVolume?.stats"
-                        :weekly-volume-trend="weeklyVolume?.trend"
+                        :weekly-volume-stats="analyticalStats?.weeklyVolume?.stats"
+                        :weekly-volume-trend="analyticalStats?.weeklyVolume?.trend"
                     />
 
-                    <DurationSection :duration-distribution="workoutDistributions?.duration" />
+                    <DurationSection :duration-distribution="analyticalStats?.workoutDistributions?.duration" />
                 </div>
 
-                <TimeOfDaySection :time-of-day-distribution="workoutDistributions?.time_of_day" />
+                <TimeOfDaySection :time-of-day-distribution="analyticalStats?.workoutDistributions?.time_of_day" />
             </Deferred>
 
             <RecentVolumeSection :recent-workouts="recentWorkouts" />

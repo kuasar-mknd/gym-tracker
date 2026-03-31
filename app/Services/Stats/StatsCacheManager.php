@@ -32,6 +32,7 @@ final class StatsCacheManager
         $weekKey = now()->startOfWeek()->format('Y-W');
 
         Cache::forget("stats.weekly_volume.{$user->id}");
+        Cache::forget("stats.dashboard_analytical.{$user->id}");
         Cache::forget("stats.weekly_volume_comparison.{$user->id}.{$weekKey}");
         Cache::forget("stats.monthly_volume_comparison.{$user->id}");
         Cache::forget("stats.monthly_volume_history.{$user->id}.6");
@@ -55,6 +56,7 @@ final class StatsCacheManager
     {
         Cache::forget("stats.duration_history.{$user->id}.20");
         Cache::forget("stats.workout_distributions.{$user->id}.90");
+        Cache::forget("stats.dashboard_analytical.{$user->id}");
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.performance_overview.{$user->id}.{$days}");

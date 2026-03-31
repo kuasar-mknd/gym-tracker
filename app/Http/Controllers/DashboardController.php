@@ -48,8 +48,7 @@ class DashboardController extends Controller
             // ⚡ Bolt: PERFORMANCE OPTIMIZATION
             // Consolidate deferred props to reduce the number of async requests and backend executions.
             // Related chart data is fetched together to ensure consistent loading states and fewer DB queries.
-            'weeklyVolume' => Inertia::defer(fn (): array => $fetchDashboardData->getWeeklyVolumeData($user)),
-            'workoutDistributions' => Inertia::defer(fn (): array => $fetchDashboardData->getWorkoutDistributions($user)),
+            'analyticalStats' => Inertia::defer(fn (): array => $fetchDashboardData->getAnalyticalStats($user)),
         ]);
     }
 }
