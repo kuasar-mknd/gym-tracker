@@ -1,4 +1,32 @@
 <script setup>
+/**
+ * GlassInput.vue
+ *
+ * A reusable input component implementing the consistent "Liquid Glass"
+ * aesthetic. It supports text, email, password (with toggle visibility),
+ * and search inputs, among others.
+ *
+ * The component features a clear button for specific input types,
+ * configurable sizes, and accessible error handling.
+ */
+
+/**
+ * Component Props
+ *
+ * @property {String|Number} modelValue - The bound value of the input.
+ * @property {String} type - The input type (e.g., 'text', 'email', 'password'). Default: 'text'.
+ * @property {String} label - The label displayed above the input field. Default: ''.
+ * @property {String} error - The error message to display below the input if validation fails. Default: ''.
+ * @property {String} size - The physical size of the input. Accepts 'sm', 'md', 'lg'. Default: 'md'.
+ * @property {Boolean} selectOnFocus - If true, selects all text within the input upon gaining focus. Default: false.
+ */
+
+/**
+ * Component Emits
+ *
+ * @event update:modelValue - Emitted when the input value changes, allowing for v-model two-way binding.
+ */
+
 import { computed, useAttrs, getCurrentInstance, ref } from 'vue'
 import InputError from '@/Components/Form/InputError.vue'
 
