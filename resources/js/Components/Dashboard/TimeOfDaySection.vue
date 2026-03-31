@@ -25,18 +25,13 @@ defineProps({
 
         <!-- Time of Day Chart -->
         <div class="relative -mx-2 mt-2 h-48 w-auto">
-            <Deferred data="workoutDistributions">
-                <template #fallback>
-                    <GlassSkeleton height="100%" width="100%" variant="circle" />
-                </template>
-                <TimeOfDayChart
-                    v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
-                    :data="timeOfDayDistribution"
-                />
-                <div v-else class="text-text-muted flex h-full items-center justify-center">
-                    <p class="text-sm">Pas assez de données (90j)</p>
-                </div>
-            </Deferred>
+            <TimeOfDayChart
+                v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
+                :data="timeOfDayDistribution"
+            />
+            <div v-else class="text-text-muted flex h-full items-center justify-center">
+                <p class="text-sm">Pas assez de données (90j)</p>
+            </div>
         </div>
     </section>
 </template>

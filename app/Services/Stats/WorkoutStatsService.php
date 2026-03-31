@@ -74,13 +74,14 @@ final class WorkoutStatsService
 
                 foreach ($workouts as $workout) {
                     // Time of day calculation using native PHP string/date parsing
-                    $startedAt = is_string($workout->started_at) ? strtotime($workout->started_at) : false;
+                    /** @var int|false $startedAtTimestamp */
+                    $startedAtTimestamp = is_string($workout->started_at) ? strtotime($workout->started_at) : false;
 
-                    if ($startedAt === false) {
+                    if ($startedAtTimestamp === false) {
                         continue;
                     }
 
-                    $hour = (int) date('G', $startedAt);
+                    $hour = (int) date('G', $startedAtTimestamp);
                     $timeLabel = match (true) {
                         $hour >= 6 && $hour < 12 => 'Morning (06h-12h)',
                         $hour >= 12 && $hour < 17 => 'Afternoon (12h-17h)',
@@ -91,10 +92,11 @@ final class WorkoutStatsService
 
                     // Duration calculation using native timestamp differences
                     if ($workout->ended_at) {
-                        $endedAt = is_string($workout->ended_at) ? strtotime($workout->ended_at) : false;
+                        /** @var int|false $endedAtTimestamp */
+                        $endedAtTimestamp = is_string($workout->ended_at) ? strtotime($workout->ended_at) : false;
 
-                        if ($endedAt !== false) {
-                            $minutes = (int) floor(abs($endedAt - $startedAt) / 60);
+                        if ($endedAtTimestamp !== false) {
+                            $minutes = (int) floor(abs($endedAtTimestamp - $startedAtTimestamp) / 60);
                             $durationLabel = match (true) {
                                 $minutes < 30 => '< 30 min',
                                 $minutes < 60 => '30-60 min',
