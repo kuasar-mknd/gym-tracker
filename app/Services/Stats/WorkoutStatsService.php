@@ -74,9 +74,9 @@ final class WorkoutStatsService
 
                 foreach ($workouts as $workout) {
                     // Time of day calculation using native PHP string/date parsing
-                    $startedAt = is_string($workout->started_at) ? strtotime($workout->started_at) : null;
+                    $startedAt = is_string($workout->started_at) ? strtotime($workout->started_at) : false;
 
-                    if ($startedAt === null) {
+                    if ($startedAt === false) {
                         continue;
                     }
 
@@ -91,9 +91,9 @@ final class WorkoutStatsService
 
                     // Duration calculation using native timestamp differences
                     if ($workout->ended_at) {
-                        $endedAt = is_string($workout->ended_at) ? strtotime($workout->ended_at) : null;
+                        $endedAt = is_string($workout->ended_at) ? strtotime($workout->ended_at) : false;
 
-                        if ($endedAt) {
+                        if ($endedAt !== false) {
                             $minutes = (int) floor(abs($endedAt - $startedAt) / 60);
                             $durationLabel = match (true) {
                                 $minutes < 30 => '< 30 min',
