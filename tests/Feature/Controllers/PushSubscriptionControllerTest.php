@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\postJson;
 
@@ -57,7 +58,7 @@ it('validates required fields for updating a push subscription', function (array
                 'p256dh' => 'test-p256dh-key',
             ],
         ],
-        ['endpoint']
+        ['endpoint'],
     ],
     'invalid endpoint url' => [
         [
@@ -67,7 +68,7 @@ it('validates required fields for updating a push subscription', function (array
                 'p256dh' => 'test-p256dh-key',
             ],
         ],
-        ['endpoint']
+        ['endpoint'],
     ],
     'missing auth key' => [
         [
@@ -76,7 +77,7 @@ it('validates required fields for updating a push subscription', function (array
                 'p256dh' => 'test-p256dh-key',
             ],
         ],
-        ['keys.auth']
+        ['keys.auth'],
     ],
     'missing p256dh key' => [
         [
@@ -85,7 +86,7 @@ it('validates required fields for updating a push subscription', function (array
                 'auth' => 'test-auth-key',
             ],
         ],
-        ['keys.p256dh']
+        ['keys.p256dh'],
     ],
 ]);
 
@@ -129,12 +130,12 @@ it('validates required fields for deleting a push subscription', function (array
 })->with([
     'missing endpoint' => [
         [],
-        ['endpoint']
+        ['endpoint'],
     ],
     'invalid endpoint url' => [
         [
             'endpoint' => 'not-a-url',
         ],
-        ['endpoint']
+        ['endpoint'],
     ],
 ]);
