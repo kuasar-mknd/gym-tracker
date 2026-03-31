@@ -85,7 +85,10 @@ final class VolumeStatsService
                 $startOfWeek = now()->startOfWeek();
                 $endOfWeek = now()->endOfWeek();
 
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Use toBase() to avoid hydrating Eloquent models.
                 $workouts = $user->workouts()
+                    ->toBase()
                     ->whereBetween('started_at', [$startOfWeek, $endOfWeek])
                     ->selectRaw('DATE(started_at) as date, SUM(workout_volume) as total_volume')
                     ->groupBy('date')
@@ -100,7 +103,7 @@ final class VolumeStatsService
                     $trend[] = new WeeklyVolumeTrendPoint(
                         $date,
                         ucfirst($dateObj->translatedFormat('D')),
-                        $workoutData && is_numeric($workoutData->getAttribute('total_volume')) ? (float) $workoutData->getAttribute('total_volume') : 0.0,
+                        $workoutData && is_numeric($workoutData->total_volume) ? (float) $workoutData->total_volume : 0.0,
                     );
                 }
 
