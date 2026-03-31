@@ -26,6 +26,7 @@ class StatsServiceCacheTest extends TestCase
 
         // Expectation: Volume related keys are cleared
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
+        Cache::shouldReceive('forget')->once()->with("stats.dashboard_analytical.{$user->id}");
         Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key): bool => str_starts_with((string) $key, "stats.weekly_volume_comparison.{$user->id}")));
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_history.{$user->id}.6");
@@ -53,6 +54,7 @@ class StatsServiceCacheTest extends TestCase
         // Expectation: Duration related keys are cleared
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.workout_distributions.{$user->id}.90");
+        Cache::shouldReceive('forget')->once()->with("stats.dashboard_analytical.{$user->id}");
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");
