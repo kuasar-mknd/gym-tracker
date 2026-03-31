@@ -11,7 +11,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
@@ -37,6 +37,27 @@ const showAddForm = ref(false)
 const editingExercise = ref(null)
 const searchQuery = ref('')
 const activeCategory = ref('all')
+const searchInput = ref(null)
+
+const handleKeyDown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchInput.value?.focus()
+    }
+
+    if (e.key === 'Escape' && document.activeElement === searchInput.value) {
+        searchInput.value?.blur()
+        searchQuery.value = ''
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+    document.removeEventListener('keydown', handleKeyDown)
+})
 
 // Local state for optimistic updates to ensure immediate UI feedback before server confirmation
 const localExercises = ref([...props.exercises])
@@ -270,17 +291,21 @@ const typeLabel = (type) => {
                 class="glass-panel-light animate-slide-up flex items-center gap-3 rounded-2xl p-3"
                 style="animation-delay: 0.1s"
             >
-                <span class="material-symbols-outlined text-text-muted text-[24px]">search</span>
+                <label for="search-exercises-input" class="sr-only">Rechercher des exercices</label>
+                <span class="material-symbols-outlined text-text-muted text-[24px]" aria-hidden="true">search</span>
                 <input
+                    id="search-exercises-input"
+                    ref="searchInput"
                     v-model="searchQuery"
                     type="search"
                     dusk="search-exercises"
                     placeholder="Recherche exercices..."
-                    aria-label="Rechercher des exercices"
+                    aria-label="Rechercher des exercices (Raccourci : ⌘K)"
                     class="text-text-main placeholder:text-text-muted/50 flex-1 border-none bg-transparent text-lg focus:ring-0 focus:outline-none"
                 />
                 <div
                     class="text-text-muted/40 hidden items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
+                    aria-hidden="true"
                 >
                     <span class="material-symbols-outlined text-sm">keyboard</span>
                     ⌘K
