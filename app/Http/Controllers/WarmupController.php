@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Warmups\UpdateWarmupPreferenceAction;
 use App\Http\Requests\UpdateWarmupPreferenceRequest;
 use App\Models\WarmupPreference;
 use Inertia\Inertia;
@@ -51,24 +52,14 @@ class WarmupController extends Controller
      * or creates a new record if one does not already exist.
      *
      * @param  \App\Http\Requests\UpdateWarmupPreferenceRequest  $request  The validated HTTP request containing warmup preference data.
+     * @param  \App\Actions\Warmups\UpdateWarmupPreferenceAction  $updateWarmupPreferenceAction  Action to update warmup preferences.
      * @return \Illuminate\Http\RedirectResponse A redirect response back to the previous page with a success message.
      */
-    public function update(UpdateWarmupPreferenceRequest $request): \Illuminate\Http\RedirectResponse
+    public function update(UpdateWarmupPreferenceRequest $request, UpdateWarmupPreferenceAction $updateWarmupPreferenceAction): \Illuminate\Http\RedirectResponse
     {
-        $preference = $this->user()->warmupPreference;
-
-        if ($preference) {
-            $this->authorize('update', $preference);
-        } else {
-            $this->authorize('create', WarmupPreference::class);
-        }
-
         $validated = $request->validated();
 
-        $this->user()->warmupPreference()->updateOrCreate(
-            ['user_id' => $this->user()->id],
-            $validated
-        );
+        $updateWarmupPreferenceAction->execute($this->user(), $validated);
 
         return redirect()->back()->with('success', 'Préférences de récupération sauvegardées.');
     }
