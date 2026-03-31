@@ -176,7 +176,7 @@ jobs:
                   cat <<EOF > .env
                   APP_NAME=GymTracker
                   APP_ENV=testing
-                  APP_KEY=$(php artisan key:generate --show --no-ansi)
+                  APP_KEY=
                   APP_DEBUG=true
                   APP_URL=http://127.0.0.1:8000
 
@@ -197,6 +197,8 @@ jobs:
                   DUSK_DRIVER_URL=http://127.0.0.1:9515
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
                   EOF
+
+                  php artisan key:generate
 
                   # Dusk automatically uses .env.testing if present, we must override it
                   cp .env .env.testing
