@@ -17,23 +17,28 @@ class FetchWaterHistoryAction
      */
     public function execute(User $user): array
     {
-        $startDate = Carbon::now()->subDays(6)->startOfDay();
+        $now = Carbon::now();
+        $startDate = $now->copy()->subDays(6)->startOfDay();
         $historyLogs = $user->waterLogs()
             ->where('consumed_at', '>=', $startDate)
             ->get();
 
+        // ⚡ Bolt: Group by date string to change O(n*7) collection filtering into O(n) + O(1) lookups
+        $groupedLogs = $historyLogs->groupBy(function (WaterLog $log): string {
+            /** @var \Carbon\Carbon $consumedAt */
+            $consumedAt = $log->consumed_at;
+
+            return $consumedAt->format('Y-m-d');
+        });
+
         $history = [];
         for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
+            // ⚡ Bolt: Use copy() instead of new Carbon instance inside loop
+            $date = $now->copy()->subDays($i);
             $dateString = $date->format('Y-m-d');
 
             /** @var float|int $dayTotal */
-            $dayTotal = $historyLogs->filter(function (WaterLog $log) use ($dateString): bool {
-                /** @var \Carbon\Carbon $consumedAt */
-                $consumedAt = $log->consumed_at;
-
-                return $consumedAt->format('Y-m-d') === $dateString;
-            })->sum('amount');
+            $dayTotal = $groupedLogs->has($dateString) ? $groupedLogs->get($dateString)->sum('amount') : 0;
 
             $dayTotalValue = (float) $dayTotal;
 
