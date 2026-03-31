@@ -38,7 +38,7 @@ class FetchWaterHistoryAction
             $dateString = $date->format('Y-m-d');
 
             /** @var float|int $dayTotal */
-            $dayTotal = $groupedLogs->has($dateString) ? $groupedLogs->get($dateString)->sum('amount') : 0;
+            $dayTotal = $groupedLogs->get($dateString)?->sum('amount') ?? 0;
 
             $dayTotalValue = (float) $dayTotal;
 
