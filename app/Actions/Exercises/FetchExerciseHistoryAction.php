@@ -42,6 +42,15 @@ class FetchExerciseHistoryAction
 
     /**
      * Fetch exercise history directly from the database using toBase() to avoid Eloquent overhead.
+     *
+     * @return \Illuminate\Support\Collection<int, array{
+     *     id: int,
+     *     workout_id: int,
+     *     workout_name: string,
+     *     formatted_date: string,
+     *     best_1rm: float,
+     *     sets: array<int, array<string, mixed>>
+     * }>
      */
     private function fetchFromDatabase(User $user, Exercise $exercise): Collection
     {
@@ -64,31 +73,42 @@ class FetchExerciseHistoryAction
             ])
             ->get();
 
-        return $results->groupBy('line_id')->map(function (Collection $group): array {
+        return $results->groupBy('line_id')->map(function (Collection $group): ?array {
+            /** @var \stdClass|null $first */
             $first = $group->first();
+
+            if (! $first) {
+                return null;
+            }
+
             $startedAt = Carbon::parse((string) $first->started_at);
 
             // Filter out empty sets from left join (where weight/reps are null)
             $sets = $group
-                ->filter(fn ($set) => $set->weight !== null)
+                ->filter(fn ($set): bool => property_exists($set, 'weight') && $set->weight !== null)
                 ->map(fn ($set): array => [
-                    'weight' => (float) $set->weight,
-                    'reps' => (int) $set->reps,
-                    'one_rep_max' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
+                    'weight' => (float) ($set->weight ?? 0),
+                    'reps' => (int) ($set->reps ?? 0),
+                    'one_rep_max' => (float) $this->calculate1RM((float) ($set->weight ?? 0), (int) ($set->reps ?? 0)),
                 ]);
 
-            $best1rm = $sets->max('one_rep_max') ?? 0.0;
+            /** @var float $best1rm */
+            $best1rm = (float) ($sets->max('one_rep_max') ?? 0.0);
+
+            /** @var array<int, array<string, mixed>> $setsArray */
+            $setsArray = $sets->values()->toArray();
 
             return [
                 'id' => (int) $first->line_id,
                 'workout_id' => (int) $first->workout_id,
-                'workout_name' => (string) $first->workout_name,
+                'workout_name' => (string) ($first->workout_name ?? ''),
                 'formatted_date' => $startedAt->locale('fr')->isoFormat('ddd D MMM'),
-                'best_1rm' => (float) $best1rm,
-                'sets' => $sets->values()->toArray(),
+                'best_1rm' => $best1rm,
+                'sets' => $setsArray,
                 'timestamp' => $startedAt->timestamp,
             ];
         })
+            ->filter()
             ->sortByDesc('timestamp')
             ->values()
             ->map(function (array $item): array {
