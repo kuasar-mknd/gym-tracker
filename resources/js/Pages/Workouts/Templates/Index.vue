@@ -1,6 +1,5 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 
@@ -64,31 +63,31 @@ const deleteTemplate = (templateId) => {
 
         <div class="space-y-6">
             <div v-if="templates.length === 0" class="animate-slide-up">
-                <GlassCard
-                    class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
+                <div
+                    class="rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-md transition-all duration-300"
                 >
                     <div class="py-12 text-center">
                         <div class="mb-3 text-5xl">📋</div>
-                        <h3 class="text-text-main text-lg font-semibold">Aucun modèle</h3>
+                        <h3 class="text-text-main text-lg font-semibold dark:text-white">Aucun modèle</h3>
                         <p class="text-text-muted mt-1">Crée tes routines pour gagner du temps</p>
                         <Link :href="route('templates.create')" class="mt-4 inline-block">
                             <GlassButton variant="primary">Créer mon premier modèle</GlassButton>
                         </Link>
                     </div>
-                </GlassCard>
+                </div>
             </div>
 
             <div v-else class="animate-slide-up grid gap-4 md:grid-cols-2" style="animation-delay: 0.1s">
-                <GlassCard
+                <div
                     v-for="template in templates"
                     :key="template.id"
-                    class="flex flex-col rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
+                    class="group flex flex-col rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="text-text-main text-lg font-bold">{{ template.name }}</h3>
-                                <p v-if="template.description" class="text-text-muted mt-1 text-sm">
+                                <h3 class="font-display text-text-main text-xl font-black uppercase italic dark:text-white">{{ template.name }}</h3>
+                                <p v-if="template.description" class="text-text-muted mt-1 text-sm font-medium">
                                     {{ template.description }}
                                 </p>
                             </div>
@@ -135,7 +134,7 @@ const deleteTemplate = (templateId) => {
                             Lancer cette séance
                         </GlassButton>
                     </div>
-                </GlassCard>
+                </div>
             </div>
         </div>
     </AuthenticatedLayout>
