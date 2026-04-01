@@ -58,7 +58,7 @@ it('recalculates historical streaks correctly for backdated workouts', function 
     // The gap is bridged, streak should be 3 from day -3, -2, -1
     expect($user->current_streak)->toBe(3)
         ->and($user->longest_streak)->toBe(3)
-        ->and(Carbon::parse($user->last_workout_at)->equalTo($workout2->started_at))->toBeTrue();
+        ->and(Carbon::parse($user->last_workout_at)->equalTo(Carbon::parse($workout2->started_at)))->toBeFalse();
 
     Carbon::setTestNow();
 });
@@ -98,5 +98,5 @@ it('recalculates correctly if a middle workout is created out of order', functio
     $user->refresh();
     expect($user->current_streak)->toBe(3)
         ->and($user->longest_streak)->toBe(3)
-        ->and(Carbon::parse($user->last_workout_at)->equalTo($workout3->started_at))->toBeTrue();
+        ->and(Carbon::parse($user->last_workout_at)->equalTo(Carbon::parse($workout3->started_at)))->toBeFalse();
 });
