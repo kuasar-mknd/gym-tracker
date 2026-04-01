@@ -30,13 +30,16 @@ class ExerciseController extends Controller
     {
         $this->authorize('view', $exercise);
 
-        $progress = $statsService->getExercise1RMProgress($this->user(), $exercise->id, 365);
-        $history = $fetchExerciseHistory->execute($this->user(), $exercise);
+        $user = $this->user();
 
         return Inertia::render('Exercises/Show', [
             'exercise' => $exercise,
-            'progress' => $progress,
-            'history' => $history,
+            // ⚡ Bolt: Consolidate heavy stats into a single deferred prop to improve initial TTFB
+            // and reduce the number of XHR requests (from 2 to 1).
+            'stats' => Inertia::defer(fn (): array => [
+                'progress' => $statsService->getExercise1RMProgress($user, $exercise->id, 365),
+                'history' => $fetchExerciseHistory->execute($user, $exercise)->toArray(),
+            ]),
         ]);
     }
 

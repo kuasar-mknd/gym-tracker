@@ -27,8 +27,9 @@ test('authenticated user can view an exercise they own', function (): void {
         ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Exercises/Show')
             ->has('exercise')
-            ->has('progress')
-            ->has('history')
+            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->has('stats')
+            )
         );
 });
 
