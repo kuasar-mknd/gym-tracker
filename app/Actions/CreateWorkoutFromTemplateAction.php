@@ -9,10 +9,22 @@ use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Action class responsible for creating a new workout instance
+ * based on an existing workout template.
+ *
+ * This includes copying all template lines and sets into
+ * actual workout lines and sets for the user to perform.
+ */
 final class CreateWorkoutFromTemplateAction
 {
     /**
      * Create a new workout from an existing template.
+     *
+     * @param User $user The user performing the workout.
+     * @param WorkoutTemplate $template The template to base the workout on.
+     * @return Workout The newly created workout instance.
+     * @throws \Throwable If the database transaction fails.
      */
     public function execute(User $user, WorkoutTemplate $template): Workout
     {
@@ -33,6 +45,18 @@ final class CreateWorkoutFromTemplateAction
         });
     }
 
+    /**
+     * Creates the corresponding workout lines and sets from the template.
+     *
+     * Iterates over the template's lines and sets, creates the new workout lines,
+     * and performs a bulk insertion of all sets to optimize database queries.
+     * It also calculates and updates the total workout volume.
+     *
+     * @param Workout $workout The newly created workout.
+     * @param WorkoutTemplate $template The source workout template.
+     * @param User $user The user performing the workout.
+     * @return void
+     */
     private function createLinesAndSets(Workout $workout, WorkoutTemplate $template, User $user): void
     {
         // Optimization: Prime the relationship to prevent N+1 queries in observers
