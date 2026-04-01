@@ -9,9 +9,9 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-describe('BodyMeasurementController', function () {
-    describe('index', function () {
-        it('renders the index page for authenticated users', function () {
+describe('BodyMeasurementController', function (): void {
+    describe('index', function (): void {
+        it('renders the index page for authenticated users', function (): void {
             $user = User::factory()->create();
             BodyMeasurement::factory()->count(3)->create([
                 'user_id' => $user->id,
@@ -20,20 +20,20 @@ describe('BodyMeasurementController', function () {
             $this->actingAs($user)
                 ->get(route('body-measurements.index'))
                 ->assertOk()
-                ->assertInertia(fn (Assert $page) => $page
+                ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                     ->component('Measurements/Index')
                     ->has('measurements', 3)
                 );
         });
 
-        it('redirects unauthenticated users to login', function () {
+        it('redirects unauthenticated users to login', function (): void {
             $this->get(route('body-measurements.index'))
                 ->assertRedirect(route('login'));
         });
     });
 
-    describe('store', function () {
-        it('creates a new body measurement', function () {
+    describe('store', function (): void {
+        it('creates a new body measurement', function (): void {
             $user = User::factory()->create();
             $data = [
                 'weight' => 75.5,
@@ -54,7 +54,7 @@ describe('BodyMeasurementController', function () {
             ]);
         });
 
-        it('clears cache after creating a body measurement', function () {
+        it('clears cache after creating a body measurement', function (): void {
             // Need to allow other Cache facade calls
             Cache::spy();
 
@@ -71,7 +71,7 @@ describe('BodyMeasurementController', function () {
             Cache::shouldHaveReceived('forget')->atLeast()->once();
         });
 
-        it('requires valid data', function () {
+        it('requires valid data', function (): void {
             $user = User::factory()->create();
 
             $this->actingAs($user)
@@ -79,14 +79,14 @@ describe('BodyMeasurementController', function () {
                 ->assertInvalid(['weight', 'measured_at']);
         });
 
-        it('redirects unauthenticated users to login', function () {
+        it('redirects unauthenticated users to login', function (): void {
             $this->post(route('body-measurements.store'), [])
                 ->assertRedirect(route('login'));
         });
     });
 
-    describe('destroy', function () {
-        it('deletes a body measurement', function () {
+    describe('destroy', function (): void {
+        it('deletes a body measurement', function (): void {
             $user = User::factory()->create();
             $measurement = BodyMeasurement::factory()->create([
                 'user_id' => $user->id,
@@ -101,7 +101,7 @@ describe('BodyMeasurementController', function () {
             ]);
         });
 
-        it('clears cache after deleting a body measurement', function () {
+        it('clears cache after deleting a body measurement', function (): void {
             Cache::spy();
 
             $user = User::factory()->create();
@@ -116,7 +116,7 @@ describe('BodyMeasurementController', function () {
             Cache::shouldHaveReceived('forget')->atLeast()->once();
         });
 
-        it('prevents deleting another users measurement', function () {
+        it('prevents deleting another users measurement', function (): void {
             $user = User::factory()->create();
             $otherUser = User::factory()->create();
             $measurement = BodyMeasurement::factory()->create([
@@ -132,7 +132,7 @@ describe('BodyMeasurementController', function () {
             ]);
         });
 
-        it('redirects unauthenticated users to login', function () {
+        it('redirects unauthenticated users to login', function (): void {
             $measurement = BodyMeasurement::factory()->create();
 
             $this->delete(route('body-measurements.destroy', $measurement))
