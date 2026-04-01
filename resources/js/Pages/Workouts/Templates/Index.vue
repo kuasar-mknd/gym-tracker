@@ -86,7 +86,11 @@ const deleteTemplate = (templateId) => {
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="font-display text-text-main text-xl font-black uppercase italic dark:text-white">{{ template.name }}</h3>
+                                <h3
+                                    class="font-display text-text-main text-xl font-black uppercase italic dark:text-white"
+                                >
+                                    {{ template.name }}
+                                </h3>
                                 <p v-if="template.description" class="text-text-muted mt-1 text-sm font-medium">
                                     {{ template.description }}
                                 </p>
