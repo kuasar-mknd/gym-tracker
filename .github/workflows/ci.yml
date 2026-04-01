@@ -47,7 +47,7 @@ jobs:
             - name: Setup Node
               uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version: 24
                   cache: 'npm'
 
             - name: Install Node Dependencies
@@ -187,7 +187,7 @@ jobs:
                   DB_HOST=127.0.0.1
                   DB_PORT=3306
                   DB_DATABASE=gym_tracker_dusk
-                  DB_USERNAME=sail
+                  DB_USERNAME=root
                   DB_PASSWORD=password
 
                   SESSION_DRIVER=cookie
