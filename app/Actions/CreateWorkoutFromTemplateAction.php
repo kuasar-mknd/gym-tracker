@@ -41,27 +41,39 @@ final class CreateWorkoutFromTemplateAction
         $allSets = [];
         $totalWorkoutVolume = 0.0;
         $now = now()->toDateTimeString();
+        $allLines = [];
 
         foreach ($template->workoutTemplateLines as $templateLine) {
-            /** @var \App\Models\WorkoutLine $workoutLine */
-            $workoutLine = $workout->workoutLines()->create([
+            $allLines[] = [
+                'workout_id' => $workout->id,
                 'exercise_id' => $templateLine->exercise_id,
                 'order' => $templateLine->order,
-            ]);
-            $workoutLine->setRelation('workout', $workout);
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
 
-            foreach ($templateLine->workoutTemplateSets as $templateSet) {
-                $allSets[] = [
-                    'workout_line_id' => $workoutLine->id,
-                    'reps' => $templateSet->reps,
-                    'weight' => $templateSet->weight,
-                    'is_warmup' => $templateSet->is_warmup,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
+        if ($allLines !== []) {
+            \App\Models\WorkoutLine::insert($allLines);
+            $createdLines = \App\Models\WorkoutLine::where('workout_id', $workout->id)->orderBy('id')->get();
 
-                $volume = (float) ($templateSet->weight ?? 0) * (int) ($templateSet->reps ?? 0);
-                $totalWorkoutVolume += $volume;
+            foreach ($template->workoutTemplateLines as $index => $templateLine) {
+                $workoutLine = $createdLines[$index];
+                $workoutLine->setRelation('workout', $workout);
+
+                foreach ($templateLine->workoutTemplateSets as $templateSet) {
+                    $allSets[] = [
+                        'workout_line_id' => $workoutLine->id,
+                        'reps' => $templateSet->reps,
+                        'weight' => $templateSet->weight,
+                        'is_warmup' => $templateSet->is_warmup,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+
+                    $volume = (float) ($templateSet->weight ?? 0) * (int) ($templateSet->reps ?? 0);
+                    $totalWorkoutVolume += $volume;
+                }
             }
         }
 
