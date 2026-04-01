@@ -146,8 +146,9 @@ const chartOptions = computed(() => {
                 v-for="metric in metrics"
                 :key="metric.value"
                 @click="selectedMetric = metric.value"
+                :aria-pressed="selectedMetric === metric.value"
                 :class="[
-                    'rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-all',
+                    'focus-visible:ring-electric-orange rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-all focus-visible:ring-2 focus-visible:outline-none',
                     selectedMetric === metric.value
                         ? 'scale-105 text-white shadow-lg'
                         : 'text-text-muted hover:text-text-main bg-white/50 hover:bg-white/80',
