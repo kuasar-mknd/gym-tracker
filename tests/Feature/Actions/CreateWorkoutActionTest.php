@@ -33,5 +33,5 @@ it('creates a workout and dispatches stats recalculation job', function (): void
         'name' => 'Morning Routine',
     ]);
 
-    Queue::assertPushed(RecalculateUserStats::class, fn ($job) => $job->user->id === $user->id);
+    Queue::assertPushed(RecalculateUserStats::class, fn ($job): bool => $job->user->id === $user->id);
 });
