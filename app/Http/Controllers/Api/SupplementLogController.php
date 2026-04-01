@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Supplements\FetchSupplementLogsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSupplementLogRequest;
 use App\Http\Requests\UpdateSupplementLogRequest;
@@ -12,14 +13,13 @@ use App\Models\SupplementLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class SupplementLogController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, FetchSupplementLogsAction $fetchSupplementLogs): AnonymousResourceCollection
     {
         $this->authorize('viewAny', SupplementLog::class);
 
@@ -28,14 +28,9 @@ class SupplementLogController extends Controller
         ]);
 
         /** @var int $perPage */
-        $perPage = $validated['per_page'] ?? 15;
+        $perPage = (int) ($validated['per_page'] ?? 15);
 
-        $logs = QueryBuilder::for(SupplementLog::class)
-            ->allowedFilters(['supplement_id'])
-            ->allowedSorts(['consumed_at', 'created_at'])
-            ->allowedIncludes(['supplement'])
-            ->where('user_id', $this->user()->id)
-            ->paginate($perPage);
+        $logs = $fetchSupplementLogs->execute($this->user(), $perPage);
 
         return SupplementLogResource::collection($logs);
     }
