@@ -74,9 +74,7 @@ class Set extends Model
      */
     public function updateVolumes(): void
     {
-        $this->loadMissing('workoutLine.workout.user');
-        $workout = $this->workoutLine->workout;
-        $user = $workout->user;
+        [$workout, $user] = $this->getWorkoutAndUser();
 
         if (! $user || ! $workout) {
             return;
@@ -95,9 +93,7 @@ class Set extends Model
      */
     public function decrementVolumes(): void
     {
-        $this->loadMissing('workoutLine.workout.user');
-        $workout = $this->workoutLine->workout;
-        $user = $workout->user;
+        [$workout, $user] = $this->getWorkoutAndUser();
 
         if (! $user || ! $workout) {
             return;
@@ -109,6 +105,19 @@ class Set extends Model
             $user->decrement('total_volume', $volume);
             $workout->decrement('workout_volume', $volume);
         }
+    }
+
+    /**
+     * Get the associated workout and user.
+     *
+     * @return array{0: \App\Models\Workout|null, 1: \App\Models\User|null}
+     */
+    protected function getWorkoutAndUser(): array
+    {
+        $this->loadMissing('workoutLine.workout.user');
+        $workout = $this->workoutLine?->workout;
+
+        return [$workout, $workout?->user];
     }
 
     protected static function booted(): void
