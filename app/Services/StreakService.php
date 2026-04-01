@@ -33,10 +33,37 @@ final class StreakService
         $workoutDate = $this->resolveWorkoutDate($user, $workout);
 
         if (! $workoutDate) {
+            $user->last_workout_at = null;
+            $user->current_streak = 0;
+            $user->save();
+
             return;
         }
 
         $lastRecordedDate = $this->getLastRecordedDate($user);
+
+        // If the new workout is in the past compared to the last recorded workout,
+        // we should trigger a full recalculation.
+        if ($lastRecordedDate && $workoutDate->lessThan($lastRecordedDate)) {
+            $this->recalculateHistoricalStreak($user);
+
+            // Keep the latest started_at since this is just a backdated insertion
+            $latestStartedAt = $user->workouts()->latest('started_at')->value('started_at');
+            $latestStartedAtCarbon = null;
+
+            if ($latestStartedAt && is_scalar($latestStartedAt)) {
+                $latestStartedAtCarbon = Carbon::parse((string) $latestStartedAt);
+            }
+
+            if ($latestStartedAtCarbon) {
+                $user->last_workout_at = $latestStartedAtCarbon;
+            } else {
+                $user->last_workout_at = null;
+            }
+            $user->save();
+
+            return;
+        }
 
         if ($lastRecordedDate?->equalTo($workoutDate)) {
             // Ensure last_workout_at is updated if the new workout is more recent on the same day
@@ -58,8 +85,73 @@ final class StreakService
             $latestStartedAtCarbon = Carbon::parse((string) $latestStartedAt);
         }
 
-        $user->last_workout_at = ($workout !== null) ? $workout->started_at : $latestStartedAtCarbon;
+        if ($workout !== null) {
+            if (! $latestStartedAtCarbon || $workout->started_at->greaterThan($latestStartedAtCarbon)) {
+                $user->last_workout_at = $workout->started_at;
+            } elseif ($latestStartedAtCarbon) {
+                $user->last_workout_at = $latestStartedAtCarbon;
+            } else {
+                $user->last_workout_at = null;
+            }
+        } elseif ($latestStartedAtCarbon) {
+            $user->last_workout_at = $latestStartedAtCarbon;
+        } else {
+            $user->last_workout_at = null;
+        }
+
         $user->save();
+    }
+
+    /**
+     * Recalculate the user's current and longest streaks based on all their past workouts.
+     * This is used when a backdated workout is inserted or a workout is deleted.
+     *
+     * @param  \App\Models\User  $user  The user whose streak is being recalculated.
+     */
+    public function recalculateHistoricalStreak(User $user): void
+    {
+        // Get all unique workout dates for the user
+        $workoutDates = $user->workouts()
+            ->select('started_at')
+            ->orderBy('started_at')
+            ->pluck('started_at')
+            ->map(fn ($date) => Carbon::parse((string) $date)->startOfDay())
+            ->unique(fn (Carbon $date) => $date->toDateString())
+            ->values();
+
+        if ($workoutDates->isEmpty()) {
+            $user->current_streak = 0;
+            $user->longest_streak = 0;
+
+            return;
+        }
+
+        $currentStreak = 0;
+        $longestStreak = 0;
+        $lastDate = null;
+
+        foreach ($workoutDates as $date) {
+            if (! $lastDate) {
+                $currentStreak = 1;
+            } else {
+                $diffInDays = (int) $lastDate->diffInDays($date, false);
+
+                if ($diffInDays === 1) {
+                    $currentStreak++;
+                } elseif ($diffInDays > 1) {
+                    $currentStreak = 1;
+                }
+            }
+
+            if ($currentStreak > $longestStreak) {
+                $longestStreak = $currentStreak;
+            }
+
+            $lastDate = $date;
+        }
+
+        $user->current_streak = $currentStreak;
+        $user->longest_streak = $longestStreak;
     }
 
     /**
@@ -107,9 +199,6 @@ final class StreakService
             } elseif ($diffInDays > 1) {
                 // Streak broken
                 $user->current_streak = 1;
-            } elseif ($diffInDays < 0) {
-                // Backdated workout - we don't handle historical streak recalculation here yet
-                // For now, don't increment or reset.
             }
         }
 
