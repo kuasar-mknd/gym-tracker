@@ -64,3 +64,7 @@
 ## 2024-05-18 - Optimized RecommendedValuesService Cache Put
 **Learning:** Performing `Cache::put()` operations inside a loop introduces N+1 caching overhead.
 **Action:** Replaced the loop-based `Cache::put()` calls with an array collection pattern and a single `Cache::putMany()` call to reduce cache interaction overhead and improve performance.
+
+## 2026-04-02 - [Optimizing Exercise History with toBase() and Caching]
+**Learning:** Fetching complex exercise history with relationships (workouts, sets) using Eloquent leads to massive memory overhead and slow response times due to model hydration. Consolidating these statistics into a single deferred Inertia prop and backing it with a `toBase()` query and versioned caching significantly improves both TTFB and data retrieval efficiency.
+**Action:** Use raw DB queries with joins for complex analytical histories and wrap them in consolidated deferred props on the frontend to improve perceived performance.
