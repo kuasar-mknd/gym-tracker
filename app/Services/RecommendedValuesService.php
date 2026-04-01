@@ -254,13 +254,18 @@ final class RecommendedValuesService
             ->get()
             ->keyBy('exercise_id');
 
+        $cacheData = [];
         foreach ($uncachedExerciseIds as $exerciseId) {
             $lastLine = $lastLines->get($exerciseId);
             $values = $this->calculateFromLine($lastLine);
 
             $cacheKey = "recommended_values:{$userId}:{$exerciseId}:{$workoutId}";
-            Cache::put($cacheKey, $values, 300);
+            $cacheData[$cacheKey] = $values;
             $results[$exerciseId] = $values;
+        }
+
+        if (count($cacheData) > 0) {
+            Cache::putMany($cacheData, 300);
         }
 
         return $results;
