@@ -16,6 +16,7 @@ class FetchSupplementLogsAction
      *
      * @param  User  $user  The user to fetch logs for.
      * @param  int  $perPage  Number of items per page.
+     * @return LengthAwarePaginator<int, SupplementLog>
      */
     public function execute(User $user, int $perPage): LengthAwarePaginator
     {
