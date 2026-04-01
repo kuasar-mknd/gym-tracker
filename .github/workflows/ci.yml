@@ -7,6 +7,9 @@ on:
     pull_request:
         branches: ['main', 'fix/e2e-stability', 'reboot-main']
 
+env:
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
     contents: read
 
@@ -184,7 +187,7 @@ jobs:
                   DB_HOST=127.0.0.1
                   DB_PORT=3306
                   DB_DATABASE=gym_tracker_dusk
-                  DB_USERNAME=root
+                  DB_USERNAME=sail
                   DB_PASSWORD=password
 
                   SESSION_DRIVER=cookie
