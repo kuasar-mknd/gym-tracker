@@ -7,6 +7,9 @@ on:
     pull_request:
         branches: ['main', 'fix/e2e-stability', 'reboot-main']
 
+env:
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 permissions:
     contents: read
 
@@ -309,7 +312,10 @@ jobs:
                       platform: linux/amd64
                     - runner: ubuntu-24.04-arm
                       platform: linux/arm64
-        permissions:
+        env:
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
             contents: read
             packages: write
         env:
@@ -363,7 +369,10 @@ jobs:
     merge:
         runs-on: ubuntu-latest
         needs: build
-        permissions:
+        env:
+    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
             contents: read
             packages: write
         env:
