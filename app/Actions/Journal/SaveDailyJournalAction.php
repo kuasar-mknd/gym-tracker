@@ -7,7 +7,6 @@ namespace App\Actions\Journal;
 use App\Models\DailyJournal;
 use App\Models\User;
 use Illuminate\Support\Carbon;
-use UnexpectedValueException;
 
 class SaveDailyJournalAction
 {
@@ -22,7 +21,7 @@ class SaveDailyJournalAction
         $dateInput = $data['date'] ?? null;
 
         if (! is_string($dateInput)) {
-            throw new UnexpectedValueException('Date must be a string');
+            throw new \UnexpectedValueException('Date must be a string');
         }
 
         $date = Carbon::parse($dateInput);
