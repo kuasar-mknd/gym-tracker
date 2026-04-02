@@ -184,19 +184,24 @@ final class VolumeStatsService
             "stats.monthly_volume_history.{$user->id}.{$months}",
             now()->addMinutes(30),
             function () use ($user, $months): array {
-                $data = $user->workouts()
-                    ->where('started_at', '>=', now()->subMonths($months - 1)->startOfMonth())
-                    ->select(['started_at', 'workout_volume as volume'])
-                    ->get();
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Perform grouping and summation directly in SQL to reduce memory usage and CPU cycles in PHP.
+                // Uses toBase() to bypass Eloquent model hydration and a driver-aware format for database portability.
+                $driver = \Illuminate\Support\Facades\DB::getDriverName();
+                $monthFormat = $driver === 'sqlite' ? "strftime('%Y-%m', started_at)" : "DATE_FORMAT(started_at, '%Y-%m')";
 
-                $grouped = $data->groupBy(fn (object $row): string => Carbon::parse($row->started_at ?? (string) now())->format('Y-m'));
+                $results = $user->workouts()
+                    ->toBase()
+                    ->where('started_at', '>=', now()->subMonths($months - 1)->startOfMonth())
+                    ->selectRaw("{$monthFormat} as month, SUM(workout_volume) as volume")
+                    ->groupBy('month')
+                    ->pluck('volume', 'month');
 
                 return collect(range($months - 1, 0))
-                    ->map(function (int $i) use ($grouped): MonthlyVolumePoint {
+                    ->map(function (int $i) use ($results): MonthlyVolumePoint {
                         $date = now()->subMonths($i);
-                        $month = $date->format('Y-m');
-                        $monthData = $grouped->get($month);
-                        $sum = $monthData ? $monthData->sum('volume') : 0.0;
+                        $monthKey = $date->format('Y-m');
+                        $sum = $results->get($monthKey) ?? 0.0;
 
                         return new MonthlyVolumePoint(
                             $date->translatedFormat('M'),
@@ -213,8 +218,32 @@ final class VolumeStatsService
      */
     private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, ?Carbon $prevEnd = null): array
     {
-        $currentVolume = $this->getPeriodVolume($user, $currentStart);
-        $previousVolume = $this->getPeriodVolume($user, $prevStart, $prevEnd);
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Consolidate two SUM queries into a single database query using conditional aggregation.
+        // Also uses toBase() to bypass Eloquent overhead.
+        $query = $user->workouts()
+            ->toBase()
+            ->where('started_at', '>=', $prevStart);
+
+        if ($prevEnd) {
+            $query->selectRaw('
+                SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
+                SUM(CASE WHEN started_at <= ? THEN workout_volume ELSE 0 END) as previous_volume
+            ', [$currentStart, $prevEnd]);
+        } else {
+            // ⚡ Bolt: Preserve exactly the original behavior where 'previous_volume' is the sum for the whole query if $prevEnd is null.
+            $query->selectRaw('
+                SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
+                SUM(workout_volume) as previous_volume
+            ', [$currentStart]);
+        }
+
+        /** @var \stdClass|null $stats */
+        $stats = $query->first();
+
+        $currentVolume = is_numeric($stats?->current_volume) ? (float) $stats->current_volume : 0.0;
+        $previousVolume = is_numeric($stats?->previous_volume) ? (float) $stats->previous_volume : 0.0;
+
         $diff = $currentVolume - $previousVolume;
         $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
 
@@ -224,18 +253,5 @@ final class VolumeStatsService
             'difference' => $diff,
             'percentage' => round($percentage, 1),
         ];
-    }
-
-    private function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
-    {
-        $query = $user->workouts();
-
-        if ($end) {
-            $query->whereBetween('started_at', [$start, $end]);
-        } else {
-            $query->where('started_at', '>=', $start);
-        }
-
-        return (float) $query->sum('workout_volume');
     }
 }
