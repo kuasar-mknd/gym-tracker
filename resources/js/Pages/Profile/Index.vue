@@ -132,7 +132,12 @@ const menuGroups = [
                 </h3>
 
                 <div class="grid grid-cols-1 gap-3">
-                    <Link v-for="item in group.items" :key="item.name" :href="route(item.route)" class="group block">
+                    <Link
+                        v-for="item in group.items"
+                        :key="item.name"
+                        :href="route(item.route)"
+                        class="group focus-visible:ring-electric-orange block rounded-2xl transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    >
                         <GlassCard
                             padding="p-4"
                             :hover="true"
