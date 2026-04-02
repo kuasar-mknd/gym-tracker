@@ -47,6 +47,8 @@ class AchievementController extends Controller implements HasMiddleware
      */
     public function index(): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Achievement::class);
+
         return AchievementResource::collection(Achievement::paginate());
     }
 
@@ -68,6 +70,8 @@ class AchievementController extends Controller implements HasMiddleware
      */
     public function store(StoreAchievementRequest $request): AchievementResource
     {
+        $this->authorize('create', Achievement::class);
+
         $achievement = Achievement::create($request->validated());
 
         return new AchievementResource($achievement);
@@ -91,6 +95,8 @@ class AchievementController extends Controller implements HasMiddleware
      */
     public function show(Achievement $achievement): AchievementResource
     {
+        $this->authorize('view', $achievement);
+
         return new AchievementResource($achievement);
     }
 
@@ -114,6 +120,8 @@ class AchievementController extends Controller implements HasMiddleware
      */
     public function update(UpdateAchievementRequest $request, Achievement $achievement): AchievementResource
     {
+        $this->authorize('update', $achievement);
+
         $achievement->update($request->validated());
 
         return new AchievementResource($achievement);
@@ -139,6 +147,8 @@ class AchievementController extends Controller implements HasMiddleware
      */
     public function destroy(Achievement $achievement): Response
     {
+        $this->authorize('delete', $achievement);
+
         $achievement->delete();
 
         return response()->noContent();
