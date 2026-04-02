@@ -49,7 +49,10 @@ const isActiveRoute = (itemRoute) => {
                 v-else
                 v-press
                 :href="route(item.route)"
-                :class="['glass-nav-item group', { active: isActiveRoute(item.route) }]"
+                :class="[
+                    'glass-nav-item group focus-visible:ring-electric-orange rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none',
+                    { active: isActiveRoute(item.route) },
+                ]"
                 :aria-label="item.name"
                 :aria-current="isActiveRoute(item.route) ? 'page' : undefined"
                 :dusk="'nav-' + item.route.split('.')[0]"
