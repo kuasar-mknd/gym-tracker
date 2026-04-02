@@ -16,9 +16,11 @@
  * @property {String|Number} modelValue - The bound value of the input.
  * @property {String} type - The input type (e.g., 'text', 'email', 'password'). Default: 'text'.
  * @property {String} label - The label displayed above the input field. Default: ''.
+ * @property {Boolean} hideLabel - Whether to visually hide the label (still accessible via screen readers). Default: false.
  * @property {String} error - The error message to display below the input if validation fails. Default: ''.
  * @property {String} size - The physical size of the input. Accepts 'sm', 'md', 'lg'. Default: 'md'.
  * @property {Boolean} selectOnFocus - If true, selects all text within the input upon gaining focus. Default: false.
+ * @property {String} inputClass - Custom classes to apply to the input element.
  */
 
 /**
@@ -27,7 +29,7 @@
  * @event update:modelValue - Emitted when the input value changes, allowing for v-model two-way binding.
  */
 
-import { computed, useAttrs, getCurrentInstance, ref } from 'vue'
+import { computed, useAttrs, getCurrentInstance, ref, useSlots } from 'vue'
 import InputError from '@/Components/Form/InputError.vue'
 
 defineOptions({
@@ -47,6 +49,10 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    hideLabel: {
+        type: Boolean,
+        default: false,
+    },
     error: {
         type: String,
         default: '',
@@ -59,12 +65,19 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    inputClass: {
+        type: String,
+        default: '',
+    },
 })
 
 defineEmits(['update:modelValue'])
 
 const attrs = useAttrs()
+const slots = useSlots()
 const instance = getCurrentInstance()
+const input = ref(null)
+
 const inputId = computed(() => {
     return attrs.id || `glass-input-${instance?.uid}`
 })
@@ -104,23 +117,44 @@ const showClearButton = computed(() => {
     )
 })
 
+const hasSuffix = computed(() => !!slots.suffix)
+
 const isRequired = computed(() => {
     // Check for 'required' in attrs (Vue treats presence as empty string usually, or true if bound)
     return 'required' in attrs && attrs.required !== false
+})
+
+defineExpose({
+    focus: () => input.value?.focus(),
+    select: () => input.value?.select(),
 })
 </script>
 
 <template>
     <div class="w-full">
         <!-- Main Label -->
-        <label v-if="label" :for="inputId" class="font-display-label text-text-muted mb-2 block">
+        <label
+            v-if="label"
+            :for="inputId"
+            :class="['font-display-label text-text-muted mb-2 block', { 'sr-only': hideLabel }]"
+        >
             {{ label }}
             <span v-if="isRequired" class="ml-0.5 text-red-500" aria-hidden="true">*</span>
         </label>
 
         <!-- Standard input -->
         <div class="relative">
+            <!-- Search Icon -->
+            <div
+                v-if="type === 'search'"
+                class="text-text-muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+                aria-hidden="true"
+            >
+                <span class="material-symbols-outlined text-[24px]">search</span>
+            </div>
+
             <input
+                ref="input"
                 :id="inputId"
                 :type="inputType"
                 :value="modelValue"
@@ -129,22 +163,32 @@ const isRequired = computed(() => {
                 :aria-invalid="!!error"
                 :aria-describedby="errorId"
                 :class="[
-                    'glass-input',
+                    'glass-input dark:placeholder:text-text-muted/50 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white',
                     sizeClasses[size],
                     {
                         'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
-                        'pr-10': hasClearButton || isPassword, // Add padding for clear or toggle button
+                        'pl-10': type === 'search',
+                        'pr-10': hasClearButton || isPassword || hasSuffix, // Padding for icons/buttons
                     },
+                    inputClass,
                 ]"
                 v-bind="$attrs"
             />
+
+            <!-- Suffix Slot -->
+            <div v-if="hasSuffix" class="absolute top-1/2 right-3 flex -translate-y-1/2 items-center">
+                <slot name="suffix" />
+            </div>
 
             <!-- Clear Button -->
             <button
                 v-if="showClearButton"
                 type="button"
                 @click="$emit('update:modelValue', '')"
-                class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                :class="[
+                    'text-text-muted hover:text-text-main focus-visible:ring-electric-orange absolute top-1/2 -translate-y-1/2 rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                    hasSuffix ? 'right-12' : 'right-3',
+                ]"
                 aria-label="Effacer le texte"
                 v-press
             >
@@ -156,7 +200,10 @@ const isRequired = computed(() => {
                 v-if="isPassword"
                 type="button"
                 @click="showPassword = !showPassword"
-                class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                :class="[
+                    'text-text-muted hover:text-text-main focus-visible:ring-electric-orange absolute top-1/2 -translate-y-1/2 rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                    hasSuffix ? 'right-12' : 'right-3',
+                ]"
                 :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                 :title="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                 v-press

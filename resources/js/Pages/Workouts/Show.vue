@@ -593,11 +593,13 @@ const filteredExercises = computed(() => {
                 </h2>
                 <div v-if="!showCreateForm">
                     <div class="sticky top-0 z-10 bg-white/50 pt-1 pb-4 backdrop-blur-sm dark:bg-slate-900/50">
-                        <input
+                        <GlassInput
                             v-model="searchQuery"
                             type="search"
+                            size="lg"
+                            label="Rechercher un exercice"
+                            hide-label
                             placeholder="Rechercher..."
-                            class="text-text-main focus:border-electric-orange/50 w-full rounded-2xl border-2 border-slate-100 p-4 shadow-sm focus:ring-0 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                         />
                     </div>
                     <div class="max-h-[60vh] space-y-3 overflow-y-auto pb-64">

@@ -287,29 +287,28 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Search Bar -->
-            <div
-                class="glass-panel-light animate-slide-up flex items-center gap-3 rounded-2xl p-3"
-                style="animation-delay: 0.1s"
-            >
-                <label for="search-exercises-input" class="sr-only">Rechercher des exercices</label>
-                <span class="material-symbols-outlined text-text-muted text-[24px]" aria-hidden="true">search</span>
-                <input
-                    id="search-exercises-input"
+            <div class="animate-slide-up" style="animation-delay: 0.1s">
+                <GlassInput
                     ref="searchInput"
                     v-model="searchQuery"
                     type="search"
+                    size="lg"
+                    label="Rechercher des exercices"
+                    hide-label
                     dusk="search-exercises"
                     placeholder="Recherche exercices..."
-                    aria-label="Rechercher des exercices (Raccourci : ⌘K)"
-                    class="text-text-main placeholder:text-text-muted/50 flex-1 border-none bg-transparent text-lg focus:ring-0 focus:outline-none"
-                />
-                <div
-                    class="text-text-muted/40 hidden items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
-                    aria-hidden="true"
+                    :aria-label="'Rechercher des exercices (Raccourci : ⌘K)'"
                 >
-                    <span class="material-symbols-outlined text-sm">keyboard</span>
-                    ⌘K
-                </div>
+                    <template #suffix>
+                        <div
+                            class="text-text-muted/40 hidden items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
+                            aria-hidden="true"
+                        >
+                            <span class="material-symbols-outlined text-sm">keyboard</span>
+                            ⌘K
+                        </div>
+                    </template>
+                </GlassInput>
             </div>
 
             <!-- Category Pills -->
