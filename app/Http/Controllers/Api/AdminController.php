@@ -37,6 +37,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function index(): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Admin::class);
+
         return AdminResource::collection(Admin::paginate());
     }
 
@@ -45,6 +47,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function store(StoreAdminRequest $request): AdminResource
     {
+        $this->authorize('create', Admin::class);
+
         $admin = Admin::create($request->validated());
 
         return new AdminResource($admin);
@@ -55,6 +59,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function show(Admin $admin): AdminResource
     {
+        $this->authorize('view', $admin);
+
         return new AdminResource($admin);
     }
 
@@ -63,6 +69,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function update(UpdateAdminRequest $request, Admin $admin): AdminResource
     {
+        $this->authorize('update', $admin);
+
         $admin->update($request->validated());
 
         return new AdminResource($admin);
@@ -73,6 +81,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function destroy(Admin $admin): JsonResponse
     {
+        $this->authorize('delete', $admin);
+
         $admin->delete();
 
         return response()->json(null, 204);
