@@ -68,7 +68,7 @@
                             @click="addWater(250)"
                             :disabled="form.processing"
                             aria-label="Ajouter 250ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">local_drink</span>
                             <span class="text-text-main text-xs font-bold">250ml</span>
@@ -77,7 +77,7 @@
                             @click="addWater(500)"
                             :disabled="form.processing"
                             aria-label="Ajouter 500ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_drop</span>
                             <span class="text-text-main text-xs font-bold">500ml</span>
@@ -86,7 +86,7 @@
                             @click="addWater(1000)"
                             :disabled="form.processing"
                             aria-label="Ajouter 1L"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-4 transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-95"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_bottle</span>
                             <span class="text-text-main text-xs font-bold">1L</span>
@@ -100,7 +100,7 @@
                                 type="number"
                                 v-model="customAmount"
                                 placeholder="Quantité personnalisée"
-                                class="font-display text-text-main h-12 w-full rounded-xl border border-slate-200 bg-white px-4 font-bold transition-all outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                class="font-display text-text-main h-12 w-full rounded-2xl border border-white/20 bg-white/10 px-4 font-bold backdrop-blur-md transition-all outline-none focus:bg-white/20 focus:ring-2 focus:ring-blue-500/20"
                             />
                             <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 text-xs font-bold"
                                 >ML</span
@@ -135,7 +135,7 @@
                         <div
                             v-for="log in logs"
                             :key="log.id"
-                            class="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-3 transition-all hover:border-slate-200"
+                            class="flex items-center justify-between rounded-2xl border border-white/20 bg-white/10 p-3 backdrop-blur-md transition-all hover:bg-white/20"
                         >
                             <div class="flex items-center gap-3">
                                 <div
