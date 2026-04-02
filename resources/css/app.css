@@ -353,7 +353,7 @@
         font-weight: 600;
     }
 
-    &:focus {
+    &:focus-visible {
         border-color: rgba(255, 85, 0, 0.5);
         box-shadow:
             0 0 0 4px rgba(255, 85, 0, 0.1),
@@ -378,7 +378,7 @@
         font-size: 4.5rem;
     }
 
-    &:focus {
+    &:focus-visible {
         outline: none;
         transform: scale(1.05);
     }
