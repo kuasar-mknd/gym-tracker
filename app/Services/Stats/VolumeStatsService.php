@@ -14,9 +14,20 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Service for calculating and retrieving user volume statistics.
+ *
+ * This service handles all calculations related to lifted volume, including
+ * trends over time, daily/weekly/monthly aggregations, and comparisons
+ * between different periods.
+ */
 final class VolumeStatsService
 {
     /**
+     * Get the volume trend over a specified number of days.
+     *
+     * @param  User  $user  The user to retrieve the trend for.
+     * @param  int  $days   The number of days to look back.
      * @return array<int, VolumeTrendPoint>
      */
     public function getVolumeTrend(User $user, int $days = 30): array
@@ -41,6 +52,10 @@ final class VolumeStatsService
     }
 
     /**
+     * Get the aggregated daily volume trend.
+     *
+     * @param  User  $user  The user to retrieve the daily trend for.
+     * @param  int  $days   The number of days to include in the trend.
      * @return array<int, DailyVolumeTrendPoint>
      */
     public function getDailyVolumeTrend(User $user, int $days = 7): array
@@ -74,6 +89,9 @@ final class VolumeStatsService
     }
 
     /**
+     * Get the aggregated weekly volume trend for the current week.
+     *
+     * @param  User  $user  The user to retrieve the weekly trend for.
      * @return array<int, WeeklyVolumeTrendPoint>
      */
     public function getWeeklyVolumeTrend(User $user): array
@@ -113,6 +131,10 @@ final class VolumeStatsService
     }
 
     /**
+     * Get the volume history for the user's most recent workouts.
+     *
+     * @param  User  $user  The user to retrieve the volume history for.
+     * @param  int  $limit  The maximum number of recent workouts to include.
      * @return array<int, VolumeHistoryPoint>
      */
     public function getVolumeHistory(User $user, int $limit = 20): array
@@ -135,6 +157,12 @@ final class VolumeStatsService
         );
     }
 
+    /**
+     * Compare the current month's volume to the previous month's volume.
+     *
+     * @param  User  $user  The user to calculate the comparison for.
+     * @return VolumeComparison
+     */
     public function getMonthlyVolumeComparison(User $user): VolumeComparison
     {
         $comparison = $this->calculateComparison(
@@ -152,6 +180,12 @@ final class VolumeStatsService
         );
     }
 
+    /**
+     * Compare the current week's volume to the previous week's volume.
+     *
+     * @param  User  $user  The user to calculate the comparison for.
+     * @return VolumeComparison
+     */
     public function getWeeklyVolumeComparison(User $user): VolumeComparison
     {
         $weekKey = now()->startOfWeek()->format('Y-W');
@@ -176,6 +210,10 @@ final class VolumeStatsService
     }
 
     /**
+     * Get the aggregated monthly volume history.
+     *
+     * @param  User  $user    The user to retrieve the monthly history for.
+     * @param  int  $months   The number of months to look back.
      * @return array<int, MonthlyVolumePoint>
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
@@ -209,6 +247,12 @@ final class VolumeStatsService
     }
 
     /**
+     * Calculate a comparison of volume between two periods.
+     *
+     * @param  User  $user          The user to calculate the comparison for.
+     * @param  Carbon  $currentStart The start date of the current period.
+     * @param  Carbon  $prevStart    The start date of the previous period.
+     * @param  Carbon|null  $prevEnd The end date of the previous period.
      * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float}
      */
     private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, ?Carbon $prevEnd = null): array
@@ -226,6 +270,14 @@ final class VolumeStatsService
         ];
     }
 
+    /**
+     * Get the total volume for a specific time period.
+     *
+     * @param  User  $user        The user to calculate the period volume for.
+     * @param  Carbon  $start     The start date of the period.
+     * @param  Carbon|null  $end  The end date of the period.
+     * @return float
+     */
     private function getPeriodVolume(User $user, Carbon $start, ?Carbon $end = null): float
     {
         $query = $user->workouts();
