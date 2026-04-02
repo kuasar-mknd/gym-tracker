@@ -9,7 +9,6 @@ use App\Http\Requests\StoreAdminRequest;
 use App\Http\Requests\UpdateAdminRequest;
 use App\Http\Resources\AdminResource;
 use App\Models\Admin;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -37,6 +36,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function index(): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Admin::class);
+
         return AdminResource::collection(Admin::paginate());
     }
 
@@ -45,6 +46,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function store(StoreAdminRequest $request): AdminResource
     {
+        $this->authorize('create', Admin::class);
+
         $admin = Admin::create($request->validated());
 
         return new AdminResource($admin);
@@ -55,6 +58,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function show(Admin $admin): AdminResource
     {
+        $this->authorize('view', $admin);
+
         return new AdminResource($admin);
     }
 
@@ -63,6 +68,8 @@ class AdminController extends Controller implements HasMiddleware
      */
     public function update(UpdateAdminRequest $request, Admin $admin): AdminResource
     {
+        $this->authorize('update', $admin);
+
         $admin->update($request->validated());
 
         return new AdminResource($admin);
@@ -71,10 +78,12 @@ class AdminController extends Controller implements HasMiddleware
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Admin $admin): JsonResponse
+    public function destroy(Admin $admin): \Illuminate\Http\Response
     {
+        $this->authorize('delete', $admin);
+
         $admin->delete();
 
-        return response()->json(null, 204);
+        return response()->noContent();
     }
 }

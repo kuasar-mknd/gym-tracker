@@ -57,3 +57,8 @@
 **Vulnerability:** Found `MacroCalculationController` (API) missing explicit `$this->authorize()` calls in `index()` and `store()` methods, unlike its web counterpart and other API resource controllers.
 **Learning:** Even when queries are scoped to the authenticated user (e.g., `$user->macroCalculations()`), missing explicit authorization bypasses the central Policy logic. This can lead to security gaps if the Policy is intended to enforce broader restrictions (e.g., account status, feature flags, or global "deny" rules) beyond simple ownership.
 **Prevention:** Enforce defense-in-depth by always calling `$this->authorize()` at the start of every resource controller action (including `index` and `store`), regardless of relationship scoping or `FormRequest` checks.
+
+## 2026-03-29 - Broken Function Level Authorization via HasMiddleware Anti-pattern
+**Vulnerability:** Found `AchievementController` and `AdminController` (API) relying solely on the `HasMiddleware` interface with `can` middleware for authorization, missing explicit `$this->authorize()` calls in their CRUD methods.
+**Learning:** Relying on `HasMiddleware` or `Middleware` definitions within controllers is a fragile pattern. It separates the authorization logic from the execution flow of the method, making it easy to accidentally bypass if the middleware configuration is changed or if the controller is refactored.
+**Prevention:** Always enforce defense-in-depth by calling `$this->authorize()` at the beginning of every controller action, even when using middleware-based authorization or FormRequests.
