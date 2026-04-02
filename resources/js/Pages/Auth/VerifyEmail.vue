@@ -29,7 +29,10 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
             </p>
         </div>
 
-        <div v-if="verificationLinkSent" class="bg-accent-success/20 text-accent-success mb-4 rounded-xl p-3 text-sm">
+        <div
+            v-if="verificationLinkSent"
+            class="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm font-medium text-emerald-600 shadow-sm backdrop-blur-md"
+        >
             Un nouveau lien de vérification a été envoyé à ton adresse email.
         </div>
 
@@ -38,7 +41,12 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
                 Renvoyer l'email
             </GlassButton>
 
-            <Link :href="route('logout')" method="post" as="button" class="glass-button w-full justify-center">
+            <Link
+                :href="route('logout')"
+                method="post"
+                as="button"
+                class="text-text-main flex w-full items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-bold shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/20 hover:shadow-md active:scale-95"
+            >
                 Se déconnecter
             </Link>
         </form>
