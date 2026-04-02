@@ -226,16 +226,16 @@ final class VolumeStatsService
             ->where('started_at', '>=', $prevStart);
 
         if ($prevEnd) {
-            $query->selectRaw("
+            $query->selectRaw('
                 SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
                 SUM(CASE WHEN started_at <= ? THEN workout_volume ELSE 0 END) as previous_volume
-            ", [$currentStart, $prevEnd]);
+            ', [$currentStart, $prevEnd]);
         } else {
             // ⚡ Bolt: Preserve exactly the original behavior where 'previous_volume' is the sum for the whole query if $prevEnd is null.
-            $query->selectRaw("
+            $query->selectRaw('
                 SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
                 SUM(workout_volume) as previous_volume
-            ", [$currentStart]);
+            ', [$currentStart]);
         }
 
         /** @var \stdClass|null $stats */
