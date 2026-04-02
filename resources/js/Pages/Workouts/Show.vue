@@ -594,6 +594,7 @@ const filteredExercises = computed(() => {
                 <div v-if="!showCreateForm">
                     <div class="sticky top-0 z-10 bg-white/50 pt-1 pb-4 backdrop-blur-sm dark:bg-slate-900/50">
                         <GlassInput
+                            id="search-workout-exercise"
                             v-model="searchQuery"
                             type="search"
                             size="lg"

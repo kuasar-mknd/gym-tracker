@@ -136,7 +136,10 @@ defineExpose({
         <label
             v-if="label"
             :for="inputId"
-            :class="['font-display-label text-text-muted mb-2 block', { 'sr-only': hideLabel }]"
+            :class="[
+                'font-display-label text-text-muted mb-2 block',
+                { 'sr-only': hideLabel },
+            ]"
         >
             {{ label }}
             <span v-if="isRequired" class="ml-0.5 text-red-500" aria-hidden="true">*</span>
@@ -163,55 +166,51 @@ defineExpose({
                 :aria-invalid="!!error"
                 :aria-describedby="errorId"
                 :class="[
-                    'glass-input dark:placeholder:text-text-muted/50 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white',
+                    'glass-input dark:bg-slate-800/80 dark:border-slate-700 dark:text-white dark:placeholder:text-text-muted/50',
                     sizeClasses[size],
                     {
                         'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
                         'pl-10': type === 'search',
-                        'pr-10': hasClearButton || isPassword || hasSuffix, // Padding for icons/buttons
+                        'pr-12': (hasClearButton || isPassword || hasSuffix) && !(hasSuffix && (hasClearButton || isPassword)),
+                        'pr-32': hasSuffix && (hasClearButton || isPassword),
                     },
                     inputClass,
                 ]"
                 v-bind="$attrs"
             />
 
-            <!-- Suffix Slot -->
-            <div v-if="hasSuffix" class="absolute top-1/2 right-3 flex -translate-y-1/2 items-center">
+            <!-- Right Decorations Container -->
+            <div class="absolute top-1/2 right-2 -translate-y-1/2 flex items-center gap-0.5">
+                <!-- Clear Button -->
+                <button
+                    v-if="showClearButton"
+                    type="button"
+                    @click="$emit('update:modelValue', '')"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    aria-label="Effacer le texte"
+                    v-press
+                >
+                    <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">cancel</span>
+                </button>
+
+                <!-- Password Toggle -->
+                <button
+                    v-if="isPassword"
+                    type="button"
+                    @click="showPassword = !showPassword"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                    :title="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+                    v-press
+                >
+                    <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">
+                        {{ showPassword ? 'visibility_off' : 'visibility' }}
+                    </span>
+                </button>
+
+                <!-- Suffix Slot -->
                 <slot name="suffix" />
             </div>
-
-            <!-- Clear Button -->
-            <button
-                v-if="showClearButton"
-                type="button"
-                @click="$emit('update:modelValue', '')"
-                :class="[
-                    'text-text-muted hover:text-text-main focus-visible:ring-electric-orange absolute top-1/2 -translate-y-1/2 rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                    hasSuffix ? 'right-12' : 'right-3',
-                ]"
-                aria-label="Effacer le texte"
-                v-press
-            >
-                <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">cancel</span>
-            </button>
-
-            <!-- Password Toggle -->
-            <button
-                v-if="isPassword"
-                type="button"
-                @click="showPassword = !showPassword"
-                :class="[
-                    'text-text-muted hover:text-text-main focus-visible:ring-electric-orange absolute top-1/2 -translate-y-1/2 rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none',
-                    hasSuffix ? 'right-12' : 'right-3',
-                ]"
-                :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-                :title="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-                v-press
-            >
-                <span class="material-symbols-outlined text-lg leading-none" aria-hidden="true">
-                    {{ showPassword ? 'visibility_off' : 'visibility' }}
-                </span>
-            </button>
         </div>
 
         <InputError :message="error" :id="errorId" />

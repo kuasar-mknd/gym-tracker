@@ -289,6 +289,7 @@ const typeLabel = (type) => {
             <!-- Search Bar -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
                 <GlassInput
+                    id="search-exercises-input"
                     ref="searchInput"
                     v-model="searchQuery"
                     type="search"
