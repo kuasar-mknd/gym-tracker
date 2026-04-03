@@ -46,15 +46,9 @@ const open = ref(false)
 
 <template>
     <div class="relative">
-        <button
-            type="button"
-            class="focus-visible:ring-electric-orange block w-full rounded-xl text-left transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-            @click="open = !open"
-            aria-haspopup="true"
-            :aria-expanded="open"
-        >
-            <slot name="trigger" />
-        </button>
+        <div @click="open = !open">
+            <slot name="trigger" :open="open" />
+        </div>
 
         <!-- Full Screen Dropdown Overlay -->
         <div v-show="open" class="fixed inset-0 z-40" @click="open = false"></div>
