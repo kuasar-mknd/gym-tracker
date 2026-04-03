@@ -33,6 +33,14 @@ const showingNavigationDropdown = ref(false)
 
 <template>
     <div class="bg-pearl-white relative min-h-dvh w-full overflow-x-hidden dark:bg-slate-900">
+        <!-- Skip to content link -->
+        <a
+            href="#main-content"
+            class="bg-electric-orange absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold text-white transition-transform focus:translate-y-0 focus:ring-2 focus:ring-white focus:outline-none"
+        >
+            Aller au contenu principal
+        </a>
+
         <!-- Liquid Glass Background -->
         <LiquidBackground :variant="liquidVariant" />
 
@@ -134,10 +142,12 @@ const showingNavigationDropdown = ref(false)
                         <!-- User Dropdown -->
                         <div class="relative">
                             <Dropdown align="right" width="48">
-                                <template #trigger>
+                                <template #trigger="{ open }">
                                     <button
                                         type="button"
-                                        class="text-text-main inline-flex items-center gap-2 rounded-xl border border-white bg-white/60 px-4 py-2 text-sm font-bold transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:hover:bg-slate-700"
+                                        aria-haspopup="true"
+                                        :aria-expanded="open"
+                                        class="text-text-main focus-visible:ring-electric-orange inline-flex items-center gap-2 rounded-xl border border-white bg-white/60 px-4 py-2 text-sm font-bold transition-all hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:hover:bg-slate-700"
                                     >
                                         <div
                                             class="bg-gradient-main flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white"
