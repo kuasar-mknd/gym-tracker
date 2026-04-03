@@ -5,7 +5,10 @@ defineProps({
 </script>
 
 <template>
-    <header id="dashboard-header" class="animate-fade-in flex items-center justify-between py-4">
+    <header
+        id="dashboard-header"
+        class="animate-fade-in flex items-center justify-between rounded-3xl border border-white/20 bg-white/10 p-4 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-xl active:scale-[0.98]"
+    >
         <div class="flex items-center gap-4">
             <!-- Avatar with gradient border -->
             <div class="relative">
@@ -37,9 +40,11 @@ defineProps({
         </div>
 
         <!-- Streak Badge -->
-        <div class="streak-badge cursor-pointer transition-transform hover:scale-105">
+        <div
+            class="streak-badge group flex cursor-pointer items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
+        >
             <span
-                class="material-symbols-outlined text-electric-orange text-[24px]"
+                class="material-symbols-outlined text-electric-orange text-[24px] transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse"
                 style="font-variation-settings: 'FILL' 1"
                 >local_fire_department</span
             >
