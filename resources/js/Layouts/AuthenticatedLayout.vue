@@ -143,8 +143,7 @@ const showingNavigationDropdown = ref(false)
                         <div class="relative">
                             <Dropdown align="right" width="48">
                                 <template #trigger>
-                                    <button
-                                        type="button"
+                                    <div
                                         class="text-text-main inline-flex items-center gap-2 rounded-xl border border-white bg-white/60 px-4 py-2 text-sm font-bold transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:hover:bg-slate-700"
                                     >
                                         <div
@@ -158,7 +157,7 @@ const showingNavigationDropdown = ref(false)
                                             aria-hidden="true"
                                             >expand_more</span
                                         >
-                                    </button>
+                                    </div>
                                 </template>
 
                                 <template #content>

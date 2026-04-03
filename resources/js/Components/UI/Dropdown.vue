@@ -48,7 +48,7 @@ const open = ref(false)
     <div class="relative">
         <button
             type="button"
-            class="block w-full text-left focus:outline-none"
+            class="focus-visible:ring-electric-orange block w-full rounded-xl text-left transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             @click="open = !open"
             aria-haspopup="true"
             :aria-expanded="open"
