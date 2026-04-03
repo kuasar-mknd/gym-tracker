@@ -14,6 +14,10 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    ariaLabelledby: {
+        type: String,
+        default: null,
+    },
 })
 
 const emit = defineEmits(['close'])
@@ -88,6 +92,7 @@ const maxWidthClass = computed(() => {
     <dialog
         class="z-[100] m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
         ref="dialog"
+        :aria-labelledby="ariaLabelledby"
     >
         <div class="fixed inset-0 z-[100] overflow-y-auto px-4 py-6 sm:px-0" scroll-region>
             <Transition
