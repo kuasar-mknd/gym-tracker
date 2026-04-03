@@ -136,10 +136,7 @@ defineExpose({
         <label
             v-if="label"
             :for="inputId"
-            :class="[
-                'font-display-label text-text-muted mb-2 block',
-                { 'sr-only': hideLabel },
-            ]"
+            :class="['font-display-label text-text-muted mb-2 block', { 'sr-only': hideLabel }]"
         >
             {{ label }}
             <span v-if="isRequired" class="ml-0.5 text-red-500" aria-hidden="true">*</span>
@@ -166,12 +163,14 @@ defineExpose({
                 :aria-invalid="!!error"
                 :aria-describedby="errorId"
                 :class="[
-                    'glass-input dark:bg-slate-800/80 dark:border-slate-700 dark:text-white dark:placeholder:text-text-muted/50',
+                    'glass-input dark:placeholder:text-text-muted/50 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white',
                     sizeClasses[size],
                     {
                         'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
                         'pl-10': type === 'search',
-                        'pr-12': (hasClearButton || isPassword || hasSuffix) && !(hasSuffix && (hasClearButton || isPassword)),
+                        'pr-12':
+                            (hasClearButton || isPassword || hasSuffix) &&
+                            !(hasSuffix && (hasClearButton || isPassword)),
                         'pr-32': hasSuffix && (hasClearButton || isPassword),
                     },
                     inputClass,
@@ -180,7 +179,7 @@ defineExpose({
             />
 
             <!-- Right Decorations Container -->
-            <div class="absolute top-1/2 right-2 -translate-y-1/2 flex items-center gap-0.5">
+            <div class="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-0.5">
                 <!-- Clear Button -->
                 <button
                     v-if="showClearButton"
