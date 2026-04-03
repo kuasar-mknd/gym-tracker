@@ -13,7 +13,7 @@ defineProps({
     <Link
         v-press
         :href="href"
-        class="mx-2 my-1 block w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-start text-sm font-medium text-white/80 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:text-white focus:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+        class="mx-2 my-1 block rounded-2xl border border-white/20 bg-white/10 px-4 py-2.5 text-start text-sm font-medium text-white/80 backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:bg-white/20 hover:text-white focus-visible:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
     >
         <slot />
     </Link>

@@ -33,6 +33,14 @@ const showingNavigationDropdown = ref(false)
 
 <template>
     <div class="bg-pearl-white relative min-h-dvh w-full overflow-x-hidden dark:bg-slate-900">
+        <!-- Skip to content link -->
+        <a
+            href="#main-content"
+            class="bg-electric-orange absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold text-white transition-transform focus:translate-y-0 focus:ring-2 focus:ring-white focus:outline-none"
+        >
+            {{ $t('Skip to content') }}
+        </a>
+
         <!-- Liquid Glass Background -->
         <LiquidBackground :variant="liquidVariant" />
 
