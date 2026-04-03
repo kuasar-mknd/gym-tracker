@@ -9,6 +9,7 @@ import DurationSection from '@/Components/Dashboard/DurationSection.vue'
 import TimeOfDaySection from '@/Components/Dashboard/TimeOfDaySection.vue'
 import RecentVolumeSection from '@/Components/Dashboard/RecentVolumeSection.vue'
 import RecentExercisesSection from '@/Components/Dashboard/RecentExercisesSection.vue'
+import RecentWorkoutDurationSection from '@/Components/Dashboard/RecentWorkoutDurationSection.vue'
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
@@ -70,9 +71,10 @@ const startWorkout = () => {
                 <TimeOfDaySection :time-of-day-distribution="analyticalStats?.workoutDistributions?.time_of_day" />
             </Deferred>
 
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
                 <RecentVolumeSection :recent-workouts="recentWorkouts" />
                 <RecentExercisesSection :recent-workouts="recentWorkouts" />
+                <RecentWorkoutDurationSection :recent-workouts="recentWorkouts" />
             </div>
 
             <RecentActivity
