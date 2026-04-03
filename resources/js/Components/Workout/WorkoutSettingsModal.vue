@@ -12,9 +12,14 @@ const emit = defineEmits(['close', 'submit'])
 </script>
 
 <template>
-    <Modal :show="show" @close="emit('close')" max-width="lg">
+    <Modal :show="show" @close="emit('close')" max-width="lg" aria-labelledby="workout-settings-title">
         <div class="p-6">
-            <h2 class="font-display text-text-main mb-6 text-2xl font-black uppercase italic">Paramètres</h2>
+            <h2
+                id="workout-settings-title"
+                class="font-display text-text-main mb-6 text-2xl font-black uppercase italic"
+            >
+                Paramètres
+            </h2>
             <form @submit.prevent="emit('submit')" class="space-y-5">
                 <GlassInput v-model="form.name" label="Nom" dusk="workout-name-input" />
                 <GlassInput v-model="form.started_at" type="datetime-local" label="Date" />
