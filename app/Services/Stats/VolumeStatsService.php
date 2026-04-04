@@ -25,16 +25,29 @@ final class VolumeStatsService
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $user->workouts()
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
+                // This significantly reduces memory usage and execution time for large datasets.
+                ->toBase()
                 ->where('started_at', '>=', now()->subDays($days))
                 ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
                 ->orderBy('started_at')
                 ->get()
-                ->map(fn (object $row): VolumeTrendPoint => new VolumeTrendPoint(
-                    Carbon::parse($row->started_at)->format('d/m'),
-                    Carbon::parse($row->started_at)->format('Y-m-d'),
-                    (string) $row->name,
-                    is_numeric($row->getAttribute('volume')) ? (float) $row->getAttribute('volume') : 0.0,
-                ))
+                ->map(function (object $row): ?VolumeTrendPoint {
+                    $timestamp = strtotime((string) $row->started_at);
+
+                    if ($timestamp === false) {
+                        return null;
+                    }
+
+                    return new VolumeTrendPoint(
+                        date('d/m', $timestamp),
+                        date('Y-m-d', $timestamp),
+                        (string) $row->name,
+                        is_numeric($row->volume) ? (float) $row->volume : 0.0,
+                    );
+                })
+                ->filter()
                 ->values()
                 ->toArray()
         );
@@ -121,16 +134,29 @@ final class VolumeStatsService
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
             fn (): array => $user->workouts()
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
+                // This significantly reduces memory usage and execution time for large datasets.
+                ->toBase()
                 ->whereNotNull('ended_at')
                 ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
                 ->orderBy('started_at')
                 ->limit($limit)
                 ->get()
-                ->map(fn (object $row): VolumeHistoryPoint => new VolumeHistoryPoint(
-                    Carbon::parse($row->started_at)->format('d/m'),
-                    is_numeric($row->getAttribute('volume')) ? (float) $row->getAttribute('volume') : 0.0,
-                    (string) $row->name,
-                ))
+                ->map(function (object $row): ?VolumeHistoryPoint {
+                    $timestamp = strtotime((string) $row->started_at);
+
+                    if ($timestamp === false) {
+                        return null;
+                    }
+
+                    return new VolumeHistoryPoint(
+                        date('d/m', $timestamp),
+                        is_numeric($row->volume) ? (float) $row->volume : 0.0,
+                        (string) $row->name,
+                    );
+                })
+                ->filter()
                 ->toArray()
         );
     }
