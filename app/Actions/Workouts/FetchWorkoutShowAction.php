@@ -9,12 +9,25 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 
+/**
+ * Action class responsible for preparing the data necessary to display a specific workout.
+ *
+ * This class fetches all relevant nested relationships (lines, sets, exercises, personal records)
+ * and available reference data (exercise lists, categories) required by the frontend view.
+ */
 class FetchWorkoutShowAction
 {
     /**
      * Prepare the data required for the workout show view.
      *
-     * @return array<string, mixed>
+     * @param  \App\Models\User  $user  The authenticated user viewing the workout.
+     * @param  \App\Models\Workout  $workout  The workout to be displayed.
+     * @return array{
+     *     workout: \App\Models\Workout,
+     *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>|array<int, \App\Models\Exercise>,
+     *     categories: array<int, string>,
+     *     types: array<int, array{value: string, label: string}>
+     * }
      */
     public function execute(User $user, Workout $workout): array
     {
