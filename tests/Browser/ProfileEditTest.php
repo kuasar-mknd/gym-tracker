@@ -35,7 +35,7 @@ class ProfileEditTest extends DuskTestCase
                 ->assertInputValue('input[type="text"]', 'Original Name')
                 ->assertInputValue('input[type="email"]', $user->email);
 
-            $newName = 'Updated Name ' . time();
+            $newName = 'Updated Name '.time();
             $browser->clear('input[type="text"]')
                 ->type('input[type="text"]', $newName)
                 ->press('Enregistrer')
