@@ -34,9 +34,8 @@ final class VolumeStatsService
                 ->orderBy('started_at')
                 ->get()
                 ->map(fn (object $row): VolumeTrendPoint => new VolumeTrendPoint(
-                    /** @var string $row->started_at */
-                    date('d/m', strtotime($row->started_at)),
-                    date('Y-m-d', strtotime($row->started_at)),
+                    date('d/m', strtotime((string) $row->started_at)),
+                    date('Y-m-d', strtotime((string) $row->started_at)),
                     (string) $row->name,
                     is_numeric($row->volume) ? (float) $row->volume : 0.0,
                 ))
@@ -136,8 +135,7 @@ final class VolumeStatsService
                 ->limit($limit)
                 ->get()
                 ->map(fn (object $row): VolumeHistoryPoint => new VolumeHistoryPoint(
-                    /** @var string $row->started_at */
-                    date('d/m', strtotime($row->started_at)),
+                    date('d/m', strtotime((string) $row->started_at)),
                     is_numeric($row->volume) ? (float) $row->volume : 0.0,
                     (string) $row->name,
                 ))

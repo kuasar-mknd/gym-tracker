@@ -32,10 +32,8 @@ final class WorkoutStatsService
                 ->take($limit)
                 ->get()
                 ->map(function (object $workout): DurationHistoryPoint {
-                    /** @var string $workout->started_at */
-                    $start = strtotime($workout->started_at);
-                    /** @var string $workout->ended_at */
-                    $end = strtotime($workout->ended_at);
+                    $start = strtotime((string) $workout->started_at);
+                    $end = strtotime((string) $workout->ended_at);
 
                     return new DurationHistoryPoint(
                         date('d/m', $start),
