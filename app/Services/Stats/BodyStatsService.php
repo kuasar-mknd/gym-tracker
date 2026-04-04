@@ -7,7 +7,6 @@ namespace App\Services\Stats;
 use App\DTOs\Stats\BodyFatHistoryPoint;
 use App\DTOs\Stats\LatestBodyMetrics;
 use App\DTOs\Stats\WeightHistoryPoint;
-use App\Models\BodyMeasurement;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;

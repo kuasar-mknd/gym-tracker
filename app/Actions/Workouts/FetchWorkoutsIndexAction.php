@@ -104,7 +104,7 @@ final class FetchWorkoutsIndexAction
 
             return [
                 'month' => $date->translatedFormat('M'),
-                'count' => $data && is_numeric($data->getAttribute('count')) ? (int) $data->getAttribute('count') : 0,
+                'count' => $data && is_numeric($data->count) ? (int) $data->count : 0,
             ];
         });
     }
