@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 
 class DeleteUserRequest extends FormRequest
 {
@@ -26,5 +28,38 @@ class DeleteUserRequest extends FormRequest
         return [
             'password' => ['required', 'current_password'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+            $seconds = RateLimiter::availableIn($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'password' => trans('auth.throttle', [
+                    'seconds' => $seconds,
+                    'minutes' => ceil($seconds / 60),
+                ]),
+            ]);
+        }
+    }
+
+    protected function passedValidation(): void
+    {
+        RateLimiter::clear($this->throttleKey());
+    }
+
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
+            if ($validator->errors()->has('password')) {
+                RateLimiter::hit($this->throttleKey());
+            }
+        });
+    }
+
+    public function throttleKey(): string
+    {
+        return 'delete-account-'.$this->user()?->id;
     }
 }
