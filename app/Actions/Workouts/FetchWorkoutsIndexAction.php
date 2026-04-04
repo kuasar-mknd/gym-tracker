@@ -86,7 +86,9 @@ final class FetchWorkoutsIndexAction
         $startDate = now()->subMonths(5)->startOfMonth();
 
         // ⚡ Bolt Optimization: Group and count directly in SQL to reduce memory usage and CPU cycles in PHP.
+        // Also uses toBase() to avoid Eloquent model hydration.
         $results = Workout::query()
+            ->toBase()
             ->where('user_id', $user->id)
             ->where('started_at', '>=', $startDate)
             ->selectRaw("DATE_FORMAT(started_at, '%Y-%m') as month, COUNT(*) as count")

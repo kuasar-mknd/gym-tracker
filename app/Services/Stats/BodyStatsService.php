@@ -23,12 +23,17 @@ final class BodyStatsService
             "stats.weight_history.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $user->bodyMeasurements()
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
+                // This significantly reduces memory usage and execution time for large datasets.
+                ->toBase()
                 ->where('measured_at', '>=', now()->subDays($days))
                 ->orderBy('measured_at', 'asc')
                 ->get()
-                ->map(fn (BodyMeasurement $m): WeightHistoryPoint => new WeightHistoryPoint(
-                    Carbon::parse($m->measured_at)->format('d/m'),
-                    Carbon::parse($m->measured_at)->format('Y-m-d'),
+                ->map(fn (object $m): WeightHistoryPoint => new WeightHistoryPoint(
+                    /** @var string $m->measured_at */
+                    date('d/m', strtotime($m->measured_at)),
+                    date('Y-m-d', strtotime($m->measured_at)),
                     (float) $m->weight,
                 ))
                 ->toArray()
@@ -70,13 +75,18 @@ final class BodyStatsService
             "stats.body_fat_history.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => $user->bodyMeasurements()
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
+                // This significantly reduces memory usage and execution time for large datasets.
+                ->toBase()
                 ->where('measured_at', '>=', now()->subDays($days))
                 ->whereNotNull('body_fat')
                 ->orderBy('measured_at', 'asc')
                 ->get()
-                ->map(fn (BodyMeasurement $m): BodyFatHistoryPoint => new BodyFatHistoryPoint(
-                    Carbon::parse($m->measured_at)->format('d/m'),
-                    Carbon::parse($m->measured_at)->format('Y-m-d'),
+                ->map(fn (object $m): BodyFatHistoryPoint => new BodyFatHistoryPoint(
+                    /** @var string $m->measured_at */
+                    date('d/m', strtotime($m->measured_at)),
+                    date('Y-m-d', strtotime($m->measured_at)),
                     (float) $m->body_fat,
                 ))
                 ->toArray()
@@ -97,25 +107,39 @@ final class BodyStatsService
             "stats.body_progress.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days): array {
+                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
+                // This significantly reduces memory usage and execution time for large datasets.
                 $measurements = $user->bodyMeasurements()
+                    ->toBase()
                     ->where('measured_at', '>=', now()->subDays($days))
                     ->orderBy('measured_at', 'asc')
                     ->get();
 
                 /** @var array<int, WeightHistoryPoint> $weightHistory */
-                $weightHistory = $measurements->map(fn (BodyMeasurement $m): WeightHistoryPoint => new WeightHistoryPoint(
-                    Carbon::parse($m->measured_at)->format('d/m'),
-                    Carbon::parse($m->measured_at)->format('Y-m-d'),
-                    (float) $m->weight,
-                ))->toArray();
+                $weightHistory = $measurements->map(function (object $m): WeightHistoryPoint {
+                    /** @var string $m->measured_at */
+                    $timestamp = strtotime($m->measured_at);
+
+                    return new WeightHistoryPoint(
+                        date('d/m', $timestamp),
+                        date('Y-m-d', $timestamp),
+                        (float) $m->weight,
+                    );
+                })->toArray();
 
                 /** @var array<int, BodyFatHistoryPoint> $bodyFatHistory */
-                $bodyFatHistory = $measurements->filter(fn (BodyMeasurement $m): bool => $m->body_fat !== null)
-                    ->map(fn (BodyMeasurement $m): BodyFatHistoryPoint => new BodyFatHistoryPoint(
-                        Carbon::parse($m->measured_at)->format('d/m'),
-                        Carbon::parse($m->measured_at)->format('Y-m-d'),
-                        (float) $m->body_fat,
-                    ))->values()->toArray();
+                $bodyFatHistory = $measurements->filter(fn (object $m): bool => isset($m->body_fat) && $m->body_fat !== null)
+                    ->map(function (object $m): BodyFatHistoryPoint {
+                        /** @var string $m->measured_at */
+                        $timestamp = strtotime($m->measured_at);
+
+                        return new BodyFatHistoryPoint(
+                            date('d/m', $timestamp),
+                            date('Y-m-d', $timestamp),
+                            (float) $m->body_fat,
+                        );
+                    })->values()->toArray();
 
                 return [
                     'weightHistory' => $weightHistory,
