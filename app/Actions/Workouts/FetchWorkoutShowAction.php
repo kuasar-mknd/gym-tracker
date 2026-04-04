@@ -24,7 +24,7 @@ class FetchWorkoutShowAction
      * @param  \App\Models\Workout  $workout  The workout to be displayed.
      * @return array{
      *     workout: \App\Models\Workout,
-     *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>|array,
+     *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>|array<int, \App\Models\Exercise>,
      *     categories: array<int, string>,
      *     types: array<int, array{value: string, label: string}>
      * }
