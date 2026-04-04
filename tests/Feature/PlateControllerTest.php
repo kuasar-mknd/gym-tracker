@@ -118,7 +118,11 @@ describe('PlateController Update', function (): void {
 
     it('prevents a user from updating another user\'s plate', function (): void {
         $otherUser = User::factory()->create();
-        $plate = Plate::factory()->create(['user_id' => $otherUser->id]);
+        $plate = Plate::factory()->create([
+            'user_id' => $otherUser->id,
+            'weight' => 10,
+            'quantity' => 2,
+        ]);
 
         $updateData = [
             'weight' => 25,
