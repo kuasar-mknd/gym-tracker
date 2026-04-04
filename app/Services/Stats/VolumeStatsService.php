@@ -33,12 +33,21 @@ final class VolumeStatsService
                 ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
                 ->orderBy('started_at')
                 ->get()
-                ->map(fn (object $row): VolumeTrendPoint => new VolumeTrendPoint(
-                    date('d/m', strtotime((string) $row->started_at)),
-                    date('Y-m-d', strtotime((string) $row->started_at)),
-                    (string) $row->name,
-                    is_numeric($row->volume) ? (float) $row->volume : 0.0,
-                ))
+                ->map(function (object $row): ?VolumeTrendPoint {
+                    $timestamp = strtotime((string) $row->started_at);
+
+                    if ($timestamp === false) {
+                        return null;
+                    }
+
+                    return new VolumeTrendPoint(
+                        date('d/m', $timestamp),
+                        date('Y-m-d', $timestamp),
+                        (string) $row->name,
+                        is_numeric($row->volume) ? (float) $row->volume : 0.0,
+                    );
+                })
+                ->filter()
                 ->values()
                 ->toArray()
         );
@@ -134,11 +143,20 @@ final class VolumeStatsService
                 ->orderBy('started_at')
                 ->limit($limit)
                 ->get()
-                ->map(fn (object $row): VolumeHistoryPoint => new VolumeHistoryPoint(
-                    date('d/m', strtotime((string) $row->started_at)),
-                    is_numeric($row->volume) ? (float) $row->volume : 0.0,
-                    (string) $row->name,
-                ))
+                ->map(function (object $row): ?VolumeHistoryPoint {
+                    $timestamp = strtotime((string) $row->started_at);
+
+                    if ($timestamp === false) {
+                        return null;
+                    }
+
+                    return new VolumeHistoryPoint(
+                        date('d/m', $timestamp),
+                        is_numeric($row->volume) ? (float) $row->volume : 0.0,
+                        (string) $row->name,
+                    );
+                })
+                ->filter()
                 ->toArray()
         );
     }

@@ -28,8 +28,12 @@ final class BodyStatsService
                 ->where('measured_at', '>=', now()->subDays($days))
                 ->orderBy('measured_at', 'asc')
                 ->get()
-                ->map(function (object $m): WeightHistoryPoint {
+                ->map(function (object $m): ?WeightHistoryPoint {
                     $timestamp = strtotime((string) $m->measured_at);
+
+                    if ($timestamp === false) {
+                        return null;
+                    }
 
                     return new WeightHistoryPoint(
                         date('d/m', $timestamp),
@@ -37,6 +41,7 @@ final class BodyStatsService
                         (float) $m->weight,
                     );
                 })
+                ->filter()
                 ->toArray()
         );
     }
@@ -84,8 +89,12 @@ final class BodyStatsService
                 ->whereNotNull('body_fat')
                 ->orderBy('measured_at', 'asc')
                 ->get()
-                ->map(function (object $m): BodyFatHistoryPoint {
+                ->map(function (object $m): ?BodyFatHistoryPoint {
                     $timestamp = strtotime((string) $m->measured_at);
+
+                    if ($timestamp === false) {
+                        return null;
+                    }
 
                     return new BodyFatHistoryPoint(
                         date('d/m', $timestamp),
@@ -93,6 +102,7 @@ final class BodyStatsService
                         (float) $m->body_fat,
                     );
                 })
+                ->filter()
                 ->toArray()
         );
     }
@@ -121,27 +131,35 @@ final class BodyStatsService
                     ->get();
 
                 /** @var array<int, WeightHistoryPoint> $weightHistory */
-                $weightHistory = $measurements->map(function (object $m): WeightHistoryPoint {
+                $weightHistory = $measurements->map(function (object $m): ?WeightHistoryPoint {
                     $timestamp = strtotime((string) $m->measured_at);
+
+                    if ($timestamp === false) {
+                        return null;
+                    }
 
                     return new WeightHistoryPoint(
                         date('d/m', $timestamp),
                         date('Y-m-d', $timestamp),
                         (float) $m->weight,
                     );
-                })->toArray();
+                })->filter()->values()->toArray();
 
                 /** @var array<int, BodyFatHistoryPoint> $bodyFatHistory */
                 $bodyFatHistory = $measurements->filter(fn (object $m): bool => isset($m->body_fat))
-                    ->map(function (object $m): BodyFatHistoryPoint {
+                    ->map(function (object $m): ?BodyFatHistoryPoint {
                         $timestamp = strtotime((string) $m->measured_at);
+
+                        if ($timestamp === false) {
+                            return null;
+                        }
 
                         return new BodyFatHistoryPoint(
                             date('d/m', $timestamp),
                             date('Y-m-d', $timestamp),
                             (float) $m->body_fat,
                         );
-                    })->values()->toArray();
+                    })->filter()->values()->toArray();
 
                 return [
                     'weightHistory' => $weightHistory,

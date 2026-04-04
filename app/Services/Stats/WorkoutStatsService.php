@@ -31,9 +31,13 @@ final class WorkoutStatsService
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(function (object $workout): DurationHistoryPoint {
+                ->map(function (object $workout): ?DurationHistoryPoint {
                     $start = strtotime((string) $workout->started_at);
                     $end = strtotime((string) $workout->ended_at);
+
+                    if ($start === false || $end === false) {
+                        return null;
+                    }
 
                     return new DurationHistoryPoint(
                         date('d/m', $start),
@@ -41,6 +45,7 @@ final class WorkoutStatsService
                         (string) ($workout->name ?? __('Workout')),
                     );
                 })
+                ->filter()
                 ->reverse()->values()->toArray()
         );
     }
