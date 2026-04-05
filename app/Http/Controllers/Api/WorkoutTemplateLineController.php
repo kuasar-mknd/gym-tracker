@@ -42,6 +42,9 @@ class WorkoutTemplateLineController extends Controller
     ): WorkoutTemplateLineResource {
         /** @var array{workout_template_id: int, exercise_id: int, order?: int|null} $validated */
         $validated = $request->validated();
+        $workoutTemplate = \App\Models\WorkoutTemplate::findOrFail($validated['workout_template_id']);
+
+        $this->authorize('create', [\App\Models\WorkoutTemplateLine::class, $workoutTemplate]);
 
         $workoutTemplateLine = $action->execute($validated);
 

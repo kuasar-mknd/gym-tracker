@@ -67,3 +67,8 @@
 **Vulnerability:** The account deletion endpoint (DeleteUserRequest) lacked rate limiting for password validation, allowing an attacker with a hijacked session to brute-force a user's password.
 **Learning:** FormRequest validation rules like current_password protect against IDOR but do not natively protect against brute-force attacks on the session.
 **Prevention:** Implement rate limiting via the RateLimiter facade inside prepareForValidation() and withValidator() for any FormRequest that handles sensitive destructive actions or password confirmation.
+
+## 2026-04-05 - Broken Function Level Authorization via Implicit FormRequest Authorization
+**Vulnerability:** Found `SetController` and `WorkoutTemplateLineController` relying implicitly on `FormRequest` authorization which returned `true`, bypassing explicit `$this->authorize()` checks for nested creation.
+**Learning:** Relying solely on `FormRequest::authorize()` can bypass Policy logic completely, leading to Broken Function Level Authorization (BFLA/IDOR) on nested resource creation if explicitly checked properties (like the parent resource ownership) are ignored in the `store` method.
+**Prevention:** Enforce defense-in-depth by explicitly resolving the parent model via `findOrFail()` and calling `$this->authorize('create', [ChildModel::class, $parentModel])` within the controller's `store` method.
