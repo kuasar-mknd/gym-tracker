@@ -26,13 +26,16 @@ class FetchExerciseHistoryAction
      */
     public function execute(User $user, Exercise $exercise): Collection
     {
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Replaced whereHas('workout') subquery with a direct INNER JOIN to the workouts table
+        // to avoid an expensive EXISTS subquery execution, significantly improving performance for users with large workout histories.
         // @phpstan-ignore-next-line
         return WorkoutLine::query()
-            ->where('exercise_id', $exercise->id)
-            ->whereHas('workout', function ($query) use ($user): void {
-                $query->where('user_id', $user->id)
-                    ->whereNotNull('started_at');
-            })
+            ->select('workout_lines.*')
+            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+            ->where('workout_lines.exercise_id', $exercise->id)
+            ->where('workouts.user_id', $user->id)
+            ->whereNotNull('workouts.started_at')
             ->with(['workout', 'sets'])
             ->get()
             ->map(function (WorkoutLine $line): ?array {
