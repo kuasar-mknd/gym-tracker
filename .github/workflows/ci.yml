@@ -15,7 +15,7 @@ permissions:
 
 jobs:
     setup-php:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
               run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
     frontend-build:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -64,7 +64,7 @@ jobs:
                   retention-days: 1
 
     laravel-tests:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         needs: [setup-php, frontend-build]
         services:
             mysql:
@@ -126,7 +126,7 @@ jobs:
               run: php artisan test
 
     browser-tests:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         needs: [setup-php, frontend-build]
         services:
             mysql:
@@ -248,7 +248,7 @@ jobs:
                   path: tests/Browser/console
 
     lint:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         needs: setup-php
         steps:
             - name: Checkout code
@@ -272,7 +272,7 @@ jobs:
               run: ./vendor/bin/pint --test
 
     audit:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         needs: [setup-php, laravel-tests]
         steps:
             - name: Checkout code
@@ -368,7 +368,7 @@ jobs:
                   retention-days: 1
 
     merge:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         needs: build
         permissions:
             contents: read
