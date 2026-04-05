@@ -8,3 +8,7 @@
 ## 2026-03-29 - [Accessibility in custom form inputs]
 **Learning:** Custom input components like `GlassInput.vue` often use interactive elements (like clear buttons or password toggles) nested within the input area. Setting `tabindex="-1"` on these elements to bypass focus breaks keyboard navigation. Additionally, validation error components like `InputError.vue` need an `id` prop and `role="alert"` so they can be explicitly linked to inputs via `aria-describedby` and announced by screen readers immediately upon appearance.
 **Action:** Never use `tabindex="-1"` on functional interactive elements. Always provide clear `:focus-visible` styling (e.g., using brand colors like `ring-electric-orange`). For validation errors, ensure an `id` is passed and link it via `aria-describedby` on the corresponding input.
+
+## 2026-04-05 - [Race-Condition Protection for Flash Messages]
+**Learning:** Flash messages triggered in rapid succession can lead to race conditions where older `setTimeout` calls clear newer messages.
+**Action:** Always store `setTimeout` IDs and use `clearTimeout` in Vue `watch` functions before setting a new timer for the same type of notification.

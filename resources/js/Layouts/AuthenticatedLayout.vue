@@ -1,12 +1,12 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 defineProps({
@@ -29,11 +29,32 @@ defineProps({
 })
 
 const showingNavigationDropdown = ref(false)
+const page = usePage()
+
+const toasts = {
+    success: { icon: 'check_circle', color: 'emerald', delay: 5000, id: null },
+    error: { icon: 'error', color: 'red', delay: 8000, id: null },
+}
+
+watch(
+    () => [page.props.flash?.success, page.props.flash?.error],
+    ([s, e]) => {
+        ;[s, e].forEach((val, i) => {
+            const key = Object.keys(toasts)[i]
+            if (val) {
+                clearTimeout(toasts[key].id)
+                toasts[key].id = setTimeout(() => page.props.flash && (page.props.flash[key] = null), toasts[key].delay)
+            }
+        })
+    },
+    { immediate: true },
+)
+
+onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 </script>
 
 <template>
     <div class="bg-pearl-white relative min-h-dvh w-full overflow-x-hidden dark:bg-slate-900">
-        <!-- Skip to content link -->
         <a
             href="#main-content"
             class="bg-electric-orange absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold text-white transition-transform focus:translate-y-0 focus:ring-2 focus:ring-white focus:outline-none"
@@ -41,42 +62,51 @@ const showingNavigationDropdown = ref(false)
             Aller au contenu principal
         </a>
 
-        <!-- Liquid Glass Background -->
         <LiquidBackground :variant="liquidVariant" />
 
-        <!-- Success Toast -->
-        <Transition
-            enter-active-class="transition ease-out duration-300"
-            enter-from-class="opacity-0 -translate-y-4"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-200"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 -translate-y-4"
-        >
-            <div
-                v-if="$page.props.flash?.success"
-                class="fixed top-20 right-4 left-4 z-[60] sm:right-6 sm:left-auto sm:w-80"
+        <!-- Flash Toasts -->
+        <div v-for="(cfg, type) in toasts" :key="type">
+            <Transition
+                enter-active-class="transition ease-out duration-300"
+                enter-from-class="opacity-0 -translate-y-4"
+                enter-to-class="opacity-100 translate-y-0"
+                leave-active-class="transition ease-in duration-200"
+                leave-from-class="opacity-100 translate-y-0"
+                leave-to-class="opacity-0 -translate-y-4"
             >
                 <div
-                    class="glass-panel-light flex items-center gap-3 rounded-2xl border-l-[6px] border-l-emerald-500 p-4 shadow-lg backdrop-blur-xl"
+                    v-if="$page.props.flash?.[type]"
+                    class="fixed top-20 right-4 left-4 z-[60] sm:right-6 sm:left-auto sm:w-80"
                 >
-                    <div class="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-500">
-                        <span class="material-symbols-outlined">check_circle</span>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $page.props.flash.success }}</p>
-                    </div>
-                    <button
-                        v-press
-                        @click="$page.props.flash.success = null"
-                        class="text-slate-400 hover:text-slate-600"
-                        aria-label="Fermer"
+                    <div
+                        :class="[
+                            'glass-panel-light flex items-center gap-3 rounded-2xl border-l-[6px] p-4 shadow-lg backdrop-blur-xl',
+                            type === 'success' ? 'border-l-emerald-500' : 'border-l-red-500',
+                        ]"
                     >
-                        <span class="material-symbols-outlined text-base">close</span>
-                    </button>
+                        <div
+                            :class="[
+                                'flex size-10 items-center justify-center rounded-xl',
+                                type === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500',
+                            ]"
+                        >
+                            <span class="material-symbols-outlined">{{ cfg.icon }}</span>
+                        </div>
+                        <p class="flex-1 text-sm font-bold text-slate-900 dark:text-white">
+                            {{ $page.props.flash[type] }}
+                        </p>
+                        <button
+                            v-press
+                            @click="$page.props.flash[type] = null"
+                            class="text-slate-400 hover:text-slate-600"
+                            aria-label="Fermer"
+                        >
+                            <span class="material-symbols-outlined text-base">close</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </Transition>
+            </Transition>
+        </div>
 
         <!-- Desktop Navigation -->
         <nav
