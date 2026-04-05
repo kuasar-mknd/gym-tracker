@@ -131,7 +131,7 @@ final class FetchWorkoutsIndexAction
         $results = Workout::query()
             ->toBase()
             ->where('user_id', $user->id)
-            ->selectRaw("DAYOFWEEK(started_at) as day_of_week, COUNT(*) as count")
+            ->selectRaw('DAYOFWEEK(started_at) as day_of_week, COUNT(*) as count')
             ->groupBy('day_of_week')
             ->get()
             ->keyBy('day_of_week');
@@ -148,6 +148,7 @@ final class FetchWorkoutsIndexAction
 
         return collect($days)->map(function (string $dayName, int $dayIndex) use ($results): array {
             $data = $results->get($dayIndex);
+
             return [
                 'day' => $dayName,
                 'count' => $data && is_numeric($data->count) ? (int) $data->count : 0,
