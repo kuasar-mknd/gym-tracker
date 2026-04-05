@@ -1,12 +1,12 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 defineProps({
@@ -29,6 +29,37 @@ defineProps({
 })
 
 const showingNavigationDropdown = ref(false)
+const page = usePage()
+
+// ⚡ Palette: Auto-hide flash messages with race-condition protection
+let successTimeout = null
+let errorTimeout = null
+
+watch(
+    () => page.props.flash?.success,
+    (value) => {
+        if (value) {
+            if (successTimeout) clearTimeout(successTimeout)
+            successTimeout = setTimeout(() => {
+                page.props.flash.success = null
+                successTimeout = null
+            }, 5000)
+        }
+    },
+)
+
+watch(
+    () => page.props.flash?.error,
+    (value) => {
+        if (value) {
+            if (errorTimeout) clearTimeout(errorTimeout)
+            errorTimeout = setTimeout(() => {
+                page.props.flash.error = null
+                errorTimeout = null
+            }, 8000)
+        }
+    },
+)
 </script>
 
 <template>
@@ -69,6 +100,40 @@ const showingNavigationDropdown = ref(false)
                     <button
                         v-press
                         @click="$page.props.flash.success = null"
+                        class="text-slate-400 hover:text-slate-600"
+                        aria-label="Fermer"
+                    >
+                        <span class="material-symbols-outlined text-base">close</span>
+                    </button>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Error Toast -->
+        <Transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0 -translate-y-4"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 -translate-y-4"
+        >
+            <div
+                v-if="$page.props.flash?.error"
+                class="fixed top-20 right-4 left-4 z-[60] sm:right-6 sm:left-auto sm:w-80"
+            >
+                <div
+                    class="glass-panel-light flex items-center gap-3 rounded-2xl border-l-[6px] border-l-red-500 p-4 shadow-lg backdrop-blur-xl"
+                >
+                    <div class="flex size-10 items-center justify-center rounded-xl bg-red-50 text-red-500">
+                        <span class="material-symbols-outlined">error</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $page.props.flash.error }}</p>
+                    </div>
+                    <button
+                        v-press
+                        @click="$page.props.flash.error = null"
                         class="text-slate-400 hover:text-slate-600"
                         aria-label="Fermer"
                     >
