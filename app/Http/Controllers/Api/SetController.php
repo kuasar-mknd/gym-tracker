@@ -42,7 +42,13 @@ class SetController extends Controller
      */
     public function store(SetStoreRequest $request, StoreSetAction $action): SetResource
     {
-        $set = $action->execute($this->user(), $request->validated());
+        /** @var array{workout_line_id: int} $validated */
+        $validated = $request->validated();
+        $workoutLine = \App\Models\WorkoutLine::findOrFail($validated['workout_line_id']);
+
+        $this->authorize('create', [\App\Models\Set::class, $workoutLine]);
+
+        $set = $action->execute($this->user(), $validated);
 
         return new SetResource($set->loadMissing('personalRecord'));
     }
