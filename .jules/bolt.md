@@ -64,3 +64,7 @@
 ## 2024-05-18 - Optimized RecommendedValuesService Cache Put
 **Learning:** Performing `Cache::put()` operations inside a loop introduces N+1 caching overhead.
 **Action:** Replaced the loop-based `Cache::put()` calls with an array collection pattern and a single `Cache::putMany()` call to reduce cache interaction overhead and improve performance.
+
+## 2025-06-03 - [whereHas vs INNER JOIN on belongsTo]
+**Learning:** Using `whereHas` on a simple `belongsTo` relationship (like checking if a workout belongs to a user inside `WorkoutLine`) creates an `EXISTS()` subquery. In MySQL, especially as the main table grows, this subquery evaluation can be significantly slower than a direct `INNER JOIN` to the related table combined with a `WHERE` clause.
+**Action:** For simple parent relationship filtering or sorting, replace `whereHas` with `join()` and `where()` on the joined columns. Always ensure to add `select('main_table.*')` to prevent the joined columns from overriding model attributes.
