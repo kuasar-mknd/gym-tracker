@@ -13,38 +13,51 @@ class LoginTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
-    public function test_login_flow_on_mobile_viewports(): void
+    private function performLogin(Browser $browser, string $sizeMacro): void
     {
-        $viewports = [
-            'Mini' => [375, 812],
-            'Normal' => [390, 844],
-            'Max' => [430, 932],
-        ];
+        $user = User::factory()->create([
+            'email' => 'login-'.time().random_int(0, 999).'@example.com',
+            'password' => bcrypt('password123'),
+        ]);
 
-        foreach ($viewports as $format => [$width, $height]) {
-            $this->browse(function (Browser $browser) use ($format, $width, $height): void {
-                $user = User::factory()->create([
-                    'email' => 'login-'.time().random_int(0, 999).'@example.com',
-                    'password' => bcrypt('password123'),
-                ]);
+        try {
+            $browser->{$sizeMacro}()
+                ->visit('/login')
+                ->disableAnimations()
+                ->waitFor('@email-input', 30)
+                ->type('@email-input', $user->email)
+                ->type('@password-input', 'password123')
+                ->script("document.querySelector('[data-testid=\"login-button\"]').scrollIntoView({block: 'center'});");
 
-                try {
-                    $browser->resize($width, $height)
-                        ->visit('/login')
-                        ->waitFor('@email-input', 30)
-                        ->type('@email-input', $user->email)
-                        ->type('@password-input', 'password123')
-                        ->script("document.querySelector('[data-testid=\"login-button\"]').scrollIntoView({block: 'center'});");
-
-                    $browser->pause(500)
-                        ->click('@login-button')
-                        ->waitForLocation('/dashboard', 30)
-                        ->assertPathIs('/dashboard');
-                } catch (\Exception $e) {
-                    $browser->screenshot('failure-iphone-'.strtolower($format));
-                    throw $e;
-                }
-            });
+            $browser->pause(500)
+                ->click('@login-button')
+                ->waitForLocation('/dashboard', 30)
+                ->assertPathIs('/dashboard')
+                ->assertNoConsoleExceptions();
+        } catch (\Exception $e) {
+            $browser->screenshot('login-failure-'.$sizeMacro);
+            throw $e;
         }
+    }
+
+    public function test_login_on_iphone_mini(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performLogin($browser, 'resizeToIphoneMini');
+        });
+    }
+
+    public function test_login_on_iphone_15(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performLogin($browser, 'resizeToIphone15');
+        });
+    }
+
+    public function test_login_on_iphone_max(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $this->performLogin($browser, 'resizeToIphoneMax');
+        });
     }
 }
