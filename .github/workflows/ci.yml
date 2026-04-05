@@ -214,16 +214,16 @@ jobs:
                   chmod -R 777 storage bootstrap/cache
                   php artisan config:clear
 
-                  php artisan migrate:fresh --seed --force
+                  php artisan migrate:fresh --seed --force --env=testing
 
                   # Start server
-                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
+                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload --env=testing > storage/logs/serve.log 2>&1 &
 
                   # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk
-                  php artisan dusk
+                  php artisan dusk --env=testing
 
             - name: Dump Logs on Failure
               if: failure()
