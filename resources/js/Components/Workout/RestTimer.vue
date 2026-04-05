@@ -226,7 +226,7 @@ watch(
                 <button
                     @click="close"
                     dusk="close-timer-x"
-                    class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                    class="focus-visible:ring-electric-orange absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:outline-none active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
                     aria-label="Fermer le minuteur"
                     title="Fermer le minuteur"
                 >
@@ -258,7 +258,7 @@ watch(
                         <button
                             @click="addTime(30)"
                             dusk="add-30s"
-                            class="flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                            class="focus-visible:ring-electric-orange flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 focus-visible:ring-2 focus-visible:outline-none active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                             title="Ajouter 30 secondes"
                             aria-label="Ajouter 30 secondes"
                         >
@@ -267,7 +267,7 @@ watch(
 
                         <button
                             @click="toggleTimer"
-                            class="bg-accent-primary flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 active:scale-95"
+                            class="bg-accent-primary focus-visible:ring-electric-orange flex h-10 w-10 items-center justify-center rounded-full text-black shadow-lg shadow-orange-500/20 transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
                             :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
                         >
@@ -287,7 +287,7 @@ watch(
                     <button
                         @click="skipTimer"
                         dusk="skip-rest-timer"
-                        class="flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                        class="focus-visible:ring-electric-orange flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 focus-visible:ring-2 focus-visible:outline-none active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                         title="Passer le repos"
                         aria-label="Passer le repos"
                     >
@@ -296,7 +296,7 @@ watch(
                     <button
                         @click="close"
                         dusk="close-timer"
-                        class="rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                        class="focus-visible:ring-electric-orange rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:outline-none active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
                         title="Fermer le minuteur"
                         aria-label="Fermer le minuteur"
                     >

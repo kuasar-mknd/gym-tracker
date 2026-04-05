@@ -97,7 +97,7 @@ const errorId = computed(() => {
                 <button
                     v-press="{ haptic: 'tap' }"
                     type="button"
-                    class="text-text-main flex h-10 w-10 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-2xl font-bold shadow-sm backdrop-blur-md transition-all hover:-translate-y-1 hover:bg-white/20 active:scale-95"
+                    class="text-text-main focus-visible:ring-electric-orange flex h-10 w-10 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-2xl font-bold shadow-sm backdrop-blur-md transition-all hover:-translate-y-1 hover:bg-white/20 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                     :aria-label="`Diminuer ${label || 'la valeur'}`"
                     @click="$emit('update:modelValue', Math.max(0, Number(modelValue) - 2.5))"
                 >
@@ -106,7 +106,7 @@ const errorId = computed(() => {
                 <button
                     v-press="{ haptic: 'tap' }"
                     type="button"
-                    class="text-text-main flex h-10 w-10 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-2xl font-bold shadow-sm backdrop-blur-md transition-all hover:-translate-y-1 hover:bg-white/20 active:scale-95"
+                    class="text-text-main focus-visible:ring-electric-orange flex h-10 w-10 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-2xl font-bold shadow-sm backdrop-blur-md transition-all hover:-translate-y-1 hover:bg-white/20 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                     :aria-label="`Augmenter ${label || 'la valeur'}`"
                     @click="$emit('update:modelValue', Number(modelValue) + 2.5)"
                 >

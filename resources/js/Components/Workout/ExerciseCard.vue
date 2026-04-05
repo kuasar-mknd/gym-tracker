@@ -94,7 +94,7 @@ const emit = defineEmits(['start-edit', 'cancel-edit', 'update', 'delete'])
                     <button
                         @click.stop="emit('start-edit', exercise)"
                         :dusk="`edit-exercise-btn-${exercise.id}`"
-                        class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange flex size-10 items-center justify-center rounded-xl transition-all sm:hidden"
+                        class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange focus-visible:ring-electric-orange flex size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:hidden"
                         :aria-label="`Modifier ${exercise.name}`"
                     >
                         <span class="material-symbols-outlined text-sm opacity-50">edit</span>
@@ -104,7 +104,7 @@ const emit = defineEmits(['start-edit', 'cancel-edit', 'update', 'delete'])
                     <button
                         @click.stop="emit('start-edit', exercise)"
                         :dusk="`edit-exercise-btn-desktop-${exercise.id}`"
-                        class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all sm:flex"
+                        class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange focus-visible:ring-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:flex"
                         data-testid="edit-exercise-button"
                         :aria-label="`Modifier ${exercise.name}`"
                     >
@@ -113,7 +113,7 @@ const emit = defineEmits(['start-edit', 'cancel-edit', 'update', 'delete'])
                     <button
                         @click.stop="emit('delete', exercise.id)"
                         :dusk="`delete-exercise-btn-${exercise.id}`"
-                        class="text-text-muted hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 sm:flex"
+                        class="text-text-muted focus-visible:ring-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none sm:flex"
                         data-testid="delete-exercise-button"
                         :aria-label="`Supprimer ${exercise.name}`"
                     >
