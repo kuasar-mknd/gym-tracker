@@ -10,6 +10,7 @@ import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 
+const WorkoutFrequencyChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutFrequencyChart.vue'))
 const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
 const MonthlyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/MonthlyVolumeChart.vue'))
 const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
@@ -187,10 +188,21 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
                     <!-- Charts Grid -->
                     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <!-- Workout Frequency (Day of Week) Chart -->
+                        <GlassCard v-if="deferredData?.charts?.day_of_week_frequency?.length > 0">
+                            <div class="mb-4">
+                                <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence par Jour</h3>
+                                <p class="text-text-muted text-xs">Séances selon le jour de la semaine</p>
+                            </div>
+                            <div class="h-48 w-full">
+                                <WorkoutFrequencyChart :data="deferredData.charts.day_of_week_frequency" />
+                            </div>
+                        </GlassCard>
+
                         <!-- Frequency Chart -->
                         <GlassCard v-if="deferredData?.charts?.monthly_frequency?.length > 0">
                             <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence</h3>
+                                <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence Mensuelle</h3>
                                 <p class="text-text-muted text-xs">Séances par mois</p>
                             </div>
                             <WorkoutsPerMonthChart :data="deferredData.charts.monthly_frequency" />
