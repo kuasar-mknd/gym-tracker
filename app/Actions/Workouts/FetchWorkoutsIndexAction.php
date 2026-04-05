@@ -41,6 +41,7 @@ final class FetchWorkoutsIndexAction
      * @return array{
      *     charts: array{
      *         monthly_frequency: Collection<int, array{month: string, count: int}>,
+     *         day_of_week_frequency: Collection<int, array{day: string, count: int}>,
      *         monthly_volume: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
      *         duration_history: array<int, \App\DTOs\Stats\DurationHistoryPoint>,
      *         volume_history: array<int, \App\DTOs\Stats\VolumeHistoryPoint>
@@ -53,12 +54,25 @@ final class FetchWorkoutsIndexAction
         return [
             'charts' => [
                 'monthly_frequency' => $this->getMonthlyFrequency($user),
+                'day_of_week_frequency' => $this->getDayOfWeekFrequency($user),
                 'monthly_volume' => $this->statsService->getMonthlyVolumeHistory($user, 6),
                 'duration_history' => $this->statsService->getDurationHistory($user, 20),
                 'volume_history' => $this->statsService->getVolumeHistory($user, 20),
             ],
             'exercises' => Exercise::getCachedForUser($user->id),
         ];
+    }
+
+    /**
+     * @return Collection<int, array{day: string, count: int}>
+     */
+    protected function getDayOfWeekFrequency(User $user): Collection
+    {
+        return Cache::remember(
+            "stats.day_of_week_frequency.{$user->id}",
+            now()->addHour(),
+            fn (): Collection => $this->calculateDayOfWeekFrequency($user)
+        );
     }
 
     /**
@@ -107,6 +121,38 @@ final class FetchWorkoutsIndexAction
                 'count' => $data && is_numeric($data->count) ? (int) $data->count : 0,
             ];
         });
+    }
+
+    /**
+     * @return Collection<int, array{day: string, count: int}>
+     */
+    private function calculateDayOfWeekFrequency(User $user): Collection
+    {
+        $results = Workout::query()
+            ->toBase()
+            ->where('user_id', $user->id)
+            ->selectRaw("DAYOFWEEK(started_at) as day_of_week, COUNT(*) as count")
+            ->groupBy('day_of_week')
+            ->get()
+            ->keyBy('day_of_week');
+
+        $days = [
+            2 => 'Lun',
+            3 => 'Mar',
+            4 => 'Mer',
+            5 => 'Jeu',
+            6 => 'Ven',
+            7 => 'Sam',
+            1 => 'Dim',
+        ];
+
+        return collect($days)->map(function (string $dayName, int $dayIndex) use ($results): array {
+            $data = $results->get($dayIndex);
+            return [
+                'day' => $dayName,
+                'count' => $data && is_numeric($data->count) ? (int) $data->count : 0,
+            ];
+        })->values();
     }
 
     /** @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout> */
