@@ -10,9 +10,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-describe('WorkoutLineController', function () {
-    describe('store', function () {
-        it('allows a user to add a workout line to their workout', function () {
+describe('WorkoutLineController', function (): void {
+    describe('store', function (): void {
+        it('allows a user to add a workout line to their workout', function (): void {
             $user = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
             $exercise = Exercise::factory()->create();
@@ -31,7 +31,7 @@ describe('WorkoutLineController', function () {
             ]);
         });
 
-        it('assigns correct order when adding multiple workout lines', function () {
+        it('assigns correct order when adding multiple workout lines', function (): void {
             $user = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
             $exercise1 = Exercise::factory()->create();
@@ -56,7 +56,7 @@ describe('WorkoutLineController', function () {
             ]);
         });
 
-        it('returns validation error if exercise_id is missing', function () {
+        it('returns validation error if exercise_id is missing', function (): void {
             $user = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
@@ -67,7 +67,7 @@ describe('WorkoutLineController', function () {
             $this->assertDatabaseCount('workout_lines', 0);
         });
 
-        it('prevents adding a workout line to an ended workout', function () {
+        it('prevents adding a workout line to an ended workout', function (): void {
             $user = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
             $exercise = Exercise::factory()->create();
@@ -81,7 +81,7 @@ describe('WorkoutLineController', function () {
             $this->assertDatabaseCount('workout_lines', 0);
         });
 
-        it('prevents adding a workout line to another users workout', function () {
+        it('prevents adding a workout line to another users workout', function (): void {
             $user = User::factory()->create();
             $otherUser = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'ended_at' => null]);
@@ -96,7 +96,7 @@ describe('WorkoutLineController', function () {
             $this->assertDatabaseCount('workout_lines', 0);
         });
 
-        it('prevents adding a workout line with another users exercise', function () {
+        it('prevents adding a workout line with another users exercise', function (): void {
             $user = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
@@ -113,8 +113,8 @@ describe('WorkoutLineController', function () {
         });
     });
 
-    describe('destroy', function () {
-        it('allows a user to delete their workout line', function () {
+    describe('destroy', function (): void {
+        it('allows a user to delete their workout line', function (): void {
             $user = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
             $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -128,7 +128,7 @@ describe('WorkoutLineController', function () {
             ]);
         });
 
-        it('prevents deleting a workout line from an ended workout', function () {
+        it('prevents deleting a workout line from an ended workout', function (): void {
             $user = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
             $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
@@ -142,7 +142,7 @@ describe('WorkoutLineController', function () {
             ]);
         });
 
-        it('prevents deleting a workout line from another users workout', function () {
+        it('prevents deleting a workout line from another users workout', function (): void {
             $user = User::factory()->create();
             $otherUser = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'ended_at' => null]);
