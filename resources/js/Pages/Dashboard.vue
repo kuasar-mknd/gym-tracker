@@ -13,6 +13,7 @@ import RecentWorkoutDurationSection from '@/Components/Dashboard/RecentWorkoutDu
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
+import ActiveGoalsChart from '@/Components/Stats/ActiveGoalsChart.vue'
 
 /**
  * Dashboard - Command Center
@@ -84,6 +85,24 @@ const startWorkout = () => {
             />
 
             <GoalsSummary :active-goals="activeGoals" />
+
+            <section
+                v-if="activeGoals && activeGoals.length > 0"
+                class="animate-slide-up relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                style="animation-delay: 0.28s"
+            >
+                <div class="relative z-10 mb-6">
+                    <h3 class="text-electric-orange mb-1 text-[10px] font-black tracking-[0.2em] uppercase">
+                        Visualisation
+                    </h3>
+                    <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                        Progression des Objectifs
+                    </p>
+                </div>
+                <div class="relative -mx-2 mt-2 h-48 w-auto">
+                    <ActiveGoalsChart :data="activeGoals" />
+                </div>
+            </section>
 
             <RecentPRs :recent-p-rs="recentPRs" />
         </div>
