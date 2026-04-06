@@ -82,20 +82,32 @@ const handlePeriodChange = (period) => {
                 :latest-weight="latestWeight"
                 :weight-change="weightChange"
                 :weight-history="deferredData?.body?.weightHistory"
+                :deferred-data="deferredData"
             />
 
             <BodyMetricsGrid
                 :body-fat="bodyFat"
                 :body-fat-history="deferredData?.body?.bodyFatHistory"
                 :monthly-comparison="deferredData?.performance?.monthlyComparison"
+                :deferred-data="deferredData"
             />
 
-            <VolumeTrendCard :volume-trend="deferredData?.performance?.volumeTrend" :current-period="currentPeriod" />
+            <VolumeTrendCard
+                :volume-trend="deferredData?.performance?.volumeTrend"
+                :current-period="currentPeriod"
+                :deferred-data="deferredData"
+            />
 
-            <DurationHistoryCard :duration-history="deferredData?.performance?.durationHistory" />
+            <DurationHistoryCard
+                :duration-history="deferredData?.performance?.durationHistory"
+                :deferred-data="deferredData"
+            />
 
             <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.2s">
-                <MuscleDistributionCard :muscle-distribution="deferredData?.performance?.muscleDistribution" />
+                <MuscleDistributionCard
+                    :muscle-distribution="deferredData?.performance?.muscleDistribution"
+                    :deferred-data="deferredData"
+                />
 
                 <ExerciseProgressCard :exercises="exercises" />
             </div>
@@ -105,6 +117,7 @@ const handlePeriodChange = (period) => {
                 :muscle-distribution="deferredData?.performance?.muscleDistribution"
                 :exercises="exercises"
                 :monthly-comparison="deferredData?.performance?.monthlyComparison"
+                :deferred-data="deferredData"
             />
         </div>
     </AuthenticatedLayout>

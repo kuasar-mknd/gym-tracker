@@ -9,6 +9,7 @@ const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/V
 const props = defineProps({
     volumeTrend: Array,
     currentPeriod: String,
+    deferredData: Object,
 })
 
 const totalVolume = computed(() => {
@@ -44,7 +45,7 @@ const totalVolume = computed(() => {
             </div>
         </div>
         <div class="h-48">
-            <Deferred data="deferredData">
+            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
                     <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                 </template>

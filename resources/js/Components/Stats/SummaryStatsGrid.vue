@@ -39,6 +39,11 @@ defineProps({
      * absolute difference, and the percentage change.
      */
     monthlyComparison: Object,
+
+    /**
+     * Consolidated deferred data object.
+     */
+    deferredData: Object,
 })
 </script>
 
@@ -48,7 +53,7 @@ defineProps({
         <!-- Number of Sessions Card -->
         <GlassCard padding="p-4" class="text-center">
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
-            <Deferred data="deferredData">
+            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
@@ -61,7 +66,7 @@ defineProps({
         <!-- Number of Muscles Targeted Card -->
         <GlassCard padding="p-4" class="text-center">
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
-            <Deferred data="deferredData">
+            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
@@ -82,7 +87,7 @@ defineProps({
         <!-- Monthly Comparison Volume Change Card -->
         <GlassCard padding="p-4" class="text-center">
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
-            <Deferred data="deferredData">
+            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="3rem" class="mx-auto mt-1" />
                 </template>

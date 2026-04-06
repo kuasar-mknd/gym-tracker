@@ -10,6 +10,7 @@ defineProps({
     latestWeight: [Number, String],
     weightChange: Number,
     weightHistory: Array,
+    deferredData: Object,
 })
 </script>
 
@@ -40,7 +41,7 @@ defineProps({
 
         <!-- Real Weight Chart (Deferred) -->
         <div class="relative -mx-2 h-40 w-full">
-            <Deferred data="deferredData">
+            <Deferred :data="deferredData ? 'deferredData' : 'bodyStats'">
                 <template #fallback>
                     <div class="flex h-full items-center justify-center px-4">
                         <GlassSkeleton height="8rem" width="100%" class="rounded-xl" />
