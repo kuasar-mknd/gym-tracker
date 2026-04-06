@@ -29,7 +29,7 @@ class ProfileEditTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $viewports): void {
             // Login once, since we just edit the profile multiple times
-            $browser->loginAs(User::find($user->id));
+            $browser->loginAs($user);
 
             foreach ($viewports as $name => [$width, $height]) {
                 try {
@@ -44,8 +44,7 @@ class ProfileEditTest extends DuskTestCase
                         ->type('input[autocomplete="name"]', $newName)
                         ->script("document.querySelector('form button[type=\"submit\"]').scrollIntoView({block: 'center'});");
 
-                    $browser->pause(500)
-                        ->click('form button[type="submit"]')
+                    $browser->click('form button[type="submit"]')
                         ->waitForText('Enregistré ✓', 15)
                         ->assertSee('Enregistré ✓')
                         ->assertNoConsoleExceptions();

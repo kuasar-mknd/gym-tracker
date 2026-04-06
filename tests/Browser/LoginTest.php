@@ -38,8 +38,7 @@ class LoginTest extends DuskTestCase
                         ->type('input[type="password"]', $password)
                         ->script("document.querySelector('[data-testid=\"login-button\"]').scrollIntoView({block: 'center'});");
 
-                    $browser->pause(500)
-                        ->click('[data-testid="login-button"]')
+                    $browser->click('[data-testid="login-button"]')
                         ->waitForLocation('/dashboard', 15)
                         ->waitFor('#main-content', 15)
                         ->assertSee('RETOUR')
@@ -47,12 +46,16 @@ class LoginTest extends DuskTestCase
 
                     // Log out to reset state for the next iteration
                     $browser->visit('/profile')
-                        ->waitFor('form[action="/logout"] button', 15)
-                        ->script("document.querySelector('form[action=\"/logout\"] button').scrollIntoView({block: 'center'});");
+                        ->waitForText('Déconnexion', 15)
+                        ->script("
+                            const el = Array.from(document.querySelectorAll('button, a')).find(el => el.textContent.trim().toUpperCase() === 'DÉCONNEXION' || el.textContent.trim() === 'Déconnexion');
+                            if (el) {
+                                el.scrollIntoView({block: 'center'});
+                                el.click();
+                            }
+                        ");
 
-                    $browser->pause(500)
-                        ->click('form[action="/logout"] button')
-                        ->waitForLocation('/', 15);
+                    $browser->waitForLocation('/', 15);
 
                 } catch (\Exception $e) {
                     $browser->screenshot('login-failure-iphone-'.strtolower($name));
