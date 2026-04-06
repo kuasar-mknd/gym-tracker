@@ -61,6 +61,10 @@
 ## 2026-04-01 - [Consolidating & Optimizing Dashboard Stats]
 **Learning:** Consolidating multiple deferred Inertia props (e.g., weekly volume and workout distributions) into a single analytical prop significantly reduces HTTP overhead and XHR requests. Furthermore, combining this with `toBase()` queries and native PHP date parsing (`strtotime`) instead of Eloquent models and Carbon objects inside analytical loops provides a massive boost in memory efficiency and execution speed.
 **Action:** Always look to merge deferred props that load simultaneously and ensure their underlying queries use `toBase()` to avoid unnecessary model hydration in analytical paths.
+
+## 2026-04-02 - [Granular Deferred Loading for Stats Dashboard]
+**Learning:** Consolidating multiple independent deferred props into a single `deferredData` object reduces HTTP overhead and background requests (Inertia 2.0). Combining this with the removal of large, page-level `<Deferred>` wrappers allows immediate, lightweight metadata (like latest weight and exercise counts) to render instantly. This improves perceived performance and prevents "all-or-nothing" loading states for the user.
+**Action:** Always consolidate deferred props at the controller level but keep their frontend `<Deferred>` wrappers localized to the specific components that need them. This ensures immediate data is never blocked by heavy analytical queries.
 ## 2024-05-18 - Optimized RecommendedValuesService Cache Put
 **Learning:** Performing `Cache::put()` operations inside a loop introduces N+1 caching overhead.
 **Action:** Replaced the loop-based `Cache::put()` calls with an array collection pattern and a single `Cache::putMany()` call to reduce cache interaction overhead and improve performance.

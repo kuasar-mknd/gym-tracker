@@ -141,10 +141,10 @@ test('stats page renders without cache errors', function (): void {
         ->assertInertia(
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Stats/Index')
-// In the new architecture, StatsController returns performanceStats and bodyStats as consolidated deferred props
+// In the new architecture, StatsController returns deferredData as a consolidated deferred prop
                 ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
-                    ->has('performanceStats.volumeTrend')
-                    ->has('bodyStats.weightHistory')
+                    ->has('deferredData.performance.volumeTrend')
+                    ->has('deferredData.body.weightHistory')
                 )
                 ->has('exercises')
         );
