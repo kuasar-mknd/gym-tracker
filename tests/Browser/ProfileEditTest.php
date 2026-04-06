@@ -42,6 +42,7 @@ class ProfileEditTest extends DuskTestCase
                         ->waitFor('input[autocomplete="name"]', 15)
                         ->clear('input[autocomplete="name"]')
                         ->type('input[autocomplete="name"]', $newName)
+                        ->keys('input[autocomplete="name"]', ['{escape}']) // Trigger blur for Vue reactivity
                         ->script("document.querySelector('form button[type=\"submit\"]').scrollIntoView({block: 'center'});");
 
                     $browser->click('form button[type="submit"]')

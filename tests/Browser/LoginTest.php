@@ -49,13 +49,11 @@ class LoginTest extends DuskTestCase
                         ->waitForText('Déconnexion', 15)
                         ->script("
                             const el = Array.from(document.querySelectorAll('button, a')).find(el => el.textContent.trim().toUpperCase() === 'DÉCONNEXION' || el.textContent.trim() === 'Déconnexion');
-                            if (el) {
-                                el.scrollIntoView({block: 'center'});
-                                el.click();
-                            }
+                            if (el) el.scrollIntoView({block: 'center'});
                         ");
 
-                    $browser->waitForLocation('/', 15);
+                    $browser->press('Déconnexion')
+                        ->waitForLocation('/', 15);
 
                 } catch (\Exception $e) {
                     $browser->screenshot('login-failure-iphone-'.strtolower($name));
