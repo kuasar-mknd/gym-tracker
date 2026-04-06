@@ -24,7 +24,8 @@
                         <div class="inline-flex rounded-xl border border-white/20 bg-white/10 p-1 backdrop-blur-md">
                             <button
                                 @click="form.unit = 'kg'"
-                                class="rounded-lg px-4 py-1 text-sm font-bold transition-all"
+                                :aria-pressed="form.unit === 'kg'"
+                                class="focus-visible:ring-electric-orange rounded-lg px-4 py-1 text-sm font-bold transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.unit === 'kg'
                                         ? 'text-text-main bg-white/40 shadow-sm backdrop-blur-sm'
@@ -35,7 +36,8 @@
                             </button>
                             <button
                                 @click="form.unit = 'lbs'"
-                                class="rounded-lg px-4 py-1 text-sm font-bold transition-all"
+                                :aria-pressed="form.unit === 'lbs'"
+                                class="focus-visible:ring-electric-orange rounded-lg px-4 py-1 text-sm font-bold transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.unit === 'lbs'
                                         ? 'text-text-main bg-white/40 shadow-sm backdrop-blur-sm'
@@ -54,7 +56,8 @@
                             <div class="grid grid-cols-2 gap-3">
                                 <button
                                     @click="form.gender = 'male'"
-                                    class="flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all"
+                                    :aria-pressed="form.gender === 'male'"
+                                    class="focus-visible:ring-electric-orange flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                     :class="
                                         form.gender === 'male'
                                             ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
@@ -65,7 +68,8 @@
                                 </button>
                                 <button
                                     @click="form.gender = 'female'"
-                                    class="flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all"
+                                    :aria-pressed="form.gender === 'female'"
+                                    class="focus-visible:ring-hot-pink flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                     :class="
                                         form.gender === 'female'
                                             ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'

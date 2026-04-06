@@ -12,3 +12,7 @@
 ## 2026-04-05 - [Race-Condition Protection for Flash Messages]
 **Learning:** Flash messages triggered in rapid succession can lead to race conditions where older `setTimeout` calls clear newer messages.
 **Action:** Always store `setTimeout` IDs and use `clearTimeout` in Vue `watch` functions before setting a new timer for the same type of notification.
+
+## 2026-04-06 - [Accessible button-based radio groups]
+**Learning:** When using `<button>` elements to simulate radio groups or toggle selections (like choosing gender or measurement units in calculators), developers often forget keyboard focus indicators and screen reader state. Without `focus-visible` styles, keyboard users cannot navigate the options, and without `aria-pressed`, screen reader users cannot tell which option is currently active.
+**Action:** Always apply `focus-visible:ring-2 focus-visible:outline-none` (using brand colors like `ring-electric-orange`) and dynamically bind `:aria-pressed="condition"` to all custom selection buttons.
