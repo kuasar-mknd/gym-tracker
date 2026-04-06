@@ -201,6 +201,7 @@ final class FetchDashboardDataAction
     private function getActiveGoals(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->goals()
+            ->with('exercise')
             ->whereNull('completed_at')
             ->latest()
             ->take(2)
