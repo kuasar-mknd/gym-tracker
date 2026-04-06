@@ -33,7 +33,7 @@ class ProfileEditTest extends DuskTestCase
 
             foreach ($viewports as $name => [$width, $height]) {
                 try {
-                    $newName = 'Updated Name ' . $name . ' ' . time();
+                    $newName = 'Updated Name '.$name.' '.time();
 
                     $browser->resize($width, $height)
                         ->visit('/profile/edit')
@@ -42,13 +42,16 @@ class ProfileEditTest extends DuskTestCase
                         ->waitFor('input[autocomplete="name"]', 15)
                         ->clear('input[autocomplete="name"]')
                         ->type('input[autocomplete="name"]', $newName)
+                        ->script("document.querySelector('form button[type=\"submit\"]').scrollIntoView({block: 'center'});");
+
+                    $browser->pause(500)
                         ->click('form button[type="submit"]')
                         ->waitForText('Enregistré ✓', 15)
                         ->assertSee('Enregistré ✓')
                         ->assertNoConsoleExceptions();
 
                 } catch (\Exception $e) {
-                    $browser->screenshot('profile-edit-failure-iphone-' . strtolower($name));
+                    $browser->screenshot('profile-edit-failure-iphone-'.strtolower($name));
                     throw $e;
                 }
             }
