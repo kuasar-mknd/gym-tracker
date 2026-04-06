@@ -48,11 +48,14 @@ class StatsController extends Controller
 
         return Inertia::render('Stats/Index', [
             ...$immediateData,
-            // ⚡ Bolt: Consolidate deferred props to reduce the number of async requests.
-            // Performance Stats: volumeTrend, muscleDistribution, monthlyComparison, durationHistory
-            'performanceStats' => Inertia::defer(fn (): array => $this->statsService->getPerformanceOverview($user, $days)),
-            // Body Stats: weightHistory, bodyFatHistory
-            'bodyStats' => Inertia::defer(fn (): array => $this->statsService->getBodyProgressOverview($user, $days)),
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // Consolidate deferred props to reduce the number of async requests and backend executions.
+            // This reduces HTTP overhead (1 XHR instead of 2) and ensures related visualizations
+            // appear together for a better user experience.
+            'deferredData' => Inertia::defer(fn (): array => [
+                'performance' => $this->statsService->getPerformanceOverview($user, $days),
+                'body' => $this->statsService->getBodyProgressOverview($user, $days),
+            ]),
         ]);
     }
 

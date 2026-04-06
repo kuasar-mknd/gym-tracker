@@ -33,7 +33,7 @@ defineProps({
 
             <!-- Real Body Fat Chart (Deferred) -->
             <div class="mt-4 h-32 w-full">
-                <Deferred data="bodyStats">
+                <Deferred data="deferredData">
                     <template #fallback>
                         <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                     </template>
@@ -47,7 +47,7 @@ defineProps({
 
         <!-- This Month Volume -->
         <GlassCard padding="p-5">
-            <Deferred data="performanceStats">
+            <Deferred data="deferredData">
                 <template #fallback>
                     <div class="space-y-4">
                         <GlassSkeleton height="1rem" width="6rem" />

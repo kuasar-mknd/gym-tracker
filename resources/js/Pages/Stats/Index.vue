@@ -13,9 +13,8 @@ import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SummaryStatsGrid from '@/Components/Stats/SummaryStatsGrid.vue'
 
 const props = defineProps({
-    // ⚡ Bolt: Consolidated props
-    performanceStats: Object,
-    bodyStats: Object,
+    // ⚡ Bolt: Consolidated deferred data
+    deferredData: Object,
 
     exercises: Array,
     latestWeight: [Number, String],
@@ -79,51 +78,34 @@ const handlePeriodChange = (period) => {
                 </div>
             </header>
 
-            <Deferred data="performanceStats,bodyStats">
-                <template #fallback>
-                    <GlassSkeleton class="h-64 w-full" />
-                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <GlassSkeleton class="h-32 w-full" />
-                        <GlassSkeleton class="h-32 w-full" />
-                    </div>
-                    <GlassSkeleton class="h-64 w-full" />
-                    <GlassSkeleton class="h-64 w-full" />
-                    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <GlassSkeleton class="h-64 w-full" />
-                        <GlassSkeleton class="h-64 w-full" />
-                    </div>
-                    <GlassSkeleton class="h-32 w-full" />
-                </template>
+            <WeightEvolutionCard
+                :latest-weight="latestWeight"
+                :weight-change="weightChange"
+                :weight-history="deferredData?.body?.weightHistory"
+            />
 
-                <WeightEvolutionCard
-                    :latest-weight="latestWeight"
-                    :weight-change="weightChange"
-                    :weight-history="bodyStats?.weightHistory"
-                />
+            <BodyMetricsGrid
+                :body-fat="bodyFat"
+                :body-fat-history="deferredData?.body?.bodyFatHistory"
+                :monthly-comparison="deferredData?.performance?.monthlyComparison"
+            />
 
-                <BodyMetricsGrid
-                    :body-fat="bodyFat"
-                    :body-fat-history="bodyStats?.bodyFatHistory"
-                    :monthly-comparison="performanceStats?.monthlyComparison"
-                />
+            <VolumeTrendCard :volume-trend="deferredData?.performance?.volumeTrend" :current-period="currentPeriod" />
 
-                <VolumeTrendCard :volume-trend="performanceStats?.volumeTrend" :current-period="currentPeriod" />
+            <DurationHistoryCard :duration-history="deferredData?.performance?.durationHistory" />
 
-                <DurationHistoryCard :duration-history="performanceStats?.durationHistory" />
+            <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.2s">
+                <MuscleDistributionCard :muscle-distribution="deferredData?.performance?.muscleDistribution" />
 
-                <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.2s">
-                    <MuscleDistributionCard :muscle-distribution="performanceStats?.muscleDistribution" />
+                <ExerciseProgressCard :exercises="exercises" />
+            </div>
 
-                    <ExerciseProgressCard :exercises="exercises" />
-                </div>
-
-                <SummaryStatsGrid
-                    :volume-trend="performanceStats?.volumeTrend"
-                    :muscle-distribution="performanceStats?.muscleDistribution"
-                    :exercises="exercises"
-                    :monthly-comparison="performanceStats?.monthlyComparison"
-                />
-            </Deferred>
+            <SummaryStatsGrid
+                :volume-trend="deferredData?.performance?.volumeTrend"
+                :muscle-distribution="deferredData?.performance?.muscleDistribution"
+                :exercises="exercises"
+                :monthly-comparison="deferredData?.performance?.monthlyComparison"
+            />
         </div>
     </AuthenticatedLayout>
 </template>
