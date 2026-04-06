@@ -16,7 +16,7 @@ describe('WorkoutLineController@store', function (): void {
         $exercise = Exercise::factory()->create(['user_id' => null]); // Global exercise
 
         $response = $this->actingAs($user)
-            ->post(route('workouts.lines.store', $workout), [
+            ->post(route('workout-lines.store', $workout), [
                 'exercise_id' => $exercise->id,
             ]);
 
@@ -34,7 +34,7 @@ describe('WorkoutLineController@store', function (): void {
         $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
         $response = $this->actingAs($user)
-            ->post(route('workouts.lines.store', $workout), []);
+            ->post(route('workout-lines.store', $workout), []);
 
         $response->assertStatus(302);
         $response->assertSessionHasErrors(['exercise_id']);
@@ -45,7 +45,7 @@ describe('WorkoutLineController@store', function (): void {
         $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
         $response = $this->actingAs($user)
-            ->post(route('workouts.lines.store', $workout), [
+            ->post(route('workout-lines.store', $workout), [
                 'exercise_id' => 99999,
             ]);
 
@@ -60,7 +60,7 @@ describe('WorkoutLineController@store', function (): void {
         $exercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
 
         $response = $this->actingAs($user)
-            ->post(route('workouts.lines.store', $workout), [
+            ->post(route('workout-lines.store', $workout), [
                 'exercise_id' => $exercise->id,
             ]);
 
@@ -75,7 +75,7 @@ describe('WorkoutLineController@store', function (): void {
         $exercise = Exercise::factory()->create(['user_id' => null]);
 
         $response = $this->actingAs($user)
-            ->post(route('workouts.lines.store', $workout), [
+            ->post(route('workout-lines.store', $workout), [
                 'exercise_id' => $exercise->id,
             ]);
 
@@ -88,7 +88,7 @@ describe('WorkoutLineController@store', function (): void {
         $exercise = Exercise::factory()->create(['user_id' => null]);
 
         $response = $this->actingAs($user)
-            ->post(route('workouts.lines.store', $workout), [
+            ->post(route('workout-lines.store', $workout), [
                 'exercise_id' => $exercise->id,
             ]);
 
