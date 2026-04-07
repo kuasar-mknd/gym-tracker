@@ -99,7 +99,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <button
                                         v-press
                                         @click="emit('edit', journal)"
-                                        class="text-text-muted/50 hover:text-text-main rounded-xl p-1 transition-all hover:bg-white/20 active:scale-95"
+                                        class="text-text-muted/50 hover:text-text-main focus-visible:ring-electric-orange rounded-xl p-1 transition-all hover:bg-white/20 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                         aria-label="Modifier l'entrée"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -114,7 +114,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <button
                                         v-press
                                         @click="emit('delete', journal.id)"
-                                        class="text-text-muted/50 rounded-xl p-1 transition-all hover:bg-white/20 hover:text-red-400 active:scale-95"
+                                        class="text-text-muted/50 focus-visible:ring-electric-orange rounded-xl p-1 transition-all hover:bg-white/20 hover:text-red-400 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                         aria-label="Supprimer l'entrée"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
