@@ -30,10 +30,12 @@ class ProfileEditTest extends DuskTestCase
                 ->disableAnimations()
                 ->waitFor('#main-content', 30);
 
-            $browser->waitFor('input[type="text"]', 15)
-                ->clear('input[type="text"]')
-                ->type('input[type="text"]', $newName)
-                ->press('Enregistrer')
+            $browser->waitFor('@profile-name-input', 15)
+                ->clear('@profile-name-input')
+                ->type('@profile-name-input', $newName)
+                ->script("document.querySelector('[dusk=\"save-profile-btn\"]').scrollIntoView({block: 'center'});");
+
+            $browser->click('@save-profile-btn')
                 ->waitForText('Enregistré ✓', 15)
                 ->assertNoConsoleExceptions();
         } catch (\Exception $e) {
