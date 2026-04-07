@@ -6,7 +6,9 @@ import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
+import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import { Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 defineProps({
@@ -49,6 +51,9 @@ watch(
     },
     { immediate: true },
 )
+
+const activeWorkout = computed(() => page.props.auth?.user?.active_workout)
+const isWorkoutShow = computed(() => route().current('workouts.show'))
 
 onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 </script>
@@ -277,6 +282,10 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
             class="relative z-10 px-5 py-6 sm:px-6 lg:px-8"
             :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'sm:pb-main-safe pb-64']"
         >
+            <div class="mx-auto mb-6 max-w-7xl" v-if="activeWorkout && !isWorkoutShow">
+                <ActiveWorkoutBanner :workout="activeWorkout" />
+            </div>
+
             <Transition
                 enter-active-class="transition ease-out duration-300"
                 enter-from-class="opacity-0 translate-y-4"

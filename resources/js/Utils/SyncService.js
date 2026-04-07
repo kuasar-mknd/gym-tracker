@@ -33,6 +33,13 @@ class SyncService {
         try {
             return await api(config)
         } catch (error) {
+            // Auto-retry once on 429 Too Many Requests (rate limiting)
+            if (error.response?.status === 429) {
+                const retryAfter = parseInt(error.response.headers?.['retry-after'] || '2', 10)
+                await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000))
+                return await api(config)
+            }
+
             if (!navigator.onLine || error.code === 'ERR_NETWORK') {
                 this.addToQueue(config)
                 return Promise.reject({ isOffline: true, message: 'Network error: Request queued' })

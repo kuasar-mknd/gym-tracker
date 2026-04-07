@@ -33,6 +33,7 @@ final class FetchDashboardDataAction
      * @param  \App\Models\User  $user  The authenticated user for whom to fetch data.
      * @return array{
      *     latestWeight: float|string|null,
+     *     activeWorkout: \App\Models\Workout|null,
      *     recentWorkouts: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
      *     recentPRs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>,
      *     activeGoals: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
@@ -46,6 +47,7 @@ final class FetchDashboardDataAction
         return [
             // ⚡ Bolt: Removed unused workoutsCount and thisWeekCount queries to prevent 2 unnecessary queries on dashboard load
             'latestWeight' => $latestMetrics->latest_weight ?? null,
+            'activeWorkout' => $this->getActiveWorkout($user),
             'recentWorkouts' => $this->getRecentWorkouts($user),
             'recentPRs' => $this->getRecentPRs($user),
             'activeGoals' => $this->getActiveGoals($user),
@@ -207,6 +209,22 @@ final class FetchDashboardDataAction
             ->take(2)
             ->get()
             ->append(['unit']);
+    }
+
+    /**
+     * Get the currently active (unfinished) workout for the user.
+     * Returns null if no active workout exists.
+     *
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \App\Models\Workout|null The active workout or null.
+     */
+    private function getActiveWorkout(User $user): ?\App\Models\Workout
+    {
+        return $user->workouts()
+            ->whereNull('ended_at')
+            ->withCount('workoutLines')
+            ->latest('started_at')
+            ->first();
     }
 
     /**

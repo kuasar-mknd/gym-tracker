@@ -8,14 +8,27 @@ const page = usePage()
 const navItems = [
     { name: 'Accueil', icon: 'grid_view', route: 'dashboard' },
     { name: 'Stats', icon: 'bar_chart_4_bars', route: 'stats.index' },
-    { name: 'Add', icon: 'play_arrow', isFab: true, action: 'createWorkout' },
+    { isFab: true },
     { name: 'Séances', icon: 'calendar_month', route: 'workouts.index' },
     { name: 'Plus', icon: 'menu', route: 'profile.index' },
 ]
 
-const createWorkout = () => {
+const isWorkoutShow = computed(() => route().current('workouts.show'))
+
+const fabConfig = computed(() => {
+    if (isWorkoutShow.value) {
+        return { name: 'Exercice', icon: 'add' }
+    }
+    return { name: 'Séance', icon: 'play_arrow' }
+})
+
+const handleFabClick = () => {
     triggerHaptic('toggle')
-    router.post(route('workouts.store'))
+    if (isWorkoutShow.value) {
+        window.dispatchEvent(new CustomEvent('open-add-exercise'))
+    } else {
+        router.post(route('workouts.store'))
+    }
 }
 
 const isActiveRoute = (itemRoute) => {
@@ -32,14 +45,9 @@ const isActiveRoute = (itemRoute) => {
         <template v-for="item in navItems" :key="item.name">
             <!-- Center FAB -->
             <div v-if="item.isFab" class="relative">
-                <button
-                    v-press
-                    @click="createWorkout"
-                    class="glass-nav-fab"
-                    :aria-label="item.name === 'Add' ? 'Nouvelle séance' : item.name"
-                >
+                <button v-press @click="handleFabClick" class="glass-nav-fab" :aria-label="fabConfig.name">
                     <span class="material-symbols-outlined text-4xl font-black" aria-hidden="true">{{
-                        item.icon
+                        fabConfig.icon
                     }}</span>
                 </button>
             </div>

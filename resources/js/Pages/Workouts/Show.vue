@@ -27,7 +27,7 @@ import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import { Head, useForm, router, usePage } from '@inertiajs/vue3'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -60,7 +60,30 @@ const timerDuration = ref(90)
 
 let tempIdCounter = 0
 
+/**
+ * Flush (execute immediately) all pending debounced updates for a given set.
+ * This prevents interleaved PATCH requests from overwriting each other's results.
+ */
+const flushPendingUpdates = (setId) => {
+    const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
+    fields.forEach((field) => {
+        const timerKey = `${setId}_${field}`
+        if (updateTimers[timerKey]) {
+            clearTimeout(updateTimers[timerKey].timerId)
+            // Execute the pending update immediately
+            if (typeof updateTimers[timerKey].execute === 'function') {
+                updateTimers[timerKey].execute()
+            }
+            delete updateTimers[timerKey]
+        }
+    })
+}
+
 const toggleSetCompletion = (set, exerciseRestTime) => {
+    // Flush any pending debounced updates for this set BEFORE toggling
+    // to ensure value changes are sent before the completion toggle
+    flushPendingUpdates(set.id)
+
     const newState = !set.is_completed
     const previousState = set.is_completed
 
@@ -74,8 +97,12 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
         is_completed: newState,
     })
         .then((response) => {
+            // Only merge back the fields we sent + metadata to avoid overwriting
+            // concurrent optimistic updates (e.g. weight/reps changes)
             if (response.data?.data) {
-                Object.assign(set, response.data.data)
+                set.is_completed = response.data.data.is_completed
+                set.personal_record = response.data.data.personal_record
+                set.updated_at = response.data.data.updated_at
             }
         })
         .catch((err) => {
@@ -241,7 +268,7 @@ const removeLine = (lineId) => {
             fields.forEach((field) => {
                 const timerKey = `${set.id}_${field}`
                 if (updateTimers[timerKey]) {
-                    clearTimeout(updateTimers[timerKey])
+                    clearTimeout(updateTimers[timerKey].timerId)
                     delete updateTimers[timerKey]
                 }
             })
@@ -314,15 +341,25 @@ const addSet = (lineId) => {
 // ⚡ Perf: Optimistic updateSet — no router.reload
 const updateTimers = {}
 const updateSet = (set, field, value) => {
+    // Skip API calls for temp sets that haven't been created on the server yet
+    if (String(set.id).startsWith('temp-')) {
+        set[field] = value
+        return
+    }
+
     const previousValue = set[field]
     set[field] = value
     const timerKey = `${set.id}_${field}`
-    if (updateTimers[timerKey]) clearTimeout(updateTimers[timerKey])
-    updateTimers[timerKey] = setTimeout(() => {
+    if (updateTimers[timerKey]?.timerId) clearTimeout(updateTimers[timerKey].timerId)
+
+    const execute = () => {
         SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value })
             .then((response) => {
+                // Only merge back the specific field we updated + metadata
+                // to avoid overwriting concurrent optimistic updates
                 if (response.data?.data) {
-                    Object.assign(set, response.data.data)
+                    set[field] = response.data.data[field]
+                    set.updated_at = response.data.data.updated_at
                 }
             })
             .catch((err) => {
@@ -331,8 +368,15 @@ const updateSet = (set, field, value) => {
                     triggerHaptic('error')
                 }
             })
-        delete updateTimers[timerKey]
-    }, 1000)
+    }
+
+    updateTimers[timerKey] = {
+        timerId: setTimeout(() => {
+            execute()
+            delete updateTimers[timerKey]
+        }, 1000),
+        execute,
+    }
 }
 
 // ⚡ Perf: Optimistic removeSet — no router.reload
@@ -342,7 +386,7 @@ const removeSet = (setId) => {
     fields.forEach((field) => {
         const timerKey = `${setId}_${field}`
         if (updateTimers[timerKey]) {
-            clearTimeout(updateTimers[timerKey])
+            clearTimeout(updateTimers[timerKey].timerId)
             delete updateTimers[timerKey]
         }
     })
@@ -380,6 +424,18 @@ const updateDurationFromTime = (set, val) => {
 const filteredExercises = computed(() => {
     const q = searchQuery.value.toLowerCase().trim()
     return q ? localExercises.value.filter((e) => e.name.toLowerCase().includes(q)) : localExercises.value
+})
+
+const handleFabAddExercise = () => {
+    showAddExercise.value = true
+}
+
+onMounted(() => {
+    window.addEventListener('open-add-exercise', handleFabAddExercise)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('open-add-exercise', handleFabAddExercise)
 })
 </script>
 
@@ -597,7 +653,7 @@ const filteredExercises = computed(() => {
                     Ajouter un exercice
                 </h2>
                 <div v-if="!showCreateForm">
-                    <div class="sticky top-0 z-10 bg-white/50 pt-1 pb-4 backdrop-blur-sm dark:bg-slate-900/50">
+                    <div class="pb-4">
                         <GlassInput
                             id="search-workout-exercise"
                             v-model="searchQuery"
@@ -608,7 +664,7 @@ const filteredExercises = computed(() => {
                             placeholder="Rechercher..."
                         />
                     </div>
-                    <div class="max-h-[60vh] space-y-3 overflow-y-auto pb-64">
+                    <div class="max-h-[60vh] space-y-3 overflow-y-auto">
                         <div
                             v-if="filteredExercises.length === 0 && searchQuery"
                             @click="quickCreate"

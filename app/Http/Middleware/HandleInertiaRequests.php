@@ -64,6 +64,13 @@ class HandleInertiaRequests extends Middleware
 
         $latestAchievement = $notificationService->getLatestAchievement($user);
 
+        $activeWorkout = $user->workouts()
+            ->select('id', 'name', 'started_at')
+            ->whereNull('ended_at')
+            ->withCount('workoutLines')
+            ->latest('started_at')
+            ->first();
+
         return [
             'id' => $user->id,
             'name' => $user->name,
@@ -77,6 +84,7 @@ class HandleInertiaRequests extends Middleware
             ] : null,
             'current_streak' => $user->last_workout_at && $user->last_workout_at->startOfDay()->diffInDays(now()->startOfDay()) > 1 ? 0 : $user->current_streak,
             'longest_streak' => $user->longest_streak,
+            'active_workout' => $activeWorkout,
         ];
     }
 }

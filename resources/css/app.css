@@ -333,6 +333,8 @@
 
 @utility glass-input {
     /* ===== GLASS INPUT ===== */
+    appearance: none;
+    -webkit-appearance: none;
     width: 100%;
     min-height: var(--touch-min);
     padding: 0.75rem 1rem;
@@ -345,6 +347,13 @@
     transition: all 0.2s ease;
     outline: none;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+
+    &::-webkit-search-decoration,
+    &::-webkit-search-cancel-button,
+    &::-webkit-search-results-button,
+    &::-webkit-search-results-decoration {
+        display: none;
+    }
 
     &::placeholder {
         color: var(--text-muted);
