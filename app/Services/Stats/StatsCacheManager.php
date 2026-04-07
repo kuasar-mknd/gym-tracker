@@ -21,7 +21,6 @@ final class StatsCacheManager
      * Clear all statistics cache for a given user.
      *
      * @param  User  $user  The user whose stats cache should be cleared.
-     * @return void
      */
     public function clearUserStatsCache(User $user): void
     {
@@ -35,7 +34,6 @@ final class StatsCacheManager
      * This affects historical volume and duration limits but not analytical aggregates.
      *
      * @param  User  $user  The user whose workout metadata cache should be cleared.
-     * @return void
      */
     public function clearWorkoutMetadataStats(User $user): void
     {
@@ -53,7 +51,6 @@ final class StatsCacheManager
      * This invalidates weekly/monthly comparisons, trends, daily volume, and muscle distribution.
      *
      * @param  User  $user  The user whose volume stats cache should be cleared.
-     * @return void
      */
     public function clearVolumeStats(User $user): void
     {
@@ -84,7 +81,6 @@ final class StatsCacheManager
      * Clear cache related to workout duration and time-of-day changes.
      *
      * @param  User  $user  The user whose duration stats cache should be cleared.
-     * @return void
      */
     public function clearDurationStats(User $user): void
     {
@@ -101,7 +97,6 @@ final class StatsCacheManager
      * Clear all workout-related statistics cache (both volume and duration).
      *
      * @param  User  $user  The user whose workout stats cache should be cleared.
-     * @return void
      */
     public function clearWorkoutRelatedStats(User $user): void
     {
@@ -113,7 +108,6 @@ final class StatsCacheManager
      * Clear cache related to body measurements (e.g., weight, body fat).
      *
      * @param  User  $user  The user whose body measurement stats cache should be cleared.
-     * @return void
      */
     public function clearBodyMeasurementStats(User $user): void
     {
