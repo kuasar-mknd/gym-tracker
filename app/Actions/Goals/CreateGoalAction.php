@@ -15,11 +15,7 @@ class CreateGoalAction
     }
 
     /**
-     * Execute the action.
-     *
-     * @param  User  $user  The user creating the goal.
-     * @param  array<string, mixed>  $data  The goal data.
-     * @return Goal
+     * @param  array<string, mixed>  $data
      */
     public function execute(User $user, array $data): Goal
     {

@@ -11,18 +11,20 @@ use App\Http\Requests\Api\WorkoutTemplateStoreRequest;
 use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Resources\WorkoutTemplateResource;
 use App\Models\WorkoutTemplate;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class WorkoutTemplateController extends Controller
 {
-    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(): AnonymousResourceCollection
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
-        // @phpstan-ignore-next-line
-        $templates = QueryBuilder::for(WorkoutTemplate::class)
-            ->where('user_id', $this->user()->id)
-            ->allowedSorts(['created_at', 'name'])
+        /** @var QueryBuilder<WorkoutTemplate> $templates */
+        $templates = clone QueryBuilder::for(WorkoutTemplate::class)->where('user_id', $this->user()->id);
+
+        $templates->allowedSorts(['created_at', 'name'])
             ->allowedIncludes(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets']);
 
         $templates = $templates->paginate();
@@ -61,7 +63,7 @@ class WorkoutTemplateController extends Controller
         return new WorkoutTemplateResource($template);
     }
 
-    public function destroy(WorkoutTemplate $workoutTemplate): \Illuminate\Http\Response
+    public function destroy(WorkoutTemplate $workoutTemplate): Response
     {
         $this->authorize('delete', $workoutTemplate);
 
