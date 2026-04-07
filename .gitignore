@@ -1,9 +1,8 @@
 *.log
 .DS_Store
 .env
-.env.backup
-.env.production
-.env.dusk.local
+.env.*
+!.env.example
 pnpm-lock.yaml
 .phpactor.json
 .phpunit.result.cache
