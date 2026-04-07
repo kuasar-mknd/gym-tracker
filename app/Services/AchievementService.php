@@ -161,21 +161,19 @@ final class AchievementService
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
+        // ⚡ Bolt Optimization: Use toBase() to avoid hydrating Eloquent models and Carbon objects.
+        // This significantly reduces memory usage and execution time for large datasets.
         $dates = $user->workouts()
+            ->toBase()
             ->where('started_at', '>=', now()->subDays($days + 30))
             ->latest('started_at')
             ->pluck('started_at');
 
-        /** @var Collection<int, string> $mapped */
-        $mapped = $dates->map(function ($date): string {
-            if ($date instanceof \DateTimeInterface) {
-                return $date->format('Y-m-d');
-            }
+        return $dates->map(function (mixed $date): string {
+            $dateString = is_string($date) ? $date : '';
 
-            return \Illuminate\Support\Carbon::parse(is_string($date) ? $date : '')->format('Y-m-d');
-        });
-
-        return $mapped->unique()->values()->all();
+            return strlen($dateString) >= 10 ? substr($dateString, 0, 10) : $dateString;
+        })->unique()->values()->all();
     }
 
     /**
