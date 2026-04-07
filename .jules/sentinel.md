@@ -72,3 +72,8 @@
 **Vulnerability:** Found `SetController` and `WorkoutTemplateLineController` relying implicitly on `FormRequest` authorization which returned `true`, bypassing explicit `$this->authorize()` checks for nested creation.
 **Learning:** Relying solely on `FormRequest::authorize()` can bypass Policy logic completely, leading to Broken Function Level Authorization (BFLA/IDOR) on nested resource creation if explicitly checked properties (like the parent resource ownership) are ignored in the `store` method.
 **Prevention:** Enforce defense-in-depth by explicitly resolving the parent model via `findOrFail()` and calling `$this->authorize('create', [ChildModel::class, $parentModel])` within the controller's `store` method.
+
+## 2026-04-06 - Rate Limiting on Password Updates
+**Vulnerability:** The password update endpoint (`PasswordController@update`) lacked per-user rate limiting for the `current_password` validation rule, exposing users to brute-force attacks on their current session password.
+**Learning:** Global route throttling is insufficient for sensitive credential verification. Brute-force protection should be enforced at the request level using a user-specific throttle key.
+**Prevention:** Encapsulate sensitive credential verification in a dedicated `FormRequest`. Use `prepareForValidation()` to check for throttling and `withValidator()` to increment the failure count on specific validation errors (e.g., `current_password`).
