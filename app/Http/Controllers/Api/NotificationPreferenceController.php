@@ -9,6 +9,8 @@ use App\Http\Requests\Api\NotificationPreferenceStoreRequest;
 use App\Http\Requests\Api\NotificationPreferenceUpdateRequest;
 use App\Http\Resources\NotificationPreferenceResource;
 use App\Models\NotificationPreference;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -17,14 +19,14 @@ class NotificationPreferenceController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(): AnonymousResourceCollection
     {
         $this->authorize('viewAny', NotificationPreference::class);
 
-        // @phpstan-ignore-next-line
-        $preferences = QueryBuilder::for(NotificationPreference::class)
-            ->where('user_id', $this->user()->id)
-            ->allowedSorts(['type', 'created_at']);
+        /** @var QueryBuilder<NotificationPreference> $preferences */
+        $preferences = clone QueryBuilder::for(NotificationPreference::class)->where('user_id', $this->user()->id);
+
+        $preferences->allowedSorts(['type', 'created_at']);
 
         $preferences = $preferences->get();
 
@@ -34,7 +36,7 @@ class NotificationPreferenceController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(NotificationPreferenceStoreRequest $request): \Illuminate\Http\JsonResponse
+    public function store(NotificationPreferenceStoreRequest $request): JsonResponse
     {
         $this->authorize('create', NotificationPreference::class);
 
@@ -75,7 +77,7 @@ class NotificationPreferenceController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(NotificationPreference $notification_preference): \Illuminate\Http\Response
+    public function destroy(NotificationPreference $notification_preference): Response
     {
         $this->authorize('delete', $notification_preference);
 
