@@ -190,20 +190,33 @@ final class AchievementService
         $maxStreak = 1;
         $count = count($dates);
 
-        if ($count === 1) {
+        if ($count <= 1) {
+            return $count;
+        }
+
+        // ⚡ Bolt Optimization: Use native PHP timestamp math instead of Carbon objects
+        // to eliminate O(N) object instantiation overhead inside the loop.
+        $current = strtotime($dates[0]);
+
+        if ($current === false) {
             return 1;
         }
 
         for ($i = 0; $i < $count - 1; $i++) {
-            $current = \Carbon\Carbon::parse($dates[$i]);
-            $next = \Carbon\Carbon::parse($dates[$i + 1]);
+            $next = strtotime($dates[$i + 1]);
 
-            if (abs((int) $current->diffInDays($next, false)) === 1) {
+            if ($next === false) {
+                continue;
+            }
+
+            // 86400 seconds in a day. Round to avoid timezone shift issues during daylight saving.
+            if (abs((int) round(($next - $current) / 86400)) === 1) {
                 $currentStreak++;
             } else {
                 $maxStreak = max($maxStreak, $currentStreak);
                 $currentStreak = 1;
             }
+            $current = $next;
         }
 
         return max($maxStreak, $currentStreak);

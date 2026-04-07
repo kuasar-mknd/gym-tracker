@@ -72,3 +72,6 @@
 ## 2025-06-03 - [whereHas vs INNER JOIN on belongsTo]
 **Learning:** Using `whereHas` on a simple `belongsTo` relationship (like checking if a workout belongs to a user inside `WorkoutLine`) creates an `EXISTS()` subquery. In MySQL, especially as the main table grows, this subquery evaluation can be significantly slower than a direct `INNER JOIN` to the related table combined with a `WHERE` clause.
 **Action:** For simple parent relationship filtering or sorting, replace `whereHas` with `join()` and `where()` on the joined columns. Always ensure to add `select('main_table.*')` to prevent the joined columns from overriding model attributes.
+## 2025-06-15 - [Carbon vs Native Date Math in Loops]
+**Learning:** Instantiating heavy objects like `Carbon` inside large loops (e.g., calculating maximum consecutive streaks over hundreds or thousands of dates) causes significant `O(N)` object instantiation overhead and memory pressure.
+**Action:** Replace `Carbon::parse()` and related methods (like `diffInDays()`) with native PHP timestamp math (`strtotime`, `abs`, `round(diff / 86400)`) within performance-critical loops that evaluate date sequences. Track variables between iterations to eliminate redundant parsing.
