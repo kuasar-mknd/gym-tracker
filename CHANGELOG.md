@@ -7,6 +7,40 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.26] - 2026-04-07
+
+### Ajouté
+- **Visualisations Avancées** : Intégration de nouveaux graphiques (Chart.js) pour les historiques de PRs, la progression des objectifs, la durée des jeûnes, la fréquence des entraînements par jour, et la durée des séances.
+- **Suivi des Entraînements** : Ajout du suivi de la session d'entraînement active avec bannière persistante, actions dynamiques sur bouton flottant (FAB), et meilleur affichage des modales.
+
+### Modifié
+- **Design Liquid Glass** : Application systématique du design "Liquid Glass" aux sections de statistiques (RecentVolume, TimeOfDay, Duration), aux vues de confirmation de mot de passe, au suivi d'eau (WaterTracker), au formulaire du journal, et à divers composants de liste.
+- **UX & Accessibilité (Palette)** :
+  - Support de la navigation au clavier (focus, aria-labels) sur de multiples composants et boutons (Journal, bascules personnalisées, dropdowns, etc.).
+  - Raccourci clavier de recherche (`⌘K`).
+  - Sélection automatique des données des séries au focus pour accélérer la saisie (`Auto-select`).
+  - Amélioration de l'ergonomie des messages flash (toasts de confirmation et d'erreur avec fermeture automatique).
+
+### Optimisé
+- **Performance de l'Interface (Bolt)** :
+  - Consolidation massive des propriétés différées (`Inertia::defer`) sur l'ensemble des vues de statistiques, de tableau de bord, et des index d'entraînements, pour un chargement instantané de la vue initiale.
+  - Résolution des requêtes N+1 et de l'hydratation Eloquent via `toBase()` et des requêtes optimisées dans les services de recommandation, l'historique d'eau, et les commandes de rappels d'entraînement.
+  - Amélioration de l'efficacité du calcul de la plus longue série d'assiduité (`max streak`) dans `AchievementService`.
+
+### Sécurité
+- **Audit de Sécurité (Sentinel)** :
+  - Correction d'un manque de protection contre le brute-force sur la confirmation de mot de passe (Faille de niveau ÉLEVÉ).
+  - Ajout de limitations de requêtes (rate limiting) manquantes sur la suppression de compte.
+  - Ajout et correction des autorisations explicites manquantes au niveau des méthodes dans plus de 10 contrôleurs de l'API (IntervalTimer, Warmup, MacroCalculation, WorkoutLine, etc.).
+  - Retrait du suivi des fichiers `.env` contenant de fausses ou potentielles données sensibles de l'index Git et ajout strict au `.gitignore`.
+
+### Corrigé
+- **Développement & Tests (Pixel)** :
+  - Couverture massive des fonctionnalités avec Pest (SetController, HabitController, StatsController, Actions, etc.)
+  - Mise à jour et amélioration de la stabilité des suites E2E (Dusk) sur les téléphones de type iPhone Mini / iPhone Max (Correction des exceptions d'éléments expirés pour l'édition de séances).
+- **Infrastucture Front-end** :
+  - Compatibilité Vite / Rolldown : Correction des chunks manuels empêchant la compilation du code JavaScript en environnement CI et production.
+
 ## [1.4.24] - 2026-03-24
 
 ### Ajouté
