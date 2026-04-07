@@ -1,6 +1,21 @@
+<!--
+  Components/UI/Modal.vue
+
+  A reusable, animated modal component with a "Liquid Glass" aesthetic overlay.
+  It handles visibility transitions, body scroll locking, outside-click closing,
+  and 'Escape' key listening for accessibility.
+-->
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
+/**
+ * Component Props
+ *
+ * @property {Boolean} show - Whether the modal is currently visible.
+ * @property {String} maxWidth - Controls the maximum width of the modal (sm, md, lg, xl, 2xl).
+ * @property {Boolean} closeable - Determines if the modal can be closed via background click or Escape key.
+ * @property {String} ariaLabelledby - The ID of the element providing the modal's accessible title.
+ */
 const props = defineProps({
     show: {
         type: Boolean,
@@ -20,6 +35,11 @@ const props = defineProps({
     },
 })
 
+/**
+ * Component Emits
+ *
+ * @event close - Emitted when the modal requests to close (background click or Escape key).
+ */
 const emit = defineEmits(['close'])
 const dialog = ref()
 const showSlot = ref(props.show)
