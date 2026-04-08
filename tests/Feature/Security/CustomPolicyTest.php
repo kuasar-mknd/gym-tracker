@@ -13,13 +13,21 @@ use Tests\TestCase;
 
 class CustomPolicyTest extends TestCase
 {
+    private function getDirectivesFromPolicy(Policy $policy): array
+    {
+        $reflection = new \ReflectionClass($policy);
+        $property = $reflection->getProperty('directives');
+        $property->setAccessible(true);
+        return $property->getValue($policy);
+    }
+
     public function test_custom_policy_has_correct_base_directives(): void
     {
         $policy = new Policy();
         $customPolicy = new CustomPolicy();
         $customPolicy->configure($policy);
 
-        $directives = $policy->all();
+        $directives = $this->getDirectivesFromPolicy($policy);
 
         $this->assertContains(Keyword::SELF, $directives[Directive::BASE]);
         $this->assertContains(Keyword::SELF, $directives[Directive::CONNECT]);
@@ -43,7 +51,7 @@ class CustomPolicyTest extends TestCase
         $customPolicy = new CustomPolicy();
         $customPolicy->configure($policy);
 
-        $directives = $policy->all();
+        $directives = $this->getDirectivesFromPolicy($policy);
 
         // Local environment should have unsafe-inline for script and style, plus localhost urls
         $this->assertContains(Keyword::UNSAFE_EVAL, $directives[Directive::SCRIPT]);
@@ -66,7 +74,7 @@ class CustomPolicyTest extends TestCase
         $customPolicy = new CustomPolicy();
         $customPolicy->configure($policy);
 
-        $directives = $policy->all();
+        $directives = $this->getDirectivesFromPolicy($policy);
 
         // Production environment should have unsafe-eval for script, unsafe-inline for style
         $this->assertContains(Keyword::UNSAFE_EVAL, $directives[Directive::SCRIPT]);
@@ -81,7 +89,7 @@ class CustomPolicyTest extends TestCase
         $customPolicy = new CustomPolicy();
         $customPolicy->configure($policy);
 
-        $directives = $policy->all();
+        $directives = $this->getDirectivesFromPolicy($policy);
 
         $this->assertContains('https://fonts.googleapis.com', $directives[Directive::STYLE]);
         $this->assertContains('https://fonts.bunny.net', $directives[Directive::STYLE]);
