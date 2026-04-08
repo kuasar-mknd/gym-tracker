@@ -32,6 +32,7 @@ class CustomPolicy extends Basic
 
         if (! app()->environment('local')) {
             $policy->addNonce(Directive::SCRIPT);
+            $policy->addNonce(Directive::STYLE); // Re-enable style nonces globally for security
         }
 
         if (app()->environment('local', 'testing')) {
@@ -62,10 +63,12 @@ class CustomPolicy extends Basic
         // as it is bundled and managed internally by Filament.
         $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
 
-        // Deliberate security tradeoff: Filament requires 'unsafe-inline' for style
-        // attributes on various components (e.g., grids, color pickers) which cannot
-        // use nonces since they are inline style attributes.
-        $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
+        // Fix for Filament Style Attributes: Instead of adding 'unsafe-inline' to
+        // the global style-src directive (which breaks nonce protection for all <style> tags),
+        // we use style-src-attr to specifically allow inline attributes on elements,
+        // while preserving nonce requirements for actual style tags.
+        // This requires CSP level 3 browser support.
+        $policy->add('style-src-attr', Keyword::UNSAFE_INLINE);
     }
 
     protected function configureExternalResources(Policy $policy): void
