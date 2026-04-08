@@ -16,7 +16,3 @@
 ## 2026-04-06 - [Accessible button-based radio groups]
 **Learning:** When using `<button>` elements to simulate radio groups or toggle selections (like choosing gender or measurement units in calculators), developers often forget keyboard focus indicators and screen reader state. Without `focus-visible` styles, keyboard users cannot navigate the options, and without `aria-pressed`, screen reader users cannot tell which option is currently active.
 **Action:** Always apply `focus-visible:ring-2 focus-visible:outline-none` (using brand colors like `ring-electric-orange`) and dynamically bind `:aria-pressed="condition"` to all custom selection buttons.
-
-## 2026-04-08 - [Explain Disabled States to Users]
-**Learning:** Native `disabled` attributes on buttons visually convey that an action is unavailable, but they do not explain *why*. Screen reader users and sighted users alike can benefit from a `title` or tooltip attribute providing context (e.g., "This action is temporarily disabled").
-**Action:** When creating reusable UI button components, always provide an accessible fallback or tooltip explanation for the disabled state to prevent user frustration.

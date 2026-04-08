@@ -45,7 +45,7 @@ const sizeClasses = {
         :disabled="disabled || loading"
         :aria-busy="loading"
         :aria-label="ariaLabel || $attrs['aria-label']"
-        :title="disabled || loading ? 'Cette action est temporairement désactivée' : ariaLabel || $attrs['title']"
+        :title="ariaLabel"
         :class="[
             'glass-button focus-visible:ring-electric-orange transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
             sizeClasses[size],
