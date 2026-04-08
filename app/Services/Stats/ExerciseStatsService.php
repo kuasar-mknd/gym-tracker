@@ -61,11 +61,23 @@ final class ExerciseStatsService
                 ->groupBy('workouts.started_at')
                 ->orderBy('workouts.started_at')
                 ->get()
-                ->map(fn (\stdClass $set): Exercise1RMProgressPoint => new Exercise1RMProgressPoint(
-                    Carbon::parse($set->started_at)->format('d/m'),
-                    Carbon::parse($set->started_at)->format('Y-m-d'),
-                    (float) $set->epley_1rm,
-                ))
+                ->map(function (\stdClass $set): ?Exercise1RMProgressPoint {
+                    // ⚡ Bolt Optimization: Use native PHP timestamp math instead of Carbon objects
+                    // to eliminate O(N) object instantiation overhead inside the loop.
+                    $timestamp = strtotime((string) $set->started_at);
+
+                    if ($timestamp === false) {
+                        return null;
+                    }
+
+                    return new Exercise1RMProgressPoint(
+                        date('d/m', $timestamp),
+                        date('Y-m-d', $timestamp),
+                        (float) $set->epley_1rm,
+                    );
+                })
+                ->filter()
+                ->values()
                 ->toArray()
         );
     }
