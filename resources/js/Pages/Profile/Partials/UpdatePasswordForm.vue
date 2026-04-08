@@ -70,7 +70,9 @@ const updatePassword = () => {
             />
 
             <div class="flex items-center gap-4">
-                <GlassButton type="submit" :loading="form.processing"> Mettre à jour </GlassButton>
+                <GlassButton type="submit" :loading="form.processing" data-testid="update-password-button">
+                    Mettre à jour
+                </GlassButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
