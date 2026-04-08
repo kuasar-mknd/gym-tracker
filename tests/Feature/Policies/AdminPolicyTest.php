@@ -5,11 +5,12 @@ declare(strict_types=1);
 use App\Models\Admin;
 use App\Models\User;
 use App\Policies\AdminPolicy;
+use Illuminate\Support\Facades\Gate;
 
 describe('AdminPolicy', function () {
     it('allows viewAny when user has permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('view_any_admin')->andReturn(true);
+        $user = User::factory()->make();
+        Gate::define('view_any_admin', fn () => true);
 
         $policy = new AdminPolicy();
 
@@ -17,8 +18,8 @@ describe('AdminPolicy', function () {
     });
 
     it('denies viewAny when user lacks permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('view_any_admin')->andReturn(false);
+        $user = User::factory()->make();
+        Gate::define('view_any_admin', fn () => false);
 
         $policy = new AdminPolicy();
 
@@ -26,8 +27,8 @@ describe('AdminPolicy', function () {
     });
 
     it('allows view when user has permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('view_admin')->andReturn(true);
+        $user = User::factory()->make();
+        Gate::define('view_admin', fn () => true);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -36,8 +37,8 @@ describe('AdminPolicy', function () {
     });
 
     it('denies view when user lacks permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('view_admin')->andReturn(false);
+        $user = User::factory()->make();
+        Gate::define('view_admin', fn () => false);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -46,8 +47,8 @@ describe('AdminPolicy', function () {
     });
 
     it('allows create when user has permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('create_admin')->andReturn(true);
+        $user = User::factory()->make();
+        Gate::define('create_admin', fn () => true);
 
         $policy = new AdminPolicy();
 
@@ -55,8 +56,8 @@ describe('AdminPolicy', function () {
     });
 
     it('denies create when user lacks permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('create_admin')->andReturn(false);
+        $user = User::factory()->make();
+        Gate::define('create_admin', fn () => false);
 
         $policy = new AdminPolicy();
 
@@ -64,8 +65,8 @@ describe('AdminPolicy', function () {
     });
 
     it('allows update when user has permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('update_admin')->andReturn(true);
+        $user = User::factory()->make();
+        Gate::define('update_admin', fn () => true);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -74,8 +75,8 @@ describe('AdminPolicy', function () {
     });
 
     it('denies update when user lacks permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('update_admin')->andReturn(false);
+        $user = User::factory()->make();
+        Gate::define('update_admin', fn () => false);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -84,8 +85,8 @@ describe('AdminPolicy', function () {
     });
 
     it('allows delete when user has permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('delete_admin')->andReturn(true);
+        $user = User::factory()->make();
+        Gate::define('delete_admin', fn () => true);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -94,8 +95,8 @@ describe('AdminPolicy', function () {
     });
 
     it('denies delete when user lacks permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('delete_admin')->andReturn(false);
+        $user = User::factory()->make();
+        Gate::define('delete_admin', fn () => false);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -104,8 +105,8 @@ describe('AdminPolicy', function () {
     });
 
     it('allows restore when user has permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('restore_admin')->andReturn(true);
+        $user = User::factory()->make();
+        Gate::define('restore_admin', fn () => true);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -114,8 +115,8 @@ describe('AdminPolicy', function () {
     });
 
     it('denies restore when user lacks permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('restore_admin')->andReturn(false);
+        $user = User::factory()->make();
+        Gate::define('restore_admin', fn () => false);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -124,8 +125,8 @@ describe('AdminPolicy', function () {
     });
 
     it('allows forceDelete when user has permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('force_delete_admin')->andReturn(true);
+        $user = User::factory()->make();
+        Gate::define('force_delete_admin', fn () => true);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
@@ -134,8 +135,8 @@ describe('AdminPolicy', function () {
     });
 
     it('denies forceDelete when user lacks permission', function () {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('can')->with('force_delete_admin')->andReturn(false);
+        $user = User::factory()->make();
+        Gate::define('force_delete_admin', fn () => false);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
