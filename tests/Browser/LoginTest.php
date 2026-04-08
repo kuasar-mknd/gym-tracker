@@ -24,13 +24,13 @@ class LoginTest extends DuskTestCase
             $browser->{$sizeMacro}()
                 ->visit('/login')
                 ->disableAnimations()
-                ->waitFor('@email-input', 30)
-                ->type('@email-input', $user->email)
-                ->type('@password-input', 'password123')
+                ->waitFor('[data-testid="email-input"]', 30)
+                ->type('[data-testid="email-input"]', $user->email)
+                ->type('[data-testid="password-input"]', 'password123')
                 ->script("document.querySelector('[data-testid=\"login-button\"]').scrollIntoView({block: 'center'});");
 
             $browser->pause(500)
-                ->click('@login-button')
+                ->click('[data-testid="login-button"]')
                 ->waitForLocation('/dashboard', 30)
                 ->assertPathIs('/dashboard')
                 ->assertNoConsoleExceptions();
