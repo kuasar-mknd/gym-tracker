@@ -13,16 +13,17 @@ class ProfileEditTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
-    private function performProfileEditCheck(Browser $browser, string $sizeMacro): void
+    private function performProfileEditCheck(Browser $browser, string $sizeMacro, string $deviceFormat): void
     {
         $user = User::factory()->create([
             'name' => 'Original Name',
-            'email' => 'profile-'.time().random_int(0, 999).'@example.com',
+            'email' => 'profile-edit-'.time().random_int(0, 999).'@example.com',
+            'email_verified_at' => now(),
             'password' => bcrypt('password123'),
         ]);
 
         try {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs($user)
                 ->{$sizeMacro}()
                 ->visit('/profile/edit')
                 ->disableAnimations()
@@ -32,13 +33,16 @@ class ProfileEditTest extends DuskTestCase
 
             // Verify Profile Info Section
             $browser->assertSee('Informations du profil')
+                ->waitFor('@profile-name-input', 15)
                 ->assertInputValue('@profile-name-input', 'Original Name')
                 ->assertInputValue('input[autocomplete="username"]', $user->email);
 
             $newName = 'Updated Name '.time();
             $browser->clear('@profile-name-input')
                 ->type('@profile-name-input', $newName)
-                ->click('[data-testid="save-profile-button"]')
+                ->script("document.querySelector('[dusk=\"save-profile-btn\"]').scrollIntoView({block: 'center'});");
+
+            $browser->click('@save-profile-btn')
                 ->waitForText('Enregistré ✓', 15)
                 ->assertInputValue('@profile-name-input', $newName);
 
@@ -46,8 +50,7 @@ class ProfileEditTest extends DuskTestCase
             $browser->script("document.body.style.paddingBottom = '500px';");
 
             // Verify Password Section
-            // We use JS to scroll to password section to avoid elements intercepting clicks on mobile viewports
-            $browser->script("document.querySelector('[data-testid=\"update-password-button\"]').scrollIntoView({block: 'center'});");
+            $browser->script("document.querySelector('input[autocomplete=\"current-password\"]').scrollIntoView({block: 'center'});");
             $browser->pause(500);
 
             $browser->assertSee('Mot de passe')
@@ -72,7 +75,7 @@ class ProfileEditTest extends DuskTestCase
 
             $browser->assertNoConsoleExceptions();
         } catch (\Exception $e) {
-            $browser->screenshot('profile-edit-failure-'.$sizeMacro);
+            $browser->screenshot('failure-iphone-'.$deviceFormat);
             throw $e;
         }
     }
@@ -80,21 +83,21 @@ class ProfileEditTest extends DuskTestCase
     public function test_profile_edit_on_iphone_mini(): void
     {
         $this->browse(function (Browser $browser): void {
-            $this->performProfileEditCheck($browser, 'resizeToIphoneMini');
+            $this->performProfileEditCheck($browser, 'resizeToIphoneMini', 'mini');
         });
     }
 
     public function test_profile_edit_on_iphone_15(): void
     {
         $this->browse(function (Browser $browser): void {
-            $this->performProfileEditCheck($browser, 'resizeToIphone15');
+            $this->performProfileEditCheck($browser, 'resizeToIphone15', 'normal');
         });
     }
 
     public function test_profile_edit_on_iphone_max(): void
     {
         $this->browse(function (Browser $browser): void {
-            $this->performProfileEditCheck($browser, 'resizeToIphoneMax');
+            $this->performProfileEditCheck($browser, 'resizeToIphoneMax', 'max');
         });
     }
 }
