@@ -54,6 +54,22 @@ it('creates a new workout (Happy Path)', function (): void {
         ->assertRedirect(); // Should redirect to workouts.show
 });
 
+it('redirects to the active workout if one is currently in progress', function (): void {
+    $user = User::factory()->create();
+
+    $activeWorkout = Workout::factory()->for($user)->create([
+        'started_at' => now()->subMinutes(10),
+        'ended_at' => null,
+    ]);
+
+    actingAs($user)
+        ->post(route('workouts.store'))
+        ->assertRedirect(route('workouts.show', $activeWorkout));
+
+    // Ensure no new workout was created
+    expect($user->workouts()->count())->toBe(1);
+});
+
 it('updates an existing workout (Happy Path)', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);

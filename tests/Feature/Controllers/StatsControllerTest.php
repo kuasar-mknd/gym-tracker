@@ -36,8 +36,8 @@ test('stats dashboard loads deferred performance and body stats props', function
                 ->component('Stats/Index')
                 ->loadDeferredProps(
                     fn (Assert $page): Assert => $page
-                        ->has('performanceStats')
-                        ->has('bodyStats')
+                        ->has('deferredData.performance')
+                        ->has('deferredData.body')
                 )
         );
 });

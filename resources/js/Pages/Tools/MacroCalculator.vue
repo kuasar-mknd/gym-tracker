@@ -25,7 +25,8 @@
                         <div class="grid grid-cols-2 gap-3">
                             <button
                                 @click="form.gender = 'male'"
-                                class="flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all"
+                                :aria-pressed="form.gender === 'male'"
+                                class="focus-visible:ring-electric-orange flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.gender === 'male'
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
@@ -36,7 +37,8 @@
                             </button>
                             <button
                                 @click="form.gender = 'female'"
-                                class="flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all"
+                                :aria-pressed="form.gender === 'female'"
+                                class="focus-visible:ring-hot-pink flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.gender === 'female'
                                         ? 'border-hot-pink bg-hot-pink/20 text-hot-pink shadow-[0_0_15px_rgba(236,72,153,0.3)]'
@@ -107,7 +109,8 @@
                                 v-for="goalOption in ['cut', 'maintain', 'bulk']"
                                 :key="goalOption"
                                 @click="form.goal = goalOption"
-                                class="flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all"
+                                :aria-pressed="form.goal === goalOption"
+                                class="focus-visible:ring-electric-orange flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.goal === goalOption
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'

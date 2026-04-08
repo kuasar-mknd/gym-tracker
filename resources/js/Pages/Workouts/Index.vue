@@ -15,6 +15,9 @@ const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/St
 const MonthlyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/MonthlyVolumeChart.vue'))
 const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
 const VolumePerWorkoutChart = defineAsyncComponent(() => import('@/Components/Stats/VolumePerWorkoutChart.vue'))
+const WorkoutHistoryTimelineChart = defineAsyncComponent(
+    () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
+)
 
 const props = defineProps({
     workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
@@ -236,6 +239,22 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         </GlassCard>
                     </div>
                 </Deferred>
+            </div>
+
+            <!-- Timeline Chart -->
+            <div class="animate-slide-up" style="animation-delay: 0.08s">
+                <GlassCard
+                    v-if="workouts?.data?.length > 0"
+                    class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md"
+                >
+                    <div class="mb-4">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic dark:text-white">
+                            Aperçu Historique
+                        </h3>
+                        <p class="text-text-muted text-xs font-semibold">Volume et Durée des dernières séances</p>
+                    </div>
+                    <WorkoutHistoryTimelineChart :data="workouts.data" />
+                </GlassCard>
             </div>
 
             <!-- Available Exercises -->

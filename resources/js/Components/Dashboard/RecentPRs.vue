@@ -1,5 +1,8 @@
 <script setup>
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import { defineAsyncComponent } from 'vue'
+
+const RecentPRsChart = defineAsyncComponent(() => import('@/Components/Stats/RecentPRsChart.vue'))
 
 defineProps({
     recentPRs: { type: Array, required: true },
@@ -8,9 +11,21 @@ defineProps({
 
 <template>
     <!-- Recent PRs -->
-    <section v-if="recentPRs.length > 0" class="animate-slide-up" style="animation-delay: 0.3s">
-        <div class="mb-4 flex items-center justify-between px-1">
-            <h3 class="text-text-muted text-xs font-black tracking-[0.2em] uppercase">Records personnels</h3>
+    <section
+        v-if="recentPRs.length > 0"
+        class="animate-slide-up relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+        style="animation-delay: 0.3s"
+    >
+        <div class="relative z-10 mb-6">
+            <h3 class="mb-1 text-[10px] font-black tracking-[0.2em] text-[#FF5500] uppercase">Réussites</h3>
+            <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                Records Personnels
+            </p>
+        </div>
+
+        <!-- PR Bar Chart -->
+        <div class="relative -mx-2 mt-2 mb-6 h-48 w-auto">
+            <RecentPRsChart :data="recentPRs" />
         </div>
 
         <div class="space-y-3">

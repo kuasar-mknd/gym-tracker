@@ -161,21 +161,19 @@ final class AchievementService
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
+        // ⚡ Bolt Optimization: Use toBase() to avoid hydrating Eloquent models and Carbon objects.
+        // This significantly reduces memory usage and execution time for large datasets.
         $dates = $user->workouts()
+            ->toBase()
             ->where('started_at', '>=', now()->subDays($days + 30))
             ->latest('started_at')
             ->pluck('started_at');
 
-        /** @var Collection<int, string> $mapped */
-        $mapped = $dates->map(function ($date): string {
-            if ($date instanceof \DateTimeInterface) {
-                return $date->format('Y-m-d');
-            }
+        return $dates->map(function (mixed $date): string {
+            $dateString = is_string($date) ? $date : '';
 
-            return \Illuminate\Support\Carbon::parse(is_string($date) ? $date : '')->format('Y-m-d');
-        });
-
-        return $mapped->unique()->values()->all();
+            return strlen($dateString) >= 10 ? substr($dateString, 0, 10) : $dateString;
+        })->unique()->values()->all();
     }
 
     /**
@@ -190,20 +188,33 @@ final class AchievementService
         $maxStreak = 1;
         $count = count($dates);
 
-        if ($count === 1) {
+        if ($count <= 1) {
+            return $count;
+        }
+
+        // ⚡ Bolt Optimization: Use native PHP timestamp math instead of Carbon objects
+        // to eliminate O(N) object instantiation overhead inside the loop.
+        $current = strtotime($dates[0]);
+
+        if ($current === false) {
             return 1;
         }
 
         for ($i = 0; $i < $count - 1; $i++) {
-            $current = \Carbon\Carbon::parse($dates[$i]);
-            $next = \Carbon\Carbon::parse($dates[$i + 1]);
+            $next = strtotime($dates[$i + 1]);
 
-            if (abs((int) $current->diffInDays($next, false)) === 1) {
+            if ($next === false) {
+                continue;
+            }
+
+            // 86400 seconds in a day. Round to avoid timezone shift issues during daylight saving.
+            if (abs((int) round(($next - $current) / 86400)) === 1) {
                 $currentStreak++;
             } else {
                 $maxStreak = max($maxStreak, $currentStreak);
                 $currentStreak = 1;
             }
+            $current = $next;
         }
 
         return max($maxStreak, $currentStreak);

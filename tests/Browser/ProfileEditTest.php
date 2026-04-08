@@ -32,15 +32,15 @@ class ProfileEditTest extends DuskTestCase
 
             // Verify Profile Info Section
             $browser->assertSee('Informations du profil')
-                ->assertInputValue('input[autocomplete="name"]', 'Original Name')
+                ->assertInputValue('@profile-name-input', 'Original Name')
                 ->assertInputValue('input[autocomplete="username"]', $user->email);
 
             $newName = 'Updated Name '.time();
-            $browser->clear('input[autocomplete="name"]')
-                ->type('input[autocomplete="name"]', $newName)
+            $browser->clear('@profile-name-input')
+                ->type('@profile-name-input', $newName)
                 ->click('[data-testid="save-profile-button"]')
                 ->waitForText('Enregistré ✓', 15)
-                ->assertInputValue('input[autocomplete="name"]', $newName);
+                ->assertInputValue('@profile-name-input', $newName);
 
             // Add padding to bottom of body to allow scrolling elements above the floating nav
             $browser->script("document.body.style.paddingBottom = '500px';");

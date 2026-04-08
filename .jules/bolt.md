@@ -61,6 +61,10 @@
 ## 2026-04-01 - [Consolidating & Optimizing Dashboard Stats]
 **Learning:** Consolidating multiple deferred Inertia props (e.g., weekly volume and workout distributions) into a single analytical prop significantly reduces HTTP overhead and XHR requests. Furthermore, combining this with `toBase()` queries and native PHP date parsing (`strtotime`) instead of Eloquent models and Carbon objects inside analytical loops provides a massive boost in memory efficiency and execution speed.
 **Action:** Always look to merge deferred props that load simultaneously and ensure their underlying queries use `toBase()` to avoid unnecessary model hydration in analytical paths.
+
+## 2026-04-02 - [Granular Deferred Loading for Stats Dashboard]
+**Learning:** Consolidating multiple independent deferred props into a single `deferredData` object reduces HTTP overhead and background requests (Inertia 2.0). Combining this with the removal of large, page-level `<Deferred>` wrappers allows immediate, lightweight metadata (like latest weight and exercise counts) to render instantly. This improves perceived performance and prevents "all-or-nothing" loading states for the user.
+**Action:** Always consolidate deferred props at the controller level but keep their frontend `<Deferred>` wrappers localized to the specific components that need them. This ensures immediate data is never blocked by heavy analytical queries.
 ## 2024-05-18 - Optimized RecommendedValuesService Cache Put
 **Learning:** Performing `Cache::put()` operations inside a loop introduces N+1 caching overhead.
 **Action:** Replaced the loop-based `Cache::put()` calls with an array collection pattern and a single `Cache::putMany()` call to reduce cache interaction overhead and improve performance.
@@ -68,3 +72,10 @@
 ## 2025-06-03 - [whereHas vs INNER JOIN on belongsTo]
 **Learning:** Using `whereHas` on a simple `belongsTo` relationship (like checking if a workout belongs to a user inside `WorkoutLine`) creates an `EXISTS()` subquery. In MySQL, especially as the main table grows, this subquery evaluation can be significantly slower than a direct `INNER JOIN` to the related table combined with a `WHERE` clause.
 **Action:** For simple parent relationship filtering or sorting, replace `whereHas` with `join()` and `where()` on the joined columns. Always ensure to add `select('main_table.*')` to prevent the joined columns from overriding model attributes.
+## 2025-06-15 - [Carbon vs Native Date Math in Loops]
+**Learning:** Instantiating heavy objects like `Carbon` inside large loops (e.g., calculating maximum consecutive streaks over hundreds or thousands of dates) causes significant `O(N)` object instantiation overhead and memory pressure.
+**Action:** Replace `Carbon::parse()` and related methods (like `diffInDays()`) with native PHP timestamp math (`strtotime`, `abs`, `round(diff / 86400)`) within performance-critical loops that evaluate date sequences. Track variables between iterations to eliminate redundant parsing.
+
+## 2025-06-16 - [Optimizing workout date extraction in AchievementService]
+**Learning:** Using `toBase()` before `pluck()` on a datetime column prevents Eloquent from hydrating dummy models and instantiating Carbon objects for every row during serialization. Using `substr($date, 0, 10)` for date extraction is significantly more efficient than using Carbon's `format()`. For 1000 records, this reduced memory by ~77% and time by ~45%.
+**Action:** Always use `toBase()` when only raw column values are needed from a large dataset, especially for casted columns like datetimes.

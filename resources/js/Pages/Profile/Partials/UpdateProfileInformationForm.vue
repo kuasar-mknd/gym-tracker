@@ -31,6 +31,7 @@ const submit = () => {
 
         <form @submit.prevent="submit" class="mt-6 space-y-4">
             <GlassInput
+                dusk="profile-name-input"
                 v-model="form.name"
                 type="text"
                 label="Nom"
@@ -67,7 +68,12 @@ const submit = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <GlassButton type="submit" :loading="form.processing" data-testid="save-profile-button">
+                <GlassButton
+                    dusk="save-profile-btn"
+                    type="submit"
+                    :loading="form.processing"
+                    data-testid="save-profile-button"
+                >
                     Enregistrer
                 </GlassButton>
 

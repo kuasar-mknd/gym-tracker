@@ -8,6 +8,7 @@ const DurationHistoryChart = defineAsyncComponent(() => import('@/Components/Sta
 
 defineProps({
     durationHistory: Array,
+    deferredData: Object,
 })
 </script>
 
@@ -21,7 +22,7 @@ defineProps({
             </div>
         </div>
         <div class="h-48">
-            <Deferred data="performanceStats">
+            <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
                     <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                 </template>

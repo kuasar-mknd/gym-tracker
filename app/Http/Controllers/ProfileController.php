@@ -15,10 +15,21 @@ use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Controller for managing user profiles.
+ *
+ * This controller handles viewing, editing, updating user profile data,
+ * managing notification preferences, and securely handling user account deletion.
+ */
 class ProfileController extends Controller
 {
     /**
      * Display the user's profile menu hub.
+     *
+     * Renders the main profile navigation index page.
+     *
+     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
+     * @return \Inertia\Response The Inertia response rendering the 'Profile/Index' page.
      */
     public function index(Request $request): Response
     {
@@ -27,6 +38,12 @@ class ProfileController extends Controller
 
     /**
      * Display the user's profile form.
+     *
+     * Renders the edit profile page and passes the user's current
+     * notification preferences to the frontend.
+     *
+     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
+     * @return \Inertia\Response The Inertia response rendering the 'Profile/Edit' page with preference data.
      */
     public function edit(Request $request): Response
     {
@@ -45,6 +62,12 @@ class ProfileController extends Controller
 
     /**
      * Update the user's profile information.
+     *
+     * Validates and updates the authenticated user's name and email address.
+     * If the email address is changed, it resets the email verification state.
+     *
+     * @param  \App\Http\Requests\ProfileUpdateRequest  $request  The validated profile update request.
+     * @return \Illuminate\Http\RedirectResponse A redirect response back to the profile edit route.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -61,6 +84,13 @@ class ProfileController extends Controller
 
     /**
      * Update the user's notification preferences.
+     *
+     * Validates and delegates the updating of notification settings (email, push, and values)
+     * to the UpdateNotificationPreferencesAction.
+     *
+     * @param  \App\Http\Requests\UpdateNotificationPreferencesRequest  $request  The validated notification preferences request.
+     * @param  \App\Actions\Profile\UpdateNotificationPreferencesAction  $updatePreferences  The action handling the preference updates.
+     * @return \Illuminate\Http\RedirectResponse A redirect response back to the profile edit route with a success status.
      */
     public function updatePreferences(UpdateNotificationPreferencesRequest $request, UpdateNotificationPreferencesAction $updatePreferences): RedirectResponse
     {
@@ -80,6 +110,12 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's account.
+     *
+     * Validates the password, logs the user out, deletes their account
+     * data from the database, and invalidates their current session.
+     *
+     * @param  \App\Http\Requests\DeleteUserRequest  $request  The validated request ensuring user authorization.
+     * @return \Illuminate\Http\RedirectResponse A redirect response to the application homepage.
      */
     public function destroy(DeleteUserRequest $request): RedirectResponse
     {
