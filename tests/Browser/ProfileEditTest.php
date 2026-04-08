@@ -36,34 +36,39 @@ class ProfileEditTest extends DuskTestCase
                 ->assertInputValue('input[type="email"]', $user->email);
 
             $newName = 'Updated Name '.time();
-            $browser->clear('input[type="text"]')
-                ->type('input[type="text"]', $newName)
-                ->press('Enregistrer')
+            $browser->clear('input[autocomplete="name"]')
+                ->type('input[autocomplete="name"]', $newName)
+                ->click('[data-testid="save-profile-button"]')
                 ->waitForText('Enregistré ✓', 15)
-                ->assertInputValue('input[type="text"]', $newName);
+                ->assertInputValue('input[autocomplete="name"]', $newName);
+
+            // Add padding to bottom of body to allow scrolling elements above the floating nav
+            $browser->script("document.body.style.paddingBottom = '500px';");
 
             // Verify Password Section
             // We use JS to scroll to password section to avoid elements intercepting clicks on mobile viewports
-            $browser->script("document.querySelector('input[autocomplete=\"current-password\"]').scrollIntoView({block: 'center'});");
+            $browser->script("document.querySelector('[data-testid=\"update-password-button\"]').scrollIntoView({block: 'center'});");
             $browser->pause(500);
 
             $browser->assertSee('Mot de passe')
                 ->type('input[autocomplete="current-password"]', 'password123')
                 ->type('input[autocomplete="new-password"]', 'newpassword123')
-                ->type('input[name="password_confirmation"], input[id$="password_confirmation"], input[autocomplete="new-password"]:last-of-type', 'newpassword123')
-                ->press('Mettre à jour')
+                ->type('input[autocomplete="new-password"]:last-of-type', 'newpassword123')
+                ->click('[data-testid="update-password-button"]')
                 ->waitForText('Enregistré ✓', 15);
 
             // Verify Delete Account Section
-            $browser->script("document.querySelector('button.bg-red-500, button[class*=\"danger\"]').scrollIntoView({block: 'center'});");
+            $browser->script("document.querySelector('[data-testid=\"delete-account-button\"]').scrollIntoView({block: 'center'});");
             $browser->pause(500);
 
             $browser->assertSee('Supprimer le compte')
-                ->press('Supprimer mon compte')
-                ->waitForText('Confirmer la suppression', 15)
+                ->script("document.querySelector('[data-testid=\"delete-account-button\"]').click();");
+
+            $browser->waitForText('Confirmer la suppression', 15)
                 ->assertSee('Cette action est irréversible.')
-                ->press('Annuler')
-                ->waitUntilMissing('Confirmer la suppression', 15);
+                ->script("document.querySelector('[data-testid=\"cancel-delete-button\"]').click();");
+
+            $browser->waitUntilMissing('Confirmer la suppression', 15);
 
             $browser->assertNoConsoleExceptions();
         } catch (\Exception $e) {

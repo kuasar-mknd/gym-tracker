@@ -67,7 +67,9 @@ const submit = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <GlassButton type="submit" :loading="form.processing"> Enregistrer </GlassButton>
+                <GlassButton type="submit" :loading="form.processing" data-testid="save-profile-button">
+                    Enregistrer
+                </GlassButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
