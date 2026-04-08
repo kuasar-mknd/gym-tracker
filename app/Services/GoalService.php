@@ -117,7 +117,8 @@ final class GoalService
         }
 
         if (isset($metrics['max_weights']) && is_array($metrics['max_weights']) && isset($metrics['max_weights'][$goal->exercise_id])) {
-            $goal->current_value = (float) $metrics['max_weights'][$goal->exercise_id];
+            $val = $metrics['max_weights'][$goal->exercise_id];
+            $goal->current_value = is_numeric($val) ? (float) $val : 0.0;
 
             return;
         }
@@ -173,7 +174,8 @@ final class GoalService
         }
 
         if (isset($metrics['max_volumes']) && is_array($metrics['max_volumes']) && isset($metrics['max_volumes'][$goal->exercise_id])) {
-            $goal->current_value = (float) $metrics['max_volumes'][$goal->exercise_id];
+            $val = $metrics['max_volumes'][$goal->exercise_id];
+            $goal->current_value = is_numeric($val) ? (float) $val : 0.0;
 
             return;
         }
@@ -298,7 +300,7 @@ final class GoalService
                 ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
                 ->groupBy('workout_lines.exercise_id')
                 ->pluck('max_weight', 'exercise_id')
-                ->map(fn ($val) => (float) $val)
+                ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
                 ->toArray();
 
             $metrics['max_weights'] = $maxWeights;
@@ -315,7 +317,11 @@ final class GoalService
                 ->groupBy('workout_lines.exercise_id', 'workouts.id')
                 ->get()
                 ->groupBy('exercise_id')
-                ->map(fn ($group) => (float) $group->max('total_volume'))
+                ->map(function (\Illuminate\Support\Collection $group): float {
+                    $max = $group->max('total_volume');
+
+                    return is_numeric($max) ? (float) $max : 0.0;
+                })
                 ->toArray();
 
             $metrics['max_volumes'] = $maxVolumes;
