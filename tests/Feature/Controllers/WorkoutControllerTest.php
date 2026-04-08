@@ -19,7 +19,7 @@ describe('WorkoutController', function (): void {
                 ->get(route('workouts.index'));
 
             $response->assertOk()
-                ->assertInertia(fn (Assert $page) => $page->component('Workouts/Index'));
+                ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page->component('Workouts/Index'));
         });
 
         it('prevents a guest from viewing workouts', function (): void {
@@ -38,7 +38,7 @@ describe('WorkoutController', function (): void {
                 ->get(route('workouts.show', $workout));
 
             $response->assertOk()
-                ->assertInertia(fn (Assert $page) => $page->component('Workouts/Show'));
+                ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page->component('Workouts/Show'));
         });
 
         it('prevents a user from viewing another users workout', function (): void {
