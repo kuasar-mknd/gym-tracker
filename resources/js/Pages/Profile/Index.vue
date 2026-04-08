@@ -108,6 +108,7 @@ const menuGroups = [
                             method="post"
                             as="button"
                             class="text-xs font-black tracking-widest text-red-500 uppercase hover:text-red-600"
+                            data-testid="logout-button"
                         >
                             Déconnexion
                         </Link>

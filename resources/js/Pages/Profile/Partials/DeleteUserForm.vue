@@ -42,7 +42,9 @@ const closeModal = () => {
             </p>
         </header>
 
-        <GlassButton variant="danger" @click="confirmUserDeletion"> Supprimer mon compte </GlassButton>
+        <GlassButton variant="danger" @click="confirmUserDeletion" data-testid="delete-account-button">
+            Supprimer mon compte
+        </GlassButton>
 
         <!-- Deletion Modal -->
         <Teleport to="body">
@@ -65,13 +67,19 @@ const closeModal = () => {
                                 placeholder="Mot de passe"
                                 :error="form.errors.password"
                                 @keyup.enter="deleteUser"
+                                data-testid="delete-password-input"
                             />
                         </div>
 
                         <div class="mt-6 flex justify-end gap-3">
-                            <GlassButton @click="closeModal"> Annuler </GlassButton>
+                            <GlassButton @click="closeModal" data-testid="cancel-delete-button"> Annuler </GlassButton>
 
-                            <GlassButton variant="danger" :loading="form.processing" @click="deleteUser">
+                            <GlassButton
+                                variant="danger"
+                                :loading="form.processing"
+                                @click="deleteUser"
+                                data-testid="confirm-delete-button"
+                            >
                                 Supprimer
                             </GlassButton>
                         </div>

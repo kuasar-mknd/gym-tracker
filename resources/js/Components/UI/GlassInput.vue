@@ -41,6 +41,10 @@ const props = defineProps({
         type: [String, Number],
         default: '',
     },
+    dusk: {
+        type: String,
+        default: null,
+    },
     type: {
         type: String,
         default: 'text',
@@ -158,6 +162,7 @@ defineExpose({
                 :id="inputId"
                 :type="inputType"
                 :value="modelValue"
+                :dusk="dusk"
                 @input="$emit('update:modelValue', $event.target.value)"
                 @focus="selectOnFocus ? $event.target.select() : null"
                 :aria-invalid="!!error"

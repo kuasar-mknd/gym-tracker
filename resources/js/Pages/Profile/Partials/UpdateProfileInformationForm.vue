@@ -68,7 +68,12 @@ const submit = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <GlassButton dusk="save-profile-btn" type="submit" :loading="form.processing">
+                <GlassButton
+                    dusk="save-profile-btn"
+                    type="submit"
+                    :loading="form.processing"
+                    data-testid="save-profile-button"
+                >
                     Enregistrer
                 </GlassButton>
 
