@@ -11,8 +11,9 @@ describe('Controller', function (): void {
         it('throws RuntimeException if user is not authenticated', function (): void {
             Auth::shouldReceive('user')->once()->andReturn(null);
 
-            $controller = new class extends Controller {
-                public function getUser()
+            $controller = new class() extends Controller
+            {
+                public function getUser(): \App\Models\User
                 {
                     return $this->user();
                 }
@@ -26,8 +27,9 @@ describe('Controller', function (): void {
             $user = User::factory()->make();
             Auth::shouldReceive('user')->once()->andReturn($user);
 
-            $controller = new class extends Controller {
-                public function getUser()
+            $controller = new class() extends Controller
+            {
+                public function getUser(): \App\Models\User
                 {
                     return $this->user();
                 }
