@@ -17,6 +17,10 @@ use App\Models\User;
  */
 final class GoalService
 {
+    private array $maxWeightsCache = [];
+    private array $maxVolumesCache = [];
+    private array $hasFetchedMeasurements = [];
+    private array $latestMeasurementCache = [];
     /**
      * Synchronize all active goals for a user.
      *
@@ -27,6 +31,11 @@ final class GoalService
      */
     public function syncGoals(User $user): void
     {
+        $this->maxWeightsCache = [];
+        $this->maxVolumesCache = [];
+        $this->hasFetchedMeasurements = [];
+        $this->latestMeasurementCache = [];
+
         $goals = $user->goals()->whereNull('completed_at')->get();
         foreach ($goals as $goal) {
             $goal->setRelation('user', $user);
@@ -109,13 +118,22 @@ final class GoalService
             return;
         }
 
-        $maxWeight = $goal->user->workouts()
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workout_lines.exercise_id', $goal->exercise_id)
-            ->max('sets.weight');
+        $userId = $goal->user_id;
 
-        if ($maxWeight && is_numeric($maxWeight)) {
+        if (! isset($this->maxWeightsCache[$userId])) {
+            $this->maxWeightsCache[$userId] = $goal->user->workouts()
+                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
+                ->groupBy('workout_lines.exercise_id')
+                ->toBase()
+                ->pluck('max_weight', 'exercise_id')
+                ->all();
+        }
+
+        $maxWeight = $this->maxWeightsCache[$userId][$goal->exercise_id] ?? null;
+
+        if ($maxWeight !== null && is_numeric($maxWeight)) {
             $goal->current_value = (float) $maxWeight;
         }
     }
@@ -151,18 +169,25 @@ final class GoalService
             return;
         }
 
-        // ⚡ Bolt Optimization: Calculate max volume directly in SQL instead of loading into PHP memory.
-        // Impact: Reduces memory usage and improves performance for users with many workouts.
-        $maxVolume = \App\Models\Workout::query()
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $goal->user_id)
-            ->where('workout_lines.exercise_id', $goal->exercise_id)
-            ->selectRaw('SUM(sets.weight * sets.reps) as total_volume')
-            ->groupBy('workouts.id')
-            ->orderByDesc('total_volume')
-            ->limit(1)
-            ->value('total_volume');
+        // ⚡ Bolt Optimization: Precalculate max volumes for all exercises in the service cache to avoid N+1.
+        // Impact: Reduces memory usage and queries from N to 1 for users with many goals.
+        $userId = $goal->user_id;
+
+        if (! isset($this->maxVolumesCache[$userId])) {
+            $this->maxVolumesCache[$userId] = \App\Models\Workout::query()
+                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->where('workouts.user_id', $userId)
+                ->selectRaw('workout_lines.exercise_id, workouts.id, SUM(sets.weight * sets.reps) as total_volume')
+                ->groupBy('workout_lines.exercise_id', 'workouts.id')
+                ->toBase()
+                ->get()
+                ->groupBy('exercise_id')
+                ->map(fn ($items) => $items->max('total_volume'))
+                ->all();
+        }
+
+        $maxVolume = $this->maxVolumesCache[$userId][$goal->exercise_id] ?? null;
 
         if ($maxVolume !== null && is_numeric($maxVolume)) {
             $goal->current_value = (float) $maxVolume;
@@ -182,12 +207,22 @@ final class GoalService
             return;
         }
 
-        $latestValue = $goal->user->bodyMeasurements()
-            ->latest('measured_at')
-            ->value($goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type);
+        $userId = $goal->user_id;
 
-        if ($latestValue && is_numeric($latestValue)) {
-            $goal->current_value = (float) $latestValue;
+        if (! isset($this->hasFetchedMeasurements[$userId])) {
+            $this->latestMeasurementCache[$userId] = $goal->user->bodyMeasurements()
+                ->latest('measured_at')
+                ->first();
+            $this->hasFetchedMeasurements[$userId] = true;
+        }
+
+        if (!empty($this->latestMeasurementCache[$userId])) {
+            $type = $goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type;
+            $latestValue = $this->latestMeasurementCache[$userId]->{$type};
+
+            if ($latestValue !== null && is_numeric($latestValue)) {
+                $goal->current_value = (float) $latestValue;
+            }
         }
     }
 
