@@ -3,6 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "test:js": "vitest run",
         "dev": "vite",
         "build": "vite build",
         "format": "prettier --write \"resources/**/*.{js,vue,css}\" && ./vendor/bin/pint",
