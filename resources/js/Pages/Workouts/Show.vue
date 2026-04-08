@@ -34,9 +34,8 @@ import { triggerHaptic } from '@/composables/useHaptics'
 const props = defineProps({
     workout: { type: Object, required: true },
     exercises: { type: Array, required: true },
-    categories: { type: Array, required: true },
-    types: { type: Array, required: true },
 })
+import { EXERCISE_CATEGORIES, EXERCISE_TYPES } from '@/Utils/constants'
 
 // ⚡ Perf: Use a mutable reactive ref instead of computed to support optimistic UI updates
 const localWorkout = ref(JSON.parse(JSON.stringify(props.workout)))
@@ -146,7 +145,10 @@ const confirmFinishWorkout = () => {
 }
 
 const showAddExercise = ref(false)
-const searchQuery = ref('')
+const searchQuery = ref(localStorage.getItem('gymtracker_add_exercise_search') || '')
+watch(searchQuery, (newVal) => {
+    localStorage.setItem('gymtracker_add_exercise_search', newVal)
+})
 const showCreateForm = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
 const showConfirmModal = ref(false)
@@ -361,14 +363,20 @@ const updateSet = (set, field, value) => {
                     set[field] = response.data.data[field]
                     set.updated_at = response.data.data.updated_at
                 }
+                localStorage.removeItem(`draft_set_${set.id}`)
             })
             .catch((err) => {
                 if (!err.isOffline) {
                     set[field] = previousValue
+                    localStorage.removeItem(`draft_set_${set.id}`)
                     triggerHaptic('error')
+                } else {
+                    localStorage.removeItem(`draft_set_${set.id}`)
                 }
             })
     }
+
+    localStorage.setItem(`draft_set_${set.id}`, JSON.stringify(set))
 
     updateTimers[timerKey] = {
         timerId: setTimeout(() => {
@@ -408,12 +416,6 @@ const removeSet = (setId) => {
 }
 
 const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
-const categoriesList = ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio']
-const typesList = [
-    { value: 'strength', label: 'Force' },
-    { value: 'cardio', label: 'Cardio' },
-    { value: 'timed', label: 'Temps' },
-]
 
 const secondsToTime = (s) => (s ? new Date(s * 1000).toISOString().substr(11, 8) : '00:00:00')
 const updateDurationFromTime = (set, val) => {
@@ -432,6 +434,51 @@ const handleFabAddExercise = () => {
 
 onMounted(() => {
     window.addEventListener('open-add-exercise', handleFabAddExercise)
+
+    // Restore set drafts if any exist and haven't synced
+    const keysToRemove = []
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('draft_set_')) {
+            const setId = key.replace('draft_set_', '')
+            try {
+                const draftData = JSON.parse(localStorage.getItem(key))
+                localWorkout.value.workout_lines?.forEach((line) => {
+                    const set = line.sets?.find((s) => String(s.id) === String(setId))
+                    if (set) {
+                        const payload = {}
+                        if (draftData.weight !== undefined) {
+                            set.weight = draftData.weight
+                            payload.weight = draftData.weight
+                        }
+                        if (draftData.reps !== undefined) {
+                            set.reps = draftData.reps
+                            payload.reps = draftData.reps
+                        }
+                        if (draftData.distance_km !== undefined) {
+                            set.distance_km = draftData.distance_km
+                            payload.distance_km = draftData.distance_km
+                        }
+                        if (draftData.duration_seconds !== undefined) {
+                            set.duration_seconds = draftData.duration_seconds
+                            payload.duration_seconds = draftData.duration_seconds
+                        }
+
+                        SyncService.patch(route('api.v1.sets.update', { set: set.id }), payload)
+                            .then(() => {
+                                localStorage.removeItem(key)
+                            })
+                            .catch((err) => {
+                                if (err.isOffline) localStorage.removeItem(key)
+                            })
+                    }
+                })
+            } catch (e) {
+                keysToRemove.push(key)
+            }
+        }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k))
 })
 
 onUnmounted(() => {
@@ -714,7 +761,7 @@ onUnmounted(() => {
                                     class="glass-input w-full"
                                     dusk="new-exercise-type"
                                 >
-                                    <option v-for="t in typesList" :key="t.value" :value="t.value">
+                                    <option v-for="t in EXERCISE_TYPES" :key="t.value" :value="t.value">
                                         {{ t.label }}
                                     </option>
                                 </select>
@@ -726,7 +773,7 @@ onUnmounted(() => {
                                     class="glass-input w-full"
                                     dusk="new-exercise-category"
                                 >
-                                    <option v-for="c in categoriesList" :key="c" :value="c">{{ c }}</option>
+                                    <option v-for="c in EXERCISE_CATEGORIES" :key="c" :value="c">{{ c }}</option>
                                 </select>
                             </div>
                         </div>

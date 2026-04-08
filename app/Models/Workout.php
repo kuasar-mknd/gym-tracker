@@ -64,4 +64,14 @@ class Workout extends Model
             'workout_volume' => 'float',
         ];
     }
+
+    protected static function booted(): void
+    {
+        $clearCache = function (self $workout): void {
+            \Illuminate\Support\Facades\Cache::forget("user_active_workout_{$workout->user_id}");
+        };
+
+        static::saved($clearCache);
+        static::deleted($clearCache);
+    }
 }

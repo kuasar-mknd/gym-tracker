@@ -12,6 +12,7 @@ use App\Models\Admin;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class AdminController extends Controller implements HasMiddleware
 {
@@ -38,7 +39,11 @@ class AdminController extends Controller implements HasMiddleware
     {
         $this->authorize('viewAny', Admin::class);
 
-        return AdminResource::collection(Admin::paginate());
+        $query = QueryBuilder::for(Admin::class)
+            ->allowedSorts(['name', 'email', 'created_at'])
+            ->paginate();
+
+        return AdminResource::collection($query);
     }
 
     /**

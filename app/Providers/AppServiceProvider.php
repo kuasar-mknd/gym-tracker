@@ -62,6 +62,12 @@ final class AppServiceProvider extends ServiceProvider
         $this->registerSetEvents();
         $this->registerWorkoutEvents();
         $this->registerMeasurementEvents();
+
+        \Illuminate\Support\Facades\Event::listen(function (\Illuminate\Notifications\Events\NotificationSent $event): void {
+            if ($event->notifiable instanceof \App\Models\User) {
+                app(\App\Services\NotificationService::class)->clearCache($event->notifiable);
+            }
+        });
     }
 
     private function registerSetEvents(): void

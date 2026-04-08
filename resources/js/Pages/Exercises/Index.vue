@@ -11,7 +11,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted, watch } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
@@ -19,6 +19,13 @@ import Modal from '@/Components/UI/Modal.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
+import {
+    EXERCISE_CATEGORIES,
+    EXERCISE_TYPES,
+    CATEGORY_COLORS,
+    CATEGORY_BORDER_COLORS,
+    TYPE_ICONS,
+} from '@/Utils/constants'
 
 const { isRefreshing, pullDistance } = usePullToRefresh()
 
@@ -27,17 +34,17 @@ const ExerciseCategoryChart = defineAsyncComponent(() => import('@/Components/St
 const props = defineProps({
     /** Array of all exercises belonging to the user. */
     exercises: Array,
-    /** List of available exercise categories (e.g., 'Pectoraux', 'Dos'). */
-    categories: Array,
-    /** List of available exercise types (e.g., 'strength', 'cardio'). */
-    types: Array,
 })
 
 const showAddForm = ref(false)
 const editingExercise = ref(null)
 const searchQuery = ref('')
-const activeCategory = ref('all')
+const activeCategory = ref(localStorage.getItem('gymtracker_active_category') || 'all')
 const searchInput = ref(null)
+
+watch(activeCategory, (newCat) => {
+    localStorage.setItem('gymtracker_active_category', newCat)
+})
 
 const handleKeyDown = (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -63,7 +70,6 @@ onUnmounted(() => {
 const localExercises = ref([...props.exercises])
 
 // Sync local state when the server returns updated props (e.g., after a successful partial reload)
-import { watch } from 'vue'
 watch(
     () => props.exercises,
     (newExercises) => {
@@ -165,36 +171,9 @@ const groupedExercises = computed(() => {
     return groups
 })
 
-const categoryColors = {
-    Pectoraux: 'bg-electric-orange',
-    Dos: 'bg-vivid-violet',
-    Épaules: 'bg-hot-pink',
-    Bras: 'bg-cyan-pure text-text-main',
-    Jambes: 'bg-neon-green text-text-main',
-    Core: 'bg-magenta-pure',
-    Cardio: 'bg-lime-pure text-text-main',
-    Autres: 'bg-slate-500',
-}
-
-const categoryBorderColors = {
-    Pectoraux: 'border-l-electric-orange',
-    Dos: 'border-l-vivid-violet',
-    Épaules: 'border-l-hot-pink',
-    Bras: 'border-l-cyan-pure',
-    Jambes: 'border-l-neon-green',
-    Core: 'border-l-magenta-pure',
-    Cardio: 'border-l-lime-pure',
-    Autres: 'border-l-slate-400',
-}
-
-const typeIcons = {
-    strength: 'fitness_center',
-    cardio: 'directions_run',
-    timed: 'timer',
-}
-
 const typeLabel = (type) => {
-    const found = props.types.find((t) => t.value === type)
+    if (!EXERCISE_TYPES) return type
+    const found = EXERCISE_TYPES.find((t) => t.value === type)
     return found ? found.label : type
 }
 </script>
@@ -330,7 +309,7 @@ const typeLabel = (type) => {
                     Tous
                 </button>
                 <button
-                    v-for="cat in categories"
+                    v-for="cat in EXERCISE_CATEGORIES"
                     :key="cat"
                     v-press="{ haptic: 'selection' }"
                     @click="activeCategory = cat"
@@ -338,7 +317,7 @@ const typeLabel = (type) => {
                     :class="[
                         'category-pill shrink-0 transition-all',
                         activeCategory === cat
-                            ? `${categoryColors[cat] || 'bg-slate-500'} text-white`
+                            ? `${CATEGORY_COLORS[cat] || 'bg-slate-500'} text-white`
                             : 'text-text-main border border-slate-200 bg-white',
                     ]"
                     :aria-pressed="activeCategory === cat"
@@ -369,7 +348,7 @@ const typeLabel = (type) => {
                             <div>
                                 <label class="font-display-label text-text-muted mb-2 block">Type</label>
                                 <select v-model="form.type" name="type" class="glass-input w-full">
-                                    <option v-for="t in types" :key="t.value" :value="t.value">
+                                    <option v-for="t in EXERCISE_TYPES" :key="t.value" :value="t.value">
                                         {{ t.label }}
                                     </option>
                                 </select>
@@ -381,7 +360,7 @@ const typeLabel = (type) => {
                                 <label class="font-display-label text-text-muted mb-2 block">Catégorie</label>
                                 <select v-model="form.category" class="glass-input w-full">
                                     <option value="">— Aucune —</option>
-                                    <option v-for="cat in categories" :key="cat" :value="cat">
+                                    <option v-for="cat in EXERCISE_CATEGORIES" :key="cat" :value="cat">
                                         {{ cat }}
                                     </option>
                                 </select>
@@ -476,10 +455,10 @@ const typeLabel = (type) => {
                             :is-editing="editingExercise === exercise.id"
                             :edit-form="editForm"
                             :category="category"
-                            :types="types"
-                            :categories="categories"
-                            :category-border-colors="categoryBorderColors"
-                            :type-icons="typeIcons"
+                            :types="EXERCISE_TYPES"
+                            :categories="EXERCISE_CATEGORIES"
+                            :category-border-colors="CATEGORY_BORDER_COLORS"
+                            :type-icons="TYPE_ICONS"
                             :type-label="typeLabel"
                             @start-edit="startEdit"
                             @cancel-edit="cancelEdit"

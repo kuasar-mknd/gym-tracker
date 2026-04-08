@@ -183,7 +183,6 @@ test('exercises index page renders with correct props', function (): void {
             fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Exercises/Index')
                 ->has('exercises')
-                ->has('categories')
         );
 });
 

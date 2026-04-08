@@ -24,9 +24,7 @@ class FetchWorkoutShowAction
      * @param  \App\Models\Workout  $workout  The workout to be displayed.
      * @return array{
      *     workout: \App\Models\Workout,
-     *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>|array<int, \App\Models\Exercise>,
-     *     categories: array<int, string>,
-     *     types: array<int, array{value: string, label: string}>
+     *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>|array<int, \App\Models\Exercise>
      * }
      */
     public function execute(User $user, Workout $workout): array
@@ -41,12 +39,6 @@ class FetchWorkoutShowAction
         return [
             'workout' => $workout,
             'exercises' => $exercises,
-            'categories' => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
-            'types' => [
-                ['value' => 'strength', 'label' => 'Force'],
-                ['value' => 'cardio', 'label' => 'Cardio'],
-                ['value' => 'timed', 'label' => 'Temps'],
-            ],
         ];
     }
 }

@@ -20,7 +20,7 @@ final class NotificationService
     {
         return (int) Cache::remember(
             $this->getUnreadCountCacheKey($user),
-            now()->addSeconds(30),
+            now()->addDays(7),
             fn () => $user->unreadNotifications()->count()
         );
     }
@@ -32,7 +32,7 @@ final class NotificationService
     {
         return Cache::remember(
             $this->getLatestAchievementCacheKey($user),
-            now()->addSeconds(30),
+            now()->addDays(7),
             fn () => $user->unreadNotifications()
                 ->where('type', \App\Notifications\AchievementUnlocked::class)
                 ->latest()

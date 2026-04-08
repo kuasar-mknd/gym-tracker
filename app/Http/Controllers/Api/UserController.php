@@ -11,6 +11,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class UserController extends Controller
 {
@@ -21,7 +22,11 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        return UserResource::collection(User::paginate());
+        $query = QueryBuilder::for(User::class)
+            ->allowedSorts(['name', 'email', 'created_at'])
+            ->paginate();
+
+        return UserResource::collection($query);
     }
 
     /**

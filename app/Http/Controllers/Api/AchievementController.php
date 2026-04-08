@@ -14,6 +14,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use OpenApi\Annotations as OA;
+use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * Controller for managing achievements.
@@ -49,7 +50,11 @@ class AchievementController extends Controller implements HasMiddleware
     {
         $this->authorize('viewAny', Achievement::class);
 
-        return AchievementResource::collection(Achievement::paginate());
+        $query = QueryBuilder::for(Achievement::class)
+            ->allowedSorts(['name', 'created_at', 'required_value'])
+            ->paginate();
+
+        return AchievementResource::collection($query);
     }
 
     /**

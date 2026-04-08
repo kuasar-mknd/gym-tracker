@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Services\RecommendedValuesService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
 
 /**
  * @property int $id
@@ -90,6 +91,26 @@ class WorkoutLine extends Model
     public static function batchRecommendedValues(\Illuminate\Database\Eloquent\Collection $lines, int $userId): array
     {
         return app(RecommendedValuesService::class)->batchRecommendedValues($lines, $userId);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['exercise.name', 'order', 'notes'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
+    protected static function booted(): void
+    {
+        $clearCache = function (self $line): void {
+            if ($line->workout_id) {
+                \Illuminate\Support\Facades\Cache::forget("user_active_workout_{$line->workout->user_id}");
+            }
+        };
+
+        static::saved($clearCache);
+        static::deleted($clearCache);
     }
 
     protected function casts(): array

@@ -6,7 +6,6 @@ namespace App\Http\Controllers;
 
 use App\Actions\Exercises\CreateExerciseAction;
 use App\Actions\Exercises\FetchExerciseHistoryAction;
-use App\Enums\ExerciseCategory;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
@@ -56,12 +55,6 @@ class ExerciseController extends Controller
 
         return Inertia::render('Exercises/Index', [
             'exercises' => $exercises,
-            'categories' => collect(ExerciseCategory::cases())->map(fn (ExerciseCategory $case) => $case->value)->toArray(),
-            'types' => [
-                ['value' => 'strength', 'label' => 'Force (poids)'],
-                ['value' => 'cardio', 'label' => 'Cardio (distance)'],
-                ['value' => 'timed', 'label' => 'Temps'],
-            ],
         ]);
     }
 
