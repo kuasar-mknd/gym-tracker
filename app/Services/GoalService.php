@@ -63,7 +63,7 @@ final class GoalService
      * After updating the progress value, it checks if the goal has been completed.
      *
      * @param  Goal  $goal  The goal to update.
-     * @param  array<string, mixed>  $metrics  Optional pre-calculated metrics to avoid N+1 queries.
+     * @param  array<string, float|int|array<int, float>|\App\Models\BodyMeasurement|null>  $metrics  Optional pre-calculated metrics to avoid N+1 queries.
      */
     public function updateGoalProgress(Goal $goal, array $metrics = []): void
     {
@@ -108,7 +108,7 @@ final class GoalService
      * Finds the maximum weight lifted for the associated exercise across all user workouts.
      *
      * @param  Goal  $goal  The weight goal to update.
-     * @param  array<string, mixed>  $metrics  Optional pre-calculated metrics.
+     * @param  array<string, float|int|array<int, float>|\App\Models\BodyMeasurement|null>  $metrics  Optional pre-calculated metrics.
      */
     protected function updateWeightGoal(Goal $goal, array $metrics = []): void
     {
@@ -139,7 +139,7 @@ final class GoalService
      * Counts the total number of workouts the user has completed.
      *
      * @param  Goal  $goal  The frequency goal to update.
-     * @param  array<string, mixed>  $metrics  Optional pre-calculated metrics.
+     * @param  array<string, float|int|array<int, float>|\App\Models\BodyMeasurement|null>  $metrics  Optional pre-calculated metrics.
      */
     protected function updateFrequencyGoal(Goal $goal, array $metrics = []): void
     {
@@ -164,7 +164,7 @@ final class GoalService
      * for the associated exercise.
      *
      * @param  Goal  $goal  The volume goal to update.
-     * @param  array<string, mixed>  $metrics  Optional pre-calculated metrics.
+     * @param  array<string, float|int|array<int, float>|\App\Models\BodyMeasurement|null>  $metrics  Optional pre-calculated metrics.
      */
     protected function updateVolumeGoal(Goal $goal, array $metrics = []): void
     {
@@ -202,7 +202,7 @@ final class GoalService
      * Retrieves the most recent recorded value for the specified measurement type.
      *
      * @param  Goal  $goal  The measurement goal to update.
-     * @param  array<string, mixed>  $metrics  Optional pre-calculated metrics.
+     * @param  array<string, float|int|array<int, float>|\App\Models\BodyMeasurement|null>  $metrics  Optional pre-calculated metrics.
      */
     protected function updateMeasurementGoal(Goal $goal, array $metrics = []): void
     {
@@ -269,7 +269,7 @@ final class GoalService
      *
      * @param  User  $user  The user to calculate metrics for.
      * @param  \Illuminate\Support\Collection<int, Goal>  $goals  The goals that need metrics.
-     * @return array<string, mixed> A dictionary of pre-calculated metrics.
+     * @return array<string, float|int|array<int, float>|\App\Models\BodyMeasurement|null> A dictionary of pre-calculated metrics.
      */
     private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
     {
@@ -289,7 +289,7 @@ final class GoalService
             $metrics['workouts_count'] = $user->workouts()->count();
         }
 
-        if ($types->contains(GoalType::Weight) && ! empty($exerciseIds)) {
+        if ($types->contains(GoalType::Weight) && $exerciseIds !== []) {
             $metrics['max_weights'] = \Illuminate\Support\Facades\DB::table('workouts')
                 ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
                 ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
@@ -301,7 +301,7 @@ final class GoalService
                 ->toArray();
         }
 
-        if ($types->contains(GoalType::Volume) && ! empty($exerciseIds)) {
+        if ($types->contains(GoalType::Volume) && $exerciseIds !== []) {
             /** @var array<int, float> $maxVolumes */
             $maxVolumes = \Illuminate\Support\Facades\DB::table('workouts')
                 ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
