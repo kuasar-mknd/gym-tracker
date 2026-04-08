@@ -50,17 +50,34 @@ final class CreateWorkoutTemplateAction
     /** @param array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}> $exercises */
     private function addExercises(WorkoutTemplate $template, array $exercises): void
     {
+        if ($exercises === []) {
+            return;
+        }
+
+        $linesData = [];
         $setsData = [];
         $now = now()->toDateTimeString();
 
         foreach ($exercises as $index => $ex) {
-            $line = $template->workoutTemplateLines()->create([
+            $linesData[] = [
+                'workout_template_id' => $template->id,
                 'exercise_id' => $ex['id'],
                 'order' => $index,
-            ]);
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
 
+        \App\Models\WorkoutTemplateLine::insert($linesData);
+
+        $lines = $template->workoutTemplateLines()->get()->keyBy('order');
+
+        foreach ($exercises as $index => $ex) {
             if (isset($ex['sets'])) {
-                $this->appendSetsData($setsData, $ex['sets'], $line->id, $now);
+                $line = $lines->get($index);
+                if ($line) {
+                    $this->appendSetsData($setsData, $ex['sets'], $line->id, $now);
+                }
             }
         }
 
