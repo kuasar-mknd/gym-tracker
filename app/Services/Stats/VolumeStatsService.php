@@ -14,10 +14,23 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Service responsible for calculating and aggregating workout volume statistics.
+ *
+ * This class provides methods to generate volume trends, historical comparisons,
+ * and data points for charts over various time periods (daily, weekly, monthly).
+ * It leverages heavy caching and optimized SQL queries to minimize database load.
+ */
 final class VolumeStatsService
 {
     /**
-     * @return array<int, VolumeTrendPoint>
+     * Get a trend of workout volumes over a specified number of days.
+     *
+     * Retrieves the total volume per workout, formatted for trend visualization.
+     *
+     * @param  \App\Models\User  $user  The user to calculate the trend for.
+     * @param  int  $days  The number of days to look back (default: 30).
+     * @return array<int, VolumeTrendPoint> An array of points representing individual workout volumes.
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
@@ -54,7 +67,14 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array<int, DailyVolumeTrendPoint>
+     * Get the daily accumulated workout volume over a specified number of days.
+     *
+     * Aggregates workout volume by day, ensuring each day within the period is
+     * represented even if no workouts occurred.
+     *
+     * @param  \App\Models\User  $user  The user to calculate the trend for.
+     * @param  int  $days  The number of past days to include (default: 7).
+     * @return array<int, DailyVolumeTrendPoint> An array of points representing daily total volumes.
      */
     public function getDailyVolumeTrend(User $user, int $days = 7): array
     {
@@ -87,7 +107,13 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array<int, WeeklyVolumeTrendPoint>
+     * Get the daily accumulated workout volume for the current week.
+     *
+     * Provides a day-by-day breakdown of volume from the start of the current week
+     * to the end of the current week.
+     *
+     * @param  \App\Models\User  $user  The user to calculate the trend for.
+     * @return array<int, WeeklyVolumeTrendPoint> An array of points representing daily total volumes for the week.
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
@@ -126,7 +152,13 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array<int, VolumeHistoryPoint>
+     * Get a historical list of recent workout volumes.
+     *
+     * Retrieves the volume data for the most recent completed workouts, up to the specified limit.
+     *
+     * @param  \App\Models\User  $user  The user to fetch history for.
+     * @param  int  $limit  The maximum number of recent workouts to retrieve (default: 20).
+     * @return array<int, VolumeHistoryPoint> An array of points detailing historical workout volumes.
      */
     public function getVolumeHistory(User $user, int $limit = 20): array
     {
@@ -161,6 +193,15 @@ final class VolumeStatsService
         );
     }
 
+    /**
+     * Compare the total volume of the current month against the previous month.
+     *
+     * Calculates the volume for the current month and the corresponding period
+     * in the previous month to determine the difference and percentage change.
+     *
+     * @param  \App\Models\User  $user  The user to calculate the comparison for.
+     * @return \App\DTOs\Stats\VolumeComparison A DTO containing the current, previous, difference, and percentage stats.
+     */
     public function getMonthlyVolumeComparison(User $user): VolumeComparison
     {
         $comparison = $this->calculateComparison(
@@ -178,6 +219,15 @@ final class VolumeStatsService
         );
     }
 
+    /**
+     * Compare the total volume of the current week against the previous week.
+     *
+     * Calculates the volume for the current week and the entirety of the previous week
+     * to determine the difference and percentage change.
+     *
+     * @param  \App\Models\User  $user  The user to calculate the comparison for.
+     * @return \App\DTOs\Stats\VolumeComparison A DTO containing the current, previous, difference, and percentage stats.
+     */
     public function getWeeklyVolumeComparison(User $user): VolumeComparison
     {
         $weekKey = now()->startOfWeek()->format('Y-W');
@@ -202,7 +252,14 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array<int, MonthlyVolumePoint>
+     * Get the total workout volume grouped by month over a specified period.
+     *
+     * Aggregates total volume per month for the given number of past months,
+     * including months with zero volume.
+     *
+     * @param  \App\Models\User  $user  The user to fetch the history for.
+     * @param  int  $months  The number of months to look back (default: 6).
+     * @return array<int, MonthlyVolumePoint> An array of points representing total monthly volumes.
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {
@@ -240,7 +297,16 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float}
+     * Calculate volume comparison metrics between two distinct time periods.
+     *
+     * Internal helper method that executes a single optimized query to aggregate
+     * volume for a "current" period and a "previous" period.
+     *
+     * @param  \App\Models\User  $user  The user to calculate metrics for.
+     * @param  \Carbon\Carbon  $currentStart  The start date of the current period.
+     * @param  \Carbon\Carbon  $prevStart  The start date of the previous period.
+     * @param  \Carbon\Carbon|null  $prevEnd  The end date of the previous period (optional). If null, compares to all time before currentStart.
+     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float} An array with comparison statistics.
      */
     private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, ?Carbon $prevEnd = null): array
     {
