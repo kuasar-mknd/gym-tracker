@@ -1,0 +1,101 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Security;
+
+use App\Support\Csp\Policies\CustomPolicy;
+use Illuminate\Support\Facades\Config;
+use Spatie\Csp\Directive;
+use Spatie\Csp\Keyword;
+use Spatie\Csp\Policy;
+use Tests\TestCase;
+
+class CustomPolicyTest extends TestCase
+{
+    public function test_custom_policy_has_correct_base_directives(): void
+    {
+        $policy = new Policy();
+        $customPolicy = new CustomPolicy();
+        $customPolicy->configure($policy);
+
+        $directives = $policy->all();
+
+        $this->assertContains(Keyword::SELF, $directives[Directive::BASE]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::CONNECT]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::DEFAULT]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::FONT]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::FORM_ACTION]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::FRAME]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::IMG]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::MEDIA]);
+        $this->assertContains(Keyword::NONE, $directives[Directive::OBJECT]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::SCRIPT]);
+        $this->assertContains(Keyword::SELF, $directives[Directive::STYLE]);
+    }
+
+    public function test_custom_policy_has_correct_local_environment_directives(): void
+    {
+        Config::set('app.env', 'local');
+        $this->app['env'] = 'local';
+
+        $policy = new Policy();
+        $customPolicy = new CustomPolicy();
+        $customPolicy->configure($policy);
+
+        $directives = $policy->all();
+
+        // Local environment should have unsafe-inline for script and style, plus localhost urls
+        $this->assertContains(Keyword::UNSAFE_EVAL, $directives[Directive::SCRIPT]);
+        $this->assertContains(Keyword::UNSAFE_INLINE, $directives[Directive::SCRIPT]);
+        $this->assertContains('http://localhost:5173', $directives[Directive::SCRIPT]);
+
+        $this->assertContains(Keyword::UNSAFE_INLINE, $directives[Directive::STYLE]);
+        $this->assertContains('http://localhost:5173', $directives[Directive::STYLE]);
+
+        $this->assertContains('http://localhost:5173', $directives[Directive::CONNECT]);
+        $this->assertContains('ws://localhost:5173', $directives[Directive::CONNECT]);
+    }
+
+    public function test_custom_policy_has_correct_production_environment_directives(): void
+    {
+        Config::set('app.env', 'production');
+        $this->app['env'] = 'production';
+
+        $policy = new Policy();
+        $customPolicy = new CustomPolicy();
+        $customPolicy->configure($policy);
+
+        $directives = $policy->all();
+
+        // Production environment should have unsafe-eval for script, unsafe-inline for style
+        $this->assertContains(Keyword::UNSAFE_EVAL, $directives[Directive::SCRIPT]);
+        $this->assertNotContains(Keyword::UNSAFE_INLINE, $directives[Directive::SCRIPT]); // unsafe-inline is local only
+
+        $this->assertContains(Keyword::UNSAFE_INLINE, $directives[Directive::STYLE]);
+    }
+
+    public function test_custom_policy_has_correct_external_resources(): void
+    {
+        $policy = new Policy();
+        $customPolicy = new CustomPolicy();
+        $customPolicy->configure($policy);
+
+        $directives = $policy->all();
+
+        $this->assertContains('https://fonts.googleapis.com', $directives[Directive::STYLE]);
+        $this->assertContains('https://fonts.bunny.net', $directives[Directive::STYLE]);
+
+        $this->assertContains('data:', $directives[Directive::IMG]);
+        $this->assertContains('https://ui-avatars.com', $directives[Directive::IMG]);
+        $this->assertContains('https://www.svgrepo.com', $directives[Directive::IMG]);
+
+        $this->assertContains('https://fonts.bunny.net', $directives[Directive::FONT]);
+        $this->assertContains('https://fonts.gstatic.com', $directives[Directive::FONT]);
+        $this->assertContains('data:', $directives[Directive::FONT]);
+
+        $this->assertContains('https://fcm.googleapis.com', $directives[Directive::CONNECT]);
+        $this->assertContains('https://updates.push.apple.com', $directives[Directive::CONNECT]);
+        $this->assertContains('https://*.notify.windows.com', $directives[Directive::CONNECT]);
+    }
+}
