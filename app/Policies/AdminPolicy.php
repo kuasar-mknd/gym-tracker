@@ -14,7 +14,7 @@ class AdminPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->can('view_any_admin');
     }
 
     /**
@@ -22,7 +22,7 @@ class AdminPolicy
      */
     public function view(User $user, Admin $admin): bool
     {
-        return false;
+        return $user->can('view_admin');
     }
 
     /**
@@ -30,7 +30,7 @@ class AdminPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->can('create_admin');
     }
 
     /**
@@ -38,7 +38,7 @@ class AdminPolicy
      */
     public function update(User $user, Admin $admin): bool
     {
-        return false;
+        return $user->can('update_admin');
     }
 
     /**
@@ -46,7 +46,7 @@ class AdminPolicy
      */
     public function delete(User $user, Admin $admin): bool
     {
-        return false;
+        return $user->can('delete_admin');
     }
 
     /**
@@ -54,7 +54,7 @@ class AdminPolicy
      */
     public function restore(User $user, Admin $admin): bool
     {
-        return false;
+        return $user->can('restore_admin');
     }
 
     /**
@@ -62,6 +62,6 @@ class AdminPolicy
      */
     public function forceDelete(User $user, Admin $admin): bool
     {
-        return false;
+        return $user->can('force_delete_admin');
     }
 }
