@@ -28,11 +28,6 @@ class CustomPolicyTest extends TestCase
         return $directive instanceof \UnitEnum ? $directive->value : (string) $directive;
     }
 
-    private function getKeywordValue(mixed $keyword): string
-    {
-        return $keyword instanceof \UnitEnum ? $keyword->value : (string) $keyword;
-    }
-
     public function test_custom_policy_has_correct_base_directives(): void
     {
         $policy = new Policy();
@@ -40,20 +35,18 @@ class CustomPolicyTest extends TestCase
         $customPolicy->configure($policy);
 
         $directives = $this->getDirectivesFromPolicy($policy);
-        $selfKeyword = $this->getKeywordValue(Keyword::SELF);
-        $noneKeyword = $this->getKeywordValue(Keyword::NONE);
 
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::BASE)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::CONNECT)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::DEFAULT)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::FONT)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::FORM_ACTION)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::FRAME)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::IMG)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::MEDIA)]);
-        $this->assertContains($noneKeyword, $directives[$this->getDirectiveKey(Directive::OBJECT)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
-        $this->assertContains($selfKeyword, $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::BASE)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::CONNECT)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::DEFAULT)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::FONT)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::FORM_ACTION)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::FRAME)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::IMG)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::MEDIA)]);
+        $this->assertContains(Keyword::NONE, $directives[$this->getDirectiveKey(Directive::OBJECT)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
+        $this->assertContains(Keyword::SELF, $directives[$this->getDirectiveKey(Directive::STYLE)]);
     }
 
     public function test_custom_policy_has_correct_local_environment_directives(): void
@@ -66,15 +59,13 @@ class CustomPolicyTest extends TestCase
         $customPolicy->configure($policy);
 
         $directives = $this->getDirectivesFromPolicy($policy);
-        $unsafeEval = $this->getKeywordValue(Keyword::UNSAFE_EVAL);
-        $unsafeInline = $this->getKeywordValue(Keyword::UNSAFE_INLINE);
 
         // Local environment should have unsafe-inline for script and style, plus localhost urls
-        $this->assertContains($unsafeEval, $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
-        $this->assertContains($unsafeInline, $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
+        $this->assertContains(Keyword::UNSAFE_EVAL, $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
+        $this->assertContains(Keyword::UNSAFE_INLINE, $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
 
-        $this->assertContains($unsafeInline, $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertContains(Keyword::UNSAFE_INLINE, $directives[$this->getDirectiveKey(Directive::STYLE)]);
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::STYLE)]);
 
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::CONNECT)]);
@@ -91,14 +82,12 @@ class CustomPolicyTest extends TestCase
         $customPolicy->configure($policy);
 
         $directives = $this->getDirectivesFromPolicy($policy);
-        $unsafeEval = $this->getKeywordValue(Keyword::UNSAFE_EVAL);
-        $unsafeInline = $this->getKeywordValue(Keyword::UNSAFE_INLINE);
 
         // Production environment should have unsafe-eval for script, unsafe-inline for style
-        $this->assertContains($unsafeEval, $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
-        $this->assertNotContains($unsafeInline, $directives[$this->getDirectiveKey(Directive::SCRIPT)]); // unsafe-inline is local only
+        $this->assertContains(Keyword::UNSAFE_EVAL, $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
+        $this->assertNotContains(Keyword::UNSAFE_INLINE, $directives[$this->getDirectiveKey(Directive::SCRIPT)]); // unsafe-inline is local only
 
-        $this->assertContains($unsafeInline, $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertContains(Keyword::UNSAFE_INLINE, $directives[$this->getDirectiveKey(Directive::STYLE)]);
     }
 
     public function test_custom_policy_has_correct_external_resources(): void
