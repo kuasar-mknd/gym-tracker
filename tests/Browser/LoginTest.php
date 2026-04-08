@@ -46,14 +46,11 @@ class LoginTest extends DuskTestCase
 
                     // Log out to reset state for the next iteration
                     $browser->visit('/profile')
-                        ->waitForText('Déconnexion', 15)
-                        ->script("
-                            const el = Array.from(document.querySelectorAll('button, a')).find(el => el.textContent.trim().toUpperCase() === 'DÉCONNEXION' || el.textContent.trim() === 'Déconnexion');
-                            if (el) el.scrollIntoView({block: 'center'});
-                        ");
+                        ->waitFor('[data-testid="logout-button"]', 15)
+                        ->script("document.querySelector('[data-testid=\"logout-button\"]').scrollIntoView({block: 'center'});");
 
-                    $browser->press('Déconnexion')
-                        ->waitForLocation('/', 15);
+                    $browser->click('[data-testid="logout-button"]')
+                        ->waitForLocation('/login', 15);
 
                 } catch (\Exception $e) {
                     $browser->screenshot('login-failure-iphone-'.strtolower($name));
