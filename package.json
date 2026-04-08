@@ -9,7 +9,8 @@
         "lint": "npm run lint:js && npm run lint:php",
         "lint:js": "prettier --check \"resources/**/*.{js,vue,css}\"",
         "lint:php": "./vendor/bin/phpstan analyze --memory-limit=2G",
-        "prepare": "husky"
+        "prepare": "husky",
+        "test:js": "vitest run"
     },
     "lint-staged": {
         "resources/**/*.{js,vue,css}": "prettier --write",
