@@ -18,9 +18,13 @@ use App\Models\User;
 final class GoalService
 {
     private array $maxWeightsCache = [];
+
     private array $maxVolumesCache = [];
+
     private array $hasFetchedMeasurements = [];
+
     private array $latestMeasurementCache = [];
+
     /**
      * Synchronize all active goals for a user.
      *
@@ -216,7 +220,7 @@ final class GoalService
             $this->hasFetchedMeasurements[$userId] = true;
         }
 
-        if (!empty($this->latestMeasurementCache[$userId])) {
+        if (! empty($this->latestMeasurementCache[$userId])) {
             $type = $goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type;
             $latestValue = $this->latestMeasurementCache[$userId]->{$type};
 
