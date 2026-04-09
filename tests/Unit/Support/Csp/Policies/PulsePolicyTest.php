@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Support\Csp\Policies\PulsePolicy;
+use Mockery\MockInterface;
 use Spatie\Csp\Directive;
 use Spatie\Csp\Keyword;
 use Spatie\Csp\Policy;
-use Mockery\MockInterface;
 
 describe('configure', function () {
     it('configures the policy correctly', function () {
