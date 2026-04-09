@@ -30,6 +30,30 @@ class DeleteUserRequest extends FormRequest
         ];
     }
 
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
+            if ($validator->errors()->has('password')) {
+                $this->hitRateLimiter();
+            }
+        });
+    }
+
+    public function throttleKey(): string
+    {
+        return 'delete-account-'.$this->user()?->id;
+    }
+
+    public function hitRateLimiter(): void
+    {
+        RateLimiter::hit($this->throttleKey());
+    }
+
+    public function clearRateLimiter(): void
+    {
+        RateLimiter::clear($this->throttleKey());
+    }
+
     protected function prepareForValidation(): void
     {
         if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
@@ -46,20 +70,6 @@ class DeleteUserRequest extends FormRequest
 
     protected function passedValidation(): void
     {
-        RateLimiter::clear($this->throttleKey());
-    }
-
-    public function withValidator(\Illuminate\Validation\Validator $validator): void
-    {
-        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
-            if ($validator->errors()->has('password')) {
-                RateLimiter::hit($this->throttleKey());
-            }
-        });
-    }
-
-    public function throttleKey(): string
-    {
-        return 'delete-account-'.$this->user()?->id;
+        $this->clearRateLimiter();
     }
 }
