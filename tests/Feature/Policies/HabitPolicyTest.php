@@ -8,16 +8,16 @@ use App\Models\Habit;
 use App\Models\User;
 use App\Policies\HabitPolicy;
 
-describe('viewAny', function () {
-    it('allows any user to view any models', function () {
+describe('viewAny', function (): void {
+    it('allows any user to view any models', function (): void {
         $policy = new HabitPolicy();
 
         expect($policy->viewAny())->toBeTrue();
     });
 });
 
-describe('view', function () {
-    it('allows the owner to view the habit', function () {
+describe('view', function (): void {
+    it('allows the owner to view the habit', function (): void {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
         $policy = new HabitPolicy();
@@ -25,7 +25,7 @@ describe('view', function () {
         expect($policy->view($user, $habit))->toBeTrue();
     });
 
-    it('denies a non-owner from viewing the habit', function () {
+    it('denies a non-owner from viewing the habit', function (): void {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $owner->id]);
@@ -35,16 +35,16 @@ describe('view', function () {
     });
 });
 
-describe('create', function () {
-    it('allows any user to create models', function () {
+describe('create', function (): void {
+    it('allows any user to create models', function (): void {
         $policy = new HabitPolicy();
 
         expect($policy->create())->toBeTrue();
     });
 });
 
-describe('update', function () {
-    it('allows the owner to update the habit', function () {
+describe('update', function (): void {
+    it('allows the owner to update the habit', function (): void {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
         $policy = new HabitPolicy();
@@ -52,7 +52,7 @@ describe('update', function () {
         expect($policy->update($user, $habit))->toBeTrue();
     });
 
-    it('denies a non-owner from updating the habit', function () {
+    it('denies a non-owner from updating the habit', function (): void {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $owner->id]);
@@ -62,8 +62,8 @@ describe('update', function () {
     });
 });
 
-describe('delete', function () {
-    it('allows the owner to delete the habit', function () {
+describe('delete', function (): void {
+    it('allows the owner to delete the habit', function (): void {
         $user = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $user->id]);
         $policy = new HabitPolicy();
@@ -71,7 +71,7 @@ describe('delete', function () {
         expect($policy->delete($user, $habit))->toBeTrue();
     });
 
-    it('denies a non-owner from deleting the habit', function () {
+    it('denies a non-owner from deleting the habit', function (): void {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $owner->id]);
