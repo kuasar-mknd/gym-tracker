@@ -1,0 +1,3 @@
+## 2024-04-09 - Ensure all custom "buttons" have accessibility tags when busy
+**Learning:** Found that custom "Dashboard Action" button blocks, which show loading states with `autorenew`, missed `aria-busy` declarations. Complex, visually styled interactive elements might miss standard button a11y properties that components like `GlassButton` abstract away.
+**Action:** When adding or verifying loading state animations on large custom touch targets, explicitly check for `aria-busy` and visual cursor feedbacks (`cursor-wait`), ensuring they mirror the a11y patterns of standard buttons in the system.
