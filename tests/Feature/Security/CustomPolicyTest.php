@@ -87,11 +87,13 @@ class CustomPolicyTest extends TestCase
 
         $directives = $this->getDirectivesFromPolicy($policy);
 
-        // Production environment should have unsafe-eval for script, unsafe-inline for style
+        // Production environment should have unsafe-eval for script
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
         $this->assertNotContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::SCRIPT)]); // unsafe-inline is local only
 
-        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        // In production, we use style-src-attr for unsafe-inline instead of the global style-src
+        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE_ATTR)]);
+        $this->assertNotContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
     }
 
     public function test_custom_policy_has_correct_external_resources(): void
