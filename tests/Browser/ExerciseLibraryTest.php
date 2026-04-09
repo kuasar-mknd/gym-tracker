@@ -130,7 +130,7 @@ class ExerciseLibraryTest extends DuskTestCase
     /**
      * Test responsiveness and layout on different mobile sizes.
      */
-    public function test_exercise_library_responsive_layout_on_iphone(): void
+    public function test_exercise_library_responsive_layout(): void
     {
         $this->browse(function (Browser $browser): void {
             $user = User::factory()->create();
