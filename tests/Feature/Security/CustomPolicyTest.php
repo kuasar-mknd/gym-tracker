@@ -69,6 +69,7 @@ class CustomPolicyTest extends TestCase
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
 
+        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE_ATTR)]);
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::STYLE)]);
 
@@ -91,9 +92,9 @@ class CustomPolicyTest extends TestCase
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
         $this->assertNotContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::SCRIPT)]); // unsafe-inline is local only
 
-        // In production, we use style-src-attr for unsafe-inline instead of the global style-src
+        // In production, we allow unsafe-inline for both elements and attributes to support Filament
+        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE_ATTR)]);
-        $this->assertNotContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
     }
 
     public function test_custom_policy_has_correct_external_resources(): void

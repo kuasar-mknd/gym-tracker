@@ -32,7 +32,6 @@ class CustomPolicy extends Basic
 
         if (! app()->environment('local')) {
             $policy->addNonce(Directive::SCRIPT);
-            $policy->addNonce(Directive::STYLE); // Re-enable style nonces globally for security
         }
 
         if (app()->environment('local', 'testing')) {
@@ -50,6 +49,7 @@ class CustomPolicy extends Basic
             ->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL)
             ->add(Directive::SCRIPT, Keyword::UNSAFE_INLINE)
             ->add(Directive::SCRIPT, 'http://localhost:5173')
+            ->add(Directive::STYLE, Keyword::UNSAFE_INLINE)
             ->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE)
             ->add(Directive::STYLE, 'http://localhost:5173')
             ->add(Directive::CONNECT, 'http://localhost:5173')
@@ -63,11 +63,11 @@ class CustomPolicy extends Basic
         // as it is bundled and managed internally by Filament.
         $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
 
-        // Fix for Filament Style Attributes: Instead of adding 'unsafe-inline' to
-        // the global style-src directive (which breaks nonce protection for all <style> tags),
-        // we use style-src-attr to specifically allow inline attributes on elements,
-        // while preserving nonce requirements for actual style tags.
-        // This requires CSP level 3 browser support.
+        // Fix for Filament Style Attributes: Instead of adding 'unsafe-inline' only to
+        // the global style-src directive, we also use style-src-attr to specifically allow
+        // inline attributes on elements.
+        // NOTE: Style nonces are disabled because Filament injects <style> tags at runtime.
+        $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
         $policy->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE);
     }
 
