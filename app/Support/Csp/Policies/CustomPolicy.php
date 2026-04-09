@@ -50,6 +50,7 @@ class CustomPolicy extends Basic
             ->add(Directive::SCRIPT, Keyword::UNSAFE_INLINE)
             ->add(Directive::SCRIPT, 'http://localhost:5173')
             ->add(Directive::STYLE, Keyword::UNSAFE_INLINE)
+            ->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE)
             ->add(Directive::STYLE, 'http://localhost:5173')
             ->add(Directive::CONNECT, 'http://localhost:5173')
             ->add(Directive::CONNECT, 'ws://localhost:5173');
@@ -62,10 +63,12 @@ class CustomPolicy extends Basic
         // as it is bundled and managed internally by Filament.
         $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
 
-        // Deliberate security tradeoff: Filament requires 'unsafe-inline' for style
-        // attributes on various components (e.g., grids, color pickers) which cannot
-        // use nonces since they are inline style attributes.
+        // Fix for Filament Style Attributes: Instead of adding 'unsafe-inline' only to
+        // the global style-src directive, we also use style-src-attr to specifically allow
+        // inline attributes on elements.
+        // NOTE: Style nonces are disabled because Filament injects <style> tags at runtime.
         $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
+        $policy->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE);
     }
 
     protected function configureExternalResources(Policy $policy): void

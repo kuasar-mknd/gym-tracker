@@ -70,6 +70,7 @@ class CustomPolicyTest extends TestCase
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
 
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE_ATTR)]);
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::STYLE)]);
 
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::CONNECT)]);
@@ -87,11 +88,13 @@ class CustomPolicyTest extends TestCase
 
         $directives = $this->getDirectivesFromPolicy($policy);
 
-        // Production environment should have unsafe-eval for script, unsafe-inline for style
+        // Production environment should have unsafe-eval for script
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
         $this->assertNotContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::SCRIPT)]); // unsafe-inline is local only
 
+        // In production, we allow unsafe-inline for both elements and attributes to support Filament
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE_ATTR)]);
     }
 
     public function test_custom_policy_has_correct_external_resources(): void
