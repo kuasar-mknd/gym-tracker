@@ -16,3 +16,7 @@
 ## 2026-04-06 - [Accessible button-based radio groups]
 **Learning:** When using `<button>` elements to simulate radio groups or toggle selections (like choosing gender or measurement units in calculators), developers often forget keyboard focus indicators and screen reader state. Without `focus-visible` styles, keyboard users cannot navigate the options, and without `aria-pressed`, screen reader users cannot tell which option is currently active.
 **Action:** Always apply `focus-visible:ring-2 focus-visible:outline-none` (using brand colors like `ring-electric-orange`) and dynamically bind `:aria-pressed="condition"` to all custom selection buttons.
+
+## 2026-05-12 - [Standardizing inputs with GlassInput]
+**Learning:** Raw HTML inputs in pages often bypass the design system's consistent "Liquid Glass" styling and accessibility features (like proper error linking). The `GlassInput` component should always be preferred. It supports a `suffix` slot which is perfect for unit labels (like 'ML' or 'KG'), keeping them inside the input's visual boundary and maintaining consistent spacing.
+**Action:** Replace manual input groups with `GlassInput` and use the `suffix` slot for units to ensure UI consistency and better accessibility.
