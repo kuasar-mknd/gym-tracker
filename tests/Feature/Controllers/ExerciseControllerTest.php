@@ -72,7 +72,7 @@ describe('ExerciseController', function (): void {
             $data = [
                 'name' => 'New Bench Press',
                 'type' => 'strength',
-                'category' => \App\Enums\ExerciseCategory::PECTORAUX->value,
+                'category' => \App\Enums\ExerciseCategory::Pectoraux->value,
             ];
 
             $response = $this->actingAs($user)
@@ -93,7 +93,7 @@ describe('ExerciseController', function (): void {
             $data = [
                 'name' => 'Quick Squat',
                 'type' => 'strength',
-                'category' => \App\Enums\ExerciseCategory::JAMBES->value,
+                'category' => \App\Enums\ExerciseCategory::Jambes->value,
             ];
 
             $response = $this->actingAs($user)
