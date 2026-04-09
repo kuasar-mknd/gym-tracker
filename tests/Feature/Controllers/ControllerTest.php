@@ -13,7 +13,8 @@ describe('Controller', function (): void {
     describe('user', function (): void {
         it('throws a RuntimeException if no user is authenticated', function (): void {
             // Create an anonymous class extending Controller to access the protected user() method
-            $controller = new class extends Controller {
+            $controller = new class() extends Controller
+            {
                 public function callUser(): User
                 {
                     return $this->user();
@@ -30,7 +31,8 @@ describe('Controller', function (): void {
 
         it('returns the authenticated user if one exists', function (): void {
             // Create an anonymous class extending Controller to access the protected user() method
-            $controller = new class extends Controller {
+            $controller = new class() extends Controller
+            {
                 public function callUser(): User
                 {
                     return $this->user();
