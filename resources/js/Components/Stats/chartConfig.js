@@ -13,7 +13,7 @@ export const volumeTooltipCallback = function (context) {
         label += ': '
     }
     if (context.parsed.y !== null) {
-        label += new Intl.NumberFormat('fr-FR').format(context.parsed.y) + ' kg'
+        label += context.parsed.y.toLocaleString() + ' kg'
     }
     return label
 }
