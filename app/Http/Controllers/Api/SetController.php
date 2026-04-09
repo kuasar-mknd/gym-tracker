@@ -29,9 +29,11 @@ class SetController extends Controller
 
         $sets = QueryBuilder::for(Set::class)
             ->allowedFilters(['workout_line_id'])
-            ->whereHas('workoutLine.workout', function ($query): void {
-                $query->where('user_id', $this->user()->id);
-            })
+            // Bolt: Optimize belongsTo filtering with INNER JOIN
+            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+            ->where('workouts.user_id', $this->user()->id)
+            ->select('sets.*')
             ->paginate();
 
         return SetResource::collection($sets);

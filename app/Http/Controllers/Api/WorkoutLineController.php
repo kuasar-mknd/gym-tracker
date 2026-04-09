@@ -38,9 +38,10 @@ class WorkoutLineController extends Controller
 
         $lines = QueryBuilder::for(WorkoutLine::class)
             ->allowedFilters(['workout_id'])
-            ->whereHas('workout', function ($query): void {
-                $query->where('user_id', $this->user()->id);
-            })
+            // Bolt: Optimize belongsTo filtering with INNER JOIN
+            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
+            ->where('workouts.user_id', $this->user()->id)
+            ->select('workout_lines.*')
             ->paginate();
 
         return WorkoutLineResource::collection($lines);

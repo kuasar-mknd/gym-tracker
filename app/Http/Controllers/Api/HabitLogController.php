@@ -35,9 +35,10 @@ class HabitLogController extends Controller
             ])
             ->allowedSorts(['date', 'created_at'])
             ->defaultSort('-date')
-            ->whereHas('habit', function ($query): void {
-                $query->where('user_id', $this->user()->id);
-            })
+            // Bolt: Optimize belongsTo filtering with INNER JOIN
+            ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
+            ->where('habits.user_id', $this->user()->id)
+            ->select('habit_logs.*')
             ->paginate();
 
         return HabitLogResource::collection($logs);
