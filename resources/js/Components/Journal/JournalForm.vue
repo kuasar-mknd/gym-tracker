@@ -32,15 +32,18 @@ const emit = defineEmits(['close', 'submit'])
             <GlassInput v-model="form.date" type="date" label="Date" :error="form.errors.date" required />
 
             <div>
-                <label class="text-text-muted mb-1 block text-sm font-medium">Humeur</label>
-                <div class="flex gap-2">
+                <label id="mood-label" class="text-text-muted mb-1 block text-sm font-medium">Humeur</label>
+                <div class="flex gap-2" role="radiogroup" aria-labelledby="mood-label">
                     <button
                         v-for="mood in moods"
                         :key="mood.value"
                         v-press="{ haptic: 'selection' }"
                         type="button"
                         @click="form.mood_score = mood.value"
-                        :aria-pressed="form.mood_score === mood.value"
+                        role="radio"
+                        :aria-checked="form.mood_score === mood.value"
+                        :aria-label="mood.label"
+                        :title="mood.label"
                         :class="[
                             'focus-visible:ring-electric-orange flex-1 rounded-2xl border border-white/20 p-2 text-center text-sm backdrop-blur-md transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none',
                             form.mood_score === mood.value
@@ -48,7 +51,7 @@ const emit = defineEmits(['close', 'submit'])
                                 : 'text-text-muted bg-white/10 hover:bg-white/20 hover:text-white',
                         ]"
                     >
-                        <div class="text-xl">{{ mood.label.split(' ')[0] }}</div>
+                        <div class="text-xl" aria-hidden="true">{{ mood.label.split(' ')[0] }}</div>
                     </button>
                 </div>
                 <div v-if="form.errors.mood_score" class="mt-1 text-xs text-red-400">
@@ -120,10 +123,20 @@ const emit = defineEmits(['close', 'submit'])
             </div>
 
             <div>
-                <label class="text-text-muted mb-1 block text-sm font-medium">Notes</label>
+                <div class="mb-1 flex items-center justify-between">
+                    <label for="journal-content" class="text-text-muted block text-sm font-medium">Notes</label>
+                    <span
+                        class="text-[10px] font-bold tracking-wider uppercase"
+                        :class="form.content?.length > 1000 ? 'text-red-400' : 'text-text-muted/50'"
+                    >
+                        {{ form.content?.length || 0 }} / 1000
+                    </span>
+                </div>
                 <textarea
+                    id="journal-content"
                     v-model="form.content"
                     rows="4"
+                    maxlength="1000"
                     class="text-text-main placeholder-text-muted/50 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/15 focus:border-white/50 focus:bg-white/20 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none active:scale-[0.98]"
                     placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
                 ></textarea>

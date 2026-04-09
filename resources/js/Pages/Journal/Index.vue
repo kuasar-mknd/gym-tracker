@@ -155,7 +155,7 @@ const journalsByMonth = computed(() => {
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Journal</h2>
-                <GlassButton @click="openAddForm" aria-label="Nouvelle séance">
+                <GlassButton @click="openAddForm" aria-label="Nouvelle entrée">
                     <svg
                         class="mr-2 h-4 w-4"
                         xmlns="http://www.w3.org/2000/svg"
