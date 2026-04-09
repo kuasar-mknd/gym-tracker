@@ -7,7 +7,6 @@ namespace App\Console\Commands;
 use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Notifications\TrainingReminder;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class TrainingReminderCommand extends Command
@@ -62,7 +61,7 @@ class TrainingReminderCommand extends Command
                         'type' => 'training_reminder',
                         'is_enabled' => true,
                         'is_push_enabled' => (bool) $user->getAttribute('pref_push'),
-                        'value' => $user->getAttribute('pref_value') !== null ? (int) $user->getAttribute('pref_value') : null,
+                        'value' => is_numeric($user->getAttribute('pref_value')) ? (int) $user->getAttribute('pref_value') : null,
                     ]);
 
                     $user->setRelation('notificationPreferences', collect([$preference]));
