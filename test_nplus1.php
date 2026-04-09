@@ -11,7 +11,7 @@ $command = new \App\Console\Commands\TrainingReminderCommand();
 $command->handle();
 
 $log = DB::getQueryLog();
-echo "Queries: " . count($log) . "\n";
-foreach($log as $q) {
-    echo $q['query'] . "\n";
+echo 'Queries: '.count($log)."\n";
+foreach ($log as $q) {
+    echo $q['query']."\n";
 }

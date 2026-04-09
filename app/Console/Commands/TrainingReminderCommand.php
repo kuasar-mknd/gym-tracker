@@ -7,7 +7,6 @@ namespace App\Console\Commands;
 use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Notifications\TrainingReminder;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class TrainingReminderCommand extends Command

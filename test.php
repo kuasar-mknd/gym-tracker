@@ -12,7 +12,7 @@ $command = new \App\Console\Commands\TrainingReminderCommand();
 $command->handle();
 
 $log = \Illuminate\Support\Facades\DB::getQueryLog();
-echo "Queries: " . count($log) . "\n";
-foreach($log as $q) {
-    echo $q['query'] . "\n";
+echo 'Queries: '.count($log)."\n";
+foreach ($log as $q) {
+    echo $q['query']."\n";
 }
