@@ -38,8 +38,8 @@ class UpdatePasswordRequest extends FormRequest
     public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
         $validator->after(function (\Illuminate\Validation\Validator $validator): void {
-            if ($this->isDirty('current_password')) {
-                RateLimiter::hit($this->throttleKey());
+            if ($validator->errors()->has('current_password')) {
+                $this->hitRateLimiter();
             }
         });
     }
@@ -50,6 +50,16 @@ class UpdatePasswordRequest extends FormRequest
     public function throttleKey(): string
     {
         return 'update-password-'.$this->user()?->id;
+    }
+
+    public function hitRateLimiter(): void
+    {
+        RateLimiter::hit($this->throttleKey());
+    }
+
+    public function clearRateLimiter(): void
+    {
+        RateLimiter::clear($this->throttleKey());
     }
 
     /**
@@ -76,6 +86,6 @@ class UpdatePasswordRequest extends FormRequest
      */
     protected function passedValidation(): void
     {
-        RateLimiter::clear($this->throttleKey());
+        $this->clearRateLimiter();
     }
 }

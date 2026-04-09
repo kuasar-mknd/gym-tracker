@@ -34,7 +34,7 @@ class ConfirmPasswordRequest extends FormRequest
     {
         $validator->after(function (\Illuminate\Validation\Validator $validator): void {
             if ($validator->errors()->has('password')) {
-                RateLimiter::hit($this->throttleKey());
+                $this->hitRateLimiter();
             }
         });
     }
@@ -42,6 +42,16 @@ class ConfirmPasswordRequest extends FormRequest
     public function throttleKey(): string
     {
         return 'confirm-password-'.$this->user()?->id;
+    }
+
+    public function hitRateLimiter(): void
+    {
+        RateLimiter::hit($this->throttleKey());
+    }
+
+    public function clearRateLimiter(): void
+    {
+        RateLimiter::clear($this->throttleKey());
     }
 
     protected function prepareForValidation(): void
@@ -60,6 +70,6 @@ class ConfirmPasswordRequest extends FormRequest
 
     protected function passedValidation(): void
     {
-        RateLimiter::clear($this->throttleKey());
+        $this->clearRateLimiter();
     }
 }
