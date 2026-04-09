@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Enums\GoalType;
-use App\Models\Exercise;
-use App\Models\Goal;
 use App\Models\User;
+use App\Models\Goal;
+use App\Models\Workout;
+use App\Models\Exercise;
+use App\Enums\GoalType;
 use App\Services\GoalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,7 +15,7 @@ class GoalServicePerformanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_sync_goals_performance()
+    public function test_sync_goals_performance(): void
     {
         $user = User::factory()->create();
         $exercises = Exercise::factory()->count(10)->create();
@@ -46,7 +47,7 @@ class GoalServicePerformanceTest extends TestCase
         $service->syncGoals($user);
         $queries = \DB::getQueryLog();
 
-        echo 'Total queries executed: '.count($queries)."\n";
+        echo "Total queries executed: " . count($queries) . "\n";
         $this->assertTrue(true);
     }
 }

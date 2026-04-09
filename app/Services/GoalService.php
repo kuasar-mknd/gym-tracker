@@ -17,6 +17,10 @@ use App\Models\User;
  */
 final class GoalService
 {
+    private array $maxWeightsCache = [];
+    private array $maxVolumesCache = [];
+    private array $hasFetchedMeasurements = [];
+    private array $latestMeasurementCache = [];
     /**
      * Synchronize all active goals for a user.
      *
@@ -27,15 +31,15 @@ final class GoalService
      */
     public function syncGoals(User $user): void
     {
+        $this->maxWeightsCache = [];
+        $this->maxVolumesCache = [];
+        $this->hasFetchedMeasurements = [];
+        $this->latestMeasurementCache = [];
+
         $goals = $user->goals()->whereNull('completed_at')->get();
-
-        // ⚡ Bolt Optimization: Pre-calculate metrics for all active goals in batch to avoid N+1 queries.
-        // This reduces database queries from O(N) to a small constant number.
-        $metrics = $this->preCalculateMetrics($user, $goals);
-
         foreach ($goals as $goal) {
             $goal->setRelation('user', $user);
-            $this->updateGoalProgress($goal, $metrics);
+            $this->updateGoalProgress($goal);
         }
 
         $dirtyGoals = $goals->filter->isDirty();
@@ -63,15 +67,14 @@ final class GoalService
      * After updating the progress value, it checks if the goal has been completed.
      *
      * @param  Goal  $goal  The goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics to avoid N+1 queries.
      */
-    public function updateGoalProgress(Goal $goal, array $metrics = []): void
+    public function updateGoalProgress(Goal $goal): void
     {
         match ($goal->type) {
-            GoalType::Weight => $this->updateWeightGoal($goal, $metrics),
-            GoalType::Frequency => $this->updateFrequencyGoal($goal, $metrics),
-            GoalType::Volume => $this->updateVolumeGoal($goal, $metrics),
-            GoalType::Measurement => $this->updateMeasurementGoal($goal, $metrics),
+            GoalType::Weight => $this->updateWeightGoal($goal),
+            GoalType::Frequency => $this->updateFrequencyGoal($goal),
+            GoalType::Volume => $this->updateVolumeGoal($goal),
+            GoalType::Measurement => $this->updateMeasurementGoal($goal),
         };
 
         $this->checkCompletion($goal);
@@ -108,26 +111,27 @@ final class GoalService
      * Finds the maximum weight lifted for the associated exercise across all user workouts.
      *
      * @param  Goal  $goal  The weight goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
      */
-    protected function updateWeightGoal(Goal $goal, array $metrics = []): void
+    protected function updateWeightGoal(Goal $goal): void
     {
         if (! $goal->exercise_id) {
             return;
         }
 
-        if (isset($metrics['max_weights'][$goal->exercise_id])) {
-            $val = $metrics['max_weights'][$goal->exercise_id];
-            $goal->current_value = is_numeric($val) ? (float) $val : 0.0;
+        $userId = $goal->user_id;
 
-            return;
+        if (! isset($this->maxWeightsCache[$userId])) {
+            $this->maxWeightsCache[$userId] = $goal->user->workouts()
+                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
+                ->groupBy('workout_lines.exercise_id')
+                ->toBase()
+                ->pluck('max_weight', 'exercise_id')
+                ->all();
         }
 
-        $maxWeight = $goal->user->workouts()
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workout_lines.exercise_id', $goal->exercise_id)
-            ->max('sets.weight');
+        $maxWeight = $this->maxWeightsCache[$userId][$goal->exercise_id] ?? null;
 
         if ($maxWeight !== null && is_numeric($maxWeight)) {
             $goal->current_value = (float) $maxWeight;
@@ -140,16 +144,9 @@ final class GoalService
      * Counts the total number of workouts the user has completed.
      *
      * @param  Goal  $goal  The frequency goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
      */
-    protected function updateFrequencyGoal(Goal $goal, array $metrics = []): void
+    protected function updateFrequencyGoal(Goal $goal): void
     {
-        if (isset($metrics['workouts_count']) && is_int($metrics['workouts_count'])) {
-            $goal->current_value = $metrics['workouts_count'];
-
-            return;
-        }
-
         // ⚡ Bolt Optimization: Cache the workouts count on the User model natively.
         // Impact: Reduces queries from N to 1 when a user has multiple frequency goals.
         /** @phpstan-ignore assign.propertyReadOnly */
@@ -165,33 +162,32 @@ final class GoalService
      * for the associated exercise.
      *
      * @param  Goal  $goal  The volume goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
      */
-    protected function updateVolumeGoal(Goal $goal, array $metrics = []): void
+    protected function updateVolumeGoal(Goal $goal): void
     {
         if (! $goal->exercise_id) {
             return;
         }
 
-        if (isset($metrics['max_volumes'][$goal->exercise_id])) {
-            $val = $metrics['max_volumes'][$goal->exercise_id];
-            $goal->current_value = is_numeric($val) ? (float) $val : 0.0;
+        // ⚡ Bolt Optimization: Precalculate max volumes for all exercises in the service cache to avoid N+1.
+        // Impact: Reduces memory usage and queries from N to 1 for users with many goals.
+        $userId = $goal->user_id;
 
-            return;
+        if (! isset($this->maxVolumesCache[$userId])) {
+            $this->maxVolumesCache[$userId] = \App\Models\Workout::query()
+                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->where('workouts.user_id', $userId)
+                ->selectRaw('workout_lines.exercise_id, workouts.id, SUM(sets.weight * sets.reps) as total_volume')
+                ->groupBy('workout_lines.exercise_id', 'workouts.id')
+                ->toBase()
+                ->get()
+                ->groupBy('exercise_id')
+                ->map(fn ($items) => $items->max('total_volume'))
+                ->all();
         }
 
-        // ⚡ Bolt Optimization: Calculate max volume directly in SQL instead of loading into PHP memory.
-        // Impact: Reduces memory usage and improves performance for users with many workouts.
-        $maxVolume = \App\Models\Workout::query()
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $goal->user_id)
-            ->where('workout_lines.exercise_id', $goal->exercise_id)
-            ->selectRaw('SUM(sets.weight * sets.reps) as total_volume')
-            ->groupBy('workouts.id')
-            ->orderByDesc('total_volume')
-            ->limit(1)
-            ->value('total_volume');
+        $maxVolume = $this->maxVolumesCache[$userId][$goal->exercise_id] ?? null;
 
         if ($maxVolume !== null && is_numeric($maxVolume)) {
             $goal->current_value = (float) $maxVolume;
@@ -204,25 +200,29 @@ final class GoalService
      * Retrieves the most recent recorded value for the specified measurement type.
      *
      * @param  Goal  $goal  The measurement goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
      */
-    protected function updateMeasurementGoal(Goal $goal, array $metrics = []): void
+    protected function updateMeasurementGoal(Goal $goal): void
     {
         if (! $goal->measurement_type) {
             return;
         }
 
-        if (isset($metrics['latest_measurement']) && $metrics['latest_measurement'] instanceof \App\Models\BodyMeasurement) {
-            $m = $metrics['latest_measurement'];
-            $latestValue = $m->{$goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type};
-        } else {
-            $latestValue = $goal->user->bodyMeasurements()
+        $userId = $goal->user_id;
+
+        if (! isset($this->hasFetchedMeasurements[$userId])) {
+            $this->latestMeasurementCache[$userId] = $goal->user->bodyMeasurements()
                 ->latest('measured_at')
-                ->value($goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type);
+                ->first();
+            $this->hasFetchedMeasurements[$userId] = true;
         }
 
-        if ($latestValue !== null && is_numeric($latestValue)) {
-            $goal->current_value = (float) $latestValue;
+        if (!empty($this->latestMeasurementCache[$userId])) {
+            $type = $goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type;
+            $latestValue = $this->latestMeasurementCache[$userId]->{$type};
+
+            if ($latestValue !== null && is_numeric($latestValue)) {
+                $goal->current_value = (float) $latestValue;
+            }
         }
     }
 
@@ -263,76 +263,5 @@ final class GoalService
 
         // For most goals, higher is better
         return $goal->current_value >= $goal->target_value;
-    }
-
-    /**
-     * Pre-calculate metrics required for checking multiple goals efficiently.
-     *
-     * @param  User  $user  The user to calculate metrics for.
-     * @param  \Illuminate\Support\Collection<int, Goal>  $goals  The goals that need metrics.
-     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null} A dictionary of pre-calculated metrics.
-     */
-    private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
-    {
-        if ($goals->isEmpty()) {
-            return [];
-        }
-
-        $metrics = [];
-        $types = $goals->pluck('type')->unique();
-        $exerciseIds = $goals->whereIn('type', [GoalType::Weight, GoalType::Volume])
-            ->pluck('exercise_id')
-            ->filter()
-            ->unique()
-            ->toArray();
-
-        if ($types->contains(GoalType::Frequency)) {
-            $metrics['workouts_count'] = $user->workouts()->count();
-        }
-
-        if ($types->contains(GoalType::Weight) && $exerciseIds !== []) {
-            /** @var array<int, float> $maxWeights */
-            $maxWeights = \Illuminate\Support\Facades\DB::table('workouts')
-                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                ->where('workouts.user_id', $user->id)
-                ->whereIn('workout_lines.exercise_id', $exerciseIds)
-                ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
-                ->groupBy('workout_lines.exercise_id')
-                ->pluck('max_weight', 'exercise_id')
-                ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
-                ->toArray();
-
-            $metrics['max_weights'] = $maxWeights;
-        }
-
-        if ($types->contains(GoalType::Volume) && $exerciseIds !== []) {
-            /** @var array<int, float> $maxVolumes */
-            $maxVolumes = \Illuminate\Support\Facades\DB::table('workouts')
-                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                ->where('workouts.user_id', $user->id)
-                ->whereIn('workout_lines.exercise_id', $exerciseIds)
-                ->selectRaw('workout_lines.exercise_id, workouts.id as workout_id, SUM(sets.weight * sets.reps) as total_volume')
-                ->groupBy('workout_lines.exercise_id', 'workouts.id')
-                ->get()
-                ->groupBy('exercise_id')
-                ->map(function (\Illuminate\Support\Collection $group): float {
-                    $max = $group->max('total_volume');
-
-                    return is_numeric($max) ? (float) $max : 0.0;
-                })
-                ->toArray();
-
-            $metrics['max_volumes'] = $maxVolumes;
-        }
-
-        if ($types->contains(GoalType::Measurement)) {
-            $metrics['latest_measurement'] = $user->bodyMeasurements()
-                ->latest('measured_at')
-                ->first();
-        }
-
-        return $metrics;
     }
 }

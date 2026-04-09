@@ -13,7 +13,7 @@ class LoginTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
-    public function test_login_flow_on_iphone_devices(): void
+    public function test_login_flow_on_mobile_devices(): void
     {
         $password = 'password';
         $user = User::factory()->create([
