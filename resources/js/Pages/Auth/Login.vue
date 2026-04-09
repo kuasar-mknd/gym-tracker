@@ -98,20 +98,20 @@ const submit = () => {
 
             <!-- Social Login -->
             <div class="my-6 flex items-center justify-center gap-4 text-sm">
-                <div class="h-px flex-1 bg-slate-200"></div>
+                <div class="h-px flex-1 bg-white/20"></div>
                 <span
                     class="text-text-muted rounded-full border border-white/50 bg-white/60 px-4 py-1 font-medium backdrop-blur-md"
                 >
                     Ou continuer avec
                 </span>
-                <div class="h-px flex-1 bg-slate-200"></div>
+                <div class="h-px flex-1 bg-white/20"></div>
             </div>
 
             <div class="flex justify-center gap-4">
                 <a
                     v-if="$page.props.social_login_enabled?.google ?? true"
                     :href="route('social.redirect', 'google')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
                     aria-label="Continuer avec Google"
                 >
                     <img
@@ -124,7 +124,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.github ?? true"
                     :href="route('social.redirect', 'github')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
                     aria-label="Continuer avec GitHub"
                 >
                     <img
@@ -137,7 +137,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.apple ?? true"
                     :href="route('social.redirect', 'apple')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-700 bg-black shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
                     aria-label="Continuer avec Apple"
                 >
                     <img
