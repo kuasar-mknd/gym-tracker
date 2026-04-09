@@ -69,7 +69,7 @@ class CustomPolicyTest extends TestCase
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
 
-        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE_ATTR)]);
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::STYLE)]);
 
         $this->assertContains('http://localhost:5173', $directives[$this->getDirectiveKey(Directive::CONNECT)]);
