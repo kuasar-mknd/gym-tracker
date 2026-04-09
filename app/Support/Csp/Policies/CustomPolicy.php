@@ -68,7 +68,7 @@ class CustomPolicy extends Basic
         // we use style-src-attr to specifically allow inline attributes on elements,
         // while preserving nonce requirements for actual style tags.
         // This requires CSP level 3 browser support.
-        $policy->add('style-src-attr', Keyword::UNSAFE_INLINE);
+        $policy->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE);
     }
 
     protected function configureExternalResources(Policy $policy): void
