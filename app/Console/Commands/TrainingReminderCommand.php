@@ -7,7 +7,6 @@ namespace App\Console\Commands;
 use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Notifications\TrainingReminder;
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class TrainingReminderCommand extends Command
@@ -34,47 +33,52 @@ class TrainingReminderCommand extends Command
         $this->info('Starting training reminders check...');
 
         $count = 0;
+        $now = time();
 
-        // 1. Only fetch users who have the 'training_reminder' preference enabled
-        // 2. Use chunkById to process users in batches (memory efficient)
-        // 3. Eager load only the necessary preference to avoid N+1
+        // 1. Join notification_preferences to fetch data directly, avoiding whereHas subqueries and eager load N+1 memory issues.
+        // 2. Use chunkById to process users in batches (memory efficient), specifying users.id due to the join.
+        // 3. Manually hydrate the relation in the loop to prevent isPushEnabled from triggering an N+1 query.
         User::query()
-            ->whereHas('notificationPreferences', function ($query): void {
-                $query->where('type', 'training_reminder')
-                    ->where('is_enabled', true);
-            })
-            ->with([
-                'notificationPreferences' => function ($query): void {
-                    $query->where('type', 'training_reminder');
-                },
+            ->select([
+                'users.*',
+                'notification_preferences.value as pref_value',
+                'notification_preferences.is_push_enabled as pref_push',
             ])
+            ->join('notification_preferences', function ($join): void {
+                $join->on('users.id', '=', 'notification_preferences.user_id')
+                    ->where('notification_preferences.type', '=', 'training_reminder')
+                    ->where('notification_preferences.is_enabled', '=', true);
+            })
             ->addSelect(['last_workout_started_at' => \App\Models\Workout::select('started_at')
                 ->whereColumn('user_id', 'users.id')
                 ->orderByDesc('started_at')
                 ->limit(1),
             ])
-            ->chunkById(100, function ($users) use (&$count): void {
+            ->chunkById(100, function ($users) use (&$count, $now): void {
                 foreach ($users as $user) {
-                    /** @var NotificationPreference|null $preference */
-                    $preference = $user->notificationPreferences->first();
+                    // Manually hydrate the relation to prevent N+1 in notify() -> isPushEnabled()
+                    $preference = new NotificationPreference([
+                        'type' => 'training_reminder',
+                        'is_enabled' => true,
+                        'is_push_enabled' => (bool) $user->getAttribute('pref_push'),
+                        'value' => is_numeric($user->getAttribute('pref_value')) ? (int) $user->getAttribute('pref_value') : null,
+                    ]);
 
-                    if (! $preference) {
-                        continue;
-                    }
+                    $user->setRelation('notificationPreferences', collect([$preference]));
 
                     // Use user-defined value or fallback to 3 days
                     $days = $preference->value ?? 3;
-                    $threshold = Carbon::now()->subDays($days);
+                    $threshold = $now - ($days * 86400);
 
                     $lastWorkoutStartedAtStr = $user->getAttribute('last_workout_started_at');
-                    $lastWorkoutStartedAt = is_string($lastWorkoutStartedAtStr) ? Carbon::parse($lastWorkoutStartedAtStr) : null;
+                    $lastWorkoutTimestamp = is_string($lastWorkoutStartedAtStr) ? strtotime($lastWorkoutStartedAtStr) : null;
 
-                    if (! $lastWorkoutStartedAt || $lastWorkoutStartedAt->lt($threshold)) {
+                    if (! $lastWorkoutTimestamp || $lastWorkoutTimestamp < $threshold) {
                         $user->notify(new TrainingReminder());
                         $count++;
                     }
                 }
-            });
+            }, 'users.id', 'id');
 
         $this->info("Sent {$count} training reminders.");
     }
