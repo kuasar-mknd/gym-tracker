@@ -307,21 +307,23 @@ final class GoalService
         }
 
         if ($types->contains(GoalType::Volume) && $exerciseIds !== []) {
-            /** @var array<int, float> $maxVolumes */
-            $maxVolumes = \Illuminate\Support\Facades\DB::table('workouts')
+            // ⚡ Bolt Optimization: Calculate max volumes directly in SQL using a subquery instead of pulling all records into memory.
+            // Impact: Prevents memory overflow and reduces execution time from O(N) to O(1) in PHP for users with many workouts.
+            $subQuery = \Illuminate\Support\Facades\DB::table('workouts')
                 ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
                 ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
                 ->where('workouts.user_id', $user->id)
                 ->whereIn('workout_lines.exercise_id', $exerciseIds)
                 ->selectRaw('workout_lines.exercise_id, workouts.id as workout_id, SUM(sets.weight * sets.reps) as total_volume')
-                ->groupBy('workout_lines.exercise_id', 'workouts.id')
-                ->get()
-                ->groupBy('exercise_id')
-                ->map(function (\Illuminate\Support\Collection $group): float {
-                    $max = $group->max('total_volume');
+                ->groupBy('workout_lines.exercise_id', 'workouts.id');
 
-                    return is_numeric($max) ? (float) $max : 0.0;
-                })
+            /** @var array<int, float> $maxVolumes */
+            $maxVolumes = \Illuminate\Support\Facades\DB::query()
+                ->fromSub($subQuery, 'volumes')
+                ->selectRaw('exercise_id, MAX(total_volume) as max_volume')
+                ->groupBy('exercise_id')
+                ->pluck('max_volume', 'exercise_id')
+                ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
                 ->toArray();
 
             $metrics['max_volumes'] = $maxVolumes;
