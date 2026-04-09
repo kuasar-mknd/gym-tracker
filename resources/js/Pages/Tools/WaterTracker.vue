@@ -68,8 +68,7 @@
                             @click="addWater(250)"
                             :disabled="form.processing"
                             aria-label="Ajouter 250ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
-                            v-press
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">local_drink</span>
                             <span class="text-text-main text-xs font-bold">250ml</span>
@@ -78,8 +77,7 @@
                             @click="addWater(500)"
                             :disabled="form.processing"
                             aria-label="Ajouter 500ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
-                            v-press
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_drop</span>
                             <span class="text-text-main text-xs font-bold">500ml</span>
@@ -88,8 +86,7 @@
                             @click="addWater(1000)"
                             :disabled="form.processing"
                             aria-label="Ajouter 1L"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:outline-none"
-                            v-press
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-white/20 bg-white/10 py-4 backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_bottle</span>
                             <span class="text-text-main text-xs font-bold">1L</span>
@@ -98,26 +95,22 @@
 
                     <!-- Custom Input -->
                     <div class="flex w-full items-center gap-2">
-                        <div class="grow">
-                            <GlassInput
+                        <div class="relative grow">
+                            <input
                                 type="number"
                                 v-model="customAmount"
                                 placeholder="Quantité personnalisée"
-                                hide-label
-                                label="Quantité personnalisée"
-                                input-class="font-display font-bold !h-12"
+                                class="font-display text-text-main h-12 w-full rounded-2xl border border-white/20 bg-white/10 px-4 font-bold backdrop-blur-md transition-all outline-none focus:bg-white/20 focus:ring-2 focus:ring-blue-500/20"
+                            />
+                            <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 text-xs font-bold"
+                                >ML</span
                             >
-                                <template #suffix>
-                                    <span class="text-text-muted text-xs font-bold uppercase">ML</span>
-                                </template>
-                            </GlassInput>
                         </div>
                         <GlassButton
                             @click="addWater(customAmount)"
                             :disabled="!customAmount || form.processing"
                             class="h-12 !px-4"
                             variant="primary"
-                            aria-label="Ajouter la quantité personnalisée"
                         >
                             <span class="material-symbols-outlined">add</span>
                         </GlassButton>
@@ -165,8 +158,7 @@
                             <button
                                 @click="deleteLog(log)"
                                 :aria-label="'Supprimer l\'entrée de ' + log.amount + ' ml'"
-                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-red-500/50 focus-visible:outline-none"
-                                v-press
+                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                             >
                                 <span class="material-symbols-outlined text-lg">delete</span>
                             </button>
@@ -193,7 +185,6 @@ import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import GlassInput from '@/Components/UI/GlassInput.vue'
 
 const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
 
