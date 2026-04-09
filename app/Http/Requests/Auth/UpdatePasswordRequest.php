@@ -33,6 +33,26 @@ class UpdatePasswordRequest extends FormRequest
     }
 
     /**
+     * Configure the validator instance.
+     */
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
+            if ($this->isDirty('current_password')) {
+                RateLimiter::hit($this->throttleKey());
+            }
+        });
+    }
+
+    /**
+     * Get the rate limiting throttle key for the request.
+     */
+    public function throttleKey(): string
+    {
+        return 'update-password-'.$this->user()?->id;
+    }
+
+    /**
      * Prepare the data for validation.
      *
      * Checks if the user has exceeded the allowed number of attempts.
@@ -52,32 +72,10 @@ class UpdatePasswordRequest extends FormRequest
     }
 
     /**
-     * Configure the validator instance.
-     *
-     * Increments the rate limiter if validation fails for the current password.
+     * Handle a passed validation attempt.
      */
-    public function withValidator(\Illuminate\Validation\Validator $validator): void
-    {
-        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
-            if ($validator->errors()->has('current_password')) {
-                RateLimiter::hit($this->throttleKey());
-            }
-        });
-    }
-
-    /**
-     * Clear the rate limiter for the current user.
-     */
-    public function clearRateLimiter(): void
+    protected function passedValidation(): void
     {
         RateLimiter::clear($this->throttleKey());
-    }
-
-    /**
-     * Get the throttle key for the request.
-     */
-    public function throttleKey(): string
-    {
-        return 'update-password-'.$this->user()?->id;
     }
 }
