@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions\Profile;
 
-use App\Models\NotificationPreference;
 use App\Models\User;
 
 class UpdateNotificationPreferencesAction
@@ -18,23 +17,14 @@ class UpdateNotificationPreferencesAction
      */
     public function execute(User $user, array $data): void
     {
-        $upsertData = [];
-
         foreach ($data['preferences'] as $type => $isEnabled) {
-            $upsertData[] = [
-                'user_id' => $user->id,
-                'type' => $type,
-                'is_enabled' => $isEnabled,
-                'is_push_enabled' => $data['push_preferences'][$type] ?? false,
-                'value' => $data['values'][$type] ?? null,
-            ];
-        }
-
-        if ($upsertData !== []) {
-            NotificationPreference::upsert(
-                $upsertData,
-                ['user_id', 'type'],
-                ['is_enabled', 'is_push_enabled', 'value']
+            $user->notificationPreferences()->updateOrCreate(
+                ['type' => $type],
+                [
+                    'is_enabled' => $isEnabled,
+                    'is_push_enabled' => $data['push_preferences'][$type] ?? false,
+                    'value' => $data['values'][$type] ?? null,
+                ]
             );
         }
     }

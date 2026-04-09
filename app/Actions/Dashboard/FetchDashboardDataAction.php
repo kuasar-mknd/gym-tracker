@@ -45,6 +45,7 @@ final class FetchDashboardDataAction
         $latestMetrics = $this->statsService->getLatestBodyMetrics($user);
 
         return [
+            // ⚡ Bolt: Removed unused workoutsCount and thisWeekCount queries to prevent 2 unnecessary queries on dashboard load
             'latestWeight' => $latestMetrics->latest_weight ?? null,
             'activeWorkout' => $this->getActiveWorkout($user),
             'recentWorkouts' => $this->getRecentWorkouts($user),

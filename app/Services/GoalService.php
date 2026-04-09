@@ -116,7 +116,7 @@ final class GoalService
             return;
         }
 
-        if (isset($metrics['max_weights']) && is_array($metrics['max_weights']) && isset($metrics['max_weights'][$goal->exercise_id])) {
+        if (isset($metrics['max_weights'][$goal->exercise_id])) {
             $val = $metrics['max_weights'][$goal->exercise_id];
             $goal->current_value = is_numeric($val) ? (float) $val : 0.0;
 
@@ -129,7 +129,7 @@ final class GoalService
             ->where('workout_lines.exercise_id', $goal->exercise_id)
             ->max('sets.weight');
 
-        if ($maxWeight && is_numeric($maxWeight)) {
+        if ($maxWeight !== null && is_numeric($maxWeight)) {
             $goal->current_value = (float) $maxWeight;
         }
     }
@@ -173,7 +173,7 @@ final class GoalService
             return;
         }
 
-        if (isset($metrics['max_volumes']) && is_array($metrics['max_volumes']) && isset($metrics['max_volumes'][$goal->exercise_id])) {
+        if (isset($metrics['max_volumes'][$goal->exercise_id])) {
             $val = $metrics['max_volumes'][$goal->exercise_id];
             $goal->current_value = is_numeric($val) ? (float) $val : 0.0;
 
@@ -221,7 +221,7 @@ final class GoalService
                 ->value($goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type);
         }
 
-        if ($latestValue && is_numeric($latestValue)) {
+        if ($latestValue !== null && is_numeric($latestValue)) {
             $goal->current_value = (float) $latestValue;
         }
     }
