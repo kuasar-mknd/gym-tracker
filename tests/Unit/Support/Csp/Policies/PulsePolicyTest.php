@@ -8,9 +8,9 @@ use Spatie\Csp\Directive;
 use Spatie\Csp\Keyword;
 use Spatie\Csp\Policy;
 
-describe('configure', function () {
-    it('configures the policy correctly', function () {
-        $policyMock = Mockery::mock(Policy::class, function (MockInterface $mock) {
+describe('configure', function (): void {
+    it('configures the policy correctly', function (): void {
+        $policyMock = Mockery::mock(Policy::class, function (MockInterface $mock): void {
             // Because Mockery behaves strictly when expectations are defined,
             // we will simply assert that add() and addNonce() are called with the required parameters
             // at least once, rather than explicitly enumerating every single default basic directive.
