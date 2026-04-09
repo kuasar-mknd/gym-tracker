@@ -88,7 +88,7 @@ final class WorkoutStatsService
                 ];
 
                 foreach ($workouts as $workout) {
-                    if (!is_string($workout->started_at) || strlen($workout->started_at) < 19) {
+                    if (! is_string($workout->started_at) || strlen($workout->started_at) < 19) {
                         continue;
                     }
 
@@ -123,15 +123,13 @@ final class WorkoutStatsService
                             }
                         }
 
-                        if (isset($minutes)) {
-                            $durationLabel = match (true) {
-                                $minutes < 30 => '< 30 min',
-                                $minutes < 60 => '30-60 min',
-                                $minutes < 90 => '60-90 min',
-                                default => '90+ min',
-                            };
-                            $durationBuckets[$durationLabel]++;
-                        }
+                        $durationLabel = match (true) {
+                            $minutes < 30 => '< 30 min',
+                            $minutes < 60 => '30-60 min',
+                            $minutes < 90 => '60-90 min',
+                            default => '90+ min',
+                        };
+                        $durationBuckets[$durationLabel]++;
                     }
                 }
 
