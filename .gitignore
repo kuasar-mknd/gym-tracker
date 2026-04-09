@@ -56,3 +56,4 @@ open_prs.json
 verify_workouts.py
 .grepai/
 .agent/cache/
+coverage
