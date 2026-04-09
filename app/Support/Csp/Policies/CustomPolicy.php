@@ -57,8 +57,8 @@ class CustomPolicy extends Basic
 
     protected function configureProduction(Policy $policy): void
     {
-        // Deliberate security tradeoff: AlpineJS requires 'unsafe-eval' to execute
-        // inline scripts. Refactoring to the CSP build of Alpine is not feasible
+        // Deliberate security tradeoff: AlpineJS requires 'unsafe-eval' to execute inline scripts.
+        // Refactoring to the CSP build of Alpine is not feasible
         // as it is bundled and managed internally by Filament.
         $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
 
