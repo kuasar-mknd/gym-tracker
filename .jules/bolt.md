@@ -79,7 +79,3 @@
 ## 2025-06-16 - [Optimizing workout date extraction in AchievementService]
 **Learning:** Using `toBase()` before `pluck()` on a datetime column prevents Eloquent from hydrating dummy models and instantiating Carbon objects for every row during serialization. Using `substr($date, 0, 10)` for date extraction is significantly more efficient than using Carbon's `format()`. For 1000 records, this reduced memory by ~77% and time by ~45%.
 **Action:** Always use `toBase()` when only raw column values are needed from a large dataset, especially for casted columns like datetimes.
-
-## 2026-04-08 - [Batching Goal Progress Updates]
-**Learning:** Calculating progress for multiple goals (Weight, Volume, Frequency, Measurement) in a loop causes N+1 query explosions. Each goal type has a different calculation logic, often involving heavy joins or aggregate functions.
-**Action:** Implement a `preCalculateMetrics` method to batch fetch all necessary aggregates (MAX weights, MAX volumes, workout counts, latest measurements) in a single set of queries before the loop. Pass these metrics down to individual update methods, allowing them to skip redundant DB calls while maintaining a fallback for individual goal updates.
