@@ -79,3 +79,7 @@
 ## 2025-06-16 - [Optimizing workout date extraction in AchievementService]
 **Learning:** Using `toBase()` before `pluck()` on a datetime column prevents Eloquent from hydrating dummy models and instantiating Carbon objects for every row during serialization. Using `substr($date, 0, 10)` for date extraction is significantly more efficient than using Carbon's `format()`. For 1000 records, this reduced memory by ~77% and time by ~45%.
 **Action:** Always use `toBase()` when only raw column values are needed from a large dataset, especially for casted columns like datetimes.
+
+## 2024-05-24 - Upsert instead of updateOrCreate in Loops
+**Learning:** `updateOrCreate` inside a loop fires individual `SELECT` and `INSERT`/`UPDATE` queries per iteration, leading to N+1 performance bottlenecks. Bulk `upsert()` resolves this but skips Eloquent model lifecycle events (like `saving`, `updated`) and Observers.
+**Action:** Always prefer `upsert()` for batched insertions/updates to optimize database queries, but strictly verify that the target model does not rely on observers or lifecycle events before applying the optimization. When using `upsert()` to replace relationship methods, remember to explicitly include the foreign key (e.g., `user_id`) in the payload.
