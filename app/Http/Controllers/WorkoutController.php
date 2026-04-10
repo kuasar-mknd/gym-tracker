@@ -75,10 +75,9 @@ class WorkoutController extends Controller
      * Creates a new workout for the authenticated user with the current date
      * as the start date and a default name. Redirects to the show page of the new workout.
      *
-     * @param  \Illuminate\Http\Request  $request  The HTTP request (currently unused for input but part of the signature).
      * @return \Illuminate\Http\RedirectResponse A redirect to the newly created workout.
      */
-    public function store(Request $request, CreateWorkoutAction $createWorkout): \Illuminate\Http\RedirectResponse
+    public function store(CreateWorkoutAction $createWorkout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', Workout::class);
 
