@@ -7,6 +7,24 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.28] - 2026-04-10
+
+### Sécurité
+- **Audit de Sécurité (Sentinel)** : Mise à jour de `phpseclib/phpseclib` vers la version **3.0.51** pour corriger la vulnérabilité **CVE-2026-40194** (attaque par analyse temporelle sur les comparaisons HMAC SSH2).
+
+### Optimisé
+- **Performance Backend (Bolt)** :
+    - Remplacement des boucles `updateOrCreate` par des opérations `upsert` massives dans `UpdateNotificationPreferencesAction` pour réduire le nombre de requêtes SQL (#1126).
+    - Optimisation de la mise en cache des boucles dans `RecommendedValuesService` (#1125).
+- **Architecture & Code** : Suppression d'un paramètre `Request` inutilisé dans `WorkoutController::store` (#1124).
+
+### Modifié
+- **Accessibilité & Design (Palette)** : Standardisation des composants d'interface PWA, amélioration du support du mode sombre et renforcement de l'accessibilité globale.
+
+### Corrigé
+- **Infrastructure CI/CD (Pixel)** :
+    - Synchronisation du fichier `package-lock.json` avec `package.json` pour résoudre les échecs de compilation des images Docker (linux/amd64 et linux/arm64) lors de l'étape `npm ci`.
+
 ## [1.4.26] - 2026-04-07
 
 ### Ajouté
