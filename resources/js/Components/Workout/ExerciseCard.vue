@@ -1,4 +1,14 @@
 <script setup>
+/**
+ * ExerciseCard Component
+ *
+ * This component displays an individual exercise item. It supports two modes:
+ * - View Mode: Displays the exercise name, icon, and category with swipeable row actions for mobile.
+ * - Edit Mode: Provides an inline form to update the exercise's name, type, and category.
+ *
+ * It relies on parent state to determine if it is currently being edited.
+ */
+
 import { router } from '@inertiajs/vue3'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -6,18 +16,36 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
 const props = defineProps({
+    /** The exercise object to display. */
     exercise: { type: Object, required: true },
+    /** Determines if the component should display the inline edit form. */
     isEditing: { type: Boolean, required: true },
+    /** The form object used for updating the exercise (usually an Inertia form). */
     editForm: { type: Object, required: true },
+    /** The category name of the exercise to determine visual styles (like border colors). */
     category: { type: String, required: true },
+    /** Array of available exercise types (e.g., strength, cardio) for the edit select dropdown. */
     types: { type: Array, required: true },
+    /** Array of available exercise categories for the edit select dropdown. */
     categories: { type: Array, required: true },
+    /** Mapping of categories to their specific border color Tailwind classes. */
     categoryBorderColors: { type: Object, required: true },
+    /** Mapping of exercise types to their corresponding Google Material Icons string. */
     typeIcons: { type: Object, required: true },
+    /** Function to format or translate the exercise type label for display. */
     typeLabel: { type: Function, required: true },
 })
 
-const emit = defineEmits(['start-edit', 'cancel-edit', 'update', 'delete'])
+const emit = defineEmits([
+    /** Fired when the user clicks the edit button or swipes to edit. Passes the exercise object. */
+    'start-edit',
+    /** Fired when the user cancels the inline editing form. */
+    'cancel-edit',
+    /** Fired when the edit form is submitted to save changes. Passes the exercise object. */
+    'update',
+    /** Fired when the user clicks the delete button or swipes to delete. Passes the exercise ID. */
+    'delete',
+])
 </script>
 
 <template>
