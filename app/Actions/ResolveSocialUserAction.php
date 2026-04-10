@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialUser;
@@ -19,6 +20,12 @@ final class ResolveSocialUserAction
         $existingUser = User::where('email', $socialUser->getEmail())->first();
 
         if ($existingUser) {
+            // Security: Prevent account linking if the existing account is not verified.
+            // Linking an unverified account via social login poses an account takeover risk.
+            if (! $existingUser->hasVerifiedEmail()) {
+                throw new SocialAuthException(__('Your account must be verified before linking it with a social provider.'));
+            }
+
             // Update provider info if not set (linking account)
             if (! $existingUser->provider_id) {
                 $existingUser->forceFill([
