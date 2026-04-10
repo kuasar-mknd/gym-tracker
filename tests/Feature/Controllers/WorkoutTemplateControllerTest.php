@@ -138,7 +138,7 @@ describe('WorkoutTemplateController', function (): void {
 
             $this->assertDatabaseHas('workout_templates', [
                 'user_id' => $user->id,
-                'name' => 'Morning Session',
+                'name' => 'Morning Session (Modèle)',
             ]);
         });
 
