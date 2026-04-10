@@ -198,19 +198,18 @@ final class RecommendedValuesService
     {
         $results = [];
         $uncachedExerciseIds = [];
-        $keysToExerciseIds = [];
+        $cacheKeys = [];
 
         foreach ($exerciseIds as $exerciseId) {
             $exerciseIdInt = (int) $exerciseId;
-            $cacheKey = "recommended_values:{$userId}:{$exerciseIdInt}:{$workoutId}";
-            $keysToExerciseIds[$cacheKey] = $exerciseIdInt;
+            $cacheKeys[$exerciseIdInt] = "recommended_values:{$userId}:{$exerciseIdInt}:{$workoutId}";
         }
 
         /** @var array<string, array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null> $cachedMany */
-        $cachedMany = Cache::many(array_keys($keysToExerciseIds));
+        $cachedMany = Cache::many($cacheKeys);
 
-        foreach ($cachedMany as $cacheKey => $cached) {
-            $exerciseIdInt = $keysToExerciseIds[$cacheKey];
+        foreach ($cacheKeys as $exerciseIdInt => $cacheKey) {
+            $cached = $cachedMany[$cacheKey];
             if ($cached !== null) {
                 $results[$exerciseIdInt] = $cached;
             } else {
