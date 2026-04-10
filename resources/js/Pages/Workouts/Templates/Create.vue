@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
@@ -155,24 +156,23 @@ const submit = () => {
         <form @submit.prevent="submit" class="space-y-6">
             <GlassCard class="animate-slide-up">
                 <div class="space-y-4">
-                    <div>
-                        <label class="text-text-muted block text-sm font-medium">Nom du modèle</label>
-                        <input
-                            v-model="form.name"
-                            type="text"
-                            required
-                            class="text-text-main focus:ring-accent-primary mt-1 w-full rounded-xl border border-slate-200 bg-white/50 focus:ring-2"
-                            placeholder="ex: Full Body Lundi"
-                        />
-                        <div v-if="form.errors.name" class="mt-1 text-xs text-red-400">{{ form.errors.name }}</div>
-                    </div>
+                    <GlassInput
+                        v-model="form.name"
+                        label="Nom du modèle"
+                        placeholder="ex: Full Body Lundi"
+                        :error="form.errors.name"
+                        required
+                    />
 
                     <div>
-                        <label class="text-text-muted block text-sm font-medium">Description (optionnel)</label>
+                        <label for="template-description-new" class="text-text-muted block text-sm font-medium"
+                            >Description (optionnel)</label
+                        >
                         <textarea
+                            id="template-description-new"
                             v-model="form.description"
                             rows="2"
-                            class="text-text-main focus:ring-accent-primary mt-1 w-full rounded-xl border border-slate-200 bg-white/50 focus:ring-2"
+                            class="glass-input mt-1"
                             placeholder="Détails de la séance..."
                         ></textarea>
                     </div>
@@ -186,9 +186,11 @@ const submit = () => {
                     <div v-for="(exercise, exIndex) in form.exercises" :key="exIndex">
                         <GlassCard class="relative">
                             <button
+                                v-press
                                 @click="removeExercise(exIndex)"
                                 type="button"
-                                class="text-text-muted/30 absolute top-4 right-4 hover:text-red-400"
+                                class="text-text-muted/30 focus-visible:ring-electric-orange absolute top-4 right-4 rounded-lg transition-all hover:text-red-400 focus-visible:ring-2 focus-visible:outline-none"
+                                aria-label="Supprimer l'exercice"
                             >
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path
@@ -229,21 +231,26 @@ const submit = () => {
                                         placeholder="kg"
                                     />
                                     <button
+                                        v-press="{ haptic: 'selection' }"
                                         @click="set.is_warmup = !set.is_warmup"
                                         type="button"
-                                        class="h-10 rounded-lg px-2 py-1 text-[10px] font-bold transition"
+                                        class="focus-visible:ring-electric-orange h-10 rounded-lg px-2 py-1 text-[10px] font-bold transition focus-visible:ring-2 focus-visible:outline-none"
                                         :class="
                                             set.is_warmup
                                                 ? 'bg-orange-500/20 text-orange-400'
                                                 : 'text-text-muted/50 bg-slate-100'
                                         "
+                                        aria-label="Série d'échauffement"
+                                        :aria-pressed="set.is_warmup"
                                     >
                                         W
                                     </button>
                                     <button
+                                        v-press
                                         @click="removeSet(exIndex, setIndex)"
                                         type="button"
-                                        class="text-text-muted/20 ml-auto p-1 hover:text-red-400"
+                                        class="text-text-muted/20 focus-visible:ring-electric-orange ml-auto rounded-lg p-1 transition-all hover:text-red-400 focus-visible:ring-2 focus-visible:outline-none"
+                                        aria-label="Supprimer la série"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path
@@ -256,9 +263,10 @@ const submit = () => {
                                     </button>
                                 </div>
                                 <button
+                                    v-press
                                     @click="addSet(exIndex)"
                                     type="button"
-                                    class="text-accent-primary text-xs hover:underline"
+                                    class="text-accent-primary focus-visible:ring-electric-orange rounded-lg text-xs transition-all hover:underline focus-visible:ring-2 focus-visible:outline-none"
                                 >
                                     + Ajouter une série
                                 </button>
@@ -292,9 +300,10 @@ const submit = () => {
                                 {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
                             </h3>
                             <button
+                                v-press
                                 @click="closeAddModal"
                                 type="button"
-                                class="text-text-muted hover:text-text-main rounded-xl p-2 hover:bg-slate-100"
+                                class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-xl p-2 transition-all hover:bg-slate-100 focus-visible:ring-2 focus-visible:outline-none"
                                 aria-label="Fermer"
                             >
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -319,32 +328,19 @@ const submit = () => {
                                     autofocus
                                 />
                                 <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label
-                                            class="text-text-muted mb-2 block text-xs font-black tracking-widest uppercase"
-                                            >Type</label
-                                        >
-                                        <select v-model="createExerciseForm.type" class="glass-input w-full text-sm">
-                                            <option v-for="t in types" :key="t.value" :value="t.value">
-                                                {{ t.label }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label
-                                            class="text-text-muted mb-2 block text-xs font-black tracking-widest uppercase"
-                                            >Catégorie</label
-                                        >
-                                        <select
-                                            v-model="createExerciseForm.category"
-                                            class="glass-input w-full text-sm"
-                                        >
-                                            <option value="">— Aucune —</option>
-                                            <option v-for="cat in categories" :key="cat" :value="cat">
-                                                {{ cat }}
-                                            </option>
-                                        </select>
-                                    </div>
+                                    <GlassSelect
+                                        v-model="createExerciseForm.type"
+                                        label="Type"
+                                        :options="types"
+                                        size="sm"
+                                    />
+                                    <GlassSelect
+                                        v-model="createExerciseForm.category"
+                                        label="Catégorie"
+                                        :options="categories"
+                                        placeholder="— Aucune —"
+                                        size="sm"
+                                    />
                                 </div>
                                 <div class="flex gap-2">
                                     <GlassButton
