@@ -1,6 +1,7 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 
@@ -19,9 +20,7 @@ const submit = () => {
     <GuestLayout>
         <Head title="Confirmer le mot de passe" />
 
-        <div
-            class="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 sm:p-8"
-        >
+        <GlassCard class="sm:p-8">
             <div class="mb-6 text-center">
                 <h2 class="text-text-main font-display text-2xl font-black tracking-tight uppercase italic">
                     Confirmation requise
@@ -47,6 +46,6 @@ const submit = () => {
                     Confirmer
                 </GlassButton>
             </form>
-        </div>
+        </GlassCard>
     </GuestLayout>
 </template>

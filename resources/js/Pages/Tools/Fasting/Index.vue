@@ -21,6 +21,7 @@ import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 
 const FastingHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/FastingHistoryChart.vue'))
@@ -155,7 +156,7 @@ const formatHistoryDuration = (start, end) => {
             <!-- Active Fast Section -->
             <div v-if="activeFast" class="flex justify-center">
                 <GlassCard
-                    class="relative flex w-full max-w-md flex-col items-center overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
+                    class="relative flex w-full max-w-md flex-col items-center overflow-hidden p-8 text-center"
                 >
                     <!-- Circular Progress -->
                     <div class="relative mb-6 h-64 w-64">
@@ -209,26 +210,19 @@ const formatHistoryDuration = (start, end) => {
             <!-- Start Fast Section -->
             <GlassCard
                 v-else
-                class="mx-auto max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
+                class="mx-auto max-w-md"
             >
-                <h3 class="text-text-main mb-6 text-lg font-semibold">Démarrer un jeûne</h3>
+                <h3 class="text-text-main mb-6 text-lg font-semibold dark:text-white">Démarrer un jeûne</h3>
 
                 <form @submit.prevent="startFast" class="space-y-4">
-                    <div>
-                        <label class="text-text-muted mb-2 block text-sm font-medium">Type de jeûne</label>
-                        <select
-                            v-model="selectedType"
-                            class="text-text-main focus:border-electric-orange focus:ring-electric-orange w-full rounded-xl border-white/10 bg-white/5"
-                        >
-                            <option v-for="type in fastingTypes" :key="type.label" :value="type">
-                                {{ type.label }}
-                            </option>
-                        </select>
-                    </div>
+                    <GlassSelect
+                        v-model="selectedType"
+                        label="Type de jeûne"
+                        :options="fastingTypes.map((t) => ({ value: t, label: t.label }))"
+                    />
 
                     <div>
-                        <label class="text-text-muted mb-2 block text-sm font-medium">Début</label>
-                        <GlassInput type="datetime-local" v-model="startForm.start_time" />
+                        <GlassInput type="datetime-local" v-model="startForm.start_time" label="Début" />
                     </div>
 
                     <GlassButton type="submit" variant="primary" :loading="startForm.processing" class="mt-4 w-full">
@@ -254,10 +248,8 @@ const formatHistoryDuration = (start, end) => {
             </GlassCard>
 
             <!-- History Details Section -->
-            <GlassCard
-                class="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
-            >
-                <h3 class="text-text-main mb-4 text-lg font-semibold">Historique détaillé</h3>
+            <GlassCard>
+                <h3 class="text-text-main mb-4 text-lg font-semibold dark:text-white">Historique détaillé</h3>
                 <div v-if="history.data.length === 0" class="text-text-muted py-4 text-center">
                     Aucun historique de jeûne.
                 </div>
@@ -265,7 +257,7 @@ const formatHistoryDuration = (start, end) => {
                     <div
                         v-for="fast in history.data"
                         :key="fast.id"
-                        class="flex items-center justify-between rounded-2xl border border-white/20 bg-white/5 p-3 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/10 hover:shadow-lg active:scale-95"
+                        class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800/30"
                     >
                         <div>
                             <p class="text-text-main font-medium">{{ fast.type }}</p>

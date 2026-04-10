@@ -299,9 +299,9 @@ const phaseBg = computed(() => {
         case 'rest':
             return 'bg-emerald-500/10 border-emerald-500/20'
         case 'finished':
-            return 'bg-white/10 border-white/20'
+            return 'bg-slate-100 border-slate-200 dark:bg-slate-800/30 dark:border-slate-700'
         default:
-            return 'bg-white/5 border-white/10'
+            return 'bg-slate-50 border-slate-200 dark:bg-slate-800/20 dark:border-slate-700'
     }
 })
 
@@ -350,8 +350,8 @@ onUnmounted(() => {
                     class="w-full rounded-lg py-2.5 text-sm leading-5 font-medium transition-all duration-200"
                     :class="[
                         activeTab === tab
-                            ? 'text-text-main bg-white shadow'
-                            : 'text-text-muted hover:bg-white/[0.12] hover:text-white',
+                            ? 'text-text-main bg-white shadow dark:bg-slate-700 dark:text-white'
+                            : 'text-text-muted hover:bg-white/[0.12] hover:text-slate-700 dark:hover:text-white',
                     ]"
                 >
                     {{ tab === 'timer' ? 'Minuteur' : 'Préréglages' }}
@@ -399,7 +399,7 @@ onUnmounted(() => {
 
                         <button
                             @click="resetRunner"
-                            class="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-lg backdrop-blur-md transition-transform hover:scale-110 active:scale-95"
+                            class="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-white/50 text-slate-600 shadow-lg transition-transform hover:scale-110 active:scale-95 dark:border-slate-700 dark:bg-slate-800/50 dark:text-white"
                             aria-label="Réinitialiser"
                         >
                             <span class="material-symbols-outlined text-3xl">restart_alt</span>

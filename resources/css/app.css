@@ -685,6 +685,11 @@
     background-size: 200% 100%;
     animation: skeleton-pulse 1.5s ease-in-out infinite;
     border-radius: 0.5rem;
+
+    .dark & {
+        background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+        background-size: 200% 100%;
+    }
 }
 
 @utility glass-badge {
@@ -867,6 +872,8 @@
         font-family: 'Space Grotesk', 'Inter', sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        overflow-x: hidden;
+        overscroll-behavior: none;
     }
 
     body {
@@ -875,6 +882,8 @@
         min-height: 100dvh;
         color: var(--text-main);
         overflow-x: hidden;
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* Selection styling */

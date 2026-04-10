@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, useForm, Deferred } from '@inertiajs/vue3'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
 import QuickActions from '@/Components/Dashboard/QuickActions.vue'
 import WeeklyVolumeSection from '@/Components/Dashboard/WeeklyVolumeSection.vue'
 import DurationSection from '@/Components/Dashboard/DurationSection.vue'
@@ -86,9 +87,10 @@ const startWorkout = () => {
 
             <GoalsSummary :active-goals="activeGoals" />
 
-            <section
+            <GlassCard
                 v-if="activeGoals && activeGoals.length > 0"
-                class="animate-slide-up relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                as="section"
+                class="animate-slide-up relative overflow-hidden"
                 style="animation-delay: 0.28s"
             >
                 <div class="relative z-10 mb-6">
@@ -102,7 +104,7 @@ const startWorkout = () => {
                 <div class="relative -mx-2 mt-2 h-48 w-auto">
                     <ActiveGoalsChart :data="activeGoals" />
                 </div>
-            </section>
+            </GlassCard>
 
             <RecentPRs :recent-p-rs="recentPRs" />
         </div>

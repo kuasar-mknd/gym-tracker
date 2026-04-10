@@ -1,6 +1,9 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassToggle from '@/Components/UI/GlassToggle.vue'
+import GlassSection from '@/Components/UI/GlassSection.vue'
+import Checkbox from '@/Components/Form/Checkbox.vue'
 import { usePage } from '@inertiajs/vue3'
 import { ref, reactive } from 'vue'
 import axios from 'axios'
@@ -124,12 +127,10 @@ const updatePreferences = () => {
 </script>
 
 <template>
-    <section>
-        <header>
-            <h2 class="text-text-main text-lg font-medium">Préférences de Notification</h2>
-            <p class="text-text-muted mt-1 text-sm">Choisis comment tu souhaites être informé de tes progrès.</p>
-        </header>
-
+    <GlassSection
+        title="Préférences de Notification"
+        description="Choisis comment tu souhaites être informé de tes progrès."
+    >
         <form @submit.prevent="updatePreferences" class="mt-6 space-y-6">
             <div class="space-y-4">
                 <!-- Web Push Banner -->
@@ -139,8 +140,10 @@ const updatePreferences = () => {
                 >
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <h4 class="text-text-main text-sm font-semibold">Activer les notifications Push</h4>
-                            <p class="text-text-muted text-xs">
+                            <h4 class="text-text-main text-sm font-semibold dark:text-white">
+                                Activer les notifications Push
+                            </h4>
+                            <p class="text-text-muted text-xs dark:text-slate-400">
                                 Recevez des alertes en temps réel sur votre appareil, même quand l'application est
                                 fermée.
                             </p>
@@ -161,55 +164,29 @@ const updatePreferences = () => {
 
                 <!-- Personal Record Toggle -->
                 <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h4 class="text-text-main text-sm font-medium">Records Personnels (PR)</h4>
-                            <p class="text-text-muted text-xs">Être notifié quand vous battez un record.</p>
-                        </div>
-                        <label class="relative inline-flex cursor-pointer items-center">
-                            <input type="checkbox" v-model="form.preferences.personal_record" class="peer sr-only" />
-                            <div
-                                class="peer peer-checked:bg-accent-primary h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
-                            ></div>
-                        </label>
-                    </div>
+                    <GlassToggle
+                        v-model="form.preferences.personal_record"
+                        label="Records Personnels (PR)"
+                        description="Être notifié quand vous battez un record."
+                    />
 
                     <div v-if="pushPermission === 'granted'" class="ml-2 flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            v-model="form.push_preferences.personal_record"
-                            id="push_pr"
-                            class="text-accent-primary focus:ring-accent-primary rounded border-white/10 bg-white/5"
-                        />
-                        <label for="push_pr" class="text-text-muted text-xs">Envoyer aussi en Push</label>
+                        <Checkbox v-model:checked="form.push_preferences.personal_record" />
+                        <label class="text-text-muted text-xs dark:text-slate-400">Envoyer aussi en Push</label>
                     </div>
                 </div>
 
                 <!-- Training Reminder Toggle -->
                 <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h4 class="text-text-main text-sm font-medium">Rappels d'Entraînement</h4>
-                            <p class="text-text-muted text-xs">
-                                Rappels automatiques après quelques jours d'inactivité.
-                            </p>
-                        </div>
-                        <label class="relative inline-flex cursor-pointer items-center">
-                            <input type="checkbox" v-model="form.preferences.training_reminder" class="peer sr-only" />
-                            <div
-                                class="peer peer-checked:bg-accent-primary h-6 w-11 rounded-full bg-white/10 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full"
-                            ></div>
-                        </label>
-                    </div>
+                    <GlassToggle
+                        v-model="form.preferences.training_reminder"
+                        label="Rappels d'Entraînement"
+                        description="Rappels automatiques après quelques jours d'inactivité."
+                    />
 
                     <div v-if="pushPermission === 'granted'" class="ml-2 flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            v-model="form.push_preferences.training_reminder"
-                            id="push_reminder"
-                            class="text-accent-primary focus:ring-accent-primary rounded border-white/10 bg-white/5"
-                        />
-                        <label for="push_reminder" class="text-text-muted text-xs">Envoyer aussi en Push</label>
+                        <Checkbox v-model:checked="form.push_preferences.training_reminder" />
+                        <label class="text-text-muted text-xs dark:text-slate-400">Envoyer aussi en Push</label>
                     </div>
 
                     <Transition
@@ -220,7 +197,10 @@ const updatePreferences = () => {
                         leave-from-class="translate-y-0 opacity-100"
                         leave-to-class="translate-y-1 opacity-0"
                     >
-                        <div v-if="form.preferences.training_reminder" class="ml-2 border-l-2 border-slate-200 pl-4">
+                        <div
+                            v-if="form.preferences.training_reminder"
+                            class="ml-2 border-l-2 border-slate-200 pl-4 dark:border-slate-700"
+                        >
                             <GlassInput
                                 v-model="form.values.training_reminder"
                                 type="number"
@@ -247,5 +227,6 @@ const updatePreferences = () => {
                 </Transition>
             </div>
         </form>
-    </section>
+    </GlassSection>
 </template>
+

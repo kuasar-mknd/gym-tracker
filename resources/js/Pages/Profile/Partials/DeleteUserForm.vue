@@ -1,6 +1,7 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
@@ -32,12 +33,10 @@ const closeModal = () => {
 </script>
 
 <template>
-    <section
-        class="space-y-6 rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
-    >
+    <GlassCard as="section" class="space-y-6">
         <header>
-            <h2 class="text-text-main text-lg font-semibold">Supprimer le compte</h2>
-            <p class="text-text-muted mt-1 text-sm">
+            <h2 class="text-text-main text-lg font-semibold dark:text-white">Supprimer le compte</h2>
+            <p class="text-text-muted mt-1 text-sm dark:text-slate-400">
                 Une fois ton compte supprimé, toutes tes données seront définitivement effacées.
             </p>
         </header>
@@ -87,5 +86,5 @@ const closeModal = () => {
                 </div>
             </div>
         </Teleport>
-    </section>
+    </GlassCard>
 </template>

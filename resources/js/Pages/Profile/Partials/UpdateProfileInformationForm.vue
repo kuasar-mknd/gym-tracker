@@ -1,6 +1,7 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
 
 defineProps({
@@ -21,12 +22,12 @@ const submit = () => {
 </script>
 
 <template>
-    <section
-        class="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
-    >
+    <GlassCard as="section">
         <header>
-            <h2 class="text-text-main text-lg font-semibold">Informations du profil</h2>
-            <p class="text-text-muted mt-1 text-sm">Modifie tes informations de compte et ton adresse email.</p>
+            <h2 class="text-text-main text-lg font-semibold dark:text-white">Informations du profil</h2>
+            <p class="text-text-muted mt-1 text-sm dark:text-slate-400">
+                Modifie tes informations de compte et ton adresse email.
+            </p>
         </header>
 
         <form @submit.prevent="submit" class="mt-6 space-y-4">
@@ -87,5 +88,5 @@ const submit = () => {
                 </Transition>
             </div>
         </form>
-    </section>
+    </GlassCard>
 </template>

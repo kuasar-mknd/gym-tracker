@@ -30,7 +30,7 @@
                                 :class="
                                     form.gender === 'male'
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-white/20 bg-white/10 hover:border-white/30 hover:bg-white/20'
+                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Homme</span>
@@ -42,7 +42,7 @@
                                 :class="
                                     form.gender === 'female'
                                         ? 'border-hot-pink bg-hot-pink/20 text-hot-pink shadow-[0_0_15px_rgba(236,72,153,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-white/20 bg-white/10 hover:border-white/30 hover:bg-white/20'
+                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -71,7 +71,7 @@
                         <div class="relative">
                             <select
                                 v-model="form.activity_level"
-                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-[56px] w-full appearance-none rounded-2xl border border-white/20 bg-white/10 px-4 text-lg backdrop-blur-md transition-all outline-none focus:bg-white/20 focus:ring-2"
+                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-[56px] w-full appearance-none rounded-2xl border border-slate-200 bg-white/50 px-4 text-lg transition-all outline-none focus:bg-white/80 focus:ring-2 dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-800"
                             >
                                 <option
                                     value="sedentary"
@@ -114,7 +114,7 @@
                                 :class="
                                     form.goal === goalOption
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-white/20 bg-white/10 hover:border-white/30 hover:bg-white/20'
+                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800'
                                 "
                             >
                                 <span class="font-display font-bold uppercase">{{
@@ -127,7 +127,7 @@
                     <!-- Result -->
                     <div
                         v-if="isValid"
-                        class="mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur-md"
+                        class="mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-200 bg-white/50 p-6 text-center dark:border-slate-700 dark:bg-slate-800/30"
                     >
                         <div>
                             <p class="text-text-muted text-sm font-bold tracking-wider uppercase">
@@ -141,7 +141,7 @@
                             <p class="text-text-muted text-xs font-semibold">TDEE: {{ calculatedResults.tdee }} kcal</p>
                         </div>
 
-                        <div class="grid w-full grid-cols-3 gap-4 border-t border-white/10 pt-4">
+                        <div class="grid w-full grid-cols-3 gap-4 border-t border-slate-200 pt-4 dark:border-slate-700">
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Protéines</p>
                                 <p class="font-display text-text-main text-2xl font-black">
@@ -199,11 +199,11 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group relative flex flex-col justify-between rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md transition-all hover:bg-white/10 hover:shadow-lg sm:flex-row sm:items-center"
+                            class="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/50 p-4 transition-all hover:bg-white/80 hover:shadow-lg sm:flex-row sm:items-center dark:border-slate-700 dark:bg-slate-800/30 dark:hover:bg-slate-800/50"
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="text-text-main flex h-12 w-16 items-center justify-center rounded-xl bg-white/10 text-lg font-bold"
+                                    class="text-text-main flex h-12 w-16 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold dark:bg-slate-700"
                                 >
                                     {{ entry.target_calories }}
                                 </div>

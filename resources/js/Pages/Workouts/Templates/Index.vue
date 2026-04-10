@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -63,25 +64,23 @@ const deleteTemplate = (templateId) => {
 
         <div class="space-y-6">
             <div v-if="templates.length === 0" class="animate-slide-up">
-                <div
-                    class="rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-md transition-all duration-300"
-                >
+                <GlassCard class="transition-all duration-300">
                     <div class="py-12 text-center">
                         <div class="mb-3 text-5xl">📋</div>
                         <h3 class="text-text-main text-lg font-semibold dark:text-white">Aucun modèle</h3>
-                        <p class="text-text-muted mt-1">Crée tes routines pour gagner du temps</p>
+                        <p class="text-text-muted mt-1 dark:text-slate-400">Crée tes routines pour gagner du temps</p>
                         <Link :href="route('templates.create')" class="mt-4 inline-block">
                             <GlassButton variant="primary">Créer mon premier modèle</GlassButton>
                         </Link>
                     </div>
-                </div>
+                </GlassCard>
             </div>
 
             <div v-else class="animate-slide-up grid gap-4 md:grid-cols-2" style="animation-delay: 0.1s">
-                <div
+                <GlassCard
                     v-for="template in templates"
                     :key="template.id"
-                    class="group flex flex-col rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="group flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
                 >
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
@@ -117,7 +116,7 @@ const deleteTemplate = (templateId) => {
                             <div
                                 v-for="line in template.workout_template_lines"
                                 :key="line.id"
-                                class="text-text-muted flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-xs backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/10 active:scale-95"
+                                class="text-text-muted flex items-center gap-2 rounded-xl border border-slate-200 bg-white/50 px-2 py-1 text-xs transition-all duration-300 hover:-translate-y-0.5 active:scale-95 dark:border-slate-700 dark:bg-slate-800/30"
                             >
                                 <span class="text-text-main font-medium">{{ line.exercise.name }}</span>
                                 <span class="text-text-muted/50"
@@ -138,7 +137,7 @@ const deleteTemplate = (templateId) => {
                             Lancer cette séance
                         </GlassButton>
                     </div>
-                </div>
+                </GlassCard>
             </div>
         </div>
     </AuthenticatedLayout>

@@ -60,7 +60,7 @@ defineProps({
                 'iridescent-card': variant === 'iridescent',
                 'shadow-glow-orange': variant === 'glow-orange',
                 'shadow-glow-violet': variant === 'glow-violet',
-                'bg-white/90 backdrop-blur-none': variant === 'solid',
+                'bg-white/90 backdrop-blur-none dark:bg-slate-800/90': variant === 'solid',
             },
         ]"
     >

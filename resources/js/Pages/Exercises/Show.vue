@@ -220,7 +220,7 @@ const scatterData = computed(() => {
                     </div>
                 </GlassCard>
 
-                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume (Reps)</h3>
                         <p class="text-text-muted text-xs font-semibold">Total des répétitions par séance</p>
@@ -250,7 +250,7 @@ const scatterData = computed(() => {
                     </div>
                 </GlassCard>
 
-                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">1RM Estimé</h3>
                         <p class="text-text-muted text-xs font-semibold">Meilleur 1RM estimé par séance</p>
@@ -270,7 +270,7 @@ const scatterData = computed(() => {
                     </div>
                 </GlassCard>
 
-                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">Séries</h3>
                         <p class="text-text-muted text-xs font-semibold">Nombre de séries par séance</p>
@@ -280,7 +280,7 @@ const scatterData = computed(() => {
                     </div>
                 </GlassCard>
 
-                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">Poids vs Reps</h3>
                         <p class="text-text-muted text-xs font-semibold">Répartition de toutes les séries</p>
@@ -290,7 +290,7 @@ const scatterData = computed(() => {
                     </div>
                 </GlassCard>
 
-                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                             Progression par Série
@@ -311,7 +311,7 @@ const scatterData = computed(() => {
 
             <!-- Session Performance Chart -->
             <div class="animate-slide-up" style="animation-delay: 0.15s">
-                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                             Performance Historique
@@ -330,7 +330,7 @@ const scatterData = computed(() => {
 
             <!-- Session Volume Line Chart -->
             <div class="animate-slide-up" style="animation-delay: 0.18s">
-                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                             Évolution du Volume
@@ -349,7 +349,7 @@ const scatterData = computed(() => {
 
             <!-- History Chart -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <GlassCard class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md">
+                <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                             Historique du 1RM

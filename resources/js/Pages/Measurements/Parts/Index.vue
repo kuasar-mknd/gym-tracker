@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
 
@@ -65,9 +66,9 @@ const selectCommonPart = (part) => {
             <!-- Add Form -->
             <GlassCard
                 v-if="showAddForm"
-                class="animate-slide-up rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                class="animate-slide-up"
             >
-                <h3 class="text-text-main mb-4 font-semibold">New Measurement</h3>
+                <h3 class="text-text-main mb-4 font-semibold dark:text-white">New Measurement</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>
                         <label class="text-text-muted mb-1 block text-sm font-medium">Body Part</label>
@@ -80,8 +81,8 @@ const selectCommonPart = (part) => {
                                 :class="[
                                     'rounded-full px-3 py-1 text-xs transition',
                                     form.part === part
-                                        ? 'bg-primary-500 text-white'
-                                        : 'text-text-muted bg-white/5 hover:bg-white/10',
+                                        ? 'bg-electric-orange text-white'
+                                        : 'text-text-muted bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600',
                                 ]"
                             >
                                 {{ part }}
@@ -102,14 +103,14 @@ const selectCommonPart = (part) => {
                             required
                         />
                         <div class="space-y-1">
-                            <label class="text-text-muted block text-sm font-medium">Unit</label>
-                            <select
+                            <GlassSelect
                                 v-model="form.unit"
-                                class="text-text-main focus:border-primary-500 focus:ring-primary-500 w-full rounded-xl border-white/10 bg-white/5"
-                            >
-                                <option value="cm">cm</option>
-                                <option value="in">in</option>
-                            </select>
+                                label="Unit"
+                                :options="[
+                                    { value: 'cm', label: 'cm' },
+                                    { value: 'in', label: 'in' },
+                                ]"
+                            />
                         </div>
                     </div>
 
@@ -150,7 +151,7 @@ const selectCommonPart = (part) => {
                     class="block"
                 >
                     <GlassCard
-                        class="h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95 dark:bg-black/40"
+                        class="h-full overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
                     >
                         <div class="flex items-start justify-between">
                             <div>

@@ -245,7 +245,6 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <div class="animate-slide-up" style="animation-delay: 0.08s">
                 <GlassCard
                     v-if="workouts?.data?.length > 0"
-                    class="rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md"
                 >
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic dark:text-white">

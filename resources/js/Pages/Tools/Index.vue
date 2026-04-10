@@ -18,7 +18,7 @@
             <!-- Plate Calculator -->
             <Link :href="route('plates.index')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                    class="relative h-full overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-primary/20 text-accent-primary rounded-full p-4">
@@ -49,7 +49,7 @@
             <!-- 1RM Calculator -->
             <Link :href="route('tools.1rm')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                    class="relative h-full overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-secondary/20 text-accent-secondary rounded-full p-4">
@@ -80,7 +80,7 @@
             <!-- Wilks Calculator -->
             <Link :href="route('tools.wilks')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                    class="relative h-full overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-electric-orange/20 text-electric-orange rounded-full p-4">
@@ -111,7 +111,7 @@
             <!-- Macro Calculator -->
             <Link :href="route('tools.macro-calculator')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                    class="relative h-full overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-emerald-500/20 p-4 text-emerald-500">
@@ -130,7 +130,7 @@
             <!-- Warmup Calculator -->
             <Link :href="route('tools.warmup')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                    class="relative h-full overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-blue-500/20 p-4 text-blue-500">
@@ -161,7 +161,7 @@
             <!-- Water Tracker -->
             <Link :href="route('tools.water.index')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                    class="relative h-full overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-cyan-500/20 p-4 text-cyan-500">
@@ -176,7 +176,7 @@
             <!-- Interval Timer -->
             <Link :href="route('tools.interval-timer.index')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                    class="relative h-full overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-purple-500/20 p-4 text-purple-500">
@@ -193,7 +193,7 @@
             <!-- Fasting Tracker -->
             <Link :href="route('tools.fasting.index')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+                    class="relative h-full overflow-hidden shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-violet-500/20 p-4 text-violet-500">

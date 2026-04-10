@@ -19,8 +19,8 @@
             <div class="grid gap-6 lg:grid-cols-2">
                 <!-- Calculator Input -->
                 <div class="space-y-6">
-                    <div
-                        class="animate-slide-up rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300"
+                    <GlassCard
+                        class="animate-slide-up shadow-2xl"
                         style="animation-delay: 0.05s"
                     >
                         <div class="space-y-6 p-6">
@@ -34,7 +34,7 @@
                                             placeholder="100"
                                             min="0"
                                             step="0.5"
-                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-white/20 bg-white/5 px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:bg-white/10 focus:ring-2"
+                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:bg-white/80 focus:ring-2 dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-800"
                                         />
                                         <span
                                             class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
@@ -52,7 +52,7 @@
                                             min="1"
                                             max="100"
                                             step="1"
-                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-white/20 bg-white/5 px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:bg-white/10 focus:ring-2"
+                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:bg-white/80 focus:ring-2 dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-800"
                                         />
                                         <span
                                             class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
@@ -70,12 +70,12 @@
                                 </p>
                             </div>
                         </div>
-                    </div>
+                    </GlassCard>
 
                     <!-- Result Card -->
-                    <div
+                    <GlassCard
                         v-if="oneRepMax > 0"
-                        class="animate-slide-up mt-6 flex flex-col items-center justify-center rounded-3xl border border-white/20 bg-white/10 p-8 text-center backdrop-blur-md"
+                        class="animate-slide-up mt-6 flex flex-col items-center justify-center p-8 text-center"
                         style="animation-delay: 0.08s"
                     >
                         <p class="text-text-muted text-sm font-bold tracking-wider uppercase">1RM Estimé</p>
@@ -87,13 +87,13 @@
                         <div class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
                             Basé sur {{ weight }} x {{ reps }}
                         </div>
-                    </div>
+                    </GlassCard>
                 </div>
 
                 <!-- Percentages Table -->
                 <div v-if="oneRepMax > 0">
-                    <div
-                        class="animate-slide-up h-full rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300"
+                    <GlassCard
+                        class="animate-slide-up h-full shadow-2xl"
                         style="animation-delay: 0.1s"
                     >
                         <div class="p-6">
@@ -107,11 +107,11 @@
                             </div>
 
                             <div
-                                class="overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-inner backdrop-blur-md"
+                                class="overflow-hidden rounded-3xl border border-slate-200 bg-white/50 shadow-inner dark:border-slate-700 dark:bg-slate-800/30"
                             >
                                 <table class="text-text-muted w-full text-left text-sm">
                                     <thead
-                                        class="text-text-main border-b border-white/20 bg-white/10 text-xs uppercase"
+                                        class="text-text-main border-b border-slate-200 bg-slate-50/80 text-xs uppercase dark:border-slate-700 dark:bg-slate-800/50 dark:text-white"
                                     >
                                         <tr>
                                             <th class="px-6 py-3 font-medium">Pourcentage</th>
@@ -119,11 +119,11 @@
                                             <th class="px-6 py-3 font-medium">Reps Est.</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-white/10 bg-transparent">
+                                    <tbody class="divide-y divide-slate-100 bg-transparent dark:divide-slate-700">
                                         <tr
                                             v-for="p in percentages"
                                             :key="p.percent"
-                                            class="transition-colors duration-200 hover:bg-white/20"
+                                            class="transition-colors duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                         >
                                             <td class="text-text-main px-6 py-4 font-medium">{{ p.percent }}%</td>
                                             <td class="text-text-main px-6 py-4">{{ formatWeight(p.value) }} kg</td>
@@ -133,15 +133,15 @@
                                 </table>
                             </div>
                         </div>
-                    </div>
+                    </GlassCard>
                 </div>
-                <div
+                <GlassCard
                     v-else
-                    class="animate-slide-up mt-8 rounded-3xl border border-white/20 bg-white/10 py-12 text-center shadow-2xl backdrop-blur-md transition-all duration-300"
+                    class="animate-slide-up mt-8 py-12 text-center shadow-2xl"
                 >
                     <span class="material-symbols-outlined mb-3 text-5xl text-slate-300">calculate</span>
                     <p class="text-text-muted font-medium">Entre un poids et des répétitions pour voir les résultats</p>
-                </div>
+                </GlassCard>
             </div>
         </div>
     </AuthenticatedLayout>
