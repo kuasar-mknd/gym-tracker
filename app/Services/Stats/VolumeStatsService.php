@@ -64,6 +64,10 @@ final class VolumeStatsService
             function () use ($user, $days): array {
                 $start = now()->subDays($days - 1)->startOfDay();
                 $results = $user->workouts()
+                    // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+                    // Use toBase() to avoid hydrating Eloquent models as they are not needed for this aggregation.
+                    // This reduces memory usage and speeds up the query.
+                    ->toBase()
                     ->whereBetween('started_at', [$start, now()->endOfDay()])
                     ->selectRaw('DATE(started_at) as date, SUM(workout_volume) as daily_volume')
                     ->groupBy('date')

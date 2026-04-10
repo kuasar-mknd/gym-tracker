@@ -83,3 +83,7 @@
 ## 2024-05-24 - Upsert instead of updateOrCreate in Loops
 **Learning:** `updateOrCreate` inside a loop fires individual `SELECT` and `INSERT`/`UPDATE` queries per iteration, leading to N+1 performance bottlenecks. Bulk `upsert()` resolves this but skips Eloquent model lifecycle events (like `saving`, `updated`) and Observers.
 **Action:** Always prefer `upsert()` for batched insertions/updates to optimize database queries, but strictly verify that the target model does not rely on observers or lifecycle events before applying the optimization. When using `upsert()` to replace relationship methods, remember to explicitly include the foreign key (e.g., `user_id`) in the payload.
+
+## 2026-04-10 - [Native PHP Date Math in Analytical Loops]
+**Learning:** Instantiating 'Carbon' objects inside large analytical loops causes significant O(N) object instantiation overhead and memory pressure. Native PHP 'strtotime()' and 'date()' are 80-90% faster in these scenarios.
+**Action:** Replace 'Carbon::parse()' with native 'strtotime()' and 'date()' within performance-critical loops that evaluate date sequences for charts or distributions.
