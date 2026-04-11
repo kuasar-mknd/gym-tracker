@@ -155,9 +155,7 @@ const formatHistoryDuration = (start, end) => {
         <div class="space-y-6">
             <!-- Active Fast Section -->
             <div v-if="activeFast" class="flex justify-center">
-                <GlassCard
-                    class="relative flex w-full max-w-md flex-col items-center overflow-hidden p-8 text-center"
-                >
+                <GlassCard class="relative flex w-full max-w-md flex-col items-center overflow-hidden p-8 text-center">
                     <!-- Circular Progress -->
                     <div class="relative mb-6 h-64 w-64">
                         <svg class="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
@@ -208,10 +206,7 @@ const formatHistoryDuration = (start, end) => {
             </div>
 
             <!-- Start Fast Section -->
-            <GlassCard
-                v-else
-                class="mx-auto max-w-md"
-            >
+            <GlassCard v-else class="mx-auto max-w-md">
                 <h3 class="text-text-main mb-6 text-lg font-semibold dark:text-white">Démarrer un jeûne</h3>
 
                 <form @submit.prevent="startFast" class="space-y-4">

@@ -243,9 +243,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
             <!-- Timeline Chart -->
             <div class="animate-slide-up" style="animation-delay: 0.08s">
-                <GlassCard
-                    v-if="workouts?.data?.length > 0"
-                >
+                <GlassCard v-if="workouts?.data?.length > 0">
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic dark:text-white">
                             Aperçu Historique

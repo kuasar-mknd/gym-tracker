@@ -12,7 +12,6 @@
  */
 
 import { Deferred } from '@inertiajs/vue3'
-import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 
 defineProps({
@@ -51,7 +50,9 @@ defineProps({
     <!-- Summary Stats -->
     <div class="animate-slide-up grid grid-cols-4 gap-3" style="animation-delay: 0.25s">
         <!-- Number of Sessions Card -->
-        <GlassCard padding="p-4" class="text-center">
+        <div
+            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+        >
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
@@ -61,10 +62,12 @@ defineProps({
                     {{ volumeTrend?.length || 0 }}
                 </div>
             </Deferred>
-        </GlassCard>
+        </div>
 
         <!-- Number of Muscles Targeted Card -->
-        <GlassCard padding="p-4" class="text-center">
+        <div
+            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+        >
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
@@ -74,18 +77,22 @@ defineProps({
                     {{ muscleDistribution?.length || 0 }}
                 </div>
             </Deferred>
-        </GlassCard>
+        </div>
 
         <!-- Number of Exercises Card -->
-        <GlassCard padding="p-4" class="text-center">
+        <div
+            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+        >
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Exercices</div>
             <div class="font-display text-text-main mt-1 text-2xl font-black">
                 {{ exercises?.length || 0 }}
             </div>
-        </GlassCard>
+        </div>
 
         <!-- Monthly Comparison Volume Change Card -->
-        <GlassCard padding="p-4" class="text-center">
+        <div
+            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+        >
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
@@ -100,6 +107,6 @@ defineProps({
                     {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : '' }}{{ monthlyComparison?.percentage || 0 }}%
                 </div>
             </Deferred>
-        </GlassCard>
+        </div>
     </div>
 </template>

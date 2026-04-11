@@ -64,10 +64,7 @@ const selectCommonPart = (part) => {
 
         <div class="space-y-6">
             <!-- Add Form -->
-            <GlassCard
-                v-if="showAddForm"
-                class="animate-slide-up"
-            >
+            <GlassCard v-if="showAddForm" class="animate-slide-up">
                 <h3 class="text-text-main mb-4 font-semibold dark:text-white">New Measurement</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>

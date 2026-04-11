@@ -75,12 +75,7 @@ const thumbClasses = computed(() => {
 </script>
 
 <template>
-    <div
-        :class="[
-            'flex items-center justify-between',
-            { 'gap-4': label || description },
-        ]"
-    >
+    <div :class="['flex items-center justify-between', { 'gap-4': label || description }]">
         <!-- Label & Description -->
         <div v-if="label || description" class="min-w-0 flex-1">
             <p
@@ -90,11 +85,7 @@ const thumbClasses = computed(() => {
             >
                 {{ label }}
             </p>
-            <p
-                v-if="description"
-                class="text-text-muted mt-0.5 text-xs"
-                :class="{ 'opacity-50': disabled }"
-            >
+            <p v-if="description" class="text-text-muted mt-0.5 text-xs" :class="{ 'opacity-50': disabled }">
                 {{ description }}
             </p>
         </div>

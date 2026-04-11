@@ -501,7 +501,7 @@ onUnmounted(() => {
             </button>
         </template>
 
-        <div class="space-y-4 pb-main-safe" dusk="exercise-list">
+        <div class="pb-main-safe space-y-4" dusk="exercise-list">
             <GlassCard
                 v-if="localWorkout.workout_lines.length === 0"
                 class="flex flex-col items-center justify-center p-12 text-center"
