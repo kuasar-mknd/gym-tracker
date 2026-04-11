@@ -16,6 +16,7 @@ const emit = defineEmits(['startWorkout'])
             @click="emit('startWorkout')"
             :disabled="processing"
             :aria-busy="processing"
+            aria-label="Démarrer une nouvelle séance d'entraînement"
             id="start-workout-button"
             dusk="start-workout-button"
             class="hover:shadow-glow-orange/70 group shadow-glow-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300"
@@ -54,6 +55,7 @@ const emit = defineEmits(['startWorkout'])
         <Link
             v-press
             :href="route('templates.index')"
+            aria-label="Voir mes programmes d'entraînement"
             class="hover:shadow-glow-violet/70 group shadow-glow-violet relative h-52 overflow-hidden rounded-3xl transition-all duration-300"
         >
             <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md dark:bg-slate-800/60"></div>
