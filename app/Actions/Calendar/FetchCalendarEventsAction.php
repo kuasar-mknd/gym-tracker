@@ -34,6 +34,25 @@ final class FetchCalendarEventsAction
         ];
     }
 
+    /**
+     * @param array<int, mixed> $workoutIds
+     * @return array<int, array<int, string>>
+     */
+    protected function getWorkoutPreviews(array $workoutIds): array
+    {
+        /** @var array<int, array<int, string>> */
+        return \Illuminate\Support\Facades\DB::table('workout_lines')
+            ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
+            ->whereIn('workout_lines.workout_id', $workoutIds)
+            ->select('workout_lines.workout_id', 'exercises.name')
+            ->orderBy('workout_lines.workout_id')
+            ->orderBy('workout_lines.order')
+            ->get()
+            ->groupBy('workout_id')
+            ->map(fn (\Illuminate\Support\Collection $lines) => $lines->take(3)->pluck('name')->toArray())
+            ->toArray();
+    }
+
     /** @return \Illuminate\Support\Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}> */
     private function getWorkouts(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
     {
@@ -57,20 +76,7 @@ final class FetchCalendarEventsAction
             return collect();
         }
 
-        // Batch fetch up to 3 exercise names per workout for the preview
-        $workoutIds = $workouts->pluck('id')->toArray();
-
-        /** @var array<int, array<int, string>> $previews */
-        $previews = \Illuminate\Support\Facades\DB::table('workout_lines')
-            ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
-            ->whereIn('workout_lines.workout_id', $workoutIds)
-            ->select('workout_lines.workout_id', 'exercises.name')
-            ->orderBy('workout_lines.workout_id')
-            ->orderBy('workout_lines.order')
-            ->get()
-            ->groupBy('workout_id')
-            ->map(fn (\Illuminate\Support\Collection $lines) => $lines->take(3)->pluck('name')->toArray())
-            ->toArray();
+        $previews = $this->getWorkoutPreviews($workouts->pluck('id')->toArray());
 
         return $workouts->map(function (object $workout) use ($previews): array {
             $startedAt = (string) $workout->started_at;
@@ -101,9 +107,11 @@ final class FetchCalendarEventsAction
             ->get()
             ->map(fn (object $journal): array => [
                 'id' => (int) $journal->id,
-                'date' => is_string($journal->date) ? substr($journal->date, 0, 10) : (string) $journal->date,
+                'date' => is_string($journal->date)
+                    ? substr($journal->date, 0, 10)
+                    : (string) $journal->date,
                 'mood_score' => isset($journal->mood_score) ? (int) $journal->mood_score : null,
-                'has_note' => ! empty($journal->content),
+                'has_note' => $journal->content !== null && $journal->content !== '',
             ]);
     }
 }
