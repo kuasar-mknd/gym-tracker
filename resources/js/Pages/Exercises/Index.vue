@@ -214,7 +214,7 @@ const typeLabel = (type) => {
                 </span>
             </div>
         </div>
-        <div class="space-y-6 pb-main-safe">
+        <div class="pb-main-safe space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>

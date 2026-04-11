@@ -19,10 +19,7 @@
             <div class="grid gap-6 lg:grid-cols-2">
                 <!-- Calculator Input -->
                 <div class="space-y-6">
-                    <GlassCard
-                        class="animate-slide-up shadow-2xl"
-                        style="animation-delay: 0.05s"
-                    >
+                    <GlassCard class="animate-slide-up shadow-2xl" style="animation-delay: 0.05s">
                         <div class="space-y-6 p-6">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -92,10 +89,7 @@
 
                 <!-- Percentages Table -->
                 <div v-if="oneRepMax > 0">
-                    <GlassCard
-                        class="animate-slide-up h-full shadow-2xl"
-                        style="animation-delay: 0.1s"
-                    >
+                    <GlassCard class="animate-slide-up h-full shadow-2xl" style="animation-delay: 0.1s">
                         <div class="p-6">
                             <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
                                 Pourcentages d'Entraînement
@@ -135,10 +129,7 @@
                         </div>
                     </GlassCard>
                 </div>
-                <GlassCard
-                    v-else
-                    class="animate-slide-up mt-8 py-12 text-center shadow-2xl"
-                >
+                <GlassCard v-else class="animate-slide-up mt-8 py-12 text-center shadow-2xl">
                     <span class="material-symbols-outlined mb-3 text-5xl text-slate-300">calculate</span>
                     <p class="text-text-muted font-medium">Entre un poids et des répétitions pour voir les résultats</p>
                 </GlassCard>

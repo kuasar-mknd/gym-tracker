@@ -229,4 +229,3 @@ const updatePreferences = () => {
         </form>
     </GlassSection>
 </template>
-

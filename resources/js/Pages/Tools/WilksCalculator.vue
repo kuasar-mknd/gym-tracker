@@ -21,7 +21,9 @@
                 <div class="space-y-6">
                     <!-- Unit Selection -->
                     <div class="flex justify-center">
-                        <div class="inline-flex rounded-xl border border-slate-200 bg-white/50 p-1 dark:border-slate-700 dark:bg-slate-800/50">
+                        <div
+                            class="inline-flex rounded-xl border border-slate-200 bg-white/50 p-1 dark:border-slate-700 dark:bg-slate-800/50"
+                        >
                             <button
                                 @click="form.unit = 'kg'"
                                 :aria-pressed="form.unit === 'kg'"
@@ -119,9 +121,7 @@
                     </div>
 
                     <!-- Result -->
-                    <GlassCard
-                        class="mt-6 flex flex-col items-center justify-center p-8 text-center"
-                    >
+                    <GlassCard class="mt-6 flex flex-col items-center justify-center p-8 text-center">
                         <p class="text-text-muted text-sm font-bold tracking-wider uppercase">Ton Score Wilks</p>
                         <div
                             class="from-electric-orange to-hot-pink font-display mt-2 bg-linear-to-r bg-clip-text text-6xl font-black tracking-tighter text-transparent italic"
