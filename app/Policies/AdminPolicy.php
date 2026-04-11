@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\Admin;
-use App\Models\User;
-
 use Illuminate\Contracts\Auth\Authenticatable;
 
 class AdminPolicy
