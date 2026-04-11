@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Gate;
 
 describe('AdminPolicy', function (): void {
     it('allows viewAny when user has permission', function (): void {
-        $user = User::factory()->make();
+        $user = Admin::factory()->make();
         Gate::define('view_any_admin', fn (): true => true);
 
         $policy = new AdminPolicy();
@@ -18,7 +18,7 @@ describe('AdminPolicy', function (): void {
     });
 
     it('denies viewAny when user lacks permission', function (): void {
-        $user = User::factory()->make();
+        $user = Admin::factory()->make();
         Gate::define('view_any_admin', fn (): false => false);
 
         $policy = new AdminPolicy();
@@ -26,8 +26,17 @@ describe('AdminPolicy', function (): void {
         expect($policy->viewAny($user))->toBeFalse();
     });
 
-    it('allows view when user has permission', function (): void {
+    it('denies viewAny for standard users regardless of permission', function (): void {
         $user = User::factory()->make();
+        Gate::define('view_any_admin', fn (): true => true);
+
+        $policy = new AdminPolicy();
+
+        expect($policy->viewAny($user))->toBeFalse();
+    });
+
+    it('allows view when user has permission', function (): void {
+        $user = Admin::factory()->make();
         Gate::define('view_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
@@ -37,7 +46,7 @@ describe('AdminPolicy', function (): void {
     });
 
     it('denies view when user lacks permission', function (): void {
-        $user = User::factory()->make();
+        $user = Admin::factory()->make();
         Gate::define('view_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
@@ -46,8 +55,18 @@ describe('AdminPolicy', function (): void {
         expect($policy->view($user, $admin))->toBeFalse();
     });
 
-    it('allows create when user has permission', function (): void {
+    it('denies view for standard users regardless of permission', function (): void {
         $user = User::factory()->make();
+        Gate::define('view_admin', fn (): true => true);
+        $admin = Admin::factory()->make();
+
+        $policy = new AdminPolicy();
+
+        expect($policy->view($user, $admin))->toBeFalse();
+    });
+
+    it('allows create when user has permission', function (): void {
+        $user = Admin::factory()->make();
         Gate::define('create_admin', fn (): true => true);
 
         $policy = new AdminPolicy();
@@ -56,7 +75,7 @@ describe('AdminPolicy', function (): void {
     });
 
     it('denies create when user lacks permission', function (): void {
-        $user = User::factory()->make();
+        $user = Admin::factory()->make();
         Gate::define('create_admin', fn (): false => false);
 
         $policy = new AdminPolicy();
@@ -64,8 +83,17 @@ describe('AdminPolicy', function (): void {
         expect($policy->create($user))->toBeFalse();
     });
 
-    it('allows update when user has permission', function (): void {
+    it('denies create for standard users regardless of permission', function (): void {
         $user = User::factory()->make();
+        Gate::define('create_admin', fn (): true => true);
+
+        $policy = new AdminPolicy();
+
+        expect($policy->create($user))->toBeFalse();
+    });
+
+    it('allows update when user has permission', function (): void {
+        $user = Admin::factory()->make();
         Gate::define('update_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
@@ -75,7 +103,7 @@ describe('AdminPolicy', function (): void {
     });
 
     it('denies update when user lacks permission', function (): void {
-        $user = User::factory()->make();
+        $user = Admin::factory()->make();
         Gate::define('update_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
@@ -84,8 +112,18 @@ describe('AdminPolicy', function (): void {
         expect($policy->update($user, $admin))->toBeFalse();
     });
 
-    it('allows delete when user has permission', function (): void {
+    it('denies update for standard users regardless of permission', function (): void {
         $user = User::factory()->make();
+        Gate::define('update_admin', fn (): true => true);
+        $admin = Admin::factory()->make();
+
+        $policy = new AdminPolicy();
+
+        expect($policy->update($user, $admin))->toBeFalse();
+    });
+
+    it('allows delete when user has permission', function (): void {
+        $user = Admin::factory()->make();
         Gate::define('delete_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
@@ -95,7 +133,7 @@ describe('AdminPolicy', function (): void {
     });
 
     it('denies delete when user lacks permission', function (): void {
-        $user = User::factory()->make();
+        $user = Admin::factory()->make();
         Gate::define('delete_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
@@ -104,8 +142,18 @@ describe('AdminPolicy', function (): void {
         expect($policy->delete($user, $admin))->toBeFalse();
     });
 
-    it('allows restore when user has permission', function (): void {
+    it('denies delete for standard users regardless of permission', function (): void {
         $user = User::factory()->make();
+        Gate::define('delete_admin', fn (): true => true);
+        $admin = Admin::factory()->make();
+
+        $policy = new AdminPolicy();
+
+        expect($policy->delete($user, $admin))->toBeFalse();
+    });
+
+    it('allows restore when user has permission', function (): void {
+        $user = Admin::factory()->make();
         Gate::define('restore_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
@@ -115,7 +163,7 @@ describe('AdminPolicy', function (): void {
     });
 
     it('denies restore when user lacks permission', function (): void {
-        $user = User::factory()->make();
+        $user = Admin::factory()->make();
         Gate::define('restore_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
@@ -124,8 +172,18 @@ describe('AdminPolicy', function (): void {
         expect($policy->restore($user, $admin))->toBeFalse();
     });
 
-    it('allows forceDelete when user has permission', function (): void {
+    it('denies restore for standard users regardless of permission', function (): void {
         $user = User::factory()->make();
+        Gate::define('restore_admin', fn (): true => true);
+        $admin = Admin::factory()->make();
+
+        $policy = new AdminPolicy();
+
+        expect($policy->restore($user, $admin))->toBeFalse();
+    });
+
+    it('allows forceDelete when user has permission', function (): void {
+        $user = Admin::factory()->make();
         Gate::define('force_delete_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
@@ -135,8 +193,18 @@ describe('AdminPolicy', function (): void {
     });
 
     it('denies forceDelete when user lacks permission', function (): void {
-        $user = User::factory()->make();
+        $user = Admin::factory()->make();
         Gate::define('force_delete_admin', fn (): false => false);
+        $admin = Admin::factory()->make();
+
+        $policy = new AdminPolicy();
+
+        expect($policy->forceDelete($user, $admin))->toBeFalse();
+    });
+
+    it('denies forceDelete for standard users regardless of permission', function (): void {
+        $user = User::factory()->make();
+        Gate::define('force_delete_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
         $policy = new AdminPolicy();
