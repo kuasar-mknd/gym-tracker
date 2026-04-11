@@ -33,6 +33,8 @@ class ProfileController extends Controller
      */
     public function index(Request $request): Response
     {
+        $this->authorize('view', $this->user());
+
         return Inertia::render('Profile/Index');
     }
 
@@ -47,6 +49,8 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $this->authorize('view', $this->user());
+
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => true,
             'status' => session('status'),
@@ -71,6 +75,8 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
+        $this->authorize('update', $this->user());
+
         $this->user()->fill($request->validated());
 
         if ($this->user()->isDirty('email')) {
@@ -94,6 +100,8 @@ class ProfileController extends Controller
      */
     public function updatePreferences(UpdateNotificationPreferencesRequest $request, UpdateNotificationPreferencesAction $updatePreferences): RedirectResponse
     {
+        $this->authorize('update', $this->user());
+
         /**
          * @var array{
          *     preferences: array<string, bool>,
@@ -119,6 +127,8 @@ class ProfileController extends Controller
      */
     public function destroy(DeleteUserRequest $request): RedirectResponse
     {
+        $this->authorize('delete', $this->user());
+
         $request->validated();
 
         $user = $this->user();
