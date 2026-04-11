@@ -58,7 +58,7 @@ final class StreakService
             $latestStartedAtCarbon = Carbon::parse((string) $latestStartedAt);
         }
 
-        $user->last_workout_at = ($workout !== null) ? $workout->started_at : $latestStartedAtCarbon;
+        $user->last_workout_at = $workout !== null ? $workout->started_at : $latestStartedAtCarbon;
         $user->save();
     }
 
@@ -107,9 +107,6 @@ final class StreakService
             } elseif ($diffInDays > 1) {
                 // Streak broken
                 $user->current_streak = 1;
-            } elseif ($diffInDays < 0) {
-                // Backdated workout - we don't handle historical streak recalculation here yet
-                // For now, don't increment or reset.
             }
         }
 

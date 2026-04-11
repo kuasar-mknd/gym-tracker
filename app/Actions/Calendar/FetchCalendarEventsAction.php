@@ -34,47 +34,84 @@ final class FetchCalendarEventsAction
         ];
     }
 
+    /**
+     * @param  array<int, mixed>  $workoutIds
+     * @return array<int, array<int, string>>
+     */
+    protected function getWorkoutPreviews(array $workoutIds): array
+    {
+        /** @var array<int, array<int, string>> */
+        return \Illuminate\Support\Facades\DB::table('workout_lines')
+            ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
+            ->whereIn('workout_lines.workout_id', $workoutIds)
+            ->select('workout_lines.workout_id', 'exercises.name')
+            ->orderBy('workout_lines.workout_id')
+            ->orderBy('workout_lines.order')
+            ->get()
+            ->groupBy('workout_id')
+            ->map(fn (\Illuminate\Support\Collection $lines) => $lines->take(3)->pluck('name')->toArray())
+            ->toArray();
+    }
+
     /** @return \Illuminate\Support\Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}> */
     private function getWorkouts(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
     {
-        return Workout::where('user_id', $user->id)
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Use toBase() to avoid hydrating Eloquent models and Carbon objects.
+        // This significantly reduces memory usage and execution time for large datasets.
+        $workouts = Workout::query()
+            ->toBase()
+            ->select(['id', 'name', 'started_at'])
+            ->selectSub(
+                \App\Models\WorkoutLine::query()
+                    ->whereColumn('workout_id', 'workouts.id')
+                    ->selectRaw('count(*)'),
+                'exercises_count'
+            )
+            ->where('user_id', $user->id)
             ->whereBetween('started_at', [$start, $end])
-            ->withCount('workoutLines')
-            ->with([
-                'workoutLines' => function ($query): void {
-                    $query->select('id', 'workout_id', 'exercise_id')
-                        ->orderBy('order')
-                        ->limit(3)
-                        ->with('exercise:id,name');
-                },
-            ])
-            ->get()
-            ->map(function ($workout): array {
-                /** @var array<int, string> $preview */
-                $preview = $workout->workoutLines->map(fn ($line) => $line->exercise->name ?? 'Exercice inconnu')->toArray();
+            ->get();
 
-                return [
-                    'id' => $workout->id,
-                    'name' => $workout->name ?? 'Séance',
-                    'date' => $workout->started_at->toDateString(),
-                    'started_at' => $workout->started_at->toIso8601String(),
-                    'exercises_count' => $workout->workout_lines_count ?? 0,
-                    'preview_exercises' => $preview,
-                ];
-            });
+        if ($workouts->isEmpty()) {
+            return collect();
+        }
+
+        $previews = $this->getWorkoutPreviews($workouts->pluck('id')->toArray());
+
+        return $workouts->map(function (object $workout) use ($previews): array {
+            $startedAt = (string) $workout->started_at;
+            $timestamp = strtotime($startedAt);
+
+            return [
+                'id' => (int) $workout->id,
+                'name' => (string) ($workout->name ?? 'Séance'),
+                'date' => substr($startedAt, 0, 10),
+                'started_at' => $timestamp !== false ? date('c', $timestamp) : $startedAt,
+                'exercises_count' => (int) ($workout->exercises_count ?? 0),
+                'preview_exercises' => $previews[$workout->id] ?? [],
+            ];
+        });
     }
 
     /** @return \Illuminate\Support\Collection<int, array{id: int, date: string, mood_score: int|null, has_note: bool}> */
     private function getJournals(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
     {
-        return DailyJournal::where('user_id', $user->id)
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Use toBase() to avoid hydrating Eloquent models and Carbon objects.
+        // This significantly reduces memory usage and execution time for large datasets.
+        return DailyJournal::query()
+            ->toBase()
+            ->select(['id', 'date', 'mood_score', 'content'])
+            ->where('user_id', $user->id)
             ->whereBetween('date', [$start, $end])
             ->get()
-            ->map(fn ($journal): array => [
-                'id' => $journal->id,
-                'date' => $journal->date->toDateString(),
-                'mood_score' => $journal->mood_score,
-                'has_note' => (bool) ($journal->content ?? false),
+            ->map(fn (object $journal): array => [
+                'id' => (int) $journal->id,
+                'date' => is_string($journal->date)
+                    ? substr($journal->date, 0, 10)
+                    : (string) $journal->date,
+                'mood_score' => isset($journal->mood_score) ? (int) $journal->mood_score : null,
+                'has_note' => $journal->content !== null && $journal->content !== '',
             ]);
     }
 }
