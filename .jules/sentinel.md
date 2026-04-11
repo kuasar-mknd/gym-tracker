@@ -77,3 +77,8 @@
 **Vulnerability:** The password update endpoint (`PasswordController@update`) lacked per-user rate limiting for the `current_password` validation rule, exposing users to brute-force attacks on their current session password.
 **Learning:** Global route throttling is insufficient for sensitive credential verification. Brute-force protection should be enforced at the request level using a user-specific throttle key.
 **Prevention:** Encapsulate sensitive credential verification in a dedicated `FormRequest`. Use `prepareForValidation()` to check for throttling and `withValidator()` to increment the failure count on specific validation errors (e.g., `current_password`).
+
+## 2026-05-18 - AdminPolicy Authorization Bypass
+**Vulnerability:** `AdminPolicy` methods were type-hinted with `App\Models\User`, allowing standard users to bypass authorization checks if they were somehow granted admin-like permissions, or simply because the policy defaulted to checking properties on a standard user model rather than strictly requiring an `Admin` instance.
+**Learning:** When creating policies for administrative resources that rely on a separate model (e.g., `Admin` vs `User`), type-hinting the broader `Authenticatable` interface and explicitly checking `instanceof Admin` is crucial for defense-in-depth. This prevents a standard `User` model from ever evaluating the permission checks within an admin-specific policy.
+**Prevention:** Always use explicit `instanceof` checks in Policies when the application supports multiple user types or guards to ensure that only the intended model type can ever be evaluated for permissions.
