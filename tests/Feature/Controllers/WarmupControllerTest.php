@@ -10,7 +10,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\get;
-use function Pest\Laravel\put;
+use function Pest\Laravel\post;
 
 uses(RefreshDatabase::class);
 
@@ -65,7 +65,7 @@ describe('WarmupController', function (): void {
         ];
 
         actingAs($user)
-            ->put(route('tools.warmup.update'), $data)
+            ->post(route('tools.warmup.update'), $data)
             ->assertRedirect()
             ->assertSessionHas('success', 'Préférences de récupération sauvegardées.');
 
@@ -92,7 +92,7 @@ describe('WarmupController', function (): void {
         ];
 
         actingAs($user)
-            ->put(route('tools.warmup.update'), $data)
+            ->post(route('tools.warmup.update'), $data)
             ->assertRedirect()
             ->assertSessionHas('success', 'Préférences de récupération sauvegardées.');
 
@@ -113,7 +113,7 @@ describe('WarmupController', function (): void {
         ];
 
         actingAs($user)
-            ->put(route('tools.warmup.update'), $data)
+            ->post(route('tools.warmup.update'), $data)
             ->assertStatus(302)
             ->assertSessionHasErrors(['bar_weight', 'rounding_increment', 'steps']);
     });
@@ -130,7 +130,7 @@ describe('WarmupController', function (): void {
         ];
 
         actingAs($user)
-            ->put(route('tools.warmup.update'), $data)
+            ->post(route('tools.warmup.update'), $data)
             ->assertStatus(302)
             ->assertSessionHasErrors(['steps.0.percent', 'steps.0.reps']);
     });
@@ -153,7 +153,7 @@ describe('WarmupController', function (): void {
         ];
 
         actingAs($user)
-            ->put(route('tools.warmup.update'), $data)
+            ->post(route('tools.warmup.update'), $data)
             ->assertRedirect();
 
         // The other user's preference should be unchanged
@@ -172,7 +172,7 @@ describe('WarmupController', function (): void {
     it('redirects unauthenticated users', function (): void {
         get(route('tools.warmup'))->assertRedirect(route('login'));
 
-        put(route('tools.warmup.update'), [
+        post(route('tools.warmup.update'), [
             'bar_weight' => 20,
             'rounding_increment' => 2.5,
             'steps' => [],
