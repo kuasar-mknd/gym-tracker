@@ -35,7 +35,7 @@ final class FetchCalendarEventsAction
     }
 
     /**
-     * @param array<int, mixed> $workoutIds
+     * @param  array<int, mixed>  $workoutIds
      * @return array<int, array<int, string>>
      */
     protected function getWorkoutPreviews(array $workoutIds): array
