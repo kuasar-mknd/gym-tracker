@@ -87,3 +87,7 @@
 ## 2026-04-10 - [Native PHP Date Math in Analytical Loops]
 **Learning:** Instantiating 'Carbon' objects inside large analytical loops causes significant O(N) object instantiation overhead and memory pressure. Native PHP 'strtotime()' and 'date()' are 80-90% faster in these scenarios.
 **Action:** Replace 'Carbon::parse()' with native 'strtotime()' and 'date()' within performance-critical loops that evaluate date sequences for charts or distributions.
+
+## 2024-05-25 - [toBase() Type Safety with Datetimes]
+**Learning:** Using `toBase()->value('column')` on a datetime column bypasses Eloquent's attribute casting and returns a raw string instead of a `Carbon` instance. This can break existing logic that relies on `instanceof Carbon` checks or Carbon-specific methods.
+**Action:** When using `toBase()` for performance on datetime columns, always explicitly parse the result with `Carbon::parse()` if the subsequent logic expects a Carbon object, or rely on native PHP string/date functions for even better performance.

@@ -25,8 +25,8 @@ final class StreakService
      * it resets to 1. If consecutive, it increments. It also updates the
      * user's `last_workout_at` timestamp.
      *
-     * @param  \App\Models\User  $user  The user whose streak is being updated.
-     * @param  \App\Models\Workout|null  $workout  The newly completed or updated workout (optional).
+     * @param  User  $user  The user whose streak is being updated.
+     * @param  Workout|null  $workout  The newly completed or updated workout (optional).
      */
     public function updateStreak(User $user, ?Workout $workout = null): void
     {
@@ -50,23 +50,32 @@ final class StreakService
 
         $this->calculateNewStreak($user, $workoutDate, $lastRecordedDate);
 
-        // Ensure we assign a Carbon instance or null, handling the mixed return of value()
-        $latestStartedAt = $user->workouts()->latest('started_at')->value('started_at');
-        $latestStartedAtCarbon = null;
+        if ($workout !== null) {
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // If a workout is provided, use its started_at date directly.
+            // This avoids an unnecessary database query to find the "latest" workout.
+            $user->last_workout_at = $workout->started_at;
+        } else {
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // Only query the database if no workout was provided.
+            // Using value() without toBase() ensures Eloquent casting to Carbon.
+            $latestStartedAt = $user->workouts()
+                ->latest('started_at')
+                ->value('started_at');
 
-        if ($latestStartedAt && is_scalar($latestStartedAt)) {
-            $latestStartedAtCarbon = Carbon::parse((string) $latestStartedAt);
+            $user->last_workout_at = ($latestStartedAt instanceof Carbon)
+                ? $latestStartedAt
+                : ($latestStartedAt && is_scalar($latestStartedAt) ? Carbon::parse((string) $latestStartedAt) : null);
         }
 
-        $user->last_workout_at = $workout !== null ? $workout->started_at : $latestStartedAtCarbon;
         $user->save();
     }
 
     /**
      * Get the user's last recorded workout date as a Carbon instance.
      *
-     * @param  \App\Models\User  $user  The user model.
-     * @return \Illuminate\Support\Carbon|null The start of the day of the last workout, or null if never recorded.
+     * @param  User  $user  The user model.
+     * @return Carbon|null The start of the day of the last workout, or null if never recorded.
      */
     protected function getLastRecordedDate(User $user): ?Carbon
     {
@@ -87,9 +96,9 @@ final class StreakService
      * or remain the same (same day). It also updates the `longest_streak` if
      * the new current streak exceeds it.
      *
-     * @param  \App\Models\User  $user  The user whose streak is being calculated.
-     * @param  \Illuminate\Support\Carbon  $workoutDate  The resolved start-of-day date of the current workout.
-     * @param  \Illuminate\Support\Carbon|null  $lastRecordedDate  The start-of-day date of the previously recorded workout.
+     * @param  User  $user  The user whose streak is being calculated.
+     * @param  Carbon  $workoutDate  The resolved start-of-day date of the current workout.
+     * @param  Carbon|null  $lastRecordedDate  The start-of-day date of the previously recorded workout.
      */
     protected function calculateNewStreak(User $user, Carbon $workoutDate, ?Carbon $lastRecordedDate): void
     {
@@ -124,12 +133,14 @@ final class StreakService
      * The returned date is always normalized to the start of the day to ensure
      * accurate day-to-day streak calculations.
      *
-     * @param  \App\Models\User  $user  The user model.
-     * @param  \App\Models\Workout|null  $workout  The explicitly provided workout.
-     * @return \Illuminate\Support\Carbon|null The resolved date normalized to start of day, or null if no workouts exist.
+     * @param  User  $user  The user model.
+     * @param  Workout|null  $workout  The explicitly provided workout.
+     * @return Carbon|null The resolved date normalized to start of day, or null if no workouts exist.
      */
     private function resolveWorkoutDate(User $user, ?Workout $workout): ?Carbon
     {
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Use the provided workout's date if available to avoid a database query.
         $startedAt = $workout->started_at ?? $user->workouts()->latest('started_at')->value('started_at');
 
         if ($startedAt instanceof Carbon) {
