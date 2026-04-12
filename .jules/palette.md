@@ -5,3 +5,6 @@
 ## 2026-04-11 - Standardize character count for textareas
 **Learning:** Adding a visible character counter to textareas (like Workout Notes or Journal entries) improves UX by providing immediate feedback on validation limits before submission.
 **Action:** Always include a `{{ current / max }}` indicator for textareas with `maxlength` constraints, using the `text-red-400` class for limit warnings to maintain consistency with the 'Liquid Glass' design system.
+## 2026-04-12 - Add aria-labels to icon-only buttons
+**Learning:** Icon-only buttons (like those using only `material-symbols-outlined`) often miss `aria-label` attributes, making them inaccessible to screen readers. This is common in lists where actions like 'Edit' or 'Delete' are represented solely by icons to save space.
+**Action:** Always ensure that any button containing only an icon has a descriptive `aria-label` attribute (e.g., `aria-label="Modifier le complément"`) to convey its purpose to assistive technologies.

@@ -122,6 +122,7 @@ const formatDate = (dateString) => {
                 <!-- Mobile Add Button -->
                 <button
                     @click="showAddForm = true"
+                    aria-label="Ajouter un complément"
                     class="bg-gradient-main flex size-12 items-center justify-center rounded-xl text-white shadow-lg active:scale-95 sm:hidden"
                 >
                     <span class="material-symbols-outlined">add</span>
@@ -225,12 +226,14 @@ const formatDate = (dateString) => {
                                 <div class="flex gap-1">
                                     <button
                                         @click="startEdit(supplement)"
+                                        aria-label="Modifier le complément"
                                         class="text-text-muted hover:text-electric-orange p-1 transition-colors"
                                     >
                                         <span class="material-symbols-outlined text-lg">edit</span>
                                     </button>
                                     <button
                                         @click="deleteSupplement(supplement.id)"
+                                        aria-label="Supprimer le complément"
                                         class="text-text-muted p-1 transition-colors hover:text-red-500"
                                     >
                                         <span class="material-symbols-outlined text-lg">delete</span>
