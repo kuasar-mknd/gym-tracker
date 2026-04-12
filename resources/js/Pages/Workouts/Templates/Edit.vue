@@ -180,18 +180,32 @@ const submit = () => {
                     />
 
                     <div>
-                        <label
-                            :for="'template-description-' + template.id"
-                            class="text-text-muted block text-sm font-medium"
-                            >Description (optionnel)</label
-                        >
+                        <div class="mb-1 flex items-center justify-between">
+                            <label
+                                :for="'template-description-' + template.id"
+                                class="text-text-muted block text-sm font-medium"
+                                >Description (optionnel)</label
+                            >
+                            <span
+                                :id="'template-description-counter-' + template.id"
+                                class="text-[10px] font-bold tracking-wider uppercase"
+                                :class="form.description?.length > 1000 ? 'text-red-400' : 'text-text-muted/50'"
+                            >
+                                {{ form.description?.length || 0 }} / 1000
+                            </span>
+                        </div>
                         <textarea
                             :id="'template-description-' + template.id"
                             v-model="form.description"
                             rows="2"
-                            class="glass-input mt-1"
+                            maxlength="1000"
+                            :aria-describedby="'template-description-counter-' + template.id"
+                            class="text-text-main placeholder:text-text-muted/50 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/15 focus:border-white/50 focus:bg-white/20 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:hover:border-slate-600 dark:focus:bg-slate-800"
                             placeholder="Détails de la séance..."
                         ></textarea>
+                        <p v-if="form.errors.description" class="mt-2 text-sm font-medium text-red-600">
+                            {{ form.errors.description }}
+                        </p>
                     </div>
                 </div>
             </GlassCard>

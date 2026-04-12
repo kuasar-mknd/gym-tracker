@@ -8,3 +8,7 @@
 ## 2026-04-12 - Add aria-labels to icon-only buttons
 **Learning:** Icon-only buttons (like those using only `material-symbols-outlined`) often miss `aria-label` attributes, making them inaccessible to screen readers. This is common in lists where actions like 'Edit' or 'Delete' are represented solely by icons to save space.
 **Action:** Always ensure that any button containing only an icon has a descriptive `aria-label` attribute (e.g., `aria-label="Modifier le complément"`) to convey its purpose to assistive technologies.
+
+## 2024-05-15 - Accessible character counters for textareas
+**Learning:** While visible character counters improve UX, they are often invisible to screen readers if not properly linked.
+**Action:** Always link textarea character counters using `aria-describedby` on the textarea and a matching `id` on the counter element to ensure the limit is communicated to assistive technologies.
