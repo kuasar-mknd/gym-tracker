@@ -7,9 +7,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-describe('PushSubscriptionController', function () {
-    describe('update', function () {
-        it('allows a user to save a valid push subscription', function () {
+describe('PushSubscriptionController', function (): void {
+    describe('update', function (): void {
+        it('allows a user to save a valid push subscription', function (): void {
             $user = User::factory()->create();
 
             $payload = [
@@ -33,7 +33,7 @@ describe('PushSubscriptionController', function () {
             ]);
         });
 
-        it('returns validation errors for missing endpoint', function () {
+        it('returns validation errors for missing endpoint', function (): void {
             $user = User::factory()->create();
 
             $payload = [
@@ -50,7 +50,7 @@ describe('PushSubscriptionController', function () {
                 ->assertJsonValidationErrors(['endpoint']);
         });
 
-        it('returns validation errors for missing keys', function () {
+        it('returns validation errors for missing keys', function (): void {
             $user = User::factory()->create();
 
             $payload = [
@@ -64,7 +64,7 @@ describe('PushSubscriptionController', function () {
                 ->assertJsonValidationErrors(['keys.auth', 'keys.p256dh']);
         });
 
-        it('redirects or forbids a guest user', function () {
+        it('redirects or forbids a guest user', function (): void {
             $payload = [
                 'endpoint' => 'https://fcm.googleapis.com/fcm/send/fake-endpoint',
                 'keys' => [
@@ -79,8 +79,8 @@ describe('PushSubscriptionController', function () {
         });
     });
 
-    describe('destroy', function () {
-        it('allows a user to delete an existing push subscription', function () {
+    describe('destroy', function (): void {
+        it('allows a user to delete an existing push subscription', function (): void {
             $user = User::factory()->create();
             $user->updatePushSubscription(
                 'https://fcm.googleapis.com/fcm/send/fake-endpoint',
@@ -107,7 +107,7 @@ describe('PushSubscriptionController', function () {
             ]);
         });
 
-        it('returns validation errors for missing endpoint on deletion', function () {
+        it('returns validation errors for missing endpoint on deletion', function (): void {
             $user = User::factory()->create();
 
             $payload = [];
@@ -119,7 +119,7 @@ describe('PushSubscriptionController', function () {
                 ->assertJsonValidationErrors(['endpoint']);
         });
 
-        it('returns validation error for invalid url format', function () {
+        it('returns validation error for invalid url format', function (): void {
             $user = User::factory()->create();
 
             $payload = [
@@ -133,7 +133,7 @@ describe('PushSubscriptionController', function () {
                 ->assertJsonValidationErrors(['endpoint']);
         });
 
-        it('redirects or forbids a guest user from deleting', function () {
+        it('redirects or forbids a guest user from deleting', function (): void {
             $payload = [
                 'endpoint' => 'https://fcm.googleapis.com/fcm/send/fake-endpoint',
             ];
