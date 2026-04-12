@@ -1,6 +1,9 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import { defineAsyncComponent } from 'vue'
+
+const RecentWorkoutsTimelineChart = defineAsyncComponent(() => import('@/Components/Stats/RecentWorkoutsTimelineChart.vue'))
 
 defineProps({
     recentWorkouts: { type: Array, required: true },
@@ -41,8 +44,15 @@ const colorForWorkout = (index) => {
             </GlassButton>
         </div>
 
-        <!-- Activity Cards -->
+        <!-- Activity Cards and Chart -->
         <div v-else class="flex flex-col gap-3">
+            <div class="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md mb-2">
+                <div class="mb-4 text-[10px] font-black tracking-[0.2em] text-vivid-violet uppercase">
+                    Durée des séances
+                </div>
+                <RecentWorkoutsTimelineChart :data="recentWorkouts" />
+            </div>
+
             <Link
                 v-for="(workout, index) in recentWorkouts"
                 :key="workout.id"
