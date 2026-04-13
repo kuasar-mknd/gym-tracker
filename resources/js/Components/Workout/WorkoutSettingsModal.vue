@@ -30,6 +30,7 @@ const emit = defineEmits(['close', 'submit'])
                             Notes
                         </label>
                         <span
+                            id="workout-notes-counter"
                             class="text-[10px] font-bold tracking-wider uppercase"
                             :class="form.notes?.length > 1000 ? 'text-red-400' : 'text-text-muted/50'"
                         >
@@ -41,6 +42,7 @@ const emit = defineEmits(['close', 'submit'])
                         v-model="form.notes"
                         rows="4"
                         maxlength="1000"
+                        aria-describedby="workout-notes-counter"
                         class="text-text-main placeholder:text-text-muted/50 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/15 focus:border-white/50 focus:bg-white/20 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-white dark:hover:border-slate-600 dark:focus:bg-slate-800"
                         placeholder="Notes sur la séance..."
                         dusk="workout-notes-input"
