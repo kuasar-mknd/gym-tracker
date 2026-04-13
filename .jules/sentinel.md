@@ -87,3 +87,8 @@
 **Vulnerability:** Found `UserPolicy` instance-level methods (`view`, `update`, etc.) incorrectly missing the target `User` model as a parameter and lacking ownership checks. This bypassed ownership-based authorization in favor of global Spatie-style permissions.
 **Learning:** For resource policies that govern specific model instances, the policy method must accept that instance as a second argument. Relying solely on the authenticated user model to check for global permissions (`Update:User`) creates a gap where regular users cannot manage their own resources, and users with the permission can manage ALL resources of that type.
 **Prevention:** Always implement instance-level policy methods with two parameters: `AuthUser $authUser` and `Model $model`. Combine ownership logic (`$authUser->id === $model->user_id`) with permission-based overrides (`$authUser->can('Update:Model')`) to ensure proper access control.
+
+## 2026-06-15 - Inconsistent Input Validation & DoS Risk
+**Vulnerability:** Found `notes` fields in `WorkoutStoreRequest` and API `WorkoutUpdateRequest` lacked character length limits, while the web `UpdateWorkoutRequest` enforced a 1000-character limit.
+**Learning:** Inconsistent validation across different entry points (Web vs API) for the same resource is a recurring source of security gaps. Missing length limits on text fields can be exploited for database-level DoS or storage exhaustion.
+**Prevention:** Enforce consistent validation rules by centralizing them or using shared FormRequests. Always include `max` constraints on all user-supplied string and text inputs as a baseline security measure.
