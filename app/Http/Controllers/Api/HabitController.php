@@ -10,7 +10,10 @@ use App\Http\Requests\Api\StoreHabitRequest;
 use App\Http\Requests\Api\UpdateHabitRequest;
 use App\Http\Resources\HabitResource;
 use App\Models\Habit;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 
@@ -29,10 +32,11 @@ class HabitController extends Controller
      * Retrieves all active habits for the authenticated user, supporting
      * optional pagination.
      *
-     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request containing optional query parameters.
-     * @param  \App\Actions\Habits\FetchHabitsIndexApiAction  $fetchHabitsIndexApiAction  The action to fetch habits.
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection A collection of habit resources.
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view habits.
+     * @param  Request  $request  The incoming HTTP request containing optional query parameters.
+     * @param  FetchHabitsIndexApiAction  $fetchHabitsIndexApiAction  The action to fetch habits.
+     * @return AnonymousResourceCollection A collection of habit resources.
+     *
+     * @throws AuthorizationException If the user is not authorized to view habits.
      */
     #[OA\Get(
         path: '/habits',
@@ -41,7 +45,7 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(Request $request, FetchHabitsIndexApiAction $fetchHabitsIndexApiAction): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(Request $request, FetchHabitsIndexApiAction $fetchHabitsIndexApiAction): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Habit::class);
 
@@ -60,10 +64,11 @@ class HabitController extends Controller
      * Validates the request data and uses the CreateHabitAction to persist
      * the habit.
      *
-     * @param  \App\Http\Requests\Api\StoreHabitRequest  $request  The validated request containing habit data.
-     * @param  \App\Actions\Habits\CreateHabitAction  $createHabitAction  Action to handle habit creation logic.
-     * @return \Illuminate\Http\JsonResponse A JSON response containing the created habit resource.
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create habits.
+     * @param  StoreHabitRequest  $request  The validated request containing habit data.
+     * @param  CreateHabitAction  $createHabitAction  Action to handle habit creation logic.
+     * @return JsonResponse A JSON response containing the created habit resource.
+     *
+     * @throws AuthorizationException If the user is not authorized to create habits.
      */
     #[OA\Post(
         path: '/habits',
@@ -72,7 +77,7 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 201, description: 'Created successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function store(StoreHabitRequest $request, CreateHabitAction $createHabitAction): \Illuminate\Http\JsonResponse
+    public function store(StoreHabitRequest $request, CreateHabitAction $createHabitAction): JsonResponse
     {
         $this->authorize('create', Habit::class);
 
@@ -90,9 +95,10 @@ class HabitController extends Controller
      *
      * Retrieves a single habit by its ID, along with its most recent logs.
      *
-     * @param  \App\Models\Habit  $habit  The habit model instance.
-     * @return \App\Http\Resources\HabitResource The habit resource including its recent logs.
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view the habit.
+     * @param  Habit  $habit  The habit model instance.
+     * @return HabitResource The habit resource including its recent logs.
+     *
+     * @throws AuthorizationException If the user is not authorized to view the habit.
      */
     #[OA\Get(
         path: '/habits/{habit}',
@@ -119,10 +125,11 @@ class HabitController extends Controller
      *
      * Validates the request data and updates the existing habit model.
      *
-     * @param  \App\Http\Requests\Api\UpdateHabitRequest  $request  The validated request containing updated habit data.
-     * @param  \App\Models\Habit  $habit  The habit model instance to update.
-     * @return \App\Http\Resources\HabitResource The updated habit resource.
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the habit.
+     * @param  UpdateHabitRequest  $request  The validated request containing updated habit data.
+     * @param  Habit  $habit  The habit model instance to update.
+     * @return HabitResource The updated habit resource.
+     *
+     * @throws AuthorizationException If the user is not authorized to update the habit.
      */
     #[OA\Put(
         path: '/habits/{habit}',
@@ -147,9 +154,10 @@ class HabitController extends Controller
      *
      * Deletes the given habit model from the database.
      *
-     * @param  \App\Models\Habit  $habit  The habit model instance to delete.
-     * @return \Illuminate\Http\Response An empty response with a 204 status code indicating successful deletion.
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the habit.
+     * @param  Habit  $habit  The habit model instance to delete.
+     * @return Response An empty response with a 204 status code indicating successful deletion.
+     *
+     * @throws AuthorizationException If the user is not authorized to delete the habit.
      */
     #[OA\Delete(
         path: '/habits/{habit}',
@@ -157,7 +165,7 @@ class HabitController extends Controller
         tags: ['Habits']
     )]
     #[OA\Response(response: 204, description: 'Deleted successfully')]
-    public function destroy(Habit $habit): \Illuminate\Http\Response
+    public function destroy(Habit $habit): Response
     {
         $this->authorize('delete', $habit);
 
