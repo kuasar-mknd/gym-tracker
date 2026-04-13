@@ -27,7 +27,7 @@ const chartData = computed(() => {
     const reversedData = [...props.data].reverse()
 
     const labels = reversedData.map((workout) =>
-        new Date(workout.started_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+        new Date(workout.started_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
     )
 
     const durations = reversedData.map((workout) => {

@@ -126,6 +126,7 @@ const emit = defineEmits(['close', 'submit'])
                 <div class="mb-1 flex items-center justify-between">
                     <label for="journal-content" class="text-text-muted block text-sm font-medium">Notes</label>
                     <span
+                        id="journal-content-counter"
                         class="text-[10px] font-bold tracking-wider uppercase"
                         :class="form.content?.length > 1000 ? 'text-red-400' : 'text-text-muted/50'"
                     >
@@ -137,7 +138,8 @@ const emit = defineEmits(['close', 'submit'])
                     v-model="form.content"
                     rows="4"
                     maxlength="1000"
-                    class="text-text-main placeholder-text-muted/50 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/15 focus:border-white/50 focus:bg-white/20 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none active:scale-[0.98]"
+                    aria-describedby="journal-content-counter"
+                    class="text-text-main placeholder-text-muted/50 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/15 focus:border-white/50 focus:bg-white/20 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none"
                     placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
                 ></textarea>
                 <div v-if="form.errors.content" class="mt-1 text-xs text-red-400">
