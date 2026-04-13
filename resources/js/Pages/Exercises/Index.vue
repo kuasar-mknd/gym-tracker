@@ -10,6 +10,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent, onMounted, onUnmounted, watch } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
@@ -345,26 +346,22 @@ const typeLabel = (type) => {
                             :error="form.errors.name"
                         />
                         <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="font-display-label text-text-muted mb-2 block">Type</label>
-                                <select v-model="form.type" name="type" class="glass-input w-full">
-                                    <option v-for="t in EXERCISE_TYPES" :key="t.value" :value="t.value">
-                                        {{ t.label }}
-                                    </option>
-                                </select>
-                                <p v-if="form.errors.type" class="mt-2 text-sm font-medium text-red-600">
-                                    {{ form.errors.type }}
-                                </p>
-                            </div>
-                            <div>
-                                <label class="font-display-label text-text-muted mb-2 block">Catégorie</label>
-                                <select v-model="form.category" class="glass-input w-full">
-                                    <option value="">— Aucune —</option>
-                                    <option v-for="cat in EXERCISE_CATEGORIES" :key="cat" :value="cat">
-                                        {{ cat }}
-                                    </option>
-                                </select>
-                            </div>
+                            <GlassSelect
+                                v-model="form.type"
+                                label="Type"
+                                :options="EXERCISE_TYPES"
+                                :error="form.errors.type"
+                                placeholder=""
+                            />
+                            <GlassSelect
+                                v-model="form.category"
+                                label="Catégorie"
+                                :options="[
+                                    { value: '', label: '— Aucune —' },
+                                    ...EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c })),
+                                ]"
+                                placeholder=""
+                            />
                         </div>
                         <GlassButton
                             type="submit"
