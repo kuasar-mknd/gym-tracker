@@ -348,6 +348,7 @@ const typeLabel = (type) => {
                         <div class="grid grid-cols-2 gap-4">
                             <GlassSelect
                                 v-model="form.type"
+                                name="type"
                                 label="Type"
                                 :options="EXERCISE_TYPES"
                                 :error="form.errors.type"
@@ -355,6 +356,7 @@ const typeLabel = (type) => {
                             />
                             <GlassSelect
                                 v-model="form.category"
+                                name="category"
                                 label="Catégorie"
                                 :options="[
                                     { value: '', label: '— Aucune —' },
