@@ -14,8 +14,26 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 
+/**
+ * Controller for managing User Habits via API.
+ *
+ * This controller handles the CRUD operations for habits.
+ * It provides endpoints to list, create, view, update, and delete habits
+ * for the authenticated user.
+ */
 class HabitController extends Controller
 {
+    /**
+     * Display a listing of the user's habits.
+     *
+     * Retrieves all active habits for the authenticated user, supporting
+     * optional pagination.
+     *
+     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request containing optional query parameters.
+     * @param  \App\Actions\Habits\FetchHabitsIndexApiAction  $fetchHabitsIndexApiAction  The action to fetch habits.
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection A collection of habit resources.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view habits.
+     */
     #[OA\Get(
         path: '/habits',
         summary: 'Get list of habits',
@@ -36,6 +54,17 @@ class HabitController extends Controller
         return HabitResource::collection($habits);
     }
 
+    /**
+     * Store a newly created habit in storage.
+     *
+     * Validates the request data and uses the CreateHabitAction to persist
+     * the habit.
+     *
+     * @param  \App\Http\Requests\Api\StoreHabitRequest  $request  The validated request containing habit data.
+     * @param  \App\Actions\Habits\CreateHabitAction  $createHabitAction  Action to handle habit creation logic.
+     * @return \Illuminate\Http\JsonResponse A JSON response containing the created habit resource.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create habits.
+     */
     #[OA\Post(
         path: '/habits',
         summary: 'Create a new habit',
@@ -56,6 +85,15 @@ class HabitController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
+    /**
+     * Display the specified habit.
+     *
+     * Retrieves a single habit by its ID, along with its most recent logs.
+     *
+     * @param  \App\Models\Habit  $habit  The habit model instance.
+     * @return \App\Http\Resources\HabitResource The habit resource including its recent logs.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view the habit.
+     */
     #[OA\Get(
         path: '/habits/{habit}',
         summary: 'Get a specific habit',
@@ -76,6 +114,16 @@ class HabitController extends Controller
         return new HabitResource($habit);
     }
 
+    /**
+     * Update the specified habit in storage.
+     *
+     * Validates the request data and updates the existing habit model.
+     *
+     * @param  \App\Http\Requests\Api\UpdateHabitRequest  $request  The validated request containing updated habit data.
+     * @param  \App\Models\Habit  $habit  The habit model instance to update.
+     * @return \App\Http\Resources\HabitResource The updated habit resource.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the habit.
+     */
     #[OA\Put(
         path: '/habits/{habit}',
         summary: 'Update a habit',
@@ -94,6 +142,15 @@ class HabitController extends Controller
         return new HabitResource($habit);
     }
 
+    /**
+     * Remove the specified habit from storage.
+     *
+     * Deletes the given habit model from the database.
+     *
+     * @param  \App\Models\Habit  $habit  The habit model instance to delete.
+     * @return \Illuminate\Http\Response An empty response with a 204 status code indicating successful deletion.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the habit.
+     */
     #[OA\Delete(
         path: '/habits/{habit}',
         summary: 'Delete a habit',
