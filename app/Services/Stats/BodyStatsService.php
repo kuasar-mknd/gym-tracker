@@ -130,36 +130,33 @@ final class BodyStatsService
                     ->orderBy('measured_at', 'asc')
                     ->get();
 
-                /** @var array<int, WeightHistoryPoint> $weightHistory */
-                $weightHistory = $measurements->map(function (object $m): ?WeightHistoryPoint {
+                $weightHistory = [];
+                $bodyFatHistory = [];
+
+                foreach ($measurements as $m) {
                     $timestamp = strtotime((string) $m->measured_at);
 
                     if ($timestamp === false) {
-                        return null;
+                        continue;
                     }
 
-                    return new WeightHistoryPoint(
-                        date('d/m', $timestamp),
-                        date('Y-m-d', $timestamp),
+                    $date = date('d/m', $timestamp);
+                    $fullDate = date('Y-m-d', $timestamp);
+
+                    $weightHistory[] = new WeightHistoryPoint(
+                        $date,
+                        $fullDate,
                         (float) $m->weight,
                     );
-                })->filter()->values()->toArray();
 
-                /** @var array<int, BodyFatHistoryPoint> $bodyFatHistory */
-                $bodyFatHistory = $measurements->filter(fn (object $m): bool => isset($m->body_fat))
-                    ->map(function (object $m): ?BodyFatHistoryPoint {
-                        $timestamp = strtotime((string) $m->measured_at);
-
-                        if ($timestamp === false) {
-                            return null;
-                        }
-
-                        return new BodyFatHistoryPoint(
-                            date('d/m', $timestamp),
-                            date('Y-m-d', $timestamp),
+                    if (isset($m->body_fat)) {
+                        $bodyFatHistory[] = new BodyFatHistoryPoint(
+                            $date,
+                            $fullDate,
                             (float) $m->body_fat,
                         );
-                    })->filter()->values()->toArray();
+                    }
+                }
 
                 return [
                     'weightHistory' => $weightHistory,

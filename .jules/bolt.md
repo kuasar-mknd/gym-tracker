@@ -91,3 +91,7 @@
 ## 2024-05-25 - [toBase() Type Safety with Datetimes]
 **Learning:** Using `toBase()->value('column')` on a datetime column bypasses Eloquent's attribute casting and returns a raw string instead of a `Carbon` instance. This can break existing logic that relies on `instanceof Carbon` checks or Carbon-specific methods.
 **Action:** When using `toBase()` for performance on datetime columns, always explicitly parse the result with `Carbon::parse()` if the subsequent logic expects a Carbon object, or rely on native PHP string/date functions for even better performance.
+
+## 2024-05-26 - [Consolidating Collection Methods into Single Loop]
+**Learning:** Chaining multiple Laravel collection methods like `map()`, `filter()`, and `values()` across the same dataset creates multiple O(N) iterations. When these methods also perform redundant expensive operations like `strtotime()` and `date()` parsing, the performance penalty is compounded.
+**Action:** Consolidate multiple collection transformations into a single `foreach` loop. Parse raw data (like datetimes) once and reuse the results to populate multiple destination arrays, reducing both iteration overhead and redundant function calls.
