@@ -14,10 +14,22 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * Service for calculating and aggregating workout volume statistics.
+ *
+ * This class handles the computation of volume-related metrics such as daily,
+ * weekly, and monthly trends, as well as period-over-period comparisons.
+ * It leverages caching and database-level aggregations (via `toBase()`)
+ * to ensure high performance even with large datasets.
+ */
 final class VolumeStatsService
 {
     /**
-     * @return array<int, VolumeTrendPoint>
+     * Retrieve the volume trend over a specified number of days.
+     *
+     * @param  User  $user  The user for whom to calculate the volume trend.
+     * @param  int  $days  The number of past days to include in the trend (default: 30).
+     * @return array<int, VolumeTrendPoint> A list of volume trend data points.
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
@@ -54,7 +66,14 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array<int, DailyVolumeTrendPoint>
+     * Retrieve the daily volume trend for the recent period.
+     *
+     * Calculates the total workout volume for each day over the specified
+     * number of days leading up to today.
+     *
+     * @param  User  $user  The user for whom to calculate the daily trend.
+     * @param  int  $days  The number of past days to include (default: 7).
+     * @return array<int, DailyVolumeTrendPoint> A list of daily volume data points.
      */
     public function getDailyVolumeTrend(User $user, int $days = 7): array
     {
@@ -91,7 +110,12 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array<int, WeeklyVolumeTrendPoint>
+     * Retrieve the volume trend for the current week.
+     *
+     * Calculates the daily volume for each day of the current week (Monday to Sunday).
+     *
+     * @param  User  $user  The user for whom to calculate the weekly trend.
+     * @return array<int, WeeklyVolumeTrendPoint> A list of daily volume points for the current week.
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
@@ -130,7 +154,13 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array<int, VolumeHistoryPoint>
+     * Retrieve the recent volume history for individual workouts.
+     *
+     * Fetches the volume of the most recent workouts up to the specified limit.
+     *
+     * @param  User  $user  The user for whom to retrieve the history.
+     * @param  int  $limit  The maximum number of workouts to return (default: 20).
+     * @return array<int, VolumeHistoryPoint> A list of recent workout volume points.
      */
     public function getVolumeHistory(User $user, int $limit = 20): array
     {
@@ -165,6 +195,12 @@ final class VolumeStatsService
         );
     }
 
+    /**
+     * Compare the total volume of the current month against the previous month.
+     *
+     * @param  User  $user  The user to compare volume for.
+     * @return VolumeComparison An object containing the current, previous, and comparison metrics.
+     */
     public function getMonthlyVolumeComparison(User $user): VolumeComparison
     {
         $comparison = $this->calculateComparison(
@@ -182,6 +218,12 @@ final class VolumeStatsService
         );
     }
 
+    /**
+     * Compare the total volume of the current week against the previous week.
+     *
+     * @param  User  $user  The user to compare volume for.
+     * @return VolumeComparison An object containing the current, previous, and comparison metrics.
+     */
     public function getWeeklyVolumeComparison(User $user): VolumeComparison
     {
         $weekKey = now()->startOfWeek()->format('Y-W');
@@ -206,7 +248,13 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array<int, MonthlyVolumePoint>
+     * Retrieve the aggregated monthly volume history over a given period.
+     *
+     * Calculates the total volume per month for the specified number of past months.
+     *
+     * @param  User  $user  The user for whom to calculate the monthly history.
+     * @param  int  $months  The number of months to include (default: 6).
+     * @return array<int, MonthlyVolumePoint> A list of aggregated monthly volume points.
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {
@@ -244,7 +292,16 @@ final class VolumeStatsService
     }
 
     /**
-     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float}
+     * Calculate a period-over-period volume comparison.
+     *
+     * Aggregates total workout volume for a current period and a previous period,
+     * computing the absolute difference and percentage change.
+     *
+     * @param  User  $user  The user to calculate the comparison for.
+     * @param  Carbon  $currentStart  The start date/time of the current period.
+     * @param  Carbon  $prevStart  The start date/time of the previous period.
+     * @param  Carbon|null  $prevEnd  The end date/time of the previous period (optional).
+     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float} The calculated comparison metrics.
      */
     private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, ?Carbon $prevEnd = null): array
     {
