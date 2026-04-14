@@ -185,7 +185,11 @@ final class AchievementService
             ->selectRaw('DISTINCT DATE(started_at) as date')
             ->orderByDesc('date')
             ->pluck('date')
-            ->map(fn (mixed $date): string => (string) $date)
+            ->map(function (mixed $date): string {
+                return is_scalar($date) ? (string) $date : '';
+            })
+            ->filter()
+            ->values()
             ->all();
     }
 
