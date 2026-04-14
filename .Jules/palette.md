@@ -1,3 +1,6 @@
 ## 2024-04-09 - Ensure all custom "buttons" have accessibility tags when busy
 **Learning:** Found that custom "Dashboard Action" button blocks, which show loading states with `autorenew`, missed `aria-busy` declarations. Complex, visually styled interactive elements might miss standard button a11y properties that components like `GlassButton` abstract away.
 **Action:** When adding or verifying loading state animations on large custom touch targets, explicitly check for `aria-busy` and visual cursor feedbacks (`cursor-wait`), ensuring they mirror the a11y patterns of standard buttons in the system.
+## 2025-05-18 - Ensure interactive QuickActions have focus-visible styles
+**Learning:** Found that custom buttons and links in the QuickActions component, styled heavily for visual appearance, missed focus states (`focus-visible:ring-2`) and keyboard outlines, making them inaccessible for keyboard navigation.
+**Action:** When working on heavily styled interactive components (custom buttons, cards acting as links), ensure `focus-visible` utilities (`focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none focus-visible:ring-electric-orange`) are included so that the keyboard experience matches the standard components.
