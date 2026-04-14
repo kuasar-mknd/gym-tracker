@@ -179,13 +179,15 @@ final class AchievementService
         // ⚡ Bolt Optimization: Use database-level DISTINCT and DATE() to reduce data volume
         // and eliminate PHP-side unique filtering. This significantly reduces memory usage
         // and execution time for large datasets.
-        return $user->workouts()
+        $dates = $user->workouts()
             ->toBase()
             ->where('started_at', '>=', now()->subDays($days + 30))
             ->selectRaw('DISTINCT DATE(started_at) as date')
             ->orderByDesc('date')
             ->pluck('date')
             ->all();
+
+        return array_map('strval', $dates);
     }
 
     /**
