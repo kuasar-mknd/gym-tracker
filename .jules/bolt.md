@@ -95,3 +95,7 @@
 ## 2024-05-26 - [Consolidating Collection Methods into Single Loop]
 **Learning:** Chaining multiple Laravel collection methods like `map()`, `filter()`, and `values()` across the same dataset creates multiple O(N) iterations. When these methods also perform redundant expensive operations like `strtotime()` and `date()` parsing, the performance penalty is compounded.
 **Action:** Consolidate multiple collection transformations into a single `foreach` loop. Parse raw data (like datetimes) once and reuse the results to populate multiple destination arrays, reducing both iteration overhead and redundant function calls.
+
+## 2026-04-14 - [Consolidating Collection Chains to Foreach Loops]
+**Learning:** Chaining multiple collection methods (`map`, `filter`, `toArray`) on the same dataset creates multiple O(N) iterations. In high-frequency statistical methods like `getVolumeTrend` or `getVolumeHistory`, this adds significant function call overhead and memory pressure.
+**Action:** Consolidate multiple collection transformations into a single `foreach` loop to reduce execution time and memory overhead, especially when processing analytical data. Reuse expensive results (e.g., date parsing) within the single pass to further minimize redundant processing.

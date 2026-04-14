@@ -36,32 +36,35 @@ final class VolumeStatsService
         return Cache::remember(
             "stats.volume_trend.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => $user->workouts()
+            function () use ($user, $days): array {
                 // ⚡ Bolt: PERFORMANCE OPTIMIZATION
                 // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // This significantly reduces memory usage and execution time for large datasets.
-                ->toBase()
-                ->where('started_at', '>=', now()->subDays($days))
-                ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
-                ->orderBy('started_at')
-                ->get()
-                ->map(function (object $row): ?VolumeTrendPoint {
+                // Consolidate map/filter/values chains into a single foreach loop to prevent multiple O(N) iterations.
+                $workouts = $user->workouts()
+                    ->toBase()
+                    ->where('started_at', '>=', now()->subDays($days))
+                    ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
+                    ->orderBy('started_at')
+                    ->get();
+
+                $trend = [];
+                foreach ($workouts as $row) {
                     $timestamp = strtotime((string) $row->started_at);
 
                     if ($timestamp === false) {
-                        return null;
+                        continue;
                     }
 
-                    return new VolumeTrendPoint(
+                    $trend[] = new VolumeTrendPoint(
                         date('d/m', $timestamp),
                         date('Y-m-d', $timestamp),
                         (string) $row->name,
                         is_numeric($row->volume) ? (float) $row->volume : 0.0,
                     );
-                })
-                ->filter()
-                ->values()
-                ->toArray()
+                }
+
+                return $trend;
+            }
         );
     }
 
@@ -167,31 +170,35 @@ final class VolumeStatsService
         return Cache::remember(
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
-            fn (): array => $user->workouts()
+            function () use ($user, $limit): array {
                 // ⚡ Bolt: PERFORMANCE OPTIMIZATION
                 // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // This significantly reduces memory usage and execution time for large datasets.
-                ->toBase()
-                ->whereNotNull('ended_at')
-                ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
-                ->orderBy('started_at')
-                ->limit($limit)
-                ->get()
-                ->map(function (object $row): ?VolumeHistoryPoint {
+                // Consolidate map/filter/values chains into a single foreach loop to prevent multiple O(N) iterations.
+                $workouts = $user->workouts()
+                    ->toBase()
+                    ->whereNotNull('ended_at')
+                    ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
+                    ->orderBy('started_at')
+                    ->limit($limit)
+                    ->get();
+
+                $history = [];
+                foreach ($workouts as $row) {
                     $timestamp = strtotime((string) $row->started_at);
 
                     if ($timestamp === false) {
-                        return null;
+                        continue;
                     }
 
-                    return new VolumeHistoryPoint(
+                    $history[] = new VolumeHistoryPoint(
                         date('d/m', $timestamp),
                         is_numeric($row->volume) ? (float) $row->volume : 0.0,
                         (string) $row->name,
                     );
-                })
-                ->filter()
-                ->toArray()
+                }
+
+                return $history;
+            }
         );
     }
 
