@@ -28,33 +28,48 @@ final class AchievementService
         }
 
         $metrics = $this->preCalculateMetrics($user, $locked);
+        $toUnlock = [];
 
         foreach ($locked as $achievement) {
-            $this->checkAndUnlock($user, $achievement, $metrics);
+            if ($this->isAchievementMet($achievement, $metrics)) {
+                $toUnlock[] = $achievement;
+            }
+        }
+
+        if (count($toUnlock) > 0) {
+            $now = now();
+            $attachData = [];
+            foreach ($toUnlock as $achievement) {
+                $attachData[$achievement->id] = ['achieved_at' => $now];
+            }
+
+            // ⚡ Bolt Optimization: Use a single attach() call to perform a batch insert
+            // into the pivot table, reducing database roundtrips from O(N) to O(1).
+            $user->achievements()->attach($attachData);
+
+            // Notify user for each unlocked achievement
+            foreach ($toUnlock as $achievement) {
+                $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
+            }
         }
     }
 
     /**
-     * Check if an achievement is unlocked based on calculated metrics and unlock it if so.
+     * Determine if the criteria for an achievement is met.
      *
-     * @param  User  $user  The user to check the achievement for.
      * @param  Achievement  $achievement  The achievement to check.
      * @param  array<string, int|float>  $metrics  The pre-calculated metrics.
+     * @return bool True if met, false otherwise.
      */
-    private function checkAndUnlock(User $user, Achievement $achievement, array $metrics): void
+    private function isAchievementMet(Achievement $achievement, array $metrics): bool
     {
-        $isUnlocked = match ($achievement->type) {
+        return match ($achievement->type) {
             'count' => ($metrics['count'] ?? 0) >= $achievement->threshold,
             'weight_record' => ($metrics['max_weight'] ?? 0) >= $achievement->threshold,
             'volume_total' => ($metrics['total_volume'] ?? 0) >= $achievement->threshold,
             'streak' => ($metrics['max_streak'] ?? 0) >= $achievement->threshold,
             default => false,
         };
-
-        if ($isUnlocked) {
-            $user->achievements()->attach($achievement->id, ['achieved_at' => now()]);
-            $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
-        }
     }
 
     /**
@@ -161,19 +176,21 @@ final class AchievementService
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
-        // ⚡ Bolt Optimization: Use toBase() to avoid hydrating Eloquent models and Carbon objects.
-        // This significantly reduces memory usage and execution time for large datasets.
-        $dates = $user->workouts()
+        // ⚡ Bolt Optimization: Use database-level DISTINCT and DATE() to reduce data volume
+        // and eliminate PHP-side unique filtering. This significantly reduces memory usage
+        // and execution time for large datasets.
+        return $user->workouts()
             ->toBase()
             ->where('started_at', '>=', now()->subDays($days + 30))
-            ->latest('started_at')
-            ->pluck('started_at');
-
-        return $dates->map(function (mixed $date): string {
-            $dateString = is_string($date) ? $date : '';
-
-            return strlen($dateString) >= 10 ? substr($dateString, 0, 10) : $dateString;
-        })->unique()->values()->all();
+            ->selectRaw('DISTINCT DATE(started_at) as date')
+            ->orderByDesc('date')
+            ->pluck('date')
+            ->map(function (mixed $date): string {
+                return is_scalar($date) ? (string) $date : '';
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**
