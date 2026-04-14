@@ -99,3 +99,11 @@
 ## 2026-04-14 - [Consolidating Collection Chains to Foreach Loops]
 **Learning:** Chaining multiple collection methods (`map`, `filter`, `toArray`) on the same dataset creates multiple O(N) iterations. In high-frequency statistical methods like `getVolumeTrend` or `getVolumeHistory`, this adds significant function call overhead and memory pressure.
 **Action:** Consolidate multiple collection transformations into a single `foreach` loop to reduce execution time and memory overhead, especially when processing analytical data. Reuse expensive results (e.g., date parsing) within the single pass to further minimize redundant processing.
+
+## 2026-04-15 - [Database-level Date Uniqueness]
+**Learning:** Shifting date uniqueness logic from PHP collections to the database layer using `selectRaw('DISTINCT DATE(started_at) as date')` significantly reduces data transfer volume and eliminates expensive O(N) mapping/Carbon instantiation in PHP.
+**Action:** Always prefer database-level grouping or distinct selection for date-based analytical sequences.
+
+## 2026-04-15 - [Batching Pivot Attachments]
+**Learning:** Calling `$user->achievements()->attach($id)` inside a loop causes N database queries. Laravel's `attach()` supports an array of IDs and pivot data, which performs a single multi-row `INSERT`.
+**Action:** Collect related models in-memory and perform a single batch `attach()` to reduce database roundtrips.
