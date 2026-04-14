@@ -5,7 +5,8 @@ import GoalCard from '@/Components/Goals/GoalCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import { ref, watch, defineAsyncComponent } from 'vue'
+import GlassSelect from '@/Components/UI/GlassSelect.vue'
+import { ref, watch, computed, defineAsyncComponent } from 'vue'
 
 const GoalTypeChart = defineAsyncComponent(() => import('@/Components/Stats/GoalTypeChart.vue'))
 
@@ -73,7 +74,12 @@ const goalDistribution = computed(() => {
     return Object.values(types).filter((t) => t.count > 0)
 })
 
-import { computed } from 'vue'
+const goalTypeOptions = [
+    { value: 'weight', label: 'Force (Poids max)' },
+    { value: 'frequency', label: 'Fréquence (Séances)' },
+    { value: 'volume', label: 'Volume (Max par séance)' },
+    { value: 'measurement', label: 'Mensuration' },
+]
 </script>
 
 <template>
@@ -120,67 +126,30 @@ import { computed } from 'vue'
                             <form @submit.prevent="submit" class="space-y-6">
                                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                                     <div class="space-y-4">
-                                        <div>
-                                            <label
-                                                class="text-text-muted mb-1.5 block text-sm font-medium tracking-wider uppercase"
-                                                >Type d'objectif</label
-                                            >
-                                            <select
-                                                v-model="form.type"
-                                                class="text-text-main focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
-                                            >
-                                                <option value="weight" class="bg-white">Force (Poids max)</option>
-                                                <option value="frequency" class="bg-white">Fréquence (Séances)</option>
-                                                <option value="volume" class="bg-white">Volume (Max par séance)</option>
-                                                <option value="measurement" class="bg-white">Mensuration</option>
-                                            </select>
-                                        </div>
+                                        <GlassSelect
+                                            v-model="form.type"
+                                            label="Type d'objectif"
+                                            :options="goalTypeOptions"
+                                            :error="form.errors.type"
+                                        />
 
-                                        <div v-if="form.type === 'weight' || form.type === 'volume'">
-                                            <label
-                                                class="text-text-muted mb-1.5 block text-sm font-medium tracking-wider uppercase"
-                                                >Exercice</label
-                                            >
-                                            <select
-                                                v-model="form.exercise_id"
-                                                class="text-text-main focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
-                                            >
-                                                <option value="" disabled class="bg-white">
-                                                    Sélectionner un exercice
-                                                </option>
-                                                <option
-                                                    v-for="ex in exercises"
-                                                    :key="ex.id"
-                                                    :value="ex.id"
-                                                    class="bg-white"
-                                                >
-                                                    {{ ex.name }}
-                                                </option>
-                                            </select>
-                                        </div>
+                                        <GlassSelect
+                                            v-if="form.type === 'weight' || form.type === 'volume'"
+                                            v-model="form.exercise_id"
+                                            label="Exercice"
+                                            :options="exercises.map((e) => ({ value: e.id, label: e.name }))"
+                                            placeholder="Sélectionner un exercice"
+                                            :error="form.errors.exercise_id"
+                                        />
 
-                                        <div v-if="form.type === 'measurement'">
-                                            <label
-                                                class="text-text-muted mb-1.5 block text-sm font-medium tracking-wider uppercase"
-                                                >Mensuration</label
-                                            >
-                                            <select
-                                                v-model="form.measurement_type"
-                                                class="text-text-main focus:ring-accent-primary w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-2.5 transition-all outline-none focus:border-transparent focus:ring-2"
-                                            >
-                                                <option value="" disabled class="bg-white">
-                                                    Sélectionner une mesure
-                                                </option>
-                                                <option
-                                                    v-for="type in measurementTypes"
-                                                    :key="type.value"
-                                                    :value="type.value"
-                                                    class="bg-white"
-                                                >
-                                                    {{ type.label }}
-                                                </option>
-                                            </select>
-                                        </div>
+                                        <GlassSelect
+                                            v-if="form.type === 'measurement'"
+                                            v-model="form.measurement_type"
+                                            label="Mensuration"
+                                            :options="measurementTypes"
+                                            placeholder="Sélectionner une mesure"
+                                            :error="form.errors.measurement_type"
+                                        />
                                     </div>
 
                                     <div class="space-y-4">
