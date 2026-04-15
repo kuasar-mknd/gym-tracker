@@ -66,40 +66,12 @@
                     </div>
 
                     <!-- Activity Level -->
-                    <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Niveau d'activité</label>
-                        <div class="relative">
-                            <select
-                                v-model="form.activity_level"
-                                class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-[56px] w-full appearance-none rounded-2xl border border-slate-200 bg-white/50 px-4 text-lg transition-all outline-none focus:bg-white/80 focus:ring-2 dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-800"
-                            >
-                                <option
-                                    value="sedentary"
-                                    class="text-text-main bg-white dark:bg-slate-900 dark:text-white"
-                                >
-                                    Sédentaire (peu ou pas d'exercice)
-                                </option>
-                                <option value="light" class="text-text-main bg-white dark:bg-slate-900 dark:text-white">
-                                    Légèrement actif (1-3 jours/semaine)
-                                </option>
-                                <option
-                                    value="moderate"
-                                    class="text-text-main bg-white dark:bg-slate-900 dark:text-white"
-                                >
-                                    Modérément actif (3-5 jours/semaine)
-                                </option>
-                                <option value="very" class="text-text-main bg-white dark:bg-slate-900 dark:text-white">
-                                    Très actif (6-7 jours/semaine)
-                                </option>
-                                <option value="extra" class="text-text-main bg-white dark:bg-slate-900 dark:text-white">
-                                    Extrêmement actif (travail physique)
-                                </option>
-                            </select>
-                            <div class="text-text-muted pointer-events-none absolute top-1/2 right-4 -translate-y-1/2">
-                                <span class="material-symbols-outlined">expand_more</span>
-                            </div>
-                        </div>
-                    </div>
+                    <GlassSelect
+                        v-model="form.activity_level"
+                        label="Niveau d'activité"
+                        :options="activityOptions"
+                        size="lg"
+                    />
 
                     <!-- Goal -->
                     <div>
@@ -248,6 +220,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassSelect from '@/Components/UI/GlassSelect.vue'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 
@@ -257,6 +230,14 @@ const props = defineProps({
         required: true,
     },
 })
+
+const activityOptions = [
+    { value: 'sedentary', label: "Sédentaire (peu ou pas d'exercice)" },
+    { value: 'light', label: 'Légèrement actif (1-3 jours/semaine)' },
+    { value: 'moderate', label: 'Modérément actif (3-5 jours/semaine)' },
+    { value: 'very', label: 'Très actif (6-7 jours/semaine)' },
+    { value: 'extra', label: 'Extrêmement actif (travail physique)' },
+]
 
 const form = useForm({
     gender: 'male',
