@@ -19,6 +19,7 @@ class NotificationPreferenceFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id' => \App\Models\User::factory(),
             'type' => $this->faker->unique()->word,
             'value' => $this->faker->numberBetween(1, 100),
             'is_enabled' => $this->faker->boolean,
