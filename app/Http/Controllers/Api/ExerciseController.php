@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Exercises\FetchExercisesApiAction;
 use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Http\Resources\ExerciseResource;
 use App\Models\Exercise;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 
 /**
@@ -25,9 +29,9 @@ class ExerciseController extends Controller
      * as well as global exercises (where user_id is null).
      * Supports filtering by name, type, and category, and sorting by name and created_at.
      *
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection A collection of exercise resources.
+     * @return AnonymousResourceCollection A collection of exercise resources.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view exercises.
+     * @throws AuthorizationException If the user is not authorized to view exercises.
      */
     #[OA\Get(
         path: '/exercises',
@@ -65,19 +69,11 @@ class ExerciseController extends Controller
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     #[OA\Response(response: 403, description: 'Forbidden')]
-    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(FetchExercisesApiAction $action): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Exercise::class);
 
-        $exercises = \Spatie\QueryBuilder\QueryBuilder::for(Exercise::class)
-            ->allowedFilters(['name', 'type', 'category'])
-            ->allowedSorts(['name', 'created_at'])
-            ->defaultSort('name')
-            ->where(function ($query): void {
-                $query->whereNull('user_id')
-                    ->orWhere('user_id', $this->user()->id);
-            })
-            ->paginate();
+        $exercises = $action->execute($this->user());
 
         return ExerciseResource::collection($exercises);
     }
@@ -87,10 +83,10 @@ class ExerciseController extends Controller
      *
      * Validates the request data and creates a new custom exercise for the user.
      *
-     * @param  \App\Http\Requests\ExerciseStoreRequest  $request  The incoming validated request.
-     * @return \App\Http\Resources\ExerciseResource The newly created exercise resource.
+     * @param  ExerciseStoreRequest  $request  The incoming validated request.
+     * @return ExerciseResource The newly created exercise resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create an exercise.
+     * @throws AuthorizationException If the user is not authorized to create an exercise.
      */
     #[OA\Post(
         path: '/exercises',
@@ -120,10 +116,10 @@ class ExerciseController extends Controller
      *
      * Retrieves the details of a specific exercise.
      *
-     * @param  \App\Models\Exercise  $exercise  The exercise instance to display.
-     * @return \App\Http\Resources\ExerciseResource The requested exercise resource.
+     * @param  Exercise  $exercise  The exercise instance to display.
+     * @return ExerciseResource The requested exercise resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view the exercise.
+     * @throws AuthorizationException If the user is not authorized to view the exercise.
      */
     #[OA\Get(
         path: '/exercises/{id}',
@@ -154,11 +150,11 @@ class ExerciseController extends Controller
      * Modifies the details of an existing exercise.
      * Only the user who created the exercise can update it.
      *
-     * @param  \App\Http\Requests\ExerciseUpdateRequest  $request  The incoming validated request.
-     * @param  \App\Models\Exercise  $exercise  The exercise instance to update.
-     * @return \App\Http\Resources\ExerciseResource The updated exercise resource.
+     * @param  ExerciseUpdateRequest  $request  The incoming validated request.
+     * @param  Exercise  $exercise  The exercise instance to update.
+     * @return ExerciseResource The updated exercise resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the exercise.
+     * @throws AuthorizationException If the user is not authorized to update the exercise.
      */
     #[OA\Put(
         path: '/exercises/{id}',
@@ -195,10 +191,10 @@ class ExerciseController extends Controller
      * Permanently deletes a custom exercise.
      * Only the user who created the exercise can delete it.
      *
-     * @param  \App\Models\Exercise  $exercise  The exercise instance to delete.
-     * @return \Illuminate\Http\Response An empty HTTP response indicating success.
+     * @param  Exercise  $exercise  The exercise instance to delete.
+     * @return Response An empty HTTP response indicating success.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the exercise.
+     * @throws AuthorizationException If the user is not authorized to delete the exercise.
      */
     #[OA\Delete(
         path: '/exercises/{id}',
@@ -216,7 +212,7 @@ class ExerciseController extends Controller
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     #[OA\Response(response: 403, description: 'Forbidden')]
     #[OA\Response(response: 404, description: 'Exercise not found')]
-    public function destroy(Exercise $exercise): \Illuminate\Http\Response
+    public function destroy(Exercise $exercise): Response
     {
         $this->authorize('delete', $exercise);
 
