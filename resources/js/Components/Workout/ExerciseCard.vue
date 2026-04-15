@@ -13,6 +13,7 @@ import { router } from '@inertiajs/vue3'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
 const props = defineProps({
@@ -159,17 +160,24 @@ const emit = defineEmits([
                     :error="editForm.errors.name"
                 />
                 <div class="grid grid-cols-2 gap-3">
-                    <select v-model="editForm.type" dusk="edit-exercise-type" class="glass-input text-sm">
-                        <option v-for="t in types" :key="t.value" :value="t.value">
-                            {{ t.label }}
-                        </option>
-                    </select>
-                    <select v-model="editForm.category" dusk="edit-exercise-category" class="glass-input text-sm">
-                        <option value="">— Aucune —</option>
-                        <option v-for="cat in categories" :key="cat" :value="cat">
-                            {{ cat }}
-                        </option>
-                    </select>
+                    <GlassSelect
+                        v-model="editForm.type"
+                        dusk="edit-exercise-type"
+                        :options="types"
+                        size="sm"
+                        hide-label
+                    />
+                    <GlassSelect
+                        v-model="editForm.category"
+                        dusk="edit-exercise-category"
+                        :options="[
+                            { value: '', label: '— Aucune —' },
+                            ...categories.map((c) => ({ value: c, label: c })),
+                        ]"
+                        size="sm"
+                        hide-label
+                        placeholder=""
+                    />
                 </div>
                 <div class="flex gap-2">
                     <GlassButton

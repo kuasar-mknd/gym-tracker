@@ -20,6 +20,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
@@ -754,28 +755,18 @@ onUnmounted(() => {
                         <GlassInput v-model="createExerciseForm.name" label="Nom" dusk="new-exercise-name" required />
 
                         <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="font-display-label text-text-muted mb-2 block">Type</label>
-                                <select
-                                    v-model="createExerciseForm.type"
-                                    class="glass-input w-full"
-                                    dusk="new-exercise-type"
-                                >
-                                    <option v-for="t in EXERCISE_TYPES" :key="t.value" :value="t.value">
-                                        {{ t.label }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="font-display-label text-text-muted mb-2 block">Catégorie</label>
-                                <select
-                                    v-model="createExerciseForm.category"
-                                    class="glass-input w-full"
-                                    dusk="new-exercise-category"
-                                >
-                                    <option v-for="c in EXERCISE_CATEGORIES" :key="c" :value="c">{{ c }}</option>
-                                </select>
-                            </div>
+                            <GlassSelect
+                                v-model="createExerciseForm.type"
+                                label="Type"
+                                :options="EXERCISE_TYPES"
+                                dusk="new-exercise-type"
+                            />
+                            <GlassSelect
+                                v-model="createExerciseForm.category"
+                                label="Catégorie"
+                                :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
+                                dusk="new-exercise-category"
+                            />
                         </div>
 
                         <GlassButton
