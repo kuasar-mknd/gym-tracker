@@ -99,3 +99,7 @@
 ## 2026-04-14 - [Consolidating Collection Chains to Foreach Loops]
 **Learning:** Chaining multiple collection methods (`map`, `filter`, `toArray`) on the same dataset creates multiple O(N) iterations. In high-frequency statistical methods like `getVolumeTrend` or `getVolumeHistory`, this adds significant function call overhead and memory pressure.
 **Action:** Consolidate multiple collection transformations into a single `foreach` loop to reduce execution time and memory overhead, especially when processing analytical data. Reuse expensive results (e.g., date parsing) within the single pass to further minimize redundant processing.
+
+## 2026-04-15 - [The Query Builder Pluck Trap]
+**Learning:** Calling `pluck('alias')` directly on a Query Builder instance (e.g. after `selectRaw('DISTINCT ... as alias')`) overrides any previously defined select clauses. This causes the query to fail because the alias is lost.
+**Action:** When plucking a raw expression or an alias from a Query Builder, always call `get()` first to execute the query with the correct select clauses, then call `pluck()` on the resulting Collection.

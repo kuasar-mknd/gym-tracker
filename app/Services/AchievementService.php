@@ -161,19 +161,29 @@ final class AchievementService
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
-        // ⚡ Bolt Optimization: Use toBase() to avoid hydrating Eloquent models and Carbon objects.
-        // This significantly reduces memory usage and execution time for large datasets.
-        $dates = $user->workouts()
+        // ⚡ Bolt Optimization: Shift date uniqueness logic from PHP collections to the database layer
+        // by using selectRaw('DISTINCT DATE(column) as alias').
+        // This significantly reduces data transfer volume and eliminates expensive O(N) mapping
+        // and Carbon instantiation in PHP. Uses toBase() to bypass Eloquent hydration and
+        // driver-aware SQL for database portability.
+        $driver = \Illuminate\Support\Facades\DB::getDriverName();
+        $dateFormat = match ($driver) {
+            'sqlite' => "strftime('%Y-%m-%d', started_at)",
+            'pgsql' => 'started_at::date',
+            'sqlsrv' => 'CAST(started_at AS DATE)',
+            default => 'DATE(started_at)',
+        };
+
+        return $user->workouts()
             ->toBase()
             ->where('started_at', '>=', now()->subDays($days + 30))
-            ->latest('started_at')
-            ->pluck('started_at');
-
-        return $dates->map(function (mixed $date): string {
-            $dateString = is_string($date) ? $date : '';
-
-            return strlen($dateString) >= 10 ? substr($dateString, 0, 10) : $dateString;
-        })->unique()->values()->all();
+            ->selectRaw("DISTINCT {$dateFormat} as workout_date")
+            ->orderByDesc('workout_date')
+            ->get()
+            // ⚡ Bolt: Pluck from the collection to avoid the "Pluck Trap" where
+            // calling pluck() on the Query Builder would discard the selectRaw alias.
+            ->pluck('workout_date')
+            ->all();
     }
 
     /**
