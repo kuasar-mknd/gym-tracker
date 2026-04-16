@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Exercise;
+use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
@@ -121,4 +122,57 @@ test('destroy forbids removing another users workout line', function (): void {
         ->assertForbidden();
 
     assertDatabaseHas('workout_lines', ['id' => $line->id]);
+});
+
+test('getRecommendedValuesAttribute returns decoded array when attribute is set and valid', function (): void {
+    $line = new WorkoutLine();
+    $line->setRawAttributes([
+        'recommended_values' => json_encode(['weight' => 50.0, 'reps' => 10, 'distance_km' => 0.0, 'duration_seconds' => 0]),
+    ]);
+
+    $values = $line->getRecommendedValuesAttribute();
+
+    expect($values)->toEqual(['weight' => 50.0, 'reps' => 10, 'distance_km' => 0.0, 'duration_seconds' => 0]);
+});
+
+test('getRecommendedValuesAttribute returns default values when attribute is set but invalid', function (): void {
+    $line = new WorkoutLine();
+    $line->setRawAttributes([
+        'recommended_values' => 'invalid-json',
+    ]);
+
+    $values = $line->getRecommendedValuesAttribute();
+
+    expect($values)->toBe(['weight' => 0.0, 'reps' => 0, 'distance_km' => 0.0, 'duration_seconds' => 0]);
+});
+
+test('getRecommendedValuesAttribute delegates to service when attribute is not set', function (): void {
+    $user = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $user->id]);
+    $exercise = Exercise::factory()->create();
+    $line = WorkoutLine::factory()->create([
+        'workout_id' => $workout->id,
+        'exercise_id' => $exercise->id,
+    ]);
+
+    // Create a previous workout line with some sets to calculate from
+    $prevWorkout = Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => $workout->started_at->copy()->subDays(1),
+    ]);
+    $prevLine = WorkoutLine::factory()->create([
+        'workout_id' => $prevWorkout->id,
+        'exercise_id' => $exercise->id,
+    ]);
+    Set::factory()->create([
+        'workout_line_id' => $prevLine->id,
+        'weight' => 100.0,
+        'reps' => 5,
+        'distance_km' => 0.0,
+        'duration_seconds' => 0,
+    ]);
+
+    $values = $line->getRecommendedValuesAttribute();
+
+    expect($values)->toEqual(['weight' => 100.0, 'reps' => 5, 'distance_km' => 0.0, 'duration_seconds' => 0]);
 });
