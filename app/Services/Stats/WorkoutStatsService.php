@@ -92,44 +92,14 @@ final class WorkoutStatsService
                         continue;
                     }
 
-                    // Fast path: direct string parsing for the hour, bypassing strtotime()
-                    $hour = (int) substr($workout->started_at, 11, 2);
-
-                    $timeLabel = match (true) {
-                        $hour >= 6 && $hour < 12 => 'Morning (06h-12h)',
-                        $hour >= 12 && $hour < 17 => 'Afternoon (12h-17h)',
-                        $hour >= 17 && $hour < 22 => 'Evening (17h-22h)',
-                        default => 'Night (22h-06h)',
-                    };
+                    $timeLabel = $this->resolveTimeOfDayLabel($workout->started_at);
                     $timeBuckets[$timeLabel]++;
 
                     if (is_string($workout->ended_at) && strlen($workout->ended_at) >= 19) {
-                        // Fast path: If the workout starts and ends on the same day, compute duration directly
-                        // bypassing strtotime overhead.
-                        if (substr($workout->started_at, 0, 10) === substr($workout->ended_at, 0, 10)) {
-                            $h1 = (int) substr($workout->started_at, 11, 2);
-                            $m1 = (int) substr($workout->started_at, 14, 2);
-                            $h2 = (int) substr($workout->ended_at, 11, 2);
-                            $m2 = (int) substr($workout->ended_at, 14, 2);
-                            $minutes = abs(($h2 * 60 + $m2) - ($h1 * 60 + $m1));
-                        } else {
-                            // Fallback to strtotime for workouts spanning multiple days
-                            $startedAtTimestamp = strtotime($workout->started_at);
-                            $endedAtTimestamp = strtotime($workout->ended_at);
-                            if ($startedAtTimestamp !== false && $endedAtTimestamp !== false) {
-                                $minutes = (int) floor(abs($endedAtTimestamp - $startedAtTimestamp) / 60);
-                            } else {
-                                continue;
-                            }
+                        $durationLabel = $this->resolveDurationLabel($workout->started_at, $workout->ended_at);
+                        if ($durationLabel !== null) {
+                            $durationBuckets[$durationLabel]++;
                         }
-
-                        $durationLabel = match (true) {
-                            $minutes < 30 => '< 30 min',
-                            $minutes < 60 => '30-60 min',
-                            $minutes < 90 => '60-90 min',
-                            default => '90+ min',
-                        };
-                        $durationBuckets[$durationLabel]++;
                     }
                 }
 
@@ -145,5 +115,46 @@ final class WorkoutStatsService
                 ];
             }
         );
+    }
+
+    private function resolveTimeOfDayLabel(string $startedAt): string
+    {
+        $hour = (int) substr($startedAt, 11, 2);
+
+        return match (true) {
+            $hour >= 6 && $hour < 12 => 'Morning (06h-12h)',
+            $hour >= 12 && $hour < 17 => 'Afternoon (12h-17h)',
+            $hour >= 17 && $hour < 22 => 'Evening (17h-22h)',
+            default => 'Night (22h-06h)',
+        };
+    }
+
+    private function resolveDurationLabel(string $startedAt, string $endedAt): ?string
+    {
+        // Fast path: If the workout starts and ends on the same day, compute duration directly
+        // bypassing strtotime overhead.
+        if (substr($startedAt, 0, 10) === substr($endedAt, 0, 10)) {
+            $h1 = (int) substr($startedAt, 11, 2);
+            $m1 = (int) substr($startedAt, 14, 2);
+            $h2 = (int) substr($endedAt, 11, 2);
+            $m2 = (int) substr($endedAt, 14, 2);
+            $minutes = abs(($h2 * 60 + $m2) - ($h1 * 60 + $m1));
+        } else {
+            // Fallback to strtotime for workouts spanning multiple days
+            $startedAtTimestamp = strtotime($startedAt);
+            $endedAtTimestamp = strtotime($endedAt);
+            if ($startedAtTimestamp !== false && $endedAtTimestamp !== false) {
+                $minutes = (int) floor(abs($endedAtTimestamp - $startedAtTimestamp) / 60);
+            } else {
+                return null;
+            }
+        }
+
+        return match (true) {
+            $minutes < 30 => '< 30 min',
+            $minutes < 60 => '30-60 min',
+            $minutes < 90 => '60-90 min',
+            default => '90+ min',
+        };
     }
 }
