@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\Habit;
 use App\Models\HabitLog;
-use Illuminate\Support\Carbon;
 
 test('whereDateBetween scope works with separate arguments', function (): void {
     $habit = Habit::factory()->create();
