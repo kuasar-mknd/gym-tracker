@@ -63,7 +63,7 @@ class CustomPolicy extends Basic
         // as it is bundled and managed internally by Filament.
         $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
 
-        // Fix for Filament Style Attributes: Instead of adding 'unsafe-inline' only to
+        // Filament Style Attributes: Instead of adding 'unsafe-inline' only to
         // the global style-src directive, we also use style-src-attr to specifically allow
         // inline attributes on elements.
         // NOTE: Style nonces are disabled because Filament injects <style> tags at runtime.
