@@ -1,7 +1,5 @@
 <script setup>
-import { Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
-import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 
 const DurationDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/DurationDistributionChart.vue'))
 
