@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
+use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
 use Illuminate\Support\Facades\DB;
 
@@ -37,14 +38,35 @@ final class CreateWorkoutTemplateFromWorkoutAction
     private function copyExercises(WorkoutTemplate $template, Workout $workout): void
     {
         $now = now();
-        $setsData = [];
+        $linesData = [];
 
-        foreach ($workout->workoutLines as $line) {
-            /** @var \App\Models\WorkoutTemplateLine $templateLine */
-            $templateLine = $template->workoutTemplateLines()->create([
+        $workoutLines = $workout->workoutLines->values();
+
+        foreach ($workoutLines as $line) {
+            $linesData[] = [
+                'workout_template_id' => $template->id,
                 'exercise_id' => $line->exercise_id,
                 'order' => $line->order,
-            ]);
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if ($linesData === []) {
+            return;
+        }
+
+        WorkoutTemplateLine::insert($linesData);
+
+        $templateLines = $template->workoutTemplateLines()->orderBy('id')->get();
+
+        $setsData = [];
+
+        foreach ($workoutLines as $index => $line) {
+            if (! isset($templateLines[$index])) {
+                continue;
+            }
+            $templateLine = $templateLines[$index];
 
             foreach ($line->sets as $set) {
                 $setsData[] = [
