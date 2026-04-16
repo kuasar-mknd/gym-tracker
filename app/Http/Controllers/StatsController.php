@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\Stats\FetchStatsOverviewAction;
+use App\Actions\Stats\GetStatsDashboardAction;
 use App\Models\Exercise;
 use App\Services\StatsService;
 use Illuminate\Http\Request;
@@ -34,29 +34,22 @@ class StatsController extends Controller
      * deferred loading for heavier analytical queries (like trends and distributions).
      *
      * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
-     * @param  \App\Actions\Stats\FetchStatsOverviewAction  $fetchStatsOverview  Action to fetch overview stats.
+     * @param  \App\Actions\Stats\GetStatsDashboardAction  $getStatsDashboard  Action to fetch overview stats.
      * @return \Inertia\Response The Inertia response rendering the 'Stats/Index' page.
      */
-    public function index(Request $request, FetchStatsOverviewAction $fetchStatsOverview): \Inertia\Response
+    public function index(Request $request, GetStatsDashboardAction $getStatsDashboard): \Inertia\Response
     {
-        $user = $this->user();
-        $period = $request->query('period', '30j');
-        $days = $fetchStatsOverview->parsePeriod($period);
+        $data = $getStatsDashboard->execute($this->user(), $request);
 
-        // Immediate data
-        $immediateData = $fetchStatsOverview->getImmediateStats($user, $period);
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Consolidate deferred props to reduce the number of async requests and backend executions.
+        // This reduces HTTP overhead (1 XHR instead of 2) and ensures related visualizations
+        // appear together for a better user experience.
+        /** @var callable(): mixed $deferredDataCallable */
+        $deferredDataCallable = $data['deferredData'];
+        $data['deferredData'] = Inertia::defer($deferredDataCallable);
 
-        return Inertia::render('Stats/Index', [
-            ...$immediateData,
-            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-            // Consolidate deferred props to reduce the number of async requests and backend executions.
-            // This reduces HTTP overhead (1 XHR instead of 2) and ensures related visualizations
-            // appear together for a better user experience.
-            'deferredData' => Inertia::defer(fn (): array => [
-                'performance' => $this->statsService->getPerformanceOverview($user, $days),
-                'body' => $this->statsService->getBodyProgressOverview($user, $days),
-            ]),
-        ]);
+        return Inertia::render('Stats/Index', $data);
     }
 
     /**
