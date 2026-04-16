@@ -92,3 +92,7 @@
 **Vulnerability:** Found `notes` fields in `WorkoutStoreRequest` and API `WorkoutUpdateRequest` lacked character length limits, while the web `UpdateWorkoutRequest` enforced a 1000-character limit.
 **Learning:** Inconsistent validation across different entry points (Web vs API) for the same resource is a recurring source of security gaps. Missing length limits on text fields can be exploited for database-level DoS or storage exhaustion.
 **Prevention:** Enforce consistent validation rules by centralizing them or using shared FormRequests. Always include `max` constraints on all user-supplied string and text inputs as a baseline security measure.
+## 2024-05-18 - Prevent Arbitrary Socialite Driver Instantiation
+**Vulnerability:** Unvalidated user input (the `$provider` string from the URL path) was passed directly to `Socialite::driver($provider)`.
+**Learning:** Laravel Socialite uses the Manager pattern. While typically configured drivers work fine, passing arbitrary strings could potentially load unexpected classes if an attacker finds a way to register malicious drivers, or simply cause unhandled exceptions that might leak stack traces or cause Denial of Service.
+**Prevention:** Always validate dynamic path parameters that map to system configurations or drivers against a strict whitelist (e.g., `ALLOWED_PROVIDERS = ['github', 'google', 'apple']`) before instantiation.
