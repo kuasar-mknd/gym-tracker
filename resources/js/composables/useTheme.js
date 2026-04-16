@@ -4,7 +4,7 @@
  * Manages dark/light mode with system preference detection
  * and localStorage persistence.
  */
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 /**
  * @typedef {'system' | 'light' | 'dark'} ThemeMode
