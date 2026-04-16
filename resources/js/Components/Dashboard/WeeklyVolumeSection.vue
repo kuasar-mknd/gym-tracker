@@ -1,5 +1,4 @@
 <script setup>
-import { Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
