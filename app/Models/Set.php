@@ -75,8 +75,8 @@ class Set extends Model
     public function updateVolumes(): void
     {
         $this->loadMissing('workoutLine.workout.user');
-        $workout = $this->workoutLine->workout;
-        $user = $workout->user;
+        $workout = $this->workoutLine?->workout;
+        $user = $workout?->user;
 
         if (! $user || ! $workout) {
             return;
@@ -96,8 +96,8 @@ class Set extends Model
     public function decrementVolumes(): void
     {
         $this->loadMissing('workoutLine.workout.user');
-        $workout = $this->workoutLine->workout;
-        $user = $workout->user;
+        $workout = $this->workoutLine?->workout;
+        $user = $workout?->user;
 
         if (! $user || ! $workout) {
             return;
