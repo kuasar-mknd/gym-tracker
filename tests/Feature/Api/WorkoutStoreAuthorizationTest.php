@@ -32,8 +32,6 @@ class WorkoutStoreAuthorizationTest extends TestCase
 
         $response = $this->postJson(route('api.v1.workouts.store'), $data);
 
-        // Before our fix, this would have returned 201 Created because the policy was not checked.
-        // After our fix, it should return 403 Forbidden.
         $response->assertForbidden();
     }
 
