@@ -192,4 +192,90 @@ class SetTest extends TestCase
             ->delete(route('sets.destroy', $set))
             ->assertForbidden();
     }
+
+    public function test_it_increments_volumes_on_set_creation(): void
+    {
+        $user = User::factory()->create(['total_volume' => 0]);
+        $workout = Workout::factory()->create(['user_id' => $user->id, 'workout_volume' => 0]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+
+        Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 50,
+            'reps' => 10,
+        ]);
+
+        $this->assertEquals(500, $user->fresh()->total_volume);
+        $this->assertEquals(500, $workout->fresh()->workout_volume);
+    }
+
+    public function test_it_updates_volumes_on_set_update(): void
+    {
+        $user = User::factory()->create(['total_volume' => 0]);
+        $workout = Workout::factory()->create(['user_id' => $user->id, 'workout_volume' => 0]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 50,
+            'reps' => 10,
+        ]);
+
+        $set->update(['weight' => 60, 'reps' => 10]);
+
+        $this->assertEquals(600, $user->fresh()->total_volume);
+        $this->assertEquals(600, $workout->fresh()->workout_volume);
+    }
+
+    public function test_it_decrements_volumes_on_set_deletion(): void
+    {
+        $user = User::factory()->create(['total_volume' => 0]);
+        $workout = Workout::factory()->create(['user_id' => $user->id, 'workout_volume' => 0]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 50,
+            'reps' => 10,
+        ]);
+
+        $set->delete();
+
+        $this->assertEquals(0, $user->fresh()->total_volume);
+        $this->assertEquals(0, $workout->fresh()->workout_volume);
+    }
+
+    public function test_it_handles_missing_relations_gracefully(): void
+    {
+        $user = User::factory()->create(['total_volume' => 0]);
+        $workout = Workout::factory()->create(['user_id' => $user->id, 'workout_volume' => 0]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 50,
+            'reps' => 10,
+        ]);
+
+        $workout->delete();
+        $set->delete();
+
+        $this->expectNotToPerformAssertions();
+    }
 }
