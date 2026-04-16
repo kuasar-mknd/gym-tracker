@@ -12,11 +12,17 @@ use Laravel\Socialite\Facades\Socialite;
 
 class SocialAuthController extends Controller
 {
+    public const ALLOWED_PROVIDERS = ['github', 'google', 'apple'];
+
     /**
      * Redirect the user to the provider authentication page.
      */
     public function redirect(string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
+        if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
+            abort(404);
+        }
+
         return Socialite::driver($provider)->redirect();
     }
 
@@ -25,6 +31,9 @@ class SocialAuthController extends Controller
      */
     public function callback(HandleSocialCallbackAction $action, string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
+        if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
+            abort(404);
+        }
         try {
             $user = $action->execute($provider);
         } catch (SocialAuthException $e) {
