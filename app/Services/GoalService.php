@@ -310,14 +310,13 @@ final class GoalService
     /**
      * Pre-calculate max weights for given exercise IDs.
      *
-     * @phpstan-ignore return.type
-     *
      * @param  array<array-key, mixed>  $exerciseIds
      * @return array<int, float>
      */
     private function preCalculateMaxWeights(User $user, array $exerciseIds): array
     {
-        return \Illuminate\Support\Facades\DB::table('workouts')
+        /** @var array<int, float> $maxWeights */
+        $maxWeights = \Illuminate\Support\Facades\DB::table('workouts')
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $user->id)
@@ -327,12 +326,12 @@ final class GoalService
             ->pluck('max_weight', 'exercise_id')
             ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
             ->toArray();
+
+        return $maxWeights;
     }
 
     /**
      * Pre-calculate max volumes for given exercise IDs.
-     *
-     * @phpstan-ignore return.type
      *
      * @param  array<array-key, mixed>  $exerciseIds
      * @return array<int, float>
@@ -349,12 +348,15 @@ final class GoalService
             ->selectRaw('workout_lines.exercise_id, workouts.id as workout_id, SUM(sets.weight * sets.reps) as total_volume')
             ->groupBy('workout_lines.exercise_id', 'workouts.id');
 
-        return \Illuminate\Support\Facades\DB::query()
+        /** @var array<int, float> $maxVolumes */
+        $maxVolumes = \Illuminate\Support\Facades\DB::query()
             ->fromSub($subQuery, 'volumes')
             ->selectRaw('exercise_id, MAX(total_volume) as max_volume')
             ->groupBy('exercise_id')
             ->pluck('max_volume', 'exercise_id')
             ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
             ->toArray();
+
+        return $maxVolumes;
     }
 }
