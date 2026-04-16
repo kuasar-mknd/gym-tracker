@@ -48,13 +48,13 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: 24
-                  cache: 'npm'
+                  cache: 'pnpm'
 
             - name: Install Node Dependencies
-              run: npm install --legacy-peer-deps
+              run: npm install -g pnpm && pnpm install
 
             - name: Build Assets
-              run: npm run build
+              run: pnpm run build
 
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v4
@@ -93,7 +93,7 @@ jobs:
             - name: Verify Build Assets
               run: |
                   ls -la public/build
-                  cat public/build/manifest.json || echo "Manifest not found"
+                  if [ ! -f public/build/manifest.json ]; then echo "Manifest not found"; fi
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -155,7 +155,7 @@ jobs:
             - name: Verify Build Assets
               run: |
                   ls -la public/build
-                  cat public/build/manifest.json || echo "Manifest not found"
+                  if [ ! -f public/build/manifest.json ]; then echo "Manifest not found"; fi
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
