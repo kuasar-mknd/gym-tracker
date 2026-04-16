@@ -291,42 +291,11 @@ final class GoalService
         }
 
         if ($types->contains(GoalType::Weight) && $exerciseIds !== []) {
-            /** @var array<int, float> $maxWeights */
-            $maxWeights = \Illuminate\Support\Facades\DB::table('workouts')
-                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                ->where('workouts.user_id', $user->id)
-                ->whereIn('workout_lines.exercise_id', $exerciseIds)
-                ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
-                ->groupBy('workout_lines.exercise_id')
-                ->pluck('max_weight', 'exercise_id')
-                ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
-                ->toArray();
-
-            $metrics['max_weights'] = $maxWeights;
+            $metrics['max_weights'] = $this->preCalculateMaxWeights($user, $exerciseIds);
         }
 
         if ($types->contains(GoalType::Volume) && $exerciseIds !== []) {
-            // ⚡ Bolt Optimization: Calculate max volumes directly in SQL using a subquery instead of pulling all records into memory.
-            // Impact: Prevents memory overflow and reduces execution time from O(N) to O(1) in PHP for users with many workouts.
-            $subQuery = \Illuminate\Support\Facades\DB::table('workouts')
-                ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                ->where('workouts.user_id', $user->id)
-                ->whereIn('workout_lines.exercise_id', $exerciseIds)
-                ->selectRaw('workout_lines.exercise_id, workouts.id as workout_id, SUM(sets.weight * sets.reps) as total_volume')
-                ->groupBy('workout_lines.exercise_id', 'workouts.id');
-
-            /** @var array<int, float> $maxVolumes */
-            $maxVolumes = \Illuminate\Support\Facades\DB::query()
-                ->fromSub($subQuery, 'volumes')
-                ->selectRaw('exercise_id, MAX(total_volume) as max_volume')
-                ->groupBy('exercise_id')
-                ->pluck('max_volume', 'exercise_id')
-                ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
-                ->toArray();
-
-            $metrics['max_volumes'] = $maxVolumes;
+            $metrics['max_volumes'] = $this->preCalculateMaxVolumes($user, $exerciseIds);
         }
 
         if ($types->contains(GoalType::Measurement)) {
@@ -336,5 +305,58 @@ final class GoalService
         }
 
         return $metrics;
+    }
+
+    /**
+     * Pre-calculate max weights for given exercise IDs.
+     *
+     * @param  array<array-key, mixed>  $exerciseIds
+     * @return array<int, float>
+     */
+    private function preCalculateMaxWeights(User $user, array $exerciseIds): array
+    {
+        /** @var array<int, float> $maxWeights */
+        $maxWeights = \Illuminate\Support\Facades\DB::table('workouts')
+            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->whereIn('workout_lines.exercise_id', $exerciseIds)
+            ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
+            ->groupBy('workout_lines.exercise_id')
+            ->pluck('max_weight', 'exercise_id')
+            ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
+            ->toArray();
+
+        return $maxWeights;
+    }
+
+    /**
+     * Pre-calculate max volumes for given exercise IDs.
+     *
+     * @param  array<array-key, mixed>  $exerciseIds
+     * @return array<int, float>
+     */
+    private function preCalculateMaxVolumes(User $user, array $exerciseIds): array
+    {
+        // ⚡ Bolt Optimization: Calculate max volumes directly in SQL using a subquery instead of pulling all records into memory.
+        // Impact: Prevents memory overflow and reduces execution time from O(N) to O(1) in PHP for users with many workouts.
+        $subQuery = \Illuminate\Support\Facades\DB::table('workouts')
+            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->where('workouts.user_id', $user->id)
+            ->whereIn('workout_lines.exercise_id', $exerciseIds)
+            ->selectRaw('workout_lines.exercise_id, workouts.id as workout_id, SUM(sets.weight * sets.reps) as total_volume')
+            ->groupBy('workout_lines.exercise_id', 'workouts.id');
+
+        /** @var array<int, float> $maxVolumes */
+        $maxVolumes = \Illuminate\Support\Facades\DB::query()
+            ->fromSub($subQuery, 'volumes')
+            ->selectRaw('exercise_id, MAX(total_volume) as max_volume')
+            ->groupBy('exercise_id')
+            ->pluck('max_volume', 'exercise_id')
+            ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
+            ->toArray();
+
+        return $maxVolumes;
     }
 }
