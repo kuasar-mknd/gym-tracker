@@ -1,9 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Head, router, Deferred } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
-import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import WeightEvolutionCard from '@/Components/Stats/WeightEvolutionCard.vue'
 import BodyMetricsGrid from '@/Components/Stats/BodyMetricsGrid.vue'
 import VolumeTrendCard from '@/Components/Stats/VolumeTrendCard.vue'
