@@ -192,4 +192,46 @@ class SetTest extends TestCase
             ->delete(route('sets.destroy', $set))
             ->assertForbidden();
     }
+
+    public function test_get_volume_calculates_correctly(): void
+    {
+        $set = new Set(['weight' => 50, 'reps' => 10]);
+        $this->assertEquals(500.0, $set->getVolume());
+
+        $set = new Set(['weight' => 22.5, 'reps' => 8]);
+        $this->assertEquals(180.0, $set->getVolume());
+
+        $set = new Set(['weight' => null, 'reps' => 10]);
+        $this->assertEquals(0.0, $set->getVolume());
+
+        $set = new Set(['weight' => 50, 'reps' => null]);
+        $this->assertEquals(0.0, $set->getVolume());
+
+        $set = new Set(['weight' => null, 'reps' => null]);
+        $this->assertEquals(0.0, $set->getVolume());
+    }
+
+    public function test_get_original_volume_calculates_correctly(): void
+    {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
+        $exercise = Exercise::factory()->create();
+        $workoutLine = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+        $set = Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 50,
+            'reps' => 10,
+        ]);
+
+        $this->assertEquals(500.0, $set->getOriginalVolume());
+
+        $set->weight = 60;
+        $set->reps = 8;
+
+        $this->assertEquals(500.0, $set->getOriginalVolume());
+        $this->assertEquals(480.0, $set->getVolume());
+    }
 }
