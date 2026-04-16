@@ -83,4 +83,27 @@ class SupplementTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_scope_for_user_filters_correctly(): void
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+
+        Supplement::factory()->count(3)->create(['user_id' => $user1->id]);
+        Supplement::factory()->count(2)->create(['user_id' => $user2->id]);
+
+        $user1Supplements = Supplement::forUser($user1->id)->get();
+        $user2Supplements = Supplement::forUser($user2->id)->get();
+
+        $this->assertCount(3, $user1Supplements);
+        $this->assertCount(2, $user2Supplements);
+
+        foreach ($user1Supplements as $supplement) {
+            $this->assertEquals($user1->id, $supplement->user_id);
+        }
+
+        foreach ($user2Supplements as $supplement) {
+            $this->assertEquals($user2->id, $supplement->user_id);
+        }
+    }
 }
