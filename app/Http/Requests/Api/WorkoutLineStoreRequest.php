@@ -40,7 +40,7 @@ class WorkoutLineStoreRequest extends FormRequest
                 }),
             ],
             'order' => 'nullable|integer',
-            'notes' => 'nullable|string',
+            'notes' => 'nullable|string|max:1000',
         ];
     }
 }

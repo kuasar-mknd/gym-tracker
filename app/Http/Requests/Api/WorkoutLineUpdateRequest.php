@@ -47,7 +47,7 @@ class WorkoutLineUpdateRequest extends FormRequest
                 }),
             ],
             'order' => 'sometimes|integer',
-            'notes' => 'nullable|string',
+            'notes' => 'nullable|string|max:1000',
         ];
     }
 }
