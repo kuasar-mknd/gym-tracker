@@ -170,4 +170,21 @@ class ExerciseTest extends TestCase
 
         $response->assertRedirect('/login');
     }
+
+    public function test_scope_for_user_returns_system_and_user_exercises(): void
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+
+        $systemExercise = Exercise::factory()->create(['user_id' => null]);
+        $user1Exercise = Exercise::factory()->create(['user_id' => $user1->id]);
+        $user2Exercise = Exercise::factory()->create(['user_id' => $user2->id]);
+
+        $exercises = Exercise::forUser($user1->id)->get();
+
+        $this->assertCount(2, $exercises);
+        $this->assertTrue($exercises->contains('id', $systemExercise->id));
+        $this->assertTrue($exercises->contains('id', $user1Exercise->id));
+        $this->assertFalse($exercises->contains('id', $user2Exercise->id));
+    }
 }
