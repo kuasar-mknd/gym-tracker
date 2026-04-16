@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class ExerciseTest extends TestCase
@@ -169,5 +170,35 @@ class ExerciseTest extends TestCase
         $response = $this->get('/exercises');
 
         $response->assertRedirect('/login');
+    }
+
+    public function test_invalidate_cache_for_user_exercise(): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+
+        $globalVersion = '1';
+        Cache::put('exercises_global_version', $globalVersion);
+        Cache::put("exercises_list_{$user->id}_v{$globalVersion}", 'data');
+        Cache::put("exercises_list_{$user->id}", 'data');
+
+        $exercise->invalidateCache();
+
+        $this->assertFalse(Cache::has("exercises_list_{$user->id}_v{$globalVersion}"));
+        $this->assertFalse(Cache::has("exercises_list_{$user->id}"));
+    }
+
+    public function test_invalidate_cache_for_global_exercise(): void
+    {
+        $exercise = Exercise::factory()->create(['user_id' => null]);
+
+        $initialTime = (string) (time() - 100);
+        Cache::put('exercises_global_version', $initialTime);
+
+        $exercise->invalidateCache();
+
+        $newVersion = Cache::get('exercises_global_version');
+        $this->assertNotEquals($initialTime, $newVersion);
+        $this->assertIsString($newVersion);
     }
 }
