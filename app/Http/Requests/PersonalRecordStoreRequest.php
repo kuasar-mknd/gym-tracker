@@ -21,7 +21,7 @@ class PersonalRecordStoreRequest extends FormRequest
     {
         return [
             'exercise_id' => $this->getExerciseIdRules(),
-            'type' => 'required|string',
+            'type' => 'required|string|max:255',
             'value' => 'required|numeric',
             'secondary_value' => 'nullable|numeric',
             'workout_id' => $this->getWorkoutIdRules(),

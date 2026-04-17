@@ -27,7 +27,7 @@ class StoreAchievementRequest extends FormRequest
         return [
             'slug' => ['required', 'string', 'max:255', Rule::unique('achievements')],
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string'],
+            'description' => ['required', 'string', 'max:5000'],
             'icon' => ['required', 'string', 'max:255'],
             'type' => ['required', 'string', 'max:255'],
             'threshold' => ['required', 'numeric', 'min:0'],
