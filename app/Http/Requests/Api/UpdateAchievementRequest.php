@@ -30,7 +30,7 @@ class UpdateAchievementRequest extends FormRequest
         return [
             'slug' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('achievements')->ignore($achievement->id)],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'description' => ['sometimes', 'required', 'string'],
+            'description' => ['sometimes', 'required', 'string', 'max:5000'],
             'icon' => ['sometimes', 'required', 'string', 'max:255'],
             'type' => ['sometimes', 'required', 'string', 'max:255'],
             'threshold' => ['sometimes', 'required', 'numeric', 'min:0'],

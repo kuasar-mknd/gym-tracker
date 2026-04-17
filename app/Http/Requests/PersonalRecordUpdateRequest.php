@@ -21,7 +21,7 @@ class PersonalRecordUpdateRequest extends FormRequest
     {
         return [
             'exercise_id' => $this->getExerciseIdRules(),
-            'type' => 'sometimes|string',
+            'type' => 'sometimes|string|max:255',
             'value' => 'sometimes|numeric',
             'secondary_value' => 'nullable|numeric',
             'workout_id' => $this->getWorkoutIdRules(),
