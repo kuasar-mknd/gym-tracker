@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Service for managing user achievements.
@@ -18,7 +19,13 @@ final class AchievementService
      */
     public function syncAchievements(User $user): void
     {
-        $unlockedIds = $user->achievements()->pluck('achievements.id')->toArray();
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Use direct DB query for pivot IDs to avoid unnecessary JOIN with achievements table.
+        $unlockedIds = DB::table('user_achievements')
+            ->where('user_id', $user->id)
+            ->pluck('achievement_id')
+            ->toArray();
+
         // ⚡ Bolt Optimization: Use cached all() collection and filter in-memory
         // Impact: Eliminates a database query during the frequently called sync operation
         $locked = Achievement::getCachedAll()->whereNotIn('id', $unlockedIds)->values();
@@ -161,19 +168,23 @@ final class AchievementService
      */
     private function getUniqueWorkoutDates(User $user, int $days): array
     {
-        // ⚡ Bolt Optimization: Use toBase() to avoid hydrating Eloquent models and Carbon objects.
-        // This significantly reduces memory usage and execution time for large datasets.
+        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+        // Offload date extraction and uniqueness to SQL layer using DISTINCT DATE().
+        // This eliminates O(N) mapping, filtering, and unique operations in PHP.
+        // Using toBase() avoids hydrating Eloquent models.
+        $driver = DB::getDriverName();
+        $dateFormat = $driver === 'sqlite' ? "strftime('%Y-%m-%d', started_at)" : 'DATE(started_at)';
+
+        /** @var array<int, string> $dates */
         $dates = $user->workouts()
             ->toBase()
             ->where('started_at', '>=', now()->subDays($days + 30))
-            ->latest('started_at')
-            ->pluck('started_at');
+            ->selectRaw("DISTINCT {$dateFormat} as date")
+            ->orderByDesc('date')
+            ->pluck('date')
+            ->all();
 
-        return $dates->map(function (mixed $date): string {
-            $dateString = is_string($date) ? $date : '';
-
-            return strlen($dateString) >= 10 ? substr($dateString, 0, 10) : $dateString;
-        })->unique()->values()->all();
+        return $dates;
     }
 
     /**
