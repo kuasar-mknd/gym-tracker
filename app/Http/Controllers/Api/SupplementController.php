@@ -12,8 +12,24 @@ use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
 
+/**
+ * Controller for managing user supplements via API.
+ *
+ * Provides endpoints to list, create, retrieve, update, and delete
+ * supplement records for the authenticated user.
+ */
 class SupplementController extends Controller
 {
+    /**
+     * Display a listing of the user's supplements.
+     *
+     * Retrieves a paginated list of supplements belonging to the authenticated user.
+     * Supports filtering by name/brand, sorting, and eager loading the latest log.
+     *
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection A collection of supplement resources.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view supplements.
+     */
     #[OA\Get(
         path: '/supplements',
         summary: 'Get list of supplements',
@@ -36,6 +52,16 @@ class SupplementController extends Controller
         return SupplementResource::collection($supplements);
     }
 
+    /**
+     * Store a newly created supplement in storage.
+     *
+     * Validates the request data and creates a new supplement record for the authenticated user.
+     *
+     * @param  \App\Http\Requests\Api\SupplementStoreRequest  $request  The incoming validated request.
+     * @return \Illuminate\Http\JsonResponse A JSON response containing the newly created supplement.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a supplement.
+     */
     #[OA\Post(
         path: '/supplements',
         summary: 'Create a new supplement',
@@ -60,6 +86,16 @@ class SupplementController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
+    /**
+     * Display the specified supplement.
+     *
+     * Retrieves the details of a specific supplement record, along with its latest usage log.
+     *
+     * @param  \App\Models\Supplement  $supplement  The supplement instance to display.
+     * @return \App\Http\Resources\SupplementResource The requested supplement resource.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view the supplement.
+     */
     #[OA\Get(
         path: '/supplements/{supplement}',
         summary: 'Get a specific supplement',
@@ -76,6 +112,17 @@ class SupplementController extends Controller
         return new SupplementResource($supplement);
     }
 
+    /**
+     * Update the specified supplement in storage.
+     *
+     * Validates the incoming request and modifies the details of an existing supplement.
+     *
+     * @param  \App\Http\Requests\Api\SupplementUpdateRequest  $request  The incoming validated request.
+     * @param  \App\Models\Supplement  $supplement  The supplement instance to update.
+     * @return \App\Http\Resources\SupplementResource The updated supplement resource.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the supplement.
+     */
     #[OA\Put(
         path: '/supplements/{supplement}',
         summary: 'Update a supplement',
@@ -94,6 +141,16 @@ class SupplementController extends Controller
         return new SupplementResource($supplement);
     }
 
+    /**
+     * Remove the specified supplement from storage.
+     *
+     * Permanently deletes a supplement record from the user's inventory.
+     *
+     * @param  \App\Models\Supplement  $supplement  The supplement instance to delete.
+     * @return \Illuminate\Http\Response An empty HTTP response indicating success.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the supplement.
+     */
     #[OA\Delete(
         path: '/supplements/{supplement}',
         summary: 'Delete a supplement',
