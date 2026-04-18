@@ -99,3 +99,7 @@
 ## 2026-04-14 - [Consolidating Collection Chains to Foreach Loops]
 **Learning:** Chaining multiple collection methods (`map`, `filter`, `toArray`) on the same dataset creates multiple O(N) iterations. In high-frequency statistical methods like `getVolumeTrend` or `getVolumeHistory`, this adds significant function call overhead and memory pressure.
 **Action:** Consolidate multiple collection transformations into a single `foreach` loop to reduce execution time and memory overhead, especially when processing analytical data. Reuse expensive results (e.g., date parsing) within the single pass to further minimize redundant processing.
+
+## 2026-04-20 - [Batch Achievement Unlocks]
+**Learning:** Unlocking multiple achievements simultaneously (common for new users or high-volume workouts) caused O(N) database queries to the 'user_achievements' pivot table when using individual 'attach()' calls.
+**Action:** Refactor synchronization logic to collect all eligible achievements first, then perform a single '$user->achievements()->attach($attachData)' call to process all unlocks in a single database transaction.

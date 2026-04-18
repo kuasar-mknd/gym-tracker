@@ -36,32 +36,49 @@ final class AchievementService
 
         $metrics = $this->preCalculateMetrics($user, $locked);
 
+        $toUnlock = [];
         foreach ($locked as $achievement) {
-            $this->checkAndUnlock($user, $achievement, $metrics);
+            if ($this->isCriteriaMet($achievement, $metrics)) {
+                $toUnlock[] = $achievement;
+            }
+        }
+
+        if ($toUnlock !== []) {
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // Batch achievement unlocks in a single database query to the pivot table.
+            // This reduces queries from O(N) to O(1) during the attachment phase.
+            $now = now();
+            $attachData = [];
+
+            foreach ($toUnlock as $achievement) {
+                $attachData[$achievement->id] = ['achieved_at' => $now];
+            }
+
+            $user->achievements()->attach($attachData);
+
+            // Send notifications individually to preserve user experience
+            foreach ($toUnlock as $achievement) {
+                $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
+            }
         }
     }
 
     /**
-     * Check if an achievement is unlocked based on calculated metrics and unlock it if so.
+     * Determine if an achievement's criteria is met based on calculated metrics.
      *
-     * @param  User  $user  The user to check the achievement for.
      * @param  Achievement  $achievement  The achievement to check.
      * @param  array<string, int|float>  $metrics  The pre-calculated metrics.
+     * @return bool True if criteria is met, false otherwise.
      */
-    private function checkAndUnlock(User $user, Achievement $achievement, array $metrics): void
+    private function isCriteriaMet(Achievement $achievement, array $metrics): bool
     {
-        $isUnlocked = match ($achievement->type) {
+        return match ($achievement->type) {
             'count' => ($metrics['count'] ?? 0) >= $achievement->threshold,
             'weight_record' => ($metrics['max_weight'] ?? 0) >= $achievement->threshold,
             'volume_total' => ($metrics['total_volume'] ?? 0) >= $achievement->threshold,
             'streak' => ($metrics['max_streak'] ?? 0) >= $achievement->threshold,
             default => false,
         };
-
-        if ($isUnlocked) {
-            $user->achievements()->attach($achievement->id, ['achieved_at' => now()]);
-            $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
-        }
     }
 
     /**
@@ -77,7 +94,9 @@ final class AchievementService
         $metrics = [];
 
         if ($types->contains('count')) {
-            $metrics['count'] = $user->workouts()->count();
+            // ⚡ Bolt: Use workouts_count if already loaded on the user model to save a query.
+            /** @phpstan-ignore property.notFound */
+            $metrics['count'] = $user->workouts_count ?? $user->workouts()->count();
         }
 
         if ($types->contains('weight_record')) {
