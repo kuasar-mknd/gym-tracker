@@ -7,11 +7,11 @@ use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Sanctum\Sanctum;
 
-beforeEach(function () {
+beforeEach(function (): void {
     //
 });
 
-test('user can list achievements', function () {
+test('user can list achievements', function (): void {
     $user = User::factory()->create();
     Achievement::factory()->count(3)->create();
 
@@ -22,7 +22,7 @@ test('user can list achievements', function () {
     $response->assertStatus(200);
 });
 
-test('user can view a specific achievement', function () {
+test('user can view a specific achievement', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
 
@@ -34,20 +34,20 @@ test('user can view a specific achievement', function () {
         ->assertJsonPath('data.id', $achievement->id);
 });
 
-test('unauthenticated user cannot list achievements', function () {
+test('unauthenticated user cannot list achievements', function (): void {
     $response = $this->getJson('/api/v1/achievements');
 
     $response->assertStatus(401);
 });
 
-test('unauthenticated user cannot view achievement', function () {
+test('unauthenticated user cannot view achievement', function (): void {
     $achievement = Achievement::factory()->create();
     $response = $this->getJson("/api/v1/achievements/{$achievement->id}");
 
     $response->assertStatus(401);
 });
 
-test('user cannot create achievement', function () {
+test('user cannot create achievement', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -64,13 +64,11 @@ test('user cannot create achievement', function () {
     $response->assertForbidden();
 });
 
-test('admin with permission can create achievement', function () {
+test('admin with permission can create achievement', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn ($user, $ability): bool => true);
 
     $response = $this->postJson('/api/v1/achievements', [
         'slug' => 'new-achievement',
@@ -86,13 +84,11 @@ test('admin with permission can create achievement', function () {
         ->assertJsonPath('data.slug', 'new-achievement');
 });
 
-test('validation error on store', function () {
+test('validation error on store', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn ($user, $ability): bool => true);
 
     $response = $this->postJson('/api/v1/achievements', [
         // Missing required fields
@@ -103,7 +99,7 @@ test('validation error on store', function () {
         ->assertJsonValidationErrors(['slug', 'description', 'icon', 'type', 'threshold', 'category']);
 });
 
-test('user cannot update achievement', function () {
+test('user cannot update achievement', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
     Sanctum::actingAs($user);
@@ -115,14 +111,12 @@ test('user cannot update achievement', function () {
     $response->assertForbidden();
 });
 
-test('admin with permission can update achievement', function () {
+test('admin with permission can update achievement', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
     Sanctum::actingAs($user);
 
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn ($user, $ability): bool => true);
 
     $response = $this->putJson("/api/v1/achievements/{$achievement->id}", [
         'slug' => 'updated-slug',
@@ -138,14 +132,12 @@ test('admin with permission can update achievement', function () {
         ->assertJsonPath('data.name', 'Updated Achievement Name');
 });
 
-test('validation error on update', function () {
+test('validation error on update', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
     Sanctum::actingAs($user);
 
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn ($user, $ability): bool => true);
 
     $response = $this->putJson("/api/v1/achievements/{$achievement->id}", [
         'slug' => '', // empty slug
@@ -155,7 +147,7 @@ test('validation error on update', function () {
         ->assertJsonValidationErrors(['slug']);
 });
 
-test('user cannot delete achievement', function () {
+test('user cannot delete achievement', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
     Sanctum::actingAs($user);
@@ -165,14 +157,12 @@ test('user cannot delete achievement', function () {
     $response->assertForbidden();
 });
 
-test('admin with permission can delete achievement', function () {
+test('admin with permission can delete achievement', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create();
     Sanctum::actingAs($user);
 
-    Gate::before(function ($user, $ability) {
-        return true;
-    });
+    Gate::before(fn ($user, $ability): bool => true);
 
     $response = $this->deleteJson("/api/v1/achievements/{$achievement->id}");
 
