@@ -82,6 +82,8 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                 <div
                     v-if="$page.props.flash?.[type]"
                     class="fixed top-20 right-4 left-4 z-[60] sm:right-6 sm:left-auto sm:w-80"
+                    role="alert"
+                    :aria-live="type === 'error' ? 'assertive' : 'polite'"
                 >
                     <div
                         :class="[

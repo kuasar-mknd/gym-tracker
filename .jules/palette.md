@@ -12,3 +12,7 @@
 ## 2024-05-15 - Accessible character counters for textareas
 **Learning:** While visible character counters improve UX, they are often invisible to screen readers if not properly linked.
 **Action:** Always link textarea character counters using `aria-describedby` on the textarea and a matching `id` on the counter element to ensure the limit is communicated to assistive technologies.
+
+## 2026-04-18 - Enhanced Supplement Interaction & Toast Accessibility
+**Learning:** Adding localized loading states to list items (e.g., supplement consumption) significantly improves perceived performance and prevents duplicate actions. Standardizing these interactions with `GlassButton` ensures consistent haptic feedback and accessibility patterns. Global toast notifications benefit from explicit ARIA roles and live regions to ensure they are announced to screen reader users immediately.
+**Action:** Always implement `consumingId` or similar state for per-item async actions in lists. Ensure all flash messages use `role="alert"` and appropriate `aria-live` settings based on severity.
