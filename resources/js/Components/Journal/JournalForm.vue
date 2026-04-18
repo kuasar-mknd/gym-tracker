@@ -1,3 +1,14 @@
+<!--
+  @component JournalForm
+  @description A form component for creating and editing daily journal entries, tracking metrics like mood, sleep, stress, energy, and nutrition.
+
+  @prop {Object} form - Required. The Inertia form object containing the journal data and validation errors.
+  @prop {Array} moods - Required. An array of mood options to display as selectable buttons.
+  @prop {Object|null} editingJournal - Optional. The existing journal entry being edited, or null if creating a new entry.
+
+  @emits close - Emitted when the user clicks the close or cancel buttons.
+  @emits submit - Emitted when the user submits the form.
+-->
 <script setup>
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'

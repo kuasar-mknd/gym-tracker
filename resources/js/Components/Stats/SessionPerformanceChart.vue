@@ -1,3 +1,10 @@
+<!--
+  @component SessionPerformanceChart
+  @description Displays a combination bar/line chart visualizing a user's workout performance over multiple sessions.
+  It shows both the total volume (as bars) and the best 1RM (as a line) over time.
+
+  @prop {Array} data - Required. An array of session objects containing 'formatted_date', 'sets', and 'best_1rm' properties.
+-->
 <script setup>
 import { computed } from 'vue'
 import {
