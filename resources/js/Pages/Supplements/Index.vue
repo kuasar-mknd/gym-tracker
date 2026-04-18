@@ -15,6 +15,7 @@ const props = defineProps({
 
 const showAddForm = ref(false)
 const editingSupplement = ref(null)
+const consumingId = ref(null)
 
 const form = useForm({
     name: '',
@@ -75,6 +76,8 @@ const consume = (id) => {
         {},
         {
             preserveScroll: true,
+            onStart: () => (consumingId.value = id),
+            onFinish: () => (consumingId.value = null),
         },
     )
 }
@@ -121,9 +124,10 @@ const formatDate = (dateString) => {
                 </GlassButton>
                 <!-- Mobile Add Button -->
                 <button
+                    v-press
                     @click="showAddForm = true"
                     aria-label="Ajouter un complément"
-                    class="bg-gradient-main flex size-12 items-center justify-center rounded-xl text-white shadow-lg active:scale-95 sm:hidden"
+                    class="bg-gradient-main flex size-12 items-center justify-center rounded-xl text-white shadow-lg sm:hidden"
                 >
                     <span class="material-symbols-outlined">add</span>
                 </button>
@@ -225,6 +229,7 @@ const formatDate = (dateString) => {
                                 </div>
                                 <div class="flex gap-1">
                                     <button
+                                        v-press
                                         @click="startEdit(supplement)"
                                         aria-label="Modifier le complément"
                                         class="text-text-muted hover:text-electric-orange p-1 transition-colors"
@@ -232,6 +237,7 @@ const formatDate = (dateString) => {
                                         <span class="material-symbols-outlined text-lg">edit</span>
                                     </button>
                                     <button
+                                        v-press
                                         @click="deleteSupplement(supplement.id)"
                                         aria-label="Supprimer le complément"
                                         class="text-text-muted p-1 transition-colors hover:text-red-500"
@@ -274,15 +280,17 @@ const formatDate = (dateString) => {
 
                         <!-- Action Footer -->
                         <div class="border-t border-white/5 bg-white/5 p-3">
-                            <button
+                            <GlassButton
                                 @click="consume(supplement.id)"
-                                class="from-electric-orange to-vivid-violet flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r py-2 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:shadow-orange-500/40 active:scale-95"
+                                variant="primary"
+                                class="w-full"
+                                size="sm"
                                 :disabled="supplement.servings_remaining <= 0"
-                                :class="{ 'cursor-not-allowed opacity-50': supplement.servings_remaining <= 0 }"
+                                :loading="consumingId === supplement.id"
+                                icon="check_circle"
                             >
-                                <span class="material-symbols-outlined text-lg">check_circle</span>
                                 Prendre une dose
-                            </button>
+                            </GlassButton>
                         </div>
                     </div>
                 </GlassCard>
