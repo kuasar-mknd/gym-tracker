@@ -37,7 +37,7 @@ class GoalStoreRequest extends FormRequest
                     });
                 }),
             ],
-            'measurement_type' => ['required_if:type,measurement', 'nullable', 'string'],
+            'measurement_type' => ['required_if:type,measurement', 'nullable', 'string', 'max:255'],
             'deadline' => ['nullable', 'date', 'after:today'],
             'start_value' => ['nullable', 'numeric'],
         ];

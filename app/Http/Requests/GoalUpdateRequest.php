@@ -39,7 +39,7 @@ class GoalUpdateRequest extends FormRequest
                     });
                 }),
             ],
-            'measurement_type' => ['sometimes', 'nullable', 'string'],
+            'measurement_type' => ['sometimes', 'nullable', 'string', 'max:255'],
             'deadline' => ['nullable', 'date'], // Removed after:today to allow editing old goals without validation error if deadline passed
             'completed_at' => ['nullable', 'date'],
         ];
