@@ -11,8 +11,6 @@ use App\Http\Resources\HabitLogResource;
 use App\Models\HabitLog;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class HabitLogController extends Controller
 {
@@ -23,23 +21,11 @@ class HabitLogController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(\App\Actions\Habits\FetchHabitLogsIndexApiAction $fetchHabitLogsIndexApiAction): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', HabitLog::class);
 
-        $logs = QueryBuilder::for(HabitLog::class)
-            ->allowedIncludes(['habit'])
-            ->allowedFilters([
-                AllowedFilter::exact('habit_id'),
-                AllowedFilter::scope('date_between', 'whereDateBetween'),
-            ])
-            ->allowedSorts(['date', 'created_at'])
-            ->defaultSort('-date')
-            // Bolt: Optimize belongsTo filtering with INNER JOIN
-            ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
-            ->where('habits.user_id', $this->user()->id)
-            ->select('habit_logs.*')
-            ->paginate();
+        $logs = $fetchHabitLogsIndexApiAction->execute($this->user());
 
         return HabitLogResource::collection($logs);
     }
