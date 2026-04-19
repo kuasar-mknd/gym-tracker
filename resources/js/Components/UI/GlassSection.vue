@@ -28,7 +28,10 @@ defineProps({
 </script>
 
 <template>
-    <component :is="as">
+    <component
+        :is="as"
+        class="bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-6 transition-all duration-300 hover:bg-white/20 hover:-translate-y-1 hover:shadow-xl active:scale-[0.98]"
+    >
         <header class="mb-6">
             <h2 class="text-text-main text-lg font-medium dark:text-white">
                 {{ title }}
