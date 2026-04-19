@@ -29,8 +29,8 @@ class UpdateHabitRequest extends FormRequest
         return [
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'color' => 'nullable|string',
-            'icon' => 'nullable|string',
+            'color' => 'nullable|string|max:50',
+            'icon' => 'nullable|string|max:255',
             'goal_times_per_week' => 'sometimes|integer|min:1|max:7',
             'archived' => 'boolean',
         ];

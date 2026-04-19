@@ -26,8 +26,8 @@ class StoreHabitRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'color' => 'nullable|string',
-            'icon' => 'nullable|string',
+            'color' => 'nullable|string|max:50',
+            'icon' => 'nullable|string|max:255',
             'goal_times_per_week' => 'required|integer|min:1|max:7',
         ];
     }
