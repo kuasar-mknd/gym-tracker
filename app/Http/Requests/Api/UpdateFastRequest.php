@@ -31,7 +31,7 @@ class UpdateFastRequest extends FormRequest
             'start_time' => ['sometimes', 'date'],
             'end_time' => ['nullable', 'date'],
             'target_duration_minutes' => ['sometimes', 'integer', 'min:1'],
-            'type' => ['sometimes', 'string'],
+            'type' => ['sometimes', 'string', 'max:255'],
             'status' => ['sometimes', 'required', 'string', 'in:active,completed,broken'],
         ];
     }
