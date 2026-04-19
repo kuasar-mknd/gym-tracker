@@ -20,7 +20,7 @@ const emit = defineEmits(['startWorkout'])
             id="start-workout-button"
             dusk="start-workout-button"
             class="hover:shadow-glow-orange/70 group shadow-glow-orange focus-visible:ring-electric-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-            :class="{ 'cursor-wait': processing }"
+            :class="{ 'cursor-wait opacity-50': processing }"
         >
             <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md dark:bg-slate-800/60"></div>
             <div
