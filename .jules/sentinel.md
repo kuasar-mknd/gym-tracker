@@ -96,3 +96,8 @@
 **Vulnerability:** Unvalidated user input (the `$provider` string from the URL path) was passed directly to `Socialite::driver($provider)`.
 **Learning:** Laravel Socialite uses the Manager pattern. While typically configured drivers work fine, passing arbitrary strings could potentially load unexpected classes if an attacker finds a way to register malicious drivers, or simply cause unhandled exceptions that might leak stack traces or cause Denial of Service.
 **Prevention:** Always validate dynamic path parameters that map to system configurations or drivers against a strict whitelist (e.g., `ALLOWED_PROVIDERS = ['github', 'google', 'apple']`) before instantiation.
+
+## 2024-05-19 - DoS Risk via Missing Length Limits on Hashed Fields
+**Vulnerability:** Authentication-related FormRequests (`LoginRequest`, `ConfirmPasswordRequest`, `UpdatePasswordRequest`, `DeleteUserRequest`) lacked maximum length constraints on `email`, `password`, and `current_password` fields.
+**Learning:** While Laravel handles validation, missing `max` limits on fields that are subsequently hashed (like passwords) or used in database queries can be exploited for ReDoS or CPU-exhaustion DoS attacks. Hashing an extremely long string is computationally expensive.
+**Prevention:** Always enforce a reasonable `max` limit (e.g., `max:255`) on all sensitive string inputs, especially those that will be hashed or used in intensive operations, to prevent resource exhaustion.
