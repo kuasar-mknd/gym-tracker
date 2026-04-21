@@ -16,3 +16,6 @@
 ## 2026-04-18 - Enhanced Supplement Interaction & Toast Accessibility
 **Learning:** Adding localized loading states to list items (e.g., supplement consumption) significantly improves perceived performance and prevents duplicate actions. Standardizing these interactions with `GlassButton` ensures consistent haptic feedback and accessibility patterns. Global toast notifications benefit from explicit ARIA roles and live regions to ensure they are announced to screen reader users immediately.
 **Action:** Always implement `consumingId` or similar state for per-item async actions in lists. Ensure all flash messages use `role="alert"` and appropriate `aria-live` settings based on severity.
+## 2026-04-21 - Accessible custom progress indicators
+**Learning:** Custom UI progress bars built with `div` elements and dynamic inline styles (like those in `GoalCard` and `GoalsSummary`) lack semantic meaning. Screen reader users cannot interpret them as progress indicators without explicit ARIA roles and values.
+**Action:** Always add `role="progressbar"`, `aria-valuemin="0"`, `aria-valuemax="100"`, and dynamically bind `:aria-valuenow="currentValue"` to the parent container of any custom `div`-based progress bar to ensure assistive technologies can correctly announce progress updates.

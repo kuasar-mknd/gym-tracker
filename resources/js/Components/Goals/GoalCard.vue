@@ -102,6 +102,10 @@ const statusColor = computed(() => {
                 </div>
                 <div
                     class="h-2 w-full overflow-hidden rounded-full border border-white/20 bg-white/10 shadow-inner backdrop-blur-md"
+                    role="progressbar"
+                    :aria-valuenow="progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
                 >
                     <div
                         class="relative h-full transition-all duration-1000 ease-out"

@@ -26,7 +26,13 @@ defineProps({
                             >{{ Math.round(goal.progress_pct) }}%</span
                         >
                     </div>
-                    <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                    <div
+                        class="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700"
+                        role="progressbar"
+                        :aria-valuenow="goal.progress_pct"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    >
                         <div
                             class="glow-orange bg-gradient-main h-full transition-all duration-1000"
                             :style="{ width: goal.progress_pct + '%' }"
