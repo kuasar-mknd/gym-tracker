@@ -36,32 +36,42 @@ final class AchievementService
 
         $metrics = $this->preCalculateMetrics($user, $locked);
 
+        $toUnlockIds = [];
+        $unlockedAchievements = [];
+
         foreach ($locked as $achievement) {
-            $this->checkAndUnlock($user, $achievement, $metrics);
+            if ($this->isUnlocked($achievement, $metrics)) {
+                $toUnlockIds[] = $achievement->id;
+                $unlockedAchievements[] = $achievement;
+            }
+        }
+
+        if (count($toUnlockIds) > 0) {
+            // ⚡ Bolt Optimization: Batch multiple many-to-many attach operations into a single query.
+            // Impact: Reduces database writes from O(N) to O(1) when multiple achievements are unlocked at once.
+            $user->achievements()->attach($toUnlockIds, ['achieved_at' => now()]);
+
+            foreach ($unlockedAchievements as $achievement) {
+                $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
+            }
         }
     }
 
     /**
-     * Check if an achievement is unlocked based on calculated metrics and unlock it if so.
+     * Check if an achievement should be unlocked based on calculated metrics.
      *
-     * @param  User  $user  The user to check the achievement for.
      * @param  Achievement  $achievement  The achievement to check.
      * @param  array<string, int|float>  $metrics  The pre-calculated metrics.
      */
-    private function checkAndUnlock(User $user, Achievement $achievement, array $metrics): void
+    private function isUnlocked(Achievement $achievement, array $metrics): bool
     {
-        $isUnlocked = match ($achievement->type) {
+        return match ($achievement->type) {
             'count' => ($metrics['count'] ?? 0) >= $achievement->threshold,
             'weight_record' => ($metrics['max_weight'] ?? 0) >= $achievement->threshold,
             'volume_total' => ($metrics['total_volume'] ?? 0) >= $achievement->threshold,
             'streak' => ($metrics['max_streak'] ?? 0) >= $achievement->threshold,
             default => false,
         };
-
-        if ($isUnlocked) {
-            $user->achievements()->attach($achievement->id, ['achieved_at' => now()]);
-            $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
-        }
     }
 
     /**
@@ -77,7 +87,9 @@ final class AchievementService
         $metrics = [];
 
         if ($types->contains('count')) {
-            $metrics['count'] = $user->workouts()->count();
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // Use toBase() to avoid hydrating Eloquent models just for a count.
+            $metrics['count'] = $user->workouts()->toBase()->count();
         }
 
         if ($types->contains('weight_record')) {
@@ -105,6 +117,9 @@ final class AchievementService
     {
         /** @var float|null $maxWeight */
         $maxWeight = $user->personalRecords()
+            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
+            // Use toBase() to bypass Eloquent model hydration and overhead.
+            ->toBase()
             ->where('type', 'max_weight')
             ->max('value');
 

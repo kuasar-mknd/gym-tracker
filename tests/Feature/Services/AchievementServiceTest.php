@@ -213,3 +213,41 @@ test('it does not duplicate achievement assignments', function (): void {
 
     Notification::assertSentTimes(\App\Notifications\AchievementUnlocked::class, 1);
 });
+
+test('it awards multiple achievements at once', function (): void {
+    $user = User::factory()->create();
+
+    $achievement1 = Achievement::factory()->create([
+        'type' => 'count',
+        'threshold' => 1,
+        'slug' => 'first-workout',
+    ]);
+
+    $achievement2 = Achievement::factory()->create([
+        'type' => 'weight_record',
+        'threshold' => 100,
+        'slug' => 'heavy-lifter',
+    ]);
+
+    $workout = Workout::factory()->create(['user_id' => $user->id]);
+    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+    Set::factory()->create([
+        'workout_line_id' => $line->id,
+        'weight' => 100,
+        'reps' => 1,
+    ]);
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseHas('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $achievement1->id,
+    ]);
+
+    assertDatabaseHas('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $achievement2->id,
+    ]);
+
+    Notification::assertSentTimes(\App\Notifications\AchievementUnlocked::class, 2);
+});
