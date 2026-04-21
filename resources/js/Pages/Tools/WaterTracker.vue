@@ -18,7 +18,14 @@
             <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
                 <div class="flex flex-col items-center space-y-8 p-4">
                     <!-- Progress Circle/Tank -->
-                    <div class="relative flex h-64 w-64 items-center justify-center">
+                    <div
+                        class="relative flex h-64 w-64 items-center justify-center"
+                        role="progressbar"
+                        :aria-valuenow="percentage"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        aria-label="Progrès d'hydratation"
+                    >
                         <!-- Circular Progress SVG -->
                         <svg class="h-full w-full rotate-[-90deg]" viewBox="0 0 100 100">
                             <!-- Background Circle -->
@@ -67,8 +74,9 @@
                         <button
                             @click="addWater(250)"
                             :disabled="form.processing"
+                            v-press
                             aria-label="Ajouter 250ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 active:scale-95 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">local_drink</span>
                             <span class="text-text-main text-xs font-bold">250ml</span>
@@ -76,8 +84,9 @@
                         <button
                             @click="addWater(500)"
                             :disabled="form.processing"
+                            v-press
                             aria-label="Ajouter 500ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 active:scale-95 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_drop</span>
                             <span class="text-text-main text-xs font-bold">500ml</span>
@@ -85,8 +94,9 @@
                         <button
                             @click="addWater(1000)"
                             :disabled="form.processing"
+                            v-press
                             aria-label="Ajouter 1L"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 active:scale-95 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_bottle</span>
                             <span class="text-text-main text-xs font-bold">1L</span>
@@ -95,17 +105,18 @@
 
                     <!-- Custom Input -->
                     <div class="flex w-full items-center gap-2">
-                        <div class="relative grow">
-                            <input
-                                type="number"
-                                v-model="customAmount"
-                                placeholder="Quantité personnalisée"
-                                class="font-display text-text-main h-12 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 font-bold transition-all outline-none focus:bg-white/80 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-800"
-                            />
-                            <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 text-xs font-bold"
-                                >ML</span
-                            >
-                        </div>
+                        <GlassInput
+                            v-model="customAmount"
+                            type="number"
+                            label="Quantité personnalisée"
+                            hide-label
+                            placeholder="Quantité personnalisée"
+                            class="grow"
+                        >
+                            <template #suffix>
+                                <span class="text-text-muted text-xs font-bold uppercase">ML</span>
+                            </template>
+                        </GlassInput>
                         <GlassButton
                             @click="addWater(customAmount)"
                             :disabled="!customAmount || form.processing"
@@ -182,8 +193,10 @@
 <script setup>
 import { ref, computed, defineAsyncComponent } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
+import { triggerHaptic } from '@/composables/useHaptics'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
 const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
@@ -238,6 +251,7 @@ const addWater = (amount) => {
 
 const deleteLog = (log) => {
     if (confirm('Supprimer cette entrée ?')) {
+        triggerHaptic('warning')
         router.delete(route('tools.water.destroy', { waterLog: log.id }), {
             preserveScroll: true,
         })
