@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('returns a list of daily journals for the authenticated user', function () {
+it('returns a list of daily journals for the authenticated user', function (): void {
     $user = User::factory()->create();
     DailyJournal::factory()->count(3)->create([
         'user_id' => $user->id,
@@ -25,7 +25,7 @@ it('returns a list of daily journals for the authenticated user', function () {
     $response->assertJsonCount(3, 'data');
 });
 
-it('creates a new daily journal', function () {
+it('creates a new daily journal', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->postJson(route('api.v1.daily-journals.store'), [
@@ -42,7 +42,7 @@ it('creates a new daily journal', function () {
     ]);
 });
 
-it('returns 422 Unprocessable when creating a journal with invalid data', function () {
+it('returns 422 Unprocessable when creating a journal with invalid data', function (): void {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->postJson(route('api.v1.daily-journals.store'), [
@@ -54,7 +54,7 @@ it('returns 422 Unprocessable when creating a journal with invalid data', functi
     $response->assertJsonValidationErrors(['mood_score']);
 });
 
-it('returns 403 Forbidden when trying to view another user\'s journal', function () {
+it('returns 403 Forbidden when trying to view another user\'s journal', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $journal = DailyJournal::factory()->create([
