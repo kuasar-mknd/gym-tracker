@@ -27,7 +27,7 @@ const colorForWorkout = (index) => {
             <h3 class="text-text-muted text-xs font-black tracking-[0.2em] uppercase">Activité Récente</h3>
             <Link
                 :href="route('workouts.index')"
-                class="text-electric-orange hover:text-vivid-violet text-xs font-bold tracking-wider uppercase transition-colors"
+                class="text-electric-orange hover:text-vivid-violet focus-visible:ring-electric-orange rounded-sm text-xs font-bold tracking-wider uppercase transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
                 Voir tout
             </Link>
@@ -62,7 +62,7 @@ const colorForWorkout = (index) => {
                 :key="workout.id"
                 v-press
                 :href="route('workouts.show', { workout: workout.id })"
-                class="group relative flex items-center justify-between rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
+                class="group focus-visible:ring-electric-orange relative flex items-center justify-between rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
             >
                 <!-- Color indicator -->
                 <div

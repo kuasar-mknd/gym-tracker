@@ -12,13 +12,21 @@ defineProps({
     <section v-if="activeGoals.length > 0" class="animate-slide-up" style="animation-delay: 0.25s">
         <div class="mb-4 flex items-center justify-between px-1">
             <h3 class="text-text-muted text-xs font-black tracking-[0.2em] uppercase">Objectifs en cours</h3>
-            <Link :href="route('goals.index')" class="text-electric-orange text-xs font-bold tracking-wider uppercase">
+            <Link
+                :href="route('goals.index')"
+                class="text-electric-orange focus-visible:ring-electric-orange rounded-sm text-xs font-bold tracking-wider uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
                 Voir tout
             </Link>
         </div>
 
         <div class="space-y-3">
-            <Link v-for="goal in activeGoals" :key="goal.id" :href="route('goals.index')" class="block">
+            <Link
+                v-for="goal in activeGoals"
+                :key="goal.id"
+                :href="route('goals.index')"
+                class="focus-visible:ring-electric-orange block rounded-3xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
                 <GlassCard :hover="true" padding="p-4">
                     <div class="mb-2 flex items-center justify-between">
                         <span class="text-text-main line-clamp-1 text-sm font-bold">{{ goal.title }}</span>
