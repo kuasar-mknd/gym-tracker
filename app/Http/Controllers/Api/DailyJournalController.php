@@ -11,12 +11,47 @@ use App\Http\Resources\DailyJournalResource;
 use App\Models\DailyJournal;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use OpenApi\Attributes as OA;
 
+/**
+ * Controller for managing daily journals via the API.
+ *
+ * Provides endpoints for retrieving, creating, updating, and deleting
+ * daily journals for the authenticated user.
+ */
 class DailyJournalController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the user's daily journals.
+     *
+     * @param Request $request The incoming request.
+     * @return AnonymousResourceCollection A paginated collection of daily journals.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
+    #[OA\Get(
+        path: '/api/v1/daily-journals',
+        summary: 'List daily journals',
+        tags: ['Daily Journals'],
+    )]
+    #[OA\Parameter(
+        name: 'per_page',
+        in: 'query',
+        required: false,
+        description: 'Number of items per page',
+        schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 100)
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Successful operation'
+    )]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated'
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden'
+    )]
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', DailyJournal::class);
@@ -36,8 +71,37 @@ class DailyJournalController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created daily journal.
+     *
+     * @param DailyJournalStoreRequest $request The validated request data.
+     * @return DailyJournalResource The created daily journal resource.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
+    #[OA\Post(
+        path: '/api/v1/daily-journals',
+        summary: 'Create a new daily journal',
+        tags: ['Daily Journals'],
+    )]
+    #[OA\RequestBody(
+        required: true,
+        description: 'Daily journal data'
+    )]
+    #[OA\Response(
+        response: 201,
+        description: 'Journal created successfully'
+    )]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated'
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Validation error'
+    )]
     public function store(DailyJournalStoreRequest $request): DailyJournalResource
     {
         $this->authorize('create', DailyJournal::class);
@@ -52,8 +116,40 @@ class DailyJournalController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified daily journal.
+     *
+     * @param DailyJournal $dailyJournal The daily journal to display.
+     * @return DailyJournalResource The daily journal resource.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
+    #[OA\Get(
+        path: '/api/v1/daily-journals/{id}',
+        summary: 'Get a specific daily journal',
+        tags: ['Daily Journals'],
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'Journal ID',
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Successful operation'
+    )]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated'
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Journal not found'
+    )]
     public function show(DailyJournal $dailyJournal): DailyJournalResource
     {
         $this->authorize('view', $dailyJournal);
@@ -62,8 +158,49 @@ class DailyJournalController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified daily journal in storage.
+     *
+     * @param DailyJournalUpdateRequest $request The validated request data.
+     * @param DailyJournal $dailyJournal The daily journal to update.
+     * @return DailyJournalResource The updated daily journal resource.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
+    #[OA\Put(
+        path: '/api/v1/daily-journals/{id}',
+        summary: 'Update an existing daily journal',
+        tags: ['Daily Journals'],
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'Journal ID',
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\RequestBody(
+        required: true,
+        description: 'Updated daily journal data'
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Journal updated successfully'
+    )]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated'
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Journal not found'
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Validation error'
+    )]
     public function update(DailyJournalUpdateRequest $request, DailyJournal $dailyJournal): DailyJournalResource
     {
         $this->authorize('update', $dailyJournal);
@@ -74,8 +211,40 @@ class DailyJournalController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified daily journal from storage.
+     *
+     * @param DailyJournal $dailyJournal The daily journal to delete.
+     * @return \Illuminate\Http\Response A no-content response.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
+    #[OA\Delete(
+        path: '/api/v1/daily-journals/{id}',
+        summary: 'Delete a daily journal',
+        tags: ['Daily Journals'],
+    )]
+    #[OA\Parameter(
+        name: 'id',
+        in: 'path',
+        required: true,
+        description: 'Journal ID',
+        schema: new OA\Schema(type: 'integer')
+    )]
+    #[OA\Response(
+        response: 204,
+        description: 'Journal deleted successfully'
+    )]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated'
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden'
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Journal not found'
+    )]
     public function destroy(DailyJournal $dailyJournal): \Illuminate\Http\Response
     {
         $this->authorize('delete', $dailyJournal);
