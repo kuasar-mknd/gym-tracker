@@ -24,8 +24,9 @@ class DailyJournalController extends Controller
     /**
      * Display a listing of the user's daily journals.
      *
-     * @param Request $request The incoming request.
+     * @param  Request  $request  The incoming request.
      * @return AnonymousResourceCollection A paginated collection of daily journals.
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Get(
@@ -73,8 +74,9 @@ class DailyJournalController extends Controller
     /**
      * Store a newly created daily journal.
      *
-     * @param DailyJournalStoreRequest $request The validated request data.
+     * @param  DailyJournalStoreRequest  $request  The validated request data.
      * @return DailyJournalResource The created daily journal resource.
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Post(
@@ -118,8 +120,9 @@ class DailyJournalController extends Controller
     /**
      * Display the specified daily journal.
      *
-     * @param DailyJournal $dailyJournal The daily journal to display.
+     * @param  DailyJournal  $dailyJournal  The daily journal to display.
      * @return DailyJournalResource The daily journal resource.
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Get(
@@ -160,9 +163,10 @@ class DailyJournalController extends Controller
     /**
      * Update the specified daily journal in storage.
      *
-     * @param DailyJournalUpdateRequest $request The validated request data.
-     * @param DailyJournal $dailyJournal The daily journal to update.
+     * @param  DailyJournalUpdateRequest  $request  The validated request data.
+     * @param  DailyJournal  $dailyJournal  The daily journal to update.
      * @return DailyJournalResource The updated daily journal resource.
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Put(
@@ -213,8 +217,9 @@ class DailyJournalController extends Controller
     /**
      * Remove the specified daily journal from storage.
      *
-     * @param DailyJournal $dailyJournal The daily journal to delete.
+     * @param  DailyJournal  $dailyJournal  The daily journal to delete.
      * @return \Illuminate\Http\Response A no-content response.
+     *
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Delete(
