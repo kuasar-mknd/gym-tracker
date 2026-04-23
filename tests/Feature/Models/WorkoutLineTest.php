@@ -122,3 +122,24 @@ test('destroy forbids removing another users workout line', function (): void {
 
     assertDatabaseHas('workout_lines', ['id' => $line->id]);
 });
+
+test('setRecommendedValuesAttribute stores json string', function (): void {
+    $user = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $user->id]);
+    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+
+    $values = [
+        'weight' => 50.5,
+        'reps' => 10,
+        'distance_km' => 0.0,
+        'duration_seconds' => 60,
+    ];
+
+    $line->recommended_values = $values;
+    $line->save();
+
+    assertDatabaseHas('workout_lines', [
+        'id' => $line->id,
+        'recommended_values' => json_encode($values),
+    ]);
+});
