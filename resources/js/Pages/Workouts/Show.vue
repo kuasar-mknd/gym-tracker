@@ -27,6 +27,7 @@ import SyncService from '@/Utils/SyncService'
 import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
+import WorkoutVolumeDistributionChart from '@/Components/Stats/WorkoutVolumeDistributionChart.vue'
 import { Head, useForm, router, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
@@ -501,6 +502,16 @@ onUnmounted(() => {
                 <span class="material-symbols-outlined" aria-hidden="true">settings</span>
             </button>
         </template>
+
+        <div class="space-y-6 mb-6">
+            <GlassCard class="animate-slide-up">
+                <div class="mb-4">
+                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume par Exercice</h3>
+                    <p class="text-text-muted text-xs font-semibold">Distribution du volume de la séance</p>
+                </div>
+                <WorkoutVolumeDistributionChart :workout="localWorkout" />
+            </GlassCard>
+        </div>
 
         <div class="pb-main-safe space-y-4" dusk="exercise-list">
             <GlassCard
