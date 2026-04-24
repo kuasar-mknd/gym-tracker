@@ -63,7 +63,7 @@ class WorkoutTemplateController extends Controller
      * Validates the request data and creates a new workout template for the user.
      *
      * @param  WorkoutTemplateStoreRequest  $request  The incoming validated request.
-     * @param  CreateWorkoutTemplateAction  $action   Action class to handle creation.
+     * @param  CreateWorkoutTemplateAction  $action  Action class to handle creation.
      * @return WorkoutTemplateResource The newly created workout template resource.
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException
@@ -127,9 +127,9 @@ class WorkoutTemplateController extends Controller
      *
      * Modifies the details of an existing workout template.
      *
-     * @param  WorkoutTemplateUpdateRequest  $request          The incoming validated request.
-     * @param  WorkoutTemplate               $workoutTemplate  The workout template instance to update.
-     * @param  UpdateWorkoutTemplateAction   $action           Action class to handle update.
+     * @param  WorkoutTemplateUpdateRequest  $request  The incoming validated request.
+     * @param  WorkoutTemplate  $workoutTemplate  The workout template instance to update.
+     * @param  UpdateWorkoutTemplateAction  $action  Action class to handle update.
      * @return WorkoutTemplateResource The updated workout template resource.
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException
