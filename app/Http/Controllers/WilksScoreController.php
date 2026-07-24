@@ -7,11 +7,13 @@ namespace App\Http\Controllers;
 use App\Actions\Tools\CreateWilksScoreAction;
 use App\Http\Requests\StoreWilksScoreRequest;
 use App\Models\WilksScore;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class WilksScoreController extends Controller
 {
-    public function index(): \Inertia\Response
+    public function index(): Response
     {
         $this->authorize('viewAny', WilksScore::class);
 
@@ -28,7 +30,7 @@ class WilksScoreController extends Controller
         ]);
     }
 
-    public function store(StoreWilksScoreRequest $request, CreateWilksScoreAction $createWilksScoreAction): \Illuminate\Http\RedirectResponse
+    public function store(StoreWilksScoreRequest $request, CreateWilksScoreAction $createWilksScoreAction): RedirectResponse
     {
         $this->authorize('create', WilksScore::class);
 
@@ -40,7 +42,7 @@ class WilksScoreController extends Controller
         return redirect()->back();
     }
 
-    public function destroy(WilksScore $wilksScore): \Illuminate\Http\RedirectResponse
+    public function destroy(WilksScore $wilksScore): RedirectResponse
     {
         $this->authorize('delete', $wilksScore);
 

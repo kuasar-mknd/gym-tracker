@@ -5,8 +5,9 @@ declare(strict_types=1);
 use App\Actions\Tools\CreateMacroCalculationAction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
-uses(Tests\TestCase::class, RefreshDatabase::class);
+uses(TestCase::class, RefreshDatabase::class);
 
 test('execute maps activity level to multiplier and creates calculation', function (string $activityLevel, float $expectedMultiplier): void {
     $user = User::factory()->create();

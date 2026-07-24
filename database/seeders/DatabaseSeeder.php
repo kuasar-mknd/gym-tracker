@@ -38,6 +38,6 @@ class DatabaseSeeder extends Seeder
         Exercise::create(['name' => 'Planche Abdominale', 'type' => 'timed', 'category' => 'Abdominaux']);
 
         // 4. Badges / Achievements
-        $this->call(\Database\Seeders\AchievementSeeder::class);
+        $this->call(AchievementSeeder::class);
     }
 }

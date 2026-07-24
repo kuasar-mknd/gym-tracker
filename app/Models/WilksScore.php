@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\WilksScoreFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WilksScore extends Model
 {
-    /** @use HasFactory<\Database\Factories\WilksScoreFactory> */
+    /** @use HasFactory<WilksScoreFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -23,7 +24,7 @@ class WilksScore extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {

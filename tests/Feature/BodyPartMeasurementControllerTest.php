@@ -21,7 +21,7 @@ test('user can view body parts index', function (): void {
     actingAs($user)
         ->get(route('body-parts.index'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('Measurements/Parts/Index')
             ->has('latestMeasurements')
             ->has('commonParts')
@@ -38,7 +38,7 @@ test('user can view body part show history', function (): void {
     actingAs($user)
         ->get(route('body-parts.show', 'Biceps L'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('Measurements/Parts/Show')
             ->where('part', 'Biceps L')
             ->has('history', 2)

@@ -11,6 +11,7 @@ use App\Http\Requests\Api\WorkoutTemplateStoreRequest;
 use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Resources\WorkoutTemplateResource;
 use App\Models\WorkoutTemplate;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
@@ -32,7 +33,7 @@ class WorkoutTemplateController extends Controller
      *
      * @return AnonymousResourceCollection A collection of workout template resources.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Get(
         path: '/workout-templates',
@@ -66,7 +67,7 @@ class WorkoutTemplateController extends Controller
      * @param  CreateWorkoutTemplateAction  $action  Action class to handle creation.
      * @return WorkoutTemplateResource The newly created workout template resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Post(
         path: '/workout-templates',
@@ -97,7 +98,7 @@ class WorkoutTemplateController extends Controller
      * @param  WorkoutTemplate  $workoutTemplate  The workout template instance to display.
      * @return WorkoutTemplateResource The requested workout template resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Get(
         path: '/workout-templates/{id}',
@@ -132,7 +133,7 @@ class WorkoutTemplateController extends Controller
      * @param  UpdateWorkoutTemplateAction  $action  Action class to handle update.
      * @return WorkoutTemplateResource The updated workout template resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Put(
         path: '/workout-templates/{id}',
@@ -171,7 +172,7 @@ class WorkoutTemplateController extends Controller
      * @param  WorkoutTemplate  $workoutTemplate  The workout template instance to delete.
      * @return Response An empty HTTP response indicating success.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Delete(
         path: '/workout-templates/{id}',

@@ -1,6 +1,16 @@
 <?php
 
 declare(strict_types=1);
+use NunoMaduro\PhpInsights\Domain\Insights\ForbiddenFinalClasses;
+use NunoMaduro\PhpInsights\Domain\Insights\ForbiddenNormalClasses;
+use NunoMaduro\PhpInsights\Domain\Insights\ForbiddenTraits;
+use PHP_CodeSniffer\Standards\Generic\Sniffs\Formatting\SpaceAfterNotSniff;
+use PHP_CodeSniffer\Standards\PSR2\Sniffs\Methods\FunctionClosingBraceSniff;
+use PhpCsFixer\Fixer\Basic\BracesFixer;
+use SlevomatCodingStandard\Sniffs\Classes\EmptyLinesAroundClassBracesSniff;
+use SlevomatCodingStandard\Sniffs\Classes\SuperfluousExceptionNamingSniff;
+use SlevomatCodingStandard\Sniffs\Commenting\DocCommentSpacingSniff;
+use SlevomatCodingStandard\Sniffs\TypeHints\PropertyTypeHintSniff;
 
 return [
     'preset' => 'laravel',
@@ -17,22 +27,22 @@ return [
     ],
     'remove' => [
         // Remove rules that conflict with Laravel Pint
-        \SlevomatCodingStandard\Sniffs\Classes\EmptyLinesAroundClassBracesSniff::class,
-        \SlevomatCodingStandard\Sniffs\Commenting\DocCommentSpacingSniff::class,
-        \PhpCsFixer\Fixer\Basic\BracesFixer::class,
-        \PHP_CodeSniffer\Standards\PSR2\Sniffs\Methods\FunctionClosingBraceSniff::class,
-        \PHP_CodeSniffer\Standards\Generic\Sniffs\Formatting\SpaceAfterNotSniff::class,
+        EmptyLinesAroundClassBracesSniff::class,
+        DocCommentSpacingSniff::class,
+        BracesFixer::class,
+        FunctionClosingBraceSniff::class,
+        SpaceAfterNotSniff::class,
         // Also remove ObjectCalisthenics if it's too strict
         // \ObjectCalisthenics\Sniffs\Files\ClassTraitAndInterfaceLengthSniff::class,
 
         // Allow common Laravel patterns
-        \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenTraits::class,
-        \SlevomatCodingStandard\Sniffs\Classes\SuperfluousExceptionNamingSniff::class,
-        \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenNormalClasses::class,
-        \NunoMaduro\PhpInsights\Domain\Insights\ForbiddenFinalClasses::class,
+        ForbiddenTraits::class,
+        SuperfluousExceptionNamingSniff::class,
+        ForbiddenNormalClasses::class,
+        ForbiddenFinalClasses::class,
     ],
     'config' => [
-        \SlevomatCodingStandard\Sniffs\TypeHints\PropertyTypeHintSniff::class => [
+        PropertyTypeHintSniff::class => [
             'exclude' => [
                 'app/Models/User.php',
             ],

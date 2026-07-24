@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Traits;
 
+use App\Models\WorkoutTemplateSet;
+
 trait HandlesWorkoutTemplateSets
 {
     /**
@@ -34,7 +36,7 @@ trait HandlesWorkoutTemplateSets
 
         // Chunking to avoid parameter limits in SQL (SQLite max is 999 typically)
         foreach (array_chunk($setsData, 100) as $chunk) {
-            \App\Models\WorkoutTemplateSet::insert($chunk);
+            WorkoutTemplateSet::insert($chunk);
         }
     }
 }

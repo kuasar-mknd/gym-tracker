@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Models\User;
+use App\Services\StatsService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -14,14 +16,14 @@ final class RecalculateUserStats implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public \App\Models\User $user)
+    public function __construct(public User $user)
     {
     }
 
     /**
      * Execute the job.
      */
-    public function handle(\App\Services\StatsService $statsService): void
+    public function handle(StatsService $statsService): void
     {
         // ⚡ Bolt: Use surgical cache invalidation instead of broad clearUserStatsCache
         // to prevent unnecessary invalidation of body measurement statistics when workout data changes.

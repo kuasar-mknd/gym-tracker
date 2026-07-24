@@ -2,8 +2,9 @@
 
 use App\Models\Supplement;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('it limits per_page to 100', function (): void {
     $user = User::factory()->create();

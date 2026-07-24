@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Models\User;
+use App\Services\AchievementService;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -15,7 +17,7 @@ final class SyncUserAchievements implements ShouldBeUnique, ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public \App\Models\User $user)
+    public function __construct(public User $user)
     {
     }
 
@@ -30,7 +32,7 @@ final class SyncUserAchievements implements ShouldBeUnique, ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(\App\Services\AchievementService $achievementService): void
+    public function handle(AchievementService $achievementService): void
     {
         $achievementService->syncAchievements($this->user);
     }

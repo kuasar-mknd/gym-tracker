@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -19,7 +20,7 @@ it('displays the goals index page for an authenticated user', function (): void 
         ->get('/goals')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Goals/Index')
                 ->has('goals', 3)
                 ->has('exercises', 2)

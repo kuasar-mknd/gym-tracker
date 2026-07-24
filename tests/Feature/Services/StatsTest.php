@@ -7,6 +7,9 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Services\StatsService;
+use Carbon\Carbon;
+use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -19,9 +22,9 @@ test('authenticated user can view stats page', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): AssertableInertia => $page
             ->component('Stats/Index')
-            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                 ->has('deferredData.performance.volumeTrend')
                 ->has('deferredData.performance.muscleDistribution')
                 ->has('deferredData.performance.monthlyComparison')
@@ -65,9 +68,9 @@ test('stats page calculates volume trend correctly', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): AssertableInertia => $page
             ->component('Stats/Index')
-            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                 ->where('deferredData.performance.volumeTrend.0.volume', 1500)
                 ->where('deferredData.performance.volumeTrend.0.name', $workout->name)
             )
@@ -109,9 +112,9 @@ test('stats page calculates muscle distribution correctly', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): AssertableInertia => $page
             ->component('Stats/Index')
-            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                 ->has('deferredData.performance.muscleDistribution', 2)
                 ->where('deferredData.performance.muscleDistribution', function ($distribution): bool {
                     $chest = collect($distribution)->first(fn ($d): bool => $d['category'] === 'Pectoraux');
@@ -124,7 +127,7 @@ test('stats page calculates muscle distribution correctly', function (): void {
 });
 
 test('stats page calculates monthly comparison correctly', function (): void {
-    \Carbon\Carbon::setTestNow('2024-03-15 12:00:00');
+    Carbon::setTestNow('2024-03-15 12:00:00');
     $user = User::factory()->create();
 
     // Current Month Workout (March)
@@ -157,19 +160,19 @@ test('stats page calculates monthly comparison correctly', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): AssertableInertia => $page
             ->component('Stats/Index')
-            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                 ->where('deferredData.performance.monthlyComparison.current_volume', fn ($val): bool => round((float) $val) == 1000)
                 ->where('deferredData.performance.monthlyComparison.previous_volume', fn ($val): bool => round((float) $val) == 500)
                 ->where('deferredData.performance.monthlyComparison.percentage', fn ($val): bool => round((float) $val) == 100)
             )
         );
 
-    \Carbon\Carbon::setTestNow();
+    Carbon::setTestNow();
 
     // Clear cache to avoid affecting other tests if they run in same process
-    app(\App\Services\StatsService::class)->clearUserStatsCache($user);
+    app(StatsService::class)->clearUserStatsCache($user);
 });
 
 test('can retrieve exercise progress (1RM)', function (): void {
@@ -236,9 +239,9 @@ test('stats do not include other users data', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): AssertableInertia => $page
             ->component('Stats/Index')
-            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                 ->where('deferredData.performance.volumeTrend', []) // Should be empty for this user
             )
         );
@@ -257,9 +260,9 @@ test('stats page provides duration history', function (): void {
     actingAs($user)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): AssertableInertia => $page
             ->component('Stats/Index')
-            ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                 ->has('deferredData.performance.durationHistory')
                 ->where('deferredData.performance.durationHistory.0.duration', 60)
                 ->where('deferredData.performance.durationHistory.0.name', $workout->name)

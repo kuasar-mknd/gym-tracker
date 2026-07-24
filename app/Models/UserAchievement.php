@@ -6,14 +6,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $user_id
  * @property int $achievement_id
- * @property \Illuminate\Support\Carbon $achieved_at
- * @property-read \App\Models\User $user
- * @property-read \App\Models\Achievement $achievement
+ * @property Carbon $achieved_at
+ * @property-read User $user
+ * @property-read Achievement $achievement
  */
 class UserAchievement extends Model
 {
@@ -24,7 +25,7 @@ class UserAchievement extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {
@@ -32,7 +33,7 @@ class UserAchievement extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Achievement, $this>
+     * @return BelongsTo<Achievement, $this>
      */
     public function achievement(): BelongsTo
     {

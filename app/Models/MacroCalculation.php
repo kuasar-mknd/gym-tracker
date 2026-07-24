@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\MacroCalculationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MacroCalculation extends Model
 {
-    /** @use HasFactory<\Database\Factories\MacroCalculationFactory> */
+    /** @use HasFactory<MacroCalculationFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -29,7 +30,7 @@ class MacroCalculation extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {

@@ -10,8 +10,12 @@ use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Http\Requests\UpdateWorkoutRequest;
 use App\Models\Workout;
+use App\Services\StatsService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Controller for managing Workouts.
@@ -22,7 +26,7 @@ use Inertia\Inertia;
  */
 class WorkoutController extends Controller
 {
-    public function __construct(protected \App\Services\StatsService $statsService)
+    public function __construct(protected StatsService $statsService)
     {
     }
 
@@ -32,9 +36,9 @@ class WorkoutController extends Controller
      * Retrieves all workouts for the authenticated user, eager loading
      * related workout lines, exercises, and sets.
      *
-     * @return \Inertia\Response The Inertia response rendering the Workouts/Index page.
+     * @return Response The Inertia response rendering the Workouts/Index page.
      */
-    public function index(Request $request, FetchWorkoutsIndexAction $fetchWorkouts): \Inertia\Response
+    public function index(Request $request, FetchWorkoutsIndexAction $fetchWorkouts): Response
     {
         $this->authorize('viewAny', Workout::class);
 
@@ -57,12 +61,12 @@ class WorkoutController extends Controller
      * Shows the details of a specific workout, including its exercises and sets.
      * Ensures that the authenticated user owns the workout.
      *
-     * @param  \App\Models\Workout  $workout  The workout to display.
-     * @return \Inertia\Response The Inertia response rendering the Workouts/Show page.
+     * @param  Workout  $workout  The workout to display.
+     * @return Response The Inertia response rendering the Workouts/Show page.
      *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized to view the workout (403).
+     * @throws HttpException If the user is not authorized to view the workout (403).
      */
-    public function show(Workout $workout, FetchWorkoutShowAction $fetchWorkoutShow): \Inertia\Response
+    public function show(Workout $workout, FetchWorkoutShowAction $fetchWorkoutShow): Response
     {
         $this->authorize('view', $workout);
 
@@ -75,9 +79,9 @@ class WorkoutController extends Controller
      * Creates a new workout for the authenticated user with the current date
      * as the start date and a default name. Redirects to the show page of the new workout.
      *
-     * @return \Illuminate\Http\RedirectResponse A redirect to the newly created workout.
+     * @return RedirectResponse A redirect to the newly created workout.
      */
-    public function store(CreateWorkoutAction $createWorkout): \Illuminate\Http\RedirectResponse
+    public function store(CreateWorkoutAction $createWorkout): RedirectResponse
     {
         $this->authorize('create', Workout::class);
 
@@ -95,7 +99,7 @@ class WorkoutController extends Controller
     /**
      * Update the specified workout in storage.
      */
-    public function update(UpdateWorkoutRequest $request, Workout $workout, UpdateWorkoutAction $updateWorkout): \Illuminate\Http\RedirectResponse
+    public function update(UpdateWorkoutRequest $request, Workout $workout, UpdateWorkoutAction $updateWorkout): RedirectResponse
     {
         $this->authorize('update', $workout);
 
@@ -113,7 +117,7 @@ class WorkoutController extends Controller
     /**
      * Remove the specified workout from storage.
      */
-    public function destroy(Workout $workout): \Illuminate\Http\RedirectResponse
+    public function destroy(Workout $workout): RedirectResponse
     {
         $this->authorize('delete', $workout);
 

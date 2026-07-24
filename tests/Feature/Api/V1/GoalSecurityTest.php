@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 use App\Models\Exercise;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\postJson;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 describe('Goal Security', function (): void {
     test('user cannot create goal with another users private exercise', function (): void {

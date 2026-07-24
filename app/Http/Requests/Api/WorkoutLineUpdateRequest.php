@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Models\User;
+use App\Models\WorkoutLine;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class WorkoutLineUpdateRequest extends FormRequest
 {
@@ -15,15 +19,15 @@ class WorkoutLineUpdateRequest extends FormRequest
     {
         $workoutLine = $this->route('workout_line');
 
-        if (! $workoutLine instanceof \App\Models\WorkoutLine) {
-            $workoutLine = \App\Models\WorkoutLine::find($this->route('workout_line'));
+        if (! $workoutLine instanceof WorkoutLine) {
+            $workoutLine = WorkoutLine::find($this->route('workout_line'));
         }
 
-        if (! $workoutLine instanceof \App\Models\WorkoutLine) {
+        if (! $workoutLine instanceof WorkoutLine) {
             return false;
         }
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $this->user();
 
         return $workoutLine->workout->user_id === $user->id;
@@ -32,14 +36,14 @@ class WorkoutLineUpdateRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'exercise_id' => [
                 'sometimes',
-                \Illuminate\Validation\Rule::exists('exercises', 'id')->where(function ($query): void {
+                Rule::exists('exercises', 'id')->where(function ($query): void {
                     $query->where(function ($q): void {
                         $q->whereNull('user_id')
                             ->orWhere('user_id', $this->user()?->id);

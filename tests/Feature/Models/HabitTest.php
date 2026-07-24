@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Habit;
+use App\Models\HabitLog;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 
@@ -12,11 +13,11 @@ test('user can view habits page', function (): void {
     $this->actingAs($user)
         ->get(route('habits.index'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('Habits/Index')
             ->has('habits')
             ->has('weekDates')
-            ->loadDeferredProps(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+            ->loadDeferredProps(fn (AssertableInertia $page): AssertableInertia => $page
                 ->has('stats.consistencyData')
                 ->has('stats.history')
             )
@@ -84,7 +85,7 @@ test('user can toggle a habit', function (): void {
         ->post(route('habits.toggle', $habit), ['date' => $date])
         ->assertRedirect();
 
-    $log = \App\Models\HabitLog::where('habit_id', $habit->id)->first();
+    $log = HabitLog::where('habit_id', $habit->id)->first();
     expect($log)->not->toBeNull();
     expect($log->date->toDateString())->toBe($date);
 
@@ -93,7 +94,7 @@ test('user can toggle a habit', function (): void {
         ->post(route('habits.toggle', $habit), ['date' => $date])
         ->assertRedirect();
 
-    expect(\App\Models\HabitLog::where('habit_id', $habit->id)->whereDate('date', $date)->exists())->toBeFalse();
+    expect(HabitLog::where('habit_id', $habit->id)->whereDate('date', $date)->exists())->toBeFalse();
 });
 
 test('user cannot update other users habits', function (): void {

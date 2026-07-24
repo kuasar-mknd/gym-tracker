@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -24,7 +25,7 @@ test('authenticated user can view an exercise they own', function (): void {
     actingAs($user)
         ->get(route('exercises.show', $exercise))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): AssertableInertia => $page
             ->component('Exercises/Show')
             ->has('exercise')
             ->has('progress')

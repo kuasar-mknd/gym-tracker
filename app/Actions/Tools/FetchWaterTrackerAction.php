@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Actions\Tools;
 
 use App\Models\User;
+use App\Models\WaterLog;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 
 class FetchWaterTrackerAction
 {
     /**
      * Get the today's water logs and total amount for the user.
      *
-     * @return array{logs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\WaterLog>, todayTotal: float|int}
+     * @return array{logs: Collection<int, WaterLog>, todayTotal: float|int}
      */
     public function execute(User $user): array
     {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\User;
+use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 
 final class WorkoutTemplateLinePolicy
@@ -28,7 +29,7 @@ final class WorkoutTemplateLinePolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user, ?\App\Models\WorkoutTemplate $workoutTemplate = null): bool
+    public function create(User $user, ?WorkoutTemplate $workoutTemplate = null): bool
     {
         if ($workoutTemplate === null) {
             return true;

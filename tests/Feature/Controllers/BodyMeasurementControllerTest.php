@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use App\Models\BodyMeasurement;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 describe('BodyMeasurementController', function (): void {
     describe('index', function (): void {
@@ -20,7 +22,7 @@ describe('BodyMeasurementController', function (): void {
             $this->actingAs($user)
                 ->get(route('body-measurements.index'))
                 ->assertOk()
-                ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->assertInertia(fn (Assert $page): AssertableInertia => $page
                     ->component('Measurements/Index')
                     ->has('measurements', 3)
                 );

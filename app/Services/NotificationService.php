@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\User;
+use App\Notifications\AchievementUnlocked;
 use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Support\Facades\Cache;
 
@@ -34,7 +35,7 @@ final class NotificationService
             $this->getLatestAchievementCacheKey($user),
             now()->addDays(7),
             fn () => $user->unreadNotifications()
-                ->where('type', \App\Notifications\AchievementUnlocked::class)
+                ->where('type', AchievementUnlocked::class)
                 ->latest()
                 ->first()
         );

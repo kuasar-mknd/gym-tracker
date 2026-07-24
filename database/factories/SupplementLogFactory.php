@@ -10,14 +10,14 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SupplementLog>
+ * @extends Factory<SupplementLog>
  */
 class SupplementLogFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\App\Models\SupplementLog>
+     * @var class-string<SupplementLog>
      */
     protected $model = SupplementLog::class;
 

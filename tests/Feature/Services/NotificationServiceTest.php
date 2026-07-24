@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Services;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Achievement;
 use App\Models\User;
 use App\Notifications\AchievementUnlocked;
 use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
@@ -69,10 +71,10 @@ class NotificationServiceTest extends TestCase
         // We can check the shared data by calling a route and checking Inertia props
         // or just by instantiating the middleware and calling share()
 
-        $request = new \Illuminate\Http\Request();
+        $request = new Request();
         $request->setUserResolver(fn () => $user);
 
-        $middleware = new \App\Http\Middleware\HandleInertiaRequests();
+        $middleware = new HandleInertiaRequests();
         $sharedData = $middleware->share($request);
 
         $this->assertEquals(1, $sharedData['auth']['user']['unread_notifications_count']);

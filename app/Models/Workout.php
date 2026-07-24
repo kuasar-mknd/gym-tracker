@@ -4,8 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\WorkoutFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -14,15 +20,15 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int $user_id
  * @property string|null $name
  * @property float $workout_volume
- * @property \Illuminate\Support\Carbon $started_at
- * @property \Illuminate\Support\Carbon|null $ended_at
+ * @property Carbon $started_at
+ * @property Carbon|null $ended_at
  * @property string|null $notes
- * @property-read \App\Models\User $user
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkoutLine> $workoutLines
+ * @property-read User $user
+ * @property-read Collection<int, WorkoutLine> $workoutLines
  */
 class Workout extends Model
 {
-    /** @use HasFactory<\Database\Factories\WorkoutFactory> */
+    /** @use HasFactory<WorkoutFactory> */
     use HasFactory, LogsActivity;
 
     protected $fillable = [
@@ -33,17 +39,17 @@ class Workout extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
+     * @return BelongsTo<User, $this>
      */
-    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutLine, $this>
+     * @return HasMany<WorkoutLine, $this>
      */
-    public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function workoutLines(): HasMany
     {
         return $this->hasMany(WorkoutLine::class)->orderBy('order');
     }
@@ -68,7 +74,7 @@ class Workout extends Model
     protected static function booted(): void
     {
         $clearCache = function (self $workout): void {
-            \Illuminate\Support\Facades\Cache::forget("user_active_workout_{$workout->user_id}");
+            Cache::forget("user_active_workout_{$workout->user_id}");
         };
 
         static::saved($clearCache);

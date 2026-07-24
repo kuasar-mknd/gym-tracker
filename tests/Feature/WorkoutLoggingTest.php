@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -29,7 +31,7 @@ class WorkoutLoggingTest extends TestCase
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id]);
-        $exercise = \App\Models\Exercise::factory()->create();
+        $exercise = Exercise::factory()->create();
 
         $response = $this->actingAs($user)->post(route('workout-lines.store', $workout), [
             'exercise_id' => $exercise->id,
@@ -46,8 +48,8 @@ class WorkoutLoggingTest extends TestCase
     {
         $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id]);
-        $exercise = \App\Models\Exercise::factory()->create();
-        $line = \App\Models\WorkoutLine::factory()->create([
+        $exercise = Exercise::factory()->create();
+        $line = WorkoutLine::factory()->create([
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);

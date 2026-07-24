@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Browser;
 
+use App\Models\Exercise;
+use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
@@ -25,12 +28,12 @@ class WorkoutCompletionTest extends DuskTestCase
             'name' => 'Test Workout',
             'started_at' => now()->subHour(),
         ]);
-        $exercise = \App\Models\Exercise::factory()->create(['user_id' => $user->id]);
-        $line = \App\Models\WorkoutLine::factory()->create([
+        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+        $line = WorkoutLine::factory()->create([
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);
-        \App\Models\Set::factory()->create([
+        Set::factory()->create([
             'workout_line_id' => $line->id,
             'is_completed' => true,
         ]);
@@ -53,7 +56,7 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->pause(1000)
                 ->click('#confirm-finish-button');
 
-            $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::find($workout->id)->ended_at !== null);
+            $browser->waitUsing(15, 500, fn (): bool => Workout::find($workout->id)->ended_at !== null);
 
             $browser->visit('/dashboard')
                 ->waitFor('#dashboard-header', 30)

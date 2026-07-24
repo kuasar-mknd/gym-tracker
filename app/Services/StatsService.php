@@ -23,6 +23,7 @@ use App\Services\Stats\ExerciseStatsService;
 use App\Services\Stats\StatsCacheManager;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Service for calculating and retrieving user workout statistics.
@@ -163,15 +164,15 @@ final readonly class StatsService
      * @param  User  $user  The user to fetch stats for.
      * @param  int  $days  The number of days to look back.
      * @return array{
-     *     volumeTrend: array<int, \App\DTOs\Stats\VolumeTrendPoint>,
-     *     muscleDistribution: array<int, \App\DTOs\Stats\MuscleDistributionStat>,
-     *     monthlyComparison: \App\DTOs\Stats\VolumeComparison,
-     *     durationHistory: array<int, \App\DTOs\Stats\DurationHistoryPoint>
+     *     volumeTrend: array<int, VolumeTrendPoint>,
+     *     muscleDistribution: array<int, MuscleDistributionStat>,
+     *     monthlyComparison: VolumeComparison,
+     *     durationHistory: array<int, DurationHistoryPoint>
      * }
      */
     public function getPerformanceOverview(User $user, int $days = 30): array
     {
-        return \Illuminate\Support\Facades\Cache::remember(
+        return Cache::remember(
             "stats.performance_overview.{$user->id}.{$days}",
             now()->addMinutes(30),
             fn (): array => [

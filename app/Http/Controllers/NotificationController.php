@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Services\NotificationService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,7 +30,7 @@ class NotificationController extends Controller
     /**
      * Mark a notification as read.
      */
-    public function markAsRead(Request $request, string $id): \Illuminate\Http\RedirectResponse
+    public function markAsRead(Request $request, string $id): RedirectResponse
     {
         $this->user()->unreadNotifications()->where('id', $id)->update(['read_at' => now()]);
         $this->notificationService->clearCache($this->user());
@@ -40,7 +41,7 @@ class NotificationController extends Controller
     /**
      * Mark all notifications as read.
      */
-    public function markAllAsRead(Request $request): \Illuminate\Http\RedirectResponse
+    public function markAllAsRead(Request $request): RedirectResponse
     {
         $this->user()->unreadNotifications()->update(['read_at' => now()]);
         $this->notificationService->clearCache($this->user());

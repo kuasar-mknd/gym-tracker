@@ -21,7 +21,7 @@ final class CreateWorkoutTemplateFromWorkoutAction
         // Eager load relationships to prevent N+1 queries during iteration
         $workout->load(['workoutLines.sets']);
 
-        return DB::transaction(function () use ($user, $workout): \App\Models\WorkoutTemplate {
+        return DB::transaction(function () use ($user, $workout): WorkoutTemplate {
             $template = new WorkoutTemplate([
                 'name' => $workout->name.' (Modèle)',
                 'description' => 'Créé à partir de la séance du '.($workout->created_at?->format('d/m/Y') ?? now()->format('d/m/Y')),

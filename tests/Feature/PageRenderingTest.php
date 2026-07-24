@@ -26,6 +26,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -49,9 +50,9 @@ test('dashboard page renders with correct props', function (): void {
         ->get('/dashboard')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Dashboard')
-                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page)
+                ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page)
                 ->has('recentWorkouts')
                 ->has('activeGoals')
         );
@@ -70,9 +71,9 @@ test('workouts index page renders with paginated data structure', function (): v
         ->get('/workouts')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Workouts/Index')
-                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                     ->has('deferredData.charts')
                     ->has('deferredData.exercises')
                 )
@@ -87,7 +88,7 @@ test('workouts index page renders correctly when empty', function (): void {
         ->get('/workouts')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Workouts/Index')
                 ->has('workouts.data', 0)  // Empty array
         );
@@ -109,7 +110,7 @@ test('workout show page renders with correct props', function (): void {
         ->get("/workouts/{$workout->id}")
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Workouts/Show')
                 ->has('workout')
                 ->has('workout.workout_lines')
@@ -139,10 +140,10 @@ test('stats page renders without cache errors', function (): void {
         ->get('/stats')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Stats/Index')
 // In the new architecture, StatsController returns deferredData as a consolidated deferred prop
-                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                     ->has('deferredData.performance.volumeTrend')
                     ->has('deferredData.body.weightHistory')
                 )
@@ -162,7 +163,7 @@ test('goals index page renders with correct props', function (): void {
         ->get('/goals')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Goals/Index')
                 ->has('goals')
         );
@@ -180,7 +181,7 @@ test('exercises index page renders with correct props', function (): void {
         ->get('/exercises')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Exercises/Index')
                 ->has('exercises')
         );
@@ -196,7 +197,7 @@ test('templates index page renders with correct props', function (): void {
         ->get('/templates')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Workouts/Templates/Index')
                 ->has('templates')
         );
@@ -214,10 +215,10 @@ test('body measurements index page renders with correct props', function (): voi
         ->get('/body-measurements')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Measurements/Index')
                 ->has('measurements')
-                ->loadDeferredProps(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+                ->loadDeferredProps(fn (Assert $page): AssertableInertia => $page
                     ->has('bodyStats.weightHistory')
                     ->has('bodyStats.bodyFatHistory')
                 )
@@ -236,7 +237,7 @@ test('daily journals index page renders with correct props', function (): void {
         ->get('/daily-journals')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Journal/Index')
                 ->has('journals')
         );
@@ -252,7 +253,7 @@ test('notifications index page renders correctly', function (): void {
         ->get('/notifications')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Notifications/Index')
                 ->has('notifications')
         );
@@ -270,7 +271,7 @@ test('achievements index page renders with correct props', function (): void {
         ->get('/achievements')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Achievements/Index')
                 ->has('achievements')
         );
@@ -286,7 +287,7 @@ test('profile edit page renders with correct props', function (): void {
         ->get('/profile')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Profile/Index')
             // mustVerifyEmail is the standard prop from Breeze
         );
@@ -302,7 +303,7 @@ test('tools index page renders correctly', function (): void {
         ->get('/tools')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Tools/Index')
         );
 });
@@ -312,7 +313,7 @@ test('one rep max calculator page renders correctly', function (): void {
         ->get('/tools/1rm')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Tools/OneRepMax')
         );
 });
@@ -329,7 +330,7 @@ test('plates index page renders with correct props', function (): void {
         ->get('/plates')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Tools/PlateCalculator')
                 ->has('plates')
         );
@@ -378,7 +379,7 @@ test('login page renders correctly', function (): void {
     $this->get('/login')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Auth/Login')
         );
 });
@@ -387,7 +388,7 @@ test('register page renders correctly', function (): void {
     $this->get('/register')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            fn (Assert $page): AssertableInertia => $page
                 ->component('Auth/Register')
         );
 });

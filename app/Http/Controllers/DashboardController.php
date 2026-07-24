@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Actions\Dashboard\FetchDashboardDataAction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * Controller for the Dashboard landing page.
@@ -33,10 +34,10 @@ class DashboardController extends Controller
      * - Volume trends
      * - Duration distribution
      *
-     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
-     * @return \Inertia\Response The Inertia response rendering the 'Dashboard' page.
+     * @param  Request  $request  The incoming HTTP request.
+     * @return Response The Inertia response rendering the 'Dashboard' page.
      */
-    public function __invoke(Request $request, FetchDashboardDataAction $fetchDashboardData): \Inertia\Response
+    public function __invoke(Request $request, FetchDashboardDataAction $fetchDashboardData): Response
     {
         $user = $this->user();
 

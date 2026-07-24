@@ -10,6 +10,7 @@ use App\Http\Requests\ExerciseStoreRequest;
 use App\Http\Requests\ExerciseUpdateRequest;
 use App\Models\Exercise;
 use App\Services\StatsService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -92,7 +93,7 @@ class ExerciseController extends Controller
      * @param  Exercise  $exercise  The exercise to update.
      * @return RedirectResponse A redirect back to the previous page.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update this exercise.
+     * @throws AuthorizationException If the user is not authorized to update this exercise.
      */
     public function update(ExerciseUpdateRequest $request, Exercise $exercise): RedirectResponse
     {
@@ -113,7 +114,7 @@ class ExerciseController extends Controller
      * @param  Exercise  $exercise  The exercise to delete.
      * @return RedirectResponse A redirect back with potential error messages if deletion fails.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete this exercise.
+     * @throws AuthorizationException If the user is not authorized to delete this exercise.
      */
     public function destroy(Exercise $exercise): RedirectResponse
     {

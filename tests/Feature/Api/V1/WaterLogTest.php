@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Models\WaterLog;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\Habit;
+use App\Models\User;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ToggleHabitRequest extends FormRequest
@@ -13,10 +16,10 @@ class ToggleHabitRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        /** @var \App\Models\Habit|null $habit */
+        /** @var Habit|null $habit */
         $habit = $this->route('habit');
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $this->user();
 
         return $habit && $habit->user_id === $user->id;
@@ -25,7 +28,7 @@ class ToggleHabitRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

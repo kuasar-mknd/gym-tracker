@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
@@ -13,7 +14,7 @@ final class AchievementPolicy
 
     public function viewAny(AuthUser $authUser): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return true;
         }
 
@@ -22,7 +23,7 @@ final class AchievementPolicy
 
     public function view(AuthUser $authUser): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return true;
         }
 
@@ -36,7 +37,7 @@ final class AchievementPolicy
 
     public function update(AuthUser $authUser): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return false;
         }
 
@@ -45,7 +46,7 @@ final class AchievementPolicy
 
     public function delete(AuthUser $authUser): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return false;
         }
 

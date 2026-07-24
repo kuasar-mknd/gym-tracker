@@ -28,7 +28,9 @@
         <env name="DB_DATABASE" value="gym_tracker_testing"/>
         <env name="DB_USERNAME" value="sail"/>
         <env name="DB_PASSWORD" value="password"/>
-        <env name="DB_HOST" value="127.0.0.1"/>
+        <!-- DB_HOST is intentionally inherited from the environment so the suite runs transparently
+             both in Sail (resolves to the "mysql" service via .env) and in CI/host (set to 127.0.0.1
+             via the workflow env block). Hardcoding it here would break one of the two contexts. -->
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

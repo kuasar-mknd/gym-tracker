@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\CreateWorkoutFromTemplateAction;
 use App\Models\User;
+use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
@@ -53,7 +54,7 @@ it('creates a workout from a template with lines and sets', function (): void {
     $workout = $action->execute($user, $template);
 
     // Assert
-    expect($workout)->toBeInstanceOf(\App\Models\Workout::class)
+    expect($workout)->toBeInstanceOf(Workout::class)
         ->and($workout->user_id)->toBe($user->id)
         ->and($workout->name)->toBe('My Test Template')
         ->and($workout->started_at)->not->toBeNull();

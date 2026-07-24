@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\BodyPartMeasurementFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -12,15 +14,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @property string $part
  * @property string $value
  * @property string $unit
- * @property \Illuminate\Support\Carbon $measured_at
+ * @property Carbon $measured_at
  * @property string|null $notes
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \App\Models\User $user
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User $user
  */
 class BodyPartMeasurement extends BaseMeasurement
 {
-    /** @use HasFactory<\Database\Factories\BodyPartMeasurementFactory> */
+    /** @use HasFactory<BodyPartMeasurementFactory> */
     use HasFactory;
 
     protected $fillable = [

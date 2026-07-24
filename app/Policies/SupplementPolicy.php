@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\Supplement;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
@@ -14,7 +15,7 @@ final class SupplementPolicy
 
     public function viewAny(AuthUser $authUser): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return true;
         }
 
@@ -23,7 +24,7 @@ final class SupplementPolicy
 
     public function view(AuthUser $authUser, Supplement $supplement): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return $authUser->id === $supplement->user_id;
         }
 
@@ -32,7 +33,7 @@ final class SupplementPolicy
 
     public function create(AuthUser $authUser): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return true;
         }
 
@@ -41,7 +42,7 @@ final class SupplementPolicy
 
     public function update(AuthUser $authUser, Supplement $supplement): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return $authUser->id === $supplement->user_id;
         }
 
@@ -50,7 +51,7 @@ final class SupplementPolicy
 
     public function delete(AuthUser $authUser, Supplement $supplement): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($authUser instanceof User) {
             return $authUser->id === $supplement->user_id;
         }
 

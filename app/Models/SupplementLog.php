@@ -4,24 +4,26 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\SupplementLogFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $supplement_id
  * @property int $user_id
  * @property int $quantity
- * @property \Illuminate\Support\Carbon $consumed_at
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \App\Models\Supplement $supplement
- * @property-read \App\Models\User $user
+ * @property Carbon $consumed_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Supplement $supplement
+ * @property-read User $user
  */
 class SupplementLog extends Model
 {
-    /** @use HasFactory<\Database\Factories\SupplementLogFactory> */
+    /** @use HasFactory<SupplementLogFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -32,7 +34,7 @@ class SupplementLog extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Supplement, $this>
+     * @return BelongsTo<Supplement, $this>
      */
     public function supplement(): BelongsTo
     {
@@ -40,7 +42,7 @@ class SupplementLog extends Model
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {

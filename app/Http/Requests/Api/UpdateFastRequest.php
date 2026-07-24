@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Models\Fast;
+use App\Models\User;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateFastRequest extends FormRequest
@@ -13,7 +16,7 @@ class UpdateFastRequest extends FormRequest
         $fast = $this->route('fast');
         $user = $this->user();
 
-        if (! $user instanceof \App\Models\User || ! $fast instanceof \App\Models\Fast) {
+        if (! $user instanceof User || ! $fast instanceof Fast) {
             return false;
         }
 
@@ -23,7 +26,7 @@ class UpdateFastRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

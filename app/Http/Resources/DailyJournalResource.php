@@ -6,10 +6,11 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property \Illuminate\Support\Carbon|null $date
+ * @property Carbon|null $date
  * @property string $content
  * @property int|null $mood_score
  * @property int|null $sleep_quality
@@ -18,8 +19,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property int|null $motivation_level
  * @property int|null $nutrition_score
  * @property int|null $training_intensity
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class DailyJournalResource extends JsonResource
 {

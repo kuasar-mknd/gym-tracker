@@ -20,10 +20,10 @@ test('user can view body measurements index', function (): void {
     actingAs($user)
         ->get(route('body-measurements.index'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('Measurements/Index')
             ->has('measurements', 3)
-            ->loadDeferredProps(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+            ->loadDeferredProps(fn (AssertableInertia $page): AssertableInertia => $page
                 ->has('bodyStats')
             )
         );

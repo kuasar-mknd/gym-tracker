@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Supplements\ConsumeSupplementAction;
 use App\Actions\Supplements\FetchSupplementsIndexAction;
 use App\Http\Requests\SupplementStoreRequest;
 use App\Http\Requests\SupplementUpdateRequest;
 use App\Models\Supplement;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Controller for managing User Supplements.
@@ -27,9 +31,9 @@ class SupplementController extends Controller
      * consumption log to determine if they've been taken today. Also retrieves
      * the last 30 days of usage history for the visualization chart.
      *
-     * @return \Inertia\Response The Inertia response rendering the Supplements/Index page.
+     * @return Response The Inertia response rendering the Supplements/Index page.
      */
-    public function index(FetchSupplementsIndexAction $fetchSupplementsIndexAction): \Inertia\Response
+    public function index(FetchSupplementsIndexAction $fetchSupplementsIndexAction): Response
     {
         $this->authorize('viewAny', Supplement::class);
 
@@ -44,10 +48,10 @@ class SupplementController extends Controller
      *
      * Validates the input and creates a new supplement record for the authenticated user.
      *
-     * @param  \App\Http\Requests\SupplementStoreRequest  $request  The incoming HTTP request containing supplement details.
-     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
+     * @param  SupplementStoreRequest  $request  The incoming HTTP request containing supplement details.
+     * @return RedirectResponse Redirects back with a success message.
      */
-    public function store(SupplementStoreRequest $request): \Illuminate\Http\RedirectResponse
+    public function store(SupplementStoreRequest $request): RedirectResponse
     {
         $this->authorize('create', Supplement::class);
 
@@ -65,13 +69,13 @@ class SupplementController extends Controller
      * Updates the details of an existing supplement. Ensures the user owns the supplement
      * before applying changes.
      *
-     * @param  \App\Http\Requests\SupplementUpdateRequest  $request  The incoming HTTP request with updated details.
-     * @param  \App\Models\Supplement  $supplement  The supplement to update.
-     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
+     * @param  SupplementUpdateRequest  $request  The incoming HTTP request with updated details.
+     * @param  Supplement  $supplement  The supplement to update.
+     * @return RedirectResponse Redirects back with a success message.
      *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
+     * @throws HttpException If the user is not authorized (403).
      */
-    public function update(SupplementUpdateRequest $request, Supplement $supplement): \Illuminate\Http\RedirectResponse
+    public function update(SupplementUpdateRequest $request, Supplement $supplement): RedirectResponse
     {
         $this->authorize('update', $supplement);
 
@@ -88,12 +92,12 @@ class SupplementController extends Controller
      *
      * Permanently deletes a supplement record. Ensures the user owns the supplement.
      *
-     * @param  \App\Models\Supplement  $supplement  The supplement to delete.
-     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
+     * @param  Supplement  $supplement  The supplement to delete.
+     * @return RedirectResponse Redirects back with a success message.
      *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
+     * @throws HttpException If the user is not authorized (403).
      */
-    public function destroy(Supplement $supplement): \Illuminate\Http\RedirectResponse
+    public function destroy(Supplement $supplement): RedirectResponse
     {
         $this->authorize('delete', $supplement);
 
@@ -108,13 +112,13 @@ class SupplementController extends Controller
      * Creates a log entry for the consumption and decrements the inventory count.
      * Prevents the inventory from going below zero.
      *
-     * @param  \Illuminate\Http\Request  $request  The HTTP request.
-     * @param  \App\Models\Supplement  $supplement  The supplement consumed.
-     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
+     * @param  Request  $request  The HTTP request.
+     * @param  Supplement  $supplement  The supplement consumed.
+     * @return RedirectResponse Redirects back with a success message.
      *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
+     * @throws HttpException If the user is not authorized (403).
      */
-    public function consume(Request $request, Supplement $supplement, \App\Actions\Supplements\ConsumeSupplementAction $action): \Illuminate\Http\RedirectResponse
+    public function consume(Request $request, Supplement $supplement, ConsumeSupplementAction $action): RedirectResponse
     {
         $this->authorize('update', $supplement);
 

@@ -9,6 +9,7 @@ use App\Http\Requests\Api\StoreFastRequest;
 use App\Http\Requests\Api\UpdateFastRequest;
 use App\Http\Resources\FastResource;
 use App\Models\Fast;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
@@ -26,9 +27,9 @@ class FastController extends Controller
      *
      * Retrieves a paginated list of fasting records belonging to the authenticated user.
      *
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection A collection of fast resources.
+     * @return AnonymousResourceCollection A collection of fast resources.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view fasts.
+     * @throws AuthorizationException If the user is not authorized to view fasts.
      */
     #[OA\Get(
         path: '/fasts',
@@ -54,10 +55,10 @@ class FastController extends Controller
      *
      * Validates the request data and starts a new active fast for the user.
      *
-     * @param  \App\Http\Requests\Api\StoreFastRequest  $request  The incoming validated request.
-     * @return \App\Http\Resources\FastResource The newly created fast resource.
+     * @param  StoreFastRequest  $request  The incoming validated request.
+     * @return FastResource The newly created fast resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a fast.
+     * @throws AuthorizationException If the user is not authorized to create a fast.
      */
     #[OA\Post(
         path: '/fasts',
@@ -91,10 +92,10 @@ class FastController extends Controller
      *
      * Retrieves the details of a specific fasting record.
      *
-     * @param  \App\Models\Fast  $fast  The fast instance to display.
-     * @return \App\Http\Resources\FastResource The requested fast resource.
+     * @param  Fast  $fast  The fast instance to display.
+     * @return FastResource The requested fast resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view the fast.
+     * @throws AuthorizationException If the user is not authorized to view the fast.
      */
     #[OA\Get(
         path: '/fasts/{id}',
@@ -124,11 +125,11 @@ class FastController extends Controller
      *
      * Modifies the details of an existing fast, for example ending an active fast.
      *
-     * @param  \App\Http\Requests\Api\UpdateFastRequest  $request  The incoming validated request.
-     * @param  \App\Models\Fast  $fast  The fast instance to update.
-     * @return \App\Http\Resources\FastResource The updated fast resource.
+     * @param  UpdateFastRequest  $request  The incoming validated request.
+     * @param  Fast  $fast  The fast instance to update.
+     * @return FastResource The updated fast resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the fast.
+     * @throws AuthorizationException If the user is not authorized to update the fast.
      */
     #[OA\Put(
         path: '/fasts/{id}',
@@ -162,10 +163,10 @@ class FastController extends Controller
      *
      * Permanently deletes a fasting record from the user's history.
      *
-     * @param  \App\Models\Fast  $fast  The fast instance to delete.
-     * @return \Illuminate\Http\Response An empty HTTP response indicating success.
+     * @param  Fast  $fast  The fast instance to delete.
+     * @return Response An empty HTTP response indicating success.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the fast.
+     * @throws AuthorizationException If the user is not authorized to delete the fast.
      */
     #[OA\Delete(
         path: '/fasts/{id}',

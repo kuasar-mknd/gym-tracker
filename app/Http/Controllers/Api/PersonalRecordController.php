@@ -11,6 +11,7 @@ use App\Http\Resources\PersonalRecordResource;
 use App\Models\PersonalRecord;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class PersonalRecordController extends Controller
 {
@@ -84,7 +85,7 @@ class PersonalRecordController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(PersonalRecord $personalRecord): \Illuminate\Http\Response
+    public function destroy(PersonalRecord $personalRecord): Response
     {
         $this->authorize('delete', $personalRecord);
 

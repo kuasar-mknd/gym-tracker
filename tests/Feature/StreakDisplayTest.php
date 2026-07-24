@@ -38,7 +38,7 @@ class StreakDisplayTest extends TestCase
         $this->actingAs($user)
             ->get('/dashboard')
             ->assertInertia(
-                fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+                fn (AssertableInertia $page): AssertableInertia => $page
                     ->component('Dashboard')
                     ->where('auth.user.current_streak', 0) // Should be 0, currently likely 5
             );
@@ -55,7 +55,7 @@ class StreakDisplayTest extends TestCase
         $this->actingAs($user)
             ->get('/dashboard')
             ->assertInertia(
-                fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
+                fn (AssertableInertia $page): AssertableInertia => $page
                     ->component('Dashboard')
                     ->where('auth.user.current_streak', 5)
             );

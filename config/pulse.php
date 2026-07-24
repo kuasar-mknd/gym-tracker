@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\IpWhitelist;
+use App\Http\Middleware\PulseNonceMiddleware;
+use App\Support\Csp\Policies\PulsePolicy;
+use Laravel\Pulse\Http\Middleware\Authorize;
 use Laravel\Pulse\Pulse;
 use Laravel\Pulse\Recorders;
+use Spatie\Csp\AddCspHeaders;
 
 return [
 
@@ -122,11 +127,12 @@ return [
     */
 
     'middleware' => [
-        \Spatie\Csp\AddCspHeaders::class.':'.\App\Support\Csp\Policies\PulsePolicy::class,
-        \App\Http\Middleware\PulseNonceMiddleware::class,
+        AddCspHeaders::class.':'.PulsePolicy::class,
+        PulseNonceMiddleware::class,
         'web',
         'auth:admin,web',
-        Laravel\Pulse\Http\Middleware\Authorize::class,
+        IpWhitelist::class,
+        Authorize::class,
     ],
 
     /*

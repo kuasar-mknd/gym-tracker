@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * Controller for rendering standalone fitness tools.
@@ -20,9 +21,9 @@ class ToolsController extends Controller
      * Serves as a directory or landing page linking to the various
      * fitness calculators and utilities available to the user.
      *
-     * @return \Inertia\Response The Inertia response rendering the 'Tools/Index' page.
+     * @return Response The Inertia response rendering the 'Tools/Index' page.
      */
-    public function index(): \Inertia\Response
+    public function index(): Response
     {
         return Inertia::render('Tools/Index');
     }
@@ -33,9 +34,9 @@ class ToolsController extends Controller
      * Renders a dedicated page allowing users to estimate their 1RM
      * for a given lift based on weight and reps completed.
      *
-     * @return \Inertia\Response The Inertia response rendering the 'Tools/OneRepMax' page.
+     * @return Response The Inertia response rendering the 'Tools/OneRepMax' page.
      */
-    public function oneRepMax(): \Inertia\Response
+    public function oneRepMax(): Response
     {
         return Inertia::render('Tools/OneRepMax');
     }

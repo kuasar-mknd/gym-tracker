@@ -6,6 +6,7 @@ namespace App\Policies;
 
 use App\Models\Set;
 use App\Models\User;
+use App\Models\WorkoutLine;
 
 final class SetPolicy
 {
@@ -28,7 +29,7 @@ final class SetPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user, ?\App\Models\WorkoutLine $workoutLine = null): bool
+    public function create(User $user, ?WorkoutLine $workoutLine = null): bool
     {
         if ($workoutLine === null) {
             return true;

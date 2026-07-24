@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\BodyMeasurementFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $user_id
  * @property float $weight
  * @property float|null $body_fat
- * @property \Illuminate\Support\Carbon $measured_at
+ * @property Carbon $measured_at
  * @property string|null $notes
- * @property-read \App\Models\User $user
+ * @property-read User $user
  */
 class BodyMeasurement extends BaseMeasurement
 {
-    /** @use HasFactory<\Database\Factories\BodyMeasurementFactory> */
+    /** @use HasFactory<BodyMeasurementFactory> */
     use HasFactory;
 
     protected $fillable = [

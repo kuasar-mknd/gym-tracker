@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,7 @@ class NewPasswordController extends Controller
     /**
      * Handle an incoming new password request.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
@@ -61,7 +62,7 @@ class NewPasswordController extends Controller
         /** @phpstan-ignore-next-line */
         return Password::reset(
             $credentials,
-            function (\App\Models\User $user) use ($credentials): void {
+            function (User $user) use ($credentials): void {
                 /** @var string $password */
                 $password = $credentials['password'];
 

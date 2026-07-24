@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\DailyJournalFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $user_id
- * @property \Illuminate\Support\Carbon $date
+ * @property Carbon $date
  * @property string|null $content
  * @property int|null $mood_score
  * @property int|null $sleep_quality
@@ -20,11 +22,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $motivation_level
  * @property int|null $nutrition_score
  * @property int|null $training_intensity
- * @property-read \App\Models\User $user
+ * @property-read User $user
  */
 class DailyJournal extends Model
 {
-    /** @use HasFactory<\Database\Factories\DailyJournalFactory> */
+    /** @use HasFactory<DailyJournalFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -40,7 +42,7 @@ class DailyJournal extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {

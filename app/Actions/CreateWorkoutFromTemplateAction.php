@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use App\Models\WorkoutTemplate;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +21,7 @@ final class CreateWorkoutFromTemplateAction
         // Optimize: Eager load relationships to prevent N+1 queries during iteration
         $template->load(['workoutTemplateLines.workoutTemplateSets']);
 
-        return DB::transaction(function () use ($user, $template): \App\Models\Workout {
+        return DB::transaction(function () use ($user, $template): Workout {
             $workout = new Workout([
                 'name' => $template->name,
                 'started_at' => now(),
@@ -43,7 +45,7 @@ final class CreateWorkoutFromTemplateAction
         $now = now()->toDateTimeString();
 
         foreach ($template->workoutTemplateLines as $templateLine) {
-            /** @var \App\Models\WorkoutLine $workoutLine */
+            /** @var WorkoutLine $workoutLine */
             $workoutLine = $workout->workoutLines()->create([
                 'exercise_id' => $templateLine->exercise_id,
                 'order' => $templateLine->order,
@@ -68,7 +70,7 @@ final class CreateWorkoutFromTemplateAction
         if ($allSets !== []) {
             // Use insert() for bulk insertion to prevent N+1 queries during creation
             // We manually calculate and apply the volume since Set::saved events won't fire
-            \App\Models\Set::insert($allSets);
+            Set::insert($allSets);
 
             if ($totalWorkoutVolume > 0) {
                 $user->increment('total_volume', $totalWorkoutVolume);

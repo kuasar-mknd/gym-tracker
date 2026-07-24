@@ -5,8 +5,13 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Services\RecommendedValuesService;
+use Database\Factories\WorkoutLineFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 
 /**
@@ -15,13 +20,13 @@ use Spatie\Activitylog\LogOptions;
  * @property int $exercise_id
  * @property int $order
  * @property string|null $notes
- * @property-read \App\Models\Workout $workout
- * @property-read \App\Models\Exercise $exercise
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Set> $sets
+ * @property-read Workout $workout
+ * @property-read Exercise $exercise
+ * @property-read Collection<int, Set> $sets
  */
 class WorkoutLine extends Model
 {
-    /** @use HasFactory<\Database\Factories\WorkoutLineFactory> */
+    /** @use HasFactory<WorkoutLineFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -36,25 +41,25 @@ class WorkoutLine extends Model
     protected $appends = [];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Workout, $this>
+     * @return BelongsTo<Workout, $this>
      */
-    public function workout(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function workout(): BelongsTo
     {
         return $this->belongsTo(Workout::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Exercise, $this>
+     * @return BelongsTo<Exercise, $this>
      */
-    public function exercise(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function exercise(): BelongsTo
     {
         return $this->belongsTo(Exercise::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Set, $this>
+     * @return HasMany<Set, $this>
      */
-    public function sets(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function sets(): HasMany
     {
         return $this->hasMany(Set::class);
     }
@@ -85,10 +90,10 @@ class WorkoutLine extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Collection<int, WorkoutLine>  $lines
+     * @param  Collection<int, WorkoutLine>  $lines
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
      */
-    public static function batchRecommendedValues(\Illuminate\Database\Eloquent\Collection $lines, int $userId): array
+    public static function batchRecommendedValues(Collection $lines, int $userId): array
     {
         return app(RecommendedValuesService::class)->batchRecommendedValues($lines, $userId);
     }
@@ -105,7 +110,7 @@ class WorkoutLine extends Model
     {
         $clearCache = function (self $line): void {
             if ($line->workout_id) {
-                \Illuminate\Support\Facades\Cache::forget("user_active_workout_{$line->workout->user_id}");
+                Cache::forget("user_active_workout_{$line->workout->user_id}");
             }
         };
 

@@ -2,13 +2,20 @@
 
 declare(strict_types=1);
 
+use NunoMaduro\PhpInsights\Domain\Insights\CyclomaticComplexityIsHigh;
 use NunoMaduro\PhpInsights\Domain\Insights\ForbiddenDefineFunctions;
 use NunoMaduro\PhpInsights\Domain\Insights\ForbiddenFinalClasses;
 use NunoMaduro\PhpInsights\Domain\Insights\ForbiddenNormalClasses;
 use NunoMaduro\PhpInsights\Domain\Insights\ForbiddenPrivateMethods;
 use NunoMaduro\PhpInsights\Domain\Insights\ForbiddenTraits;
 use NunoMaduro\PhpInsights\Domain\Metrics\Architecture\Classes;
+use PHP_CodeSniffer\Standards\Generic\Sniffs\Files\LineLengthSniff;
+use SlevomatCodingStandard\Sniffs\Classes\SuperfluousExceptionNamingSniff;
+use SlevomatCodingStandard\Sniffs\Commenting\DocCommentSpacingSniff;
+use SlevomatCodingStandard\Sniffs\Commenting\InlineDocCommentDeclarationSniff;
 use SlevomatCodingStandard\Sniffs\Commenting\UselessFunctionDocCommentSniff;
+use SlevomatCodingStandard\Sniffs\Functions\FunctionLengthSniff;
+use SlevomatCodingStandard\Sniffs\Functions\UnusedParameterSniff;
 use SlevomatCodingStandard\Sniffs\Namespaces\AlphabeticallySortedUsesSniff;
 use SlevomatCodingStandard\Sniffs\TypeHints\DeclareStrictTypesSniff;
 use SlevomatCodingStandard\Sniffs\TypeHints\DisallowMixedTypeHintSniff;
@@ -83,14 +90,14 @@ return [
         PropertyTypeHintSniff::class,
         ReturnTypeHintSniff::class,
         UselessFunctionDocCommentSniff::class,
-        \PHP_CodeSniffer\Standards\Generic\Sniffs\Files\LineLengthSniff::class,
-        \SlevomatCodingStandard\Sniffs\Functions\UnusedParameterSniff::class,
-        \NunoMaduro\PhpInsights\Domain\Insights\CyclomaticComplexityIsHigh::class,
+        LineLengthSniff::class,
+        UnusedParameterSniff::class,
+        CyclomaticComplexityIsHigh::class,
         ForbiddenFinalClasses::class, // Allow final classes
-        \SlevomatCodingStandard\Sniffs\Classes\SuperfluousExceptionNamingSniff::class, // Allow "Exception" suffix
-        \SlevomatCodingStandard\Sniffs\Functions\FunctionLengthSniff::class, // Allow longer functions
-        \SlevomatCodingStandard\Sniffs\Commenting\InlineDocCommentDeclarationSniff::class, // Allow simple @var
-        \SlevomatCodingStandard\Sniffs\Commenting\DocCommentSpacingSniff::class, // Relaxed doc spacing
+        SuperfluousExceptionNamingSniff::class, // Allow "Exception" suffix
+        FunctionLengthSniff::class, // Allow longer functions
+        InlineDocCommentDeclarationSniff::class, // Allow simple @var
+        DocCommentSpacingSniff::class, // Relaxed doc spacing
     ],
 
     'config' => [

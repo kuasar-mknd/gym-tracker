@@ -8,7 +8,10 @@ use App\Http\Requests\GoalStoreRequest;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Services\GoalService;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * Controller for managing user goals.
@@ -22,7 +25,7 @@ class GoalController extends Controller
     /**
      * Create a new GoalController instance.
      *
-     * @param  \App\Services\GoalService  $goalService  The service responsible for updating goal progress.
+     * @param  GoalService  $goalService  The service responsible for updating goal progress.
      */
     public function __construct(protected GoalService $goalService)
     {
@@ -35,9 +38,9 @@ class GoalController extends Controller
      * exercises and predefined measurement types for the creation form.
      * Eager loads the associated exercise for each goal.
      *
-     * @return \Inertia\Response The Inertia response rendering the 'Goals/Index' page.
+     * @return Response The Inertia response rendering the 'Goals/Index' page.
      */
-    public function index(): \Inertia\Response
+    public function index(): Response
     {
         return Inertia::render('Goals/Index', [
             'goals' => $this->user()->goals()
@@ -62,12 +65,12 @@ class GoalController extends Controller
      * Validates the request data, sets a default start value if none is provided,
      * creates the goal, and immediately calculates its initial progress.
      *
-     * @param  \App\Http\Requests\GoalStoreRequest  $request  The validated request containing goal details.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the goals index.
+     * @param  GoalStoreRequest  $request  The validated request containing goal details.
+     * @return RedirectResponse A redirect back to the goals index.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a goal.
+     * @throws AuthorizationException If the user is not authorized to create a goal.
      */
-    public function store(GoalStoreRequest $request): \Illuminate\Http\RedirectResponse
+    public function store(GoalStoreRequest $request): RedirectResponse
     {
         $this->authorize('create', Goal::class);
 
@@ -92,13 +95,13 @@ class GoalController extends Controller
      * Validates the incoming data, updates the goal's attributes, and recalculates
      * its progress to reflect the new target or criteria.
      *
-     * @param  \App\Http\Requests\GoalStoreRequest  $request  The validated request containing updated goal details.
-     * @param  \App\Models\Goal  $goal  The goal instance to update.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the goals index.
+     * @param  GoalStoreRequest  $request  The validated request containing updated goal details.
+     * @param  Goal  $goal  The goal instance to update.
+     * @return RedirectResponse A redirect back to the goals index.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the goal.
+     * @throws AuthorizationException If the user is not authorized to update the goal.
      */
-    public function update(GoalStoreRequest $request, Goal $goal): \Illuminate\Http\RedirectResponse
+    public function update(GoalStoreRequest $request, Goal $goal): RedirectResponse
     {
         $this->authorize('update', $goal);
 
@@ -113,12 +116,12 @@ class GoalController extends Controller
      *
      * Permanently deletes the given goal from the database.
      *
-     * @param  \App\Models\Goal  $goal  The goal instance to delete.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the goals index.
+     * @param  Goal  $goal  The goal instance to delete.
+     * @return RedirectResponse A redirect back to the goals index.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the goal.
+     * @throws AuthorizationException If the user is not authorized to delete the goal.
      */
-    public function destroy(Goal $goal): \Illuminate\Http\RedirectResponse
+    public function destroy(Goal $goal): RedirectResponse
     {
         $this->authorize('delete', $goal);
 

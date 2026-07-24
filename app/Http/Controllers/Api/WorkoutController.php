@@ -8,9 +8,14 @@ use App\Actions\CreateWorkoutAction;
 use App\Http\Requests\WorkoutStoreRequest;
 use App\Http\Requests\WorkoutUpdateRequest;
 use App\Http\Resources\WorkoutResource;
+use App\Jobs\RecalculateUserStats;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
+use Spatie\QueryBuilder\QueryBuilder;
 
 /**
  * Controller for managing user workouts via API.
@@ -30,7 +35,7 @@ class WorkoutController extends Controller
      * such as `workoutLines`, `workoutLines.exercise`, and `workoutLines.sets`.
      *
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Get(
         path: '/workouts',
@@ -39,11 +44,11 @@ class WorkoutController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Workout::class);
 
-        $workouts = \Spatie\QueryBuilder\QueryBuilder::for(Workout::class)
+        $workouts = QueryBuilder::for(Workout::class)
             ->allowedIncludes(['workoutLines', 'workoutLines.exercise', 'workoutLines.sets'])
             ->allowedSorts(['started_at', 'ended_at', 'created_at'])
             ->defaultSort('-started_at')
@@ -59,8 +64,8 @@ class WorkoutController extends Controller
      * Validates the request data and creates a new workout for the authenticated user.
      * Dispatches a background job to recalculate user statistics after creation.
      *
-     * @param  \App\Http\Requests\WorkoutStoreRequest  $request  The incoming validated request.
-     * @return \App\Http\Resources\WorkoutResource The newly created workout resource.
+     * @param  WorkoutStoreRequest  $request  The incoming validated request.
+     * @return WorkoutResource The newly created workout resource.
      */
     #[OA\Post(
         path: '/workouts',
@@ -85,10 +90,10 @@ class WorkoutController extends Controller
      * and sets. It also batch-loads recommended values for the workout lines to
      * optimize performance.
      *
-     * @param  \App\Models\Workout  $workout  The workout instance to display.
-     * @return \App\Http\Resources\WorkoutResource The requested workout resource.
+     * @param  Workout  $workout  The workout instance to display.
+     * @return WorkoutResource The requested workout resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Get(
         path: '/workouts/{workout}',
@@ -117,11 +122,11 @@ class WorkoutController extends Controller
      * Dispatches a background job to recalculate the user's statistics
      * based on the updated workout data.
      *
-     * @param  \App\Http\Requests\WorkoutUpdateRequest  $request  The incoming validated request.
-     * @param  \App\Models\Workout  $workout  The workout instance to update.
-     * @return \App\Http\Resources\WorkoutResource The updated workout resource.
+     * @param  WorkoutUpdateRequest  $request  The incoming validated request.
+     * @param  Workout  $workout  The workout instance to update.
+     * @return WorkoutResource The updated workout resource.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Put(
         path: '/workouts/{workout}',
@@ -140,7 +145,7 @@ class WorkoutController extends Controller
 
         $workout->update($validated);
 
-        \App\Jobs\RecalculateUserStats::dispatch($workout->user);
+        RecalculateUserStats::dispatch($workout->user);
 
         return new WorkoutResource($workout);
     }
@@ -151,10 +156,10 @@ class WorkoutController extends Controller
      * Deletes the given workout and dispatches a background job to recalculate
      * the user's statistics, removing the impact of the deleted workout.
      *
-     * @param  \App\Models\Workout  $workout  The workout instance to delete.
-     * @return \Illuminate\Http\Response An empty response indicating successful deletion.
+     * @param  Workout  $workout  The workout instance to delete.
+     * @return Response An empty response indicating successful deletion.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     #[OA\Delete(
         path: '/workouts/{workout}',
@@ -164,14 +169,14 @@ class WorkoutController extends Controller
     #[OA\Response(response: 204, description: 'Deleted successfully')]
     #[OA\Response(response: 403, description: 'Forbidden')]
     #[OA\Response(response: 404, description: 'Not found')]
-    public function destroy(Workout $workout): \Illuminate\Http\Response
+    public function destroy(Workout $workout): Response
     {
         $this->authorize('delete', $workout);
 
         $user = $workout->user;
         $workout->delete();
 
-        \App\Jobs\RecalculateUserStats::dispatch($user);
+        RecalculateUserStats::dispatch($user);
 
         return response()->noContent();
     }

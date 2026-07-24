@@ -6,6 +6,8 @@ namespace App\Models;
 
 use App\Models\Traits\HasFitnessData;
 use App\Models\Traits\HasToolsData;
+use App\Services\NotificationService;
+use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +17,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\LogOptions;
@@ -28,7 +32,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property int|null $default_rest_time
  * @property int $current_streak
  * @property int $longest_streak
- * @property \Illuminate\Support\Carbon|null $last_workout_at
+ * @property Carbon|null $last_workout_at
  * @property-read Collection<int, Workout> $workouts
  * @property-read NotifColl<int, Notification> $notifications
  * @property-read NotifColl<int, Notification> $unreadNotifications
@@ -37,7 +41,7 @@ final class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens;
 
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory;
 
     use HasFitnessData;
@@ -45,6 +49,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     use HasToolsData;
     use LogsActivity;
     use Notifiable;
+    use TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -65,6 +70,8 @@ final class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -123,12 +130,12 @@ final class User extends Authenticatable implements MustVerifyEmail
 
     public function getUnreadNotificationsCountCached(): int
     {
-        return app(\App\Services\NotificationService::class)->getUnreadCount($this);
+        return app(NotificationService::class)->getUnreadCount($this);
     }
 
     public function getLatestAchievementCached(): ?Notification
     {
-        return app(\App\Services\NotificationService::class)->getLatestAchievement($this);
+        return app(NotificationService::class)->getLatestAchievement($this);
     }
 
     /**

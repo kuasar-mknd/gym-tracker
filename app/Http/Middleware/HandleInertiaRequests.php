@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 
@@ -56,7 +58,7 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
-        if (! $user instanceof \App\Models\User) {
+        if (! $user instanceof User) {
             return null;
         }
 
@@ -64,7 +66,7 @@ class HandleInertiaRequests extends Middleware
 
         $latestAchievement = $notificationService->getLatestAchievement($user);
 
-        $activeWorkout = \Illuminate\Support\Facades\Cache::remember(
+        $activeWorkout = Cache::remember(
             "user_active_workout_{$user->id}",
             now()->addHours(2),
             fn () => $user->workouts()

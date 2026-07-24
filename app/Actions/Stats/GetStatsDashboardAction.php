@@ -28,8 +28,8 @@ class GetStatsDashboardAction
     /**
      * Execute the action to compile dashboard data.
      *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
+     * @param  User  $user  The authenticated user.
+     * @param  Request  $request  The incoming HTTP request.
      * @return array<string, mixed> Array of data for the Inertia response.
      */
     public function execute(User $user, Request $request): array

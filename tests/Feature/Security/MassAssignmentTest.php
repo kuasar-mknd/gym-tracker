@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Security;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,7 +25,7 @@ class MassAssignmentTest extends TestCase
         // In strict mode (dev/test), this throws an exception.
         // In production, it would silently discard the attribute.
         // Both outcomes prevent mass assignment.
-        $this->expectException(\Illuminate\Database\Eloquent\MassAssignmentException::class);
+        $this->expectException(MassAssignmentException::class);
 
         new User($userData);
     }
@@ -38,7 +39,7 @@ class MassAssignmentTest extends TestCase
             'email_verified_at' => now(),
         ];
 
-        $this->expectException(\Illuminate\Database\Eloquent\MassAssignmentException::class);
+        $this->expectException(MassAssignmentException::class);
 
         User::create($userData);
     }

@@ -7,8 +7,9 @@ use App\Enums\GoalType;
 use App\Models\User;
 use App\Services\GoalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
-uses(Tests\TestCase::class, RefreshDatabase::class);
+uses(TestCase::class, RefreshDatabase::class);
 
 it('creates a goal and sets default start_value to 0 if not provided', function (): void {
     // Arrange

@@ -4,21 +4,25 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\WorkoutTemplateLineFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
  * @property int $workout_template_id
  * @property int $exercise_id
  * @property int $order
- * @property-read \App\Models\WorkoutTemplate $workoutTemplate
- * @property-read \App\Models\Exercise $exercise
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkoutTemplateSet> $workoutTemplateSets
+ * @property-read WorkoutTemplate $workoutTemplate
+ * @property-read Exercise $exercise
+ * @property-read Collection<int, WorkoutTemplateSet> $workoutTemplateSets
  */
 class WorkoutTemplateLine extends Model
 {
-    /** @use HasFactory<\Database\Factories\WorkoutTemplateLineFactory> */
+    /** @use HasFactory<WorkoutTemplateLineFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -28,25 +32,25 @@ class WorkoutTemplateLine extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\WorkoutTemplate, $this>
+     * @return BelongsTo<WorkoutTemplate, $this>
      */
-    public function workoutTemplate(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function workoutTemplate(): BelongsTo
     {
         return $this->belongsTo(WorkoutTemplate::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Exercise, $this>
+     * @return BelongsTo<Exercise, $this>
      */
-    public function exercise(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function exercise(): BelongsTo
     {
         return $this->belongsTo(Exercise::class);
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutTemplateSet, $this>
+     * @return HasMany<WorkoutTemplateSet, $this>
      */
-    public function workoutTemplateSets(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function workoutTemplateSets(): HasMany
     {
         return $this->hasMany(WorkoutTemplateSet::class);
     }

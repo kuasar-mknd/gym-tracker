@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Socialite\Contracts\Provider;
+use Laravel\Socialite\Facades\Socialite;
 use Tests\TestCase;
 
 class SocialAuthTest extends TestCase
@@ -35,10 +38,10 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
         $socialiteUser->user = ['email_verified' => true];
 
-        $provider = \Mockery::mock(\Laravel\Socialite\Contracts\Provider::class);
+        $provider = \Mockery::mock(Provider::class);
         $provider->shouldReceive('user')->andReturn($socialiteUser);
 
-        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('github')->andReturn($provider);
+        Socialite::shouldReceive('driver')->with('github')->andReturn($provider);
 
         $response = $this->get(route('social.callback', 'github'));
 
@@ -54,7 +57,7 @@ class SocialAuthTest extends TestCase
 
     public function test_social_callback_logs_in_existing_user(): void
     {
-        $user = \App\Models\User::factory()->create([
+        $user = User::factory()->create([
             'email' => 'existing@example.com',
             'provider' => 'google',
             'provider_id' => '67890',
@@ -68,10 +71,10 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
         $socialiteUser->user = ['verified_email' => true];
 
-        $provider = \Mockery::mock(\Laravel\Socialite\Contracts\Provider::class);
+        $provider = \Mockery::mock(Provider::class);
         $provider->shouldReceive('user')->andReturn($socialiteUser);
 
-        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+        Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
 
         $response = $this->get(route('social.callback', 'google'));
 
@@ -81,7 +84,7 @@ class SocialAuthTest extends TestCase
 
     public function test_social_callback_links_account_if_email_matches(): void
     {
-        $user = \App\Models\User::factory()->create([
+        $user = User::factory()->create([
             'email' => 'match@example.com',
             'provider' => null,
             'provider_id' => null,
@@ -95,10 +98,10 @@ class SocialAuthTest extends TestCase
         $socialiteUser->shouldReceive('getAvatar')->andReturn('https://example.com/avatar.jpg');
         $socialiteUser->user = ['verified' => true];
 
-        $provider = \Mockery::mock(\Laravel\Socialite\Contracts\Provider::class);
+        $provider = \Mockery::mock(Provider::class);
         $provider->shouldReceive('user')->andReturn($socialiteUser);
 
-        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('github')->andReturn($provider);
+        Socialite::shouldReceive('driver')->with('github')->andReturn($provider);
 
         $response = $this->get(route('social.callback', 'github'));
 

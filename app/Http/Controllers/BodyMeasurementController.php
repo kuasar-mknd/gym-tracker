@@ -6,7 +6,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Models\BodyMeasurement;
+use App\Services\StatsService;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * Controller for managing user body measurements.
@@ -21,9 +25,9 @@ class BodyMeasurementController extends Controller
     /**
      * Create a new BodyMeasurementController instance.
      *
-     * @param  \App\Services\StatsService  $statsService  Service for fetching and clearing user measurement statistics.
+     * @param  StatsService  $statsService  Service for fetching and clearing user measurement statistics.
      */
-    public function __construct(protected \App\Services\StatsService $statsService)
+    public function __construct(protected StatsService $statsService)
     {
     }
 
@@ -34,11 +38,11 @@ class BodyMeasurementController extends Controller
      * and fetches their historical weight data spanning the past year to
      * populate the frontend graphs and list view.
      *
-     * @return \Inertia\Response The Inertia response rendering the 'Measurements/Index' page.
+     * @return Response The Inertia response rendering the 'Measurements/Index' page.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view measurements.
+     * @throws AuthorizationException If the user is not authorized to view measurements.
      */
-    public function index(): \Inertia\Response
+    public function index(): Response
     {
         $this->authorize('viewAny', BodyMeasurement::class);
 
@@ -63,12 +67,12 @@ class BodyMeasurementController extends Controller
      * on the validated incoming request. After creation, clears the
      * related body measurement stats cache to ensure fresh data.
      *
-     * @param  \App\Http\Requests\BodyMeasurementStoreRequest  $request  The validated request containing measurement data.
-     * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
+     * @param  BodyMeasurementStoreRequest  $request  The validated request containing measurement data.
+     * @return RedirectResponse Redirects back to the previous page.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a measurement.
+     * @throws AuthorizationException If the user is not authorized to create a measurement.
      */
-    public function store(BodyMeasurementStoreRequest $request): \Illuminate\Http\RedirectResponse
+    public function store(BodyMeasurementStoreRequest $request): RedirectResponse
     {
         $this->authorize('create', BodyMeasurement::class);
 
@@ -86,12 +90,12 @@ class BodyMeasurementController extends Controller
      * user is authorized to do so (i.e., they own the measurement).
      * Afterward, clears the relevant body measurement stats cache.
      *
-     * @param  \App\Models\BodyMeasurement  $bodyMeasurement  The body measurement model instance to delete.
-     * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
+     * @param  BodyMeasurement  $bodyMeasurement  The body measurement model instance to delete.
+     * @return RedirectResponse Redirects back to the previous page.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the measurement.
+     * @throws AuthorizationException If the user is not authorized to delete the measurement.
      */
-    public function destroy(BodyMeasurement $bodyMeasurement): \Illuminate\Http\RedirectResponse
+    public function destroy(BodyMeasurement $bodyMeasurement): RedirectResponse
     {
         $this->authorize('delete', $bodyMeasurement);
 

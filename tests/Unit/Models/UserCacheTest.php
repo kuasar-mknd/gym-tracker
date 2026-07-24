@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Models;
 
 use App\Models\User;
+use App\Notifications\AchievementUnlocked;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -108,7 +109,7 @@ class UserCacheTest extends TestCase
         // Create an achievement notification
         $achievement = $user->notifications()->create([
             'id' => Str::uuid(),
-            'type' => \App\Notifications\AchievementUnlocked::class,
+            'type' => AchievementUnlocked::class,
             'data' => ['achievement_id' => 1],
             'read_at' => null,
         ]);

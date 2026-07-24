@@ -25,7 +25,7 @@ class StoreSetAction
     public function execute(User $user, array $validated): Set
     {
         try {
-            /** @var \App\Models\WorkoutLine $workoutLine */
+            /** @var WorkoutLine $workoutLine */
             $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
 
             Gate::forUser($user)->authorize('create', [Set::class, $workoutLine]);

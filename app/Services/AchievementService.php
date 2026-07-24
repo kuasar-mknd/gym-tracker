@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Achievement;
 use App\Models\User;
+use App\Notifications\AchievementUnlocked;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -52,7 +53,7 @@ final class AchievementService
             $user->achievements()->attach($toUnlockIds, ['achieved_at' => now()]);
 
             foreach ($unlockedAchievements as $achievement) {
-                $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
+                $user->notify(new AchievementUnlocked($achievement));
             }
         }
     }

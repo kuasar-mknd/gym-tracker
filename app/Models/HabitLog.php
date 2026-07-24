@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\HabitLogFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $habit_id
- * @property \Illuminate\Support\Carbon $date
+ * @property Carbon $date
  * @property string|null $notes
- * @property-read \App\Models\Habit $habit
+ * @property-read Habit $habit
  */
 class HabitLog extends Model
 {
-    /** @use HasFactory<\Database\Factories\HabitLogFactory> */
+    /** @use HasFactory<HabitLogFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -28,7 +30,7 @@ class HabitLog extends Model
     ];
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Habit, $this>
+     * @return BelongsTo<Habit, $this>
      */
     public function habit(): BelongsTo
     {
@@ -36,9 +38,9 @@ class HabitLog extends Model
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<$this>  $query
+     * @param  Builder<$this>  $query
      * @param  array<int, mixed>|mixed  $dates
-     * @return \Illuminate\Database\Eloquent\Builder<$this>
+     * @return Builder<$this>
      */
     public function scopeWhereDateBetween(Builder $query, ...$dates): Builder
     {

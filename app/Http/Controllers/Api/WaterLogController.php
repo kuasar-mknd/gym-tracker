@@ -8,6 +8,8 @@ use App\Http\Requests\StoreWaterLogRequest;
 use App\Http\Requests\UpdateWaterLogRequest;
 use App\Http\Resources\WaterLogResource;
 use App\Models\WaterLog;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -22,7 +24,7 @@ class WaterLogController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(): AnonymousResourceCollection
     {
         $this->authorize('viewAny', WaterLog::class);
 
@@ -46,7 +48,7 @@ class WaterLogController extends Controller
     )]
     #[OA\Response(response: 201, description: 'Created successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function store(StoreWaterLogRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreWaterLogRequest $request): JsonResponse
     {
         $this->authorize('create', WaterLog::class);
 
@@ -101,7 +103,7 @@ class WaterLogController extends Controller
         tags: ['Water Logs']
     )]
     #[OA\Response(response: 204, description: 'Deleted successfully')]
-    public function destroy(WaterLog $waterLog): \Illuminate\Http\Response
+    public function destroy(WaterLog $waterLog): Response
     {
         $this->authorize('delete', $waterLog);
 

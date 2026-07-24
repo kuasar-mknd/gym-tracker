@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Goals\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\Column;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -27,7 +28,7 @@ class GoalsTable
             ]);
     }
 
-    /** @return array<\Filament\Tables\Columns\Column> */
+    /** @return array<Column> */
     private static function getColumns(): array
     {
         return [

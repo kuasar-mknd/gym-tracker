@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\UserAchievement;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\UserAchievement
+ * @mixin UserAchievement
  */
 class UserAchievementResource extends JsonResource
 {
