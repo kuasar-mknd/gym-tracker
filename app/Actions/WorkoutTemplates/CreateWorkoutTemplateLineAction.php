@@ -17,7 +17,7 @@ class CreateWorkoutTemplateLineAction
      */
     public function execute(array $data): WorkoutTemplateLine
     {
-        /** @var WorkoutTemplate $workoutTemplate */
+        /** @var \App\Models\WorkoutTemplate $workoutTemplate */
         $workoutTemplate = WorkoutTemplate::findOrFail($data['workout_template_id']);
 
         $this->authorize('create', [WorkoutTemplateLine::class, $workoutTemplate]);
@@ -26,7 +26,7 @@ class CreateWorkoutTemplateLineAction
         $maxOrder = $workoutTemplate->workoutTemplateLines()->max('order');
         $order = $data['order'] ?? ($maxOrder === null ? 0 : $maxOrder + 1);
 
-        /** @var WorkoutTemplateLine */
+        /** @var \App\Models\WorkoutTemplateLine */
         return $workoutTemplate->workoutTemplateLines()->create(array_merge(
             collect($data)->except('workout_template_id')->toArray(),
             ['order' => $order]

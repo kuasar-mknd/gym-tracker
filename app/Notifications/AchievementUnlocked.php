@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\Achievement;
-use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Carbon;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
@@ -28,7 +26,7 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        /** @var User $_notifiable */
+        /** @var \App\Models\User $_notifiable */
         if ($_notifiable->isPushEnabled('achievement')) {
             $channels[] = WebPushChannel::class;
         }
@@ -50,7 +48,7 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array<string, Carbon|int|string|bool|float|array<int, mixed>|null>
+     * @return array<string, \Illuminate\Support\Carbon|int|string|bool|float|array<int, mixed>|null>
      */
     public function toArray(object $_notifiable): array
     {

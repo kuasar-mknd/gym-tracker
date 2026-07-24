@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Models\User;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,7 +15,7 @@ class PersonalRecordUpdateRequest extends FormRequest
     }
 
     /**
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -38,7 +36,7 @@ class PersonalRecordUpdateRequest extends FormRequest
         return [
             'sometimes',
             Rule::exists('exercises', 'id')->where(function ($query): void {
-                /** @var User|null $user */
+                /** @var \App\Models\User|null $user */
                 $user = $this->user();
                 $query->where(function ($q) use ($user): void {
                     $q->whereNull('user_id')->orWhere('user_id', $user?->id);
@@ -53,7 +51,7 @@ class PersonalRecordUpdateRequest extends FormRequest
         return [
             'nullable',
             Rule::exists('workouts', 'id')->where(function ($query) {
-                /** @var User $user */
+                /** @var \App\Models\User $user */
                 $user = $this->user();
 
                 return $query->where('user_id', $user->id);
@@ -67,7 +65,7 @@ class PersonalRecordUpdateRequest extends FormRequest
         return [
             'nullable',
             Rule::exists('sets', 'id')->where(function ($query) {
-                /** @var User $user */
+                /** @var \App\Models\User $user */
                 $user = $this->user();
 
                 return $query->whereIn('workout_line_id', function ($q) use ($user): void {

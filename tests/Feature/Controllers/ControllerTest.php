@@ -26,7 +26,7 @@ describe('Controller', function (): void {
 
             // Assert that calling the method throws the expected exception
             expect(fn (): User => $controller->callUser())
-                ->toThrow(RuntimeException::class, 'User not authenticated');
+                ->toThrow(\RuntimeException::class, 'User not authenticated');
         });
 
         it('returns the authenticated user if one exists', function (): void {

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Jobs\RecalculateUserStats;
 use App\Models\User;
 use App\Models\Workout;
 
@@ -21,7 +20,7 @@ class CreateWorkoutAction
         $workout->user_id = $user->id;
         $workout->save();
 
-        RecalculateUserStats::dispatch($user);
+        \App\Jobs\RecalculateUserStats::dispatch($user);
 
         return $workout;
     }

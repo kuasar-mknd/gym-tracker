@@ -9,7 +9,6 @@ use App\Actions\Tools\FetchWaterTrackerAction;
 use App\Http\Requests\StoreWaterLogRequest;
 use App\Models\User;
 use App\Models\WaterLog;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,17 +23,16 @@ class WaterController extends Controller
     /**
      * Display the user's water tracker and history.
      *
-     * @param  FetchWaterHistoryAction  $fetchWaterHistory  Action to fetch historical water data.
-     * @param  FetchWaterTrackerAction  $fetchWaterTracker  Action to fetch today's water data.
-     * @return Response The Inertia response rendering the Tools/WaterTracker page.
+     * @param  \App\Actions\Tools\FetchWaterHistoryAction  $fetchWaterHistory  Action to fetch historical water data.
+     * @param  \App\Actions\Tools\FetchWaterTrackerAction  $fetchWaterTracker  Action to fetch today's water data.
+     * @return \Inertia\Response The Inertia response rendering the Tools/WaterTracker page.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function index(FetchWaterHistoryAction $fetchWaterHistory, FetchWaterTrackerAction $fetchWaterTracker): Response
     {
         $this->authorize('viewAny', WaterLog::class);
 
-        /** @var User $user */
         $user = $this->user();
 
         $trackerData = $fetchWaterTracker->execute($user);
@@ -49,10 +47,10 @@ class WaterController extends Controller
     /**
      * Store a new water log entry.
      *
-     * @param  StoreWaterLogRequest  $request  The validated request containing the water log amount.
-     * @return RedirectResponse Redirects back to the water tracker page.
+     * @param  \App\Http\Requests\StoreWaterLogRequest  $request  The validated request containing the water log amount.
+     * @return \Illuminate\Http\RedirectResponse Redirects back to the water tracker page.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function store(StoreWaterLogRequest $request): RedirectResponse
     {
@@ -72,10 +70,10 @@ class WaterController extends Controller
     /**
      * Delete an existing water log entry.
      *
-     * @param  WaterLog  $waterLog  The water log entry to delete.
-     * @return RedirectResponse Redirects back to the water tracker page.
+     * @param  \App\Models\WaterLog  $waterLog  The water log entry to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirects back to the water tracker page.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function destroy(WaterLog $waterLog): RedirectResponse
     {

@@ -210,7 +210,7 @@ test('updateProgressPercentage handles edge cases', function (): void {
     $goal1->current_value = 5;
     // Since updateFrequencyGoal overwrites current_value based on workouts,
     // we mock the goal type so it doesn't overwrite our manual current_value
-    $goal1->type = GoalType::Measurement;
+    $goal1->type = \App\Enums\GoalType::Measurement;
     $goal1->measurement_type = 'weight'; // Just to pass guard
     $this->service->updateGoalProgress($goal1);
     expect((float) $goal1->progress_pct)->toBe(100.0);
@@ -225,7 +225,7 @@ test('updateProgressPercentage handles edge cases', function (): void {
         'current_value' => 10, // overshoot
     ]);
 
-    BodyMeasurement::factory()->create([
+    \App\Models\BodyMeasurement::factory()->create([
         'user_id' => $user->id,
         'weight' => 10,
     ]);

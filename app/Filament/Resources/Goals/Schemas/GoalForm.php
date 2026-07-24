@@ -9,7 +9,6 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
-use Illuminate\Contracts\Support\Htmlable;
 
 class GoalForm
 {
@@ -19,7 +18,7 @@ class GoalForm
             ->components(self::getComponents());
     }
 
-    /** @return array<int, Htmlable|string> */
+    /** @return array<int, \Illuminate\Contracts\Support\Htmlable|string> */
     private static function getComponents(): array
     {
         return [

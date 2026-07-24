@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\Security;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -31,7 +30,7 @@ class UserMassAssignmentTest extends TestCase
         ];
 
         // Expect MassAssignmentException because strict mode is enabled in tests
-        $this->expectException(MassAssignmentException::class);
+        $this->expectException(\Illuminate\Database\Eloquent\MassAssignmentException::class);
 
         // Simulate mass assignment
         $user->update($payload);

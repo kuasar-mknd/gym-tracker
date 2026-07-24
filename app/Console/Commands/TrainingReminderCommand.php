@@ -6,7 +6,6 @@ namespace App\Console\Commands;
 
 use App\Models\NotificationPreference;
 use App\Models\User;
-use App\Models\Workout;
 use App\Notifications\TrainingReminder;
 use Illuminate\Console\Command;
 
@@ -50,7 +49,7 @@ class TrainingReminderCommand extends Command
                     ->where('notification_preferences.type', '=', 'training_reminder')
                     ->where('notification_preferences.is_enabled', '=', true);
             })
-            ->addSelect(['last_workout_started_at' => Workout::select('started_at')
+            ->addSelect(['last_workout_started_at' => \App\Models\Workout::select('started_at')
                 ->whereColumn('user_id', 'users.id')
                 ->orderByDesc('started_at')
                 ->limit(1),

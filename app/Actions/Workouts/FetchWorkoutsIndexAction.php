@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions\Workouts;
 
-use App\DTOs\Stats\DurationHistoryPoint;
-use App\DTOs\Stats\MonthlyVolumePoint;
-use App\DTOs\Stats\VolumeHistoryPoint;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StatsService;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -26,7 +22,7 @@ final class FetchWorkoutsIndexAction
      * Fetch workouts and related statistics for the index page.
      *
      * @return array{
-     *     workouts: LengthAwarePaginator<int, Workout>,
+     *     workouts: \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout>,
      *     totalExercises: int
      * }
      */
@@ -46,11 +42,11 @@ final class FetchWorkoutsIndexAction
      *     charts: array{
      *         monthly_frequency: Collection<int, array{month: string, count: int}>,
      *         day_of_week_frequency: Collection<int, array{day: string, count: int}>,
-     *         monthly_volume: array<int, MonthlyVolumePoint>,
-     *         duration_history: array<int, DurationHistoryPoint>,
-     *         volume_history: array<int, VolumeHistoryPoint>
+     *         monthly_volume: array<int, \App\DTOs\Stats\MonthlyVolumePoint>,
+     *         duration_history: array<int, \App\DTOs\Stats\DurationHistoryPoint>,
+     *         volume_history: array<int, \App\DTOs\Stats\VolumeHistoryPoint>
      *     },
-     *     exercises: \Illuminate\Database\Eloquent\Collection<int, Exercise>
+     *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>
      * }
      */
     public function getDeferredData(User $user): array
@@ -160,10 +156,10 @@ final class FetchWorkoutsIndexAction
         })->values();
     }
 
-    /** @return LengthAwarePaginator<int, Workout> */
+    /** @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout> */
     private function getWorkouts(
         User $user
-    ): LengthAwarePaginator {
+    ): \Illuminate\Pagination\LengthAwarePaginator {
         return Workout::with([
             'workoutLines' => function ($query): void {
                 $query->with('exercise')->withCount('sets');

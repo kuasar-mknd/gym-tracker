@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Models\Exercise;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -63,7 +62,7 @@ test('stats dashboard accepts invalid period and passes it through to view while
 
 test('authenticated user can fetch progress for their exercise', function (): void {
     $user = User::factory()->create();
-    $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+    $exercise = \App\Models\Exercise::factory()->create(['user_id' => $user->id]);
 
     actingAs($user)
         ->get(route('stats.exercise', $exercise))
@@ -72,7 +71,7 @@ test('authenticated user can fetch progress for their exercise', function (): vo
 });
 
 test('unauthenticated user cannot fetch exercise progress', function (): void {
-    $exercise = Exercise::factory()->create();
+    $exercise = \App\Models\Exercise::factory()->create();
 
     get(route('stats.exercise', $exercise))
         ->assertRedirect(route('login'));
@@ -89,7 +88,7 @@ test('user gets 404 for non-existent exercise progress', function (): void {
 test('user cannot fetch progress for another users exercise', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    $exercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
+    $exercise = \App\Models\Exercise::factory()->create(['user_id' => $otherUser->id]);
 
     actingAs($user)
         ->get(route('stats.exercise', $exercise))

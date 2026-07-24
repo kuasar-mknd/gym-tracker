@@ -7,16 +7,14 @@ namespace App\Http\Controllers;
 use App\Actions\Journal\SaveDailyJournalAction;
 use App\Http\Requests\DailyJournalStoreRequest;
 use App\Models\DailyJournal;
-use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class DailyJournalController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', DailyJournal::class);
 
@@ -33,7 +31,7 @@ class DailyJournalController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(DailyJournalStoreRequest $request, SaveDailyJournalAction $action): RedirectResponse
+    public function store(DailyJournalStoreRequest $request, SaveDailyJournalAction $action): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', DailyJournal::class);
 
@@ -45,7 +43,7 @@ class DailyJournalController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(DailyJournal $dailyJournal): RedirectResponse
+    public function destroy(DailyJournal $dailyJournal): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $dailyJournal);
 

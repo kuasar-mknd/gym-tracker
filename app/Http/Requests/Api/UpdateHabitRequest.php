@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\Models\Habit;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateHabitRequest extends FormRequest
@@ -15,7 +13,7 @@ class UpdateHabitRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        /** @var Habit $habit */
+        /** @var \App\Models\Habit $habit */
         $habit = $this->route('habit');
 
         return $this->user()?->getAuthIdentifier() === $habit->user_id;
@@ -24,7 +22,7 @@ class UpdateHabitRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

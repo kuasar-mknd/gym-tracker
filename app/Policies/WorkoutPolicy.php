@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
@@ -15,7 +14,7 @@ final class WorkoutPolicy
 
     public function viewAny(AuthUser $authUser): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return true;
         }
 
@@ -24,7 +23,7 @@ final class WorkoutPolicy
 
     public function view(AuthUser $authUser, Workout $workout): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return $authUser->id === $workout->user_id;
         }
 
@@ -33,7 +32,7 @@ final class WorkoutPolicy
 
     public function create(AuthUser $authUser): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return true;
         }
 
@@ -42,7 +41,7 @@ final class WorkoutPolicy
 
     public function update(AuthUser $authUser, Workout $workout): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return $authUser->id === $workout->user_id && is_null($workout->ended_at);
         }
 
@@ -51,7 +50,7 @@ final class WorkoutPolicy
 
     public function delete(AuthUser $authUser, Workout $workout): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return $authUser->id === $workout->user_id;
         }
 

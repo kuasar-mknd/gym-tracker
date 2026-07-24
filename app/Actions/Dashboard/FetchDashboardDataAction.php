@@ -4,16 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Dashboard;
 
-use App\DTOs\Stats\DailyVolumeTrendPoint;
-use App\DTOs\Stats\DistributionStat;
-use App\DTOs\Stats\WeeklyVolumeTrendPoint;
-use App\Models\Goal;
-use App\Models\PersonalRecord;
 use App\Models\User;
-use App\Models\Workout;
 use App\Services\StatsService;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * Action class responsible for fetching and aggregating all necessary data
@@ -27,7 +19,7 @@ final class FetchDashboardDataAction
     /**
      * Create a new FetchDashboardDataAction instance.
      *
-     * @param  StatsService  $statsService  The statistics service used to calculate trends and comparisons.
+     * @param  \App\Services\StatsService  $statsService  The statistics service used to calculate trends and comparisons.
      */
     public function __construct(
         protected StatsService $statsService
@@ -38,13 +30,13 @@ final class FetchDashboardDataAction
      * Fetch immediate dashboard data for the given user.
      * These are lightweight queries or single-row fetches suitable for initial page load.
      *
-     * @param  User  $user  The authenticated user for whom to fetch data.
+     * @param  \App\Models\User  $user  The authenticated user for whom to fetch data.
      * @return array{
      *     latestWeight: float|string|null,
-     *     activeWorkout: Workout|null,
-     *     recentWorkouts: Collection<int, Workout>,
-     *     recentPRs: Collection<int, PersonalRecord>,
-     *     activeGoals: Collection<int, Goal>
+     *     activeWorkout: \App\Models\Workout|null,
+     *     recentWorkouts: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
+     *     recentPRs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>,
+     *     activeGoals: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
      * }
      */
     public function getImmediateStats(User $user): array
@@ -65,8 +57,8 @@ final class FetchDashboardDataAction
     /**
      * Get consolidated weekly volume data (stats + trend).
      *
-     * @param  User  $user  The authenticated user.
-     * @return array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, WeeklyVolumeTrendPoint>}
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
      */
     public function getWeeklyVolumeData(User $user): array
     {
@@ -87,13 +79,13 @@ final class FetchDashboardDataAction
      *
      * @param  User  $user  The authenticated user.
      * @return array{
-     *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, WeeklyVolumeTrendPoint>},
-     *     workoutDistributions: array{duration: array<int, DistributionStat>, time_of_day: array<int, DistributionStat>}
+     *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>},
+     *     workoutDistributions: array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
      * }
      */
     public function getAnalyticalStats(User $user): array
     {
-        return Cache::remember(
+        return \Illuminate\Support\Facades\Cache::remember(
             "stats.dashboard_analytical.{$user->id}",
             now()->addMinutes(10),
             fn (): array => [
@@ -106,8 +98,8 @@ final class FetchDashboardDataAction
     /**
      * Get consolidated workout distributions (duration + time of day).
      *
-     * @param  User  $user  The authenticated user.
-     * @return array{duration: array<int, DistributionStat>, time_of_day: array<int, DistributionStat>}
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
      */
     public function getWorkoutDistributions(User $user): array
     {
@@ -120,7 +112,7 @@ final class FetchDashboardDataAction
      * Calculates the total workout volume for the current week and compares it
      * against the previous week to determine a percentage change.
      *
-     * @param  User  $user  The authenticated user.
+     * @param  \App\Models\User  $user  The authenticated user.
      * @return array{current_week_volume: float, percentage: float|int} Array containing the current week's volume and the percentage change.
      */
     public function getWeeklyVolumeStats(User $user): array
@@ -138,8 +130,8 @@ final class FetchDashboardDataAction
      *
      * Retrieves the daily workout volume for each day of the current week.
      *
-     * @param  User  $user  The authenticated user.
-     * @return array<int, WeeklyVolumeTrendPoint> A list of daily volumes formatted for a trend chart.
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint> A list of daily volumes formatted for a trend chart.
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
@@ -151,8 +143,8 @@ final class FetchDashboardDataAction
      *
      * Retrieves a rolling 7-day trend of daily workout volume.
      *
-     * @param  User  $user  The authenticated user.
-     * @return array<int, DailyVolumeTrendPoint> A list of daily volumes for the past week.
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return array<int, \App\DTOs\Stats\DailyVolumeTrendPoint> A list of daily volumes for the past week.
      */
     public function getVolumeTrend(User $user): array
     {
@@ -166,7 +158,7 @@ final class FetchDashboardDataAction
      * heavy analytical queries. Preferred approach is to use individual methods
      * with Inertia's deferred loading.
      *
-     * @param  User  $user  The authenticated user.
+     * @param  \App\Models\User  $user  The authenticated user.
      * @return array<string, mixed> All dashboard data aggregated into a single array.
      */
     public function execute(User $user): array
@@ -189,10 +181,10 @@ final class FetchDashboardDataAction
      * Get recent Personal Records.
      * Optimized to fetch only the amount displayed on the dashboard (2).
      *
-     * @param  User  $user  The authenticated user.
-     * @return Collection<int, PersonalRecord> A collection of the most recent personal records.
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord> A collection of the most recent personal records.
      */
-    private function getRecentPRs(User $user): Collection
+    private function getRecentPRs(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->personalRecords()
             ->with('exercise')
@@ -205,10 +197,10 @@ final class FetchDashboardDataAction
      * Get active goals.
      * Optimized to fetch only the amount displayed on the dashboard (2).
      *
-     * @param  User  $user  The authenticated user.
-     * @return Collection<int, Goal> A collection of currently active user goals.
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal> A collection of currently active user goals.
      */
-    private function getActiveGoals(User $user): Collection
+    private function getActiveGoals(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->goals()
             ->with('exercise')
@@ -223,10 +215,10 @@ final class FetchDashboardDataAction
      * Get the currently active (unfinished) workout for the user.
      * Returns null if no active workout exists.
      *
-     * @param  User  $user  The authenticated user.
-     * @return Workout|null The active workout or null.
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \App\Models\Workout|null The active workout or null.
      */
-    private function getActiveWorkout(User $user): ?Workout
+    private function getActiveWorkout(User $user): ?\App\Models\Workout
     {
         return $user->workouts()
             ->whereNull('ended_at')
@@ -241,10 +233,10 @@ final class FetchDashboardDataAction
      * to avoid loading full collections when only the count is needed for UI logic.
      * Limits to 3 items as per dashboard layout.
      *
-     * @param  User  $user  The authenticated user.
-     * @return Collection<int, Workout> A collection of the most recent workouts.
+     * @param  \App\Models\User  $user  The authenticated user.
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout> A collection of the most recent workouts.
      */
-    private function getRecentWorkouts(User $user): Collection
+    private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {
         return $user->workouts()
             ->withCount('workoutLines')

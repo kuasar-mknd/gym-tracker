@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Models\User;
-use App\Models\WilksScore;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<WilksScore>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\WilksScore>
  */
 class WilksScoreFactory extends Factory
 {

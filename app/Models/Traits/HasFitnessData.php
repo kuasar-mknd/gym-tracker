@@ -17,7 +17,6 @@ use App\Models\WorkoutTemplate;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Database\Eloquent\Relations\Pivot;
 
 trait HasFitnessData
 {
@@ -75,7 +74,7 @@ trait HasFitnessData
         return $this->hasMany(Habit::class);
     }
 
-    /** @return BelongsToMany<Achievement, $this, Pivot, 'pivot'> */
+    /** @return BelongsToMany<Achievement, $this, \Illuminate\Database\Eloquent\Relations\Pivot, 'pivot'> */
     public function achievements(): BelongsToMany
     {
         return $this->belongsToMany(Achievement::class, 'user_achievements')

@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\WorkoutLineStoreRequest;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\RedirectResponse;
 
 /**
  * Controller for managing Workout Lines.
@@ -24,13 +21,13 @@ class WorkoutLineController extends Controller
      * Validates the request, authorizes the user to add lines to the given workout,
      * calculates the order for the new line, and persists it.
      *
-     * @param  WorkoutLineStoreRequest  $request  The validated request containing workout line details (e.g., exercise_id).
-     * @param  Workout  $workout  The workout to which the line is being added.
-     * @return RedirectResponse Redirects to the workout's show page.
+     * @param  \App\Http\Requests\WorkoutLineStoreRequest  $request  The validated request containing workout line details (e.g., exercise_id).
+     * @param  \App\Models\Workout  $workout  The workout to which the line is being added.
+     * @return \Illuminate\Http\RedirectResponse Redirects to the workout's show page.
      *
-     * @throws AuthorizationException If the user is not authorized to create a line for the workout.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a line for the workout.
      */
-    public function store(WorkoutLineStoreRequest $request, Workout $workout): RedirectResponse
+    public function store(\App\Http\Requests\WorkoutLineStoreRequest $request, Workout $workout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', [WorkoutLine::class, $workout]);
 
@@ -50,12 +47,12 @@ class WorkoutLineController extends Controller
      * Deletes the specified workout line after verifying the user is authorized
      * to perform the action.
      *
-     * @param  WorkoutLine  $workoutLine  The workout line to delete.
-     * @return RedirectResponse Redirects back to the previous page.
+     * @param  \App\Models\WorkoutLine  $workoutLine  The workout line to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
      *
-     * @throws AuthorizationException If the user is not authorized to delete the line.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the line.
      */
-    public function destroy(WorkoutLine $workoutLine): RedirectResponse
+    public function destroy(\App\Models\WorkoutLine $workoutLine): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $workoutLine);
 

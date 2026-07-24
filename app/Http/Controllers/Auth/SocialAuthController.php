@@ -9,7 +9,6 @@ use App\Exceptions\SocialAuthException;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 
 class SocialAuthController extends Controller
 {
@@ -18,7 +17,7 @@ class SocialAuthController extends Controller
     /**
      * Redirect the user to the provider authentication page.
      */
-    public function redirect(string $provider): RedirectResponse
+    public function redirect(string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
             abort(404);
@@ -30,7 +29,7 @@ class SocialAuthController extends Controller
     /**
      * Obtain the user information from the provider.
      */
-    public function callback(HandleSocialCallbackAction $action, string $provider): RedirectResponse
+    public function callback(HandleSocialCallbackAction $action, string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
             abort(404);

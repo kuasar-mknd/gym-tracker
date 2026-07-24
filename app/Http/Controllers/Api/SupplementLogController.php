@@ -27,7 +27,6 @@ class SupplementLogController extends Controller
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
-        /** @var int $perPage */
         $perPage = (int) ($validated['per_page'] ?? 15);
 
         $logs = $fetchSupplementLogs->execute($this->user(), $perPage);

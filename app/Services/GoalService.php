@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\GoalType;
-use App\Models\BodyMeasurement;
 use App\Models\Goal;
 use App\Models\User;
-use App\Models\Workout;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Service for managing user goals and tracking progress.
@@ -67,7 +63,7 @@ final class GoalService
      * After updating the progress value, it checks if the goal has been completed.
      *
      * @param  Goal  $goal  The goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: BodyMeasurement|null}  $metrics  Optional pre-calculated metrics to avoid N+1 queries.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics to avoid N+1 queries.
      */
     public function updateGoalProgress(Goal $goal, array $metrics = []): void
     {
@@ -112,7 +108,7 @@ final class GoalService
      * Finds the maximum weight lifted for the associated exercise across all user workouts.
      *
      * @param  Goal  $goal  The weight goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
      */
     protected function updateWeightGoal(Goal $goal, array $metrics = []): void
     {
@@ -144,7 +140,7 @@ final class GoalService
      * Counts the total number of workouts the user has completed.
      *
      * @param  Goal  $goal  The frequency goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
      */
     protected function updateFrequencyGoal(Goal $goal, array $metrics = []): void
     {
@@ -169,7 +165,7 @@ final class GoalService
      * for the associated exercise.
      *
      * @param  Goal  $goal  The volume goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
      */
     protected function updateVolumeGoal(Goal $goal, array $metrics = []): void
     {
@@ -186,7 +182,7 @@ final class GoalService
 
         // ⚡ Bolt Optimization: Calculate max volume directly in SQL instead of loading into PHP memory.
         // Impact: Reduces memory usage and improves performance for users with many workouts.
-        $maxVolume = Workout::query()
+        $maxVolume = \App\Models\Workout::query()
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $goal->user_id)
@@ -208,7 +204,7 @@ final class GoalService
      * Retrieves the most recent recorded value for the specified measurement type.
      *
      * @param  Goal  $goal  The measurement goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
      */
     protected function updateMeasurementGoal(Goal $goal, array $metrics = []): void
     {
@@ -216,7 +212,7 @@ final class GoalService
             return;
         }
 
-        if (isset($metrics['latest_measurement']) && $metrics['latest_measurement'] instanceof BodyMeasurement) {
+        if (isset($metrics['latest_measurement']) && $metrics['latest_measurement'] instanceof \App\Models\BodyMeasurement) {
             $m = $metrics['latest_measurement'];
             $latestValue = $m->{$goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type};
         } else {
@@ -273,10 +269,10 @@ final class GoalService
      * Pre-calculate metrics required for checking multiple goals efficiently.
      *
      * @param  User  $user  The user to calculate metrics for.
-     * @param  Collection<int, Goal>  $goals  The goals that need metrics.
-     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: BodyMeasurement|null} A dictionary of pre-calculated metrics.
+     * @param  \Illuminate\Support\Collection<int, Goal>  $goals  The goals that need metrics.
+     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null} A dictionary of pre-calculated metrics.
      */
-    private function preCalculateMetrics(User $user, Collection $goals): array
+    private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
     {
         if ($goals->isEmpty()) {
             return [];
@@ -320,7 +316,7 @@ final class GoalService
     private function preCalculateMaxWeights(User $user, array $exerciseIds): array
     {
         /** @var array<int, float> $maxWeights */
-        $maxWeights = DB::table('workouts')
+        $maxWeights = \Illuminate\Support\Facades\DB::table('workouts')
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $user->id)
@@ -344,7 +340,7 @@ final class GoalService
     {
         // ⚡ Bolt Optimization: Calculate max volumes directly in SQL using a subquery instead of pulling all records into memory.
         // Impact: Prevents memory overflow and reduces execution time from O(N) to O(1) in PHP for users with many workouts.
-        $subQuery = DB::table('workouts')
+        $subQuery = \Illuminate\Support\Facades\DB::table('workouts')
             ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workouts.user_id', $user->id)
@@ -353,7 +349,7 @@ final class GoalService
             ->groupBy('workout_lines.exercise_id', 'workouts.id');
 
         /** @var array<int, float> $maxVolumes */
-        $maxVolumes = DB::query()
+        $maxVolumes = \Illuminate\Support\Facades\DB::query()
             ->fromSub($subQuery, 'volumes')
             ->selectRaw('exercise_id, MAX(total_volume) as max_volume')
             ->groupBy('exercise_id')

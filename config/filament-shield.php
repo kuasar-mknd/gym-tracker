@@ -1,11 +1,6 @@
 <?php
 
 declare(strict_types=1);
-use App\Models\Admin;
-use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
-use Filament\Pages\Dashboard;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 
 return [
 
@@ -56,7 +51,7 @@ return [
     |
     */
 
-    'auth_provider_model' => Admin::class,
+    'auth_provider_model' => \App\Models\Admin::class,
 
     /*
     |--------------------------------------------------------------------------
@@ -179,7 +174,7 @@ return [
     'resources' => [
         'subject' => 'model',
         'manage' => [
-            RoleResource::class => [
+            \BezhanSalleh\FilamentShield\Resources\Roles\RoleResource::class => [
                 'viewAny',
                 'view',
                 'create',
@@ -207,7 +202,7 @@ return [
         'subject' => 'class',
         'prefix' => 'view',
         'exclude' => [
-            Dashboard::class,
+            \Filament\Pages\Dashboard::class,
         ],
     ],
 
@@ -226,8 +221,8 @@ return [
         'subject' => 'class',
         'prefix' => 'view',
         'exclude' => [
-            AccountWidget::class,
-            FilamentInfoWidget::class,
+            \Filament\Widgets\AccountWidget::class,
+            \Filament\Widgets\FilamentInfoWidget::class,
         ],
     ],
 

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Security;
 
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -39,7 +38,7 @@ class WebRoutesSecurityTest extends TestCase
         // Mock manifest to avoid Inertia errors if build is missing
         $this->instance('vite.manifest', []);
 
-        $user = User::factory()->create();
+        $user = \App\Models\User::factory()->create();
 
         $routes = [
             route('supplements.index'),

@@ -7,7 +7,6 @@ namespace App\Filament\Resources\Supplements\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Tables\Columns\Column;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -28,7 +27,7 @@ class SupplementsTable
             ]);
     }
 
-    /** @return array<Column> */
+    /** @return array<\Filament\Tables\Columns\Column> */
     private static function getColumns(): array
     {
         return [

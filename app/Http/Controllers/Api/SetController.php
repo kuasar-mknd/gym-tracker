@@ -9,13 +9,8 @@ use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
-use App\Models\WorkoutLine;
 use App\Services\StatsService;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -44,9 +39,9 @@ class SetController extends Controller
      * Supports filtering by workout_line_id.
      *
      * @param  Request  $request  The incoming HTTP request.
-     * @return AnonymousResourceCollection A collection of set resources.
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection A collection of set resources.
      *
-     * @throws AuthorizationException If the user is not authorized.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Get(
         path: '/sets',
@@ -56,7 +51,7 @@ class SetController extends Controller
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     #[OA\Response(response: 403, description: 'Forbidden')]
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Set::class);
 
@@ -82,8 +77,8 @@ class SetController extends Controller
      * @param  StoreSetAction  $action  The action to execute the creation logic.
      * @return SetResource The created set resource.
      *
-     * @throws AuthorizationException If the user is not authorized.
-     * @throws ModelNotFoundException If the workout line is not found.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException If the workout line is not found.
      */
     #[OA\Post(
         path: '/sets',
@@ -98,9 +93,9 @@ class SetController extends Controller
     {
         /** @var array{workout_line_id: int} $validated */
         $validated = $request->validated();
-        $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
+        $workoutLine = \App\Models\WorkoutLine::findOrFail($validated['workout_line_id']);
 
-        $this->authorize('create', [Set::class, $workoutLine]);
+        $this->authorize('create', [\App\Models\Set::class, $workoutLine]);
 
         $set = $action->execute($this->user(), $validated);
 
@@ -115,7 +110,7 @@ class SetController extends Controller
      * @param  Set  $set  The set model instance.
      * @return SetResource The set resource.
      *
-     * @throws AuthorizationException If the user is not authorized to view the set.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view the set.
      */
     #[OA\Get(
         path: '/sets/{set}',
@@ -142,7 +137,7 @@ class SetController extends Controller
      * @param  Set  $set  The set model instance to update.
      * @return SetResource The updated set resource.
      *
-     * @throws AuthorizationException If the user is not authorized to update the set.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the set.
      */
     #[OA\Put(
         path: '/sets/{set}',
@@ -172,9 +167,9 @@ class SetController extends Controller
      * Deletes the set from the database and clears volume-related user statistics.
      *
      * @param  Set  $set  The set model instance to delete.
-     * @return Response An empty HTTP response.
+     * @return \Illuminate\Http\Response An empty HTTP response.
      *
-     * @throws AuthorizationException If the user is not authorized to delete the set.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the set.
      */
     #[OA\Delete(
         path: '/sets/{set}',
@@ -185,7 +180,7 @@ class SetController extends Controller
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     #[OA\Response(response: 403, description: 'Forbidden')]
     #[OA\Response(response: 404, description: 'Not found')]
-    public function destroy(Set $set): Response
+    public function destroy(Set $set): \Illuminate\Http\Response
     {
         $this->authorize('delete', $set);
 

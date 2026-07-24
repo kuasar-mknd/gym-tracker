@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\GoalType;
-use Database\Factories\GoalFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -23,16 +21,16 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property float $start_value
  * @property int|null $exercise_id
  * @property string|null $measurement_type
- * @property Carbon|null $deadline
- * @property Carbon|null $completed_at
+ * @property \Illuminate\Support\Carbon|null $deadline
+ * @property \Illuminate\Support\Carbon|null $completed_at
  * @property float $progress_pct
  * @property-read string $unit
- * @property-read User $user
- * @property-read Exercise|null $exercise
+ * @property-read \App\Models\User $user
+ * @property-read \App\Models\Exercise|null $exercise
  */
 class Goal extends Model
 {
-    /** @use HasFactory<GoalFactory> */
+    /** @use HasFactory<\Database\Factories\GoalFactory> */
     use HasFactory, LogsActivity;
 
     protected $fillable = [
@@ -49,7 +47,7 @@ class Goal extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
     public function user(): BelongsTo
     {
@@ -57,7 +55,7 @@ class Goal extends Model
     }
 
     /**
-     * @return BelongsTo<Exercise, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Exercise, $this>
      */
     public function exercise(): BelongsTo
     {

@@ -9,7 +9,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Plate>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Plate>
  */
 class PlateFactory extends Factory
 {

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\Achievement;
 use App\Models\User;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -30,10 +29,10 @@ test('authenticated user can view achievements page', function (): void {
     actingAs($user)
         ->get(route('achievements.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Achievements/Index')
             ->has('achievements', 2)
-            ->has('summary', fn (Assert $json): AssertableInertia => $json
+            ->has('summary', fn (Assert $json): \Inertia\Testing\AssertableInertia => $json
                 ->where('total', 2)
                 ->where('unlocked', 1)
             )
@@ -56,8 +55,8 @@ test('achievements list returns correct structure', function (): void {
     actingAs($user)
         ->get(route('achievements.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): AssertableInertia => $page
-            ->has('achievements.0', fn (Assert $json): AssertableInertia => $json
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
+            ->has('achievements.0', fn (Assert $json): \Inertia\Testing\AssertableInertia => $json
                 ->where('id', $achievement->id)
                 ->where('slug', $achievement->slug)
                 ->where('name', $achievement->name)
@@ -80,7 +79,7 @@ test('achievements are ordered or retrieved correctly', function (): void {
     actingAs($user)
         ->get(route('achievements.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->has('achievements', 5)
         );
 });

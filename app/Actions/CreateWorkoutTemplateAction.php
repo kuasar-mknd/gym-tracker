@@ -6,7 +6,6 @@ namespace App\Actions;
 
 use App\Models\User;
 use App\Models\WorkoutTemplate;
-use App\Models\WorkoutTemplateLine;
 use App\Traits\HandlesWorkoutTemplateSets;
 use Illuminate\Support\Facades\DB;
 
@@ -32,7 +31,7 @@ final class CreateWorkoutTemplateAction
      */
     public function execute(User $user, array $data): WorkoutTemplate
     {
-        return DB::transaction(function () use ($user, $data): WorkoutTemplate {
+        return DB::transaction(function () use ($user, $data): \App\Models\WorkoutTemplate {
             $template = new WorkoutTemplate([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
@@ -68,17 +67,17 @@ final class CreateWorkoutTemplateAction
             ];
         }
 
-        WorkoutTemplateLine::insert($linesData);
+        \App\Models\WorkoutTemplateLine::insert($linesData);
 
         // Fetch the generated lines to get their IDs
-        $lines = WorkoutTemplateLine::where('workout_template_id', $template->id)
+        $lines = \App\Models\WorkoutTemplateLine::where('workout_template_id', $template->id)
             ->orderBy('id')
             ->get();
 
         $setsData = [];
         foreach (collect($exercises)->values() as $index => $ex) {
             if (isset($ex['sets'])) {
-                /** @var WorkoutTemplateLine $line */
+                /** @var \App\Models\WorkoutTemplateLine $line */
                 $line = $lines[$index] ?? null;
 
                 if ($line !== null) {

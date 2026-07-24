@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Security;
 
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 use Tests\TestCase;
 
@@ -19,7 +18,7 @@ class PasswordPolicyTest extends TestCase
         // without reflection or resolving it, but we can test validation behavior.
 
         // This confirms that "password" (8 chars) passes in testing
-        $validator = Validator::make(
+        $validator = \Illuminate\Support\Facades\Validator::make(
             ['password' => 'password'],
             ['password' => Password::defaults()]
         );
@@ -27,7 +26,7 @@ class PasswordPolicyTest extends TestCase
         $this->assertTrue($validator->passes(), 'Default "password" should pass in testing environment');
 
         // This confirms that "short" (5 chars) fails
-        $validator = Validator::make(
+        $validator = \Illuminate\Support\Facades\Validator::make(
             ['password' => 'short'],
             ['password' => Password::defaults()]
         );

@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\AchievementFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
@@ -23,11 +21,11 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property string $type
  * @property float $threshold
  * @property string $category
- * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $users
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
  */
 class Achievement extends Model
 {
-    /** @use HasFactory<AchievementFactory> */
+    /** @use HasFactory<\Database\Factories\AchievementFactory> */
     use HasFactory, LogsActivity;
 
     protected $fillable = [
@@ -52,7 +50,7 @@ class Achievement extends Model
     }
 
     /**
-     * @return BelongsToMany<User, $this, Pivot, 'pivot'>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<\App\Models\User, $this, \Illuminate\Database\Eloquent\Relations\Pivot, 'pivot'>
      */
     public function users(): BelongsToMany
     {

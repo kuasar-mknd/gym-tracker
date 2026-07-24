@@ -7,7 +7,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SetStoreRequest;
 use App\Http\Requests\SetUpdateRequest;
 use App\Models\Set;
-use App\Models\User;
 use App\Models\WorkoutLine;
 use App\Services\StatsService;
 use Illuminate\Http\RedirectResponse;
@@ -34,7 +33,6 @@ class SetController extends Controller
 
         $workoutLine->sets()->create($request->validated());
 
-        /** @var User $user */
         $user = $this->user();
         // Bolt: Only clear volume-related stats for set additions
         $this->statsService->clearVolumeStats($user);
@@ -51,7 +49,6 @@ class SetController extends Controller
 
         $set->update($request->validated());
 
-        /** @var User $user */
         $user = $this->user();
         // Bolt: Only clear volume-related stats for set updates
         $this->statsService->clearVolumeStats($user);

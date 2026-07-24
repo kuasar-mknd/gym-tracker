@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\PlateFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Plate extends Model
 {
-    /** @use HasFactory<PlateFactory> */
+    /** @use HasFactory<\Database\Factories\PlateFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -23,7 +22,7 @@ class Plate extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
     public function user(): BelongsTo
     {

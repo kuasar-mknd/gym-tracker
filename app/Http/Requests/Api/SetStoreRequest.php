@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +20,7 @@ class SetStoreRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -30,9 +28,9 @@ class SetStoreRequest extends FormRequest
             'workout_line_id' => [
                 'required',
                 Rule::exists('workout_lines', 'id')->where(function ($query): void {
-                    /** @var Builder $query */
+                    /** @var \Illuminate\Database\Query\Builder $query */
                     $query->whereIn('workout_id', function ($q): void {
-                        /** @var Builder $q */
+                        /** @var \Illuminate\Database\Query\Builder $q */
                         $q->select('id')
                             ->from('workouts')
                             ->where('user_id', $this->user()?->id);

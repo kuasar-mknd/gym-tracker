@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\PersonalRecordType;
-use Database\Factories\PersonalRecordFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -20,15 +17,15 @@ use Illuminate\Support\Carbon;
  * @property float|null $secondary_value
  * @property int|null $workout_id
  * @property int|null $set_id
- * @property Carbon|null $achieved_at
- * @property-read User $user
- * @property-read Exercise $exercise
- * @property-read Workout|null $workout
- * @property-read Set|null $set
+ * @property \Illuminate\Support\Carbon|null $achieved_at
+ * @property-read \App\Models\User $user
+ * @property-read \App\Models\Exercise $exercise
+ * @property-read \App\Models\Workout|null $workout
+ * @property-read \App\Models\Set|null $set
  */
 class PersonalRecord extends Model
 {
-    /** @use HasFactory<PersonalRecordFactory> */
+    /** @use HasFactory<\Database\Factories\PersonalRecordFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -43,33 +40,33 @@ class PersonalRecord extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
-    public function user(): BelongsTo
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
     /**
-     * @return BelongsTo<Exercise, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Exercise, $this>
      */
-    public function exercise(): BelongsTo
+    public function exercise(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Exercise::class);
     }
 
     /**
-     * @return BelongsTo<Workout, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Workout, $this>
      */
-    public function workout(): BelongsTo
+    public function workout(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Workout::class);
     }
 
     /**
-     * @return BelongsTo<Set, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Set, $this>
      */
-    public function set(): BelongsTo
+    public function set(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Set::class);
     }

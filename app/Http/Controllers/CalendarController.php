@@ -7,11 +7,10 @@ namespace App\Http\Controllers;
 use App\Actions\Calendar\FetchCalendarEventsAction;
 use App\Http\Requests\CalendarIndexRequest;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class CalendarController extends Controller
 {
-    public function index(CalendarIndexRequest $request, FetchCalendarEventsAction $fetchCalendarEvents): Response
+    public function index(CalendarIndexRequest $request, FetchCalendarEventsAction $fetchCalendarEvents): \Inertia\Response
     {
         /** @var array{year?: int|string|null, month?: int|string|null} $validated */
         $validated = $request->validated();

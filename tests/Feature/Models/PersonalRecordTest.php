@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Models;
 
-use App\Models\Exercise;
-use App\Models\Set;
-use App\Models\User;
-use App\Models\Workout;
-use App\Models\WorkoutLine;
-use App\Services\PersonalRecordService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,12 +13,12 @@ class PersonalRecordTest extends TestCase
 
     public function test_logging_a_set_creates_personal_records(): void
     {
-        $user = User::factory()->create();
+        $user = \App\Models\User::factory()->create();
         $this->actingAs($user);
 
-        $exercise = Exercise::factory()->create();
-        $workout = Workout::factory()->create(['user_id' => $user->id]);
-        $workoutLine = WorkoutLine::factory()->create([
+        $exercise = \App\Models\Exercise::factory()->create();
+        $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id]);
+        $workoutLine = \App\Models\WorkoutLine::factory()->create([
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);
@@ -51,24 +45,24 @@ class PersonalRecordTest extends TestCase
 
     public function test_updating_a_set_updates_personal_record(): void
     {
-        $user = User::factory()->create();
+        $user = \App\Models\User::factory()->create();
         $this->actingAs($user);
 
-        $exercise = Exercise::factory()->create();
-        $workout = Workout::factory()->create(['user_id' => $user->id]);
-        $workoutLine = WorkoutLine::factory()->create([
+        $exercise = \App\Models\Exercise::factory()->create();
+        $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id]);
+        $workoutLine = \App\Models\WorkoutLine::factory()->create([
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);
 
-        $set = Set::factory()->create([
+        $set = \App\Models\Set::factory()->create([
             'workout_line_id' => $workoutLine->id,
             'reps' => 10,
             'weight' => 50,
         ]);
 
         // Manually trigger service since factory doesn't
-        (new PersonalRecordService())->syncSetPRs($set, $user);
+        (new \App\Services\PersonalRecordService())->syncSetPRs($set, $user);
 
         $this->patch(route('sets.update', $set), [
             'reps' => 10,
@@ -84,12 +78,12 @@ class PersonalRecordTest extends TestCase
 
     public function test_lower_weight_does_not_overwrite_pr(): void
     {
-        $user = User::factory()->create();
+        $user = \App\Models\User::factory()->create();
         $this->actingAs($user);
 
-        $exercise = Exercise::factory()->create();
-        $workout = Workout::factory()->create(['user_id' => $user->id]);
-        $workoutLine = WorkoutLine::factory()->create([
+        $exercise = \App\Models\Exercise::factory()->create();
+        $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id]);
+        $workoutLine = \App\Models\WorkoutLine::factory()->create([
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);
@@ -116,12 +110,12 @@ class PersonalRecordTest extends TestCase
 
     public function test_warmup_set_does_not_create_pr(): void
     {
-        $user = User::factory()->create();
+        $user = \App\Models\User::factory()->create();
         $this->actingAs($user);
 
-        $exercise = Exercise::factory()->create();
-        $workout = Workout::factory()->create(['user_id' => $user->id]);
-        $workoutLine = WorkoutLine::factory()->create([
+        $exercise = \App\Models\Exercise::factory()->create();
+        $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id]);
+        $workoutLine = \App\Models\WorkoutLine::factory()->create([
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);

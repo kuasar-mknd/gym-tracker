@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\WarmupPreference;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin WarmupPreference
+ * @mixin \App\Models\WarmupPreference
  */
 class WarmupPreferenceResource extends JsonResource
 {

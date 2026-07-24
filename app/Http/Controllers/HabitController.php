@@ -11,11 +11,8 @@ use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
 use App\Http\Requests\ToggleHabitRequest;
 use App\Models\Habit;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * Controller for managing User Habits.
@@ -32,11 +29,11 @@ class HabitController extends Controller
      * including their completion logs for the current week.
      * Also generates the dates for the current week to be displayed in the calendar view.
      *
-     * @param  Request  $request  The HTTP request.
-     * @param  FetchHabitsIndexAction  $fetchHabits  The action to fetch habits data.
-     * @return Response The Inertia response rendering the Habits/Index page.
+     * @param  \Illuminate\Http\Request  $request  The HTTP request.
+     * @param  \App\Actions\Habits\FetchHabitsIndexAction  $fetchHabits  The action to fetch habits data.
+     * @return \Inertia\Response The Inertia response rendering the Habits/Index page.
      */
-    public function index(Request $request, FetchHabitsIndexAction $fetchHabits): Response
+    public function index(Request $request, FetchHabitsIndexAction $fetchHabits): \Inertia\Response
     {
         $this->authorize('viewAny', Habit::class);
         $user = $this->user();
@@ -54,10 +51,10 @@ class HabitController extends Controller
      * Validates the input and creates a new habit for the authenticated user.
      * Sets default values for color and icon if they are not provided.
      *
-     * @param  HabitStoreRequest  $request  The validated request containing habit details.
-     * @return RedirectResponse Redirects back with a success message.
+     * @param  \App\Http\Requests\HabitStoreRequest  $request  The validated request containing habit details.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
      */
-    public function store(HabitStoreRequest $request, CreateHabitAction $createHabitAction): RedirectResponse
+    public function store(HabitStoreRequest $request, CreateHabitAction $createHabitAction): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', Habit::class);
 
@@ -73,11 +70,11 @@ class HabitController extends Controller
      * Updates the details of an existing habit.
      * Authorization is ensured by the HabitUpdateRequest.
      *
-     * @param  HabitUpdateRequest  $request  The validated request with updated details.
-     * @param  Habit  $habit  The habit to update.
-     * @return RedirectResponse Redirects back with a success message.
+     * @param  \App\Http\Requests\HabitUpdateRequest  $request  The validated request with updated details.
+     * @param  \App\Models\Habit  $habit  The habit to update.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
      */
-    public function update(HabitUpdateRequest $request, Habit $habit): RedirectResponse
+    public function update(HabitUpdateRequest $request, Habit $habit): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $habit);
 
@@ -91,12 +88,12 @@ class HabitController extends Controller
      *
      * Permanently deletes a habit. Ensures the user owns the habit.
      *
-     * @param  Habit  $habit  The habit to delete.
-     * @return RedirectResponse Redirects back with a success message.
+     * @param  \App\Models\Habit  $habit  The habit to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
      *
-     * @throws HttpException If the user is not authorized (403).
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
      */
-    public function destroy(Habit $habit): RedirectResponse
+    public function destroy(Habit $habit): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $habit);
 
@@ -112,14 +109,14 @@ class HabitController extends Controller
      * If no log exists, one is created (check).
      * Ensures the user owns the habit.
      *
-     * @param  ToggleHabitRequest  $request  The HTTP request containing the date.
-     * @param  Habit  $habit  The habit to toggle.
-     * @param  ToggleHabitAction  $toggleHabitAction  The action to toggle the habit.
-     * @return RedirectResponse Redirects back.
+     * @param  \App\Http\Requests\ToggleHabitRequest  $request  The HTTP request containing the date.
+     * @param  \App\Models\Habit  $habit  The habit to toggle.
+     * @param  \App\Actions\Habits\ToggleHabitAction  $toggleHabitAction  The action to toggle the habit.
+     * @return \Illuminate\Http\RedirectResponse Redirects back.
      *
-     * @throws HttpException If the user is not authorized (403).
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized (403).
      */
-    public function toggle(ToggleHabitRequest $request, Habit $habit, ToggleHabitAction $toggleHabitAction): RedirectResponse
+    public function toggle(ToggleHabitRequest $request, Habit $habit, ToggleHabitAction $toggleHabitAction): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $habit);
 

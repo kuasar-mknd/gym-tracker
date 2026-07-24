@@ -7,7 +7,6 @@ namespace App\Actions\Stats;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Services\StatsService;
-use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Action responsible for fetching the necessary data to render the stats overview dashboard.
@@ -20,7 +19,7 @@ class FetchStatsOverviewAction
     /**
      * Create a new FetchStatsOverviewAction instance.
      *
-     * @param  StatsService  $statsService  The underlying service for retrieving stats.
+     * @param  \App\Services\StatsService  $statsService  The underlying service for retrieving stats.
      */
     public function __construct(protected StatsService $statsService)
     {
@@ -32,7 +31,7 @@ class FetchStatsOverviewAction
      * This method fetches metrics that are fast to calculate, such as the user's
      * latest body measurements and cached exercise list.
      *
-     * @param  User  $user  The user to fetch stats for.
+     * @param  \App\Models\User  $user  The user to fetch stats for.
      * @param  string  $period  The requested time period (e.g., '30j').
      * @return array<string, mixed> An array of immediate statistics.
      */
@@ -72,9 +71,9 @@ class FetchStatsOverviewAction
      * Retrieve the list of available exercises for the user, usually cached.
      *
      * @param  int  $userId  The ID of the user.
-     * @return Collection<int, Exercise> A collection of exercises.
+     * @return \Illuminate\Database\Eloquent\Collection<int, Exercise> A collection of exercises.
      */
-    private function getFilteredExercises(int $userId): Collection
+    private function getFilteredExercises(int $userId): \Illuminate\Database\Eloquent\Collection
     {
         return Exercise::getCachedForUser($userId);
     }

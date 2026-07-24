@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\SupplementFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 class Supplement extends Model
 {
-    /** @use HasFactory<SupplementFactory> */
+    /** @use HasFactory<\Database\Factories\SupplementFactory> */
     use HasFactory;
 
     use LogsActivity;
@@ -31,7 +29,7 @@ class Supplement extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
     public function user(): BelongsTo
     {
@@ -39,7 +37,7 @@ class Supplement extends Model
     }
 
     /**
-     * @return HasMany<SupplementLog, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\SupplementLog, $this>
      */
     public function logs(): HasMany
     {
@@ -47,16 +45,16 @@ class Supplement extends Model
     }
 
     /**
-     * @return HasOne<SupplementLog, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<\App\Models\SupplementLog, $this>
      */
-    public function latestLog(): HasOne
+    public function latestLog(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(SupplementLog::class)->latestOfMany('consumed_at');
     }
 
     /**
-     * @param  Builder<$this>  $query
-     * @return Builder<$this>
+     * @param  \Illuminate\Database\Eloquent\Builder<$this>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<$this>
      */
     public function scopeForUser(Builder $query, int $userId): Builder
     {

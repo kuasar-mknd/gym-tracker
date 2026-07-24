@@ -156,7 +156,7 @@ it('rolls back transaction on error', function (): void {
 
     try {
         $action->execute($user, $data);
-    } catch (Exception) {
+    } catch (\Exception) {
         // Expected exception
     }
 

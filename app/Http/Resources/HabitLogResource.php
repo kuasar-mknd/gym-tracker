@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\HabitLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin HabitLog */
+/** @mixin \App\Models\HabitLog */
 class HabitLogResource extends JsonResource
 {
     /**

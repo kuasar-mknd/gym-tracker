@@ -7,10 +7,8 @@ namespace App\Http\Controllers;
 use App\Actions\Stats\GetStatsDashboardAction;
 use App\Models\Exercise;
 use App\Services\StatsService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
 
 /**
  * Controller for displaying user statistics dashboards.
@@ -23,7 +21,7 @@ class StatsController extends Controller
     /**
      * Create a new StatsController instance.
      *
-     * @param  StatsService  $statsService  Service for retrieving stats data.
+     * @param  \App\Services\StatsService  $statsService  Service for retrieving stats data.
      */
     public function __construct(protected StatsService $statsService)
     {
@@ -35,11 +33,11 @@ class StatsController extends Controller
      * Retrieves immediate data for fast initial rendering and uses Inertia's
      * deferred loading for heavier analytical queries (like trends and distributions).
      *
-     * @param  Request  $request  The incoming HTTP request.
-     * @param  GetStatsDashboardAction  $getStatsDashboard  Action to fetch overview stats.
-     * @return Response The Inertia response rendering the 'Stats/Index' page.
+     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
+     * @param  \App\Actions\Stats\GetStatsDashboardAction  $getStatsDashboard  Action to fetch overview stats.
+     * @return \Inertia\Response The Inertia response rendering the 'Stats/Index' page.
      */
-    public function index(Request $request, GetStatsDashboardAction $getStatsDashboard): Response
+    public function index(Request $request, GetStatsDashboardAction $getStatsDashboard): \Inertia\Response
     {
         $data = $getStatsDashboard->execute($this->user(), $request);
 
@@ -57,10 +55,10 @@ class StatsController extends Controller
     /**
      * Get 1RM (One Rep Max) progress for a specific exercise as JSON.
      *
-     * @param  Exercise  $exercise  The exercise to get progress for.
-     * @return JsonResponse JSON response containing the progress data.
+     * @param  \App\Models\Exercise  $exercise  The exercise to get progress for.
+     * @return \Illuminate\Http\JsonResponse JSON response containing the progress data.
      */
-    public function exercise(Exercise $exercise): JsonResponse
+    public function exercise(Exercise $exercise): \Illuminate\Http\JsonResponse
     {
         $this->authorize('view', $exercise);
 

@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\User;
-use App\Models\Workout;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Workout>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Workout>
  */
 class WorkoutFactory extends Factory
 {
@@ -21,7 +19,7 @@ class WorkoutFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'user_id' => \App\Models\User::factory(),
             'name' => 'Séance du '.$this->faker->date('d/m/Y'),
             'started_at' => now(),
         ];

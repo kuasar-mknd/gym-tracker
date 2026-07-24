@@ -10,10 +10,7 @@ use App\Http\Requests\Api\WorkoutLineUpdateRequest;
 use App\Http\Resources\WorkoutLineResource;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -30,12 +27,12 @@ class WorkoutLineController extends Controller
      *
      * Supports filtering by workout_id.
      *
-     * @param  Request  $request  The incoming HTTP request.
-     * @return AnonymousResourceCollection A collection of workout line resources.
+     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection A collection of workout line resources.
      *
-     * @throws AuthorizationException If the user is not authorized to view workout lines.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view workout lines.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', WorkoutLine::class);
 
@@ -57,18 +54,18 @@ class WorkoutLineController extends Controller
      * and delegates creation to the CreateWorkoutLineAction. Recommended values
      * are automatically appended to the response.
      *
-     * @param  WorkoutLineStoreRequest  $request  The validated store request containing exercise_id, workout_id, and order.
-     * @param  CreateWorkoutLineAction  $action  The action class responsible for creating the line.
-     * @return WorkoutLineResource The newly created workout line resource.
+     * @param  \App\Http\Requests\Api\WorkoutLineStoreRequest  $request  The validated store request containing exercise_id, workout_id, and order.
+     * @param  \App\Actions\Workouts\CreateWorkoutLineAction  $action  The action class responsible for creating the line.
+     * @return \App\Http\Resources\WorkoutLineResource The newly created workout line resource.
      *
-     * @throws ModelNotFoundException If the referenced workout does not exist.
-     * @throws AuthorizationException If the user is not authorized to add a line to the workout.
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException If the referenced workout does not exist.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to add a line to the workout.
      */
     public function store(WorkoutLineStoreRequest $request, CreateWorkoutLineAction $action): WorkoutLineResource
     {
         $validated = $request->validated();
 
-        /** @var Workout $workout */
+        /** @var \App\Models\Workout $workout */
         $workout = Workout::findOrFail($validated['workout_id']);
 
         $this->authorize('create', [WorkoutLine::class, $workout]);
@@ -88,10 +85,10 @@ class WorkoutLineController extends Controller
      *
      * Automatically appends recommended values based on user's past performance.
      *
-     * @param  WorkoutLine  $workoutLine  The workout line to display.
-     * @return WorkoutLineResource The requested workout line resource.
+     * @param  \App\Models\WorkoutLine  $workoutLine  The workout line to display.
+     * @return \App\Http\Resources\WorkoutLineResource The requested workout line resource.
      *
-     * @throws AuthorizationException If the user is not authorized to view the workout line.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view the workout line.
      */
     public function show(WorkoutLine $workoutLine): WorkoutLineResource
     {
@@ -109,11 +106,11 @@ class WorkoutLineController extends Controller
      * Allows updating the exercise or the order of the line. Recommended values
      * are automatically appended to the response.
      *
-     * @param  WorkoutLineUpdateRequest  $request  The validated update request.
-     * @param  WorkoutLine  $workoutLine  The workout line to update.
-     * @return WorkoutLineResource The updated workout line resource.
+     * @param  \App\Http\Requests\Api\WorkoutLineUpdateRequest  $request  The validated update request.
+     * @param  \App\Models\WorkoutLine  $workoutLine  The workout line to update.
+     * @return \App\Http\Resources\WorkoutLineResource The updated workout line resource.
      *
-     * @throws AuthorizationException If the user is not authorized to update the workout line.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the workout line.
      */
     public function update(WorkoutLineUpdateRequest $request, WorkoutLine $workoutLine): WorkoutLineResource
     {
@@ -130,10 +127,10 @@ class WorkoutLineController extends Controller
     /**
      * Remove the specified workout line from storage.
      *
-     * @param  WorkoutLine  $workoutLine  The workout line to delete.
-     * @return Response A 204 No Content response.
+     * @param  \App\Models\WorkoutLine  $workoutLine  The workout line to delete.
+     * @return \Illuminate\Http\Response A 204 No Content response.
      *
-     * @throws AuthorizationException If the user is not authorized to delete the workout line.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the workout line.
      */
     public function destroy(WorkoutLine $workoutLine): Response
     {

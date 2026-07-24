@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\Exercise;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,10 +13,10 @@ class WorkoutTemplateTest extends TestCase
 
     public function test_can_create_workout_template(): void
     {
-        $user = User::factory()->create();
+        $user = \App\Models\User::factory()->create();
         $this->actingAs($user);
 
-        $exercise = Exercise::factory()->create();
+        $exercise = \App\Models\Exercise::factory()->create();
 
         $response = $this->post(route('templates.store'), [
             'name' => 'Test Template',
@@ -42,10 +40,10 @@ class WorkoutTemplateTest extends TestCase
 
     public function test_can_execute_template_into_workout(): void
     {
-        $user = User::factory()->create();
+        $user = \App\Models\User::factory()->create();
         $this->actingAs($user);
 
-        $exercise = Exercise::factory()->create();
+        $exercise = \App\Models\Exercise::factory()->create();
         $template = $user->workoutTemplates()->create([
             'name' => 'Squat Day',
         ]);
@@ -62,10 +60,10 @@ class WorkoutTemplateTest extends TestCase
 
     public function test_can_save_workout_as_template(): void
     {
-        $user = User::factory()->create();
+        $user = \App\Models\User::factory()->create();
         $this->actingAs($user);
 
-        $exercise = Exercise::factory()->create();
+        $exercise = \App\Models\Exercise::factory()->create();
         $workout = $user->workouts()->create([
             'name' => 'My Real Workout',
             'started_at' => now(),
@@ -83,8 +81,8 @@ class WorkoutTemplateTest extends TestCase
 
     public function test_cannot_access_others_templates(): void
     {
-        $user1 = User::factory()->create();
-        $user2 = User::factory()->create();
+        $user1 = \App\Models\User::factory()->create();
+        $user2 = \App\Models\User::factory()->create();
 
         $template = $user1->workoutTemplates()->create([
             'name' => 'User 1 Template',

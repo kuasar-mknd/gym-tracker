@@ -6,19 +6,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $user_id
- * @property Carbon $measured_at
+ * @property \Illuminate\Support\Carbon $measured_at
  * @property string|null $notes
- * @property-read User $user
+ * @property-read \App\Models\User $user
  */
 abstract class BaseMeasurement extends Model
 {
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
     public function user(): BelongsTo
     {

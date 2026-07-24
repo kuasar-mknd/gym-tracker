@@ -15,13 +15,13 @@ class FetchExerciseHistoryAction
     use CalculatesOneRepMax;
 
     /**
-     * @return Collection<int, array{
+     * @return \Illuminate\Support\Collection<int, array{
      *     id: int,
      *     workout_id: int,
      *     workout_name: string,
      *     formatted_date: string,
      *     best_1rm: float,
-     *     sets: Collection<int, array<string, mixed>>
+     *     sets: \Illuminate\Support\Collection<int, array<string, mixed>>
      * }>
      */
     public function execute(User $user, Exercise $exercise): Collection

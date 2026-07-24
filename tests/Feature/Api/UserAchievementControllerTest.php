@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\Achievement;
 use App\Models\User;
 use App\Models\UserAchievement;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\deleteJson;
@@ -13,7 +12,7 @@ use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
-uses(RefreshDatabase::class);
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 describe('UserAchievement API', function (): void {
     beforeEach(function (): void {

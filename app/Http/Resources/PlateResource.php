@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\Plate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin Plate */
+/** @mixin \App\Models\Plate */
 class PlateResource extends JsonResource
 {
     /**

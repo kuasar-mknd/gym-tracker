@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Enums\PersonalRecordType;
 use App\Models\PersonalRecord;
-use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Carbon;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
@@ -29,7 +26,7 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        /** @var User $_notifiable */
+        /** @var \App\Models\User $_notifiable */
         if ($_notifiable->isPushEnabled('personal_record')) {
             $channels[] = WebPushChannel::class;
         }
@@ -51,14 +48,14 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array<string, Carbon|int|string|bool|float|array<int, mixed>|null>
+     * @return array<string, \Illuminate\Support\Carbon|int|string|bool|float|array<int, mixed>|null>
      */
     public function toArray(object $_notifiable): array
     {
         $typeLabel = match ($this->personalRecord->type) {
-            PersonalRecordType::MaxWeight => 'Poids Maximum',
-            PersonalRecordType::Max1RM => '1RM Estimé',
-            PersonalRecordType::MaxVolumeSet => 'Volume par Série',
+            \App\Enums\PersonalRecordType::MaxWeight => 'Poids Maximum',
+            \App\Enums\PersonalRecordType::Max1RM => '1RM Estimé',
+            \App\Enums\PersonalRecordType::MaxVolumeSet => 'Volume par Série',
             default => 'Record Personnel',
         };
 

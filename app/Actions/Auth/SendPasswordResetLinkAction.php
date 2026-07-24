@@ -14,7 +14,7 @@ class SendPasswordResetLinkAction
      *
      * @param  array<string, mixed>  $data
      *
-     * @throws ValidationException
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function execute(array $data): string
     {

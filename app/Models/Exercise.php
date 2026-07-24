@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ExerciseCategory;
-use Database\Factories\ExerciseFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -23,30 +20,30 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property string $type
  * @property ExerciseCategory $category
  * @property int|null $default_rest_time
- * @property-read Collection<int, WorkoutLine> $workoutLines
- * @property-read User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkoutLine> $workoutLines
+ * @property-read \App\Models\User|null $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder|Exercise forUser(int $userId)
  */
 class Exercise extends Model
 {
-    /** @use HasFactory<ExerciseFactory> */
+    /** @use HasFactory<\Database\Factories\ExerciseFactory> */
     use HasFactory, LogsActivity;
 
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
 
     /**
-     * @return HasMany<WorkoutLine, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutLine, $this>
      */
-    public function workoutLines(): HasMany
+    public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(WorkoutLine::class);
     }
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
-    public function user(): BelongsTo
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class);
     }
@@ -55,8 +52,8 @@ class Exercise extends Model
      * Scope the query to include system exercises and exercises owned by the given user.
      */
     /**
-     * @param  Builder<$this>  $query
-     * @return Builder<$this>
+     * @param  \Illuminate\Database\Eloquent\Builder<$this>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<$this>
      */
     public function scopeForUser(Builder $query, int $userId): Builder
     {

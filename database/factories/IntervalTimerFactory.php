@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\IntervalTimer;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<IntervalTimer>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\IntervalTimer>
  */
 class IntervalTimerFactory extends Factory
 {

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Enums\ExerciseCategory;
-use App\Models\Exercise;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,13 +14,13 @@ class ExerciseStoreRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('create', Exercise::class) ?? false;
+        return $this->user()?->can('create', \App\Models\Exercise::class) ?? false;
     }
 
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -38,7 +35,7 @@ class ExerciseStoreRequest extends FormRequest
                 })),
             ],
             'type' => ['required', Rule::in(['strength', 'cardio', 'timed'])],
-            'category' => ['nullable', Rule::enum(ExerciseCategory::class)],
+            'category' => ['nullable', Rule::enum(\App\Enums\ExerciseCategory::class)],
         ];
     }
 

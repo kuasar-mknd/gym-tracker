@@ -9,7 +9,6 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use App\Notifications\AchievementUnlocked;
 use App\Services\AchievementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -44,7 +43,7 @@ test('it awards count achievement', function (): void {
 
     Notification::assertSentTo(
         $user,
-        AchievementUnlocked::class,
+        \App\Notifications\AchievementUnlocked::class,
         fn ($notification): bool => $notification->achievement->id === $achievement->id
     );
 });
@@ -212,7 +211,7 @@ test('it does not duplicate achievement assignments', function (): void {
     $this->service->syncAchievements($user);
     $this->assertEquals(1, $user->achievements()->count());
 
-    Notification::assertSentTimes(AchievementUnlocked::class, 1);
+    Notification::assertSentTimes(\App\Notifications\AchievementUnlocked::class, 1);
 });
 
 test('it awards multiple achievements at once', function (): void {
@@ -250,5 +249,5 @@ test('it awards multiple achievements at once', function (): void {
         'achievement_id' => $achievement2->id,
     ]);
 
-    Notification::assertSentTimes(AchievementUnlocked::class, 2);
+    Notification::assertSentTimes(\App\Notifications\AchievementUnlocked::class, 2);
 });

@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\Supplement;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin Supplement */
+/** @mixin \App\Models\Supplement */
 class SupplementResource extends JsonResource
 {
     /**

@@ -9,10 +9,8 @@ use App\Http\Requests\Api\DailyJournalStoreRequest;
 use App\Http\Requests\DailyJournalUpdateRequest;
 use App\Http\Resources\DailyJournalResource;
 use App\Models\DailyJournal;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 
 /**
@@ -29,7 +27,7 @@ class DailyJournalController extends Controller
      * @param  Request  $request  The incoming request.
      * @return AnonymousResourceCollection A paginated collection of daily journals.
      *
-     * @throws AuthorizationException If the user is not authorized.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Get(
         path: '/api/v1/daily-journals',
@@ -79,7 +77,7 @@ class DailyJournalController extends Controller
      * @param  DailyJournalStoreRequest  $request  The validated request data.
      * @return DailyJournalResource The created daily journal resource.
      *
-     * @throws AuthorizationException If the user is not authorized.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Post(
         path: '/api/v1/daily-journals',
@@ -125,7 +123,7 @@ class DailyJournalController extends Controller
      * @param  DailyJournal  $dailyJournal  The daily journal to display.
      * @return DailyJournalResource The daily journal resource.
      *
-     * @throws AuthorizationException If the user is not authorized.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Get(
         path: '/api/v1/daily-journals/{id}',
@@ -169,7 +167,7 @@ class DailyJournalController extends Controller
      * @param  DailyJournal  $dailyJournal  The daily journal to update.
      * @return DailyJournalResource The updated daily journal resource.
      *
-     * @throws AuthorizationException If the user is not authorized.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Put(
         path: '/api/v1/daily-journals/{id}',
@@ -220,9 +218,9 @@ class DailyJournalController extends Controller
      * Remove the specified daily journal from storage.
      *
      * @param  DailyJournal  $dailyJournal  The daily journal to delete.
-     * @return Response A no-content response.
+     * @return \Illuminate\Http\Response A no-content response.
      *
-     * @throws AuthorizationException If the user is not authorized.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Delete(
         path: '/api/v1/daily-journals/{id}',
@@ -252,7 +250,7 @@ class DailyJournalController extends Controller
         response: 404,
         description: 'Journal not found'
     )]
-    public function destroy(DailyJournal $dailyJournal): Response
+    public function destroy(DailyJournal $dailyJournal): \Illuminate\Http\Response
     {
         $this->authorize('delete', $dailyJournal);
 

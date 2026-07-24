@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -26,7 +25,7 @@ test('users can only see system exercises and their own custom exercises in stat
     actingAs($userA)
         ->get(route('stats.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Stats/Index')
             ->has('exercises', 2) // Should only have System + User A
             ->where('exercises.0.name', 'System Exercise') // Assuming order by name
@@ -52,7 +51,7 @@ test('users can only see system exercises and their own custom exercises in work
     actingAs($userA)
         ->get(route('workouts.show', $workout))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Workouts/Show')
             ->has('exercises', 2) // Should only have System + User A
             ->where('exercises.0.name', 'System Exercise')

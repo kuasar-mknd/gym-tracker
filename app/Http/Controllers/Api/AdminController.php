@@ -10,7 +10,6 @@ use App\Http\Requests\UpdateAdminRequest;
 use App\Http\Resources\AdminResource;
 use App\Models\Admin;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -20,7 +19,7 @@ class AdminController extends Controller implements HasMiddleware
     /**
      * Get the middleware that should be assigned to the controller.
      *
-     * @return array<int, Middleware|string>
+     * @return array<int, \Illuminate\Routing\Controllers\Middleware|string>
      */
     public static function middleware(): array
     {
@@ -84,7 +83,7 @@ class AdminController extends Controller implements HasMiddleware
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Admin $admin): Response
+    public function destroy(Admin $admin): \Illuminate\Http\Response
     {
         $this->authorize('delete', $admin);
 

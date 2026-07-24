@@ -7,7 +7,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreIntervalTimerRequest;
 use App\Http\Requests\UpdateIntervalTimerRequest;
 use App\Models\IntervalTimer;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,9 +22,9 @@ class IntervalTimerController extends Controller
     /**
      * Display a listing of the user's interval timers.
      *
-     * @return Response The Inertia response rendering the 'Tools/IntervalTimer' page.
+     * @return \Inertia\Response The Inertia response rendering the 'Tools/IntervalTimer' page.
      *
-     * @throws AuthorizationException If the user is not authorized.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     public function index(): Response
     {
@@ -39,10 +38,10 @@ class IntervalTimerController extends Controller
     /**
      * Store a newly created interval timer in storage.
      *
-     * @param  StoreIntervalTimerRequest  $request  The validated HTTP request containing the timer details.
-     * @return RedirectResponse A redirect response to the timer index page.
+     * @param  \App\Http\Requests\StoreIntervalTimerRequest  $request  The validated HTTP request containing the timer details.
+     * @return \Illuminate\Http\RedirectResponse A redirect response to the timer index page.
      *
-     * @throws AuthorizationException If the user is not authorized to create a timer.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a timer.
      */
     public function store(StoreIntervalTimerRequest $request): RedirectResponse
     {
@@ -59,11 +58,11 @@ class IntervalTimerController extends Controller
     /**
      * Update the specified interval timer in storage.
      *
-     * @param  UpdateIntervalTimerRequest  $request  The validated HTTP request with updated timer data.
-     * @param  IntervalTimer  $intervalTimer  The timer instance to update.
-     * @return RedirectResponse A redirect response to the timer index page.
+     * @param  \App\Http\Requests\UpdateIntervalTimerRequest  $request  The validated HTTP request with updated timer data.
+     * @param  \App\Models\IntervalTimer  $intervalTimer  The timer instance to update.
+     * @return \Illuminate\Http\RedirectResponse A redirect response to the timer index page.
      *
-     * @throws AuthorizationException If the user is not authorized to update this timer.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update this timer.
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): RedirectResponse
     {
@@ -80,10 +79,10 @@ class IntervalTimerController extends Controller
     /**
      * Remove the specified interval timer from storage.
      *
-     * @param  IntervalTimer  $intervalTimer  The timer instance to delete.
-     * @return RedirectResponse A redirect response to the timer index page.
+     * @param  \App\Models\IntervalTimer  $intervalTimer  The timer instance to delete.
+     * @return \Illuminate\Http\RedirectResponse A redirect response to the timer index page.
      *
-     * @throws AuthorizationException If the user is not authorized to delete this timer.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete this timer.
      */
     public function destroy(IntervalTimer $intervalTimer): RedirectResponse
     {

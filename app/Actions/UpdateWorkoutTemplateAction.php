@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Models\WorkoutTemplate;
-use App\Models\WorkoutTemplateLine;
-use App\Models\WorkoutTemplateSet;
 use App\Traits\HandlesWorkoutTemplateSets;
 use Illuminate\Support\Facades\DB;
 
@@ -32,7 +30,7 @@ final class UpdateWorkoutTemplateAction
      */
     public function execute(WorkoutTemplate $template, array $data): WorkoutTemplate
     {
-        return DB::transaction(function () use ($template, $data): WorkoutTemplate {
+        return DB::transaction(function () use ($template, $data): \App\Models\WorkoutTemplate {
             $template->update([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? $template->description,
@@ -71,17 +69,17 @@ final class UpdateWorkoutTemplateAction
             ];
         }
 
-        WorkoutTemplateLine::insert($linesData);
+        \App\Models\WorkoutTemplateLine::insert($linesData);
 
         // Fetch the generated lines to get their IDs
-        $lines = WorkoutTemplateLine::where('workout_template_id', $template->id)
+        $lines = \App\Models\WorkoutTemplateLine::where('workout_template_id', $template->id)
             ->orderBy('order')
             ->get();
 
         $setsData = [];
         foreach ($exercises as $index => $ex) {
             if (isset($ex['sets'])) {
-                /** @var WorkoutTemplateLine $line */
+                /** @var \App\Models\WorkoutTemplateLine $line */
                 $line = $lines[$index] ?? null;
 
                 if ($line !== null) {
@@ -97,7 +95,7 @@ final class UpdateWorkoutTemplateAction
     {
         $lineIds = $template->workoutTemplateLines()->pluck('id');
         if ($lineIds->isNotEmpty()) {
-            WorkoutTemplateSet::whereIn('workout_template_line_id', $lineIds)->delete();
+            \App\Models\WorkoutTemplateSet::whereIn('workout_template_line_id', $lineIds)->delete();
             $template->workoutTemplateLines()->delete();
         }
     }

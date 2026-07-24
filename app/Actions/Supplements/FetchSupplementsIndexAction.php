@@ -13,7 +13,7 @@ final class FetchSupplementsIndexAction
 {
     /**
      * @return array{
-     *     supplements: Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: null}>,
+     *     supplements: Collection<int, array{id: int, name: string, icon: 'heroicon-o-beaker', current_log: float, unit: 'servings', daily_goal: null}>,
      *     usageHistory: array<int, array{date: string, count: float}>
      * }
      */
@@ -28,7 +28,7 @@ final class FetchSupplementsIndexAction
     /**
      * Retrieve supplements with their latest log status.
      *
-     * @return Collection<int, array{id: int, name: string, icon: string, current_log: float, unit: string, daily_goal: null}>
+     * @return Collection<int, array{id: int, name: string, icon: 'heroicon-o-beaker', current_log: float, unit: 'servings', daily_goal: null}>
      */
     private function getSupplementsWithLatestLog(User $user): Collection
     {

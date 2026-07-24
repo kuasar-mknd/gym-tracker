@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\MacroCalculation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<MacroCalculation>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\MacroCalculation>
  */
 class MacroCalculationFactory extends Factory
 {

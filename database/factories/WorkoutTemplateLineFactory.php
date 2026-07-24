@@ -6,11 +6,10 @@ namespace Database\Factories;
 
 use App\Models\Exercise;
 use App\Models\WorkoutTemplate;
-use App\Models\WorkoutTemplateLine;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<WorkoutTemplateLine>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\WorkoutTemplateLine>
  */
 class WorkoutTemplateLineFactory extends Factory
 {

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
 
@@ -29,7 +28,7 @@ final class HabitLogPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user, ?Habit $habit = null): bool
+    public function create(User $user, ?\App\Models\Habit $habit = null): bool
     {
         if ($habit === null) {
             return true;

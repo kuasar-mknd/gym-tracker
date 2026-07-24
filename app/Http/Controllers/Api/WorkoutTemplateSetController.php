@@ -12,7 +12,6 @@ use App\Http\Resources\WorkoutTemplateSetResource;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -21,7 +20,7 @@ class WorkoutTemplateSetController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', WorkoutTemplateSet::class);
 
@@ -45,7 +44,7 @@ class WorkoutTemplateSetController extends Controller
         /** @var array{workout_template_line_id: int, reps?: int|null, weight?: float|null, is_warmup: bool, order?: int|null} $validated */
         $validated = $request->validated();
 
-        /** @var WorkoutTemplateLine $workoutTemplateLine */
+        /** @var \App\Models\WorkoutTemplateLine $workoutTemplateLine */
         $workoutTemplateLine = WorkoutTemplateLine::findOrFail($validated['workout_template_line_id']);
 
         $this->authorize('create', [WorkoutTemplateSet::class, $workoutTemplateLine]);

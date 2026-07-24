@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Actions\Profile;
 
-use App\Models\NotificationPreference;
 use App\Models\User;
 
 class UpdateNotificationPreferencesAction
@@ -31,7 +30,7 @@ class UpdateNotificationPreferencesAction
         }
 
         if ($upsertData !== []) {
-            NotificationPreference::upsert(
+            \App\Models\NotificationPreference::upsert(
                 $upsertData,
                 ['user_id', 'type'],
                 ['is_enabled', 'is_push_enabled', 'value']

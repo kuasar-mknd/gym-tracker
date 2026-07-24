@@ -4,24 +4,20 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\WorkoutTemplateFactory;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
  * @property int $user_id
  * @property string $name
  * @property string|null $description
- * @property-read User $user
- * @property-read Collection<int, WorkoutTemplateLine> $workoutTemplateLines
+ * @property-read \App\Models\User $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkoutTemplateLine> $workoutTemplateLines
  */
 class WorkoutTemplate extends Model
 {
-    /** @use HasFactory<WorkoutTemplateFactory> */
+    /** @use HasFactory<\Database\Factories\WorkoutTemplateFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -30,17 +26,17 @@ class WorkoutTemplate extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
-    public function user(): BelongsTo
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
     /**
-     * @return HasMany<WorkoutTemplateLine, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutTemplateLine, $this>
      */
-    public function workoutTemplateLines(): HasMany
+    public function workoutTemplateLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(WorkoutTemplateLine::class);
     }

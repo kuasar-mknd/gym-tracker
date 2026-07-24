@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Validation\Validator;
 
 class DeleteUserRequest extends FormRequest
 {
@@ -23,7 +21,7 @@ class DeleteUserRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -32,9 +30,9 @@ class DeleteUserRequest extends FormRequest
         ];
     }
 
-    public function withValidator(Validator $validator): void
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
-        $validator->after(function (Validator $validator): void {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
             if ($validator->errors()->has('password')) {
                 $this->hitRateLimiter();
             }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\Exercise;
-use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
@@ -15,7 +14,7 @@ final class ExercisePolicy
 
     public function viewAny(AuthUser $authUser): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return true;
         }
 
@@ -24,7 +23,7 @@ final class ExercisePolicy
 
     public function view(AuthUser $authUser, Exercise $exercise): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return $exercise->user_id === null || $authUser->id === $exercise->user_id;
         }
 
@@ -33,7 +32,7 @@ final class ExercisePolicy
 
     public function create(AuthUser $authUser): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return true;
         }
 
@@ -42,7 +41,7 @@ final class ExercisePolicy
 
     public function update(AuthUser $authUser, Exercise $exercise): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return $authUser->id === $exercise->user_id;
         }
 
@@ -51,7 +50,7 @@ final class ExercisePolicy
 
     public function delete(AuthUser $authUser, Exercise $exercise): bool
     {
-        if ($authUser instanceof User) {
+        if ($authUser instanceof \App\Models\User) {
             return $authUser->id === $exercise->user_id;
         }
 

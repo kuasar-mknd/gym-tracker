@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Habits;
 
-use App\Models\Habit;
-use App\Models\HabitLog;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
 
 final class FetchHabitsIndexAction
 {
@@ -17,7 +14,7 @@ final class FetchHabitsIndexAction
      * ⚡ Bolt: Fast queries only.
      *
      * @return array{
-     *     habits: Collection<int, Habit>,
+     *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
      *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
      * }
      */
@@ -56,7 +53,7 @@ final class FetchHabitsIndexAction
         $now = Carbon::now();
         $past30Days = $now->copy()->subDays(29)->startOfDay();
 
-        $consistencyStats = HabitLog::query()
+        $consistencyStats = \App\Models\HabitLog::query()
             ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
             ->where('habits.user_id', $user->id)
             ->where('habit_logs.date', '>=', $past30Days)
@@ -97,7 +94,7 @@ final class FetchHabitsIndexAction
      * Legacy method for backward compatibility if needed, but should be replaced by deferred loading.
      *
      * @return array{
-     *     habits: Collection<int, Habit>,
+     *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
      *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>,
      *     consistencyData: array<int, array{date: string, count: int}>,
      *     history: array<int, array{date: string, full_date: string, count: int}>

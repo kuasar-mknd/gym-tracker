@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\assertDatabaseHas;
@@ -15,7 +14,7 @@ use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
-uses(RefreshDatabase::class);
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 describe('Habits API', function (): void {
     beforeEach(function (): void {

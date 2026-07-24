@@ -3,9 +3,8 @@
 use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(RefreshDatabase::class);
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();

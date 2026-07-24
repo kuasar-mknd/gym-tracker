@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Models\User;
-use App\Models\WarmupPreference;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<WarmupPreference>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\WarmupPreference>
  */
 class WarmupPreferenceFactory extends Factory
 {

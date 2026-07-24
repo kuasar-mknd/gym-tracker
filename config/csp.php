@@ -1,8 +1,6 @@
 <?php
 
 declare(strict_types=1);
-use App\Support\Csp\Nonce\ViteNonceGenerator;
-use App\Support\Csp\Policies\CustomPolicy;
 
 // use Spatie\Csp\Directive;
 // use Spatie\Csp\Keyword;
@@ -14,7 +12,7 @@ return [
      * any class that implements `Spatie\Csp\Preset`
      */
     'presets' => [
-        CustomPolicy::class,
+        \App\Support\Csp\Policies\CustomPolicy::class,
     ],
 
     /**
@@ -58,7 +56,7 @@ return [
     /*
      * The class responsible for generating the nonces used in inline tags and headers.
      */
-    'nonce_generator' => ViteNonceGenerator::class,
+    'nonce_generator' => \App\Support\Csp\Nonce\ViteNonceGenerator::class,
 
     /*
      * Set false to disable automatic nonce generation and handling.

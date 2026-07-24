@@ -8,7 +8,6 @@ use App\Models\Achievement;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Notifications\AchievementUnlocked;
-use Database\Seeders\AchievementSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -21,7 +20,7 @@ class AchievementTest extends TestCase
     {
         parent::setUp();
         // Seed achievements
-        $this->seed(AchievementSeeder::class);
+        $this->seed(\Database\Seeders\AchievementSeeder::class);
     }
 
     public function test_awards_first_workout_badge(): void

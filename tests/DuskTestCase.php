@@ -10,7 +10,6 @@ use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Illuminate\Support\Collection;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
-use PHPUnit\Framework\Assert;
 
 abstract class DuskTestCase extends BaseTestCase
 {
@@ -45,7 +44,7 @@ abstract class DuskTestCase extends BaseTestCase
                     ! str_contains((string) ($log['message'] ?? ''), 'navigator.vibrate')
             );
 
-            Assert::assertTrue(
+            \PHPUnit\Framework\Assert::assertTrue(
                 $failures->isEmpty(),
                 "Console exceptions found:\n".$failures->implode('message', "\n")
             );

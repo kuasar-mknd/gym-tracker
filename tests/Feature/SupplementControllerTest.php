@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\Supplement;
 use App\Models\User;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -20,7 +19,7 @@ test('authenticated user can view supplements page', function (): void {
     actingAs($user)
         ->get(route('supplements.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page): AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Supplements/Index')
             ->has('supplements', 3)
             ->has('usageHistory')

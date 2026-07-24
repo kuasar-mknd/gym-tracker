@@ -7,7 +7,6 @@ namespace App\Filament\Resources\Users\Schemas;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
-use Illuminate\Contracts\Support\Htmlable;
 
 class UserForm
 {
@@ -17,7 +16,7 @@ class UserForm
             ->components(self::getComponents());
     }
 
-    /** @return array<int, Htmlable|string> */
+    /** @return array<int, \Illuminate\Contracts\Support\Htmlable|string> */
     private static function getComponents(): array
     {
         return [

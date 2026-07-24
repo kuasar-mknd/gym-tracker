@@ -8,7 +8,6 @@ use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Action class responsible for preparing the data necessary to display a specific workout.
@@ -21,11 +20,11 @@ class FetchWorkoutShowAction
     /**
      * Prepare the data required for the workout show view.
      *
-     * @param  User  $user  The authenticated user viewing the workout.
-     * @param  Workout  $workout  The workout to be displayed.
+     * @param  \App\Models\User  $user  The authenticated user viewing the workout.
+     * @param  \App\Models\Workout  $workout  The workout to be displayed.
      * @return array{
-     *     workout: Workout,
-     *     exercises: Collection<int, Exercise>|array<int, Exercise>
+     *     workout: \App\Models\Workout,
+     *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>|array<int, \App\Models\Exercise>
      * }
      */
     public function execute(User $user, Workout $workout): array

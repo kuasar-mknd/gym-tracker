@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\Models\Achievement;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,11 +20,11 @@ class UpdateAchievementRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        /** @var Achievement $achievement */
+        /** @var \App\Models\Achievement $achievement */
         $achievement = $this->route('achievement');
 
         return [

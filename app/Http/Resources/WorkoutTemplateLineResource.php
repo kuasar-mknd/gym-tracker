@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\WorkoutTemplateLine;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin WorkoutTemplateLine */
+/** @mixin \App\Models\WorkoutTemplateLine */
 class WorkoutTemplateLineResource extends JsonResource
 {
     /**

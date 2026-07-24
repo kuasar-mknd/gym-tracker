@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\IntervalTimer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
@@ -21,7 +20,7 @@ describe('IntervalTimerController', function (): void {
             $this->actingAs($user)
                 ->get(route('tools.interval-timer.index'))
                 ->assertOk()
-                ->assertInertia(fn (Assert $page): AssertableInertia => $page
+                ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                     ->component('Tools/IntervalTimer')
                     ->has('timers', 3)
                 );

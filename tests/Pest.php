@@ -2,14 +2,12 @@
 
 declare(strict_types=1);
 
-use Illuminate\Foundation\Testing\DatabaseTruncation;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\DuskTestCase;
-use Tests\TestCase;
-
-pest()->extend(DuskTestCase::class)
-    ->use(DatabaseTruncation::class)
+pest()->extend(Tests\DuskTestCase::class)
+    ->use(Illuminate\Foundation\Testing\DatabaseTruncation::class)
     ->in('Browser');
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 /*
 |--------------------------------------------------------------------------

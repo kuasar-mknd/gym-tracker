@@ -18,7 +18,7 @@ it('renders the index page for authenticated user', function (): void {
     actingAs($user)
         ->get(route('habits.index'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+        ->assertInertia(fn (AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Habits/Index')
             ->has('habits')
             ->has('weekDates')

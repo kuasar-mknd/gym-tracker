@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\WilksScore;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin WilksScore */
+/** @mixin \App\Models\WilksScore */
 class WilksScoreResource extends JsonResource
 {
     /**

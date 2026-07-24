@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\NotificationPreference;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<NotificationPreference>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\NotificationPreference>
  */
 class NotificationPreferenceFactory extends Factory
 {
@@ -21,7 +19,7 @@ class NotificationPreferenceFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'user_id' => \App\Models\User::factory(),
             'type' => $this->faker->unique()->word,
             'value' => $this->faker->numberBetween(1, 100),
             'is_enabled' => $this->faker->boolean,

@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\StatsService;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -70,7 +69,7 @@ class StatsServiceTest extends TestCase
 
     public function test_can_calculate_monthly_volume_comparison(): void
     {
-        Carbon::setTestNow('2024-03-15 12:00:00');
+        \Carbon\Carbon::setTestNow('2024-03-15 12:00:00');
         $user = User::factory()->create();
 
         // Current month workout (March)
@@ -96,7 +95,7 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(100, $comparison->difference);
         $this->assertEquals(25.0, $comparison->percentage);
 
-        Carbon::setTestNow();
+        \Carbon\Carbon::setTestNow();
     }
 
     public function test_can_calculate_weekly_volume_trend(): void

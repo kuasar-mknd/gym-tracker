@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 use App\Models\Admin;
 use App\Models\User;
-use Spatie\Permission\Models\Role;
 
 it('redirects unauthenticated users to login', function (): void {
     $this->get('/backoffice')->assertRedirect('/backoffice/login');
 });
 
 it('allows authenticated admin to access dashboard', function (): void {
-    Role::create(['name' => 'super_admin', 'guard_name' => 'admin']);
+    \Spatie\Permission\Models\Role::create(['name' => 'super_admin', 'guard_name' => 'admin']);
     $admin = Admin::factory()->create();
     $admin->assignRole('super_admin');
 

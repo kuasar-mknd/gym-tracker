@@ -1,8 +1,6 @@
 <?php
 
 declare(strict_types=1);
-use App\Models\Admin;
-use App\Models\User;
 
 return [
 
@@ -71,12 +69,12 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', User::class),
+            'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
 
         'admins' => [
             'driver' => 'eloquent',
-            'model' => Admin::class,
+            'model' => App\Models\Admin::class,
         ],
 
         // 'users' => [

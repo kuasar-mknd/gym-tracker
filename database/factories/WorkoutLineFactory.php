@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\Exercise;
-use App\Models\Workout;
-use App\Models\WorkoutLine;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<WorkoutLine>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\WorkoutLine>
  */
 class WorkoutLineFactory extends Factory
 {
@@ -22,8 +19,8 @@ class WorkoutLineFactory extends Factory
     public function definition(): array
     {
         return [
-            'workout_id' => Workout::factory(),
-            'exercise_id' => Exercise::factory(),
+            'workout_id' => \App\Models\Workout::factory(),
+            'exercise_id' => \App\Models\Exercise::factory(),
             'order' => 0,
         ];
     }

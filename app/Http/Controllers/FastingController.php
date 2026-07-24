@@ -8,7 +8,6 @@ use App\Actions\Fasting\FetchFastingIndexAction;
 use App\Http\Requests\Api\StoreFastRequest;
 use App\Http\Requests\Api\UpdateFastRequest;
 use App\Models\Fast;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,10 +27,10 @@ class FastingController extends Controller
      * Retrieves the fasting history and any currently active fast for
      * the authenticated user to render the fasting index page.
      *
-     * @param  FetchFastingIndexAction  $fetchFastingIndexAction  The action to fetch fasting data.
-     * @return Response The Inertia response rendering the 'Tools/Fasting/Index' page.
+     * @param  \App\Actions\Fasting\FetchFastingIndexAction  $fetchFastingIndexAction  The action to fetch fasting data.
+     * @return \Inertia\Response The Inertia response rendering the 'Tools/Fasting/Index' page.
      *
-     * @throws AuthorizationException If the user is not authorized to view fasts.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view fasts.
      */
     public function index(FetchFastingIndexAction $fetchFastingIndexAction): Response
     {
@@ -48,10 +47,10 @@ class FastingController extends Controller
      * Validates the request data and starts a new fast for the user.
      * Prevents starting a new fast if one is already currently active.
      *
-     * @param  StoreFastRequest  $request  The validated request containing fast details.
-     * @return RedirectResponse Redirects back with a success message or an error if a fast is already active.
+     * @param  \App\Http\Requests\Api\StoreFastRequest  $request  The validated request containing fast details.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message or an error if a fast is already active.
      *
-     * @throws AuthorizationException If the user is not authorized to create a fast.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a fast.
      */
     public function store(StoreFastRequest $request): RedirectResponse
     {
@@ -78,11 +77,11 @@ class FastingController extends Controller
      * Validates the request and updates the details of an existing fast,
      * such as ending it or modifying its duration/type.
      *
-     * @param  UpdateFastRequest  $request  The validated request with updated fast details.
-     * @param  Fast  $fast  The fast record to update.
-     * @return RedirectResponse Redirects back with a success message.
+     * @param  \App\Http\Requests\Api\UpdateFastRequest  $request  The validated request with updated fast details.
+     * @param  \App\Models\Fast  $fast  The fast record to update.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
      *
-     * @throws AuthorizationException If the user is not authorized to update the fast.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the fast.
      */
     public function update(UpdateFastRequest $request, Fast $fast): RedirectResponse
     {
@@ -98,10 +97,10 @@ class FastingController extends Controller
      *
      * Permanently deletes a fasting record from the database.
      *
-     * @param  Fast  $fast  The fast record to delete.
-     * @return RedirectResponse Redirects back with a success message.
+     * @param  \App\Models\Fast  $fast  The fast record to delete.
+     * @return \Illuminate\Http\RedirectResponse Redirects back with a success message.
      *
-     * @throws AuthorizationException If the user is not authorized to delete the fast.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the fast.
      */
     public function destroy(Fast $fast): RedirectResponse
     {

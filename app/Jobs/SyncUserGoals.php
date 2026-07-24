@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Models\User;
-use App\Services\GoalService;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -17,7 +15,7 @@ final class SyncUserGoals implements ShouldBeUnique, ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public User $user)
+    public function __construct(public \App\Models\User $user)
     {
     }
 
@@ -32,7 +30,7 @@ final class SyncUserGoals implements ShouldBeUnique, ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(GoalService $goalService): void
+    public function handle(\App\Services\GoalService $goalService): void
     {
         $goalService->syncGoals($this->user);
     }

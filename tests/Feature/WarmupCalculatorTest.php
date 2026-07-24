@@ -7,7 +7,6 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\WarmupPreference;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -22,7 +21,7 @@ class WarmupCalculatorTest extends TestCase
         $response = $this->actingAs($user)->get(route('tools.warmup'));
 
         $response->assertStatus(200)
-            ->assertInertia(fn (Assert $page): AssertableInertia => $page
+            ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Tools/WarmupCalculator')
                 ->has('preference')
             );

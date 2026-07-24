@@ -6,9 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateWarmupPreferenceRequest;
 use App\Models\WarmupPreference;
-use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
-use Inertia\Response;
 
 /**
  * Controller for managing warmup preferences and rendering the warmup calculator tool.
@@ -24,9 +22,9 @@ class WarmupController extends Controller
      * Retrieves the authenticated user's saved warmup preferences. If none exist,
      * initializes a new WarmupPreference instance with sensible default values.
      *
-     * @return Response The Inertia response rendering the 'Tools/WarmupCalculator' page.
+     * @return \Inertia\Response The Inertia response rendering the 'Tools/WarmupCalculator' page.
      */
-    public function index(): Response
+    public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', WarmupPreference::class);
 
@@ -52,10 +50,10 @@ class WarmupController extends Controller
      * Validates the incoming request and updates the user's existing preferences
      * or creates a new record if one does not already exist.
      *
-     * @param  UpdateWarmupPreferenceRequest  $request  The validated HTTP request containing warmup preference data.
-     * @return RedirectResponse A redirect response back to the previous page with a success message.
+     * @param  \App\Http\Requests\UpdateWarmupPreferenceRequest  $request  The validated HTTP request containing warmup preference data.
+     * @return \Illuminate\Http\RedirectResponse A redirect response back to the previous page with a success message.
      */
-    public function update(UpdateWarmupPreferenceRequest $request): RedirectResponse
+    public function update(UpdateWarmupPreferenceRequest $request): \Illuminate\Http\RedirectResponse
     {
         $preference = $this->user()->warmupPreference;
 

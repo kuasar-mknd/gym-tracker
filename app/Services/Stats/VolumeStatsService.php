@@ -13,7 +13,6 @@ use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Service for calculating and aggregating workout volume statistics.
@@ -273,7 +272,7 @@ final class VolumeStatsService
                 // ⚡ Bolt: PERFORMANCE OPTIMIZATION
                 // Perform grouping and summation directly in SQL to reduce memory usage and CPU cycles in PHP.
                 // Uses toBase() to bypass Eloquent model hydration and a driver-aware format for database portability.
-                $driver = DB::getDriverName();
+                $driver = \Illuminate\Support\Facades\DB::getDriverName();
                 $monthFormat = $driver === 'sqlite' ? "strftime('%Y-%m', started_at)" : "DATE_FORMAT(started_at, '%Y-%m')";
 
                 $results = $user->workouts()

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\WorkoutTemplateSetFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 /**
  * @property int $id
  * @property int $workout_template_line_id
@@ -12,15 +12,13 @@ use Database\Factories\WorkoutTemplateSetFactory;
  * @property float|null $weight
  * @property bool $is_warmup
  * @property int $order
- * @property-read WorkoutTemplateLine $workoutTemplateLine
+ * @property-read \App\Models\WorkoutTemplateLine $workoutTemplateLine
  */
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorkoutTemplateSet extends Model
 {
-    /** @use HasFactory<WorkoutTemplateSetFactory> */
+    /** @use HasFactory<\Database\Factories\WorkoutTemplateSetFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -32,9 +30,9 @@ class WorkoutTemplateSet extends Model
     ];
 
     /**
-     * @return BelongsTo<WorkoutTemplateLine, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\WorkoutTemplateLine, $this>
      */
-    public function workoutTemplateLine(): BelongsTo
+    public function workoutTemplateLine(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(WorkoutTemplateLine::class);
     }

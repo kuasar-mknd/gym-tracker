@@ -9,8 +9,6 @@ use App\Http\Requests\BodyMeasurementUpdateRequest;
 use App\Http\Resources\BodyMeasurementResource;
 use App\Models\BodyMeasurement;
 use App\Services\StatsService;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -30,7 +28,7 @@ class BodyMeasurementController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(): AnonymousResourceCollection
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', BodyMeasurement::class);
 
@@ -86,7 +84,7 @@ class BodyMeasurementController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(BodyMeasurement $bodyMeasurement): Response
+    public function destroy(BodyMeasurement $bodyMeasurement): \Illuminate\Http\Response
     {
         $this->authorize('delete', $bodyMeasurement);
 

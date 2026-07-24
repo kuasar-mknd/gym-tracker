@@ -6,9 +6,8 @@ use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(RefreshDatabase::class);
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 describe('WorkoutLineController@store', function (): void {
     it('creates a workout line and redirects (Happy Path)', function (): void {

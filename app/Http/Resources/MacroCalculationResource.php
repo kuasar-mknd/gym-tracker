@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\MacroCalculation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin MacroCalculation
+ * @mixin \App\Models\MacroCalculation
  */
 class MacroCalculationResource extends JsonResource
 {

@@ -8,9 +8,6 @@ use App\Http\Requests\GoalStoreRequest;
 use App\Http\Requests\GoalUpdateRequest;
 use App\Http\Resources\GoalResource;
 use App\Models\Goal;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -26,7 +23,7 @@ class GoalController extends Controller
      * Retrieves a paginated list of goals belonging to the authenticated user.
      * Supports sorting and including the related exercise.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     #[OA\Get(
         path: '/goals',
@@ -36,7 +33,7 @@ class GoalController extends Controller
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     #[OA\Response(response: 403, description: 'Forbidden')]
-    public function index(): AnonymousResourceCollection
+    public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Goal::class);
 
@@ -55,7 +52,7 @@ class GoalController extends Controller
      *
      * @param  GoalStoreRequest  $request  The request containing goal data.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     #[OA\Post(
         path: '/goals',
@@ -87,7 +84,7 @@ class GoalController extends Controller
      *
      * @param  Goal  $goal  The goal to display.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     #[OA\Get(
         path: '/goals/{goal}',
@@ -139,7 +136,7 @@ class GoalController extends Controller
      *
      * @param  Goal  $goal  The goal to remove.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     #[OA\Delete(
         path: '/goals/{goal}',
@@ -150,7 +147,7 @@ class GoalController extends Controller
     #[OA\Response(response: 401, description: 'Unauthenticated')]
     #[OA\Response(response: 403, description: 'Forbidden')]
     #[OA\Response(response: 404, description: 'Goal not found')]
-    public function destroy(Goal $goal): Response
+    public function destroy(Goal $goal): \Illuminate\Http\Response
     {
         $this->authorize('delete', $goal);
 

@@ -4,13 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StorePlateRequest;
-use App\Http\Requests\UpdatePlateRequest;
 use App\Models\Plate;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
-use Inertia\Response;
 
 /**
  * Controller for managing Plates.
@@ -25,11 +20,11 @@ class PlateController extends Controller
      *
      * Retrieves all plates for the authenticated user, ordered by weight descending.
      *
-     * @return Response The Inertia response rendering the Tools/PlateCalculator page.
+     * @return \Inertia\Response The Inertia response rendering the Tools/PlateCalculator page.
      *
-     * @throws AuthorizationException If the user is not authorized to view plates.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view plates.
      */
-    public function index(): Response
+    public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', Plate::class);
 
@@ -47,10 +42,10 @@ class PlateController extends Controller
      *
      * Validates and creates a new plate for the authenticated user.
      *
-     * @param  StorePlateRequest  $request  The validated request containing plate details.
-     * @return RedirectResponse A redirect back to the previous page.
+     * @param  \App\Http\Requests\StorePlateRequest  $request  The validated request containing plate details.
+     * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
      */
-    public function store(StorePlateRequest $request): RedirectResponse
+    public function store(\App\Http\Requests\StorePlateRequest $request): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', Plate::class);
 
@@ -66,13 +61,13 @@ class PlateController extends Controller
     /**
      * Update the specified plate in storage.
      *
-     * @param  UpdatePlateRequest  $request  The validated request containing updated fields.
-     * @param  Plate  $plate  The plate to update.
-     * @return RedirectResponse A redirect back to the previous page.
+     * @param  \App\Http\Requests\UpdatePlateRequest  $request  The validated request containing updated fields.
+     * @param  \App\Models\Plate  $plate  The plate to update.
+     * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
      *
-     * @throws AuthorizationException If the user is not authorized to update this plate.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update this plate.
      */
-    public function update(UpdatePlateRequest $request, Plate $plate): RedirectResponse
+    public function update(\App\Http\Requests\UpdatePlateRequest $request, Plate $plate): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $plate);
 
@@ -84,12 +79,12 @@ class PlateController extends Controller
     /**
      * Remove the specified plate from storage.
      *
-     * @param  Plate  $plate  The plate to delete.
-     * @return RedirectResponse A redirect back to the previous page.
+     * @param  \App\Models\Plate  $plate  The plate to delete.
+     * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
      *
-     * @throws AuthorizationException If the user is not authorized to delete this plate.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete this plate.
      */
-    public function destroy(Plate $plate): RedirectResponse
+    public function destroy(Plate $plate): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $plate);
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\JsonResponse;
 use OpenApi\Attributes as OA;
 
 #[OA\Info(
@@ -27,7 +26,7 @@ class Swagger
         response: 200,
         description: 'OK'
     )]
-    public function status(): JsonResponse
+    public function status(): \Illuminate\Http\JsonResponse
     {
         return response()->json(['status' => 'ok']);
     }

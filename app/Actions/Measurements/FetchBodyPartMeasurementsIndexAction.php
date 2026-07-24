@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 class FetchBodyPartMeasurementsIndexAction
 {
     /**
-     * @return array{latestMeasurements: Collection<int, array{part: string, current: float, unit: string, date: string, diff: float}>, commonParts: array<int, string>}
+     * @return array{latestMeasurements: Collection<int, array{part: string, current: float, unit: string, date: non-falsy-string, diff: float}>, commonParts: array<int, string>}
      */
     public function execute(User $user): array
     {

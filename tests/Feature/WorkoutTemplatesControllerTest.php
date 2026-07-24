@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
@@ -21,7 +20,7 @@ it('renders the templates index page', function (): void {
     $response = $this->actingAs($user)->get(route('templates.index'));
 
     $response->assertStatus(200)
-        ->assertInertia(fn (Assert $page): AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Workouts/Templates/Index')
             ->has('templates', 3)
         );
@@ -149,7 +148,7 @@ it('renders the template creation page', function (): void {
     $response = $this->actingAs($user)->get(route('templates.create'));
 
     $response->assertStatus(200)
-        ->assertInertia(fn (Assert $page): AssertableInertia => $page
+        ->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Workouts/Templates/Create')
             ->has('exercises')
         );

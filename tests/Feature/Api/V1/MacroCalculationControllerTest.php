@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 use App\Models\MacroCalculation;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(RefreshDatabase::class);
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();

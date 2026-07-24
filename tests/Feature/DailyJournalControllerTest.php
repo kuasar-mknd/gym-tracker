@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\DailyJournal;
 use App\Models\User;
 use Illuminate\Support\Carbon;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 it('renders the daily journal index page', function (): void {
@@ -15,7 +14,7 @@ it('renders the daily journal index page', function (): void {
         ->get('/daily-journals')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): AssertableInertia => $page
+            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Journal/Index')
                 ->has('journals')
         );

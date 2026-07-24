@@ -5,6 +5,7 @@
             "named_class": true,
             "anonymous_class": true
         },
-        "single_line_empty_body": false
+        "single_line_empty_body": false,
+        "fully_qualified_strict_types": false
     }
 }

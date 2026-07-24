@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\User;
-use App\Models\WaterLog;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<WaterLog>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\WaterLog>
  */
 class WaterLogFactory extends Factory
 {
@@ -21,7 +19,7 @@ class WaterLogFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'user_id' => \App\Models\User::factory(),
             'amount' => $this->faker->numberBetween(100, 1000), // ml
             'consumed_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
         ];

@@ -8,7 +8,7 @@ use App\Models\Achievement;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Achievement>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Achievement>
  */
 class AchievementFactory extends Factory
 {

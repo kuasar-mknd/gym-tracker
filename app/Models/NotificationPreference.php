@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\NotificationPreferenceFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NotificationPreference extends Model
 {
-    /** @use HasFactory<NotificationPreferenceFactory> */
+    /** @use HasFactory<\Database\Factories\NotificationPreferenceFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -23,7 +22,7 @@ class NotificationPreference extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
     public function user(): BelongsTo
     {

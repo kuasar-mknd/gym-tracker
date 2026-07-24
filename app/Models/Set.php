@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\SetFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -19,12 +16,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property float|null $distance_km
  * @property bool $is_warmup
  * @property bool $is_completed
- * @property-read WorkoutLine $workoutLine
- * @property-read PersonalRecord|null $personalRecord
+ * @property-read \App\Models\WorkoutLine $workoutLine
+ * @property-read \App\Models\PersonalRecord|null $personalRecord
  */
 class Set extends Model
 {
-    /** @use HasFactory<SetFactory> */
+    /** @use HasFactory<\Database\Factories\SetFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -38,17 +35,17 @@ class Set extends Model
     ];
 
     /**
-     * @return BelongsTo<WorkoutLine, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\WorkoutLine, $this>
      */
-    public function workoutLine(): BelongsTo
+    public function workoutLine(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(WorkoutLine::class);
     }
 
     /**
-     * @return HasOne<PersonalRecord, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<\App\Models\PersonalRecord, $this>
      */
-    public function personalRecord(): HasOne
+    public function personalRecord(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(PersonalRecord::class);
     }

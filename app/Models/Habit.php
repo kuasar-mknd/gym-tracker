@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\HabitFactory;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,12 +18,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $icon
  * @property int $goal_times_per_week
  * @property bool $archived
- * @property-read User $user
- * @property-read Collection<int, HabitLog> $logs
+ * @property-read \App\Models\User $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\HabitLog> $logs
  */
 class Habit extends Model
 {
-    /** @use HasFactory<HabitFactory> */
+    /** @use HasFactory<\Database\Factories\HabitFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -39,7 +37,7 @@ class Habit extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
     public function user(): BelongsTo
     {
@@ -47,7 +45,7 @@ class Habit extends Model
     }
 
     /**
-     * @return HasMany<HabitLog, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\HabitLog, $this>
      */
     public function logs(): HasMany
     {

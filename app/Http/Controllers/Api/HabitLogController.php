@@ -4,15 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Actions\Habits\FetchHabitLogsIndexApiAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreHabitLogRequest;
 use App\Http\Requests\UpdateHabitLogRequest;
 use App\Http\Resources\HabitLogResource;
-use App\Models\Habit;
 use App\Models\HabitLog;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
 
@@ -25,7 +21,7 @@ class HabitLogController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(FetchHabitLogsIndexApiAction $fetchHabitLogsIndexApiAction): AnonymousResourceCollection
+    public function index(\App\Actions\Habits\FetchHabitLogsIndexApiAction $fetchHabitLogsIndexApiAction): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', HabitLog::class);
 
@@ -41,12 +37,12 @@ class HabitLogController extends Controller
     )]
     #[OA\Response(response: 201, description: 'Created successfully')]
     #[OA\Response(response: 422, description: 'Validation error')]
-    public function store(StoreHabitLogRequest $request): JsonResponse
+    public function store(StoreHabitLogRequest $request): \Illuminate\Http\JsonResponse
     {
         $validated = $request->validated();
 
-        /** @var Habit $habit */
-        $habit = Habit::findOrFail($validated['habit_id']);
+        /** @var \App\Models\Habit $habit */
+        $habit = \App\Models\Habit::findOrFail($validated['habit_id']);
 
         $this->authorize('create', [HabitLog::class, $habit]);
 
@@ -98,7 +94,7 @@ class HabitLogController extends Controller
         tags: ['HabitLogs']
     )]
     #[OA\Response(response: 204, description: 'Deleted successfully')]
-    public function destroy(HabitLog $habit_log): Response
+    public function destroy(HabitLog $habit_log): \Illuminate\Http\Response
     {
         $this->authorize('delete', $habit_log);
 

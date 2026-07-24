@@ -6,10 +6,9 @@ use App\Models\User;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
-uses(RefreshDatabase::class);
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();

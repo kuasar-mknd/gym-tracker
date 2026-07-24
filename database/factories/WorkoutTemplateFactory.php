@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Models\User;
-use App\Models\WorkoutTemplate;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<WorkoutTemplate>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\WorkoutTemplate>
  */
 class WorkoutTemplateFactory extends Factory
 {
@@ -23,7 +21,7 @@ class WorkoutTemplateFactory extends Factory
         return [
             'name' => fake()->sentence(3),
             'description' => fake()->paragraph(),
-            'user_id' => User::factory(),
+            'user_id' => \App\Models\User::factory(),
         ];
     }
 }

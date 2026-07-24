@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\WaterLogFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +12,7 @@ use Illuminate\Support\Carbon;
 
 class WaterLog extends Model
 {
-    /** @use HasFactory<WaterLogFactory> */
+    /** @use HasFactory<\Database\Factories\WaterLogFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -23,7 +22,7 @@ class WaterLog extends Model
     ];
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\User, $this>
      */
     public function user(): BelongsTo
     {
@@ -31,9 +30,9 @@ class WaterLog extends Model
     }
 
     /**
-     * @param  Builder<WaterLog>  $query
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\WaterLog>  $query
      * @param  array<mixed>|string  $dates
-     * @return Builder<WaterLog>
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\WaterLog>
      */
     public function scopeConsumedAtBetween(Builder $query, $dates): Builder
     {

@@ -4,25 +4,16 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
-use App\Filament\Widgets\RecentUsersTable;
-use App\Filament\Widgets\StatsOverview;
-use App\Filament\Widgets\UserActivityChart;
-use App\Http\Middleware\AdminRateLimiter;
-use App\Http\Middleware\IpWhitelist;
-use App\Models\Admin;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
-use Filament\Contracts\Plugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Navigation\NavigationItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\Widget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -67,7 +58,7 @@ final class AdminPanelProvider extends PanelProvider
             ->multiFactorAuthentication([AppAuthentication::make()]);
     }
 
-    /** @return array<int, Plugin> */
+    /** @return array<int, \Filament\Contracts\Plugin> */
     private function getPlugins(): array
     {
         return [
@@ -92,30 +83,30 @@ final class AdminPanelProvider extends PanelProvider
     }
 
     /**
-     * @return array<class-string<Widget>>
+     * @return array<class-string<\Filament\Widgets\Widget>>
      */
     private function getWidgets(): array
     {
         return [
-            StatsOverview::class,
-            UserActivityChart::class,
-            RecentUsersTable::class,
+            \App\Filament\Widgets\StatsOverview::class,
+            \App\Filament\Widgets\UserActivityChart::class,
+            \App\Filament\Widgets\RecentUsersTable::class,
         ];
     }
 
     /**
-     * @return array<int, NavigationItem>
+     * @return array<int, \Filament\Navigation\NavigationItem>
      */
     private function getNavigationItems(): array
     {
         return [
-            NavigationItem::make('Pulse Serveur')
+            \Filament\Navigation\NavigationItem::make('Pulse Serveur')
                 ->url('/backoffice/pulse', shouldOpenInNewTab: true)
                 ->icon('heroicon-o-presentation-chart-line')
                 ->group('Système')
                 ->sort(100)
                 ->visible(function (): bool {
-                    /** @var Admin|null $user */
+                    /** @var \App\Models\Admin|null $user */
                     $user = auth('admin')->user();
 
                     return $user?->can('viewPulse') ?? false;
@@ -138,8 +129,8 @@ final class AdminPanelProvider extends PanelProvider
             SubstituteBindings::class,
             DisableBladeIconComponents::class,
             DispatchServingFilamentEvent::class,
-            AdminRateLimiter::class,
-            IpWhitelist::class,
+            \App\Http\Middleware\AdminRateLimiter::class,
+            \App\Http\Middleware\IpWhitelist::class,
         ];
     }
 }

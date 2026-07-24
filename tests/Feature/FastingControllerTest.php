@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\Fast;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\delete;
@@ -23,7 +22,7 @@ describe('FastingController', function (): void {
             actingAs($user)
                 ->get(route('tools.fasting.index'))
                 ->assertOk()
-                ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page): \Inertia\Testing\AssertableInertia => $page
                     ->component('Tools/Fasting/Index')
                 );
         });

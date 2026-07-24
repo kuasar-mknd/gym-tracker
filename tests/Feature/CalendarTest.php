@@ -8,7 +8,6 @@ use App\Models\DailyJournal;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -23,7 +22,7 @@ class CalendarTest extends TestCase
         $response = $this->actingAs($user)->get(route('calendar.index'));
 
         $response->assertStatus(200);
-        $response->assertInertia(fn (Assert $page): AssertableInertia => $page
+        $response->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Calendar/Index')
             ->has('year')
             ->has('month')
@@ -52,7 +51,7 @@ class CalendarTest extends TestCase
 
         $response = $this->actingAs($user)->get(route('calendar.index'));
 
-        $response->assertInertia(fn (Assert $page): AssertableInertia => $page
+        $response->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Calendar/Index')
             ->has('workouts', 1)
             ->where('workouts.0.id', $workout->id)
@@ -77,7 +76,7 @@ class CalendarTest extends TestCase
 
         $response = $this->actingAs($user)->get(route('calendar.index'));
 
-        $response->assertInertia(fn (Assert $page): AssertableInertia => $page
+        $response->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Calendar/Index')
             ->has('journals', 1)
             ->where('journals.0.id', $journal->id)
@@ -93,7 +92,7 @@ class CalendarTest extends TestCase
 
         $response = $this->actingAs($user)->get(route('calendar.index', ['year' => $year, 'month' => $month]));
 
-        $response->assertInertia(fn (Assert $page): AssertableInertia => $page
+        $response->assertInertia(fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
             ->component('Calendar/Index')
             ->where('year', $year)
             ->where('month', $month)

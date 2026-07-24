@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\BodyMeasurement;
 use App\Models\User;
 use App\Models\Workout;
-use Inertia\Testing\AssertableInertia;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('dashboard displays correct workout stats', function (): void {
@@ -36,7 +35,7 @@ test('dashboard displays correct workout stats', function (): void {
         ->get('/dashboard')
         ->assertStatus(200)
         ->assertInertia(
-            fn (Assert $page): AssertableInertia => $page
+            fn (Assert $page): \Inertia\Testing\AssertableInertia => $page
                 ->component('Dashboard')
                 ->where('latestWeight', '75.50')
                 ->has('recentWorkouts', 3)

@@ -8,7 +8,6 @@ use App\Http\Requests\StoreIntervalTimerRequest;
 use App\Http\Requests\UpdateIntervalTimerRequest;
 use App\Http\Resources\IntervalTimerResource;
 use App\Models\IntervalTimer;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -28,7 +27,7 @@ class IntervalTimerController extends Controller
      *
      * @return AnonymousResourceCollection A collection of interval timer resources.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function index(): AnonymousResourceCollection
     {
@@ -45,7 +44,7 @@ class IntervalTimerController extends Controller
      * @param  StoreIntervalTimerRequest  $request  The validated request containing timer details.
      * @return IntervalTimerResource The created interval timer resource.
      *
-     * @throws AuthorizationException
+     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function store(StoreIntervalTimerRequest $request): IntervalTimerResource
     {
@@ -62,7 +61,7 @@ class IntervalTimerController extends Controller
      * @param  IntervalTimer  $intervalTimer  The interval timer to display.
      * @return IntervalTimerResource The interval timer resource.
      *
-     * @throws AuthorizationException If the user does not own the timer.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user does not own the timer.
      */
     public function show(IntervalTimer $intervalTimer): IntervalTimerResource
     {
@@ -78,7 +77,7 @@ class IntervalTimerController extends Controller
      * @param  IntervalTimer  $intervalTimer  The interval timer to update.
      * @return IntervalTimerResource The updated interval timer resource.
      *
-     * @throws AuthorizationException If the user does not own the timer.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user does not own the timer.
      */
     public function update(UpdateIntervalTimerRequest $request, IntervalTimer $intervalTimer): IntervalTimerResource
     {
@@ -95,7 +94,7 @@ class IntervalTimerController extends Controller
      * @param  IntervalTimer  $intervalTimer  The interval timer to delete.
      * @return JsonResponse A 204 No Content response.
      *
-     * @throws AuthorizationException If the user does not own the timer.
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the user does not own the timer.
      */
     public function destroy(IntervalTimer $intervalTimer): JsonResponse
     {

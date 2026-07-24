@@ -6,7 +6,6 @@ namespace App\Actions\Exercises;
 
 use App\Models\Exercise;
 use App\Models\User;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class FetchExercisesApiAction
@@ -14,9 +13,9 @@ class FetchExercisesApiAction
     /**
      * Fetch a paginated list of exercises for the API.
      *
-     * @return LengthAwarePaginator<int, Exercise>
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, Exercise>
      */
-    public function execute(User $user): LengthAwarePaginator
+    public function execute(User $user): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return QueryBuilder::for(Exercise::class)
             ->allowedFilters(['name', 'type', 'category'])
