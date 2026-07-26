@@ -85,14 +85,29 @@ const goalTypeOptions = [
 <template>
     <Head title="Mes Objectifs" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout page-title="Mes Objectifs">
+        <!-- The #header slot is desktop-only (hidden sm:block in the layout), so the
+             create action has to be mirrored here or it is unreachable on phones. -->
+        <template #header-actions>
+            <GlassButton
+                size="sm"
+                dusk="create-goal-btn"
+                :aria-label="showCreateForm ? 'Annuler la création d\'objectif' : 'Nouvel objectif'"
+                @click="showCreateForm = !showCreateForm"
+            >
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">
+                    {{ showCreateForm ? 'close' : 'add' }}
+                </span>
+            </GlassButton>
+        </template>
+
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-text-main text-2xl font-bold tracking-tight">Mes Objectifs 🎯</h2>
                     <p class="text-text-muted text-sm">Fixe tes cibles et dépasse tes limites.</p>
                 </div>
-                <GlassButton @click="showCreateForm = !showCreateForm">
+                <GlassButton dusk="create-goal-btn-desktop" @click="showCreateForm = !showCreateForm">
                     {{ showCreateForm ? 'Annuler' : 'Nouvel Objectif' }}
                 </GlassButton>
             </div>
@@ -123,7 +138,7 @@ const goalTypeOptions = [
                     <div v-if="showCreateForm">
                         <GlassCard class="p-6">
                             <h3 class="text-text-main mb-6 text-lg font-bold">Nouvel Objectif</h3>
-                            <form @submit.prevent="submit" class="space-y-6">
+                            <form dusk="goal-create-form" @submit.prevent="submit" class="space-y-6">
                                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                                     <div class="space-y-4">
                                         <GlassSelect

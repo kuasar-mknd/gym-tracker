@@ -51,7 +51,10 @@ jobs:
                   cache: 'npm'
 
             - name: Install Node Dependencies
-              run: npm install --legacy-peer-deps
+              run: npm ci
+
+            - name: Run JS Unit Tests
+              run: npm run test
 
             - name: Build Assets
               run: npm run build

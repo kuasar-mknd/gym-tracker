@@ -65,7 +65,9 @@ const errorId = computed(() => {
 })
 
 const sizeClasses = {
-    sm: 'min-h-[36px] text-sm rounded-lg',
+    // text-base (16px) is deliberate even at this compact height: iOS auto-zooms
+    // any focused form control below 16px, which the viewport no longer suppresses.
+    sm: 'min-h-[36px] text-base rounded-lg',
     md: 'min-h-touch text-base rounded-xl',
     lg: 'min-h-[56px] text-lg rounded-2xl',
 }

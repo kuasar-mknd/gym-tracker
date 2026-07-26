@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport"
-        content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, interactive-widget=resizes-content">
+        content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta property="csp-nonce" content="{{ Vite::cspNonce() }}">
     <meta name="theme-color" content="#F8FAFF">

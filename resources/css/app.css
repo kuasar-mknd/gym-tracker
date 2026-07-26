@@ -923,3 +923,19 @@
         }
     }
 }
+
+/* Unlayered so it outranks every layered animation rule in the cascade.
+   Entry animations start at opacity:0, so neutralising the delay is what
+   keeps deferred content from staying invisible. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-delay: 0s !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-delay: 0s !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

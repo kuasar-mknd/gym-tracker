@@ -41,7 +41,10 @@ abstract class DuskTestCase extends BaseTestCase
             $failures = collect($logs)->filter(
                 fn ($log): bool => ($log['level'] ?? '') === 'SEVERE' &&
                     ! str_contains((string) ($log['message'] ?? ''), 'Failed to send logs') &&
-                    ! str_contains((string) ($log['message'] ?? ''), 'navigator.vibrate')
+                    ! str_contains((string) ($log['message'] ?? ''), 'navigator.vibrate') &&
+                    // SecurityHeaders sends COOP for production HTTPS; browsers log an
+                    // advisory when it arrives over a plain-http, non-localhost origin.
+                    ! str_contains((string) ($log['message'] ?? ''), 'Cross-Origin-Opener-Policy')
             );
 
             \PHPUnit\Framework\Assert::assertTrue(
@@ -80,6 +83,9 @@ abstract class DuskTestCase extends BaseTestCase
             '--disable-infobars',
             '--disable-search-engine-choice-screen',
             '--disable-smooth-scrolling',
+            // Entry animations start at opacity:0 with staggered delays; without this the
+            // app's reduced-motion rules stay dormant and assertions race the fade-in.
+            '--force-prefers-reduced-motion',
         ])->unless($this->hasHeadlessDisabled(), fn (Collection $items) => $items->merge([
             '--disable-gpu',
             '--headless=new',
