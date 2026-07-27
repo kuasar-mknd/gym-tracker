@@ -599,18 +599,20 @@ onUnmounted(() => {
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
+                                    :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold">kg</span>
+                                <span class="text-text-muted text-xs font-bold" aria-hidden="true">kg</span>
                                 <input
                                     type="number"
                                     v-model="set.reps"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
+                                    :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold">reps</span>
+                                <span class="text-text-muted text-xs font-bold" aria-hidden="true">reps</span>
                             </template>
 
                             <template v-else-if="line.exercise.type === 'cardio'">
@@ -621,9 +623,10 @@ onUnmounted(() => {
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'distance_km', e.target.value)"
                                     :dusk="`distance-input-${lineIndex}-${index}`"
+                                    :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold">km</span>
+                                <span class="text-text-muted text-xs font-bold" aria-hidden="true">km</span>
                                 <input
                                     type="time"
                                     step="1"
@@ -631,6 +634,7 @@ onUnmounted(() => {
                                     @focus="$event.target.select()"
                                     @input="(e) => updateDurationFromTime(set, e.target.value)"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
+                                    :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-32 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
                             </template>
@@ -643,6 +647,7 @@ onUnmounted(() => {
                                     @focus="$event.target.select()"
                                     @input="(e) => updateDurationFromTime(set, e.target.value)"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
+                                    :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-full rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
                             </template>
@@ -713,28 +718,36 @@ onUnmounted(() => {
                         />
                     </div>
                     <div class="max-h-[60vh] space-y-3 overflow-y-auto">
-                        <div
+                        <button
                             v-if="filteredExercises.length === 0 && searchQuery"
+                            type="button"
                             @click="quickCreate"
                             dusk="quick-create-exercise"
-                            class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center transition-all hover:border-emerald-500"
+                            class="flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center transition-all hover:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
                         >
-                            <p class="text-text-muted mb-2 text-sm italic">Aucun résultat pour "{{ searchQuery }}"</p>
+                            <span class="text-text-muted mb-2 block text-sm italic"
+                                >Aucun résultat pour "{{ searchQuery }}"</span
+                            >
                             <span class="font-bold tracking-wider text-emerald-600 uppercase"
                                 >Créer "{{ searchQuery }}"</span
                             >
-                        </div>
+                        </button>
 
-                        <div
+                        <!-- button, not div: adding an exercise is the primary action of this
+                             screen and was unreachable by keyboard and screen readers.
+                             Spans rather than h4/p — flow content is invalid inside a button
+                             and produced a phantom heading level in the outline. -->
+                        <button
                             v-for="exercise in filteredExercises"
                             :key="exercise.id"
+                            type="button"
                             @click="addExercise(exercise.id)"
                             :dusk="`select-exercise-${exercise.id}`"
-                            class="glass-panel-light hover:border-electric-orange/50 cursor-pointer rounded-2xl p-4 transition-all"
+                            class="glass-panel-light hover:border-electric-orange/50 focus-visible:ring-electric-orange block w-full cursor-pointer rounded-2xl p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
                         >
-                            <h4 class="text-text-main font-bold dark:text-white">{{ exercise.name }}</h4>
-                            <p class="text-text-muted text-xs uppercase">{{ exercise.category }}</p>
-                        </div>
+                            <span class="text-text-main block font-bold dark:text-white">{{ exercise.name }}</span>
+                            <span class="text-text-muted block text-xs uppercase">{{ exercise.category }}</span>
+                        </button>
                     </div>
                 </div>
 

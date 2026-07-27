@@ -15,6 +15,10 @@ abstract class DuskTestCase extends BaseTestCase
 {
     protected function setUp(): void
     {
+        // In setUp rather than prepare(): PHPUnit 12 dropped docblock annotations,
+        // so the @beforeClass hook never fires.
+        static::assertViteIsNotInDevMode();
+
         parent::setUp();
 
         Browser::macro('resizeToIphoneMini', fn (): object => $this->resize(375, 812));
@@ -69,6 +73,27 @@ abstract class DuskTestCase extends BaseTestCase
 
         putenv('APP_ENV=testing');
         $_ENV['APP_ENV'] = 'testing';
+    }
+
+    /**
+     * `npm run dev` writes public/hot, which points @vite at http://localhost:5173.
+     * The browser driving these tests runs in the Selenium container, where
+     * localhost is itself — so no asset ever loads and every test dies on a
+     * 30-second wait for #main-content. Fail loudly instead.
+     */
+    protected static function assertViteIsNotInDevMode(): void
+    {
+        // Resolved from __DIR__, not base_path(): this runs in @beforeClass, before
+        // the application container is booted.
+        if (! file_exists(dirname(__DIR__).'/public/hot')) {
+            return;
+        }
+
+        throw new \RuntimeException(
+            'public/hot exists: the Vite dev server is running, so assets resolve to '
+            .'localhost:5173, which is unreachable from the Selenium container. '
+            .'Stop `npm run dev` and run `vendor/bin/sail npm run build` before Dusk.'
+        );
     }
 
     /**
