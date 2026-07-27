@@ -52,7 +52,7 @@
         "radix-vue": "^1.9.17",
         "serialize-javascript": "^7.0.5",
         "vue-chartjs": "^5.3.4",
-        "ziggy-js": "^2.6.2"
+        "ziggy-js": "^2.6.3"
     },
     "overrides": {
         "serialize-javascript": "^7.0.5"
