@@ -222,6 +222,7 @@ const addExercise = (exerciseId) => {
 
 const createAndAddExercise = async () => {
     createExerciseForm.processing = true
+    createExerciseForm.clearErrors()
     try {
         const response = await fetch(route('exercises.store'), {
             method: 'POST',
@@ -242,9 +243,28 @@ const createAndAddExercise = async () => {
             localExercises.value.push(exercise)
             addExercise(exercise.id)
             showCreateForm.value = false
+
+            return
         }
+
+        // Anything other than 2xx used to fall through here and do nothing at
+        // all: the modal stayed open with no message, so the user just kept
+        // tapping. Surface the server's validation errors instead.
+        if (response.status === 422) {
+            const { errors = {} } = await response.json()
+
+            Object.entries(errors).forEach(([field, messages]) => {
+                createExerciseForm.setError(field, [].concat(messages)[0])
+            })
+        } else {
+            createExerciseForm.setError('name', 'La création a échoué. Réessaie dans un instant.')
+        }
+
+        triggerHaptic('error')
     } catch (e) {
         console.error(e)
+        createExerciseForm.setError('name', 'Connexion impossible. Vérifie ta connexion réseau.')
+        triggerHaptic('error')
     } finally {
         createExerciseForm.processing = false
     }
@@ -595,6 +615,7 @@ onUnmounted(() => {
                             <template v-if="line.exercise.type === 'strength'">
                                 <input
                                     type="number"
+                                    inputmode="decimal"
                                     v-model="set.weight"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
@@ -605,6 +626,7 @@ onUnmounted(() => {
                                 <span class="text-text-muted text-xs font-bold" aria-hidden="true">kg</span>
                                 <input
                                     type="number"
+                                    inputmode="numeric"
                                     v-model="set.reps"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
@@ -619,6 +641,7 @@ onUnmounted(() => {
                                 <input
                                     type="number"
                                     step="0.1"
+                                    inputmode="decimal"
                                     v-model="set.distance_km"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'distance_km', e.target.value)"
@@ -765,7 +788,13 @@ onUnmounted(() => {
                     </div>
 
                     <form @submit.prevent="createAndAddExercise" class="space-y-4">
-                        <GlassInput v-model="createExerciseForm.name" label="Nom" dusk="new-exercise-name" required />
+                        <GlassInput
+                            v-model="createExerciseForm.name"
+                            label="Nom"
+                            dusk="new-exercise-name"
+                            :error="createExerciseForm.errors.name"
+                            required
+                        />
 
                         <div class="grid grid-cols-2 gap-4">
                             <GlassSelect

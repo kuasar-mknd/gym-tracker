@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
+import { ref } from 'vue'
 
 const props = defineProps({
     templates: {
@@ -11,8 +12,26 @@ const props = defineProps({
     },
 })
 
+// Tracks the template being launched: without it a double tap posts twice and
+// creates two workouts, which the user then has to delete by hand.
+const executingTemplateId = ref(null)
+
 const executeTemplate = (templateId) => {
-    router.post(route('templates.execute', { template: templateId }))
+    if (executingTemplateId.value !== null) {
+        return
+    }
+
+    executingTemplateId.value = templateId
+
+    router.post(
+        route('templates.execute', { template: templateId }),
+        {},
+        {
+            onFinish: () => {
+                executingTemplateId.value = null
+            },
+        },
+    )
 }
 
 const deleteTemplate = (templateId) => {
@@ -133,8 +152,15 @@ const deleteTemplate = (templateId) => {
                     </div>
 
                     <div class="mt-6">
-                        <GlassButton variant="primary" class="w-full" @click="executeTemplate(template.id)">
-                            Lancer cette séance
+                        <GlassButton
+                            variant="primary"
+                            class="w-full"
+                            :disabled="executingTemplateId !== null"
+                            :loading="executingTemplateId === template.id"
+                            :dusk="`execute-template-${template.id}`"
+                            @click="executeTemplate(template.id)"
+                        >
+                            {{ executingTemplateId === template.id ? 'Lancement…' : 'Lancer cette séance' }}
                         </GlassButton>
                     </div>
                 </GlassCard>
