@@ -47,7 +47,7 @@
     "dependencies": {
         "@sentry/vue": "^10.68.0",
         "chart.js": "^4.5.1",
-        "dayjs": "^1.11.20",
+        "dayjs": "^1.11.21",
         "lucide-vue-next": "^0.577.0",
         "radix-vue": "^1.9.17",
         "serialize-javascript": "^7.0.5",
