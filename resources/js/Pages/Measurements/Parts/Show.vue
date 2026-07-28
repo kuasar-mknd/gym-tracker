@@ -134,7 +134,7 @@ const deleteMeasurement = (id) => {
                         </div>
                         <button
                             @click="deleteMeasurement(item.id)"
-                            class="text-text-muted/30 rounded-lg p-2 opacity-0 transition group-hover:opacity-100 hover:text-red-400"
+                            class="text-text-muted/30 rounded-lg p-2 opacity-100 transition hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                         >
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path

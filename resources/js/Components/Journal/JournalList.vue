@@ -96,7 +96,7 @@ const emit = defineEmits(['edit', 'delete'])
                                 </div>
 
                                 <div
-                                    class="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+                                    class="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
                                 >
                                     <button
                                         v-press

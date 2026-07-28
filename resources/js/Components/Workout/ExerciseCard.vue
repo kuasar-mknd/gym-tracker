@@ -118,7 +118,7 @@ const emit = defineEmits([
                     </div>
                 </div>
                 <div
-                    class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+                    class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
                 >
                     <button
                         @click.stop="emit('start-edit', exercise)"

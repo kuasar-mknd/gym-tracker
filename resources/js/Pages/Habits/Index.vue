@@ -331,7 +331,11 @@ const getProgressPercent = (habit) => {
                             </div>
 
                             <!-- Actions (Absolute) -->
-                            <div class="absolute top-2 right-2 flex opacity-0 transition group-hover:opacity-100">
+                            <!-- Visible by default, hover-revealed only from sm: up. A plain
+                                 opacity-0 hides these on touch, where there is no hover at all. -->
+                            <div
+                                class="absolute top-2 right-2 flex opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
+                            >
                                 <button
                                     @click="editHabit(habit)"
                                     class="text-text-muted hover:text-text-main p-1"

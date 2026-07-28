@@ -568,14 +568,14 @@ onUnmounted(() => {
                 <div class="space-y-2">
                     <SwipeableRow v-for="(set, index) in line.sets" :key="`${set.id}-${index}`">
                         <div
-                            class="flex items-center gap-3 rounded-2xl border border-white bg-white/80 p-4 shadow-sm"
+                            class="flex items-center gap-2 rounded-2xl border border-white bg-white/80 p-3 shadow-sm"
                             :class="{ 'opacity-50': set.is_completed }"
                         >
                             <button
                                 v-press
                                 @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
                                 :dusk="`complete-set-${lineIndex}-${index}`"
-                                class="group relative flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-all"
+                                class="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
                                 :class="
                                     set.is_completed ? 'bg-neon-green text-text-main' : 'bg-slate-100 text-slate-300'
                                 "
@@ -607,7 +607,7 @@ onUnmounted(() => {
                                 </div>
                             </button>
                             <div
-                                class="text-text-muted flex h-11 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-black"
+                                class="text-text-muted flex h-11 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black"
                             >
                                 {{ index + 1 }}
                             </div>
@@ -621,9 +621,9 @@ onUnmounted(() => {
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
                                     :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold" aria-hidden="true">kg</span>
+                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">kg</span>
                                 <input
                                     type="number"
                                     inputmode="numeric"
@@ -632,9 +632,9 @@ onUnmounted(() => {
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
                                     :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold" aria-hidden="true">reps</span>
+                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">reps</span>
                             </template>
 
                             <template v-else-if="line.exercise.type === 'cardio'">
@@ -647,9 +647,9 @@ onUnmounted(() => {
                                     @change="(e) => updateSet(set, 'distance_km', e.target.value)"
                                     :dusk="`distance-input-${lineIndex}-${index}`"
                                     :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold" aria-hidden="true">km</span>
+                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">km</span>
                                 <input
                                     type="time"
                                     step="1"
