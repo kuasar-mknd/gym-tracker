@@ -215,7 +215,11 @@ const updatePreferences = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <GlassButton :loading="isSaving">Sauvegarder</GlassButton>
+                <!-- GlassButton defaults to type="button", so without this the click
+                     never fires the form's @submit and nothing was ever saved. -->
+                <GlassButton type="submit" dusk="save-notification-preferences" :loading="isSaving">
+                    Sauvegarder
+                </GlassButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"

@@ -45,7 +45,15 @@ const fastingTypes = [
     { label: '36h (Monk)', hours: 36 },
 ]
 
-const selectedType = ref(fastingTypes[0])
+// A <select> can only ever hand back a string. Binding the objects directly made
+// every option render value="[object Object]", so picking anything other than the
+// default left selectedType as that string — .hours became NaN and .label.split()
+// threw, silently killing the "Commencer" button.
+const selectedTypeLabel = ref(fastingTypes[0].label)
+
+const selectedType = computed(
+    () => fastingTypes.find((type) => type.label === selectedTypeLabel.value) ?? fastingTypes[0],
+)
 
 const startForm = useForm({
     start_time: '',
@@ -211,9 +219,10 @@ const formatHistoryDuration = (start, end) => {
 
                 <form @submit.prevent="startFast" class="space-y-4">
                     <GlassSelect
-                        v-model="selectedType"
+                        v-model="selectedTypeLabel"
                         label="Type de jeûne"
-                        :options="fastingTypes.map((t) => ({ value: t, label: t.label }))"
+                        dusk="fasting-type-select"
+                        :options="fastingTypes.map((t) => ({ value: t.label, label: t.label }))"
                     />
 
                     <div>
