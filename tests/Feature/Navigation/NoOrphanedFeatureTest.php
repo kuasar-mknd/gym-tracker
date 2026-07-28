@@ -25,7 +25,7 @@ it('leaves no authenticated page without a way in', function (): void {
         // Parameterised routes are reached from a parent page, not a menu.
         ->filter(fn ($route): bool => ! str_contains($route->uri(), '{'))
         ->filter(fn ($route): bool => ! isThirdPartyPanel($route->getName()))
-        ->filter(fn ($route): bool => isBehindAuth($route))
+        ->filter(fn (\Illuminate\Routing\Route $route): bool => isBehindAuth($route))
         ->map(fn ($route): string => $route->getName())
         ->reject(fn (string $name): bool => in_array($name, allowedEntryPoints(), true))
         ->reject(fn (string $name): bool => $referenced->contains($name))
