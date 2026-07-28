@@ -360,16 +360,24 @@ const getProgressPercent = (habit) => {
                             class="flex items-center justify-center border-l border-slate-100 p-2"
                             :class="{ 'bg-accent-primary/5': day.is_today }"
                         >
+                            <!-- aria-pressed carries the done/not-done state, which colour
+                                 alone cannot convey. The before: ring widens the tap target
+                                 from 32px to ~44px without changing the visual size, which
+                                 would break the 7-column grid. -->
                             <button
+                                type="button"
                                 @click="toggleHabit(habit, day.date)"
-                                class="flex h-8 w-8 items-center justify-center rounded-full transition-all active:scale-95"
+                                :aria-pressed="isCompleted(habit, day.date)"
+                                :aria-label="`${habit.name}, ${day.day_short || day.day} ${day.day_num}`"
+                                :dusk="`habit-${habit.id}-${day.date}`"
+                                class="relative flex h-8 w-8 items-center justify-center rounded-full transition-all before:absolute before:-inset-1.5 before:content-[''] active:scale-95"
                                 :class="[
                                     isCompleted(habit, day.date)
                                         ? `${habit.color} text-white shadow-md`
                                         : 'bg-slate-100 text-slate-300 hover:bg-slate-200',
                                 ]"
                             >
-                                <span class="material-symbols-outlined text-lg">check</span>
+                                <span class="material-symbols-outlined text-lg" aria-hidden="true">check</span>
                             </button>
                         </div>
                     </div>
