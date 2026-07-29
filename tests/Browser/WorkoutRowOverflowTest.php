@@ -72,7 +72,10 @@ class WorkoutRowOverflowTest extends DuskTestCase
                 ->visit("/workouts/{$workout->id}")
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('@weight-input-0-0', 15);
+                ->waitFor('@weight-input-0-0', 15)
+                // Icon glyphs fall back to wide text until the symbol font lands, which
+                // inflates the row for a frame or two — long enough to measure.
+                ->waitUntil('document.fonts.status === "loaded"', 10);
 
             // scrollWidth beyond clientWidth on the clipping ancestor means content
             // is being cut off rather than merely wrapped.
@@ -102,7 +105,8 @@ class WorkoutRowOverflowTest extends DuskTestCase
                 ->visit("/workouts/{$workout->id}")
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('@complete-set-0-0', 15);
+                ->waitFor('@complete-set-0-0', 15)
+                ->waitUntil('document.fonts.status === "loaded"', 10);
 
             // Making the row fit must not come out of the controls: letting the
             // check button shrink squeezes it to ~28px, well under a usable target.
@@ -130,7 +134,10 @@ class WorkoutRowOverflowTest extends DuskTestCase
                 ->visit("/workouts/{$workout->id}")
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('@weight-input-0-0', 15);
+                ->waitFor('@weight-input-0-0', 15)
+                // Icon glyphs fall back to wide text until the symbol font lands, which
+                // inflates the row for a frame or two — long enough to measure.
+                ->waitUntil('document.fonts.status === "loaded"', 10);
 
             $overflow = $browser->script(
                 'return document.documentElement.scrollWidth - document.documentElement.clientWidth;'
