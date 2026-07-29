@@ -121,7 +121,7 @@
                                     <input
                                         type="number"
                                         v-model="step.percent"
-                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -132,7 +132,7 @@
                                 <input
                                     type="number"
                                     v-model="step.reps"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -140,7 +140,7 @@
                                     type="text"
                                     v-model="step.label"
                                     placeholder="ex: Barre vide"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm placeholder-slate-400 transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base placeholder-slate-400 transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">

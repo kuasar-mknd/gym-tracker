@@ -234,14 +234,14 @@ const submit = () => {
                                     <input
                                         v-model="set.reps"
                                         type="number"
-                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm"
+                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-base"
                                         placeholder="reps"
                                     />
                                     <input
                                         v-model="set.weight"
                                         type="number"
                                         step="0.5"
-                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm"
+                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-base"
                                         placeholder="kg"
                                     />
                                     <button
