@@ -3,12 +3,24 @@
         "claude_code",
         "gemini"
     ],
-    "editors": [
-        "claude_code",
-        "gemini",
-        "vscode"
+    "cloud": false,
+    "guidelines": true,
+    "mcp": true,
+    "nightwatch": false,
+    "packages": [
+        "filament/filament"
     ],
-    "guidelines": [],
-    "herd_mcp": true,
-    "sail": true
+    "sail": true,
+    "skills": [
+        "fortify-development",
+        "laravel-best-practices",
+        "configuring-horizon",
+        "mcp-development",
+        "octane-development",
+        "pulse-development",
+        "socialite-development",
+        "pest-testing",
+        "inertia-vue-development",
+        "tailwindcss-development"
+    ]
 }
