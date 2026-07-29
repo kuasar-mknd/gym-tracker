@@ -25,7 +25,7 @@ it('throws exception if socialite driver throws exception', function (): void {
 });
 
 it('throws exception if email is not verified and environment is not local', function (): void {
-    $socialUser = new SocialiteUser;
+    $socialUser = new SocialiteUser();
     $socialUser->user = ['email_verified' => false];
 
     $providerMock = Mockery::mock(Provider::class);
@@ -45,7 +45,7 @@ it('throws exception if email is not verified and environment is not local', fun
 });
 
 it('logs warning and proceeds if email is not verified but environment is local', function (): void {
-    $socialUser = new SocialiteUser;
+    $socialUser = new SocialiteUser();
     $socialUser->user = ['email_verified' => false];
     $socialUser->map([
         'id' => '123',
@@ -80,7 +80,7 @@ it('logs warning and proceeds if email is not verified but environment is local'
 });
 
 it('proceeds if email is verified', function (array $userData): void {
-    $socialUser = new SocialiteUser;
+    $socialUser = new SocialiteUser();
     $socialUser->user = $userData;
     $socialUser->map([
         'id' => '123',

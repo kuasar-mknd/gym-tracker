@@ -12,7 +12,7 @@ class SupplementTest extends TestCase
 {
     public function test_get_activitylog_options_returns_correct_configuration(): void
     {
-        $supplement = new Supplement;
+        $supplement = new Supplement();
         $options = $supplement->getActivitylogOptions();
 
         $this->assertInstanceOf(LogOptions::class, $options);

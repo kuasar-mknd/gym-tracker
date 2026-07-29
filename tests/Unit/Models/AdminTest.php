@@ -12,7 +12,7 @@ class AdminTest extends TestCase
 {
     public function test_get_activitylog_options(): void
     {
-        $admin = new Admin;
+        $admin = new Admin();
         $options = $admin->getActivitylogOptions();
 
         $this->assertInstanceOf(LogOptions::class, $options);

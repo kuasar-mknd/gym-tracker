@@ -20,7 +20,7 @@ class CreateWilksScoreActionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->action = new CreateWilksScoreAction;
+        $this->action = new CreateWilksScoreAction();
     }
 
     #[DataProvider('wilksDataProvider')]

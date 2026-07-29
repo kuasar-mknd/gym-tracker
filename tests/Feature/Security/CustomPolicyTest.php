@@ -34,8 +34,8 @@ class CustomPolicyTest extends TestCase
 
     public function test_custom_policy_has_correct_base_directives(): void
     {
-        $policy = new Policy;
-        $customPolicy = new CustomPolicy;
+        $policy = new Policy();
+        $customPolicy = new CustomPolicy();
         $customPolicy->configure($policy);
 
         $directives = $this->getDirectivesFromPolicy($policy);
@@ -58,8 +58,8 @@ class CustomPolicyTest extends TestCase
         Config::set('app.env', 'local');
         $this->app['env'] = 'local';
 
-        $policy = new Policy;
-        $customPolicy = new CustomPolicy;
+        $policy = new Policy();
+        $customPolicy = new CustomPolicy();
         $customPolicy->configure($policy);
 
         $directives = $this->getDirectivesFromPolicy($policy);
@@ -82,8 +82,8 @@ class CustomPolicyTest extends TestCase
         Config::set('app.env', 'production');
         $this->app['env'] = 'production';
 
-        $policy = new Policy;
-        $customPolicy = new CustomPolicy;
+        $policy = new Policy();
+        $customPolicy = new CustomPolicy();
         $customPolicy->configure($policy);
 
         $directives = $this->getDirectivesFromPolicy($policy);
@@ -99,8 +99,8 @@ class CustomPolicyTest extends TestCase
 
     public function test_custom_policy_has_correct_external_resources(): void
     {
-        $policy = new Policy;
-        $customPolicy = new CustomPolicy;
+        $policy = new Policy();
+        $customPolicy = new CustomPolicy();
         $customPolicy->configure($policy);
 
         $directives = $this->getDirectivesFromPolicy($policy);

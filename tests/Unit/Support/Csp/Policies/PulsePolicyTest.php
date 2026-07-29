@@ -26,7 +26,7 @@ describe('configure', function (): void {
             $mock->shouldReceive('addNonce')->andReturnSelf();
         });
 
-        $pulsePolicy = new PulsePolicy;
+        $pulsePolicy = new PulsePolicy();
         $pulsePolicy->configure($policyMock);
 
         expect(true)->toBeTrue();

@@ -12,7 +12,7 @@ uses(TestCase::class, RefreshDatabase::class);
 
 test('it creates a new log if one does not exist for the given date', function (): void {
     // Arrange
-    $action = new ToggleHabitAction;
+    $action = new ToggleHabitAction();
     $habit = Habit::factory()->create();
     $date = '2023-10-25';
 
@@ -28,7 +28,7 @@ test('it creates a new log if one does not exist for the given date', function (
 
 test('it deletes the log if one already exists for the given date', function (): void {
     // Arrange
-    $action = new ToggleHabitAction;
+    $action = new ToggleHabitAction();
     $habit = Habit::factory()->create();
     $date = '2023-10-25';
 

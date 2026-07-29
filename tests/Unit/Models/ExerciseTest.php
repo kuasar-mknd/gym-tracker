@@ -11,7 +11,7 @@ class ExerciseTest extends TestCase
 {
     public function test_get_activitylog_options(): void
     {
-        $exercise = new Exercise;
+        $exercise = new Exercise();
         $options = $exercise->getActivitylogOptions();
 
         $this->assertEquals(['name', 'type', 'category', 'default_rest_time'], $options->logAttributes);
