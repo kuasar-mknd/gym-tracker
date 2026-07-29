@@ -35,7 +35,12 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->hasSession() ? $request->session()->get('success') : null,
                 'error' => $request->hasSession() ? $request->session()->get('error') : null,
             ],
-            'is_testing' => app()->environment('testing'),
+            // CI builds its Dusk env with APP_ENV=testing but .env.dusk.local
+            // keeps APP_ENV=local, so the environment check alone held on CI and
+            // silently did not locally — where the celebration overlay this flag
+            // exists to suppress fired mid-test and swallowed clicks. The
+            // explicit flag makes both runs agree.
+            'is_testing' => app()->environment('testing') || config('app.running_browser_tests') === true,
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             'ziggy' => function () use ($request): array {
                 $ziggy = new Ziggy();

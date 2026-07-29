@@ -206,6 +206,7 @@ jobs:
                   PULSE_ENABLED=false
                   DUSK_DRIVER_URL=http://127.0.0.1:9515
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
+                  APP_RUNNING_BROWSER_TESTS=true
                   EOF
 
                   php artisan key:generate
