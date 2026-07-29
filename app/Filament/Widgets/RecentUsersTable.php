@@ -11,8 +11,10 @@ use Filament\Widgets\TableWidget;
 
 class RecentUsersTable extends TableWidget
 {
+    #[\Override]
     protected static ?int $sort = 3;
 
+    #[\Override]
     protected int|string|array $columnSpan = 'full';
 
     #[\Override]

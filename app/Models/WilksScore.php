@@ -13,6 +13,7 @@ class WilksScore extends Model
     /** @use HasFactory<\Database\Factories\WilksScoreFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'body_weight',

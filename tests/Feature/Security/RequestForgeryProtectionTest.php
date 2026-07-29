@@ -40,7 +40,7 @@ final class RequestForgeryProtectionTest extends TestCase
 
     public function test_only_api_and_dusk_routes_are_exempt(): void
     {
-        $except = (new ReflectionClass(PreventRequestForgery::class))
+        $except = new ReflectionClass(PreventRequestForgery::class)
             ->getProperty('neverVerify')
             ->getValue();
 

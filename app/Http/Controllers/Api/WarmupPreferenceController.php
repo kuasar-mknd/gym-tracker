@@ -42,7 +42,7 @@ class WarmupPreferenceController extends Controller
 
         $preference = WarmupPreference::create($validated);
 
-        return (new WarmupPreferenceResource($preference))
+        return new WarmupPreferenceResource($preference)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

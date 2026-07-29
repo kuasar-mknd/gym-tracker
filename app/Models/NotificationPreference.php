@@ -13,6 +13,7 @@ class NotificationPreference extends Model
     /** @use HasFactory<\Database\Factories\NotificationPreferenceFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'type',

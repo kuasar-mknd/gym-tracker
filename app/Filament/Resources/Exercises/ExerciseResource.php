@@ -17,14 +17,19 @@ use Filament\Tables\Table;
 
 class ExerciseResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Exercice';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Exercices';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Exercices';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBookOpen;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Gestion Contenu';
 
     #[\Override]

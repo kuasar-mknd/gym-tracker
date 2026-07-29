@@ -17,14 +17,19 @@ use Filament\Tables\Table;
 
 class UserResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Utilisateur';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Utilisateurs';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Utilisateurs';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
     #[\Override]

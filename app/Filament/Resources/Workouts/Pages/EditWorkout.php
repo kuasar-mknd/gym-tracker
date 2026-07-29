@@ -10,6 +10,7 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditWorkout extends EditRecord
 {
+    #[\Override]
     protected static string $resource = WorkoutResource::class;
 
     #[\Override]

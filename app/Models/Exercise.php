@@ -30,6 +30,7 @@ class Exercise extends Model
     /** @use HasFactory<\Database\Factories\ExerciseFactory> */
     use HasFactory, LogsActivity;
 
+    #[\Override]
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
 
     /**

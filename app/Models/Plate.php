@@ -16,6 +16,7 @@ class Plate extends Model
     /** @use HasFactory<\Database\Factories\PlateFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'weight',
         'quantity',

@@ -19,6 +19,7 @@ class Supplement extends Model
 
     use LogsActivity;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'name',

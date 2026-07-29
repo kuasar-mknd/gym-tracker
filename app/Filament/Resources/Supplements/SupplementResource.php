@@ -17,14 +17,19 @@ use Filament\Tables\Table;
 
 class SupplementResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Supplément';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Suppléments';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Suppléments';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBeaker;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
     #[\Override]

@@ -23,6 +23,7 @@ class BodyPartMeasurement extends BaseMeasurement
     /** @use HasFactory<\Database\Factories\BodyPartMeasurementFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'part',

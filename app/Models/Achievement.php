@@ -28,6 +28,7 @@ class Achievement extends Model
     /** @use HasFactory<\Database\Factories\AchievementFactory> */
     use HasFactory, LogsActivity;
 
+    #[\Override]
     protected $fillable = [
         'slug',
         'name',

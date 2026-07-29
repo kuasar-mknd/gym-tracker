@@ -10,6 +10,7 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditAchievement extends EditRecord
 {
+    #[\Override]
     protected static string $resource = AchievementResource::class;
 
     #[\Override]

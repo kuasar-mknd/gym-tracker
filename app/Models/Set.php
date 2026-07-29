@@ -24,6 +24,7 @@ class Set extends Model
     /** @use HasFactory<\Database\Factories\SetFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'workout_line_id',
         'weight',

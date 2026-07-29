@@ -33,6 +33,7 @@ class Goal extends Model
     /** @use HasFactory<\Database\Factories\GoalFactory> */
     use HasFactory, LogsActivity;
 
+    #[\Override]
     protected $fillable = [
         'title',
         'type',

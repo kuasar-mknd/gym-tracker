@@ -27,6 +27,7 @@ class DailyJournal extends Model
     /** @use HasFactory<\Database\Factories\DailyJournalFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'date',
         'content',

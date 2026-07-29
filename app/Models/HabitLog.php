@@ -21,6 +21,7 @@ class HabitLog extends Model
     /** @use HasFactory<\Database\Factories\HabitLogFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'habit_id',
         'date',

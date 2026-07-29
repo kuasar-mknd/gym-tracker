@@ -13,6 +13,7 @@ class MacroCalculation extends Model
     /** @use HasFactory<\Database\Factories\MacroCalculationFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'gender',

@@ -9,5 +9,6 @@ use Filament\Resources\Pages\CreateRecord;
 
 class CreateGoal extends CreateRecord
 {
+    #[\Override]
     protected static string $resource = GoalResource::class;
 }

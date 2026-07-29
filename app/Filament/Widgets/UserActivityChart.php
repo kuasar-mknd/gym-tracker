@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 
 class UserActivityChart extends ChartWidget
 {
+    #[\Override]
     protected ?string $heading = 'User Registrations';
 
     protected function getType(): string

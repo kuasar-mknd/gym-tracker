@@ -14,6 +14,7 @@ class IntervalTimer extends Model
     /** @use HasFactory<IntervalTimerFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'name',

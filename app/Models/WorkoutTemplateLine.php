@@ -21,6 +21,7 @@ class WorkoutTemplateLine extends Model
     /** @use HasFactory<\Database\Factories\WorkoutTemplateLineFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'workout_template_id',
         'exercise_id',

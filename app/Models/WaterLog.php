@@ -15,6 +15,7 @@ class WaterLog extends Model
     /** @use HasFactory<\Database\Factories\WaterLogFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'amount',

@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserAchievement extends Model
 {
+    #[\Override]
     protected $fillable = [
         'user_id',
         'achievement_id',

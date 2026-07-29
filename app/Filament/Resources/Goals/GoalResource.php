@@ -17,14 +17,19 @@ use Filament\Tables\Table;
 
 class GoalResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Objectif';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Objectifs';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Objectifs';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFlag;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
     #[\Override]

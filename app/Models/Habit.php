@@ -26,6 +26,7 @@ class Habit extends Model
     /** @use HasFactory<\Database\Factories\HabitFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'name',

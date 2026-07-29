@@ -13,6 +13,7 @@ class Fast extends Model
     /** @use HasFactory<\Database\Factories\FastFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'start_time',

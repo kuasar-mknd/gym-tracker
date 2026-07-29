@@ -85,7 +85,7 @@ class HabitController extends Controller
 
         $habit = $createHabitAction->execute($this->user(), $validated);
 
-        return (new HabitResource($habit))
+        return new HabitResource($habit)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

@@ -17,14 +17,19 @@ use Filament\Tables\Table;
 
 class AchievementResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Badge';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Badges';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Badges';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedStar;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Gestion Contenu';
 
     #[\Override]

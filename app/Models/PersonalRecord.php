@@ -28,6 +28,7 @@ class PersonalRecord extends Model
     /** @use HasFactory<\Database\Factories\PersonalRecordFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'exercise_id',

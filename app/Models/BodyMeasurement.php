@@ -20,6 +20,7 @@ class BodyMeasurement extends BaseMeasurement
     /** @use HasFactory<\Database\Factories\BodyMeasurementFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'weight',
         'body_fat',

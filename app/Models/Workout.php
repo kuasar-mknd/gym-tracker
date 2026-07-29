@@ -25,6 +25,7 @@ class Workout extends Model
     /** @use HasFactory<\Database\Factories\WorkoutFactory> */
     use HasFactory, LogsActivity;
 
+    #[\Override]
     protected $fillable = [
         'name',
         'started_at',

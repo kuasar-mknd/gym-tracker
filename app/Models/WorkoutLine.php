@@ -24,6 +24,7 @@ class WorkoutLine extends Model
     /** @use HasFactory<\Database\Factories\WorkoutLineFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'exercise_id',
         'order',
@@ -33,6 +34,7 @@ class WorkoutLine extends Model
     /**
      * @var list<string>
      */
+    #[\Override]
     protected $appends = [];
 
     /**
