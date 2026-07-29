@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Actions\Tools\Concerns\CalculatesMacros;
 
 test('calculates macros correctly when remaining calories are less than zero', function (): void {
-    $calculator = new class()
+    $calculator = new class
     {
         use CalculatesMacros;
 
@@ -27,7 +27,7 @@ test('calculates macros correctly when remaining calories are less than zero', f
 });
 
 test('calculates macros correctly when remaining calories are positive', function (): void {
-    $calculator = new class()
+    $calculator = new class
     {
         use CalculatesMacros;
 

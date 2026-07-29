@@ -71,6 +71,7 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
      *
      * @return array<string, string>
      */
+    #[\Override]
     protected function casts(): array
     {
         return [

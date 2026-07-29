@@ -71,6 +71,7 @@ class PersonalRecord extends Model
         return $this->belongsTo(Set::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

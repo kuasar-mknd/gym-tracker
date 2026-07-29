@@ -67,6 +67,7 @@ class Achievement extends Model
             ->dontSubmitEmptyLogs();
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         parent::booted();

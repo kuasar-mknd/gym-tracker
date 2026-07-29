@@ -29,7 +29,7 @@ class SaveDailyJournalAction
 
         /** @var DailyJournal|null $journal */
         $journal = $user->dailyJournals()->where('date', $dateString)->first();
-        $journal ??= new DailyJournal();
+        $journal ??= new DailyJournal;
 
         if (! $journal->exists) {
             $journal->user_id = $user->id;

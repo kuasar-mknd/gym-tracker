@@ -51,6 +51,7 @@ class WorkoutTemplateLine extends Model
         return $this->hasMany(WorkoutTemplateSet::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

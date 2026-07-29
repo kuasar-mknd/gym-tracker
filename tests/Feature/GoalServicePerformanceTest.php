@@ -39,7 +39,7 @@ class GoalServicePerformanceTest extends TestCase
             ]);
         }
 
-        $service = new GoalService();
+        $service = new GoalService;
 
         // Count queries
         \DB::enableQueryLog();

@@ -12,6 +12,7 @@ class ListGoals extends ListRecords
 {
     protected static string $resource = GoalResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

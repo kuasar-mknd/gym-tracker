@@ -76,7 +76,7 @@ class GoalController extends Controller
             $data['start_value'] = 0;
         }
 
-        $goal = new Goal();
+        $goal = new Goal;
         $goal->fill($data);
         $goal->user_id = $this->user()->id;
         $goal->save();

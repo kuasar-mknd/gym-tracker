@@ -23,7 +23,7 @@ class CreateGoalAction
             $data['start_value'] = 0;
         }
 
-        $goal = new Goal();
+        $goal = new Goal;
         $goal->fill($data);
         $goal->user_id = $user->id;
         $goal->save();

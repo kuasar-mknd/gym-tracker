@@ -37,6 +37,7 @@ class WorkoutTemplateSet extends Model
         return $this->belongsTo(WorkoutTemplateLine::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

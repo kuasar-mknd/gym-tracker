@@ -52,6 +52,7 @@ class Habit extends Model
         return $this->hasMany(HabitLog::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

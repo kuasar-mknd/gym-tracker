@@ -18,7 +18,7 @@ class FetchBodyPartMeasurementsIndexAction
     {
         // Optimized query: fetch only latest 2 measurements per part
         // Uses Window Function to avoid N+1 and loading full history
-        $table = (new BodyPartMeasurement())->getTable();
+        $table = (new BodyPartMeasurement)->getTable();
         $measurements = BodyPartMeasurement::fromQuery("
             SELECT * FROM (
                 SELECT *, ROW_NUMBER() OVER (PARTITION BY part ORDER BY measured_at DESC) as rn

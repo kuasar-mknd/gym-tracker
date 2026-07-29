@@ -10,7 +10,7 @@ use App\Policies\WorkoutLinePolicy;
 describe('WorkoutLinePolicy', function (): void {
     describe('viewAny', function (): void {
         it('allows any user to view any workout lines', function (): void {
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
             $user = User::factory()->make();
 
             expect($policy->viewAny())->toBeTrue();
@@ -24,7 +24,7 @@ describe('WorkoutLinePolicy', function (): void {
             $workoutLine = WorkoutLine::factory()->make();
             $workoutLine->setRelation('workout', $workout);
 
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->view($user, $workoutLine))->toBeTrue();
         });
@@ -35,7 +35,7 @@ describe('WorkoutLinePolicy', function (): void {
             $workoutLine = WorkoutLine::factory()->make();
             $workoutLine->setRelation('workout', $workout);
 
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->view($user, $workoutLine))->toBeFalse();
         });
@@ -44,7 +44,7 @@ describe('WorkoutLinePolicy', function (): void {
     describe('create', function (): void {
         it('allows the user to create a workout line if no workout is provided', function (): void {
             $user = User::factory()->make();
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->create($user))->toBeTrue();
         });
@@ -52,7 +52,7 @@ describe('WorkoutLinePolicy', function (): void {
         it('allows the user to create a workout line if it belongs to them and is not ended', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 1, 'ended_at' => null]);
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->create($user, $workout))->toBeTrue();
         });
@@ -60,7 +60,7 @@ describe('WorkoutLinePolicy', function (): void {
         it('denies the user from creating a workout line if the workout does not belong to them', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 2, 'ended_at' => null]);
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->create($user, $workout))->toBeFalse();
         });
@@ -68,7 +68,7 @@ describe('WorkoutLinePolicy', function (): void {
         it('denies the user from creating a workout line if the workout has ended', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 1, 'ended_at' => now()]);
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->create($user, $workout))->toBeFalse();
         });
@@ -81,7 +81,7 @@ describe('WorkoutLinePolicy', function (): void {
             $workoutLine = WorkoutLine::factory()->make();
             $workoutLine->setRelation('workout', $workout);
 
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->update($user, $workoutLine))->toBeTrue();
         });
@@ -92,7 +92,7 @@ describe('WorkoutLinePolicy', function (): void {
             $workoutLine = WorkoutLine::factory()->make();
             $workoutLine->setRelation('workout', $workout);
 
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->update($user, $workoutLine))->toBeFalse();
         });
@@ -103,7 +103,7 @@ describe('WorkoutLinePolicy', function (): void {
             $workoutLine = WorkoutLine::factory()->make();
             $workoutLine->setRelation('workout', $workout);
 
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->update($user, $workoutLine))->toBeFalse();
         });
@@ -116,7 +116,7 @@ describe('WorkoutLinePolicy', function (): void {
             $workoutLine = WorkoutLine::factory()->make();
             $workoutLine->setRelation('workout', $workout);
 
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->delete($user, $workoutLine))->toBeTrue();
         });
@@ -127,7 +127,7 @@ describe('WorkoutLinePolicy', function (): void {
             $workoutLine = WorkoutLine::factory()->make();
             $workoutLine->setRelation('workout', $workout);
 
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->delete($user, $workoutLine))->toBeFalse();
         });
@@ -138,7 +138,7 @@ describe('WorkoutLinePolicy', function (): void {
             $workoutLine = WorkoutLine::factory()->make();
             $workoutLine->setRelation('workout', $workout);
 
-            $policy = new WorkoutLinePolicy();
+            $policy = new WorkoutLinePolicy;
 
             expect($policy->delete($user, $workoutLine))->toBeFalse();
         });

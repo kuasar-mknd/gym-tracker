@@ -32,6 +32,7 @@ class BodyPartMeasurement extends BaseMeasurement
         'notes',
     ];
 
+    #[\Override]
     protected function casts(): array
     {
         return [

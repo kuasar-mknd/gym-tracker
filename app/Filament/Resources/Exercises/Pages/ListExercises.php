@@ -15,6 +15,7 @@ class ListExercises extends ListRecords
 {
     protected static string $resource = ExerciseResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

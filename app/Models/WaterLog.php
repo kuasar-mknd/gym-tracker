@@ -45,6 +45,7 @@ class WaterLog extends Model
         ]);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

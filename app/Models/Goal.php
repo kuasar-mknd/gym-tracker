@@ -79,6 +79,7 @@ class Goal extends Model
             ->dontSubmitEmptyLogs();
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

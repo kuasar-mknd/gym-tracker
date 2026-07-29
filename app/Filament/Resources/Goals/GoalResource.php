@@ -27,21 +27,25 @@ class GoalResource extends Resource
 
     protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
+    #[\Override]
     public static function form(Schema $schema): Schema
     {
         return GoalForm::configure($schema);
     }
 
+    #[\Override]
     public static function table(Table $table): Table
     {
         return GoalsTable::configure($table);
     }
 
+    #[\Override]
     public static function getRelations(): array
     {
         return [];
     }
 
+    #[\Override]
     public static function getPages(): array
     {
         return [

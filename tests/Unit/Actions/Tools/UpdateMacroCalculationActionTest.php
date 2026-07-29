@@ -29,7 +29,7 @@ it('updates macro calculation and maps multiplier correctly', function (): void 
         'carbs' => 134,
     ]);
 
-    $action = new UpdateMacroCalculationAction();
+    $action = new UpdateMacroCalculationAction;
 
     $data = [
         'gender' => 'male',

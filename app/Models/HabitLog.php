@@ -54,6 +54,7 @@ class HabitLog extends Model
         return $query;
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

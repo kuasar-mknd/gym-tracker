@@ -13,6 +13,7 @@ class ConditionalCspHeaders extends AddCspHeaders
     /**
      * Handle an incoming request.
      */
+    #[\Override]
     public function handle(Request $request, \Closure $next, ?string $customPreset = null): Response
     {
         /** @var string $path */

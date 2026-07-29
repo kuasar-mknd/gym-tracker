@@ -39,7 +39,7 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
      */
     public function toWebPush(object $_notifiable, $_notification): WebPushMessage
     {
-        return (new WebPushMessage())
+        return (new WebPushMessage)
             ->title('Nouveau Record ! 🏆')
             ->icon('/logo.svg')
             /** @phpstan-ignore-next-line */

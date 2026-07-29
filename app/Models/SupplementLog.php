@@ -47,6 +47,7 @@ class SupplementLog extends Model
         return $this->belongsTo(User::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

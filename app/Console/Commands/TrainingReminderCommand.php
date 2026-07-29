@@ -74,7 +74,7 @@ class TrainingReminderCommand extends Command
                     $lastWorkoutTimestamp = is_string($lastWorkoutStartedAtStr) ? strtotime($lastWorkoutStartedAtStr) : null;
 
                     if (! $lastWorkoutTimestamp || $lastWorkoutTimestamp < $threshold) {
-                        $user->notify(new TrainingReminder());
+                        $user->notify(new TrainingReminder);
                         $count++;
                     }
                 }

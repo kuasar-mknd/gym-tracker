@@ -11,6 +11,7 @@ use Spatie\Csp\Presets\Basic;
 
 class PulsePolicy extends Basic
 {
+    #[\Override]
     public function configure(Policy $policy): void
     {
         parent::configure($policy);

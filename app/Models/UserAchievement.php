@@ -39,6 +39,7 @@ class UserAchievement extends Model
         return $this->belongsTo(Achievement::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

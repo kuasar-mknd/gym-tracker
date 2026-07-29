@@ -12,6 +12,7 @@ class EditWorkout extends EditRecord
 {
     protected static string $resource = WorkoutResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

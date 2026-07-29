@@ -12,6 +12,7 @@ class ListSupplements extends ListRecords
 {
     protected static string $resource = SupplementResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

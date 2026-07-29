@@ -12,6 +12,7 @@ class ListAchievements extends ListRecords
 {
     protected static string $resource = AchievementResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

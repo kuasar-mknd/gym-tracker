@@ -21,7 +21,7 @@ class NotificationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new NotificationService();
+        $this->service = new NotificationService;
     }
 
     public function test_get_unread_count_cached(): void
@@ -69,10 +69,10 @@ class NotificationServiceTest extends TestCase
         // We can check the shared data by calling a route and checking Inertia props
         // or just by instantiating the middleware and calling share()
 
-        $request = new \Illuminate\Http\Request();
+        $request = new \Illuminate\Http\Request;
         $request->setUserResolver(fn () => $user);
 
-        $middleware = new \App\Http\Middleware\HandleInertiaRequests();
+        $middleware = new \App\Http\Middleware\HandleInertiaRequests;
         $sharedData = $middleware->share($request);
 
         $this->assertEquals(1, $sharedData['auth']['user']['unread_notifications_count']);

@@ -12,7 +12,7 @@ describe('AdminPolicy', function (): void {
         $user = Admin::factory()->make();
         Gate::define('view_any_admin', fn (): true => true);
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->viewAny($user))->toBeTrue();
     });
@@ -21,7 +21,7 @@ describe('AdminPolicy', function (): void {
         $user = Admin::factory()->make();
         Gate::define('view_any_admin', fn (): false => false);
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->viewAny($user))->toBeFalse();
     });
@@ -30,7 +30,7 @@ describe('AdminPolicy', function (): void {
         $user = User::factory()->make();
         Gate::define('view_any_admin', fn (): true => true);
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->viewAny($user))->toBeFalse();
     });
@@ -40,7 +40,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('view_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->view($user, $admin))->toBeTrue();
     });
@@ -50,7 +50,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('view_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->view($user, $admin))->toBeFalse();
     });
@@ -60,7 +60,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('view_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->view($user, $admin))->toBeFalse();
     });
@@ -69,7 +69,7 @@ describe('AdminPolicy', function (): void {
         $user = Admin::factory()->make();
         Gate::define('create_admin', fn (): true => true);
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->create($user))->toBeTrue();
     });
@@ -78,7 +78,7 @@ describe('AdminPolicy', function (): void {
         $user = Admin::factory()->make();
         Gate::define('create_admin', fn (): false => false);
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->create($user))->toBeFalse();
     });
@@ -87,7 +87,7 @@ describe('AdminPolicy', function (): void {
         $user = User::factory()->make();
         Gate::define('create_admin', fn (): true => true);
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->create($user))->toBeFalse();
     });
@@ -97,7 +97,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('update_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->update($user, $admin))->toBeTrue();
     });
@@ -107,7 +107,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('update_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->update($user, $admin))->toBeFalse();
     });
@@ -117,7 +117,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('update_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->update($user, $admin))->toBeFalse();
     });
@@ -127,7 +127,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('delete_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->delete($user, $admin))->toBeTrue();
     });
@@ -137,7 +137,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('delete_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->delete($user, $admin))->toBeFalse();
     });
@@ -147,7 +147,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('delete_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->delete($user, $admin))->toBeFalse();
     });
@@ -157,7 +157,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('restore_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->restore($user, $admin))->toBeTrue();
     });
@@ -167,7 +167,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('restore_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->restore($user, $admin))->toBeFalse();
     });
@@ -177,7 +177,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('restore_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->restore($user, $admin))->toBeFalse();
     });
@@ -187,7 +187,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('force_delete_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->forceDelete($user, $admin))->toBeTrue();
     });
@@ -197,7 +197,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('force_delete_admin', fn (): false => false);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->forceDelete($user, $admin))->toBeFalse();
     });
@@ -207,7 +207,7 @@ describe('AdminPolicy', function (): void {
         Gate::define('force_delete_admin', fn (): true => true);
         $admin = Admin::factory()->make();
 
-        $policy = new AdminPolicy();
+        $policy = new AdminPolicy;
 
         expect($policy->forceDelete($user, $admin))->toBeFalse();
     });

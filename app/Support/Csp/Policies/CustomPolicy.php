@@ -11,6 +11,7 @@ use Spatie\Csp\Presets\Basic;
 
 class CustomPolicy extends Basic
 {
+    #[\Override]
     public function configure(Policy $policy): void
     {
         // Don't call parent::configure() because Basic preset adds a nonce to STYLE,

@@ -105,6 +105,7 @@ class Exercise extends Model
         }
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [
@@ -113,6 +114,7 @@ class Exercise extends Model
         ];
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         parent::booted();

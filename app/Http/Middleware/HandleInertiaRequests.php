@@ -23,6 +23,7 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
+    #[\Override]
     public function share(Request $request): array
     {
         return [
@@ -37,7 +38,7 @@ class HandleInertiaRequests extends Middleware
             'is_testing' => app()->environment('testing'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             'ziggy' => function () use ($request): array {
-                $ziggy = new Ziggy();
+                $ziggy = new Ziggy;
 
                 return [
                     ...$ziggy->toArray(),

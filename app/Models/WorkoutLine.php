@@ -101,6 +101,7 @@ class WorkoutLine extends Model
             ->dontSubmitEmptyLogs();
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         $clearCache = function (self $line): void {
@@ -113,6 +114,7 @@ class WorkoutLine extends Model
         static::deleted($clearCache);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

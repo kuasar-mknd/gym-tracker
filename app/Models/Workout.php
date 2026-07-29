@@ -56,6 +56,7 @@ class Workout extends Model
             ->dontSubmitEmptyLogs();
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [
@@ -65,6 +66,7 @@ class Workout extends Model
         ];
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         $clearCache = function (self $workout): void {

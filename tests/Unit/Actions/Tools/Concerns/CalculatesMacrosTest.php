@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Tools\Concerns\CalculatesMacros;
 
-$testClass = new class()
+$testClass = new class
 {
     use CalculatesMacros;
 

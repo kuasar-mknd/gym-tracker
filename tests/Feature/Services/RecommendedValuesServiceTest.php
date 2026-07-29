@@ -129,7 +129,7 @@ test('it returns cached values when available', function (): void {
 });
 
 test('batch processing returns empty array for empty collection', function (): void {
-    $lines = new \Illuminate\Database\Eloquent\Collection();
+    $lines = new \Illuminate\Database\Eloquent\Collection;
     $values = $this->service->batchRecommendedValues($lines, 1);
     expect($values)->toBe([]);
 });

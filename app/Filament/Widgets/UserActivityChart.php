@@ -17,6 +17,7 @@ class UserActivityChart extends ChartWidget
         return 'bar';
     }
 
+    #[\Override]
     protected function getData(): array
     {
         $usersPerMonth = $this->getUsersPerMonth();

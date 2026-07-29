@@ -111,6 +111,7 @@ class Set extends Model
         }
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         static::saved(function (Set $set): void {
@@ -122,6 +123,7 @@ class Set extends Model
         });
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [
