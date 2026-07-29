@@ -28,6 +28,19 @@ const markAllAsRead = () => {
     )
 }
 
+/**
+ * Pagination was a conditional empty div wrapping a "add this if required"
+ * comment, so past the first 20 notifications the rest were unreachable.
+ *
+ * Prev/next rather than numbered links: this is a phone-first screen, and two
+ * thumb-sized targets beat a row of small ones.
+ */
+const goToPage = (url) => {
+    if (url) {
+        router.visit(url)
+    }
+}
+
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('fr-FR', {
         day: '2-digit',
@@ -86,6 +99,7 @@ const formatDate = (date) => {
                 <GlassCard
                     v-for="notification in notifications.data"
                     :key="notification.id"
+                    :data-notification-id="notification.id"
                     :class="['transition', !notification.read_at ? 'ring-accent-primary/30 ring-1' : 'opacity-70']"
                 >
                     <div class="flex items-start justify-between gap-4">
@@ -164,10 +178,33 @@ const formatDate = (date) => {
                 </GlassCard>
             </div>
 
-            <!-- Pagination (if needed) -->
-            <div v-if="notifications.links.length > 3" class="mt-6 flex justify-center">
-                <!-- Add simple pagination here if required -->
-            </div>
+            <nav
+                v-if="notifications.last_page > 1"
+                class="mt-6 flex items-center justify-center gap-4"
+                aria-label="Pagination des notifications"
+            >
+                <GlassButton
+                    :disabled="!notifications.prev_page_url"
+                    @click="goToPage(notifications.prev_page_url)"
+                    aria-label="Page précédente"
+                    dusk="notifications-prev"
+                >
+                    <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                </GlassButton>
+
+                <span class="text-text-muted text-sm font-bold" aria-live="polite">
+                    Page {{ notifications.current_page }} sur {{ notifications.last_page }}
+                </span>
+
+                <GlassButton
+                    :disabled="!notifications.next_page_url"
+                    @click="goToPage(notifications.next_page_url)"
+                    aria-label="Page suivante"
+                    dusk="notifications-next"
+                >
+                    <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                </GlassButton>
+            </nav>
         </div>
     </AuthenticatedLayout>
 </template>

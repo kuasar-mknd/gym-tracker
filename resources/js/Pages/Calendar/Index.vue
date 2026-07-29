@@ -97,6 +97,27 @@ const changeMonth = (delta) => {
     })
 }
 
+/**
+ * The button only appears once you have navigated away from the current month,
+ * so it has one job: come back. It used to call changeMonth(0), which resolves
+ * to the month you are already looking at — a no-op dressed as an escape hatch.
+ */
+const goToToday = () => {
+    const today = new Date()
+    const targetMonth = today.getMonth() + 1
+    const targetYear = today.getFullYear()
+
+    router.visit(route('calendar.index', { year: targetYear, month: targetMonth }), {
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            currentMonth.value = targetMonth
+            currentYear.value = targetYear
+            selectedDate.value = null
+        },
+    })
+}
+
 const selectDate = (day) => {
     if (!day.day) return
     selectedDate.value = day
@@ -123,8 +144,9 @@ const formatDateFull = (dateStr) => {
     <AuthenticatedLayout page-title="Calendrier">
         <template #header-actions>
             <GlassButton
-                @click="changeMonth(0)"
+                @click="goToToday"
                 class="px-3!"
+                dusk="calendar-today"
                 v-if="currentMonth !== new Date().getMonth() + 1 || currentYear !== new Date().getFullYear()"
             >
                 Aujourd'hui
@@ -138,7 +160,7 @@ const formatDateFull = (dateStr) => {
                     <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
                 </GlassButton>
 
-                <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic">
+                <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic" dusk="calendar-heading">
                     {{ currentMonthName }} <span class="text-electric-orange">{{ currentYear }}</span>
                 </h2>
 
