@@ -4,6 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import Modal from '@/Components/UI/Modal.vue'
 import { Head, useForm, router, Deferred } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
 
@@ -206,8 +207,8 @@ const getProgressPercent = (habit) => {
 
     <AuthenticatedLayout page-title="Habitudes">
         <template #header-actions>
-            <GlassButton size="sm" @click="openAddForm">
-                <span class="material-symbols-outlined text-sm">add</span>
+            <GlassButton size="sm" @click="openAddForm" aria-label="Ajouter une habitude" dusk="add-habit">
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>
             </GlassButton>
         </template>
 
@@ -385,12 +386,15 @@ const getProgressPercent = (habit) => {
             </div>
         </div>
 
-        <!-- Add/Edit Modal -->
-        <div v-if="showAddForm" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showAddForm = false"></div>
-            <GlassCard class="animate-scale-in relative w-full max-w-lg shadow-2xl" variant="solid">
+        <!--
+          Native <dialog> via Modal rather than a hand-rolled overlay: the
+          backdrop closed on click but nothing trapped focus, so Tab walked
+          straight out of the form and into the page behind it.
+        -->
+        <Modal :show="showAddForm" max-width="lg" aria-labelledby="habit-form-title" @close="showAddForm = false">
+            <div class="p-6">
                 <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-text-main text-xl font-bold">
+                    <h3 id="habit-form-title" class="text-text-main text-xl font-bold">
                         {{ editingHabit ? 'Modifier' : 'Nouvelle Habitude' }}
                     </h3>
                     <button
@@ -471,7 +475,7 @@ const getProgressPercent = (habit) => {
                         >
                     </div>
                 </form>
-            </GlassCard>
-        </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>
