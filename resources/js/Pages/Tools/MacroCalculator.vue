@@ -21,9 +21,10 @@
                 <div class="space-y-6">
                     <!-- Gender Selection -->
                     <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Sexe</label>
-                        <div class="grid grid-cols-2 gap-3">
+                        <span id="macro-gender-label" class="font-display-label text-text-muted mb-2 block">Sexe</span>
+                        <div class="grid grid-cols-2 gap-3" role="group" aria-labelledby="macro-gender-label">
                             <button
+                                type="button"
                                 @click="form.gender = 'male'"
                                 :aria-pressed="form.gender === 'male'"
                                 class="focus-visible:ring-electric-orange flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
@@ -36,6 +37,7 @@
                                 <span class="font-display text-lg font-black uppercase">Homme</span>
                             </button>
                             <button
+                                type="button"
                                 @click="form.gender = 'female'"
                                 :aria-pressed="form.gender === 'female'"
                                 class="focus-visible:ring-hot-pink flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
@@ -75,11 +77,14 @@
 
                     <!-- Goal -->
                     <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Objectif</label>
-                        <div class="grid grid-cols-3 gap-3">
+                        <span id="macro-goal-label" class="font-display-label text-text-muted mb-2 block"
+                            >Objectif</span
+                        >
+                        <div class="grid grid-cols-3 gap-3" role="group" aria-labelledby="macro-goal-label">
                             <button
                                 v-for="goalOption in ['cut', 'maintain', 'bulk']"
                                 :key="goalOption"
+                                type="button"
                                 @click="form.goal = goalOption"
                                 :aria-pressed="form.goal === goalOption"
                                 class="focus-visible:ring-electric-orange flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"

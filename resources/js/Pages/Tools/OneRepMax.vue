@@ -23,9 +23,12 @@
                         <div class="space-y-6 p-6">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="font-display-label text-text-muted mb-2 block">Poids Soulevé</label>
+                                    <label for="orm-weight" class="font-display-label text-text-muted mb-2 block"
+                                        >Poids Soulevé</label
+                                    >
                                     <div class="relative">
                                         <input
+                                            id="orm-weight"
                                             type="number"
                                             v-model="weight"
                                             placeholder="100"
@@ -40,9 +43,12 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="font-display-label text-text-muted mb-2 block">Répétitions</label>
+                                    <label for="orm-reps" class="font-display-label text-text-muted mb-2 block"
+                                        >Répétitions</label
+                                    >
                                     <div class="relative">
                                         <input
+                                            id="orm-reps"
                                             type="number"
                                             v-model="reps"
                                             placeholder="5"

@@ -92,6 +92,53 @@ const colors = [
 ]
 
 /**
+ * Both pickers store their value as the raw thing the template needs — a
+ * Tailwind class, a Material Symbols ligature — and rendered nothing else. The
+ * colour swatches were empty elements, so a screen reader read sixteen
+ * identical "button"s and the only distinguishing information was the
+ * background colour (WCAG 1.4.1); the icon buttons read out their ligature
+ * ("local_fire_department"). These maps give each option a name a human can
+ * act on.
+ */
+const colorNames = {
+    'bg-slate-500': 'Ardoise',
+    'bg-red-500': 'Rouge',
+    'bg-orange-500': 'Orange',
+    'bg-amber-500': 'Ambre',
+    'bg-green-500': 'Vert',
+    'bg-emerald-500': 'Émeraude',
+    'bg-teal-500': 'Turquoise',
+    'bg-cyan-500': 'Cyan',
+    'bg-sky-500': 'Bleu ciel',
+    'bg-blue-500': 'Bleu',
+    'bg-indigo-500': 'Indigo',
+    'bg-violet-500': 'Violet',
+    'bg-purple-500': 'Pourpre',
+    'bg-fuchsia-500': 'Fuchsia',
+    'bg-pink-500': 'Rose',
+    'bg-rose-500': 'Framboise',
+}
+
+const iconNames = {
+    check_circle: 'Validation',
+    fitness_center: 'Musculation',
+    water_drop: 'Hydratation',
+    bedtime: 'Sommeil',
+    restaurant: 'Repas',
+    self_improvement: 'Méditation',
+    local_fire_department: 'Calories',
+    bolt: 'Énergie',
+    directions_run: 'Course',
+    monitor_heart: 'Cardio',
+    spa: 'Bien-être',
+    medication: 'Médicament',
+    local_cafe: 'Café',
+    no_drinks: 'Sans alcool',
+    savings: 'Économies',
+    book: 'Lecture',
+}
+
+/**
  * Opens the modal to create a new habit.
  * Resets the form and editing state.
  */
@@ -423,14 +470,21 @@ const getProgressPercent = (habit) => {
                     />
 
                     <div>
-                        <label class="text-text-muted mb-1 block text-sm font-medium">Couleur</label>
-                        <div class="flex flex-wrap gap-2">
+                        <!-- A <label> with no `for` labels nothing. The swatches are
+                             buttons, so the group is what needs naming. -->
+                        <span id="habit-color-label" class="text-text-muted mb-1 block text-sm font-medium">
+                            Couleur
+                        </span>
+                        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="habit-color-label">
                             <button
                                 v-for="color in colors"
                                 :key="color"
                                 type="button"
                                 @click="form.color = color"
-                                class="h-8 w-8 rounded-full border-2 transition"
+                                :aria-label="colorNames[color]"
+                                :aria-pressed="form.color === color"
+                                :dusk="`habit-color-${color}`"
+                                class="focus-visible:ring-accent-primary h-8 w-8 rounded-full border-2 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                                 :class="[
                                     color,
                                     form.color === color ? 'border-text-main scale-110' : 'border-transparent',
@@ -440,21 +494,25 @@ const getProgressPercent = (habit) => {
                     </div>
 
                     <div>
-                        <label class="text-text-muted mb-1 block text-sm font-medium">Icône</label>
-                        <div class="flex flex-wrap gap-2">
+                        <span id="habit-icon-label" class="text-text-muted mb-1 block text-sm font-medium">Icône</span>
+                        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="habit-icon-label">
                             <button
                                 v-for="icon in icons"
                                 :key="icon"
                                 type="button"
                                 @click="form.icon = icon"
-                                class="flex h-10 w-10 items-center justify-center rounded-lg border-2 transition hover:bg-slate-100"
+                                :aria-label="iconNames[icon]"
+                                :aria-pressed="form.icon === icon"
+                                :dusk="`habit-icon-${icon}`"
+                                class="focus-visible:ring-accent-primary flex h-10 w-10 items-center justify-center rounded-lg border-2 transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:outline-none"
                                 :class="[
                                     form.icon === icon
                                         ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
                                         : 'text-text-muted border-transparent',
                                 ]"
                             >
-                                <span class="material-symbols-outlined">{{ icon }}</span>
+                                <!-- Without this the button announces the raw ligature. -->
+                                <span class="material-symbols-outlined" aria-hidden="true">{{ icon }}</span>
                             </button>
                         </div>
                     </div>

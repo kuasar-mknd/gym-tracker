@@ -54,9 +54,12 @@
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <!-- Gender Selection -->
                         <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Sexe</label>
-                            <div class="grid grid-cols-2 gap-3">
+                            <span id="wilks-gender-label" class="font-display-label text-text-muted mb-2 block"
+                                >Sexe</span
+                            >
+                            <div class="grid grid-cols-2 gap-3" role="group" aria-labelledby="wilks-gender-label">
                                 <button
+                                    type="button"
                                     @click="form.gender = 'male'"
                                     :aria-pressed="form.gender === 'male'"
                                     class="focus-visible:ring-electric-orange flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
@@ -69,6 +72,7 @@
                                     <span class="font-display text-lg font-black uppercase">Homme</span>
                                 </button>
                                 <button
+                                    type="button"
                                     @click="form.gender = 'female'"
                                     :aria-pressed="form.gender === 'female'"
                                     class="focus-visible:ring-hot-pink flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
@@ -86,9 +90,12 @@
                         <!-- Inputs -->
                         <div class="space-y-4">
                             <div>
-                                <label class="font-display-label text-text-muted mb-2 block">Poids de corps</label>
+                                <label for="wilks-body-weight" class="font-display-label text-text-muted mb-2 block"
+                                    >Poids de corps</label
+                                >
                                 <div class="relative">
                                     <input
+                                        id="wilks-body-weight"
                                         type="number"
                                         v-model="form.body_weight"
                                         placeholder="80"
@@ -102,9 +109,12 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="font-display-label text-text-muted mb-2 block">Total soulevé</label>
+                                <label for="wilks-lifted-weight" class="font-display-label text-text-muted mb-2 block"
+                                    >Total soulevé</label
+                                >
                                 <div class="relative">
                                     <input
+                                        id="wilks-lifted-weight"
                                         type="number"
                                         v-model="form.lifted_weight"
                                         placeholder="400"

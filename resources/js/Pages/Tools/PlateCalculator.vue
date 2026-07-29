@@ -21,9 +21,12 @@
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Poids Cible</label>
+                            <label for="plate-target-weight" class="font-display-label text-text-muted mb-2 block"
+                                >Poids Cible</label
+                            >
                             <div class="relative">
                                 <input
+                                    id="plate-target-weight"
                                     type="number"
                                     v-model="targetWeight"
                                     placeholder="100"
@@ -36,9 +39,12 @@
                             </div>
                         </div>
                         <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Poids Barre</label>
+                            <label for="plate-bar-weight" class="font-display-label text-text-muted mb-2 block"
+                                >Poids Barre</label
+                            >
                             <div class="relative">
                                 <input
+                                    id="plate-bar-weight"
                                     type="number"
                                     v-model="barWeight"
                                     placeholder="20"
@@ -216,13 +222,24 @@
                 <h2 class="font-display text-text-main text-xl font-black uppercase italic">Ajouter une plaque</h2>
 
                 <div class="space-y-4">
+                    <!-- GlassInput renders this exact label markup itself, and wires
+                         its `for` to the input it generates. -->
                     <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Poids (kg)</label>
-                        <GlassInput type="number" v-model="newPlate.weight" placeholder="ex: 20" step="0.5" />
+                        <GlassInput
+                            type="number"
+                            label="Poids (kg)"
+                            v-model="newPlate.weight"
+                            placeholder="ex: 20"
+                            step="0.5"
+                        />
                     </div>
                     <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Quantité (total)</label>
-                        <GlassInput type="number" v-model="newPlate.quantity" placeholder="ex: 4" />
+                        <GlassInput
+                            type="number"
+                            label="Quantité (total)"
+                            v-model="newPlate.quantity"
+                            placeholder="ex: 4"
+                        />
                         <p class="text-text-muted mt-2 text-xs">Nombre total de plaques disponibles (pas de paires)</p>
                     </div>
                 </div>
