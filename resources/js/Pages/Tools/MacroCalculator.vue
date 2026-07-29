@@ -143,6 +143,15 @@
                             >
                                 Enregistrer
                             </GlassButton>
+
+                            <p
+                                v-if="Object.keys(form.errors).length"
+                                class="mt-3 text-sm font-bold text-red-500"
+                                role="alert"
+                                dusk="macro-error"
+                            >
+                                {{ Object.values(form.errors)[0] }}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -221,6 +230,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 
@@ -318,6 +328,7 @@ const saveCalculation = () => {
         onSuccess: () => {
             // Optional: reset form or show success message
         },
+        onError: () => triggerHaptic('error'),
     })
 }
 

@@ -138,6 +138,15 @@
                             >
                                 Enregistrer
                             </GlassButton>
+
+                            <p
+                                v-if="Object.keys(form.errors).length"
+                                class="mt-3 text-sm font-bold text-red-500"
+                                role="alert"
+                                dusk="wilks-error"
+                            >
+                                {{ Object.values(form.errors)[0] }}
+                            </p>
                         </div>
                     </GlassCard>
                 </div>
@@ -215,6 +224,7 @@ import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import { triggerHaptic } from '@/composables/useHaptics'
 
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
 const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))
@@ -291,6 +301,9 @@ const saveScore = () => {
         onSuccess: () => {
             // Keep the form values so user can see what they just saved
         },
+        // The isValid guard is looser than the server's rules, so a rejection is
+        // reachable. Without this the button simply did nothing and said nothing.
+        onError: () => triggerHaptic('error'),
     })
 }
 
