@@ -99,4 +99,94 @@ class ModalSemanticsTest extends DuskTestCase
             $this->assertSame('habit-form-title', $state['labelledby']);
         });
     }
+
+    /**
+     * The template exercise picker is a bottom sheet, which is why it was built
+     * by hand: Modal centred its panel. Modal now takes a position, so the sheet
+     * keeps its placement and gains the semantics — the overlay had no role, no
+     * Escape, and left Tab free to reach the template form behind it.
+     *
+     * Create rather than Edit: templates.edit deliberately aborts with a 404.
+     */
+    public function test_the_template_exercise_picker_is_a_real_dialog(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $user = User::factory()->create();
+
+            $browser->loginAs($user)
+                ->resizeToIphone15()
+                ->visit(route('templates.create'))
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitFor('@open-add-exercise', 15)
+                ->script('document.querySelector(\'[dusk="open-add-exercise"]\').click();');
+
+            $browser->waitFor('dialog[open]', 15);
+
+            $state = $browser->script(
+                'const dialog = document.querySelector("dialog[open]");'
+                .'return {'
+                .'  modal: dialog.matches(":modal"),'
+                .'  labelledby: dialog.getAttribute("aria-labelledby"),'
+                .'  titled: !! document.getElementById("add-exercise-title"),'
+                .'  glassLayers: dialog.querySelectorAll(".glass-modal").length,'
+                .'};'
+            )[0];
+
+            $this->assertTrue($state['modal'], 'The picker must be opened modally, which is what traps Tab.');
+            $this->assertSame('add-exercise-title', $state['labelledby']);
+            $this->assertTrue($state['titled'], 'aria-labelledby must point at an element that exists.');
+            $this->assertSame(
+                1,
+                $state['glassLayers'],
+                'Modal already paints the glass panel; a second one stacks two backgrounds and two radii.'
+            );
+
+            // Keyed off the search field rather than 'body': Dusk resolves a bare
+            // 'body' against the page scope and builds the selector "body body".
+            $browser->keys('dialog[open] input[placeholder="Rechercher..."]', ['{escape}'])
+                ->waitUntilMissing('dialog[open]', 15);
+
+            $this->assertTrue(true, 'Escape closed the picker.');
+        });
+    }
+
+    /**
+     * The picker is a bottom sheet on a phone so it stays under the thumb. The
+     * shared Modal centres by default, so this pins the placement the position
+     * prop exists to preserve.
+     */
+    public function test_the_template_exercise_picker_stays_a_bottom_sheet(): void
+    {
+        $this->browse(function (Browser $browser): void {
+            $user = User::factory()->create();
+
+            $browser->loginAs($user)
+                ->resizeToIphone15()
+                ->visit(route('templates.create'))
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitFor('@open-add-exercise', 15)
+                ->script('document.querySelector(\'[dusk="open-add-exercise"]\').click();');
+
+            $browser->waitFor('dialog[open]', 15)
+                ->waitFor('#add-exercise-title', 15);
+
+            $geometry = $browser->script(
+                'const panel = document.querySelector("dialog[open] .glass-modal").getBoundingClientRect();'
+                .'return {gapBelow: window.innerHeight - panel.bottom, gapAbove: panel.top};'
+            )[0];
+
+            $this->assertLessThan(
+                48,
+                $geometry['gapBelow'],
+                'The sheet must sit against the bottom of the viewport, within thumb reach.'
+            );
+            $this->assertGreaterThan(
+                $geometry['gapBelow'],
+                $geometry['gapAbove'],
+                'A bottom sheet leaves more room above it than below it.'
+            );
+        });
+    }
 }

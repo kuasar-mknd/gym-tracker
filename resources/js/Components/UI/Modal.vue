@@ -15,6 +15,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
  * @property {String} maxWidth - Controls the maximum width of the modal (sm, md, lg, xl, 2xl).
  * @property {Boolean} closeable - Determines if the modal can be closed via background click or Escape key.
  * @property {String} ariaLabelledby - The ID of the element providing the modal's accessible title.
+ * @property {String} position - Where the panel sits on small screens: 'center' (default) or 'bottom' for a thumb-reachable sheet.
  */
 const props = defineProps({
     show: {
@@ -24,6 +25,11 @@ const props = defineProps({
     maxWidth: {
         type: String,
         default: '2xl',
+    },
+    position: {
+        type: String,
+        default: 'center',
+        validator: (value) => ['center', 'bottom'].includes(value),
     },
     closeable: {
         type: Boolean,
@@ -106,6 +112,21 @@ const maxWidthClass = computed(() => {
         '2xl': 'sm:max-w-2xl',
     }[props.maxWidth]
 })
+
+/**
+ * A bottom sheet keeps the panel under the thumb on a phone, which is how the
+ * template editors present their exercise picker. It is a placement choice
+ * only — everything a modal has to get right (focus trap, Escape, the inert
+ * background) comes from the native <dialog> underneath either way. Above the
+ * `sm` breakpoint both variants centre, as before.
+ */
+const isBottomSheet = computed(() => props.position === 'bottom')
+
+const containerClass = computed(() =>
+    isBottomSheet.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
+)
+
+const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
 </script>
 
 <template>
@@ -115,7 +136,7 @@ const maxWidthClass = computed(() => {
             ref="dialog"
             :aria-labelledby="ariaLabelledby"
         >
-            <div class="fixed inset-0 z-[100] overflow-y-auto px-4 py-6 sm:px-0" scroll-region>
+            <div class="fixed inset-0 z-[100] overflow-y-auto px-4 py-6 sm:px-0" :class="containerClass" scroll-region>
                 <Transition
                     enter-active-class="ease-out duration-300"
                     enter-from-class="opacity-0"
@@ -139,8 +160,8 @@ const maxWidthClass = computed(() => {
                 >
                     <div
                         v-show="show"
-                        class="glass-modal text-text-main mb-6 transform overflow-hidden rounded-3xl border border-white/20 bg-white/80 shadow-2xl backdrop-blur-xl transition-all sm:mx-auto sm:w-full dark:bg-slate-900/80 dark:text-white"
-                        :class="maxWidthClass"
+                        class="glass-modal text-text-main transform overflow-hidden rounded-3xl border border-white/20 bg-white/80 shadow-2xl backdrop-blur-xl transition-all sm:mx-auto sm:w-full dark:bg-slate-900/80 dark:text-white"
+                        :class="[maxWidthClass, panelSpacingClass]"
                     >
                         <slot v-if="showSlot" />
                     </div>
