@@ -174,6 +174,7 @@ const goalTypeOptions = [
                                             type="number"
                                             step="0.1"
                                             required
+                                            :error="form.errors.target_value"
                                         />
                                         <GlassInput
                                             label="Valeur de Départ (Optionnel)"
@@ -181,12 +182,14 @@ const goalTypeOptions = [
                                             type="number"
                                             step="0.1"
                                             placeholder="0"
+                                            :error="form.errors.start_value"
                                         />
                                         <GlassInput
                                             label="Titre du défi"
                                             v-model="form.title"
                                             placeholder="Ex: Bench Press 100kg"
                                             required
+                                            :error="form.errors.title"
                                         />
                                     </div>
                                 </div>

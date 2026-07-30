@@ -113,6 +113,10 @@
                         </GlassButton>
                     </div>
 
+                    <p v-if="saveError" class="text-sm font-bold text-red-500" role="alert" dusk="warmup-save-error">
+                        {{ saveError }}
+                    </p>
+
                     <div class="space-y-4">
                         <!-- Column headings, not labels: they sit above a repeated row,
                              so each field carries its own name including the step it
@@ -237,11 +241,20 @@ const removeStep = (index) => {
     }
 }
 
+const saveError = ref(null)
+
+/**
+ * The server validates every step — steps.*.percent max:100, steps.*.reps
+ * min:1 — and this had an onSuccess holding a comment and no onError at all.
+ * A rejected palier looked exactly like a saved one.
+ */
 const savePreferences = () => {
+    saveError.value = null
+
     form.post(route('tools.warmup.update'), {
         preserveScroll: true,
-        onSuccess: () => {
-            // Toast handled globally usually
+        onError: (errors) => {
+            saveError.value = Object.values(errors)[0] ?? "L'enregistrement a échoué. Réessaie."
         },
     })
 }

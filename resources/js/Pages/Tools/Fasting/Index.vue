@@ -37,22 +37,28 @@ const props = defineProps({
     history: Object,
 })
 
+// `type` is validated server-side against a fixed list — StoreFastRequest:
+// in:16:8,18:6,20:4,24:0,36:0,48:0,custom — so it is data, not something to
+// carve out of the label. It used to be derived with label.split(' ')[0],
+// which yields '16:8', '18:6' and '20:4' correctly and then '24h' and '36h',
+// neither of which the server accepts: two of the five options could never
+// start a fast, and the page rendered no error to say why.
 const fastingTypes = [
-    { label: '16:8 (Leangains)', hours: 16 },
-    { label: '18:6', hours: 18 },
-    { label: '20:4 (Warrior)', hours: 20 },
-    { label: '24h (OMAD)', hours: 24 },
-    { label: '36h (Monk)', hours: 36 },
+    { value: '16:8', label: '16:8 (Leangains)', hours: 16 },
+    { value: '18:6', label: '18:6', hours: 18 },
+    { value: '20:4', label: '20:4 (Warrior)', hours: 20 },
+    { value: '24:0', label: '24h (OMAD)', hours: 24 },
+    { value: '36:0', label: '36h (Monk)', hours: 36 },
 ]
 
 // A <select> can only ever hand back a string. Binding the objects directly made
 // every option render value="[object Object]", so picking anything other than the
 // default left selectedType as that string — .hours became NaN and .label.split()
 // threw, silently killing the "Commencer" button.
-const selectedTypeLabel = ref(fastingTypes[0].label)
+const selectedTypeValue = ref(fastingTypes[0].value)
 
 const selectedType = computed(
-    () => fastingTypes.find((type) => type.label === selectedTypeLabel.value) ?? fastingTypes[0],
+    () => fastingTypes.find((type) => type.value === selectedTypeValue.value) ?? fastingTypes[0],
 )
 
 const startForm = useForm({
@@ -121,7 +127,7 @@ const startFast = () => {
         .transform((data) => ({
             ...data,
             target_duration_minutes: selectedType.value.hours * 60,
-            type: selectedType.value.label.split(' ')[0],
+            type: selectedType.value.value,
         }))
         .post(route('tools.fasting.store'))
 }
@@ -219,15 +225,33 @@ const formatHistoryDuration = (start, end) => {
 
                 <form @submit.prevent="startFast" class="space-y-4">
                     <GlassSelect
-                        v-model="selectedTypeLabel"
+                        v-model="selectedTypeValue"
                         label="Type de jeûne"
                         dusk="fasting-type-select"
-                        :options="fastingTypes.map((t) => ({ value: t.label, label: t.label }))"
+                        :options="fastingTypes.map((t) => ({ value: t.value, label: t.label }))"
+                        :error="startForm.errors.type"
                     />
 
                     <div>
-                        <GlassInput type="datetime-local" v-model="startForm.start_time" label="Début" />
+                        <GlassInput
+                            type="datetime-local"
+                            v-model="startForm.start_time"
+                            label="Début"
+                            :error="startForm.errors.start_time"
+                        />
                     </div>
+
+                    <!-- The request adds a `base` error when a fast is already
+                         running and the controller a `message` one; neither maps
+                         to a field, so without this the rejection is invisible. -->
+                    <p
+                        v-if="Object.keys(startForm.errors).length"
+                        class="text-sm font-bold text-red-500"
+                        role="alert"
+                        dusk="fasting-error"
+                    >
+                        {{ Object.values(startForm.errors)[0] }}
+                    </p>
 
                     <GlassButton type="submit" variant="primary" :loading="startForm.processing" class="mt-4 w-full">
                         Commencer

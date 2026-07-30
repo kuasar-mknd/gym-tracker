@@ -231,6 +231,7 @@
                             v-model="newPlate.weight"
                             placeholder="ex: 20"
                             step="0.5"
+                            :error="newPlate.errors.weight"
                         />
                     </div>
                     <div>
@@ -239,6 +240,7 @@
                             label="Quantité (total)"
                             v-model="newPlate.quantity"
                             placeholder="ex: 4"
+                            :error="newPlate.errors.quantity"
                         />
                         <p class="text-text-muted mt-2 text-xs">Nombre total de plaques disponibles (pas de paires)</p>
                     </div>
@@ -246,7 +248,10 @@
 
                 <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
                     <GlassButton @click="addingPlate = false" variant="ghost">Annuler</GlassButton>
-                    <GlassButton @click="savePlate" variant="primary" :disabled="form.processing"
+                    <!-- Was :disabled="form.processing", where `form` was an empty
+                         useForm({}) that never submits — so it read false forever
+                         and the button stayed live through the request. -->
+                    <GlassButton @click="savePlate" variant="primary" :disabled="newPlate.processing"
                         >Enregistrer</GlassButton
                     >
                 </div>
@@ -279,8 +284,6 @@ const newPlate = useForm({
     weight: '',
     quantity: '',
 })
-
-const form = useForm({})
 
 const savePlate = () => {
     newPlate.post(route('plates.store'), {

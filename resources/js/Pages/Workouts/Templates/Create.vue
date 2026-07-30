@@ -44,6 +44,10 @@ const createExerciseForm = useForm({
     category: '',
 })
 
+// Quick-create goes through fetch() rather than Inertia, so nothing routes a
+// non-422 failure anywhere. This is where it lands.
+const createError = ref(null)
+
 const filteredExercises = computed(() => {
     const exercises = localExercises.value
     if (!searchQuery.value) return exercises
@@ -67,6 +71,7 @@ const addExercise = (exercise) => {
 const createAndAddExercise = async () => {
     createExerciseForm.processing = true
     createExerciseForm.clearErrors()
+    createError.value = null
 
     try {
         const response = await fetch(route('exercises.store'), {
@@ -89,6 +94,7 @@ const createAndAddExercise = async () => {
             const exercise = responseData.exercise || responseData.data || responseData
 
             if (!exercise || !exercise.id) {
+                createError.value = "La réponse du serveur n'a pas pu être lue. L'exercice n'a pas été créé."
                 createExerciseForm.processing = false
                 return
             }
@@ -110,10 +116,14 @@ const createAndAddExercise = async () => {
             }
             createExerciseForm.processing = false
         } else {
+            // 419 on an expired CSRF token, 403, 500, anything else. Resetting
+            // `processing` and stopping there just un-spun the button: the user
+            // pressed "Créer et ajouter" and the modal sat unchanged.
+            createError.value = `La création a échoué (erreur ${response.status}). Réessaie.`
             createExerciseForm.processing = false
         }
-    } catch (error) {
-        console.error('Error creating exercise:', error)
+    } catch {
+        createError.value = 'La création a échoué. Vérifie ta connexion et réessaie.'
         createExerciseForm.processing = false
     }
 }
@@ -356,6 +366,15 @@ const submit = () => {
                                 size="sm"
                             />
                         </div>
+                        <p
+                            v-if="createError"
+                            class="text-sm font-bold text-red-500"
+                            role="alert"
+                            dusk="quick-create-error"
+                        >
+                            {{ createError }}
+                        </p>
+
                         <div class="flex gap-2">
                             <GlassButton
                                 type="submit"

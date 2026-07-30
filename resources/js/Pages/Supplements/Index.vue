@@ -155,12 +155,32 @@ const formatDate = (dateString) => {
                         :error="form.errors.name"
                     />
                     <div class="grid grid-cols-2 gap-4">
-                        <GlassInput v-model="form.brand" label="Marque (Optionnel)" placeholder="Ex: MyProtein" />
-                        <GlassInput v-model="form.dosage" label="Dosage (Optionnel)" placeholder="Ex: 30g / scoop" />
+                        <GlassInput
+                            v-model="form.brand"
+                            label="Marque (Optionnel)"
+                            placeholder="Ex: MyProtein"
+                            :error="form.errors.brand"
+                        />
+                        <GlassInput
+                            v-model="form.dosage"
+                            label="Dosage (Optionnel)"
+                            placeholder="Ex: 30g / scoop"
+                            :error="form.errors.dosage"
+                        />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <GlassInput v-model="form.servings_remaining" type="number" label="Doses restantes" />
-                        <GlassInput v-model="form.low_stock_threshold" type="number" label="Alerte stock bas" />
+                        <GlassInput
+                            v-model="form.servings_remaining"
+                            type="number"
+                            label="Doses restantes"
+                            :error="form.errors.servings_remaining"
+                        />
+                        <GlassInput
+                            v-model="form.low_stock_threshold"
+                            type="number"
+                            label="Alerte stock bas"
+                            :error="form.errors.low_stock_threshold"
+                        />
                     </div>
                     <div class="flex gap-2">
                         <GlassButton type="submit" variant="primary" class="flex-1" :loading="form.processing">
@@ -191,13 +211,23 @@ const formatDate = (dateString) => {
                     <!-- Edit Mode -->
                     <div v-if="editingSupplement === supplement.id" class="space-y-4 p-4">
                         <h3 class="text-text-main font-bold">Modifier</h3>
-                        <GlassInput v-model="editForm.name" placeholder="Nom" />
-                        <GlassInput v-model="editForm.brand" placeholder="Marque" />
+                        <GlassInput v-model="editForm.name" placeholder="Nom" :error="editForm.errors.name" />
+                        <GlassInput v-model="editForm.brand" placeholder="Marque" :error="editForm.errors.brand" />
                         <div class="grid grid-cols-2 gap-2">
-                            <GlassInput v-model="editForm.servings_remaining" type="number" label="Stock" />
-                            <GlassInput v-model="editForm.low_stock_threshold" type="number" label="Seuil" />
+                            <GlassInput
+                                v-model="editForm.servings_remaining"
+                                type="number"
+                                label="Stock"
+                                :error="editForm.errors.servings_remaining"
+                            />
+                            <GlassInput
+                                v-model="editForm.low_stock_threshold"
+                                type="number"
+                                label="Seuil"
+                                :error="editForm.errors.low_stock_threshold"
+                            />
                         </div>
-                        <GlassInput v-model="editForm.dosage" placeholder="Dosage" />
+                        <GlassInput v-model="editForm.dosage" placeholder="Dosage" :error="editForm.errors.dosage" />
                         <div class="mt-2 flex gap-2">
                             <GlassButton
                                 @click="updateSupplement(supplement)"
