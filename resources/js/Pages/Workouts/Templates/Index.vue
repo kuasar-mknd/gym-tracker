@@ -114,12 +114,32 @@ const deleteTemplate = (templateId) => {
                                 </p>
                             </div>
                             <div class="flex gap-2">
-                                <button
-                                    @click="deleteTemplate(template.id)"
-                                    class="text-text-muted rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 hover:bg-red-500/10 hover:text-red-500 active:scale-95"
-                                    title="Supprimer"
+                                <!-- The edit page existed and had no way in: nothing
+                                     linked to templates.edit anywhere. -->
+                                <Link
+                                    :href="route('templates.edit', { template: template.id })"
+                                    :dusk="`edit-template-${template.id}`"
+                                    :aria-label="`Modifier ${template.name}`"
+                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 hover:bg-slate-500/10 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <span class="material-symbols-outlined block text-xl" aria-hidden="true">edit</span>
+                                </Link>
+                                <!-- title= is not a name on a touch device, where there
+                                     is no hover to reveal it. -->
+                                <button
+                                    type="button"
+                                    @click="deleteTemplate(template.id)"
+                                    :dusk="`delete-template-${template.id}`"
+                                    :aria-label="`Supprimer ${template.name}`"
+                                    class="text-text-muted focus-visible:ring-accent-primary rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 hover:bg-red-500/10 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                >
+                                    <svg
+                                        class="h-5 w-5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        aria-hidden="true"
+                                    >
                                         <path
                                             stroke-linecap="round"
                                             stroke-linejoin="round"

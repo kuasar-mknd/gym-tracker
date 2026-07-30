@@ -390,6 +390,26 @@ const handleSyncFailure = (event) => {
     }
 }
 
+/**
+ * A rejected edit reverts on screen, which is the right behaviour while the user
+ * is looking at the field — but it needs to say why, in something you can read.
+ */
+const editError = ref(null)
+let editErrorTimer = null
+
+const reportEditFailure = (message) => {
+    editError.value = message
+    triggerHaptic('error')
+
+    if (editErrorTimer) {
+        clearTimeout(editErrorTimer)
+    }
+
+    editErrorTimer = setTimeout(() => {
+        editError.value = null
+    }, 6000)
+}
+
 const markQueuedFailuresOnMount = () => {
     SyncService.failedRequests().forEach((failure) => handleSyncFailure({ detail: { url: failure.url } }))
 }
@@ -420,13 +440,24 @@ const updateSet = (set, field, value) => {
                 localStorage.removeItem(`draft_set_${set.id}`)
             })
             .catch((err) => {
-                if (!err.isOffline) {
-                    set[field] = previousValue
-                    localStorage.removeItem(`draft_set_${set.id}`)
-                    triggerHaptic('error')
-                } else {
-                    localStorage.removeItem(`draft_set_${set.id}`)
+                localStorage.removeItem(`draft_set_${set.id}`)
+
+                const kind = classifySyncError(err)
+
+                if (kind === SYNC_OFFLINE) {
+                    return
                 }
+
+                set[field] = previousValue
+
+                // The revert was the only feedback, announced by a haptic pulse:
+                // nothing at all on a desktop, and nothing for anyone who has
+                // haptics off. The value snapped back with no reason given.
+                reportEditFailure(
+                    kind === SYNC_PERMANENT
+                        ? 'Cette valeur a été refusée. La précédente est rétablie.'
+                        : "Impossible d'enregistrer. La valeur précédente est rétablie.",
+                )
             })
     }
 
@@ -564,12 +595,35 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('open-add-exercise', handleFabAddExercise)
     window.removeEventListener('sync:failed', handleSyncFailure)
+
+    if (editErrorTimer) {
+        clearTimeout(editErrorTimer)
+    }
 })
 </script>
 
 <template>
     <Head :title="localWorkout.name || 'Séance'" />
     <AuthenticatedLayout :page-title="localWorkout.name" :show-back="true" back-route="workouts.index">
+        <!-- Fixed rather than in the flow: the set being edited can be anywhere
+             down a long session, and a message that scrolls out of view is the
+             same as no message. -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="-translate-y-2 opacity-0"
+            leave-active-class="transition duration-150 ease-in"
+            leave-to-class="-translate-y-2 opacity-0"
+        >
+            <div
+                v-if="editError"
+                role="alert"
+                dusk="set-edit-error"
+                class="fixed inset-x-3 top-20 z-50 rounded-2xl border border-red-500/30 bg-red-500/95 px-4 py-3 text-sm font-bold text-white shadow-lg backdrop-blur-md"
+            >
+                {{ editError }}
+            </div>
+        </Transition>
+
         <template #header-actions>
             <button
                 v-press

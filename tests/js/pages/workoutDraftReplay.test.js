@@ -194,3 +194,75 @@ describe('Workouts/Show — offline draft replay', () => {
         wrapper.unmount()
     })
 })
+
+/**
+ * A live edit that the server refuses reverts on screen — right, while the user
+ * is looking at the field. But the only signal was a haptic pulse, which does
+ * nothing on a desktop and nothing for anyone who turned haptics off: the value
+ * snapped back with no reason given.
+ */
+describe('Workouts/Show — a live edit the server refuses', () => {
+    const editWeight = async (wrapper, value) => {
+        vi.useFakeTimers()
+        const set = wrapper.vm.localWorkout.workout_lines[0].sets[0]
+        wrapper.vm.updateSet(set, 'weight', value)
+        await vi.runOnlyPendingTimersAsync()
+        vi.useRealTimers()
+        await flushPromises()
+
+        return set
+    }
+
+    const alert = (wrapper) => wrapper.find('[dusk="set-edit-error"]')
+
+    it('says why the value came back, in words', async () => {
+        patch.mockRejectedValue({ response: { status: 422 } })
+
+        const wrapper = await mountPage()
+        const set = await editWeight(wrapper, 999)
+
+        expect(alert(wrapper).exists()).toBe(true)
+        expect(alert(wrapper).text()).toContain('refusée')
+        expect(set.weight).toBe(80)
+
+        wrapper.unmount()
+    })
+
+    it('distinguishes a server fault from a refusal', async () => {
+        patch.mockRejectedValue({ response: { status: 500 } })
+
+        const wrapper = await mountPage()
+        await editWeight(wrapper, 999)
+
+        expect(alert(wrapper).text()).toContain("Impossible d'enregistrer")
+
+        wrapper.unmount()
+    })
+
+    it('stays quiet when the edit goes through', async () => {
+        patch.mockResolvedValue({ data: {} })
+
+        const wrapper = await mountPage()
+        await editWeight(wrapper, 90)
+
+        expect(alert(wrapper).exists()).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    /**
+     * Offline is not a failure here: SyncService has queued the write, so the
+     * value stands and there is nothing to tell the user.
+     */
+    it('says nothing and keeps the value when offline', async () => {
+        patch.mockRejectedValue({ isOffline: true })
+
+        const wrapper = await mountPage()
+        const set = await editWeight(wrapper, 999)
+
+        expect(alert(wrapper).exists()).toBe(false)
+        expect(set.weight).toBe(999)
+
+        wrapper.unmount()
+    })
+})
