@@ -47,17 +47,29 @@ beforeAll(() => {
     globalThis.route = (name, params) => (name === 'api.v1.sets.update' ? `/api/v1/sets/${params.set}` : `/${name}`)
 })
 
+/**
+ * Shallow, so the page's own markup is the only thing rendered — but the three
+ * wrappers between the page root and a set row have to pass their slots through
+ * or the row never appears, and the marker with it.
+ */
+const passesSlot = { template: '<div><slot /></div>' }
+
 const mountPage = async () => {
     const wrapper = mount(WorkoutShow, {
         props: { workout: JSON.parse(JSON.stringify(workout)), exercises: [] },
         shallow: true,
-        global: { directives: { press: {} } },
+        global: {
+            directives: { press: {} },
+            stubs: { AuthenticatedLayout: passesSlot, GlassCard: passesSlot, SwipeableRow: passesSlot },
+        },
     })
 
     await flushPromises()
 
     return wrapper
 }
+
+const marker = (wrapper) => wrapper.find('[dusk="set-unsynced-0-0"]')
 
 const draft = () => JSON.parse(localStorage.getItem(DRAFT_KEY))
 
@@ -84,7 +96,7 @@ describe('Workouts/Show — offline draft replay', () => {
 
         expect(patch).toHaveBeenCalledTimes(1)
         expect(localStorage.getItem(DRAFT_KEY)).toBeNull()
-        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(false)
+        expect(marker(wrapper).exists()).toBe(false)
 
         wrapper.unmount()
     })
@@ -95,7 +107,8 @@ describe('Workouts/Show — offline draft replay', () => {
 
         const wrapper = await mountPage()
 
-        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(true)
+        expect(marker(wrapper).exists()).toBe(true)
+        expect(marker(wrapper).attributes('aria-label')).toBe('Série 1 non enregistrée')
         expect(wrapper.vm.localWorkout.workout_lines[0].sets[0].weight).toBe(95)
         expect(draft().syncRejected).toBe(true)
         expect(draft().weight).toBe(95)
@@ -109,7 +122,7 @@ describe('Workouts/Show — offline draft replay', () => {
         const wrapper = await mountPage()
 
         expect(patch).not.toHaveBeenCalled()
-        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(true)
+        expect(marker(wrapper).exists()).toBe(true)
         expect(wrapper.vm.localWorkout.workout_lines[0].sets[0].weight).toBe(95)
 
         wrapper.unmount()
@@ -126,7 +139,7 @@ describe('Workouts/Show — offline draft replay', () => {
         const wrapper = await mountPage()
 
         expect(draft().syncRejected).toBeUndefined()
-        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(true)
+        expect(marker(wrapper).exists()).toBe(true)
 
         wrapper.unmount()
     })
@@ -141,7 +154,7 @@ describe('Workouts/Show — offline draft replay', () => {
 
         const wrapper = await mountPage()
 
-        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(true)
+        expect(marker(wrapper).exists()).toBe(true)
 
         wrapper.unmount()
     })
@@ -149,12 +162,12 @@ describe('Workouts/Show — offline draft replay', () => {
     it('marks a set when a refusal arrives while the page is open', async () => {
         const wrapper = await mountPage()
 
-        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(false)
+        expect(marker(wrapper).exists()).toBe(false)
 
         window.dispatchEvent(new CustomEvent('sync:failed', { detail: { url: '/api/v1/sets/42', status: 422 } }))
         await flushPromises()
 
-        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(true)
+        expect(marker(wrapper).exists()).toBe(true)
 
         wrapper.unmount()
     })
@@ -176,7 +189,7 @@ describe('Workouts/Show — offline draft replay', () => {
         const wrapper = await mountPage()
 
         expect(localStorage.getItem(DRAFT_KEY)).toBeNull()
-        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(false)
+        expect(marker(wrapper).exists()).toBe(false)
 
         wrapper.unmount()
     })

@@ -47,7 +47,7 @@ describe('SyncService.processQueue', () => {
 
         expect(request).toHaveBeenCalledTimes(1)
         expect(service.queue).toEqual([])
-        expect(service.failedRequests()).toEqual([])
+        expect(localStorage.getItem('offline_sync_failed')).toBeNull()
     })
 
     it('keeps a mutation queued when the connection drops again', async () => {
@@ -58,7 +58,7 @@ describe('SyncService.processQueue', () => {
         await service.processQueue()
 
         expect(service.queue).toHaveLength(1)
-        expect(service.failedRequests()).toEqual([])
+        expect(localStorage.getItem('offline_sync_failed')).toBeNull()
     })
 
     /**
@@ -66,20 +66,23 @@ describe('SyncService.processQueue', () => {
      * Any non-network failure fell off the end of the catch and was gone, with
      * a console.error as the only record.
      */
-    it.each([422, 419, 403, 500])('keeps a mutation the server refused with %i', async (status) => {
+    it.each([422, 419, 403, 500])('does not lose a mutation the server refused with %i', async (status) => {
         localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
         request.mockRejectedValue({ response: { status } })
 
         const service = await freshService()
         await service.processQueue()
 
-        const failed = service.failedRequests()
+        // Read back out of storage rather than through the new accessor: on the
+        // old code the mutation is nowhere at all, so this fails on the missing
+        // edit rather than on a missing method.
+        const kept = JSON.parse(localStorage.getItem('offline_sync_failed') ?? 'null')
 
+        expect(kept).toHaveLength(1)
+        expect(kept[0].url).toBe('/api/v1/sets/1')
+        expect(kept[0].data).toEqual({ weight: 100 })
+        expect(kept[0].status).toBe(status)
         expect(service.queue).toEqual([])
-        expect(failed).toHaveLength(1)
-        expect(failed[0].url).toBe('/api/v1/sets/1')
-        expect(failed[0].status).toBe(status)
-        expect(JSON.parse(localStorage.getItem('offline_sync_failed'))).toHaveLength(1)
     })
 
     it('announces the refusal so the interface can say something', async () => {
@@ -125,7 +128,9 @@ describe('SyncService.processQueue', () => {
         const service = await freshService()
         await service.processQueue()
 
-        expect(service.failedRequests().map((item) => item.url)).toEqual(['/api/v1/sets/1'])
+        expect(JSON.parse(localStorage.getItem('offline_sync_failed')).map((item) => item.url)).toEqual([
+            '/api/v1/sets/1',
+        ])
         expect(service.queue).toEqual([])
     })
 })
