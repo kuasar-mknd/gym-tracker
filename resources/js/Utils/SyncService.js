@@ -1,10 +1,13 @@
 import axios from 'axios'
+import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
+const FAILED_KEY = 'offline_sync_failed'
 
 class SyncService {
     constructor() {
         this.queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
+        this.failed = JSON.parse(localStorage.getItem(FAILED_KEY) || '[]')
         this.isOnline = navigator.onLine
 
         window.addEventListener('online', () => {
@@ -79,15 +82,51 @@ class SyncService {
                 const { id, timestamp, ...axiosConfig } = config
                 await api(axiosConfig)
             } catch (error) {
-                console.error(`Failed to sync item: ${config.url}`, error)
-                // If it's a permanent error (not network), we might want to drop it or notify user
-                // For now, if it fails again due to network, re-add to queue
-                if (!navigator.onLine || error.code === 'ERR_NETWORK') {
+                // Anything that was not a network failure used to fall off the end
+                // of this block and be lost — a 500, an expired token, a validation
+                // error — with a console.error as the only trace. These are edits
+                // the user made while offline, so dropping them silently is data
+                // loss, not error handling.
+                if (classifySyncError(error) === SYNC_OFFLINE) {
                     this.queue.push(config)
+
+                    continue
                 }
+
+                this.recordFailure(config, error)
             }
         }
         this.saveQueue()
+    }
+
+    /**
+     * Keeps a mutation the server refused, so it can be shown or replayed rather
+     * than vanishing. Listeners get told the moment it happens.
+     */
+    recordFailure(config, error) {
+        this.failed.push({
+            ...config,
+            failedAt: new Date().toISOString(),
+            status: error?.response?.status ?? null,
+        })
+
+        localStorage.setItem(FAILED_KEY, JSON.stringify(this.failed))
+
+        window.dispatchEvent(
+            new CustomEvent('sync:failed', {
+                detail: { url: config.url, status: error?.response?.status ?? null },
+            }),
+        )
+    }
+
+    /** Mutations the server refused, still on disk. */
+    failedRequests() {
+        return [...this.failed]
+    }
+
+    clearFailedRequests() {
+        this.failed = []
+        localStorage.removeItem(FAILED_KEY)
     }
 
     /** Helper for GET requests */

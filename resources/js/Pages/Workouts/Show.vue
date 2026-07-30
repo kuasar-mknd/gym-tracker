@@ -24,6 +24,7 @@ import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
+import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErrors'
 import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
@@ -361,6 +362,38 @@ const addSet = (lineId) => {
         })
 }
 
+/**
+ * Sets whose value is on screen but not in the database.
+ *
+ * Drafts written while offline are replayed on mount. When the server refuses
+ * one, the value stays — throwing away an edit the user made earlier, with no
+ * feedback, is worse than showing it unsaved — so the row is marked instead.
+ * A refusal is recorded in the draft itself so the next mount stops retrying
+ * something a 4xx says will never be accepted.
+ */
+const unsyncedSetIds = ref(new Set())
+
+const markUnsynced = (setId) => {
+    unsyncedSetIds.value.add(String(setId))
+}
+
+/**
+ * SyncService keeps the mutations a server refused rather than dropping them,
+ * and announces each one. Most of them are set updates, so this is where they
+ * become visible instead of sitting in localStorage unread.
+ */
+const handleSyncFailure = (event) => {
+    const setId = /\/sets\/(\d+)/.exec(event.detail?.url ?? '')?.[1]
+
+    if (setId) {
+        markUnsynced(setId)
+    }
+}
+
+const markQueuedFailuresOnMount = () => {
+    SyncService.failedRequests().forEach((failure) => handleSyncFailure({ detail: { url: failure.url } }))
+}
+
 // ⚡ Perf: Optimistic updateSet — no router.reload
 const updateTimers = {}
 const updateSet = (set, field, value) => {
@@ -455,6 +488,8 @@ const handleFabAddExercise = () => {
 
 onMounted(() => {
     window.addEventListener('open-add-exercise', handleFabAddExercise)
+    window.addEventListener('sync:failed', handleSyncFailure)
+    markQueuedFailuresOnMount()
 
     // Restore set drafts if any exist and haven't synced
     const keysToRemove = []
@@ -485,12 +520,36 @@ onMounted(() => {
                             payload.duration_seconds = draftData.duration_seconds
                         }
 
+                        // Already refused once. Keep the value visible and marked,
+                        // but stop asking: a 4xx does not become a 2xx.
+                        if (draftData.syncRejected) {
+                            markUnsynced(set.id)
+
+                            return
+                        }
+
                         SyncService.patch(route('api.v1.sets.update', { set: set.id }), payload)
                             .then(() => {
                                 localStorage.removeItem(key)
                             })
                             .catch((err) => {
-                                if (err.isOffline) localStorage.removeItem(key)
+                                const kind = classifySyncError(err)
+
+                                if (kind === SYNC_OFFLINE) {
+                                    // SyncService queued it; the draft would be a
+                                    // second copy of the same pending write.
+                                    localStorage.removeItem(key)
+
+                                    return
+                                }
+
+                                if (kind === SYNC_PERMANENT) {
+                                    localStorage.setItem(key, JSON.stringify({ ...draftData, syncRejected: true }))
+                                }
+
+                                // Transient failures keep the draft untouched so the
+                                // next mount tries again.
+                                markUnsynced(set.id)
                             })
                     }
                 })
@@ -504,6 +563,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener('open-add-exercise', handleFabAddExercise)
+    window.removeEventListener('sync:failed', handleSyncFailure)
 })
 </script>
 
@@ -607,9 +667,25 @@ onUnmounted(() => {
                                 </div>
                             </button>
                             <div
-                                class="text-text-muted flex h-11 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black"
+                                class="text-text-muted relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black"
                             >
                                 {{ index + 1 }}
+
+                                <!-- The value on screen is not the value in the
+                                     database. Said out loud rather than left to a
+                                     colour, and not with a title attribute, which
+                                     a touch device never shows. -->
+                                <span
+                                    v-if="unsyncedSetIds.has(String(set.id))"
+                                    class="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-amber-500 text-white"
+                                    :dusk="`set-unsynced-${lineIndex}-${index}`"
+                                    role="img"
+                                    :aria-label="`Série ${index + 1} non enregistrée`"
+                                >
+                                    <span class="material-symbols-outlined text-[10px]" aria-hidden="true"
+                                        >cloud_off</span
+                                    >
+                                </span>
                             </div>
 
                             <template v-if="line.exercise.type === 'strength'">
