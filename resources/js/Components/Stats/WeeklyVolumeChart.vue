@@ -11,7 +11,7 @@ import {
     Legend,
     Filler,
 } from 'chart.js'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 

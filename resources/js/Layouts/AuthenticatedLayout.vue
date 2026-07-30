@@ -9,7 +9,6 @@ import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
-import { triggerHaptic } from '@/composables/useHaptics'
 
 defineProps({
     pageTitle: {
