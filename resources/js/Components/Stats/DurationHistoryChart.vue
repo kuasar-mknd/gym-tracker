@@ -71,7 +71,6 @@ const chartOptions = {
             cornerRadius: 12,
             borderWidth: 1,
             borderColor: 'rgba(0, 0, 0, 0.05)',
-            borderColor: 'rgba(0, 0, 0, 0.05)',
             callbacks: {
                 label: function (context) {
                     return context.parsed.y + ' min'

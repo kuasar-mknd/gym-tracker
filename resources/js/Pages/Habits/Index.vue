@@ -22,7 +22,7 @@ const HabitConsistencyChart = defineAsyncComponent(() => import('@/Components/St
  * - Delete habits.
  * - Toggle habit completion for specific days in the current week.
  */
-const props = defineProps({
+defineProps({
     /**
      * List of user's active habits with their logs for the current week.
      * @type {Array<{id: number, name: string, description: string|null, color: string, icon: string, goal_times_per_week: number, logs: Array}>}

@@ -6,7 +6,7 @@ import GlassSelect from '@/Components/UI/GlassSelect.vue'
 
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 
-const props = defineProps({
+defineProps({
     exercises: Array,
 })
 

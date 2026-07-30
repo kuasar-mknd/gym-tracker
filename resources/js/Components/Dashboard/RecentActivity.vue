@@ -13,11 +13,6 @@ defineProps({
 })
 
 const emit = defineEmits(['startWorkout'])
-
-const colorForWorkout = (index) => {
-    const colors = ['violet', 'orange', 'pink', 'cyan', 'green']
-    return colors[index % colors.length]
-}
 </script>
 
 <template>

@@ -20,8 +20,7 @@ const collectVueFiles = (dir) =>
  * so staying invisible on touch is the intended behaviour.
  */
 const isDecorativeOverlay = (classList) =>
-    classList.includes('pointer-events-none') ||
-    (classList.includes('inset-0') && /\bbg-/.test(classList))
+    classList.includes('pointer-events-none') || (classList.includes('inset-0') && /\bbg-/.test(classList))
 
 describe('touch affordances', () => {
     /**

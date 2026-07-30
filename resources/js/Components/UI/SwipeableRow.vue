@@ -20,7 +20,7 @@ const props = defineProps({
     actionThreshold: { type: Number, default: 80 },
 })
 
-const emit = defineEmits(['click'])
+defineEmits(['click'])
 
 // State
 const offset = ref(0)

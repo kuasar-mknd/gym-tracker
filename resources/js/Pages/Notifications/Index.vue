@@ -4,7 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, router } from '@inertiajs/vue3'
 
-const props = defineProps({
+defineProps({
     notifications: Object,
 })
 

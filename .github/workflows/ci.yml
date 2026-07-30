@@ -53,6 +53,12 @@ jobs:
             - name: Install Node Dependencies
               run: npm ci
 
+            # Runs here rather than in the `lint` job, which has no Node set up:
+            # this one already installed it. Prettier only checks formatting, so
+            # until eslint was added nothing checked the JavaScript itself.
+            - name: Lint JS (Prettier + ESLint)
+              run: npm run lint:js
+
             - name: Run JS Unit Tests
               run: npm run test
 

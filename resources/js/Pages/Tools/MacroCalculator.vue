@@ -239,7 +239,7 @@ import { triggerHaptic } from '@/composables/useHaptics'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 
-const props = defineProps({
+defineProps({
     history: {
         type: Array,
         required: true,

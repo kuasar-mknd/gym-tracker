@@ -1,4 +1,12 @@
 <script setup>
+/* eslint-disable vue/no-mutating-props --
+ * The parent owns the Inertia useForm object and hands it down so this component
+ * can v-model straight into its fields. Writing to a prop object's properties is
+ * legal in Vue — the prop binding itself is never reassigned — and it is the
+ * pattern this codebase uses for every shared form. The rule cannot tell that
+ * apart from writing through a data prop, which is a real hazard and stays
+ * reported everywhere else.
+ */
 /**
  * ExerciseCard Component
  *
@@ -16,7 +24,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
-const props = defineProps({
+defineProps({
     /** The exercise object to display. */
     exercise: { type: Object, required: true },
     /** Determines if the component should display the inline edit form. */

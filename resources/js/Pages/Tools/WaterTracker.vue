@@ -234,9 +234,9 @@ const percentage = computed(() => {
 })
 
 const dashOffset = computed(() => {
-    const circumference = 2 * Math.PI * 45 // r=45
-    // 283 approx
-    return 283 - (283 * percentage.value) / 100
+    const circumference = 2 * Math.PI * 45 // r=45 on the progress circle
+
+    return circumference - (circumference * percentage.value) / 100
 })
 
 const addWater = (amount) => {

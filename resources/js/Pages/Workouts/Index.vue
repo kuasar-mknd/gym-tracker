@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, Link, Deferred } from '@inertiajs/vue3'
-import { defineAsyncComponent } from 'vue'
+import { defineAsyncComponent, ref, watch } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
@@ -52,22 +52,38 @@ const formatDate = (dateStr) => {
     })
 }
 
+/**
+ * The optimistic delete used to splice `props.workouts.data` in place. It works,
+ * but a page owning a copy of its server data is the convention here — see
+ * Workouts/Show, which clones props.workout for exactly this reason — and
+ * writing through a prop hides the mutation from Vue's ownership model, so
+ * Inertia replacing the prop on the next visit silently discards it.
+ */
+const workoutList = ref([...(props.workouts?.data ?? [])])
+
+watch(
+    () => props.workouts?.data,
+    (rows) => {
+        workoutList.value = [...(rows ?? [])]
+    },
+)
+
 const deleteForm = useForm({})
 const confirmDeletion = (workout) => {
     if (confirm(`Êtes-vous sûr de vouloir supprimer la séance "${workout.name || 'Séance'}" ?`)) {
         // Optimistic UI
-        const index = props.workouts.data.findIndex((w) => w.id === workout.id)
+        const index = workoutList.value.findIndex((w) => w.id === workout.id)
         if (index === -1) return
 
-        const removedWorkout = props.workouts.data[index]
-        props.workouts.data.splice(index, 1)
+        const removedWorkout = workoutList.value[index]
+        workoutList.value.splice(index, 1)
         triggerHaptic('warning')
 
         deleteForm.delete(route('workouts.destroy', { workout: workout.id }), {
             preserveScroll: true,
             onError: () => {
                 // Rollback
-                props.workouts.data.splice(index, 0, removedWorkout)
+                workoutList.value.splice(index, 0, removedWorkout)
                 triggerHaptic('error')
             },
         })
@@ -155,12 +171,12 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
         <div class="space-y-6">
             <!-- Stats Row -->
-            <div v-if="workouts.data?.length > 0" class="animate-slide-up space-y-6">
+            <div v-if="workoutList.length > 0" class="animate-slide-up space-y-6">
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <GlassCard padding="p-4">
                         <div class="text-center">
                             <div class="text-gradient text-2xl font-bold">
-                                {{ workouts.meta?.total || workouts.data?.length || 0 }}
+                                {{ workouts.meta?.total || workoutList.length || 0 }}
                             </div>
                             <div class="text-text-muted mt-1 text-xs">Total séances</div>
                         </div>
@@ -243,14 +259,14 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
             <!-- Timeline Chart -->
             <div class="animate-slide-up" style="animation-delay: 0.08s">
-                <GlassCard v-if="workouts?.data?.length > 0">
+                <GlassCard v-if="workoutList.length > 0">
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic dark:text-white">
                             Aperçu Historique
                         </h3>
                         <p class="text-text-muted text-xs font-semibold">Volume et Durée des dernières séances</p>
                     </div>
-                    <WorkoutHistoryTimelineChart :data="workouts.data" />
+                    <WorkoutHistoryTimelineChart :data="workoutList" />
                 </GlassCard>
             </div>
 
@@ -305,7 +321,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </GlassCard>
                 </div>
 
-                <div v-else-if="!workouts.data || workouts.data.length === 0">
+                <div v-else-if="workoutList.length === 0">
                     <GlassEmptyState
                         title="Aucune séance"
                         description="C'est le moment de commencer ton aventure ! Clique sur le bouton pour créer ta première séance."
@@ -319,7 +335,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
                 <div v-else class="space-y-3">
                     <SwipeableRow
-                        v-for="workout in workouts.data"
+                        v-for="workout in workoutList"
                         :key="workout.id"
                         class="mb-3 block"
                         :action-threshold="80"

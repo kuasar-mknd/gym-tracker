@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { watch, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
@@ -29,7 +29,6 @@ defineProps({
     },
 })
 
-const showingNavigationDropdown = ref(false)
 const page = usePage()
 
 const toasts = {

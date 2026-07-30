@@ -16,7 +16,7 @@ defineOptions({
     inheritAttrs: false,
 })
 
-const props = defineProps({
+defineProps({
     modelValue: {
         type: [String, Number],
         default: '',

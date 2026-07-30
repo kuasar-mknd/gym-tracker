@@ -57,7 +57,7 @@ const chartOptions = {
             ticks: {
                 color: '#64748B',
                 font: { size: 10, weight: 'bold' },
-                callback: function (val, index) {
+                callback: function (val) {
                     // Show only some labels if too many? For now show all as they are bins
                     return this.getLabelForValue(val)
                 },

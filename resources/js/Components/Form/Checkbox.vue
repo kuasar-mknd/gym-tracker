@@ -9,6 +9,9 @@ const props = defineProps({
         default: false,
     },
     value: {
+        // Deliberately any: this is whatever the checkbox contributes to the
+        // bound array, and callers pass ids, strings and objects alike.
+        type: null,
         default: null,
     },
 })

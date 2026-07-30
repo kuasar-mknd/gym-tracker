@@ -1,9 +1,7 @@
 <script setup>
-import { Link, usePage, router } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
-
-const page = usePage()
 
 const navItems = [
     { name: 'Accueil', icon: 'grid_view', route: 'dashboard' },

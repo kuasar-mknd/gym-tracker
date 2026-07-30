@@ -159,9 +159,7 @@ describe('usePullToRefresh composable', () => {
         wrapper.unmount()
 
         const removed = removeSpy.mock.calls.map(([type]) => type)
-        expect(removed).toEqual(
-            expect.arrayContaining(['touchstart', 'touchmove', 'touchend'])
-        )
+        expect(removed).toEqual(expect.arrayContaining(['touchstart', 'touchmove', 'touchend']))
     })
 
     it('binds to a scroll container when one is supplied', () => {

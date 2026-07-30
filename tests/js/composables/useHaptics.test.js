@@ -1,12 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import {
-    isHapticsSupported,
-    triggerHaptic,
-    stopVibration,
-    useHaptics,
-} from '@/composables/useHaptics'
+import { isHapticsSupported, triggerHaptic, stopVibration, useHaptics } from '@/composables/useHaptics'
 
 describe('useHaptics composable', () => {
     let vibrateMock

@@ -239,7 +239,7 @@ import { triggerHaptic } from '@/composables/useHaptics'
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
 const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))
 
-const props = defineProps({
+defineProps({
     history: {
         type: Array,
         required: true,

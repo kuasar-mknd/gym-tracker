@@ -10,6 +10,14 @@
   @emits submit - Emitted when the user submits the form.
 -->
 <script setup>
+/* eslint-disable vue/no-mutating-props --
+ * The parent owns the Inertia useForm object and hands it down so this component
+ * can v-model straight into its fields. Writing to a prop object's properties is
+ * legal in Vue — the prop binding itself is never reassigned — and it is the
+ * pattern this codebase uses for every shared form. The rule cannot tell that
+ * apart from writing through a data prop, which is a real hazard and stays
+ * reported everywhere else.
+ */
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'

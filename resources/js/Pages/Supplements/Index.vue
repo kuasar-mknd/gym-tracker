@@ -8,7 +8,7 @@ import { ref, defineAsyncComponent } from 'vue'
 
 const SupplementUsageChart = defineAsyncComponent(() => import('@/Components/Stats/SupplementUsageChart.vue'))
 
-const props = defineProps({
+defineProps({
     supplements: Array,
     usageHistory: Array,
 })

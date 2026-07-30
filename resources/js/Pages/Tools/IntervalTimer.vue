@@ -24,7 +24,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
-const props = defineProps({
+defineProps({
     timers: {
         type: Array,
         default: () => [],

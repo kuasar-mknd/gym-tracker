@@ -414,7 +414,7 @@ const typeLabel = (type) => {
             <div v-if="!exercises" class="animate-pulse space-y-4">
                 <GlassCard padding="p-4">
                     <div class="flex gap-4">
-                        <GlassSkeleton width="60px" height="60px" borderRadius="16px" />
+                        <GlassSkeleton width="60px" height="60px" border-radius="16px" />
                         <div class="flex-1 space-y-3 py-1">
                             <GlassSkeleton width="70%" height="1.2rem" />
                             <GlassSkeleton width="40%" height="0.8rem" />
@@ -423,7 +423,7 @@ const typeLabel = (type) => {
                 </GlassCard>
                 <GlassCard padding="p-4">
                     <div class="flex gap-4">
-                        <GlassSkeleton width="60px" height="60px" borderRadius="16px" />
+                        <GlassSkeleton width="60px" height="60px" border-radius="16px" />
                         <div class="flex-1 space-y-3 py-1">
                             <GlassSkeleton width="60%" height="1.2rem" />
                             <GlassSkeleton width="50%" height="0.8rem" />

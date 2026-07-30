@@ -9,7 +9,7 @@ import { ref, defineAsyncComponent } from 'vue'
 
 const BodyPartDiffChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartDiffChart.vue'))
 
-const props = defineProps({
+defineProps({
     latestMeasurements: Array,
     commonParts: Array,
 })
