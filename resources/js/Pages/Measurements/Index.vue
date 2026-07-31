@@ -6,7 +6,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
 import { computed, ref, defineAsyncComponent } from 'vue'
-import { todayAsCalendarDate } from '@/Utils/date'
+import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
@@ -262,9 +262,7 @@ const latestBodyFat = computed(() => {
                                 </div>
                                 <div class="text-text-muted text-sm font-medium">
                                     {{
-                                        new Date(
-                                            measurement.measured_at.substring(0, 10) + 'T00:00:00',
-                                        ).toLocaleDateString('fr-FR', {
+                                        parseCalendarDate(measurement.measured_at)?.toLocaleDateString('fr-FR', {
                                             weekday: 'short',
                                             day: 'numeric',
                                             month: 'short',

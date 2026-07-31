@@ -12,6 +12,7 @@ import {
     Filler,
 } from 'chart.js'
 import { computed } from 'vue'
+import { parseCalendarDate } from '@/Utils/date'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
@@ -25,7 +26,7 @@ const props = defineProps({
 const chartData = computed(() => {
     return {
         labels: props.data.map((item) =>
-            new Date(item.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+            parseCalendarDate(item.date)?.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
         ),
         datasets: [
             {

@@ -16,7 +16,7 @@ import JournalForm from '@/Components/Journal/JournalForm.vue'
 import JournalList from '@/Components/Journal/JournalList.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent } from 'vue'
-import { todayAsCalendarDate } from '@/Utils/date'
+import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 
 const JournalChart = defineAsyncComponent(() => import('@/Components/Stats/JournalChart.vue'))
 
@@ -124,7 +124,7 @@ const deleteJournal = (id) => {
 const journalsByMonth = computed(() => {
     const groups = {}
     props.journals.forEach((journal) => {
-        const date = new Date(journal.date + 'T00:00:00')
+        const date = parseCalendarDate(journal.date)
         const key = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
         if (!groups[key]) {
             groups[key] = []

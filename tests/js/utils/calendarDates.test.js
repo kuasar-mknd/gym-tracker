@@ -97,8 +97,28 @@ describe('no page derives a calendar day from UTC', () => {
     const utcDayPattern =
         /toISOString\(\)\s*\.\s*(substr|substring|slice)\(\s*0\s*,\s*10\s*\)|toISOString\(\)\s*\.\s*split\(\s*['"]T['"]\s*\)\s*\[\s*0\s*\]/
 
+    /**
+     * The columns behind these three names are cast `date:Y-m-d` server-side,
+     * so they arrive as calendar days. `new Date('2026-07-31')` is specified to
+     * parse as midnight UTC, which renders the day before anywhere behind UTC.
+     *
+     * Naming the fields rather than banning `new Date` outright is deliberate:
+     * started_at, created_at and last_taken_at are genuine instants and reading
+     * them that way is correct.
+     */
+    const calendarDayFields = /new Date\(\s*[A-Za-z_$][\w$.]*\.(date|deadline|measured_at)\b/
+
     it('never slices a UTC timestamp down to a day', () => {
         const offenders = sourceFiles(sourceRoot).filter((path) => utcDayPattern.test(readFileSync(path, 'utf8')))
+
+        expect(offenders.map((path) => path.replace(sourceRoot, 'resources/js'))).toEqual([])
+    })
+
+    it('never builds a Date straight from a calendar-day field', () => {
+        // Written after three more of these turned up in chart labels that the
+        // first sweep had not looked at: a helper existing is not the same as
+        // every caller using it.
+        const offenders = sourceFiles(sourceRoot).filter((path) => calendarDayFields.test(readFileSync(path, 'utf8')))
 
         expect(offenders.map((path) => path.replace(sourceRoot, 'resources/js'))).toEqual([])
     })

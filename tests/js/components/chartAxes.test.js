@@ -20,6 +20,9 @@ vi.mock('vue-chartjs', () => {
 const MonthlyVolumeChart = (await import('@/Components/Stats/MonthlyVolumeChart.vue')).default
 const WaterHistoryChart = (await import('@/Components/Stats/WaterHistoryChart.vue')).default
 const DashboardDurationChart = (await import('@/Components/Stats/DashboardDurationChart.vue')).default
+const RecentWorkoutsTimelineChart = (await import('@/Components/Stats/RecentWorkoutsTimelineChart.vue')).default
+const WorkoutHistoryTimelineChart = (await import('@/Components/Stats/WorkoutHistoryTimelineChart.vue')).default
+const RecentWorkoutsDurationChart = (await import('@/Components/Stats/RecentWorkoutsDurationChart.vue')).default
 
 const chartIn = (wrapper, name) => wrapper.findComponent({ name })
 
@@ -72,19 +75,37 @@ describe('WaterHistoryChart Y axis', () => {
     })
 })
 
-describe('DashboardDurationChart', () => {
+/**
+ * All four, not just the one. Each had written the same zero-for-unfinished
+ * expression by hand, so testing a single component would have left the other
+ * three free to drift back — the same gap the calendar-day guard exists for.
+ *
+ * The duration dataset is found by its label rather than its index: one of
+ * these charts draws a line over bars and its durations are not dataset zero.
+ */
+describe.each([
+    ['DashboardDurationChart', DashboardDurationChart, 'Line'],
+    ['RecentWorkoutsTimelineChart', RecentWorkoutsTimelineChart, 'Line'],
+    ['WorkoutHistoryTimelineChart', WorkoutHistoryTimelineChart, 'Bar'],
+    ['RecentWorkoutsDurationChart', RecentWorkoutsDurationChart, 'Line'],
+])('%s', (_name, component, chartType) => {
     it('plots nothing for the session still running rather than a zero', () => {
-        const wrapper = mount(DashboardDurationChart, {
+        const wrapper = mount(component, {
             props: {
                 data: [
-                    { started_at: '2026-07-31T10:00:00Z', ended_at: null },
-                    { started_at: '2026-07-30T10:00:00Z', ended_at: '2026-07-30T11:00:00Z' },
+                    { started_at: '2026-07-31T10:00:00Z', ended_at: null, workout_volume: 100 },
+                    { started_at: '2026-07-30T10:00:00Z', ended_at: '2026-07-30T11:00:00Z', workout_volume: 200 },
                 ],
             },
         })
 
-        // The component reverses its input to read chronologically, so the
-        // finished session comes first and the running one last.
-        expect(chartIn(wrapper, 'Line').props('data').datasets[0].data).toEqual([60, null])
+        const durations = chartIn(wrapper, chartType)
+            .props('data')
+            .datasets.find((dataset) => dataset.label === 'Durée (min)')
+
+        // Every one of them reverses its input to read chronologically, so the
+        // finished session comes first and the running one last. null is what
+        // Chart.js skips; 0 is what it plots on the axis.
+        expect(durations.data).toEqual([60, null])
     })
 })
