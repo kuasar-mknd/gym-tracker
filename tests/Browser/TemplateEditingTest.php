@@ -50,17 +50,21 @@ class TemplateEditingTest extends DuskTestCase
                 .'field.dispatchEvent(new Event("input", {bubbles: true}));'
             );
 
-            // Centred first: the floating bottom nav covers the submit button at
-            // the end of this form, so a plain press() is intercepted.
+            // Two reasons this is not press('Mettre à jour le modèle'): Dusk
+            // matches a button on its own text and the label lives in
+            // GlassButton's slot, and at the page's resting scroll position the
+            // round floating action button sits over the submit button's centre,
+            // which is where WebDriver aims. Measured, not guessed: the
+            // interception names a material-symbols span, and after this scroll
+            // elementFromPoint at the same centre returns the submit button.
             $browser->script(
                 'document.querySelector(\'button[type="submit"]\').scrollIntoView({block: "center"});'
             );
 
-            // Not waitForText: the card's heading is text-transform: uppercase and
-            // Selenium reports the transformed string, so the name is asserted
-            // against the database instead.
-            $browser->pause(300)
-                ->click('button[type="submit"]')
+            // Not waitForText afterwards: the card's heading is text-transform
+            // uppercase and Selenium reports the transformed string, so the name
+            // is asserted against the database instead.
+            $browser->pause(300)->click('button[type="submit"]')
                 ->waitForLocation('/templates', 15)
                 ->waitFor("@edit-template-{$template->id}", 15);
 
