@@ -24,7 +24,8 @@ class GoalController extends Controller
      * both fill their select from this list, so it lives in one place — a
      * second hand-written copy is how the two screens drift apart.
      *
-     * @var list<array{value: string, label: string}>
+     * No @var here: PHP Insights rejects any @var on a class constant outright,
+     * and PHPStan reads the shape off the literal anyway.
      */
     private const array MEASUREMENT_TYPES = [
         ['value' => 'weight', 'label' => 'Poids de corps'],
