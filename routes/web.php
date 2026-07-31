@@ -55,7 +55,10 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/push-subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'update'])->name('push-subscriptions.update');
         Route::post('/push-subscriptions/delete', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
 
-        Route::resource('goals', \App\Http\Controllers\GoalController::class)->except(['index', 'show']);
+        // 'create' is excluded on purpose: goals are created from a form that
+        // expands on the index, so there is no create page and the generated
+        // route pointed at a controller method that does not exist.
+        Route::resource('goals', \App\Http\Controllers\GoalController::class)->except(['index', 'show', 'create']);
 
         Route::post('/workouts', [\App\Http\Controllers\WorkoutController::class, 'store'])->name('workouts.store');
         Route::patch('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'update'])->name('workouts.update');

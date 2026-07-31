@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { Link } from '@inertiajs/vue3'
 
 const props = defineProps({
     goal: {
@@ -7,6 +8,8 @@ const props = defineProps({
         required: true,
     },
 })
+
+const emit = defineEmits(['delete'])
 
 const progress = computed(() => props.goal.progress_pct || 0)
 const isCompleted = computed(() => !!props.goal.completed_at)
@@ -155,8 +158,35 @@ const statusColor = computed(() => {
                 v-if="goal.deadline"
                 class="flex items-center gap-1.5 pt-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase dark:text-white/60"
             >
-                <span class="material-symbols-outlined text-[14px]">schedule</span>
+                <span class="material-symbols-outlined text-[14px]" aria-hidden="true">schedule</span>
                 <span>Échéance : {{ new Date(goal.deadline).toLocaleDateString() }}</span>
+            </div>
+
+            <!--
+              Both names carry the goal title. A screen reader listing the
+              controls of a page holding six goals otherwise reads "Modifier,
+              Supprimer" six times over with nothing to tell them apart.
+            -->
+            <div class="flex items-center gap-2 border-t border-white/10 pt-3">
+                <Link
+                    :href="route('goals.edit', { goal: goal.id })"
+                    :dusk="`edit-goal-${goal.id}`"
+                    :aria-label="`Modifier l'objectif ${goal.title}`"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange min-h-touch inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 text-xs font-bold uppercase transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:outline-none"
+                >
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">edit</span>
+                    Modifier
+                </Link>
+                <button
+                    type="button"
+                    :dusk="`delete-goal-${goal.id}`"
+                    :aria-label="`Supprimer l'objectif ${goal.title}`"
+                    class="focus-visible:ring-electric-orange min-h-touch inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-bold text-red-600 uppercase transition-colors hover:bg-red-500/20 focus-visible:ring-2 focus-visible:outline-none dark:text-red-400"
+                    @click="emit('delete', goal)"
+                >
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span>
+                    Supprimer
+                </button>
             </div>
         </div>
     </div>

@@ -39,11 +39,40 @@ const props = defineProps({
 const showAddForm = ref(false)
 const editingExercise = ref(null)
 const searchQuery = ref('')
-const activeCategory = ref(localStorage.getItem('gymtracker_active_category') || 'all')
 const searchInput = ref(null)
 
-watch(activeCategory, (newCat) => {
-    localStorage.setItem('gymtracker_active_category', newCat)
+/**
+ * The filter lives in the URL, not in localStorage.
+ *
+ * Stored in localStorage it outlived the reason it was set: filter to "Jambes"
+ * on leg day and the library still opens filtered weeks later, looking like
+ * most of the exercises have disappeared — with no clue why if the category
+ * chips have scrolled out of view. A filter chosen for one session was being
+ * replayed as a permanent preference.
+ *
+ * In the URL it behaves the way a filter is expected to: it survives a reload,
+ * it can be linked to, the back button steps out of it, and opening the library
+ * fresh from the nav shows everything.
+ */
+const CATEGORY_PARAM = 'category'
+
+const readCategoryFromUrl = () => new URLSearchParams(window.location.search).get(CATEGORY_PARAM) || 'all'
+
+const activeCategory = ref(readCategoryFromUrl())
+
+watch(activeCategory, (category) => {
+    const url = new URL(window.location.href)
+
+    if (category === 'all') {
+        url.searchParams.delete(CATEGORY_PARAM)
+    } else {
+        url.searchParams.set(CATEGORY_PARAM, category)
+    }
+
+    // The filtering is done client-side, so this must not become an Inertia
+    // visit. Passing the current history state back keeps Inertia's own
+    // back/forward restoration intact.
+    window.history.replaceState(window.history.state, '', url)
 })
 
 const handleKeyDown = (e) => {

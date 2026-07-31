@@ -1,6 +1,29 @@
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import { Link } from '@inertiajs/vue3'
+
+const props = defineProps({
     user: { type: Object, required: true },
+    /**
+     * The controller has always sent this and the dashboard never rendered it,
+     * so the query ran on every page load to fill a prop nothing read.
+     */
+    latestWeight: { type: [Number, String], default: null },
+})
+
+/**
+ * Arrives as a decimal string ("75.50"). Trailing zeros are noise on a body
+ * weight, and the separator has to be the French one to match every other
+ * figure on the page.
+ */
+const formattedWeight = computed(() => {
+    if (props.latestWeight === null || props.latestWeight === '') {
+        return null
+    }
+
+    const value = Number(props.latestWeight)
+
+    return Number.isFinite(value) ? value.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : null
 })
 </script>
 
@@ -36,6 +59,15 @@ defineProps({
                 >
                     {{ user.name?.split(' ')[0] }}
                 </h1>
+                <Link
+                    v-if="formattedWeight"
+                    :href="route('body-measurements.index')"
+                    dusk="dashboard-latest-weight"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange mt-1 inline-flex items-center gap-1 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:outline-none"
+                >
+                    <span class="material-symbols-outlined text-[14px]" aria-hidden="true">monitor_weight</span>
+                    {{ formattedWeight }} kg
+                </Link>
             </div>
         </div>
 

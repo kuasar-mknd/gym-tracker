@@ -21,7 +21,10 @@ import ActiveGoalsChart from '@/Components/Stats/ActiveGoalsChart.vue'
  * Pure composition page using specialized sub-components.
  */
 defineProps({
-    latestWeight: { type: Number, default: null },
+    // String as well as Number: the column is a decimal cast, so it serialises
+    // as "75.50". Declared Number only, every dashboard render logged a failed
+    // prop type check.
+    latestWeight: { type: [Number, String], default: null },
     recentWorkouts: { type: Array, default: () => [] },
     recentPRs: { type: Array, default: () => [] },
     activeGoals: { type: Array, default: () => [] },
@@ -48,7 +51,7 @@ const startWorkout = () => {
 
     <AuthenticatedLayout>
         <div class="space-y-6">
-            <DashboardHeader :user="$page.props.auth.user" />
+            <DashboardHeader :user="$page.props.auth.user" :latest-weight="latestWeight" />
 
             <QuickActions :processing="form.processing" @start-workout="startWorkout" />
 
