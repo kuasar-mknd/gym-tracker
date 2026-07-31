@@ -55,11 +55,21 @@ class HabitLog extends Model
         return $query;
     }
 
+    /**
+     * `date:Y-m-d`, not `date`. A bare date cast serialises through Carbon's
+     * toJSON, which reads the value in the app timezone and renders it in UTC:
+     * a log for 2026-07-31 left here as "2026-07-30T22:00:00.000000Z". The week
+     * grid compares that string to the plain Y-m-d it builds for each column,
+     * so no day could ever match and no box was ever drawn as done — while the
+     * counter beside it, reading logs.length, kept saying "3/7".
+     *
+     * The column holds a calendar day, not an instant. It must not move.
+     */
     #[\Override]
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            'date' => 'date:Y-m-d',
         ];
     }
 }

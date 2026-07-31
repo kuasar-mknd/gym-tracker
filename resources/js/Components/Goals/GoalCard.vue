@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
+import { parseCalendarDate } from '@/Utils/date'
 
 const props = defineProps({
     goal: {
@@ -43,6 +44,8 @@ const typeLabel = computed(() => {
             return 'Objectif'
     }
 })
+
+const formattedDeadline = computed(() => parseCalendarDate(props.goal.deadline)?.toLocaleDateString() ?? '')
 
 const statusColor = computed(() => {
     if (isCompleted.value) return 'text-green-500 dark:text-green-400'
@@ -159,7 +162,7 @@ const statusColor = computed(() => {
                 class="flex items-center gap-1.5 pt-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase dark:text-white/60"
             >
                 <span class="material-symbols-outlined text-[14px]" aria-hidden="true">schedule</span>
-                <span>Échéance : {{ new Date(goal.deadline).toLocaleDateString() }}</span>
+                <span>Échéance : {{ formattedDeadline }}</span>
             </div>
 
             <!--

@@ -6,6 +6,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
 import { computed, ref, defineAsyncComponent } from 'vue'
+import { todayAsCalendarDate } from '@/Utils/date'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
@@ -27,7 +28,7 @@ const showAddForm = ref(false)
 const form = useForm({
     weight: '',
     body_fat: '',
-    measured_at: new Date().toISOString().substr(0, 10),
+    measured_at: todayAsCalendarDate(),
     notes: '',
 })
 

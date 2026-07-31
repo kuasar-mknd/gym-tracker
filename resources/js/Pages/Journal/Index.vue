@@ -16,6 +16,7 @@ import JournalForm from '@/Components/Journal/JournalForm.vue'
 import JournalList from '@/Components/Journal/JournalList.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent } from 'vue'
+import { todayAsCalendarDate } from '@/Utils/date'
 
 const JournalChart = defineAsyncComponent(() => import('@/Components/Stats/JournalChart.vue'))
 
@@ -40,7 +41,7 @@ const editingJournal = ref(null)
  * Includes fields for date, content (text), and various wellness scores.
  */
 const form = useForm({
-    date: new Date().toISOString().substr(0, 10),
+    date: todayAsCalendarDate(),
     content: '',
     mood_score: null,
     sleep_quality: null,
@@ -66,7 +67,7 @@ const moods = [
  */
 const openAddForm = () => {
     form.reset()
-    form.date = new Date().toISOString().substr(0, 10)
+    form.date = todayAsCalendarDate()
     editingJournal.value = null
     showAddForm.value = true
 }

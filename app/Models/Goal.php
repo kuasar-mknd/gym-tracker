@@ -88,7 +88,10 @@ class Goal extends Model
             'target_value' => 'double',
             'current_value' => 'double',
             'start_value' => 'double',
-            'deadline' => 'date',
+            // A deadline is a calendar day. Cast bare, it serialised as an
+            // instant in UTC and the card read a day early wherever the browser
+            // was not ahead of UTC.
+            'deadline' => 'date:Y-m-d',
             'completed_at' => 'datetime',
         ];
     }

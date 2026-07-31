@@ -5,6 +5,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
+import { todayAsCalendarDate } from '@/Utils/date'
 
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
@@ -22,7 +23,7 @@ const form = useForm({
     part: props.part,
     value: '',
     unit: props.history.length > 0 ? props.history[props.history.length - 1].unit : 'cm',
-    measured_at: new Date().toISOString().substr(0, 10),
+    measured_at: todayAsCalendarDate(),
     notes: '',
 })
 

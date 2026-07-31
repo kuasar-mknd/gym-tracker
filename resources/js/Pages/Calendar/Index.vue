@@ -4,6 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import { parseCalendarDate } from '@/Utils/date'
 
 const props = defineProps({
     year: Number,
@@ -157,7 +158,7 @@ const selectedDayDetails = computed(() => {
 })
 
 const formatDateFull = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('fr-FR', {
+    return parseCalendarDate(dateStr)?.toLocaleDateString('fr-FR', {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
