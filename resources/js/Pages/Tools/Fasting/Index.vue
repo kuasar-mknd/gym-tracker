@@ -137,6 +137,12 @@ const endFast = () => {
     endForm.patch(route('tools.fasting.update', props.activeFast.id))
 }
 
+const goToPage = (url) => {
+    if (url) {
+        router.visit(url)
+    }
+}
+
 const deleteFast = (id) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce jeûne ?')) {
         router.delete(route('tools.fasting.destroy', id))
@@ -298,15 +304,48 @@ const formatHistoryDuration = (start, end) => {
                             <span class="text-text-main font-mono text-sm" v-if="fast.end_time">
                                 {{ formatHistoryDuration(fast.start_time, fast.end_time) }}
                             </span>
+                            <!-- Icon-only and destructive: it had no name at all. -->
                             <button
+                                type="button"
                                 @click="deleteFast(fast.id)"
-                                class="text-red-400 transition-colors hover:text-red-300"
+                                :aria-label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
+                                class="focus-visible:ring-electric-orange rounded-lg p-1 text-red-400 transition-colors hover:text-red-300 focus-visible:ring-2 focus-visible:outline-none"
                             >
-                                <span class="material-symbols-outlined text-lg">delete</span>
+                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>
                         </div>
                     </div>
                 </div>
+
+                <!-- Paginated 10 to a page server-side, with nothing here to reach
+                     page 2: every fast older than the tenth was unreachable. -->
+                <nav
+                    v-if="history.last_page > 1"
+                    class="mt-6 flex items-center justify-center gap-4"
+                    aria-label="Pagination de l'historique des jeûnes"
+                >
+                    <GlassButton
+                        :disabled="!history.prev_page_url"
+                        @click="goToPage(history.prev_page_url)"
+                        aria-label="Page précédente"
+                        dusk="fasting-prev"
+                    >
+                        <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                    </GlassButton>
+
+                    <span class="text-text-muted text-sm font-bold" aria-live="polite">
+                        Page {{ history.current_page }} sur {{ history.last_page }}
+                    </span>
+
+                    <GlassButton
+                        :disabled="!history.next_page_url"
+                        @click="goToPage(history.next_page_url)"
+                        aria-label="Page suivante"
+                        dusk="fasting-next"
+                    >
+                        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                    </GlassButton>
+                </nav>
             </GlassCard>
         </div>
     </AuthenticatedLayout>

@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, useForm, Link, Deferred } from '@inertiajs/vue3'
+import { Head, useForm, Link, Deferred, router } from '@inertiajs/vue3'
 import { defineAsyncComponent, ref, watch } from 'vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
@@ -20,7 +20,7 @@ const WorkoutHistoryTimelineChart = defineAsyncComponent(
 )
 
 const props = defineProps({
-    workouts: Object, // Paginated data: { data: [...], links: {...}, meta: {...} }
+    workouts: Object, // Laravel paginator: { data: [...], total, current_page, last_page, prev_page_url, next_page_url }
     totalExercises: Number,
     // ⚡ Bolt: PERFORMANCE OPTIMIZATION
     // Consolidated deferred data (charts + exercises) to reduce XHR requests.
@@ -60,6 +60,17 @@ const formatDate = (dateStr) => {
  * Inertia replacing the prop on the next visit silently discards it.
  */
 const workoutList = ref([...(props.workouts?.data ?? [])])
+
+/**
+ * The history is paginated 20 to a page server-side and the page offered no way
+ * to reach page 2, so everything older than the twentieth session existed and
+ * could not be opened. Same two-target layout as the notifications list.
+ */
+const goToPage = (url) => {
+    if (url) {
+        router.visit(url)
+    }
+}
 
 watch(
     () => props.workouts?.data,
@@ -176,7 +187,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     <GlassCard padding="p-4">
                         <div class="text-center">
                             <div class="text-gradient text-2xl font-bold">
-                                {{ workouts.meta?.total || workoutList.length || 0 }}
+                                {{ workouts.total ?? workoutList.length }}
                             </div>
                             <div class="text-text-muted mt-1 text-xs">Total séances</div>
                         </div>
@@ -405,6 +416,34 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         </Link>
                     </SwipeableRow>
                 </div>
+
+                <nav
+                    v-if="workouts?.last_page > 1"
+                    class="mt-6 flex items-center justify-center gap-4"
+                    aria-label="Pagination de l'historique"
+                >
+                    <GlassButton
+                        :disabled="!workouts.prev_page_url"
+                        @click="goToPage(workouts.prev_page_url)"
+                        aria-label="Page précédente"
+                        dusk="workouts-prev"
+                    >
+                        <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                    </GlassButton>
+
+                    <span class="text-text-muted text-sm font-bold" aria-live="polite">
+                        Page {{ workouts.current_page }} sur {{ workouts.last_page }}
+                    </span>
+
+                    <GlassButton
+                        :disabled="!workouts.next_page_url"
+                        @click="goToPage(workouts.next_page_url)"
+                        aria-label="Page suivante"
+                        dusk="workouts-next"
+                    >
+                        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                    </GlassButton>
+                </nav>
             </div>
         </div>
     </AuthenticatedLayout>

@@ -681,6 +681,25 @@ onUnmounted(() => {
 
                 <div class="space-y-2">
                     <SwipeableRow v-for="(set, index) in line.sets" :key="`${set.id}-${index}`">
+                        <!-- The row was swipeable with no action behind it: dragging
+                             it snapped it open onto an empty background and left it
+                             there. Same delete the row's own button calls, reached
+                             the way Workouts/Index and ExerciseCard already do it. -->
+                        <template #action-right>
+                            <button
+                                type="button"
+                                @click="removeSet(set.id)"
+                                :dusk="`swipe-remove-set-${lineIndex}-${index}`"
+                                :aria-label="`Supprimer la série ${index + 1}`"
+                                class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
+                            >
+                                <span class="flex flex-col items-center" aria-hidden="true">
+                                    <span class="material-symbols-outlined text-2xl">delete</span>
+                                    <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
+                                </span>
+                            </button>
+                        </template>
+
                         <div
                             class="flex items-center gap-2 rounded-2xl border border-white bg-white/80 p-3 shadow-sm"
                             :class="{ 'opacity-50': set.is_completed }"
