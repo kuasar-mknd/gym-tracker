@@ -48,7 +48,12 @@ const chartOptions = {
                 color: '#64748B',
                 font: { size: 10, weight: 'bold' },
                 callback: (value) => {
-                    if (value >= 1000) return (value / 1000).toFixed(0) + 'k'
+                    // toFixed(1), not toFixed(0). Rounding to the thousand
+                    // before adding the k crushes every finer scale: with the
+                    // 500 kg step Chart.js picks for smaller volumes, the tick
+                    // at 1500 was labelled "2k" and the axis read
+                    // "1k, 2k, 2k, 3k, 3k". VolumeTrendChart already did this.
+                    if (value >= 1000) return (value / 1000).toFixed(1) + 'k'
                     return value
                 },
             },

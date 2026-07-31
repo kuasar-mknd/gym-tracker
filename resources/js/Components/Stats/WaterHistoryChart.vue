@@ -39,7 +39,14 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+/**
+ * computed, not a plain object. Evaluated once at setup, the axis maximum was
+ * frozen on the props of the first render — and an Inertia visit reuses the
+ * component instance, so setup never runs again. Add enough water to pass that
+ * first maximum and today's bar was clipped at the top of the chart while the
+ * ring above it announced the real total.
+ */
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     scales: {
@@ -84,7 +91,7 @@ const chartOptions = {
             },
         },
     },
-}
+}))
 </script>
 
 <template>

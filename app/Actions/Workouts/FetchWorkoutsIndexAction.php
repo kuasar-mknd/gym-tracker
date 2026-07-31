@@ -30,7 +30,13 @@ final class FetchWorkoutsIndexAction
     {
         return [
             'workouts' => $this->getWorkouts($user),
-            'totalExercises' => $user->workoutLines()->count(),
+            // Distinct exercises, not workout lines. The card sits beside
+            // "Total séances" and is labelled "Exercices", so it reads as a
+            // count of entities — but workoutLines() is every line of every
+            // session, so a bench press done in 40 sessions counted 40 times.
+            // The figure had no relation to the library's "N exercices
+            // disponibles" or to the Stats page's own Exercices card.
+            'totalExercises' => $user->workoutLines()->distinct()->count('exercise_id'),
         ];
     }
 

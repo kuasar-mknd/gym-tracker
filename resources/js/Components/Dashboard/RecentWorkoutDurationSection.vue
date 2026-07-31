@@ -24,7 +24,7 @@ defineProps({
         <!-- Recent Workouts Line Chart -->
         <div class="relative -mx-2 mt-2 h-48 w-auto">
             <DashboardDurationChart
-                v-if="recentWorkouts && recentWorkouts.some((w) => w.duration_minutes || w.ended_at)"
+                v-if="recentWorkouts && recentWorkouts.some((w) => w.ended_at)"
                 :data="recentWorkouts"
             />
             <div v-else class="text-text-muted flex h-full items-center justify-center">

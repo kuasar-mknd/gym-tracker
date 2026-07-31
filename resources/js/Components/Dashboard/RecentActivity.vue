@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { defineAsyncComponent } from 'vue'
+import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 
 const RecentWorkoutsTimelineChart = defineAsyncComponent(
     () => import('@/Components/Stats/RecentWorkoutsTimelineChart.vue'),
@@ -105,13 +106,7 @@ const emit = defineEmits(['startWorkout'])
                                 })
                             }}
                             •
-                            {{
-                                workout.duration_minutes ||
-                                (workout.ended_at
-                                    ? Math.round((new Date(workout.ended_at) - new Date(workout.started_at)) / 60000)
-                                    : null) ||
-                                '--'
-                            }}
+                            {{ workoutDurationMinutes(workout) ?? '--' }}
                             min
                         </p>
                     </div>

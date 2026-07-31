@@ -12,6 +12,7 @@ import {
     Filler,
 } from 'chart.js'
 import { computed } from 'vue'
+import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
@@ -34,15 +35,7 @@ const chartData = computed(() => {
         })
     })
 
-    const durations = reversedData.map((d) => {
-        if (d.duration_minutes) {
-            return d.duration_minutes
-        }
-        if (d.ended_at) {
-            return Math.round((new Date(d.ended_at) - new Date(d.started_at)) / 60000)
-        }
-        return 0
-    })
+    const durations = reversedData.map(workoutDurationMinutes)
 
     return {
         labels,

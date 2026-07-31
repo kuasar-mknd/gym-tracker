@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 import { Line } from 'vue-chartjs'
 import {
     Chart as ChartJS,
@@ -35,13 +36,7 @@ const chartData = computed(() => {
         datasets: [
             {
                 label: 'Durée (min)',
-                data: workouts.map((w) => {
-                    if (w.duration_minutes) return w.duration_minutes
-                    if (w.ended_at && w.started_at) {
-                        return Math.round((new Date(w.ended_at) - new Date(w.started_at)) / 60000)
-                    }
-                    return 0
-                }),
+                data: workouts.map(workoutDurationMinutes),
                 borderColor: '#ec4899', // hot-pink
                 backgroundColor: 'rgba(236, 72, 153, 0.2)',
                 borderWidth: 3,

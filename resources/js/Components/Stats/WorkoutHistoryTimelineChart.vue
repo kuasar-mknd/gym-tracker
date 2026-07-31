@@ -13,6 +13,7 @@ import {
     LineController,
 } from 'chart.js'
 import { computed } from 'vue'
+import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 
 ChartJS.register(
     CategoryScale,
@@ -46,11 +47,7 @@ const chartData = computed(() => {
     })
 
     const volumes = reversedData.map((d) => d.workout_volume || 0)
-    const durations = reversedData.map(
-        (d) =>
-            d.duration_minutes ||
-            (d.ended_at ? Math.round((new Date(d.ended_at) - new Date(d.started_at)) / 60000) : 0),
-    )
+    const durations = reversedData.map(workoutDurationMinutes)
 
     return {
         labels,
