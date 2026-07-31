@@ -25,6 +25,19 @@ const formattedWeight = computed(() => {
 
     return Number.isFinite(value) ? value.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : null
 })
+
+const streakDays = computed(() => props.user.current_streak || 0)
+
+/**
+ * The badge reads "4 Jours" beside a flame glyph. Announced as it stands, that
+ * is a number and an icon name with nothing saying what either counts, and
+ * nothing saying where the link goes.
+ */
+const streakLabel = computed(() => {
+    const days = streakDays.value
+
+    return `Série de ${days} ${days === 1 ? 'jour' : 'jours'}, voir les statistiques`
+})
 </script>
 
 <template>
@@ -71,19 +84,30 @@ const formattedWeight = computed(() => {
             </div>
         </div>
 
-        <!-- Streak Badge -->
-        <div
-            class="streak-badge group flex cursor-pointer items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg active:scale-95"
+        <!--
+          Streak Badge. It carried cursor-pointer, a lift on hover and
+          active:scale-95 while having no click handler at all — every
+          affordance of a button, and nothing behind it. It now goes to the
+          stats page, where the streak is what the figures are about.
+        -->
+        <Link
+            :href="route('stats.index')"
+            dusk="dashboard-streak"
+            :aria-label="streakLabel"
+            class="streak-badge group focus-visible:ring-electric-orange min-h-touch flex cursor-pointer items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none active:scale-95"
         >
             <span
                 class="material-symbols-outlined text-electric-orange text-[24px] transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse"
                 style="font-variation-settings: 'FILL' 1"
+                aria-hidden="true"
                 >local_fire_department</span
             >
-            <span class="text-text-main text-xl font-black italic dark:text-white">
-                {{ user.current_streak || 0 }}
-                <span class="text-text-muted ml-0.5 text-[10px] font-bold uppercase not-italic">Jours</span>
+            <span class="text-text-main text-xl font-black italic dark:text-white" aria-hidden="true">
+                {{ streakDays }}
+                <span class="text-text-muted ml-0.5 text-[10px] font-bold uppercase not-italic">
+                    {{ streakDays === 1 ? 'Jour' : 'Jours' }}
+                </span>
             </span>
-        </div>
+        </Link>
     </header>
 </template>

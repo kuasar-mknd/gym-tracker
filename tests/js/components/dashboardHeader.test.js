@@ -56,3 +56,36 @@ describe('DashboardHeader body weight', () => {
         )
     })
 })
+
+/**
+ * The streak badge carried cursor-pointer, a lift on hover and active:scale-95
+ * with no click handler behind any of it: every affordance of a button, and
+ * nothing there. It now leads to the stats page.
+ */
+describe('DashboardHeader streak badge', () => {
+    const streakOf = (days) =>
+        mount(DashboardHeader, {
+            props: { user: { name: 'Samuel', current_streak: days }, latestWeight: null },
+            global: {
+                mocks: { route: globalThis.route },
+                stubs: { Link: { template: '<a :href="href"><slot /></a>', props: ['href'] } },
+            },
+        }).find('[dusk="dashboard-streak"]')
+
+    it('goes somewhere, rather than only looking like it does', () => {
+        expect(streakOf(4).attributes('href')).toBe('/stats.index')
+    })
+
+    it('says what the number counts and where it leads', () => {
+        // Announced as it stood, it was a bare number beside an icon name.
+        expect(streakOf(4).attributes('aria-label')).toBe('Série de 4 jours, voir les statistiques')
+    })
+
+    it('does not say "1 jours"', () => {
+        expect(streakOf(1).attributes('aria-label')).toBe('Série de 1 jour, voir les statistiques')
+    })
+
+    it('reads zero when the streak is broken rather than nothing', () => {
+        expect(streakOf(0).attributes('aria-label')).toBe('Série de 0 jours, voir les statistiques')
+    })
+})
