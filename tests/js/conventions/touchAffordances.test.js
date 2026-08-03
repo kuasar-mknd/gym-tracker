@@ -1,19 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 
-const jsRoot = resolve(__dirname, '../../../resources/js')
-
-const collectVueFiles = (dir) =>
-    readdirSync(dir).flatMap((entry) => {
-        const fullPath = join(dir, entry)
-
-        if (statSync(fullPath).isDirectory()) {
-            return collectVueFiles(fullPath)
-        }
-
-        return entry.endsWith('.vue') ? [fullPath] : []
-    })
+import { collectSourceFiles, jsRoot } from './sourceFiles'
 
 /**
  * A full-page background overlay that fades in on hover. These carry no action,
@@ -34,7 +22,7 @@ describe('touch affordances', () => {
     it('never hides an interactive control behind hover alone', () => {
         const classAttribute = /class="([^"]*)"/g
 
-        const offenders = collectVueFiles(jsRoot).flatMap((file) => {
+        const offenders = collectSourceFiles().flatMap((file) => {
             const contents = readFileSync(file, 'utf8')
 
             return [...contents.matchAll(classAttribute)]

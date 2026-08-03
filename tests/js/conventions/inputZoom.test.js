@@ -1,19 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 
-const jsRoot = resolve(__dirname, '../../../resources/js')
-
-const collectVueFiles = (dir) =>
-    readdirSync(dir).flatMap((entry) => {
-        const fullPath = join(dir, entry)
-
-        if (statSync(fullPath).isDirectory()) {
-            return collectVueFiles(fullPath)
-        }
-
-        return entry.endsWith('.vue') ? [fullPath] : []
-    })
+import { collectSourceFiles, jsRoot } from './sourceFiles'
 
 /**
  * Matches an <input>, <select> or <textarea> tag with everything up to its
@@ -37,7 +25,7 @@ describe('form control sizing', () => {
      * template editors did.
      */
     it('never ships a form control below the iOS zoom threshold', () => {
-        const offenders = collectVueFiles(jsRoot).flatMap((file) => {
+        const offenders = collectSourceFiles().flatMap((file) => {
             const contents = readFileSync(file, 'utf8')
 
             return [...contents.matchAll(formControlTag)]

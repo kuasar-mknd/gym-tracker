@@ -1,6 +1,4 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 
@@ -67,59 +65,5 @@ describe('parseCalendarDate', () => {
         expect(parseCalendarDate(null)).toBeNull()
         expect(parseCalendarDate('')).toBeNull()
         expect(parseCalendarDate('pas une date')).toBeNull()
-    })
-})
-
-/**
- * The two tests above cover the helpers, not the call sites. Four separate
- * forms had each written the UTC-day expression by hand, and a helper does
- * nothing about the fifth one somebody writes next month — so this guards the
- * source itself rather than any one page.
- *
- * Utils/date.js is skipped: it quotes the broken form in the comment that
- * explains why the helper exists.
- */
-describe('no page derives a calendar day from UTC', () => {
-    const sourceRoot = join(process.cwd(), 'resources', 'js')
-    const skipped = join(sourceRoot, 'Utils', 'date.js')
-
-    const sourceFiles = (directory) =>
-        readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-            const path = join(directory, entry.name)
-
-            if (entry.isDirectory()) return sourceFiles(path)
-
-            return /\.(vue|js)$/.test(entry.name) && path !== skipped ? [path] : []
-        })
-
-    // new Date().toISOString() then cut to ten characters, in any of the forms
-    // that were in the codebase or are one keystroke away from it.
-    const utcDayPattern =
-        /toISOString\(\)\s*\.\s*(substr|substring|slice)\(\s*0\s*,\s*10\s*\)|toISOString\(\)\s*\.\s*split\(\s*['"]T['"]\s*\)\s*\[\s*0\s*\]/
-
-    /**
-     * The columns behind these three names are cast `date:Y-m-d` server-side,
-     * so they arrive as calendar days. `new Date('2026-07-31')` is specified to
-     * parse as midnight UTC, which renders the day before anywhere behind UTC.
-     *
-     * Naming the fields rather than banning `new Date` outright is deliberate:
-     * started_at, created_at and last_taken_at are genuine instants and reading
-     * them that way is correct.
-     */
-    const calendarDayFields = /new Date\(\s*[A-Za-z_$][\w$.]*\.(date|deadline|measured_at)\b/
-
-    it('never slices a UTC timestamp down to a day', () => {
-        const offenders = sourceFiles(sourceRoot).filter((path) => utcDayPattern.test(readFileSync(path, 'utf8')))
-
-        expect(offenders.map((path) => path.replace(sourceRoot, 'resources/js'))).toEqual([])
-    })
-
-    it('never builds a Date straight from a calendar-day field', () => {
-        // Written after three more of these turned up in chart labels that the
-        // first sweep had not looked at: a helper existing is not the same as
-        // every caller using it.
-        const offenders = sourceFiles(sourceRoot).filter((path) => calendarDayFields.test(readFileSync(path, 'utf8')))
-
-        expect(offenders.map((path) => path.replace(sourceRoot, 'resources/js'))).toEqual([])
     })
 })
