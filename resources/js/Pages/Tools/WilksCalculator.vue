@@ -235,6 +235,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
+// Aliased: this file also uses `wilksScore` as a route parameter name.
+import { wilksScore as calculateWilks } from '@/Utils/formulas'
 
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
 const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))
@@ -257,51 +259,18 @@ const isValid = computed(() => {
     return form.body_weight > 0 && form.lifted_weight > 0
 })
 
-const calculateWilks = (bw, lifted, gender, unit) => {
-    if (!bw || !lifted) return 0
-
-    // Convert to KG if needed
-    let weight = parseFloat(bw)
-    let total = parseFloat(lifted)
-
-    if (unit === 'lbs') {
-        weight = weight / 2.20462
-        total = total / 2.20462
-    }
-
-    let a, b, c, d, e, f
-
-    if (gender === 'male') {
-        a = -216.0475144
-        b = 16.2606339
-        c = -0.002388645
-        d = -0.00113732
-        e = 7.01863e-6
-        f = -1.291e-8
-    } else {
-        a = 594.31747775582
-        b = -27.23842536447
-        c = 0.82112226871
-        d = -0.00930733913
-        e = 4.731582e-5
-        f = -9.054e-8
-    }
-
-    const denominator =
-        a +
-        b * weight +
-        c * Math.pow(weight, 2) +
-        d * Math.pow(weight, 3) +
-        e * Math.pow(weight, 4) +
-        f * Math.pow(weight, 5)
-    const coeff = 500 / denominator
-
-    return (total * coeff).toFixed(2)
-}
-
-const calculatedScore = computed(() => {
-    return calculateWilks(form.body_weight, form.lifted_weight, form.gender, form.unit)
-})
+/**
+ * The formula returns a number; the two decimals are this page's presentation
+ * of it, not part of the calculation.
+ */
+const calculatedScore = computed(() =>
+    calculateWilks({
+        bodyWeight: form.body_weight,
+        lifted: form.lifted_weight,
+        gender: form.gender,
+        unit: form.unit,
+    }).toFixed(2),
+)
 
 const saveScore = () => {
     if (!isValid.value) return

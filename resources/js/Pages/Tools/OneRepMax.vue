@@ -148,23 +148,14 @@
 import { ref, computed, defineAsyncComponent } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import { oneRepMax as epley } from '@/Utils/formulas'
 
 const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
 
 const weight = ref('')
 const reps = ref('')
 
-const oneRepMax = computed(() => {
-    const w = parseFloat(weight.value)
-    const r = parseFloat(reps.value)
-
-    if (!w || !r || w <= 0 || r <= 0) return 0
-
-    if (r === 1) return w
-
-    // Epley Formula
-    return w * (1 + r / 30)
-})
+const oneRepMax = computed(() => epley(weight.value, reps.value))
 
 const percentages = computed(() => {
     const max = oneRepMax.value
