@@ -4,6 +4,19 @@ import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
 const QUEUE_KEY = 'offline_sync_queue'
 const FAILED_KEY = 'offline_sync_failed'
 
+/**
+ * Names one create attempt, for as long as that attempt exists.
+ *
+ * The dangerous failure is not the one that obviously fails. It is the request
+ * the server accepted and wrote, whose response never came home — a tunnel, a
+ * lock screen, a suspended PWA. The client sees a network error, queues the
+ * write, and replays it later against a row that already exists. Nothing in the
+ * queue could tell the difference, so the replay made a second one.
+ */
+const newIdempotencyKey = () =>
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`
+
 class SyncService {
     constructor() {
         this.queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
@@ -48,9 +61,10 @@ class SyncService {
      */
     async request(config) {
         const api = window.axios || axios
+        const stamped = this.stampIdempotency(config)
 
         try {
-            return await api(config)
+            return await api(stamped)
         } catch (error) {
             // Auto-retry once on 429 Too Many Requests (rate limiting)
             if (error.response?.status === 429) {
@@ -62,11 +76,29 @@ class SyncService {
             // A response means the server answered, so this is its verdict, not
             // a connectivity problem — queueing it would hide a real refusal.
             if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
-                this.addToQueue(config)
+                // The stamped config, so the replay carries the same key as the
+                // attempt that may already have been written.
+                this.addToQueue(stamped)
                 return Promise.reject({ isOffline: true, message: 'Network error: Request queued' })
             }
             throw error
         }
+    }
+
+    /**
+     * Gives a create a name the server can recognise on a second telling.
+     *
+     * Only POSTs need it: PATCH and DELETE against a known id are already
+     * idempotent by nature. The key is minted once and carried on the config,
+     * so queueing and replaying the same attempt reuses it rather than minting
+     * a second identity for the same intent.
+     */
+    stampIdempotency(config) {
+        if (String(config.method).toLowerCase() !== 'post' || config.headers?.['Idempotency-Key']) {
+            return config
+        }
+
+        return { ...config, headers: { ...config.headers, 'Idempotency-Key': newIdempotencyKey() } }
     }
 
     addToQueue(config) {

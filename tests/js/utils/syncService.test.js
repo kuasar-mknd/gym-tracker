@@ -189,3 +189,88 @@ describe('SyncService.request when navigator.onLine lies', () => {
         expect(service.queue).toEqual([])
     })
 })
+
+/**
+ * The dangerous failure is not the request that obviously fails. It is the one
+ * the server accepted and wrote, whose response never came home — a tunnel, a
+ * lock screen, a suspended PWA. The client cannot tell that apart from a
+ * request that never arrived, so it queues and replays it, and a second row
+ * appears. Workout 8 in the owner's database shows the shape: five lines
+ * stamped within two seconds of each other by a queue flush.
+ *
+ * The key names the attempt, so the server can recognise a second telling.
+ */
+describe('SyncService idempotency', () => {
+    const keyOf = (call) => call[0].headers?.['Idempotency-Key']
+
+    it('names every create it sends', async () => {
+        request.mockResolvedValue({ data: {} })
+
+        const service = await freshService()
+        await service.post('/api/v1/sets', { reps: 10 })
+
+        expect(keyOf(request.mock.calls[0])).toEqual(expect.any(String))
+        expect(keyOf(request.mock.calls[0]).length).toBeGreaterThan(8)
+    })
+
+    it('gives two separate creates two separate names', async () => {
+        request.mockResolvedValue({ data: {} })
+
+        const service = await freshService()
+        await service.post('/api/v1/sets', { reps: 10 })
+        await service.post('/api/v1/sets', { reps: 10 })
+
+        expect(keyOf(request.mock.calls[0])).not.toBe(keyOf(request.mock.calls[1]))
+    })
+
+    /**
+     * The whole point. A replay is the same attempt told twice, not a second
+     * attempt, so it has to carry the same name.
+     */
+    it('replays a queued create under the name it was first sent with', async () => {
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await freshService()
+        await expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({ isOffline: true })
+
+        const attempted = keyOf(request.mock.calls[0])
+        expect(attempted).toEqual(expect.any(String))
+
+        request.mockResolvedValue({ data: {} })
+        await service.processQueue()
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(keyOf(request.mock.calls[1])).toBe(attempted)
+    })
+
+    it('survives a reload with the name intact', async () => {
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await freshService()
+        await expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({ isOffline: true })
+        const attempted = keyOf(request.mock.calls[0])
+
+        // A new page load reads the queue back out of localStorage.
+        request.mockResolvedValue({ data: {} })
+        const reloaded = await freshService()
+        await reloaded.processQueue()
+
+        expect(keyOf(request.mock.calls[1])).toBe(attempted)
+    })
+
+    /**
+     * A PATCH or DELETE against an id the server issued is already idempotent;
+     * naming it would be noise.
+     */
+    it.each([
+        ['patch', (s) => s.patch('/api/v1/sets/1', { weight: 100 })],
+        ['delete', (s) => s.delete('/api/v1/sets/1')],
+    ])('does not name a %s', async (_method, call) => {
+        request.mockResolvedValue({ data: {} })
+
+        const service = await freshService()
+        await call(service)
+
+        expect(keyOf(request.mock.calls[0])).toBeUndefined()
+    })
+})

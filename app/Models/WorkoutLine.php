@@ -15,6 +15,9 @@ use Spatie\Activitylog\LogOptions;
  * @property int $exercise_id
  * @property int $order
  * @property string|null $notes
+ * @property string|null $idempotency_key names the client attempt that created this row, so a
+ *                                        replayed create returns it instead of making a second one. Deliberately absent from
+ *                                        $fillable: it identifies the attempt, never something a payload may set.
  * @property-read \App\Models\Workout $workout
  * @property-read \App\Models\Exercise $exercise
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Set> $sets

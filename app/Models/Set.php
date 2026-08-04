@@ -16,6 +16,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property float|null $distance_km
  * @property bool $is_warmup
  * @property bool $is_completed
+ * @property string|null $idempotency_key names the client attempt that created this row, so a
+ *                                        replayed create returns it instead of making a second one. Deliberately absent from
+ *                                        $fillable: it identifies the attempt, never something a payload may set.
  * @property-read \App\Models\WorkoutLine $workoutLine
  * @property-read \App\Models\PersonalRecord|null $personalRecord
  */
