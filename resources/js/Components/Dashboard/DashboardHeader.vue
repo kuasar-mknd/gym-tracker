@@ -45,7 +45,7 @@ const streakLabel = computed(() => {
         id="dashboard-header"
         class="animate-fade-in flex items-center justify-between rounded-3xl border border-white/20 bg-white/10 p-4 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-xl active:scale-[0.98]"
     >
-        <div class="flex items-center gap-4">
+        <div class="flex min-w-0 items-center gap-4">
             <!-- Avatar with gradient border -->
             <div class="relative">
                 <div
@@ -60,7 +60,7 @@ const streakLabel = computed(() => {
                     </div>
                 </div>
             </div>
-            <div>
+            <div class="min-w-0">
                 <p
                     class="text-text-muted mb-0.5 text-[10px] font-black tracking-[0.2em] uppercase"
                     dusk="dashboard-welcome"
@@ -68,7 +68,7 @@ const streakLabel = computed(() => {
                     BON RETOUR
                 </p>
                 <h1
-                    class="font-display text-text-main text-3xl font-black tracking-tighter uppercase italic dark:text-white"
+                    class="font-display text-text-main truncate text-3xl font-black tracking-tighter uppercase italic dark:text-white"
                 >
                     {{ user.name?.split(' ')[0] }}
                 </h1>
@@ -94,7 +94,7 @@ const streakLabel = computed(() => {
             :href="route('stats.index')"
             dusk="dashboard-streak"
             :aria-label="streakLabel"
-            class="streak-badge group focus-visible:ring-electric-orange min-h-touch flex cursor-pointer items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+            class="streak-badge group focus-visible:ring-electric-orange min-h-touch flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none active:scale-95"
         >
             <span
                 class="material-symbols-outlined text-electric-orange text-[24px] transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse"

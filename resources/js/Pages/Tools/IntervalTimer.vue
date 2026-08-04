@@ -507,7 +507,7 @@ onUnmounted(() => {
                         <div class="relative z-10 flex items-center gap-2">
                             <button
                                 @click="loadTimer(timer)"
-                                class="text-text-muted hover:text-electric-orange p-2 transition-colors"
+                                class="text-text-muted hover:text-electric-orange relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
                                 title="Charger & Lancer"
                                 aria-label="Charger et lancer"
                             >
@@ -515,14 +515,14 @@ onUnmounted(() => {
                             </button>
                             <button
                                 @click="editTimer(timer)"
-                                class="text-text-muted p-2 transition-colors hover:text-blue-500"
+                                class="text-text-muted relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-[''] hover:text-blue-500"
                                 aria-label="Modifier"
                             >
                                 <span class="material-symbols-outlined">edit</span>
                             </button>
                             <button
                                 @click="deleteTimer(timer)"
-                                class="text-text-muted p-2 transition-colors hover:text-red-500"
+                                class="text-text-muted relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-[''] hover:text-red-500"
                                 aria-label="Supprimer"
                             >
                                 <span class="material-symbols-outlined">delete</span>

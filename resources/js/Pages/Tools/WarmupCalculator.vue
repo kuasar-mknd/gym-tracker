@@ -6,7 +6,7 @@
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
+                    class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-4xl"
                 >
                     Calculateur<br />
                     <span class="text-gradient">d'Échauffement</span>
@@ -166,7 +166,7 @@
                                 <button
                                     type="button"
                                     @click="removeStep(index)"
-                                    class="text-slate-400 transition-colors hover:text-red-500 active:scale-95"
+                                    class="relative text-slate-400 transition-colors before:absolute before:-inset-3.5 before:content-[''] hover:text-red-500 active:scale-95"
                                     :disabled="form.steps.length <= 1"
                                     :aria-label="`Supprimer le palier ${index + 1}`"
                                 >

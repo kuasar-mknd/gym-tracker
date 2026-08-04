@@ -828,7 +828,7 @@ onUnmounted(() => {
                                 v-press="{ haptic: 'warning' }"
                                 @click="removeSet(set.id)"
                                 :dusk="`remove-set-${lineIndex}-${index}`"
-                                class="ml-auto text-slate-300 hover:text-red-500"
+                                class="relative ml-auto text-slate-300 before:absolute before:-inset-2.5 before:content-[''] hover:text-red-500"
                                 aria-label="Supprimer la série"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">delete</span>
@@ -928,7 +928,7 @@ onUnmounted(() => {
                     <div class="flex items-center gap-4">
                         <button
                             @click="showCreateForm = false"
-                            class="text-text-muted hover:text-text-main"
+                            class="text-text-muted hover:text-text-main relative before:absolute before:-inset-2.5 before:content-['']"
                             aria-label="Retour"
                         >
                             <span class="material-symbols-outlined">arrow_back</span>

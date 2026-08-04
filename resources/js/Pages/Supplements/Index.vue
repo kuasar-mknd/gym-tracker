@@ -118,7 +118,11 @@ const formatDate = (dateString) => {
                         {{ supplements.length }} produits suivis
                     </p>
                 </div>
-                <GlassButton @click="showAddForm = true" variant="primary" class="hidden sm:flex">
+                <GlassButton
+                    @click="showAddForm = true"
+                    variant="primary"
+                    class="flex hidden size-11 shrink-0 items-center justify-center sm:flex"
+                >
                     <span class="material-symbols-outlined mr-2">add</span>
                     Ajouter
                 </GlassButton>
@@ -262,7 +266,7 @@ const formatDate = (dateString) => {
                                         v-press
                                         @click="startEdit(supplement)"
                                         aria-label="Modifier le complément"
-                                        class="text-text-muted hover:text-electric-orange p-1 transition-colors"
+                                        class="text-text-muted hover:text-electric-orange min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors"
                                     >
                                         <span class="material-symbols-outlined text-lg">edit</span>
                                     </button>
@@ -270,7 +274,7 @@ const formatDate = (dateString) => {
                                         v-press
                                         @click="deleteSupplement(supplement.id)"
                                         aria-label="Supprimer le complément"
-                                        class="text-text-muted p-1 transition-colors hover:text-red-500"
+                                        class="text-text-muted min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors hover:text-red-500"
                                     >
                                         <span class="material-symbols-outlined text-lg">delete</span>
                                     </button>

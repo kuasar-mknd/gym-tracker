@@ -192,7 +192,7 @@ defineExpose({
                     v-if="showClearButton"
                     type="button"
                     @click="$emit('update:modelValue', '')"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange relative rounded-full p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                     aria-label="Effacer le texte"
                     v-press
                 >
@@ -204,7 +204,7 @@ defineExpose({
                     v-if="isPassword"
                     type="button"
                     @click="showPassword = !showPassword"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange relative rounded-full p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                     :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                     :title="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                     v-press

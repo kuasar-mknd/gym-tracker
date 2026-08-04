@@ -309,7 +309,7 @@ const formatHistoryDuration = (start, end) => {
                                 type="button"
                                 @click="deleteFast(fast.id)"
                                 :aria-label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
-                                class="focus-visible:ring-electric-orange rounded-lg p-1 text-red-400 transition-colors hover:text-red-300 focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-electric-orange relative rounded-lg p-1 text-red-400 transition-colors before:absolute before:-inset-2.5 before:content-[''] hover:text-red-300 focus-visible:ring-2 focus-visible:outline-none"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>

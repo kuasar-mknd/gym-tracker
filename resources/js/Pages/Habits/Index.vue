@@ -321,8 +321,8 @@ const getProgressPercent = (habit) => {
 
             <!-- Weekly Calendar Header -->
             <GlassCard class="overflow-hidden p-0">
-                <div class="grid grid-cols-[1fr_repeat(7,minmax(32px,1fr))] sm:grid-cols-[200px_repeat(7,1fr)]">
-                    <div class="text-text-main p-4 font-bold">Habitude</div>
+                <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
+                    <div class="text-text-main col-span-7 p-4 font-bold sm:col-span-1">Habitude</div>
                     <div
                         v-for="day in weekDates"
                         :key="day.date"
@@ -351,12 +351,12 @@ const getProgressPercent = (habit) => {
                     :key="habit.id"
                     class="group overflow-hidden p-0 transition hover:bg-white/10"
                 >
-                    <div class="grid grid-cols-[1fr_repeat(7,minmax(32px,1fr))] sm:grid-cols-[200px_repeat(7,1fr)]">
+                    <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
                         <!-- Habit Info -->
-                        <div class="relative flex flex-col justify-center p-4">
+                        <div class="relative col-span-7 flex min-w-0 flex-col justify-center p-4 sm:col-span-1">
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white"
+                                    class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white sm:flex"
                                     :class="habit.color"
                                 >
                                     <span class="material-symbols-outlined">{{ habit.icon }}</span>
@@ -382,18 +382,18 @@ const getProgressPercent = (habit) => {
                             <!-- Visible by default, hover-revealed only from sm: up. A plain
                                  opacity-0 hides these on touch, where there is no hover at all. -->
                             <div
-                                class="absolute top-2 right-2 flex opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
+                                class="mt-2 flex gap-1 opacity-100 transition sm:absolute sm:top-2 sm:right-2 sm:mt-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
                             >
                                 <button
                                     @click="editHabit(habit)"
-                                    class="text-text-muted hover:text-text-main p-1"
+                                    class="text-text-muted hover:text-text-main min-h-touch min-w-touch flex items-center justify-center rounded-lg"
                                     aria-label="Modifier l'habitude"
                                 >
                                     <span class="material-symbols-outlined text-sm">edit</span>
                                 </button>
                                 <button
                                     @click="deleteHabit(habit)"
-                                    class="text-text-muted p-1 hover:text-red-500"
+                                    class="text-text-muted min-h-touch min-w-touch flex items-center justify-center rounded-lg hover:text-red-500"
                                     aria-label="Supprimer l'habitude"
                                 >
                                     <span class="material-symbols-outlined text-sm">delete</span>
@@ -418,7 +418,7 @@ const getProgressPercent = (habit) => {
                                 :aria-pressed="isCompleted(habit, day.date)"
                                 :aria-label="`${habit.name}, ${day.day_short || day.day} ${day.day_num}`"
                                 :dusk="`habit-${habit.id}-${day.date}`"
-                                class="relative flex h-8 w-8 items-center justify-center rounded-full transition-all before:absolute before:-inset-1.5 before:content-[''] active:scale-95"
+                                class="flex size-11 shrink-0 items-center justify-center rounded-full transition-all active:scale-95"
                                 :class="[
                                     isCompleted(habit, day.date)
                                         ? `${habit.color} text-white shadow-md`
@@ -446,7 +446,7 @@ const getProgressPercent = (habit) => {
                     </h3>
                     <button
                         @click="showAddForm = false"
-                        class="text-text-muted hover:text-text-main"
+                        class="text-text-muted hover:text-text-main relative before:absolute before:-inset-2.5 before:content-['']"
                         aria-label="Fermer le formulaire"
                     >
                         <span class="material-symbols-outlined">close</span>
