@@ -8,29 +8,45 @@ class SyncService {
     constructor() {
         this.queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
         this.failed = JSON.parse(localStorage.getItem(FAILED_KEY) || '[]')
-        this.isOnline = navigator.onLine
 
-        window.addEventListener('online', () => {
-            this.isOnline = true
-            this.processQueue()
+        window.addEventListener('online', () => this.processQueue())
+
+        /**
+         * An installed PWA is suspended and resumed, not closed. A queue built
+         * up while the connection was down would otherwise wait for an `online`
+         * event that never fires, because the browser was never running to
+         * notice the transition.
+         */
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.processQueue()
+            }
         })
 
-        window.addEventListener('offline', () => {
-            this.isOnline = false
-        })
+        this.processQueue()
     }
 
     /**
-     * Perform an API request, queuing it if offline.
+     * Perform an API request, queuing it only if the attempt actually fails.
+     *
+     * This used to short-circuit on `navigator.onLine`, read ONCE in the
+     * constructor of this module-level singleton. When that snapshot was false
+     * — which an iOS PWA reports routinely at a cold launch, before the network
+     * stack is attached — every mutation for the whole page session was pushed
+     * onto the queue and rejected with `isOffline`, and not one byte was sent.
+     * Callers treat `isOffline` as "keep the value on screen", so the user
+     * watched their workout fill up normally and reloaded into an empty
+     * session. Observed on a simulator: the FAB's Inertia POST created workout
+     * 12, then adding an exercise and a set produced no server request at all.
+     *
+     * `navigator.onLine` cannot carry this decision. False negatives strand the
+     * user, and a true value never did prove reachability. So we always attempt
+     * the request; the catch below queues it when the network genuinely refuses.
+     *
      * @param {Object} config Axios request config
      * @returns {Promise}
      */
     async request(config) {
-        if (!this.isOnline) {
-            this.addToQueue(config)
-            return Promise.reject({ isOffline: true, message: 'Offline: Request queued' })
-        }
-
         const api = window.axios || axios
 
         try {
@@ -43,7 +59,9 @@ class SyncService {
                 return await api(config)
             }
 
-            if (!navigator.onLine || error.code === 'ERR_NETWORK') {
+            // A response means the server answered, so this is its verdict, not
+            // a connectivity problem — queueing it would hide a real refusal.
+            if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
                 this.addToQueue(config)
                 return Promise.reject({ isOffline: true, message: 'Network error: Request queued' })
             }
@@ -67,8 +85,22 @@ class SyncService {
         localStorage.setItem(QUEUE_KEY, JSON.stringify(this.queue))
     }
 
+    /**
+     * Flushes the queue, one drain at a time.
+     *
+     * Three things now ask for a flush — construction, `online`, and the app
+     * becoming visible again — and they can easily overlap. Chaining them means
+     * a second caller waits for the drain already in flight instead of reading
+     * a half-emptied queue and sending the same mutation twice.
+     */
     async processQueue() {
-        if (this.queue.length === 0 || !this.isOnline) return
+        this.pending = (this.pending ?? Promise.resolve()).catch(() => {}).then(() => this.drainQueue())
+
+        return this.pending
+    }
+
+    async drainQueue() {
+        if (this.queue.length === 0) return
 
         const tempQueue = [...this.queue]
         this.queue = []

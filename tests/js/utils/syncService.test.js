@@ -134,3 +134,58 @@ describe('SyncService.processQueue', () => {
         expect(service.queue).toEqual([])
     })
 })
+
+/**
+ * The defect that cost a whole workout.
+ *
+ * `isOnline` was `navigator.onLine`, read once in the constructor of a
+ * module-level singleton. An iOS PWA reports that false at a cold launch, and
+ * nothing ever repaired it: the `online` event only fires on a transition, and
+ * the browser never considered itself offline. Every mutation for the rest of
+ * the page session was queued and rejected with `isOffline`, which callers read
+ * as "keep the value on screen" — so the workout filled up normally and
+ * reloaded empty. Reproduced on a simulator: the FAB's Inertia POST created the
+ * workout, then adding an exercise and a set produced no server request at all.
+ */
+describe('SyncService.request when navigator.onLine lies', () => {
+    it('still sends the request when the browser claims to be offline', async () => {
+        setOnline(false)
+        request.mockResolvedValue({ data: { data: { id: 9 } } })
+
+        const service = await freshService()
+        const response = await service.post('/api/v1/sets', { reps: 10 })
+
+        expect(request).toHaveBeenCalledWith(
+            expect.objectContaining({ method: 'post', url: '/api/v1/sets', data: { reps: 10 } }),
+        )
+        expect(response.data.data.id).toBe(9)
+        expect(service.queue).toEqual([])
+    })
+
+    it('queues only once the attempt actually fails', async () => {
+        setOnline(false)
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await freshService()
+
+        await expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({ isOffline: true })
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(service.queue).toHaveLength(1)
+    })
+
+    /**
+     * A server that answered is not a connection that dropped. Filing a refusal
+     * as "offline" queued it forever and told the caller to keep the value.
+     */
+    it('surfaces a server refusal instead of calling it offline', async () => {
+        setOnline(false)
+        request.mockRejectedValue({ response: { status: 422 }, request: {} })
+
+        const service = await freshService()
+
+        await expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({
+            response: { status: 422 },
+        })
+        expect(service.queue).toEqual([])
+    })
+})

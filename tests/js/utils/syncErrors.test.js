@@ -15,8 +15,33 @@ describe('classifySyncError', () => {
     it('treats a dropped connection as offline even without the flag', () => {
         expect(classifySyncError({ code: 'ERR_NETWORK' })).toBe(SYNC_OFFLINE)
 
+        // What axios hands back when the request went out and nothing came
+        // home: a request, no response.
         setOnline(false)
-        expect(classifySyncError(new Error('whatever'))).toBe(SYNC_OFFLINE)
+        expect(classifySyncError({ request: {}, message: 'Network Error' })).toBe(SYNC_OFFLINE)
+    })
+
+    /**
+     * `navigator.onLine` used to decide this on its own, and it is not entitled
+     * to: it reports the network interface, not reachability, and an iOS PWA
+     * reports it false at a cold launch on a working connection.
+     *
+     * Calling an unattributable error "offline" is not a harmless guess.
+     * SYNC_OFFLINE is a promise that SyncService has the write queued, and the
+     * draft replay in Workouts/Show acts on it by DELETING the local draft as a
+     * duplicate. Say it about an error nothing queued and the edit is gone.
+     * Transient is the honest answer: try again, keep the draft.
+     */
+    it('does not call an unattributable error offline just because the flag is false', () => {
+        setOnline(false)
+
+        expect(classifySyncError(new Error('whatever'))).toBe(SYNC_TRANSIENT)
+    })
+
+    it('trusts a server that answered over the flag', () => {
+        setOnline(false)
+
+        expect(classifySyncError({ response: { status: 422 }, request: {} })).toBe(SYNC_PERMANENT)
     })
 
     /**

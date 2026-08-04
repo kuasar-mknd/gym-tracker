@@ -25,7 +25,14 @@ export const classifySyncError = (error) => {
         return SYNC_OFFLINE
     }
 
-    if (!navigator.onLine || error?.code === 'ERR_NETWORK') {
+    /**
+     * Whether the server answered is the fact that settles this, not
+     * `navigator.onLine`. That flag reports the network interface, not
+     * reachability, and an iOS PWA reports it false at a cold launch while the
+     * connection is perfectly usable — which used to file a legitimate 422 as
+     * "offline" and queue it forever instead of surfacing it.
+     */
+    if (error?.code === 'ERR_NETWORK' || (!error?.response && error?.request)) {
         return SYNC_OFFLINE
     }
 
