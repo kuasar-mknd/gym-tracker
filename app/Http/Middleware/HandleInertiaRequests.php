@@ -42,6 +42,10 @@ class HandleInertiaRequests extends Middleware
             // exists to suppress fired mid-test and swallowed clicks. The
             // explicit flag makes both runs agree.
             'is_testing' => app()->environment('testing') || config('app.running_browser_tests') === true,
+            // Accompagne la route /__dev-login. Le serveur est le
+            // seul à savoir qu'il est en local : import.meta.env.DEV vaut false
+            // dans un build de production, que le serveur local sert quand même.
+            'is_local' => app()->environment('local'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             'ziggy' => function () use ($request): array {
                 $ziggy = new Ziggy();

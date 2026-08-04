@@ -25,6 +25,14 @@ export default defineConfig({
             filename: 'sw.js',
             registerType: 'autoUpdate',
             injectRegister: 'auto',
+            // Le worker est écrit dans public/build, donc servi depuis
+            // /build/sw.js — sa portée par défaut serait /build/ et il ne
+            // contrôlerait aucune page de l'app. base + scope l'enregistrent
+            // pour la racine ; la route /sw.js le sert avec l'en-tête
+            // Service-Worker-Allowed que le navigateur exige pour l'accepter.
+            base: '/',
+            buildBase: '/build/',
+            scope: '/',
             manifest: {
                 name: 'Gym Tracker',
                 short_name: 'GymTracker',

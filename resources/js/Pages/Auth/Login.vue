@@ -159,6 +159,16 @@ const submit = () => {
                     >Créer un compte</Link
                 >
             </p>
+
+            <!--
+              Raccourci de connexion pour le développement mobile. Conditionné à la même
+              chose que la route elle-même : app()->environment('local'). Le
+              verrou est côté serveur, pas côté build — import.meta.env.DEV
+              vaut false dans le build que le serveur local sert lui aussi.
+            -->
+            <p v-if="$page.props.is_local" class="mt-4 text-center">
+                <a href="/__dev-login" class="text-xs font-bold text-slate-400 underline">Connexion dev</a>
+            </p>
         </template>
     </GuestLayout>
 </template>
