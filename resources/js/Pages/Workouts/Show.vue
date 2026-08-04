@@ -25,6 +25,7 @@ import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
 import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErrors'
+import { PendingIds } from '@/Utils/pendingIds'
 import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
@@ -62,6 +63,44 @@ const timerDuration = ref(90)
 let tempIdCounter = 0
 
 /**
+ * Placeholder ids never leave this component. Every mutation that names a line
+ * or a set asks here for the id to actually send, and waits if the creation is
+ * still in flight — see Utils/pendingIds for what sending `temp-3` cost.
+ */
+const pendingIds = new PendingIds()
+
+/**
+ * The only two ways this screen may talk to the server about a set.
+ *
+ * Both wait out a creation still in flight, so the URL always carries an id the
+ * server issued. When the row has no server-side counterpart they reject with
+ * the `isOffline` shape every caller here already understands: keep the value
+ * on screen, change nothing, and mark it unsynced rather than send a request
+ * that can only be refused.
+ */
+const patchSet = (set, payload) =>
+    pendingIds.resolve(set.id).then((realId) => {
+        if (realId === null) {
+            markUnsynced(set.id)
+
+            return Promise.reject({ isOffline: true, message: 'Set not created server-side yet' })
+        }
+
+        return SyncService.patch(route('api.v1.sets.update', { set: realId }), payload)
+    })
+
+const deleteSet = (setId) =>
+    pendingIds.resolve(setId).then((realId) => {
+        if (realId === null) {
+            pendingIds.forget(setId)
+
+            return Promise.reject({ isOffline: true, message: 'Set not created server-side yet' })
+        }
+
+        return SyncService.delete(route('api.v1.sets.destroy', { set: realId }))
+    })
+
+/**
  * Flush (execute immediately) all pending debounced updates for a given set.
  * This prevents interleaved PATCH requests from overwriting each other's results.
  */
@@ -94,9 +133,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
         timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
         showTimer.value = true
     }
-    SyncService.patch(route('api.v1.sets.update', { set: set.id }), {
-        is_completed: newState,
-    })
+    patchSet(set, { is_completed: newState })
         .then((response) => {
             // Only merge back the fields we sent + metadata to avoid overwriting
             // concurrent optimistic updates (e.g. weight/reps changes)
@@ -200,25 +237,47 @@ const addExercise = (exerciseId) => {
     showAddExercise.value = false
     searchQuery.value = ''
 
-    SyncService.post(route('api.v1.workout-lines.store'), {
+    const creation = SyncService.post(route('api.v1.workout-lines.store'), {
         workout_id: localWorkout.value.id,
         exercise_id: exerciseId,
     })
         .then((response) => {
-            // Replace temp line with server data
             const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-            if (idx !== -1 && response.data?.data) {
-                localWorkout.value.workout_lines[idx] = response.data.data
+            const created = response.data?.data
+
+            if (!created) {
+                return null
             }
+
+            if (idx !== -1) {
+                /**
+                 * Merged, not replaced. A line the server has just created has
+                 * no sets, so assigning its copy wholesale wiped every set the
+                 * user added while this request was in flight.
+                 */
+                localWorkout.value.workout_lines[idx] = {
+                    ...created,
+                    sets: [...(localWorkout.value.workout_lines[idx].sets ?? []), ...(created.sets ?? [])],
+                }
+            }
+
+            return created.id
         })
         .catch((err) => {
-            if (!err.isOffline) {
-                // Rollback
-                const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-                if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
-                triggerHaptic('error')
+            if (err.isOffline) {
+                // The row stays on screen but does not exist server-side, so
+                // nothing referring to it may be sent. null says exactly that.
+                return null
             }
+
+            const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
+            if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
+            triggerHaptic('error')
+
+            return null
         })
+
+    pendingIds.track(tempLine.id, creation)
 }
 
 const createAndAddExercise = async () => {
@@ -303,12 +362,25 @@ const removeLine = (lineId) => {
         const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
         showConfirmModal.value = false
 
-        SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: lineId })).catch((err) => {
-            if (!err.isOffline && removedLine) {
-                localWorkout.value.workout_lines.splice(idx, 0, removedLine)
-                triggerHaptic('error')
-            }
-        })
+        // Waits out a creation still in flight rather than deleting `temp-1`,
+        // which 404s and leaves the row on the server after the user removed it.
+        pendingIds
+            .resolve(lineId)
+            .then((realLineId) => {
+                if (realLineId === null) {
+                    pendingIds.forget(lineId)
+
+                    return
+                }
+
+                return SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: realLineId }))
+            })
+            .catch((err) => {
+                if (!err.isOffline && removedLine) {
+                    localWorkout.value.workout_lines.splice(idx, 0, removedLine)
+                    triggerHaptic('error')
+                }
+            })
     }
     showConfirmModal.value = true
 }
@@ -325,10 +397,13 @@ const addSet = (lineId) => {
     const distance = lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0)
     const duration = lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30)
 
-    // Optimistic: add set immediately with temp ID
+    /**
+     * Optimistic: add set immediately with a temp id. It carried the line id
+     * too, which nothing ever read — the set already lives inside its line —
+     * while being exactly the placeholder that must not reach a payload.
+     */
     const tempSet = {
         id: `temp-${++tempIdCounter}`,
-        workout_line_id: lineId,
         is_completed: false,
         weight: weight,
         reps: reps,
@@ -336,30 +411,57 @@ const addSet = (lineId) => {
         duration_seconds: duration,
         is_warmup: false,
     }
+    if (!Array.isArray(line.sets)) line.sets = []
     line.sets.push(tempSet)
 
-    SyncService.post(route('api.v1.sets.store'), {
-        workout_line_id: lineId,
-        is_completed: false,
-        weight: weight,
-        reps: reps,
-        distance_km: distance,
-        duration_seconds: duration,
-    })
-        .then((response) => {
-            // Replace temp set with server data
-            const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
-            if (setIdx !== -1 && response.data?.data) {
-                line.sets[setIdx] = response.data.data
+    /**
+     * The line may itself still be a placeholder — adding a set right after the
+     * exercise is the most ordinary thing to do on this screen. Sending
+     * `workout_line_id: "temp-1"` earned a 422 live, and when the same payload
+     * was replayed from the offline queue it took the set with it.
+     */
+    const creation = pendingIds
+        .resolve(lineId)
+        .then((realLineId) => {
+            if (realLineId === null) {
+                markUnsynced(tempSet.id)
+
+                return null
             }
+
+            return SyncService.post(route('api.v1.sets.store'), {
+                workout_line_id: realLineId,
+                is_completed: false,
+                weight: weight,
+                reps: reps,
+                distance_km: distance,
+                duration_seconds: duration,
+            }).then((response) => {
+                const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
+                const created = response.data?.data
+
+                if (setIdx !== -1 && created) {
+                    line.sets[setIdx] = created
+                }
+
+                return created?.id ?? null
+            })
         })
         .catch((err) => {
-            if (!err.isOffline) {
-                const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
-                if (setIdx !== -1) line.sets.splice(setIdx, 1)
-                triggerHaptic('error')
+            if (err.isOffline) {
+                markUnsynced(tempSet.id)
+
+                return null
             }
+
+            const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
+            if (setIdx !== -1) line.sets.splice(setIdx, 1)
+            triggerHaptic('error')
+
+            return null
         })
+
+    pendingIds.track(tempSet.id, creation)
 }
 
 /**
@@ -429,7 +531,7 @@ const updateSet = (set, field, value) => {
     if (updateTimers[timerKey]?.timerId) clearTimeout(updateTimers[timerKey].timerId)
 
     const execute = () => {
-        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value })
+        patchSet(set, { [field]: value })
             .then((response) => {
                 // Only merge back the specific field we updated + metadata
                 // to avoid overwriting concurrent optimistic updates
@@ -489,7 +591,7 @@ const removeSet = (setId) => {
         const setIdx = line.sets.findIndex((s) => s.id === setId)
         if (setIdx !== -1) {
             const removedSet = line.sets.splice(setIdx, 1)[0]
-            SyncService.delete(route('api.v1.sets.destroy', { set: setId })).catch((err) => {
+            deleteSet(setId).catch((err) => {
                 if (!err.isOffline) {
                     line.sets.splice(setIdx, 0, removedSet)
                     triggerHaptic('error')
@@ -559,7 +661,7 @@ onMounted(() => {
                             return
                         }
 
-                        SyncService.patch(route('api.v1.sets.update', { set: set.id }), payload)
+                        patchSet(set, payload)
                             .then(() => {
                                 localStorage.removeItem(key)
                             })
