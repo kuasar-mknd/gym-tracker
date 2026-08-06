@@ -65,14 +65,20 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks(id) {
-                    if (id.includes('node_modules')) {
-                        if (id.includes('chart.js') || id.includes('vue-chartjs')) {
-                            return 'chartjs';
-                        }
-                        if (id.includes('vue') || id.includes('@inertiajs/vue3')) {
-                            return 'vue-core';
-                        }
-                        return 'vendor';
+                    /**
+                     * Only the runtime every page genuinely needs.
+                     *
+                     * A `return 'vendor'` catch-all here put ALL of node_modules
+                     * in one chunk that main.js imports, so the 263 KB of
+                     * chart.js rode along on every page — the workout screen
+                     * included, which draws no charts at all. Naming chart.js
+                     * its own chunk did not help: a manual chunk is still a
+                     * static edge from the entry that reaches it. Letting
+                     * Rollup split the rest by actual use is what makes the
+                     * charts load with the pages that draw them.
+                     */
+                    if (id.includes('node_modules') && (id.includes('/vue/') || id.includes('@inertiajs'))) {
+                        return 'vue-core';
                     }
                 },
             },
