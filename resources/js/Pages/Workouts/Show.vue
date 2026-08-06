@@ -25,7 +25,7 @@ import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import SyncService from '@/Utils/SyncService'
 import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErrors'
-import { PendingIds } from '@/Utils/pendingIds'
+import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
 import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
@@ -46,16 +46,78 @@ if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workou
     localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
 }
 
+/**
+ * Rebuilds from the server's copy without discarding what it has not heard of.
+ *
+ * This watch used to assign the incoming props wholesale. Any ordinary Inertia
+ * round trip on this page — renaming the session, correcting its start time —
+ * therefore threw away every row still being created and every value the server
+ * had refused, without a word. The user renamed their workout and the sets they
+ * had just added disappeared.
+ *
+ * The server is authoritative for everything it knows about. It is not
+ * authoritative about rows it has never been told of, nor about values it
+ * rejected while the user kept theirs on screen.
+ */
+const mergeServerWorkout = (server, local) => {
+    const merged = JSON.parse(JSON.stringify(server))
+
+    if (merged.workout_lines && !Array.isArray(merged.workout_lines)) {
+        merged.workout_lines = Object.values(merged.workout_lines)
+    }
+
+    if (!Array.isArray(merged.workout_lines)) {
+        merged.workout_lines = []
+    }
+
+    const localLines = Array.isArray(local?.workout_lines) ? local.workout_lines : []
+
+    merged.workout_lines.forEach((line) => {
+        if (!Array.isArray(line.sets)) line.sets = []
+
+        const localLine = localLines.find((candidate) => candidate.id === line.id)
+
+        if (!localLine) return
+
+        const localSets = Array.isArray(localLine.sets) ? localLine.sets : []
+
+        // Still being created, or waiting in the offline queue.
+        localSets.filter((set) => isTemporaryId(set.id)).forEach((set) => line.sets.push(set))
+
+        // Marked unsynced means the server's copy is the stale one; taking it
+        // would quietly undo an edit the user can see on screen.
+        line.sets.forEach((set, index) => {
+            const localSet = localSets.find((candidate) => candidate.id === set.id)
+
+            if (localSet && unsyncedSetIds.value.has(String(set.id))) {
+                line.sets[index] = localSet
+            }
+        })
+    })
+
+    // Whole exercises the server has never heard of.
+    localLines.filter((line) => isTemporaryId(line.id)).forEach((line) => merged.workout_lines.push(line))
+
+    return merged
+}
+
 // Sync with Inertia props when they change (e.g. after redirect-based actions)
 watch(
     () => props.workout,
     (newVal) => {
-        localWorkout.value = JSON.parse(JSON.stringify(newVal))
-        if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workout_lines)) {
-            localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
-        }
+        localWorkout.value = mergeServerWorkout(newVal, localWorkout.value)
     },
 )
+
+/**
+ * A closed session is a record, not a workspace.
+ *
+ * The page had no idea a workout could be finished and rendered the full live
+ * editor regardless. SetPolicy refuses every write to a closed session, so each
+ * control answered 403 — and only the two that revert visibly said anything at
+ * all. Adding an exercise, adding a set and deleting one simply did nothing.
+ */
+const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const showTimer = ref(false)
 const timerDuration = ref(90)
@@ -911,9 +973,14 @@ onUnmounted(() => {
                 class="flex flex-col items-center justify-center p-12 text-center"
             >
                 <h3 class="font-display text-text-main mb-4 text-2xl font-black uppercase italic">Séance vide</h3>
-                <GlassButton variant="primary" @click="showAddExercise = true" dusk="add-first-exercise"
+                <GlassButton
+                    v-if="!isFinished"
+                    variant="primary"
+                    @click="showAddExercise = true"
+                    dusk="add-first-exercise"
                     >Ajouter un exercice</GlassButton
                 >
+                <p v-else class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
             </GlassCard>
 
             <GlassCard
@@ -976,6 +1043,7 @@ onUnmounted(() => {
                             <button
                                 v-press
                                 @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
+                                :disabled="isFinished"
                                 :dusk="`complete-set-${lineIndex}-${index}`"
                                 class="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
                                 :class="
@@ -1037,6 +1105,7 @@ onUnmounted(() => {
                                     :value="set.weight"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                    :disabled="isFinished"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
                                     :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -1048,6 +1117,7 @@ onUnmounted(() => {
                                     :value="set.reps"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
+                                    :disabled="isFinished"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
                                     :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -1063,6 +1133,7 @@ onUnmounted(() => {
                                     :value="set.distance_km"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'distance_km', e.target.value)"
+                                    :disabled="isFinished"
                                     :dusk="`distance-input-${lineIndex}-${index}`"
                                     :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -1074,6 +1145,7 @@ onUnmounted(() => {
                                     :value="secondsToTime(set.duration_seconds)"
                                     @focus="$event.target.select()"
                                     @input="(e) => updateDurationFromTime(set, e.target.value)"
+                                    :disabled="isFinished"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
                                     :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-32 rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -1087,6 +1159,7 @@ onUnmounted(() => {
                                     :value="secondsToTime(set.duration_seconds)"
                                     @focus="$event.target.select()"
                                     @input="(e) => updateDurationFromTime(set, e.target.value)"
+                                    :disabled="isFinished"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
                                     :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main h-11 w-full rounded-xl border-2 border-slate-200 text-center font-bold"
@@ -1094,6 +1167,7 @@ onUnmounted(() => {
                             </template>
 
                             <button
+                                v-if="!isFinished"
                                 v-press="{ haptic: 'warning' }"
                                 @click="removeSet(set.id)"
                                 :dusk="`remove-set-${lineIndex}-${index}`"
@@ -1107,6 +1181,7 @@ onUnmounted(() => {
                 </div>
 
                 <button
+                    v-if="!isFinished"
                     v-press
                     @click="addSet(line.id)"
                     :dusk="`add-set-${lineIndex}`"
@@ -1116,7 +1191,7 @@ onUnmounted(() => {
                 </button>
             </GlassCard>
 
-            <div v-if="localWorkout.workout_lines.length > 0" class="mt-8 space-y-3 px-1">
+            <div v-if="localWorkout.workout_lines.length > 0 && !isFinished" class="mt-8 space-y-3 px-1">
                 <GlassButton
                     variant="secondary"
                     @click="showAddExercise = true"

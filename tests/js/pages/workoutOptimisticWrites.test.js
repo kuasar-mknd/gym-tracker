@@ -315,3 +315,86 @@ describe('Workouts/Show — finishing the session', () => {
         expect(order).toEqual(['patch:/api/v1/sets/42', 'finish:/workouts.update'])
     })
 })
+
+/**
+ * An ordinary Inertia round trip on this page — renaming the session, fixing its
+ * start time — used to assign the incoming props over local state wholesale.
+ * Every row still being created and every value the server had refused was
+ * thrown away without a word: the user renamed their workout and the sets they
+ * had just added disappeared.
+ */
+describe('Workouts/Show — the server re-sends the workout', () => {
+    it('keeps a set the server has never heard of', async () => {
+        const setCreated = deferred()
+        post.mockImplementation((url) =>
+            url.includes('workout-lines')
+                ? Promise.resolve({ data: { data: { id: 10, order: 0, exercise: EXERCISE, sets: [] } } })
+                : setCreated.promise,
+        )
+
+        const wrapper = await mountPage(workoutWithSet)
+
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        expect(lines(wrapper)[0].sets).toHaveLength(2)
+        expect(String(lines(wrapper)[0].sets[1].id)).toMatch(/^temp-/)
+
+        // The rename comes back from the server, knowing only the saved set.
+        await wrapper.setProps({ workout: { ...JSON.parse(JSON.stringify(workoutWithSet)), name: 'Renommée' } })
+        await flushPromises()
+
+        expect(wrapper.vm.localWorkout.name).toBe('Renommée')
+        expect(lines(wrapper)[0].sets).toHaveLength(2)
+        expect(String(lines(wrapper)[0].sets[1].id)).toMatch(/^temp-/)
+    })
+
+    it('keeps a value the server refused over the stale one it sends back', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        // The set is on screen with a value the server would not accept.
+        lines(wrapper)[0].sets[0].weight = 137
+        wrapper.vm.unsyncedSetIds.add('42')
+
+        await wrapper.setProps({ workout: { ...JSON.parse(JSON.stringify(workoutWithSet)), name: 'Renommée' } })
+        await flushPromises()
+
+        expect(lines(wrapper)[0].sets[0].weight).toBe(137)
+    })
+})
+
+/**
+ * A closed session is a record, not a workspace. The page had no idea a workout
+ * could be finished and rendered the full live editor regardless: SetPolicy
+ * refuses every write to a closed session, so each control answered 403, and
+ * only the two that revert visibly said anything at all. Adding an exercise,
+ * adding a set and deleting one simply did nothing.
+ */
+describe('Workouts/Show — a finished session', () => {
+    const finished = { ...workoutWithSet, ended_at: '2026-07-29T09:30:00.000000Z' }
+
+    it('offers no control that the server would refuse', async () => {
+        const wrapper = await mountPage(finished)
+
+        expect(wrapper.find('[dusk="add-set-0"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="add-exercise-existing"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="remove-set-0-0"]').exists()).toBe(false)
+    })
+
+    it('shows the values without letting them be edited', async () => {
+        const wrapper = await mountPage(finished)
+        const weight = wrapper.find('[dusk="weight-input-0-0"]')
+
+        expect(weight.exists()).toBe(true)
+        expect(weight.attributes('disabled')).toBeDefined()
+        expect(wrapper.find('[dusk="complete-set-0-0"]').attributes('disabled')).toBeDefined()
+    })
+
+    it('still offers everything while the session is open', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        expect(wrapper.find('[dusk="add-set-0"]').exists()).toBe(true)
+        expect(wrapper.find('[dusk="remove-set-0-0"]').exists()).toBe(true)
+        expect(wrapper.find('[dusk="weight-input-0-0"]').attributes('disabled')).toBeUndefined()
+    })
+})
