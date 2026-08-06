@@ -85,9 +85,36 @@ final class AppServiceProvider extends ServiceProvider
                 }
             }
 
+            /**
+             * A record only ever went up. Correcting a mistyped weight left the
+             * inflated figure standing on the user's profile for good, because
+             * nothing recomputed the record the corrected set was holding.
+             */
+            app(\App\Services\PersonalRecordService::class)->refreshRecordsHeldBy($set, $user);
+
             // ⚡ Bolt: Offload heavy sync to background jobs
             \App\Jobs\SyncUserAchievements::dispatch($user);
             \App\Jobs\SyncUserGoals::dispatch($user);
+        });
+
+        Set::deleted(function (Set $set): void {
+            // Unconditional: the database resolves personal_records.set_id as the
+            // row goes, so by now nothing still admits this set held a record.
+            app(\App\Services\PersonalRecordService::class)->refreshFor($set);
+        });
+
+        \App\Models\WorkoutLine::deleted(function (\App\Models\WorkoutLine $line): void {
+            /**
+             * Removing an exercise takes its sets with it through an ON DELETE
+             * CASCADE, which fires no model events at all — so without this, a
+             * record set during a session the user then deleted stood forever,
+             * pointing at a row that no longer exists.
+             */
+            $user = $line->workout?->user;
+
+            if ($user && $line->exercise_id) {
+                app(\App\Services\PersonalRecordService::class)->recompute($user, (int) $line->exercise_id);
+            }
         });
     }
 

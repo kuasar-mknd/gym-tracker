@@ -142,6 +142,29 @@ const deleteSet = (setId) =>
  * Flush (execute immediately) all pending debounced updates for a given set.
  * This prevents interleaved PATCH requests from overwriting each other's results.
  */
+/**
+ * Sends everything still sitting in the debounce, and says when it has landed.
+ *
+ * Two moments need this and neither could wait out the timer: leaving the page,
+ * and closing the session. SetPolicy refuses writes to a finished workout, so a
+ * value typed a second before tapping Terminer used to go out after the workout
+ * was closed and come back 403 — reverted on screen, with the page already gone.
+ */
+const flushAllPendingUpdates = () => {
+    const inFlight = Object.keys(updateTimers).map((key) => {
+        const pending = updateTimers[key]
+
+        if (!pending) return null
+
+        clearTimeout(pending.timerId)
+        delete updateTimers[key]
+
+        return pending.execute?.()
+    })
+
+    return Promise.allSettled(inFlight.filter(Boolean))
+}
+
 const flushPendingUpdates = (setId) => {
     const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
     fields.forEach((field) => {
@@ -206,7 +229,15 @@ const showFinishModal = ref(false)
 const finishWorkout = () => {
     showFinishModal.value = true
 }
-const confirmFinishWorkout = () => {
+const confirmFinishWorkout = async () => {
+    /**
+     * Awaited, not merely started. Closing the session revokes the right to
+     * write to its sets, so the last value typed has to be accepted before the
+     * workout is finished — otherwise it arrives at a closed session, is refused
+     * 403, and is reverted on a page that has already navigated away.
+     */
+    await flushAllPendingUpdates()
+
     router.patch(
         route('workouts.update', { workout: localWorkout.value.id }),
         { is_finished: true },
@@ -650,7 +681,7 @@ const updateSet = (set, field, value) => {
     const timerKey = `${set.id}_${field}`
     if (updateTimers[timerKey]?.timerId) clearTimeout(updateTimers[timerKey].timerId)
 
-    const execute = () => {
+    const execute = () =>
         patchSet(set, { [field]: value })
             .then((response) => {
                 // Only merge back the specific field we updated + metadata
@@ -681,7 +712,6 @@ const updateSet = (set, field, value) => {
                         : "Impossible d'enregistrer. La valeur précédente est rétablie.",
                 )
             })
-    }
 
     localStorage.setItem(`draft_set_${set.id}`, JSON.stringify(set))
 
@@ -833,15 +863,7 @@ onUnmounted(() => {
      * without a word. Flushing here sends it while there is still something to
      * report to — and SyncService records a refusal durably either way.
      */
-    Object.keys(updateTimers).forEach((key) => {
-        const pending = updateTimers[key]
-
-        if (!pending) return
-
-        clearTimeout(pending.timerId)
-        delete updateTimers[key]
-        pending.execute?.()
-    })
+    flushAllPendingUpdates()
 
     if (editErrorTimer) {
         clearTimeout(editErrorTimer)

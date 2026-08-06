@@ -100,6 +100,148 @@ final class PersonalRecordService
     }
 
     /**
+     * Rebuilds an exercise's records from the sets that actually exist.
+     *
+     * update() only ever raises a record, and nothing ever lowered one. A single
+     * mistyped weight — 500 for 50 — became that exercise's personal record
+     * permanently: correcting the set did nothing, deleting it did nothing, and
+     * the figure stayed on the user's profile for good.
+     *
+     * Only called when the set behind a record changes or goes, so the cost is
+     * paid on the rare event rather than on every save.
+     *
+     * @param  list<string>|null  $types  Limit the rebuild to these records. Null
+     *                                    means all of them, which is right when a set has gone and there is no
+     *                                    longer any way to know which records it was holding.
+     */
+    public function recompute(User $user, int $exerciseId, ?array $types = null): void
+    {
+        $sets = Set::query()
+            ->join('workout_lines', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->join('workouts', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->where('workouts.user_id', $user->id)
+            ->where('workout_lines.exercise_id', $exerciseId)
+            ->where('sets.is_warmup', false)
+            ->where('sets.weight', '>', 0)
+            ->where('sets.reps', '>', 0)
+            ->select('sets.*')
+            ->with('workoutLine')
+            ->get();
+
+        /** @var array<string, callable(Set): array{0: float, 1: float|null}> $measures */
+        $measures = [
+            'max_weight' => fn (Set $set): array => [(float) $set->weight, (float) $set->reps],
+            'max_1rm' => fn (Set $set): array => [
+                $this->calculate1RM((float) $set->weight, (int) $set->reps),
+                (float) $set->weight,
+            ],
+            'max_volume_set' => fn (Set $set): array => [(float) $set->weight * (int) $set->reps, null],
+        ];
+
+        foreach ($measures as $type => $measure) {
+            if ($types !== null && ! in_array($type, $types, true)) {
+                continue;
+            }
+
+            $record = PersonalRecord::where('user_id', $user->id)
+                ->where('exercise_id', $exerciseId)
+                ->where('type', $type)
+                ->first();
+
+            $best = null;
+            $bestValue = null;
+            $bestSecondary = null;
+
+            foreach ($sets as $set) {
+                [$value, $secondary] = $measure($set);
+
+                if ($bestValue === null || $value > $bestValue) {
+                    $bestValue = $value;
+                    $bestSecondary = $secondary;
+                    $best = $set;
+                }
+            }
+
+            if ($best === null || $bestValue === null) {
+                // Nothing left that qualifies; the record no longer stands.
+                $record?->delete();
+
+                continue;
+            }
+
+            $record ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
+
+            /**
+             * No notification here. This is a correction, not an achievement —
+             * telling someone they have set a personal record because they just
+             * fixed a typo would be worse than saying nothing.
+             */
+            $record->fill([
+                'value' => $bestValue,
+                'secondary_value' => $bestSecondary,
+                'workout_id' => $best->workoutLine?->workout_id,
+                'set_id' => $best->id,
+                'achieved_at' => $best->created_at ?? now(),
+            ])->save();
+        }
+    }
+
+    /**
+     * Recomputes only when the set that changed is the one a record points at.
+     *
+     * Safe to call on every save: the lookup is a single indexed existence
+     * check, and almost every save is of a set holding nothing.
+     */
+    public function refreshRecordsHeldBy(Set $set, ?User $user = null): void
+    {
+        /**
+         * Only the records this set is actually holding. Rebuilding all three
+         * would reach past the change and reset records that nothing about this
+         * set affects — a set that beats the 1RM but not the max weight would
+         * drag the max weight down with it.
+         */
+        // Backing values, not enum instances: `type` is cast, so a strict
+        // comparison against the string keys below would never match and the
+        // rebuild would quietly select nothing.
+        /** @var list<string> $types */
+        $types = PersonalRecord::where('set_id', $set->id)
+            ->pluck('type')
+            ->map(fn (mixed $type): string => $type instanceof \BackedEnum ? (string) $type->value : (is_string($type) ? $type : ''))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($types === []) {
+            return;
+        }
+
+        $this->refreshFor($set, $user, $types);
+    }
+
+    /**
+     * Recomputes unconditionally, for when the set is on its way out.
+     *
+     * The gate above cannot be used after a deletion: personal_records.set_id is
+     * resolved by the database the moment the row goes, so by the time the
+     * `deleted` event fires nothing still admits the set held anything.
+     */
+    /**
+     * @param  list<string>|null  $types
+     */
+    public function refreshFor(Set $set, ?User $user = null, ?array $types = null): void
+    {
+        $set->loadMissing(['workoutLine.workout.user']);
+        $exerciseId = $set->workoutLine?->exercise_id;
+        $user ??= $set->workoutLine?->workout?->user;
+
+        if (! $user instanceof User || ! $exerciseId) {
+            return;
+        }
+
+        $this->recompute($user, (int) $exerciseId, $types);
+    }
+
+    /**
      * Process all tracked PR metrics for a valid set.
      *
      * Retrieves existing PRs for the user and exercise, then evaluates the set

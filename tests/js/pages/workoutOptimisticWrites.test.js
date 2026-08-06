@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 
 const post = vi.fn()
 const patch = vi.fn()
+const routerPatch = vi.fn()
 
 vi.mock('@/Utils/SyncService', () => ({
     default: {
@@ -18,7 +19,7 @@ vi.mock('@inertiajs/vue3', () => ({
     Head: { template: '<div />' },
     Link: { template: '<a><slot /></a>' },
     usePage: () => ({ props: { auth: { user: { id: 1 } }, is_testing: true } }),
-    router: { visit: vi.fn(), post: vi.fn(), reload: vi.fn(), delete: vi.fn() },
+    router: { visit: vi.fn(), post: vi.fn(), reload: vi.fn(), delete: vi.fn(), patch: (...args) => routerPatch(...args) },
     useForm: (data) => ({ ...data, processing: false, errors: {}, post: vi.fn(), put: vi.fn(), reset: vi.fn() }),
 }))
 
@@ -104,6 +105,7 @@ beforeEach(() => {
     localStorage.clear()
     post.mockReset()
     patch.mockReset()
+    routerPatch.mockReset()
     patch.mockResolvedValue({ data: {} })
 })
 
@@ -280,5 +282,36 @@ describe('Workouts/Show — leaving the page mid-edit', () => {
         await flushPromises()
 
         expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: '105' })
+    })
+})
+
+/**
+ * Closing the session revokes the right to write to its sets. A value typed a
+ * second before tapping Terminer used to go out AFTER the workout was finished,
+ * come back 403, and be reverted on a page that had already navigated away.
+ */
+describe('Workouts/Show — finishing the session', () => {
+    it('sends the pending edit before it closes the workout', async () => {
+        const order = []
+        patch.mockImplementation((...args) => {
+            order.push('patch:' + args[0])
+
+            return Promise.resolve({ data: {} })
+        })
+        routerPatch.mockImplementation((url) => {
+            order.push('finish:' + url)
+        })
+
+        const wrapper = await mountPage(workoutWithSet)
+        const input = wrapper.find('[dusk="weight-input-0-0"]')
+
+        input.element.value = '110'
+        await input.trigger('input')
+        await input.trigger('change')
+
+        await wrapper.vm.confirmFinishWorkout()
+        await flushPromises()
+
+        expect(order).toEqual(['patch:/api/v1/sets/42', 'finish:/workouts.update'])
     })
 })
