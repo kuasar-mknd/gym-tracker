@@ -274,3 +274,70 @@ describe('SyncService idempotency', () => {
         expect(keyOf(request.mock.calls[0])).toBeUndefined()
     })
 })
+
+/**
+ * The 429 retry used to be the one path that escaped every safeguard around it.
+ * It re-sent the ORIGINAL config, dropping the idempotency key on the attempt
+ * most likely to need one — a 429 says the server was busy, not that it refused,
+ * so the first attempt may well have been written. And a network failure on the
+ * second attempt fell straight out of the catch: neither sent, nor queued, nor
+ * recorded, while classifySyncError read the bare rejection as "offline" and the
+ * draft replay deleted the local draft as a duplicate of a write nobody queued.
+ */
+describe('SyncService 429 retry', () => {
+    const keyOf = (call) => call[0].headers?.['Idempotency-Key']
+
+    it('retries under the same name it first used', async () => {
+        vi.useFakeTimers()
+        request
+            .mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': '0' } }, request: {} })
+            .mockResolvedValueOnce({ data: {} })
+
+        const service = await freshService()
+        const inFlight = service.post('/api/v1/sets', { reps: 10 })
+        await vi.runAllTimersAsync()
+        await inFlight
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(keyOf(request.mock.calls[1])).toBe(keyOf(request.mock.calls[0]))
+        expect(keyOf(request.mock.calls[1])).toEqual(expect.any(String))
+
+        vi.useRealTimers()
+    })
+
+    it('queues the write when the retry hits the network instead of the server', async () => {
+        vi.useFakeTimers()
+        request
+            .mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': '0' } }, request: {} })
+            .mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await freshService()
+        // Assert on the rejection before advancing the clock: attaching the
+        // handler afterwards leaves the rejection unhandled in between.
+        const settled = expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({ isOffline: true })
+        await vi.runAllTimersAsync()
+        await settled
+
+        expect(service.queue).toHaveLength(1)
+
+        vi.useRealTimers()
+    })
+
+    it('still surfaces a refusal on the retry rather than swallowing it', async () => {
+        vi.useFakeTimers()
+        request
+            .mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': '0' } }, request: {} })
+            .mockRejectedValueOnce({ response: { status: 422 }, request: {} })
+
+        const service = await freshService()
+        const settled = expect(service.post('/api/v1/sets', { reps: 10 })).rejects.toMatchObject({
+            response: { status: 422 },
+        })
+        await vi.runAllTimersAsync()
+        await settled
+
+        expect(service.queue).toEqual([])
+
+        vi.useRealTimers()
+    })
+})

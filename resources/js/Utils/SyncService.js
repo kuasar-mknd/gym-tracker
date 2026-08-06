@@ -70,19 +70,43 @@ class SyncService {
             if (error.response?.status === 429) {
                 const retryAfter = parseInt(error.response.headers?.['retry-after'] || '2', 10)
                 await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000))
-                return await api(config)
+
+                try {
+                    /**
+                     * The stamped config. Retrying with the original dropped the
+                     * idempotency key on the one attempt most likely to need it:
+                     * a 429 means the server was busy, not that it refused, and
+                     * the first attempt may well have been written.
+                     */
+                    return await api(stamped)
+                } catch (retryError) {
+                    return this.queueOrThrow(retryError, stamped)
+                }
             }
 
-            // A response means the server answered, so this is its verdict, not
-            // a connectivity problem — queueing it would hide a real refusal.
-            if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
-                // The stamped config, so the replay carries the same key as the
-                // attempt that may already have been written.
-                this.addToQueue(stamped)
-                return Promise.reject({ isOffline: true, message: 'Network error: Request queued' })
-            }
-            throw error
+            return this.queueOrThrow(error, stamped)
         }
+    }
+
+    /**
+     * Decides what a failed attempt means, in the one place both attempts use.
+     *
+     * The retry used to sit outside this: a network failure on the second
+     * attempt was neither sent, nor queued, nor recorded — it fell straight out
+     * of the catch. classifySyncError then read the bare rejection as "offline",
+     * which the draft replay acts on by deleting the local draft as a duplicate
+     * of a queued write that never existed.
+     */
+    queueOrThrow(error, config) {
+        // A response means the server answered, so this is its verdict, not a
+        // connectivity problem — queueing it would hide a real refusal.
+        if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
+            this.addToQueue(config)
+
+            return Promise.reject({ isOffline: true, message: 'Network error: Request queued' })
+        }
+
+        throw error
     }
 
     /**
