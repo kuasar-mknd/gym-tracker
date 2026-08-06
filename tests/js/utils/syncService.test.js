@@ -341,3 +341,85 @@ describe('SyncService 429 retry', () => {
         vi.useRealTimers()
     })
 })
+
+/**
+ * The queue's whole purpose is to survive the app not running. It used to copy
+ * itself into memory and immediately write an EMPTY queue to localStorage,
+ * sending afterwards and saving again only at the very end — so for the entire
+ * duration of a drain, the durable record said nothing was pending. A reload, a
+ * crash, or an iOS suspension in that window destroyed every offline edit.
+ */
+describe('SyncService drain durability', () => {
+    const queued = (url, id) => ({
+        method: 'patch',
+        url,
+        data: { weight: 100 },
+        id,
+        timestamp: '2026-08-04T10:00:00.000Z',
+    })
+
+    const stored = () => JSON.parse(localStorage.getItem('offline_sync_queue') || '[]').map((item) => item.url)
+
+    it('keeps an unsent mutation on disk while the one before it is in flight', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([queued('/a', 'q1'), queued('/b', 'q2')]))
+
+        let releaseSecond
+        request.mockResolvedValueOnce({ data: {} }).mockImplementationOnce(
+            () =>
+                new Promise((resolve) => {
+                    releaseSecond = resolve
+                }),
+        )
+
+        const service = await freshService()
+        const draining = service.processQueue()
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        // The app dies right here. /b has not been sent, so it must still be on disk.
+        expect(stored()).toEqual(['/b'])
+
+        releaseSecond({ data: {} })
+        await draining
+
+        expect(stored()).toEqual([])
+    })
+
+    it('leaves the whole queue on disk when the network is still down', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([queued('/a', 'q1'), queued('/b', 'q2')]))
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await freshService()
+        await service.processQueue()
+
+        expect(stored()).toEqual(['/a', '/b'])
+    })
+
+    /**
+     * Re-queuing a failed entry appended it behind mutations added later, so on
+     * the next drain an older value could land after a newer one and overwrite
+     * it. Stopping at the failure keeps the order the user made the edits in.
+     */
+    it('replays in the order the edits were made, even after a failure', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([queued('/first', 'q1'), queued('/second', 'q2')]))
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} }).mockResolvedValue({ data: {} })
+
+        // The constructor drains once: /first fails on the network and stops
+        // there. The explicit drain then replays both, still in order.
+        const service = await freshService()
+        await service.processQueue()
+
+        expect(request.mock.calls.map((call) => call[0].url)).toEqual(['/first', '/first', '/second'])
+        expect(stored()).toEqual([])
+    })
+
+    it('drops a refused mutation from the queue but keeps it in the failed bucket', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([queued('/a', 'q1'), queued('/b', 'q2')]))
+        request.mockRejectedValueOnce({ response: { status: 422 }, request: {} }).mockResolvedValueOnce({ data: {} })
+
+        const service = await freshService()
+        await service.processQueue()
+
+        expect(stored()).toEqual([])
+        expect(service.failedRequests().map((item) => item.url)).toEqual(['/a'])
+    })
+})

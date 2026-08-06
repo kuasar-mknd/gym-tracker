@@ -155,16 +155,27 @@ class SyncService {
         return this.pending
     }
 
+    /**
+     * Drains from the front, and only lets an entry go once it is settled.
+     *
+     * This used to copy the queue into memory and immediately write an EMPTY
+     * queue to localStorage, doing the sending afterwards and saving again only
+     * at the very end. For the whole duration of a drain the durable record said
+     * there was nothing pending, so a reload, a crash or an iOS suspension in
+     * that window destroyed every mutation the user had made offline — the one
+     * thing the queue exists to prevent.
+     *
+     * Stopping on a network failure rather than skipping past it also keeps the
+     * order intact. Re-queuing a failed entry pushed it behind mutations added
+     * later, so on the next drain an older value could land after a newer one
+     * and overwrite it.
+     */
     async drainQueue() {
-        if (this.queue.length === 0) return
-
-        const tempQueue = [...this.queue]
-        this.queue = []
-        this.saveQueue()
-
         const api = window.axios || axios
 
-        for (const config of tempQueue) {
+        while (this.queue.length > 0) {
+            const config = this.queue[0]
+
             try {
                 // Remove internal queue ID before sending
                 const { id, timestamp, ...axiosConfig } = config
@@ -176,15 +187,19 @@ class SyncService {
                 // the user made while offline, so dropping them silently is data
                 // loss, not error handling.
                 if (classifySyncError(error) === SYNC_OFFLINE) {
-                    this.queue.push(config)
-
-                    continue
+                    // Still nothing out there. Leave this entry, and everything
+                    // behind it, exactly where they are.
+                    return
                 }
 
                 this.recordFailure(config, error)
             }
+
+            // Settled — sent, or filed as refused. Only now may it leave, and
+            // the queue that survives a reload is written before we move on.
+            this.queue.shift()
+            this.saveQueue()
         }
-        this.saveQueue()
     }
 
     /**
