@@ -25,13 +25,19 @@ export default defineConfig({
             filename: 'sw.js',
             registerType: 'autoUpdate',
             injectRegister: 'auto',
-            // Le worker est écrit dans public/build, donc servi depuis
-            // /build/sw.js — sa portée par défaut serait /build/ et il ne
-            // contrôlerait aucune page de l'app. base + scope l'enregistrent
-            // pour la racine ; la route /sw.js le sert avec l'en-tête
-            // Service-Worker-Allowed que le navigateur exige pour l'accepter.
+            /**
+             * Le worker est écrit dans public/build. Laissé à lui-même il est
+             * donc enregistré depuis /build/sw.js, ce qui lui donne la portée
+             * /build/ : il ne contrôle aucune page de l'application.
+             *
+             * buildBase décide de l'URL d'enregistrement, et valait '/build/' —
+             * le navigateur refusait donc la portée '/' demandée, quatre fois
+             * par chargement dans la console. Ajouter une route /sw.js portant
+             * Service-Worker-Allowed ne suffisait pas : rien ne l'enregistrait.
+             * C'est cette URL-là qu'il faut demander.
+             */
             base: '/',
-            buildBase: '/build/',
+            buildBase: '/',
             scope: '/',
             manifest: {
                 name: 'Gym Tracker',
