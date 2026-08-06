@@ -132,17 +132,8 @@ class WorkoutLine extends Model
          * through the model: the rows are going regardless, and the counters
          * only care about the total.
          */
-        static::deleting(function (self $line): void {
-            $volume = (float) $line->sets()->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(weight, 0) * COALESCE(reps, 0)'));
-
-            if ($volume === 0.0) {
-                return;
-            }
-
-            $workout = $line->workout;
-
-            $workout?->decrement('workout_volume', $volume);
-            $workout?->user?->decrement('total_volume', $volume);
+        static::deleted(function (self $line): void {
+            $line->workout?->recomputeVolume();
         });
     }
 

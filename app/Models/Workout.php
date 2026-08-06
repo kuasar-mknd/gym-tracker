@@ -67,6 +67,39 @@ class Workout extends Model
         ];
     }
 
+    /**
+     * Recomputes this session's volume from its sets, and moves the user's
+     * lifetime total by the difference.
+     *
+     * The counters used to be maintained by accumulating a delta per set save:
+     * new volume minus the volume that set had when the model was loaded. Two
+     * requests touching the same set at once — the weight and the reps of one
+     * row, which the debounce sends as separate PATCHes — each computed their
+     * delta from the same snapshot. Applying both left the totals adrift from
+     * the sets they claim to describe, permanently and invisibly.
+     *
+     * Recomputing from the rows costs one aggregate instead of an increment and
+     * cannot drift, whatever order the writes land in.
+     */
+    public function recomputeVolume(): void
+    {
+        $total = (float) $this->workoutLines()
+            ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
+
+        // Read back from the table: increment() writes straight to the database
+        // and leaves whatever instance the caller is holding behind.
+        $stored = $this->newQuery()->whereKey($this->getKey())->value('workout_volume');
+        $delta = $total - (is_numeric($stored) ? (float) $stored : 0.0);
+
+        if ($delta === 0.0) {
+            return;
+        }
+
+        $this->newQuery()->whereKey($this->getKey())->update(['workout_volume' => $total]);
+        $this->user?->increment('total_volume', $delta);
+    }
+
     #[\Override]
     protected static function booted(): void
     {

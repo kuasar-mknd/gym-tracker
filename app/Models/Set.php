@@ -78,20 +78,7 @@ class Set extends Model
      */
     public function updateVolumes(): void
     {
-        $this->loadMissing('workoutLine.workout.user');
-        $workout = $this->workoutLine->workout;
-        $user = $workout->user;
-
-        if (! $user || ! $workout) {
-            return;
-        }
-
-        $diff = $this->getVolume() - $this->getOriginalVolume();
-
-        if ($diff !== 0.0) {
-            $user->increment('total_volume', $diff);
-            $workout->increment('workout_volume', $diff);
-        }
+        $this->syncVolumes();
     }
 
     /**
@@ -99,20 +86,25 @@ class Set extends Model
      */
     public function decrementVolumes(): void
     {
+        $this->syncVolumes();
+    }
+
+    /**
+     * Brings both counters back in line with the sets that exist.
+     *
+     * These used to accumulate a delta per save — the set's new volume minus the
+     * volume it had when the model was loaded. Two requests touching the same
+     * row at once, which is exactly what the per-field debounce produces when a
+     * user corrects a weight and a rep count together, each computed their delta
+     * from the same snapshot. Both were applied, and the totals drifted away
+     * from the sets they claim to describe, permanently and with nothing to show
+     * for it.
+     */
+    private function syncVolumes(): void
+    {
         $this->loadMissing('workoutLine.workout.user');
-        $workout = $this->workoutLine->workout;
-        $user = $workout->user;
 
-        if (! $user || ! $workout) {
-            return;
-        }
-
-        $volume = $this->getVolume();
-
-        if ($volume !== 0.0) {
-            $user->decrement('total_volume', $volume);
-            $workout->decrement('workout_volume', $volume);
-        }
+        $this->workoutLine?->workout?->recomputeVolume();
     }
 
     #[\Override]

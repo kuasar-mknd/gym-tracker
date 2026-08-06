@@ -110,3 +110,40 @@ describe('volume counters survive a cascade', function (): void {
         expect((float) $this->user->fresh()->total_volume)->toBe(0.0);
     });
 });
+
+/**
+ * The counters used to accumulate a delta per save: the set's new volume minus
+ * the volume it had when the model was loaded. Two requests touching the same
+ * row at once — which is exactly what the per-field debounce produces when a
+ * user corrects a weight and a rep count together — each computed their delta
+ * from the same snapshot. Both were applied, and the totals drifted away from
+ * the sets they describe, permanently.
+ */
+describe('volume counters survive concurrent edits', function (): void {
+    it('matches the sets after two writes computed from the same snapshot', function (): void {
+        $user = User::factory()->create(['total_volume' => 0]);
+        $workout = Workout::factory()->create([
+            'user_id' => $user->id,
+            'ended_at' => null,
+            'workout_volume' => 0,
+        ]);
+        $line = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => Exercise::factory()->create()->id,
+        ]);
+
+        Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5]);
+
+        // Two instances of the same row, both loaded before either is written —
+        // the shape of two PATCHes arriving together.
+        $asWeightRequestSeesIt = Set::find($line->sets()->first()->id);
+        $asRepsRequestSeesIt = Set::find($line->sets()->first()->id);
+
+        $asWeightRequestSeesIt->update(['weight' => 100]);
+        $asRepsRequestSeesIt->update(['reps' => 8]);
+
+        // The row is now 100 x 8. Anything else is drift.
+        expect((float) $workout->fresh()->workout_volume)->toBe(800.0)
+            ->and((float) $user->fresh()->total_volume)->toBe(800.0);
+    });
+});
