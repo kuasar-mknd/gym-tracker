@@ -1004,10 +1004,21 @@ onUnmounted(() => {
             >
                 <div class="mb-4 flex items-center justify-between">
                     <div>
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                        <!--
+                          text-text-main is near-black and has no dark variant of
+                          its own, so in dark mode the exercise name was rendered
+                          at 2.20:1 against the page and its category at 1.71:1 —
+                          both far under the 4.5:1 that ordinary text needs, and
+                          under even the 3:1 allowed for large text. The name of
+                          the exercise you are working on was effectively
+                          invisible.
+                        -->
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic dark:text-white">
                             {{ line.exercise.name }}
                         </h3>
-                        <p class="text-text-muted text-xs font-bold uppercase">{{ line.exercise.category }}</p>
+                        <p class="text-text-muted text-xs font-bold uppercase dark:text-slate-300">
+                            {{ line.exercise.category }}
+                        </p>
                     </div>
                     <button
                         v-press="{ haptic: 'warning' }"
