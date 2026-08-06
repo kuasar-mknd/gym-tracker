@@ -76,5 +76,29 @@ class Workout extends Model
 
         static::saved($clearCache);
         static::deleted($clearCache);
+
+        /**
+         * Same cascade, one level up. Deleting a workout removes its lines and,
+         * through them, every set — all in the database, none of it through
+         * Eloquent. The line hook below never fires either, so the user's
+         * lifetime total kept the volume of a session they had deleted.
+         *
+         * The workout already carries the aggregate, so releasing it is exact
+         * and costs nothing to compute.
+         */
+        static::deleting(function (self $workout): void {
+            /**
+             * Read back from the table, not from the attribute. The counter is
+             * maintained with increment(), which writes straight to the database
+             * and leaves whatever instance the caller is holding behind — an
+             * in-memory workout can easily still say zero.
+             */
+            $stored = $workout->newQuery()->whereKey($workout->getKey())->value('workout_volume');
+            $volume = is_numeric($stored) ? (float) $stored : 0.0;
+
+            if ($volume !== 0.0) {
+                $workout->user?->decrement('total_volume', $volume);
+            }
+        });
     }
 }

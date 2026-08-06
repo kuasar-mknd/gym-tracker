@@ -117,6 +117,33 @@ class WorkoutLine extends Model
 
         static::saved($clearCache);
         static::deleted($clearCache);
+
+        /**
+         * Gives back the volume of the sets this line is about to take with it.
+         *
+         * sets.workout_line_id is ON DELETE CASCADE, so the database removes
+         * those rows itself and Eloquent never hears about it — Set::deleted
+         * does not fire, and the volume they contributed stays in
+         * users.total_volume and workouts.workout_volume for good. Every
+         * exercise ever removed from a session has been inflating those two
+         * counters since.
+         *
+         * Summed in one query and released once, rather than deleting each set
+         * through the model: the rows are going regardless, and the counters
+         * only care about the total.
+         */
+        static::deleting(function (self $line): void {
+            $volume = (float) $line->sets()->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(weight, 0) * COALESCE(reps, 0)'));
+
+            if ($volume === 0.0) {
+                return;
+            }
+
+            $workout = $line->workout;
+
+            $workout?->decrement('workout_volume', $volume);
+            $workout?->user?->decrement('total_volume', $volume);
+        });
     }
 
     #[\Override]
