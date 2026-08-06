@@ -251,13 +251,30 @@ const addExercise = (exerciseId) => {
 
             if (idx !== -1) {
                 /**
-                 * Merged, not replaced. A line the server has just created has
-                 * no sets, so assigning its copy wholesale wiped every set the
-                 * user added while this request was in flight.
+                 * Mutated in place, never replaced.
+                 *
+                 * Assigning a new object into the slot fixed one bug and made a
+                 * subtler one: addSet captures `line` when the user taps, and
+                 * pushes its optimistic set into THAT object's sets array. Swap
+                 * the slot for a fresh object with a fresh array and addSet is
+                 * left holding a detached copy — its own findIndex then never
+                 * finds the set again, so the row stays on a placeholder id for
+                 * as long as the page lives.
+                 *
+                 * Keeping the object and the array identity means every closure,
+                 * debounce timer and v-model binding already pointing at this
+                 * line stays pointing at the real one.
                  */
-                localWorkout.value.workout_lines[idx] = {
-                    ...created,
-                    sets: [...(localWorkout.value.workout_lines[idx].sets ?? []), ...(created.sets ?? [])],
+                const { sets: createdSets, ...lineFields } = created
+                const line = localWorkout.value.workout_lines[idx]
+
+                if (!Array.isArray(line.sets)) line.sets = []
+                Object.assign(line, lineFields)
+
+                // A line the server has just created has no sets of its own, but
+                // a replayed create can return one that does.
+                for (const set of createdSets ?? []) {
+                    if (!line.sets.some((existing) => existing.id === set.id)) line.sets.push(set)
                 }
             }
 
@@ -429,22 +446,59 @@ const addSet = (lineId) => {
                 return null
             }
 
-            return SyncService.post(route('api.v1.sets.store'), {
-                workout_line_id: realLineId,
+            const sent = {
                 is_completed: false,
                 weight: weight,
                 reps: reps,
                 distance_km: distance,
                 duration_seconds: duration,
+            }
+
+            return SyncService.post(route('api.v1.sets.store'), {
+                workout_line_id: realLineId,
+                ...sent,
             }).then((response) => {
-                const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
                 const created = response.data?.data
 
-                if (setIdx !== -1 && created) {
-                    line.sets[setIdx] = created
+                if (!created) {
+                    return null
                 }
 
-                return created?.id ?? null
+                /**
+                 * The server owns the identity, the user owns the values.
+                 *
+                 * Assigning the server's copy over the row reverted whatever the
+                 * user typed while the create was in flight — and typing into a
+                 * set the instant you add it is the normal way to use this
+                 * screen. The payload left with the old numbers, so the server's
+                 * answer necessarily carries them back; taking it wholesale
+                 * overwrote the new ones on screen and left the database holding
+                 * values the user had already corrected.
+                 *
+                 * Mutating in place also keeps the row identity that v-model and
+                 * the per-set debounce timers are bound to.
+                 */
+                const edited = Object.fromEntries(
+                    Object.keys(sent)
+                        .filter((field) => tempSet[field] !== sent[field])
+                        .map((field) => [field, tempSet[field]]),
+                )
+
+                const realSetId = created.id
+
+                tempSet.id = realSetId
+                tempSet.created_at = created.created_at
+                tempSet.updated_at = created.updated_at
+                tempSet.personal_record = created.personal_record
+
+                // Typed after the payload left, so the server has never heard it.
+                if (Object.keys(edited).length > 0) {
+                    SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
+                        if (!err.isOffline) markUnsynced(realSetId)
+                    })
+                }
+
+                return realSetId
             })
         })
         .catch((err) => {
