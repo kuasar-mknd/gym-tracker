@@ -26,6 +26,14 @@ import WorkoutShow from '@/Pages/Workouts/Show.vue'
 
 const EXERCISE = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
 
+const workoutWithSet = {
+    id: 1,
+    name: 'Séance',
+    started_at: '2026-07-29T08:00:00.000000Z',
+    ended_at: null,
+    workout_lines: [{ id: 10, order: 0, exercise: EXERCISE, sets: [{ id: 42, weight: 80, reps: 5, is_completed: false }] }],
+}
+
 const emptyWorkout = {
     id: 1,
     name: 'Séance',
@@ -46,9 +54,9 @@ beforeAll(() => {
 
 const passesSlot = { template: '<div><slot /></div>' }
 
-const mountPage = async () => {
+const mountPage = async (workout = emptyWorkout) => {
     const wrapper = mount(WorkoutShow, {
-        props: { workout: JSON.parse(JSON.stringify(emptyWorkout)), exercises: [EXERCISE] },
+        props: { workout: JSON.parse(JSON.stringify(workout)), exercises: [EXERCISE] },
         shallow: true,
         global: {
             directives: { press: {} },
@@ -173,5 +181,39 @@ describe('Workouts/Show — writes made while a create is in flight', () => {
         expect(lines(wrapper)[0].sets).toHaveLength(1)
         expect(lines(wrapper)[0].sets[0].id).toBe(77)
         expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 10 }))
+    })
+})
+
+/**
+ * A refused value has to leave the screen, or the user walks away believing a
+ * number that the database does not hold.
+ */
+describe('Workouts/Show — a refused edit reverts', () => {
+    it('restores the value the server accepted, not the one it just refused', async () => {
+        patch.mockRejectedValue({ response: { status: 422 }, request: {} })
+
+        const wrapper = await mountPage(workoutWithSet)
+        const input = wrapper.find('[dusk="weight-input-0-0"]')
+
+        expect(input.exists()).toBe(true)
+        expect(lines(wrapper)[0].sets[0].weight).toBe(80)
+
+        /**
+         * Typing, then leaving the field — in that order, and both events.
+         * `input` is the one that matters: it is what v-model listened to, so
+         * firing only `change` lets the old binding look innocent and makes
+         * this guard incapable of failing.
+         */
+        input.element.value = '999'
+        await input.trigger('input')
+        await input.trigger('change')
+
+        // Real timers: the edit is debounced by a second, and the rollback sits
+        // several promise hops past the refusal.
+        await new Promise((resolve) => setTimeout(resolve, 1100))
+        await flushPromises()
+
+        expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: '999' })
+        expect(lines(wrapper)[0].sets[0].weight).toBe(80)
     })
 })

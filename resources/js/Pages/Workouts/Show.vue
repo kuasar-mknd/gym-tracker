@@ -579,6 +579,13 @@ const updateSet = (set, field, value) => {
         return
     }
 
+    /**
+     * Genuinely the previous value, which it was not while these inputs used
+     * v-model. v-model writes on every keystroke, so by the time @change fired
+     * the object already held the new value — `previousValue` captured it, and
+     * the rollback below restored exactly what the server had just refused.
+     * The inputs are bound one-way now: nothing writes here but this function.
+     */
     const previousValue = set[field]
     set[field] = value
     const timerKey = `${set.id}_${field}`
@@ -921,7 +928,7 @@ onUnmounted(() => {
                                 <input
                                     type="number"
                                     inputmode="decimal"
-                                    v-model="set.weight"
+                                    :value="set.weight"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
@@ -932,7 +939,7 @@ onUnmounted(() => {
                                 <input
                                     type="number"
                                     inputmode="numeric"
-                                    v-model="set.reps"
+                                    :value="set.reps"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
@@ -947,7 +954,7 @@ onUnmounted(() => {
                                     type="number"
                                     step="0.1"
                                     inputmode="decimal"
-                                    v-model="set.distance_km"
+                                    :value="set.distance_km"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'distance_km', e.target.value)"
                                     :dusk="`distance-input-${lineIndex}-${index}`"
