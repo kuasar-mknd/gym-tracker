@@ -77,7 +77,7 @@ const submit = () => {
                 </label>
 
                 <Link
-                    v-if="canResetPassword && $page.props.ziggy.routes['password.request']"
+                    v-if="canResetPassword"
                     :href="route('password.request')"
                     class="text-electric-orange hover:text-vivid-violet text-sm font-semibold transition-colors"
                 >

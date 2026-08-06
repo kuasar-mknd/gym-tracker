@@ -51,7 +51,14 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(ZiggyVue, props.initialPage.props.ziggy)
+            /**
+             * No config: ZiggyVue reads the global the @routes directive
+             * defines in the page. Passing the Inertia prop meant shipping the
+             * whole route table a second time — 34 KB per page, and again as
+             * JSON on every Inertia navigation — for a table identical to the
+             * one already inlined.
+             */
+            .use(ZiggyVue)
 
         // Sentry configuration
         if (import.meta.env.VITE_SENTRY_DSN_PUBLIC) {

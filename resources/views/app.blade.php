@@ -34,6 +34,16 @@
         };
     </script>
 
+    {{--
+        This is the only copy of the route table.
+
+        HandleInertiaRequests also shared it as an Inertia prop, so every page
+        carried the same 34 KB twice — 157.9 KB of HTML on /login against 102.9
+        without. The prop was the one to go: @routes defines the global route()
+        that page scripts call directly, and removing it throws
+        "route is not defined" the moment a page renders. The prop also travelled
+        again as JSON on every Inertia navigation, which the inline copy does not.
+    --}}
     <!-- Scripts -->
     @routes(nonce: Vite::cspNonce())
     @vite(['resources/js/main.js', "resources/js/Pages/{$page['component']}.vue"])

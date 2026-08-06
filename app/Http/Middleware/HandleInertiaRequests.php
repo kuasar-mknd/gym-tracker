@@ -7,7 +7,6 @@ namespace App\Http\Middleware;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
-use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -47,14 +46,6 @@ class HandleInertiaRequests extends Middleware
             // dans un build de production, que le serveur local sert quand même.
             'is_local' => app()->environment('local'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
-            'ziggy' => function () use ($request): array {
-                $ziggy = new Ziggy();
-
-                return [
-                    ...$ziggy->toArray(),
-                    'location' => $request->url(),
-                ];
-            },
         ];
     }
 
