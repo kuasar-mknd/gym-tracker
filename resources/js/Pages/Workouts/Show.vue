@@ -122,6 +122,17 @@ const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 const showTimer = ref(false)
 const timerDuration = ref(90)
 
+/**
+ * Counts rest periods, so each one gets a fresh timer.
+ *
+ * The timer only reset itself while it was NOT running, and completing a set
+ * while it was already counting down neither remounted it nor restarted it. The
+ * second set of a superset was therefore given whatever was left of the first
+ * one's rest — the shorter the gap between sets, the shorter the rest, which is
+ * precisely backwards.
+ */
+const timerRun = ref(0)
+
 let tempIdCounter = 0
 
 /**
@@ -254,6 +265,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
     set.is_completed = newState
     if (newState) {
         timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
+        timerRun.value += 1
         showTimer.value = true
     }
     patchSet(set, { is_completed: newState })
@@ -1016,7 +1028,13 @@ onUnmounted(() => {
                 </div>
 
                 <div class="space-y-2">
-                    <SwipeableRow v-for="(set, index) in line.sets" :key="`${set.id}-${index}`">
+                    <!--
+                      Keyed on the set alone. Folding the index in made the key
+                      change for every row below a deletion, so Vue destroyed and
+                      rebuilt them all: swipe state reset, inputs re-created, and
+                      a field being edited losing focus mid-keystroke.
+                    -->
+                    <SwipeableRow v-for="(set, index) in line.sets" :key="set.id">
                         <!-- The row was swipeable with no action behind it: dragging
                              it snapped it open onto an empty background and left it
                              there. Same delete the row's own button calls, reached
@@ -1347,6 +1365,7 @@ onUnmounted(() => {
 
         <RestTimer
             v-if="showTimer"
+            :key="timerRun"
             :duration="timerDuration"
             @finished="showTimer = false"
             @close="showTimer = false"

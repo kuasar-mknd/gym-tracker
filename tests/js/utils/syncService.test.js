@@ -423,3 +423,53 @@ describe('SyncService drain durability', () => {
         expect(service.failedRequests().map((item) => item.url)).toEqual(['/a'])
     })
 })
+
+/**
+ * Nothing in the app has ever emptied this list — clearFailedRequests() has no
+ * caller — and each entry holds a whole request config. Left unbounded it
+ * eventually fills localStorage, and the write throws QuotaExceededError in the
+ * middle of a drain, taking the rest of the queue down with it.
+ */
+describe('SyncService failed-request bucket', () => {
+    it('keeps the most recent refusals and stops growing', async () => {
+        const many = Array.from({ length: 60 }, (_, i) => ({
+            method: 'patch',
+            url: `/api/v1/sets/${i}`,
+            data: { weight: i },
+            id: `q${i}`,
+            timestamp: '2026-08-04T10:00:00.000Z',
+        }))
+        localStorage.setItem('offline_sync_queue', JSON.stringify(many))
+        request.mockRejectedValue({ response: { status: 422 }, request: {} })
+
+        const service = await freshService()
+        await service.processQueue()
+
+        const kept = service.failedRequests()
+
+        expect(kept).toHaveLength(50)
+        expect(kept.at(-1).url).toBe('/api/v1/sets/59')
+        expect(kept.some((item) => item.url === '/api/v1/sets/0')).toBe(false)
+    })
+
+    it('does not abandon the queue when storage refuses the write', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch('/a'), aQueuedPatch('/b')]))
+        request.mockRejectedValue({ response: { status: 422 }, request: {} })
+
+        const setItem = localStorage.setItem.bind(localStorage)
+        const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key, value) => {
+            if (key === 'offline_sync_failed') throw new DOMException('full', 'QuotaExceededError')
+
+            return setItem(key, value)
+        })
+
+        const service = await freshService()
+        await service.processQueue()
+
+        spy.mockRestore()
+
+        // Both were attempted and neither is stuck in the queue.
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(service.queue).toEqual([])
+    })
+})

@@ -4,6 +4,9 @@ import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
 const QUEUE_KEY = 'offline_sync_queue'
 const FAILED_KEY = 'offline_sync_failed'
 
+/** How many refused mutations are worth keeping. See recordFailure. */
+const MAX_FAILED = 50
+
 /**
  * Names one create attempt, for as long as that attempt exists.
  *
@@ -237,7 +240,26 @@ class SyncService {
             status: error?.response?.status ?? null,
         })
 
-        localStorage.setItem(FAILED_KEY, JSON.stringify(this.failed))
+        /**
+         * Bounded, and nothing in the app has ever emptied it —
+         * clearFailedRequests() has no caller. Each entry holds a whole request
+         * config, so an unbounded list eventually fills localStorage and the
+         * write below throws QuotaExceededError in the middle of a drain,
+         * taking the queue down with it. The newest failures are the ones worth
+         * showing; the oldest are long past being actionable.
+         */
+        if (this.failed.length > MAX_FAILED) {
+            this.failed = this.failed.slice(-MAX_FAILED)
+        }
+
+        try {
+            localStorage.setItem(FAILED_KEY, JSON.stringify(this.failed))
+        } catch {
+            // Storage is full or unavailable. Losing the record of a refusal is
+            // bad; letting it abort the drain and strand the rest of the queue
+            // is worse.
+            this.failed = this.failed.slice(-1)
+        }
 
         window.dispatchEvent(
             new CustomEvent('sync:failed', {

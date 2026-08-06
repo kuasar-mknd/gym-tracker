@@ -398,3 +398,71 @@ describe('Workouts/Show — a finished session', () => {
         expect(wrapper.find('[dusk="weight-input-0-0"]').attributes('disabled')).toBeUndefined()
     })
 })
+
+/**
+ * The timer only reset itself while it was NOT running, and completing a set
+ * while it was already counting down neither remounted it nor restarted it. The
+ * second set of a superset got whatever was left of the first one's rest — the
+ * shorter the gap between sets, the shorter the rest, which is backwards.
+ */
+describe('Workouts/Show — the rest timer', () => {
+    it('starts a fresh countdown for every completed set', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+        const timer = () => wrapper.find('[dusk="rest-timer"]')
+
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        expect(timer().exists()).toBe(true)
+
+        // The element itself, so this asserts the timer was rebuilt rather than
+        // left counting down — a fresh rest period, not the tail of the last one.
+        const firstTimer = timer().element
+
+        // Uncheck, then complete again while the first rest is still running.
+        await click(wrapper, 'complete-set-0-0')
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        expect(timer().exists()).toBe(true)
+        expect(timer().element).not.toBe(firstTimer)
+    })
+})
+
+/**
+ * Set rows were keyed `${set.id}-${index}`. Deleting a row shifts every index
+ * below it, so every one of those keys changed and Vue destroyed and rebuilt
+ * rows that had not moved: swipe state reset, inputs re-created, and a field
+ * being edited losing focus mid-keystroke.
+ */
+describe('Workouts/Show — list identity', () => {
+    it('leaves the rows below a deletion alone', async () => {
+        const threeSets = {
+            ...workoutWithSet,
+            workout_lines: [
+                {
+                    id: 10,
+                    order: 0,
+                    exercise: EXERCISE,
+                    sets: [
+                        { id: 41, weight: 60, reps: 5, is_completed: false },
+                        { id: 42, weight: 70, reps: 5, is_completed: false },
+                        { id: 43, weight: 80, reps: 5, is_completed: false },
+                    ],
+                },
+            ],
+        }
+
+        const wrapper = await mountPage(threeSets)
+        const inputFor = (index) => wrapper.find(`[dusk="weight-input-0-${index}"]`).element
+
+        const survivor = inputFor(2)
+
+        // Remove the first row; the two below it shift up but do not change.
+        lines(wrapper)[0].sets.splice(0, 1)
+        await wrapper.vm.$nextTick()
+
+        expect(lines(wrapper)[0].sets).toHaveLength(2)
+        expect(inputFor(1)).toBe(survivor)
+    })
+})
