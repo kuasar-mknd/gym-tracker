@@ -217,3 +217,43 @@ describe('Workouts/Show — a refused edit reverts', () => {
         expect(lines(wrapper)[0].sets[0].weight).toBe(80)
     })
 })
+
+/**
+ * The successor of the placeholder-id bug, and it outlived the fix for it.
+ *
+ * When the exercise's create goes into the offline queue, its placeholder used
+ * to resolve to "no such row", so a set added onto it was refused on the spot
+ * and never revisited. The queue drained, the exercise appeared on the server,
+ * and the set belonged to nobody — gone, with the row still on screen.
+ */
+describe('Workouts/Show — a set added onto a queued exercise', () => {
+    it('is sent once the queue reports what the exercise became', async () => {
+        post.mockImplementation((url) =>
+            url.includes('workout-lines')
+                ? Promise.reject({ isOffline: true, queueId: 'q-77' })
+                : Promise.resolve({ data: { data: { id: 88, weight: 0, reps: 10 } } }),
+        )
+
+        const wrapper = await mountPage()
+
+        await addExercise(wrapper)
+        await flushPromises()
+
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        // Nothing has been sent for the set: the exercise does not exist yet.
+        expect(post).toHaveBeenCalledTimes(1)
+        expect(wrapper.vm.unsyncedSetIds.size).toBe(1)
+
+        // The connection comes back and the queue drains the exercise.
+        window.dispatchEvent(
+            new CustomEvent('sync:replayed', { detail: { queueId: 'q-77', data: { id: 31 } } }),
+        )
+        await flushPromises()
+
+        expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 31 }))
+        expect(lines(wrapper)[0].sets[0].id).toBe(88)
+        expect(wrapper.vm.unsyncedSetIds.size).toBe(0)
+    })
+})

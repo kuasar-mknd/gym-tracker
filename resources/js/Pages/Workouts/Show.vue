@@ -70,6 +70,44 @@ let tempIdCounter = 0
 const pendingIds = new PendingIds()
 
 /**
+ * Placeholders whose create is sitting in the offline queue rather than in
+ * flight. Anything added on top of one has to wait for the drain, and say so
+ * meanwhile.
+ */
+const queuedLineIds = new Set()
+const replayListeners = new Set()
+
+/**
+ * Resolves to the id a queued create eventually produced, once the queue
+ * actually drains.
+ *
+ * Without this, a create that went offline resolved to "no such row", so a set
+ * added to an exercise that was still queued was refused on the spot and never
+ * revisited: the queue drained, the exercise appeared on the server, and the
+ * set belonged to nobody. It is the same shape as the placeholder-id bug one
+ * level up, and it outlived the fix for it.
+ */
+const awaitReplay = (queueId) =>
+    new Promise((resolve) => {
+        if (!queueId) {
+            resolve(null)
+
+            return
+        }
+
+        const onReplayed = (event) => {
+            if (event.detail?.queueId !== queueId) return
+
+            window.removeEventListener('sync:replayed', onReplayed)
+            replayListeners.delete(onReplayed)
+            resolve(event.detail.data?.id ?? null)
+        }
+
+        replayListeners.add(onReplayed)
+        window.addEventListener('sync:replayed', onReplayed)
+    })
+
+/**
  * The only two ways this screen may talk to the server about a set.
  *
  * Both wait out a creation still in flight, so the URL always carries an id the
@@ -282,9 +320,12 @@ const addExercise = (exerciseId) => {
         })
         .catch((err) => {
             if (err.isOffline) {
-                // The row stays on screen but does not exist server-side, so
-                // nothing referring to it may be sent. null says exactly that.
-                return null
+                // Queued, not lost. Waiting for the drain to report the real id
+                // is what lets a set added onto this exercise reach the server
+                // at all; answering null here stranded it permanently.
+                queuedLineIds.add(tempLine.id)
+
+                return awaitReplay(err.queueId)
             }
 
             const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
@@ -437,6 +478,12 @@ const addSet = (lineId) => {
      * `workout_line_id: "temp-1"` earned a 422 live, and when the same payload
      * was replayed from the offline queue it took the set with it.
      */
+    // The exercise is queued rather than in flight, so this set is going nowhere
+    // until the drain. Say so now rather than leaving the row looking saved.
+    if (queuedLineIds.has(lineId)) {
+        markUnsynced(tempSet.id)
+    }
+
     const creation = pendingIds
         .resolve(lineId)
         .then((realLineId) => {
@@ -486,6 +533,9 @@ const addSet = (lineId) => {
 
                 const realSetId = created.id
 
+                // It is in the database now, under either id it has worn.
+                clearUnsynced(tempSet.id, realSetId)
+
                 tempSet.id = realSetId
                 tempSet.created_at = created.created_at
                 tempSet.updated_at = created.updated_at
@@ -528,6 +578,15 @@ const addSet = (lineId) => {
  * something a 4xx says will never be accepted.
  */
 const unsyncedSetIds = ref(new Set())
+
+/**
+ * Clears the marker once the row genuinely reaches the database. Without this
+ * the warning was add-only: a set that synced on the next drain kept telling
+ * the user it had not been saved, for as long as the page stayed open.
+ */
+const clearUnsynced = (...setIds) => {
+    setIds.forEach((setId) => unsyncedSetIds.value.delete(String(setId)))
+}
 
 const markUnsynced = (setId) => {
     unsyncedSetIds.value.add(String(setId))
@@ -758,6 +817,11 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('open-add-exercise', handleFabAddExercise)
     window.removeEventListener('sync:failed', handleSyncFailure)
+
+    // One per create still waiting on the offline queue; the page may well be
+    // left before the drain ever comes.
+    replayListeners.forEach((listener) => window.removeEventListener('sync:replayed', listener))
+    replayListeners.clear()
 
     if (editErrorTimer) {
         clearTimeout(editErrorTimer)

@@ -101,9 +101,11 @@ class SyncService {
         // A response means the server answered, so this is its verdict, not a
         // connectivity problem — queueing it would hide a real refusal.
         if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
-            this.addToQueue(config)
+            const queueId = this.addToQueue(config)
 
-            return Promise.reject({ isOffline: true, message: 'Network error: Request queued' })
+            // queueId lets a caller waiting on what this create produces pick its
+            // own write out of the drain later — see the `sync:replayed` event.
+            return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
         }
 
         throw error
@@ -125,16 +127,22 @@ class SyncService {
         return { ...config, headers: { ...config.headers, 'Idempotency-Key': newIdempotencyKey() } }
     }
 
+    /**
+     * @returns {string|null} the queue entry's id, so a caller that depends on
+     *   what this write eventually creates can recognise it when it goes out.
+     */
     addToQueue(config) {
         // Only queue mutations (POST, PATCH, PUT, DELETE)
-        if (['post', 'patch', 'put', 'delete'].includes(config.method?.toLowerCase())) {
-            this.queue.push({
-                ...config,
-                id: Date.now() + Math.random().toString(36).substr(2, 9),
-                timestamp: new Date().toISOString(),
-            })
-            this.saveQueue()
+        if (!['post', 'patch', 'put', 'delete'].includes(config.method?.toLowerCase())) {
+            return null
         }
+
+        const id = Date.now() + Math.random().toString(36).substr(2, 9)
+
+        this.queue.push({ ...config, id, timestamp: new Date().toISOString() })
+        this.saveQueue()
+
+        return id
     }
 
     saveQueue() {
@@ -179,7 +187,23 @@ class SyncService {
             try {
                 // Remove internal queue ID before sending
                 const { id, timestamp, ...axiosConfig } = config
-                await api(axiosConfig)
+                const response = await api(axiosConfig)
+
+                /**
+                 * Says what this write finally produced.
+                 *
+                 * A create queued offline leaves the caller holding a
+                 * placeholder id and no way to learn the real one — the row
+                 * exists on the server and the page never finds out. Anything
+                 * the user built on top of it, a set added to an exercise that
+                 * was still queued, was then stranded for good: the queue drained,
+                 * the exercise appeared, and the set was never sent by anyone.
+                 */
+                window.dispatchEvent(
+                    new CustomEvent('sync:replayed', {
+                        detail: { queueId: id, url: config.url, data: response?.data?.data ?? null },
+                    }),
+                )
             } catch (error) {
                 // Anything that was not a network failure used to fall off the end
                 // of this block and be lost — a 500, an expired token, a validation
