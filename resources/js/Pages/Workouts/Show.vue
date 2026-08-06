@@ -823,6 +823,26 @@ onUnmounted(() => {
     replayListeners.forEach((listener) => window.removeEventListener('sync:replayed', listener))
     replayListeners.clear()
 
+    /**
+     * Sends whatever is still sitting in the debounce.
+     *
+     * A value typed a fraction of a second before leaving the page is an edit
+     * the user made. It used to be left to fire on its own a second later, into
+     * a component that no longer exists: if the server refused it, the revert
+     * and the message landed on refs nobody was rendering, so the edit was lost
+     * without a word. Flushing here sends it while there is still something to
+     * report to — and SyncService records a refusal durably either way.
+     */
+    Object.keys(updateTimers).forEach((key) => {
+        const pending = updateTimers[key]
+
+        if (!pending) return
+
+        clearTimeout(pending.timerId)
+        delete updateTimers[key]
+        pending.execute?.()
+    })
+
     if (editErrorTimer) {
         clearTimeout(editErrorTimer)
     }

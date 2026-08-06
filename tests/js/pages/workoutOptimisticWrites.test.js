@@ -257,3 +257,28 @@ describe('Workouts/Show — a set added onto a queued exercise', () => {
         expect(wrapper.vm.unsyncedSetIds.size).toBe(0)
     })
 })
+
+/**
+ * Typing a weight and immediately going back is ordinary. The edit was left in
+ * a one-second debounce that fired into a component that no longer existed: a
+ * refusal reverted a ref nobody was rendering and told nobody, so the edit was
+ * gone without a word.
+ */
+describe('Workouts/Show — leaving the page mid-edit', () => {
+    it('sends a debounced edit instead of leaving it to fire into nothing', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+        const input = wrapper.find('[dusk="weight-input-0-0"]')
+
+        input.element.value = '105'
+        await input.trigger('input')
+        await input.trigger('change')
+
+        // Straight out of the page, well inside the debounce.
+        expect(patch).not.toHaveBeenCalled()
+
+        wrapper.unmount()
+        await flushPromises()
+
+        expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: '105' })
+    })
+})

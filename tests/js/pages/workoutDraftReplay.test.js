@@ -172,14 +172,37 @@ describe('Workouts/Show — offline draft replay', () => {
         wrapper.unmount()
     })
 
-    it('stops listening once the page is gone', async () => {
+    /**
+     * This asserted expect(true).toBe(true) after dispatching the event, on the
+     * theory that a surviving listener would throw against a detached
+     * component. It does not — a stale handler quietly mutates a ref nobody is
+     * rendering — so the test passed whether or not anything was cleaned up.
+     *
+     * Every window listener the page registers is now checked to have been
+     * handed back, by identity.
+     */
+    it('hands back every window listener it took', async () => {
+        const added = vi.spyOn(window, 'addEventListener')
+        const removed = vi.spyOn(window, 'removeEventListener')
+
         const wrapper = await mountPage()
+
+        const taken = added.mock.calls.filter(([type]) => type.startsWith('sync:') || type === 'open-add-exercise')
+
+        expect(taken.length).toBeGreaterThan(0)
+
         wrapper.unmount()
 
-        // Would throw against a detached component if the listener survived.
-        window.dispatchEvent(new CustomEvent('sync:failed', { detail: { url: '/api/v1/sets/42' } }))
+        const givenBack = removed.mock.calls
+        taken.forEach(([type, handler]) => {
+            expect(
+                givenBack.some(([outType, outHandler]) => outType === type && outHandler === handler),
+                `listener for ${type} was never removed`,
+            ).toBe(true)
+        })
 
-        expect(true).toBe(true)
+        added.mockRestore()
+        removed.mockRestore()
     })
 
     it('hands an offline edit over to the queue instead of keeping two copies', async () => {
