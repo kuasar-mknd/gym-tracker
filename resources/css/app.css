@@ -868,6 +868,12 @@
         --pearl-white: #0f172a;
     }
 
+    /*
+     * The page scrolls here, and only here. Both declarations belong on the
+     * root: the viewport takes its overflow and its overscroll behaviour from
+     * <html>, so this is what clips sideways drift and what stops the iOS
+     * rubber-band and pull-to-refresh.
+     */
     html {
         font-family: 'Space Grotesk', 'Inter', sans-serif;
         -webkit-font-smoothing: antialiased;
@@ -876,14 +882,26 @@
         overscroll-behavior: none;
     }
 
+    /*
+     * Deliberately no overflow and no overscroll-behavior on <body>. Together
+     * they made the app unscrollable.
+     *
+     * `overflow-x: hidden` turns <body> into a scroll container — CSS computes
+     * the other axis to `auto` as soon as one axis is not `visible`. <body> is
+     * as tall as its own content, so that container has nothing to scroll
+     * inside it: every wheel and every swipe landed on a scroller already at
+     * its limit, and `overscroll-behavior: none` then forbade handing the
+     * gesture up to the viewport. The page could still be scrolled from
+     * JavaScript, which is why it looked intermittent rather than broken.
+     *
+     * <html> above already clips horizontally, so nothing is lost by leaving
+     * this off.
+     */
     body {
         background-color: var(--pearl-white);
         min-height: 100vh;
         min-height: 100dvh;
         color: var(--text-main);
-        overflow-x: hidden;
-        overscroll-behavior: none;
-        -webkit-overflow-scrolling: touch;
     }
 
     /* Selection styling */

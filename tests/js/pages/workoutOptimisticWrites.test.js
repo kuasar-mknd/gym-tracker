@@ -19,7 +19,13 @@ vi.mock('@inertiajs/vue3', () => ({
     Head: { template: '<div />' },
     Link: { template: '<a><slot /></a>' },
     usePage: () => ({ props: { auth: { user: { id: 1 } }, is_testing: true } }),
-    router: { visit: vi.fn(), post: vi.fn(), reload: vi.fn(), delete: vi.fn(), patch: (...args) => routerPatch(...args) },
+    router: {
+        visit: vi.fn(),
+        post: vi.fn(),
+        reload: vi.fn(),
+        delete: vi.fn(),
+        patch: (...args) => routerPatch(...args),
+    },
     useForm: (data) => ({ ...data, processing: false, errors: {}, post: vi.fn(), put: vi.fn(), reset: vi.fn() }),
 }))
 
@@ -32,7 +38,9 @@ const workoutWithSet = {
     name: 'Séance',
     started_at: '2026-07-29T08:00:00.000000Z',
     ended_at: null,
-    workout_lines: [{ id: 10, order: 0, exercise: EXERCISE, sets: [{ id: 42, weight: 80, reps: 5, is_completed: false }] }],
+    workout_lines: [
+        { id: 10, order: 0, exercise: EXERCISE, sets: [{ id: 42, weight: 80, reps: 5, is_completed: false }] },
+    ],
 }
 
 const emptyWorkout = {
@@ -61,7 +69,14 @@ const mountPage = async (workout = emptyWorkout) => {
         shallow: true,
         global: {
             directives: { press: {} },
-            stubs: { AuthenticatedLayout: passesSlot, GlassCard: passesSlot, SwipeableRow: passesSlot, Modal: passesSlot, GlassInput: passesSlot, GlassSelect: passesSlot },
+            stubs: {
+                AuthenticatedLayout: passesSlot,
+                GlassCard: passesSlot,
+                SwipeableRow: passesSlot,
+                Modal: passesSlot,
+                GlassInput: passesSlot,
+                GlassSelect: passesSlot,
+            },
         },
     })
 
@@ -127,9 +142,7 @@ describe('Workouts/Show — writes made while a create is in flight', () => {
     it('keeps a value typed while the set was being created, and sends it', async () => {
         const lineCreated = deferred()
         const setCreated = deferred()
-        post.mockImplementation((url) =>
-            url.includes('workout-lines') ? lineCreated.promise : setCreated.promise,
-        )
+        post.mockImplementation((url) => (url.includes('workout-lines') ? lineCreated.promise : setCreated.promise))
 
         const wrapper = await mountPage()
 
@@ -249,9 +262,7 @@ describe('Workouts/Show — a set added onto a queued exercise', () => {
         expect(wrapper.vm.unsyncedSetIds.size).toBe(1)
 
         // The connection comes back and the queue drains the exercise.
-        window.dispatchEvent(
-            new CustomEvent('sync:replayed', { detail: { queueId: 'q-77', data: { id: 31 } } }),
-        )
+        window.dispatchEvent(new CustomEvent('sync:replayed', { detail: { queueId: 'q-77', data: { id: 31 } } }))
         await flushPromises()
 
         expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 31 }))

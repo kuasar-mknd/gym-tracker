@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Browser;
 
 use App\Models\User;
+use Facebook\WebDriver\WebDriverKeys;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
@@ -68,11 +69,38 @@ class ModalSemanticsTest extends DuskTestCase
                 ->waitFor('[data-testid="delete-account-button"]', 15)
                 ->script('document.querySelector(\'[data-testid="delete-account-button"]\').click();');
 
-            $browser->waitForText('Confirmer la suppression', 15)
-                ->keys('[data-testid="delete-password-input"]', ['{escape}'])
-                ->waitUntilMissingText('Confirmer la suppression', 15);
+            $browser->waitForText('Confirmer la suppression', 15);
 
-            $this->assertTrue(true, 'The modal closed on Escape.');
+            // <html>, not <body>: the viewport takes its overflow from the root
+            // element, and only falls back to <body> when the root's own is
+            // `visible`. app.css clips the root, so a lock written to <body> was
+            // read by nothing and the page scrolled behind every modal.
+            $locked = $browser->script('return getComputedStyle(document.documentElement).overflowY;')[0];
+
+            $this->assertSame('hidden', $locked, 'An open modal must stop the page scrolling behind it.');
+
+            // Sent to whatever holds focus rather than through a selector: the
+            // dialog closes on the keydown, which hides its contents before the
+            // keyup lands, and WebDriver refuses to finish typing into an
+            // element that stopped being interactable mid-gesture.
+            $browser->driver->action()->sendKeys(null, WebDriverKeys::ESCAPE)->perform();
+
+            $browser->waitUntilMissingText('Confirmer la suppression', 15);
+
+            /**
+             * Escape is a close request the browser answers itself: it closes
+             * the <dialog> before any of our code runs. Nothing was listening
+             * for that, so the panel left the screen with the scroll lock still
+             * on <body> — the whole app stopped scrolling, with no modal on
+             * screen to explain why, until the page was reloaded.
+             */
+            $released = $browser->script('return getComputedStyle(document.documentElement).overflowY;')[0];
+
+            $this->assertNotSame(
+                'hidden',
+                $released,
+                'Closing the modal must give the page scroll back, however it was closed.'
+            );
         });
     }
 
@@ -142,10 +170,13 @@ class ModalSemanticsTest extends DuskTestCase
                 'Modal already paints the glass panel; a second one stacks two backgrounds and two radii.'
             );
 
-            // Keyed off the search field rather than 'body': Dusk resolves a bare
-            // 'body' against the page scope and builds the selector "body body".
-            $browser->keys('dialog[open] input[placeholder="Rechercher..."]', ['{escape}'])
-                ->waitUntilMissing('dialog[open]', 15);
+            // Sent to whatever holds focus rather than through a selector: the
+            // dialog closes on the keydown, which hides its contents before the
+            // keyup lands, and WebDriver refuses to finish typing into an
+            // element that stopped being interactable mid-gesture.
+            $browser->driver->action()->sendKeys(null, WebDriverKeys::ESCAPE)->perform();
+
+            $browser->waitUntilMissing('dialog[open]', 15);
 
             $this->assertTrue(true, 'Escape closed the picker.');
         });
