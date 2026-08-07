@@ -48,7 +48,23 @@ final class AppServiceProvider extends ServiceProvider
         }
 
         Vite::useCspNonce();
-        Vite::prefetch(concurrency: 3);
+
+        // Vite::prefetch is deliberately absent.
+        //
+        // It injected a <link rel="prefetch"> for every asset in the manifest, so
+        // each page load pulled the entire build in the background. Measured on
+        // /workouts: 141 asset requests totalling 1350 KB, of which 120 were
+        // prefetches the page did not need, against the 21 it did.
+        //
+        // The service worker already precaches that same build — 131 entries,
+        // 1.1 MB — so the prefetch fetched a second copy of what the app had
+        // committed to caching anyway. On a phone on cellular data that is the
+        // whole bundle, twice, on every page.
+        //
+        // What it bought was an instant first navigation to each page. In an
+        // Inertia app a navigation needs only that page's chunk, tens of
+        // kilobytes, so the trade was megabytes spent to save one small request —
+        // and the service worker covers the repeat visits regardless.
 
         Model::shouldBeStrict(config('app.env') !== 'production');
 
