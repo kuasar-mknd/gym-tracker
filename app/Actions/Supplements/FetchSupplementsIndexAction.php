@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Supplements;
 
+use App\Http\Resources\SupplementResource;
 use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
@@ -13,7 +14,7 @@ final class FetchSupplementsIndexAction
 {
     /**
      * @return array{
-     *     supplements: Collection<int, array{id: int, name: string, icon: 'heroicon-o-beaker', current_log: float, unit: 'servings', daily_goal: null}>,
+     *     supplements: Collection<int, array<string, mixed>>,
      *     usageHistory: array<int, array{date: string, count: float}>
      * }
      */
@@ -28,21 +29,26 @@ final class FetchSupplementsIndexAction
     /**
      * Retrieve supplements with their latest log status.
      *
-     * @return Collection<int, array{id: int, name: string, icon: 'heroicon-o-beaker', current_log: float, unit: 'servings', daily_goal: null}>
+     * Shaped by SupplementResource, which already describes exactly what the
+     * page reads. The hand-rolled array this replaced sent id, name, icon,
+     * current_log, unit and daily_goal — the last four read by nothing, anywhere
+     * — while omitting brand, dosage, servings_remaining, low_stock_threshold
+     * and last_taken_at, every one of which the card renders. So the stock
+     * figure and the low-stock colouring showed undefined, and the edit form
+     * pre-filled itself with nothing, which the update request then rejected.
+     *
+     * @return Collection<int, array<string, mixed>>
      */
     private function getSupplementsWithLatestLog(User $user): Collection
     {
+        // toArray() rather than resolve(): resolve() is declared as a bare `array`,
+        // so at level 9 its values are implicit mixed and will not satisfy the
+        // explicit mixed above. The resource declares array<string, mixed>.
         return Supplement::forUser($user->id)
             ->with(['latestLog'])
             ->get()
-            ->map(fn (Supplement $supplement): array => [
-                'id' => (int) $supplement->id,
-                'name' => (string) $supplement->name,
-                'icon' => 'heroicon-o-beaker',
-                'current_log' => (float) ($supplement->latestLog->quantity ?? 0.0),
-                'unit' => 'servings',
-                'daily_goal' => null,
-            ]);
+            ->map(fn (Supplement $supplement): array => new SupplementResource($supplement)->toArray(request()))
+            ->values();
     }
 
     /**

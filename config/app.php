@@ -32,6 +32,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Browser Test Run
+    |--------------------------------------------------------------------------
+    |
+    | Set only by ".env.dusk.local", which "artisan dusk" swaps in for the
+    | duration of a browser test run. APP_ENV deliberately stays "local" there,
+    | because the CSP policy and the social login callback both branch on
+    | environment('local') — so this is the signal for "a browser test is
+    | driving the app" without disturbing either of them.
+    |
+    */
+
+    'running_browser_tests' => (bool) env('APP_RUNNING_BROWSER_TESTS', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Debug Mode
     |--------------------------------------------------------------------------
     |

@@ -222,8 +222,11 @@ const props = defineProps({
 
 const customAmount = ref('')
 
+// consumed_at is required|date server-side (StoreWaterLogRequest). Omitting it
+// made every single log 422 with no visible error, so nothing was ever saved.
 const form = useForm({
     amount: '',
+    consumed_at: '',
 })
 
 const percentage = computed(() => {
@@ -231,21 +234,23 @@ const percentage = computed(() => {
 })
 
 const dashOffset = computed(() => {
-    const circumference = 2 * Math.PI * 45 // r=45
-    // 283 approx
-    return 283 - (283 * percentage.value) / 100
+    const circumference = 2 * Math.PI * 45 // r=45 on the progress circle
+
+    return circumference - (circumference * percentage.value) / 100
 })
 
 const addWater = (amount) => {
     if (!amount) return
 
     form.amount = parseInt(amount)
+    form.consumed_at = new Date().toISOString()
     form.post(route('tools.water.store'), {
         preserveScroll: true,
         onSuccess: () => {
             customAmount.value = ''
             form.reset()
         },
+        onError: () => triggerHaptic('error'),
     })
 }
 

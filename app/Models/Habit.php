@@ -26,6 +26,7 @@ class Habit extends Model
     /** @use HasFactory<\Database\Factories\HabitFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'name',
@@ -52,6 +53,7 @@ class Habit extends Model
         return $this->hasMany(HabitLog::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

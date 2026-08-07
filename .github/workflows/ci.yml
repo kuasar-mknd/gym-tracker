@@ -23,7 +23,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: '8.4'
+                  php-version: '8.5'
                   extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
@@ -51,7 +51,16 @@ jobs:
                   cache: 'npm'
 
             - name: Install Node Dependencies
-              run: npm install --legacy-peer-deps
+              run: npm ci
+
+            # Runs here rather than in the `lint` job, which has no Node set up:
+            # this one already installed it. Prettier only checks formatting, so
+            # until eslint was added nothing checked the JavaScript itself.
+            - name: Lint JS (Prettier + ESLint)
+              run: npm run lint:js
+
+            - name: Run JS Unit Tests
+              run: npm run test
 
             - name: Build Assets
               run: npm run build
@@ -98,7 +107,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: '8.4'
+                  php-version: '8.5'
                   extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
@@ -160,7 +169,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: '8.4'
+                  php-version: '8.5'
                   extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
@@ -203,6 +212,7 @@ jobs:
                   PULSE_ENABLED=false
                   DUSK_DRIVER_URL=http://127.0.0.1:9515
                   SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000
+                  APP_RUNNING_BROWSER_TESTS=true
                   EOF
 
                   php artisan key:generate
@@ -257,7 +267,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: '8.4'
+                  php-version: '8.5'
                   extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2
@@ -281,7 +291,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: '8.4'
+                  php-version: '8.5'
                   extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
                   coverage: none
                   tools: composer:v2

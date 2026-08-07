@@ -14,6 +14,7 @@ class DailyJournalStoreRequest extends BaseDailyJournalStoreRequest
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
+    #[\Override]
     public function rules(): array
     {
         $rules = parent::rules();

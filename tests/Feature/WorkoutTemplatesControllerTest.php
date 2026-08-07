@@ -154,10 +154,98 @@ it('renders the template creation page', function (): void {
         );
 });
 
-it('aborts 404 for edit and update', function (): void {
+/*
+ * Editing a template used to 404 on both routes, and this file asserted the 404
+ * as if it were the intended behaviour. It was not: the Edit page, the
+ * UpdateWorkoutTemplateAction, its own tests, the WorkoutTemplateUpdateRequest
+ * and the policy's update ability were all present and wired to the API
+ * controller. Only the two web methods called abort(404), and nothing in the
+ * interface linked to templates.edit — so the feature existed and was
+ * unreachable.
+ */
+it('renders the edit page with the template lines and sets', function (): void {
     $user = User::factory()->create();
-    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+    $exercise = Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Développé couché']);
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id, 'name' => 'Haut du corps']);
+    $line = $template->workoutTemplateLines()->create(['exercise_id' => $exercise->id, 'order' => 0]);
+    $line->workoutTemplateSets()->create(['reps' => 8, 'weight' => 60, 'is_warmup' => false, 'order' => 0]);
 
-    $this->actingAs($user)->get(route('templates.edit', $template))->assertStatus(404);
-    $this->actingAs($user)->put(route('templates.update', $template), [])->assertStatus(404);
+    $this->actingAs($user)
+        ->get(route('templates.edit', $template))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('Workouts/Templates/Edit')
+            ->where('template.name', 'Haut du corps')
+            ->where('template.workout_template_lines.0.exercise.name', 'Développé couché')
+            ->where('template.workout_template_lines.0.workout_template_sets.0.reps', 8)
+            ->has('exercises')
+        );
+});
+
+it('updates a template and rebuilds its exercise lines', function (): void {
+    $user = User::factory()->create();
+    $kept = Exercise::factory()->create(['user_id' => $user->id]);
+    $added = Exercise::factory()->create(['user_id' => $user->id]);
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id, 'name' => 'Avant']);
+    $stale = $template->workoutTemplateLines()->create(['exercise_id' => $kept->id, 'order' => 0]);
+    $stale->workoutTemplateSets()->create(['reps' => 5, 'weight' => 40, 'is_warmup' => false, 'order' => 0]);
+
+    $this->actingAs($user)
+        ->put(route('templates.update', $template), [
+            'name' => 'Après',
+            'description' => 'Deux exercices',
+            'exercises' => [
+                ['id' => $added->id, 'sets' => [['reps' => 10, 'weight' => 70, 'is_warmup' => false]]],
+                ['id' => $kept->id, 'sets' => [['reps' => 12, 'weight' => 30, 'is_warmup' => true]]],
+            ],
+        ])
+        ->assertRedirect(route('templates.index'));
+
+    $template->refresh()->load('workoutTemplateLines.workoutTemplateSets');
+
+    expect($template->name)->toBe('Après')
+        ->and($template->description)->toBe('Deux exercices')
+        ->and($template->workoutTemplateLines)->toHaveCount(2)
+        ->and($template->workoutTemplateLines[0]->exercise_id)->toBe($added->id)
+        ->and($template->workoutTemplateLines[1]->exercise_id)->toBe($kept->id)
+        ->and($template->workoutTemplateLines[0]->workoutTemplateSets[0]->reps)->toBe(10);
+
+    // The rebuild must not leave the replaced line's sets behind.
+    $this->assertDatabaseMissing('workout_template_lines', ['id' => $stale->id]);
+    $this->assertDatabaseMissing('workout_template_sets', ['workout_template_line_id' => $stale->id]);
+});
+
+it('empties a template when the last exercise is removed', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+    $template->workoutTemplateLines()->create(['exercise_id' => $exercise->id, 'order' => 0]);
+
+    $this->actingAs($user)
+        ->put(route('templates.update', $template), ['name' => 'Vide', 'exercises' => []])
+        ->assertRedirect(route('templates.index'));
+
+    expect($template->refresh()->workoutTemplateLines)->toHaveCount(0);
+});
+
+it('rejects a template update with no name', function (): void {
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id, 'name' => 'Intact']);
+
+    $this->actingAs($user)
+        ->put(route('templates.update', $template), ['name' => ''])
+        ->assertSessionHasErrors('name');
+
+    expect($template->refresh()->name)->toBe('Intact');
+});
+
+it('will not let one user edit or update another user\'s template', function (): void {
+    $owner = User::factory()->create();
+    $intruder = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $owner->id, 'name' => 'Privé']);
+
+    $this->actingAs($intruder)->get(route('templates.edit', $template))->assertForbidden();
+    $this->actingAs($intruder)->put(route('templates.update', $template), ['name' => 'Volé'])->assertForbidden();
+
+    expect($template->refresh()->name)->toBe('Privé');
 });

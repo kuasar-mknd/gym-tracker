@@ -19,6 +19,7 @@ class Supplement extends Model
 
     use LogsActivity;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'name',
@@ -69,6 +70,7 @@ class Supplement extends Model
             ->dontSubmitEmptyLogs();
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

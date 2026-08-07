@@ -7,7 +7,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 it('declares sensitive attributes as hidden', function (): void {
     /** @var array<string, mixed> $defaults */
-    $defaults = (new ReflectionClass(User::class))->getDefaultProperties();
+    $defaults = new ReflectionClass(User::class)->getDefaultProperties();
     $hidden = $defaults['hidden'] ?? [];
 
     expect($hidden)

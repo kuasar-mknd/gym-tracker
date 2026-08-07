@@ -10,8 +10,10 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListWorkouts extends ListRecords
 {
+    #[\Override]
     protected static string $resource = WorkoutResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

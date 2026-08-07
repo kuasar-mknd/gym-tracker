@@ -54,9 +54,20 @@ const timer = ref(null)
 /** Timestamp (ms) when the timer should finish. */
 const endTime = ref(null)
 
-/** Calculated progress percentage for the visual bar. */
+/**
+ * Calculated progress percentage for the visual bar.
+ *
+ * Clamped, because the +30s button pushes timeLeft past the duration the bar is
+ * scaled against: the fill overflowed its track, and the progressbar reported an
+ * aria-valuenow above its own aria-valuemax — a value a screen reader is
+ * entitled to treat as nonsense.
+ */
 const progress = computed(() => {
-    return (timeLeft.value / props.duration) * 100
+    if (!props.duration) {
+        return 0
+    }
+
+    return Math.min(100, Math.max(0, (timeLeft.value / props.duration) * 100))
 })
 
 /**

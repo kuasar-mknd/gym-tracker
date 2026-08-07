@@ -13,6 +13,7 @@ class NotificationPreference extends Model
     /** @use HasFactory<\Database\Factories\NotificationPreferenceFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'type',
@@ -29,6 +30,7 @@ class NotificationPreference extends Model
         return $this->belongsTo(User::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

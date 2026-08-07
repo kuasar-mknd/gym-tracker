@@ -67,6 +67,7 @@ class UpdatePasswordRequest extends FormRequest
      *
      * Checks if the user has exceeded the allowed number of attempts.
      */
+    #[\Override]
     protected function prepareForValidation(): void
     {
         if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
@@ -84,6 +85,7 @@ class UpdatePasswordRequest extends FormRequest
     /**
      * Handle a passed validation attempt.
      */
+    #[\Override]
     protected function passedValidation(): void
     {
         $this->clearRateLimiter();

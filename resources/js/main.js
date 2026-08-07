@@ -15,12 +15,27 @@ import { registerSW } from 'virtual:pwa-register'
 
 // Register Service Worker
 if (typeof window !== 'undefined') {
-    registerSW({
-        onNeedRefresh() {
-            console.log('New content available, please refresh.')
+    /**
+     * registerType est 'autoUpdate', mais fournir onNeedRefresh fait basculer
+     * vite-plugin-pwa en mode prompt : il cesse d'appliquer la mise à jour et
+     * te laisse la main. Ici la main écrivait dans la console et n'appelait
+     * jamais updateSW, donc une nouvelle version restait indéfiniment en
+     * attente — visible uniquement en réinstallant l'app.
+     *
+     * updateSW(true) applique la version en attente et recharge.
+     */
+    const updateSW = registerSW({
+        immediate: true,
+        onRegisteredSW(_url, registration) {
+            // Le navigateur ne cherche un nouveau worker que sur une
+            // navigation. Une PWA installée est suspendue, pas fermée : sans
+            // ceci elle peut ne jamais regarder.
+            if (registration) {
+                setInterval(() => registration.update(), 60 * 60 * 1000)
+            }
         },
-        onOfflineReady() {
-            console.log('App ready to work offline.')
+        onNeedRefresh() {
+            updateSW(true)
         },
     })
 }
@@ -36,7 +51,14 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(ZiggyVue, props.initialPage.props.ziggy)
+            /**
+             * No config: ZiggyVue reads the global the @routes directive
+             * defines in the page. Passing the Inertia prop meant shipping the
+             * whole route table a second time — 34 KB per page, and again as
+             * JSON on every Inertia navigation — for a table identical to the
+             * one already inlined.
+             */
+            .use(ZiggyVue)
 
         // Sentry configuration
         if (import.meta.env.VITE_SENTRY_DSN_PUBLIC) {

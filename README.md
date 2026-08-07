@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 12" />
+  <img src="https://img.shields.io/badge/Laravel-13-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13" />
   <img src="https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3" />
   <img src="https://img.shields.io/badge/Tailwind-CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
   <img src="https://img.shields.io/badge/Inertia.js-2-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js" />
@@ -65,7 +65,7 @@ Voir la documentation détaillée :
 
 | Catégorie | Technologies |
 | --- | --- |
-| **Backend** | Laravel 12, PHP 8.5 (Strict Types), MySQL |
+| **Backend** | Laravel 13, PHP 8.5 (Strict Types), MySQL |
 | **Frontend** | Vue 3, Inertia.js 2, Tailwind CSS 4 |
 | **Testing** | Pest 4, PHPUnit 12, Laravel Dusk 8 |
 | **DevOps** | Laravel Sail (Docker), GitHub Actions |

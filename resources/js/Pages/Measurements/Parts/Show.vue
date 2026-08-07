@@ -5,6 +5,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
+import { todayAsCalendarDate } from '@/Utils/date'
 
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
@@ -22,7 +23,7 @@ const form = useForm({
     part: props.part,
     value: '',
     unit: props.history.length > 0 ? props.history[props.history.length - 1].unit : 'cm',
-    measured_at: new Date().toISOString().substr(0, 10),
+    measured_at: todayAsCalendarDate(),
     notes: '',
 })
 
@@ -40,6 +41,20 @@ const deleteMeasurement = (id) => {
         useForm({}).delete(route('body-parts.destroy', { bodyPartMeasurement: id }))
     }
 }
+
+/**
+ * BodyMeasurementResource serialises measured_at as a bare 'Y-m-d', which
+ * `new Date()` reads as UTC midnight — west of Greenwich that renders the
+ * previous day. Pinning local midnight is the same guard Measurements/Index
+ * already applies.
+ */
+const formatMeasuredAt = (measuredAt) =>
+    new Date(`${measuredAt.substring(0, 10)}T00:00:00`).toLocaleDateString(undefined, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    })
 </script>
 
 <template>
@@ -119,24 +134,28 @@ const deleteMeasurement = (id) => {
                                 <span class="text-text-main text-xl font-bold">{{ item.value }} {{ item.unit }}</span>
                             </div>
                             <div class="text-text-muted text-sm font-medium">
-                                {{
-                                    new Date(item.measured_at).toLocaleDateString(undefined, {
-                                        weekday: 'short',
-                                        day: 'numeric',
-                                        month: 'short',
-                                        year: 'numeric',
-                                    })
-                                }}
+                                {{ formatMeasuredAt(item.measured_at) }}
                             </div>
                             <div v-if="item.notes" class="text-text-muted/70 mt-1 text-xs italic">
                                 {{ item.notes }}
                             </div>
                         </div>
+                        <!-- Icon-only and destructive: without a name a screen reader
+                             announces nothing but "button". -->
                         <button
+                            type="button"
                             @click="deleteMeasurement(item.id)"
-                            class="text-text-muted/30 rounded-lg p-2 opacity-0 transition group-hover:opacity-100 hover:text-red-400"
+                            :aria-label="`Delete the ${formatMeasuredAt(item.measured_at)} entry`"
+                            :dusk="`delete-measurement-${item.id}`"
+                            class="text-text-muted/30 rounded-lg p-2 opacity-100 transition hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                         >
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg
+                                class="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                aria-hidden="true"
+                            >
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"

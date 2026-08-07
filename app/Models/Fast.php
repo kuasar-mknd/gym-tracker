@@ -13,6 +13,7 @@ class Fast extends Model
     /** @use HasFactory<\Database\Factories\FastFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'start_time',
@@ -35,6 +36,7 @@ class Fast extends Model
      *
      * @return array<string, string>
      */
+    #[\Override]
     protected function casts(): array
     {
         return [

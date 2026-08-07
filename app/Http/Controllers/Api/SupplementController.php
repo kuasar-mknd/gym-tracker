@@ -81,7 +81,7 @@ class SupplementController extends Controller
         $supplement->user_id = $userId;
         $supplement->save();
 
-        return (new SupplementResource($supplement))
+        return new SupplementResource($supplement)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

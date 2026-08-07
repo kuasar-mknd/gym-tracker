@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { nextTick } from 'vue'
 
 describe('useTheme composable', () => {
     let originalMatchMedia

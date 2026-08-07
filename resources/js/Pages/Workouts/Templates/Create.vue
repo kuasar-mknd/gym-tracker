@@ -4,6 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
+import Modal from '@/Components/UI/Modal.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 
@@ -43,6 +44,10 @@ const createExerciseForm = useForm({
     category: '',
 })
 
+// Quick-create goes through fetch() rather than Inertia, so nothing routes a
+// non-422 failure anywhere. This is where it lands.
+const createError = ref(null)
+
 const filteredExercises = computed(() => {
     const exercises = localExercises.value
     if (!searchQuery.value) return exercises
@@ -66,6 +71,7 @@ const addExercise = (exercise) => {
 const createAndAddExercise = async () => {
     createExerciseForm.processing = true
     createExerciseForm.clearErrors()
+    createError.value = null
 
     try {
         const response = await fetch(route('exercises.store'), {
@@ -88,6 +94,7 @@ const createAndAddExercise = async () => {
             const exercise = responseData.exercise || responseData.data || responseData
 
             if (!exercise || !exercise.id) {
+                createError.value = "La réponse du serveur n'a pas pu être lue. L'exercice n'a pas été créé."
                 createExerciseForm.processing = false
                 return
             }
@@ -109,10 +116,14 @@ const createAndAddExercise = async () => {
             }
             createExerciseForm.processing = false
         } else {
+            // 419 on an expired CSRF token, 403, 500, anything else. Resetting
+            // `processing` and stopping there just un-spun the button: the user
+            // pressed "Créer et ajouter" and the modal sat unchanged.
+            createError.value = `La création a échoué (erreur ${response.status}). Réessaie.`
             createExerciseForm.processing = false
         }
-    } catch (error) {
-        console.error('Error creating exercise:', error)
+    } catch {
+        createError.value = 'La création a échoué. Vérifie ta connexion et réessaie.'
         createExerciseForm.processing = false
     }
 }
@@ -234,14 +245,14 @@ const submit = () => {
                                     <input
                                         v-model="set.reps"
                                         type="number"
-                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm"
+                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-base"
                                         placeholder="reps"
                                     />
                                     <input
                                         v-model="set.weight"
                                         type="number"
                                         step="0.5"
-                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-sm"
+                                        class="text-text-main placeholder:text-text-muted/40 h-10 w-20 rounded-lg border border-slate-200 bg-white/50 text-center text-base"
                                         placeholder="kg"
                                     />
                                     <button
@@ -288,7 +299,7 @@ const submit = () => {
                         </GlassCard>
                     </div>
 
-                    <GlassButton @click="showAddExercise = true" type="button" class="w-full">
+                    <GlassButton @click="showAddExercise = true" type="button" class="w-full" dusk="open-add-exercise">
                         + Ajouter un exercice
                     </GlassButton>
                 </div>
@@ -301,113 +312,121 @@ const submit = () => {
             </div>
         </form>
 
-        <!-- Add Exercise Modal -->
-        <Teleport to="body">
-            <div v-if="showAddExercise" class="glass-overlay animate-fade-in" @click.self="closeAddModal">
-                <div
-                    class="fixed inset-x-4 top-auto bottom-4 max-h-[80vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2"
-                >
-                    <div class="glass-modal animate-slide-up overflow-hidden">
-                        <!-- Modal Header -->
-                        <div class="flex items-center justify-between border-b border-slate-200 p-4">
-                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                                {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
-                            </h3>
-                            <button
-                                v-press
-                                @click="closeAddModal"
-                                type="button"
-                                class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-xl p-2 transition-all hover:bg-slate-100 focus-visible:ring-2 focus-visible:outline-none"
-                                aria-label="Fermer"
+        <!-- Add Exercise Modal. Built out of bare divs it had no dialog role, no
+             Escape, and nothing keeping Tab from wandering into the form behind
+             it; Modal opens a native <dialog>, which supplies all three. -->
+        <Modal
+            :show="showAddExercise"
+            max-width="lg"
+            position="bottom"
+            aria-labelledby="add-exercise-title"
+            @close="closeAddModal"
+        >
+            <div>
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between border-b border-slate-200 p-4">
+                    <h3 id="add-exercise-title" class="font-display text-text-main text-lg font-black uppercase italic">
+                        {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
+                    </h3>
+                    <button
+                        v-press
+                        @click="closeAddModal"
+                        type="button"
+                        class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-xl p-2 transition-all hover:bg-slate-100 focus-visible:ring-2 focus-visible:outline-none"
+                        aria-label="Fermer"
+                    >
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Create Exercise Form -->
+                <div v-if="showCreateForm" class="p-4">
+                    <form @submit.prevent="createAndAddExercise" class="space-y-4">
+                        <GlassInput
+                            v-model="createExerciseForm.name"
+                            label="Nom de l'exercice"
+                            placeholder="Ex: Développé couché"
+                            :error="createExerciseForm.errors.name"
+                            autofocus
+                        />
+                        <div class="grid grid-cols-2 gap-3">
+                            <GlassSelect v-model="createExerciseForm.type" label="Type" :options="types" size="sm" />
+                            <GlassSelect
+                                v-model="createExerciseForm.category"
+                                label="Catégorie"
+                                :options="categories"
+                                placeholder="— Aucune —"
+                                size="sm"
+                            />
+                        </div>
+                        <p
+                            v-if="createError"
+                            class="text-sm font-bold text-red-500"
+                            role="alert"
+                            dusk="quick-create-error"
+                        >
+                            {{ createError }}
+                        </p>
+
+                        <div class="flex gap-2">
+                            <GlassButton
+                                type="submit"
+                                variant="primary"
+                                class="flex-1"
+                                :loading="createExerciseForm.processing"
                             >
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
+                                Créer et ajouter
+                            </GlassButton>
+                            <GlassButton type="button" variant="ghost" @click="showCreateForm = false">
+                                Annuler
+                            </GlassButton>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Search & List -->
+                <template v-else>
+                    <div class="p-4 uppercase">
+                        <GlassInput v-model="searchQuery" placeholder="Rechercher..." autofocus />
+                    </div>
+
+                    <div class="max-h-[50vh] overflow-y-auto p-4 pt-0">
+                        <!-- No Results - Quick Create -->
+                        <div v-if="hasNoResults" class="py-6 text-center">
+                            <p class="text-text-muted mb-3">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
+                            <GlassButton variant="primary" type="button" @click="quickCreate">
+                                Créer "{{ searchQuery }}"
+                            </GlassButton>
+                        </div>
+
+                        <!-- Exercise List -->
+                        <div v-else class="space-y-2">
+                            <button
+                                v-for="ex in filteredExercises"
+                                :key="ex.id"
+                                type="button"
+                                @click="addExercise(ex)"
+                                class="hover:border-accent-primary flex w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white"
+                            >
+                                <div class="text-left">
+                                    <div class="text-text-main font-bold">{{ ex.name }}</div>
+                                    <div class="text-text-muted text-xs">{{ ex.category }}</div>
+                                </div>
+                                <span class="material-symbols-outlined text-accent-primary" aria-hidden="true"
+                                    >add_circle</span
+                                >
                             </button>
                         </div>
-
-                        <!-- Create Exercise Form -->
-                        <div v-if="showCreateForm" class="p-4">
-                            <form @submit.prevent="createAndAddExercise" class="space-y-4">
-                                <GlassInput
-                                    v-model="createExerciseForm.name"
-                                    label="Nom de l'exercice"
-                                    placeholder="Ex: Développé couché"
-                                    :error="createExerciseForm.errors.name"
-                                    autofocus
-                                />
-                                <div class="grid grid-cols-2 gap-3">
-                                    <GlassSelect
-                                        v-model="createExerciseForm.type"
-                                        label="Type"
-                                        :options="types"
-                                        size="sm"
-                                    />
-                                    <GlassSelect
-                                        v-model="createExerciseForm.category"
-                                        label="Catégorie"
-                                        :options="categories"
-                                        placeholder="— Aucune —"
-                                        size="sm"
-                                    />
-                                </div>
-                                <div class="flex gap-2">
-                                    <GlassButton
-                                        type="submit"
-                                        variant="primary"
-                                        class="flex-1"
-                                        :loading="createExerciseForm.processing"
-                                    >
-                                        Créer et ajouter
-                                    </GlassButton>
-                                    <GlassButton type="button" variant="ghost" @click="showCreateForm = false">
-                                        Annuler
-                                    </GlassButton>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Search & List -->
-                        <template v-else>
-                            <div class="p-4 uppercase">
-                                <GlassInput v-model="searchQuery" placeholder="Rechercher..." autofocus />
-                            </div>
-
-                            <div class="max-h-[50vh] overflow-y-auto p-4 pt-0">
-                                <!-- No Results - Quick Create -->
-                                <div v-if="hasNoResults" class="py-6 text-center">
-                                    <p class="text-text-muted mb-3">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
-                                    <GlassButton variant="primary" type="button" @click="quickCreate">
-                                        Créer "{{ searchQuery }}"
-                                    </GlassButton>
-                                </div>
-
-                                <!-- Exercise List -->
-                                <div v-else class="space-y-2">
-                                    <button
-                                        v-for="ex in filteredExercises"
-                                        :key="ex.id"
-                                        type="button"
-                                        @click="addExercise(ex)"
-                                        class="hover:border-accent-primary flex w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-white"
-                                    >
-                                        <div class="text-left">
-                                            <div class="text-text-main font-bold">{{ ex.name }}</div>
-                                            <div class="text-text-muted text-xs">{{ ex.category }}</div>
-                                        </div>
-                                        <span class="material-symbols-outlined text-accent-primary">add_circle</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
                     </div>
-                </div>
+                </template>
             </div>
-        </Teleport>
+        </Modal>
     </AuthenticatedLayout>
 </template>

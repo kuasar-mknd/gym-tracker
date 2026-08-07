@@ -91,7 +91,9 @@ const errorId = computed(() => {
 })
 
 const sizeClasses = {
-    sm: 'min-h-[36px] text-sm rounded-lg',
+    // text-base (16px) is deliberate even at this compact height: iOS auto-zooms
+    // any focused form control below 16px, which the viewport no longer suppresses.
+    sm: 'min-h-[36px] text-base rounded-lg',
     md: 'min-h-touch text-base rounded-xl',
     lg: 'min-h-[56px] text-lg rounded-2xl',
 }
@@ -190,7 +192,7 @@ defineExpose({
                     v-if="showClearButton"
                     type="button"
                     @click="$emit('update:modelValue', '')"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange relative rounded-full p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                     aria-label="Effacer le texte"
                     v-press
                 >
@@ -202,7 +204,7 @@ defineExpose({
                     v-if="isPassword"
                     type="button"
                     @click="showPassword = !showPassword"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange rounded-full p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange relative rounded-full p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                     :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                     :title="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                     v-press

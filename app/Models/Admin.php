@@ -36,6 +36,7 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
      *
      * @var list<string>
      */
+    #[\Override]
     protected $fillable = [
         'name',
         'email',
@@ -47,6 +48,7 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
      *
      * @var list<string>
      */
+    #[\Override]
     protected $hidden = [
         'password',
         'remember_token',
@@ -71,6 +73,7 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
      *
      * @return array<string, string>
      */
+    #[\Override]
     protected function casts(): array
     {
         return [

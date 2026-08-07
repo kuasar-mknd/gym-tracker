@@ -1,9 +1,10 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import { parseCalendarDate } from '@/Utils/date'
 
 const props = defineProps({
     year: Number,
@@ -97,9 +98,58 @@ const changeMonth = (delta) => {
     })
 }
 
+/**
+ * The button only appears once you have navigated away from the current month,
+ * so it has one job: come back. It used to call changeMonth(0), which resolves
+ * to the month you are already looking at — a no-op dressed as an escape hatch.
+ */
+const goToToday = () => {
+    const today = new Date()
+    const targetMonth = today.getMonth() + 1
+    const targetYear = today.getFullYear()
+
+    router.visit(route('calendar.index', { year: targetYear, month: targetMonth }), {
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            currentMonth.value = targetMonth
+            currentYear.value = targetYear
+            selectedDate.value = null
+        },
+    })
+}
+
 const selectDate = (day) => {
     if (!day.day) return
     selectedDate.value = day
+}
+
+/**
+ * Borders are shared between the leading padding cells and the real day
+ * buttons, so the grid keeps one continuous rule whichever element renders.
+ */
+const cellBorderClasses = (index) => [
+    'relative flex aspect-square flex-col items-center justify-center border-r border-b border-slate-100 dark:border-slate-800',
+    (index + 1) % 7 === 0 ? 'border-r-0' : '', // Remove right border for last column
+]
+
+/**
+ * The workout and journal dots carry their meaning through colour alone, which
+ * neither a screen reader nor a colour-blind user can read. Folding them into
+ * the button's accessible name is what actually exposes the information.
+ */
+const dayLabel = (day) => {
+    const parts = [`${day.day} ${currentMonthName.value} ${currentYear.value}`]
+
+    if (day.hasWorkout) {
+        parts.push('séance')
+    }
+
+    if (day.hasJournal) {
+        parts.push('journal')
+    }
+
+    return parts.join(', ')
 }
 
 const selectedDayDetails = computed(() => {
@@ -108,7 +158,7 @@ const selectedDayDetails = computed(() => {
 })
 
 const formatDateFull = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('fr-FR', {
+    return parseCalendarDate(dateStr)?.toLocaleDateString('fr-FR', {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
@@ -123,8 +173,9 @@ const formatDateFull = (dateStr) => {
     <AuthenticatedLayout page-title="Calendrier">
         <template #header-actions>
             <GlassButton
-                @click="changeMonth(0)"
+                @click="goToToday"
                 class="px-3!"
+                dusk="calendar-today"
                 v-if="currentMonth !== new Date().getMonth() + 1 || currentYear !== new Date().getFullYear()"
             >
                 Aujourd'hui
@@ -138,7 +189,7 @@ const formatDateFull = (dateStr) => {
                     <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
                 </GlassButton>
 
-                <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic">
+                <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic" dusk="calendar-heading">
                     {{ currentMonthName }} <span class="text-electric-orange">{{ currentYear }}</span>
                 </h2>
 
@@ -164,32 +215,44 @@ const formatDateFull = (dateStr) => {
 
                 <!-- Days -->
                 <div class="grid grid-cols-7">
-                    <div
-                        v-for="(day, index) in calendarGrid"
-                        :key="index"
-                        @click="selectDate(day)"
-                        :class="[
-                            'relative flex aspect-square cursor-pointer flex-col items-center justify-center border-r border-b border-slate-100 transition-all hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50',
-                            day.day ? '' : 'pointer-events-none',
-                            selectedDate?.dateStr === day.dateStr
-                                ? 'bg-slate-100 shadow-inner dark:bg-slate-800/70'
-                                : '',
-                            (index + 1) % 7 === 0 ? 'border-r-0' : '', // Remove right border for last column
-                        ]"
-                    >
-                        <div v-if="day.day">
+                    <template v-for="(day, index) in calendarGrid" :key="index">
+                        <!-- Leading blanks are spacing, not dates: nothing to focus,
+                             nothing to announce. -->
+                        <div v-if="!day.day" :class="cellBorderClasses(index)" aria-hidden="true"></div>
+
+                        <!-- Picking a day is the only interaction on this page. As a
+                             <div @click> it was unreachable by keyboard and announced
+                             as nothing at all. -->
+                        <button
+                            v-else
+                            type="button"
+                            @click="selectDate(day)"
+                            :dusk="`calendar-day-${day.dateStr}`"
+                            :aria-label="dayLabel(day)"
+                            :aria-pressed="selectedDate?.dateStr === day.dateStr"
+                            :aria-current="day.isToday ? 'date' : undefined"
+                            :class="[
+                                ...cellBorderClasses(index),
+                                'focus-visible:ring-electric-orange cursor-pointer transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset dark:hover:bg-slate-800/50',
+                                selectedDate?.dateStr === day.dateStr
+                                    ? 'bg-slate-100 shadow-inner dark:bg-slate-800/70'
+                                    : '',
+                            ]"
+                        >
                             <!-- Date Number -->
                             <span
                                 :class="[
                                     'flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold',
                                     day.isToday ? 'bg-electric-orange text-white' : 'text-text-main',
                                 ]"
+                                aria-hidden="true"
                             >
                                 {{ day.day }}
                             </span>
 
-                            <!-- Indicators -->
-                            <div class="mt-1 flex gap-1">
+                            <!-- Indicators. Their meaning lives in aria-label; as bare
+                                 colour they say nothing. -->
+                            <div class="mt-1 flex gap-1" aria-hidden="true">
                                 <span
                                     v-if="day.hasWorkout"
                                     class="bg-vivid-violet h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgba(136,0,255,0.8)]"
@@ -199,13 +262,13 @@ const formatDateFull = (dateStr) => {
                                     class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]"
                                 ></span>
                             </div>
-                        </div>
-                    </div>
+                        </button>
+                    </template>
                 </div>
             </GlassCard>
 
             <!-- Selected Day Details -->
-            <div v-if="selectedDayDetails" class="animate-slide-up space-y-4">
+            <div v-if="selectedDayDetails" dusk="calendar-day-details" class="animate-slide-up space-y-4">
                 <div class="flex items-center gap-2">
                     <div class="via-text-muted/10 h-px flex-1 bg-linear-to-r from-transparent to-transparent"></div>
                     <h3 class="font-display text-text-main text-lg font-bold capitalize">

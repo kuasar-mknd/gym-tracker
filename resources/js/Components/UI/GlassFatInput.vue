@@ -26,7 +26,7 @@ defineOptions({
  * @property {String} error - An error message to display below the input if validation fails.
  * @property {Boolean} selectOnFocus - Whether to automatically select all text when the input is focused.
  */
-const props = defineProps({
+defineProps({
     modelValue: {
         type: [String, Number],
         default: '',

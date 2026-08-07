@@ -15,6 +15,9 @@ use Spatie\Activitylog\LogOptions;
  * @property int $exercise_id
  * @property int $order
  * @property string|null $notes
+ * @property string|null $idempotency_key names the client attempt that created this row, so a
+ *                                        replayed create returns it instead of making a second one. Deliberately absent from
+ *                                        $fillable: it identifies the attempt, never something a payload may set.
  * @property-read \App\Models\Workout $workout
  * @property-read \App\Models\Exercise $exercise
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Set> $sets
@@ -24,6 +27,7 @@ class WorkoutLine extends Model
     /** @use HasFactory<\Database\Factories\WorkoutLineFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'exercise_id',
         'order',
@@ -33,6 +37,7 @@ class WorkoutLine extends Model
     /**
      * @var list<string>
      */
+    #[\Override]
     protected $appends = [];
 
     /**
@@ -101,6 +106,7 @@ class WorkoutLine extends Model
             ->dontSubmitEmptyLogs();
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         $clearCache = function (self $line): void {
@@ -111,8 +117,27 @@ class WorkoutLine extends Model
 
         static::saved($clearCache);
         static::deleted($clearCache);
+
+        /**
+         * Gives back the volume of the sets this line is about to take with it.
+         *
+         * sets.workout_line_id is ON DELETE CASCADE, so the database removes
+         * those rows itself and Eloquent never hears about it — Set::deleted
+         * does not fire, and the volume they contributed stays in
+         * users.total_volume and workouts.workout_volume for good. Every
+         * exercise ever removed from a session has been inflating those two
+         * counters since.
+         *
+         * Summed in one query and released once, rather than deleting each set
+         * through the model: the rows are going regardless, and the counters
+         * only care about the total.
+         */
+        static::deleted(function (self $line): void {
+            $line->workout?->recomputeVolume();
+        });
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

@@ -39,7 +39,7 @@ final class TrainingReminder extends Notification implements ShouldQueue
      */
     public function toWebPush(User $_notifiable, $_notification): WebPushMessage
     {
-        return (new WebPushMessage())
+        return new WebPushMessage()
             ->title('Prêt pour ta séance ? 💪')
             ->icon('/logo.svg')
             ->body($this->message ?? '')

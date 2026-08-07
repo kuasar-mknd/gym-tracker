@@ -11,7 +11,7 @@
  * - Transparent backgrounds to allow GlassCard slots to shine.
  * - Dynamic opacity for actions to prevent bleed-through.
  */
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 const props = defineProps({
@@ -20,7 +20,7 @@ const props = defineProps({
     actionThreshold: { type: Number, default: 80 },
 })
 
-const emit = defineEmits(['click'])
+defineEmits(['click'])
 
 // State
 const offset = ref(0)
@@ -29,6 +29,11 @@ const startY = ref(0)
 const isDragging = ref(false)
 const lockDirection = ref(null) // null, 'horizontal', 'vertical'
 const containerWidth = ref(0)
+
+// Element refs for the actions layer, used to open the row on keyboard focus
+const actionsLayer = ref(null)
+const leftAction = ref(null)
+const rightAction = ref(null)
 
 // Computed
 const style = computed(() => ({
@@ -116,6 +121,44 @@ function onTouchEnd() {
     lockDirection.value = null
 }
 
+/**
+ * The actions sit behind the row at opacity 0 until a swipe drags the content
+ * aside, but they never leave the tab order — so a keyboard or screen reader
+ * user lands on a completely invisible button, and on Workouts/Index that
+ * button deletes the session (WCAG 2.4.7).
+ *
+ * Hiding them from assistive tech would be the wrong fix: swiping is the only
+ * delete affordance those rows expose, so inerting the layer would remove the
+ * feature rather than repair it. Opening the row on focus keeps the single
+ * path and makes the control visible exactly when it becomes reachable.
+ */
+function onActionFocus(event) {
+    if (leftAction.value?.contains(event.target)) {
+        offset.value = props.actionThreshold
+    } else if (rightAction.value?.contains(event.target)) {
+        offset.value = -props.actionThreshold
+    }
+}
+
+function onActionBlur(event) {
+    // relatedTarget is whatever is gaining focus; keep the row open while Tab
+    // moves between two actions on the same row.
+    if (!actionsLayer.value?.contains(event.relatedTarget)) {
+        offset.value = 0
+    }
+}
+
+// Disabling the row also removes its actions, so snap shut first — otherwise
+// the content would stay translated with nothing revealed behind it.
+watch(
+    () => props.disabled,
+    (isDisabled) => {
+        if (isDisabled) {
+            offset.value = 0
+        }
+    },
+)
+
 // Reset if clicked outside or programmatically
 function close() {
     offset.value = 0
@@ -126,22 +169,35 @@ defineExpose({ close })
 
 <template>
     <div class="relative overflow-hidden rounded-3xl">
-        <!-- Background Actions Layer -->
-        <div class="absolute inset-0 flex w-full" :style="actionStyle">
+        <!-- Background Actions Layer. Dropped entirely when the row is disabled:
+             the gesture that reveals it is off, so leaving it mounted would only
+             leave invisible buttons in the tab order. -->
+        <div
+            v-if="!disabled"
+            ref="actionsLayer"
+            class="absolute inset-0 flex w-full"
+            :style="actionStyle"
+            @focusin="onActionFocus"
+            @focusout="onActionBlur"
+        >
             <!-- Left Action Slot (revealed when swiping right) -->
-            <div class="flex w-1/2 items-center justify-start pl-4" v-if="$slots['action-left']">
+            <div ref="leftAction" class="flex w-1/2 items-center justify-start pl-4" v-if="$slots['action-left']">
                 <slot name="action-left" />
             </div>
 
             <!-- Right Action Slot (revealed when swiping left) -->
-            <div class="ml-auto flex w-1/2 items-center justify-end pr-4" v-if="$slots['action-right']">
+            <div
+                ref="rightAction"
+                class="ml-auto flex w-1/2 items-center justify-end pr-4"
+                v-if="$slots['action-right']"
+            >
                 <slot name="action-right" />
             </div>
         </div>
 
         <!-- Foreground Content Layer -->
         <div
-            class="relative z-10 touch-pan-y rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-transform active:scale-[0.99] dark:border-slate-700/30 dark:bg-slate-800/20"
+            class="relative z-10 touch-pan-y rounded-3xl border border-white/20 bg-white/10 transition-transform active:scale-[0.99] dark:border-slate-700/30 dark:bg-slate-800/20"
             :style="style"
             @touchstart="onTouchStart"
             @touchmove="onTouchMove"

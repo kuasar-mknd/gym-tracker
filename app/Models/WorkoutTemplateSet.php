@@ -21,6 +21,7 @@ class WorkoutTemplateSet extends Model
     /** @use HasFactory<\Database\Factories\WorkoutTemplateSetFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'workout_template_line_id',
         'reps',
@@ -37,6 +38,7 @@ class WorkoutTemplateSet extends Model
         return $this->belongsTo(WorkoutTemplateLine::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

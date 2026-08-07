@@ -10,8 +10,10 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditSupplement extends EditRecord
 {
+    #[\Override]
     protected static string $resource = SupplementResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

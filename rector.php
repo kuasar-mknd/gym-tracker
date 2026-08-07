@@ -14,7 +14,7 @@ return RectorConfig::configure()
         __DIR__.'/routes',
         __DIR__.'/tests',
     ])
-    ->withPhpSets(php84: true)
+    ->withPhpSets(php85: true)
     ->withPreparedSets(
         deadCode: true,
         typeDeclarations: true

@@ -19,6 +19,7 @@ final class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
+    #[\Override]
     public function register(): void
     {
         $this->app->singleton(\App\Services\StatsService::class);
@@ -47,7 +48,23 @@ final class AppServiceProvider extends ServiceProvider
         }
 
         Vite::useCspNonce();
-        Vite::prefetch(concurrency: 3);
+
+        // Vite::prefetch is deliberately absent.
+        //
+        // It injected a <link rel="prefetch"> for every asset in the manifest, so
+        // each page load pulled the entire build in the background. Measured on
+        // /workouts: 141 asset requests totalling 1350 KB, of which 120 were
+        // prefetches the page did not need, against the 21 it did.
+        //
+        // The service worker already precaches that same build — 131 entries,
+        // 1.1 MB — so the prefetch fetched a second copy of what the app had
+        // committed to caching anyway. On a phone on cellular data that is the
+        // whole bundle, twice, on every page.
+        //
+        // What it bought was an instant first navigation to each page. In an
+        // Inertia app a navigation needs only that page's chunk, tens of
+        // kilobytes, so the trade was megabytes spent to save one small request —
+        // and the service worker covers the repeat visits regardless.
 
         Model::shouldBeStrict(config('app.env') !== 'production');
 
@@ -84,9 +101,36 @@ final class AppServiceProvider extends ServiceProvider
                 }
             }
 
+            /**
+             * A record only ever went up. Correcting a mistyped weight left the
+             * inflated figure standing on the user's profile for good, because
+             * nothing recomputed the record the corrected set was holding.
+             */
+            app(\App\Services\PersonalRecordService::class)->refreshRecordsHeldBy($set, $user);
+
             // ⚡ Bolt: Offload heavy sync to background jobs
             \App\Jobs\SyncUserAchievements::dispatch($user);
             \App\Jobs\SyncUserGoals::dispatch($user);
+        });
+
+        Set::deleted(function (Set $set): void {
+            // Unconditional: the database resolves personal_records.set_id as the
+            // row goes, so by now nothing still admits this set held a record.
+            app(\App\Services\PersonalRecordService::class)->refreshFor($set);
+        });
+
+        \App\Models\WorkoutLine::deleted(function (\App\Models\WorkoutLine $line): void {
+            /**
+             * Removing an exercise takes its sets with it through an ON DELETE
+             * CASCADE, which fires no model events at all — so without this, a
+             * record set during a session the user then deleted stood forever,
+             * pointing at a row that no longer exists.
+             */
+            $user = $line->workout?->user;
+
+            if ($user && $line->exercise_id) {
+                app(\App\Services\PersonalRecordService::class)->recompute($user, (int) $line->exercise_id);
+            }
         });
     }
 

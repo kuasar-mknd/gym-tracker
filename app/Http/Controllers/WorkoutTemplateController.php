@@ -139,18 +139,49 @@ class WorkoutTemplateController extends Controller
     }
 
     /**
-     * Edit a workout template (Not implemented in UI).
+     * Show the form for editing a workout template.
+     *
+     * Loads the template's lines with their exercise and sets, which is the
+     * shape Templates/Edit builds its form from.
+     *
+     * @param  \App\Models\WorkoutTemplate  $template  The template to edit.
+     * @return \Inertia\Response The Inertia response rendering the Templates edit page.
      */
-    public function edit(WorkoutTemplate $template): \Illuminate\Http\Response
+    public function edit(WorkoutTemplate $template): \Inertia\Response
     {
-        abort(404);
+        $this->authorize('update', $template);
+
+        $template->load(['workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets']);
+
+        return Inertia::render('Workouts/Templates/Edit', [
+            'template' => $template,
+            'exercises' => Exercise::getCachedForUser($this->user()->id),
+        ]);
     }
 
     /**
-     * Update a workout template (Not implemented in UI).
+     * Update a workout template in storage.
+     *
+     * Delegates to UpdateWorkoutTemplateAction, which rebuilds the lines from
+     * the submitted end state — the same action the API controller uses.
+     *
+     * @param  \App\Http\Requests\Api\WorkoutTemplateUpdateRequest  $request  The validated request containing template data.
+     * @param  \App\Models\WorkoutTemplate  $template  The template to update.
+     * @param  \App\Actions\UpdateWorkoutTemplateAction  $updateWorkoutTemplateAction  Action handling the update logic.
+     * @return \Illuminate\Http\RedirectResponse Redirects to the templates index page.
      */
-    public function update(\Illuminate\Http\Request $request, WorkoutTemplate $template): \Illuminate\Http\Response
-    {
-        abort(404);
+    public function update(
+        \App\Http\Requests\Api\WorkoutTemplateUpdateRequest $request,
+        WorkoutTemplate $template,
+        \App\Actions\UpdateWorkoutTemplateAction $updateWorkoutTemplateAction
+    ): \Illuminate\Http\RedirectResponse {
+        $this->authorize('update', $template);
+
+        /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $validated */
+        $validated = $request->validated();
+
+        $updateWorkoutTemplateAction->execute($template, $validated);
+
+        return redirect()->route('templates.index');
     }
 }

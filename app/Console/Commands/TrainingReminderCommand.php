@@ -16,6 +16,7 @@ class TrainingReminderCommand extends Command
      *
      * @var string
      */
+    #[\Override]
     protected $signature = 'app:remind-training';
 
     /**
@@ -23,6 +24,7 @@ class TrainingReminderCommand extends Command
      *
      * @var string
      */
+    #[\Override]
     protected $description = 'Send training reminders to users based on their custom inactivity threshold.';
 
     /**

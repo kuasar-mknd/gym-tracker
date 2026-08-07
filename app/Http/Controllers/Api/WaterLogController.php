@@ -58,7 +58,7 @@ class WaterLogController extends Controller
         $log->user_id = $userId;
         $log->save();
 
-        return (new WaterLogResource($log))
+        return new WaterLogResource($log)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

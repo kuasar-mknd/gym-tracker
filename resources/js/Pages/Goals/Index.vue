@@ -2,11 +2,11 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import GoalCard from '@/Components/Goals/GoalCard.vue'
+import GoalForm from '@/Components/Goals/GoalForm.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassSelect from '@/Components/UI/GlassSelect.vue'
-import { ref, watch, computed, defineAsyncComponent } from 'vue'
+import Modal from '@/Components/UI/Modal.vue'
+import { ref, computed, defineAsyncComponent } from 'vue'
 
 const GoalTypeChart = defineAsyncComponent(() => import('@/Components/Stats/GoalTypeChart.vue'))
 
@@ -37,22 +37,32 @@ const submit = () => {
     })
 }
 
-// Auto-fill title based on selection
-watch(
-    () => [form.type, form.exercise_id, form.measurement_type],
-    () => {
-        if (form.type === 'weight' && form.exercise_id) {
-            const ex = props.exercises.find((e) => e.id == form.exercise_id)
-            if (ex) form.title = `Soulever ${form.target_value || '?'} kg au ${ex.name}`
-        } else if (form.type === 'measurement' && form.measurement_type) {
-            const mt = props.measurementTypes.find((m) => m.value === form.measurement_type)
-            if (mt)
-                form.title = `Atteindre ${form.target_value || '?'} ${form.measurement_type === 'body_fat' ? '%' : 'cm'} de ${mt.label}`
-        } else if (form.type === 'frequency') {
-            form.title = `Atteindre ${form.target_value || '?'} séances au total`
-        }
-    },
-)
+/**
+ * Deleting a goal throws away its history, so it goes through a confirmation
+ * dialog — Modal renders a native <dialog> opened with showModal(), which is
+ * what supplies the focus trap and Escape-to-close.
+ */
+const goalPendingDeletion = ref(null)
+const deleteForm = useForm({})
+
+const confirmDeletion = (goal) => {
+    goalPendingDeletion.value = goal
+}
+
+const closeDeletion = () => {
+    goalPendingDeletion.value = null
+}
+
+const deleteGoal = () => {
+    if (!goalPendingDeletion.value) {
+        return
+    }
+
+    deleteForm.delete(route('goals.destroy', { goal: goalPendingDeletion.value.id }), {
+        preserveScroll: true,
+        onSuccess: () => closeDeletion(),
+    })
+}
 
 const activeGoals = computed(() => props.goals.filter((g) => !g.completed_at))
 const completedGoals = computed(() => props.goals.filter((g) => g.completed_at))
@@ -73,26 +83,34 @@ const goalDistribution = computed(() => {
 
     return Object.values(types).filter((t) => t.count > 0)
 })
-
-const goalTypeOptions = [
-    { value: 'weight', label: 'Force (Poids max)' },
-    { value: 'frequency', label: 'Fréquence (Séances)' },
-    { value: 'volume', label: 'Volume (Max par séance)' },
-    { value: 'measurement', label: 'Mensuration' },
-]
 </script>
 
 <template>
     <Head title="Mes Objectifs" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout page-title="Mes Objectifs">
+        <!-- The #header slot is desktop-only (hidden sm:block in the layout), so the
+             create action has to be mirrored here or it is unreachable on phones. -->
+        <template #header-actions>
+            <GlassButton
+                size="sm"
+                dusk="create-goal-btn"
+                :aria-label="showCreateForm ? 'Annuler la création d\'objectif' : 'Nouvel objectif'"
+                @click="showCreateForm = !showCreateForm"
+            >
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">
+                    {{ showCreateForm ? 'close' : 'add' }}
+                </span>
+            </GlassButton>
+        </template>
+
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-text-main text-2xl font-bold tracking-tight">Mes Objectifs 🎯</h2>
                     <p class="text-text-muted text-sm">Fixe tes cibles et dépasse tes limites.</p>
                 </div>
-                <GlassButton @click="showCreateForm = !showCreateForm">
+                <GlassButton dusk="create-goal-btn-desktop" @click="showCreateForm = !showCreateForm">
                     {{ showCreateForm ? 'Annuler' : 'Nouvel Objectif' }}
                 </GlassButton>
             </div>
@@ -123,66 +141,17 @@ const goalTypeOptions = [
                     <div v-if="showCreateForm">
                         <GlassCard class="p-6">
                             <h3 class="text-text-main mb-6 text-lg font-bold">Nouvel Objectif</h3>
-                            <form @submit.prevent="submit" class="space-y-6">
-                                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                    <div class="space-y-4">
-                                        <GlassSelect
-                                            v-model="form.type"
-                                            label="Type d'objectif"
-                                            :options="goalTypeOptions"
-                                            :error="form.errors.type"
-                                        />
-
-                                        <GlassSelect
-                                            v-if="form.type === 'weight' || form.type === 'volume'"
-                                            v-model="form.exercise_id"
-                                            label="Exercice"
-                                            :options="exercises.map((e) => ({ value: e.id, label: e.name }))"
-                                            placeholder="Sélectionner un exercice"
-                                            :error="form.errors.exercise_id"
-                                        />
-
-                                        <GlassSelect
-                                            v-if="form.type === 'measurement'"
-                                            v-model="form.measurement_type"
-                                            label="Mensuration"
-                                            :options="measurementTypes"
-                                            placeholder="Sélectionner une mesure"
-                                            :error="form.errors.measurement_type"
-                                        />
-                                    </div>
-
-                                    <div class="space-y-4">
-                                        <GlassInput
-                                            label="Valeur Cible"
-                                            v-model="form.target_value"
-                                            type="number"
-                                            step="0.1"
-                                            required
-                                        />
-                                        <GlassInput
-                                            label="Valeur de Départ (Optionnel)"
-                                            v-model="form.start_value"
-                                            type="number"
-                                            step="0.1"
-                                            placeholder="0"
-                                        />
-                                        <GlassInput
-                                            label="Titre du défi"
-                                            v-model="form.title"
-                                            placeholder="Ex: Bench Press 100kg"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-
-                                <div class="flex justify-end gap-3 border-t border-white/5 pt-4">
-                                    <GlassButton type="button" @click="showCreateForm = false" variant="secondary"
-                                        >Annuler</GlassButton
-                                    >
-                                    <GlassButton type="submit" :loading="form.processing">Créer l'objectif</GlassButton>
-                                </div>
-                            </form>
+                            <div dusk="goal-create-form">
+                                <GoalForm
+                                    :form="form"
+                                    :exercises="exercises"
+                                    :measurement-types="measurementTypes"
+                                    submit-label="Créer l'objectif"
+                                    auto-title
+                                    @submit="submit"
+                                    @cancel="showCreateForm = false"
+                                />
+                            </div>
                         </GlassCard>
                     </div>
                 </Transition>
@@ -204,7 +173,7 @@ const goalTypeOptions = [
                     </div>
 
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <GoalCard v-for="goal in activeGoals" :key="goal.id" :goal="goal" />
+                        <GoalCard v-for="goal in activeGoals" :key="goal.id" :goal="goal" @delete="confirmDeletion" />
                     </div>
                 </div>
 
@@ -215,10 +184,43 @@ const goalTypeOptions = [
                         <span class="text-text-muted text-xs font-normal">({{ completedGoals.length }})</span>
                     </h3>
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <GoalCard v-for="goal in completedGoals" :key="goal.id" :goal="goal" />
+                        <GoalCard
+                            v-for="goal in completedGoals"
+                            :key="goal.id"
+                            :goal="goal"
+                            @delete="confirmDeletion"
+                        />
                     </div>
                 </div>
             </div>
         </div>
+
+        <Modal
+            :show="goalPendingDeletion !== null"
+            max-width="md"
+            aria-labelledby="delete-goal-title"
+            @close="closeDeletion"
+        >
+            <div class="p-6">
+                <h2 id="delete-goal-title" class="text-text-main text-lg font-semibold dark:text-white">
+                    Supprimer cet objectif ?
+                </h2>
+                <p class="text-text-muted mt-2 text-sm">
+                    « {{ goalPendingDeletion?.title }} » sera définitivement effacé, avec sa progression.
+                </p>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <GlassButton variant="secondary" @click="closeDeletion">Annuler</GlassButton>
+                    <GlassButton
+                        variant="danger"
+                        dusk="confirm-delete-goal"
+                        :loading="deleteForm.processing"
+                        @click="deleteGoal"
+                    >
+                        Supprimer
+                    </GlassButton>
+                </div>
+            </div>
+        </Modal>
     </AuthenticatedLayout>
 </template>

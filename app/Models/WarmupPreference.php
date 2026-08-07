@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WarmupPreference extends Model
 {
+    #[\Override]
     protected $fillable = [
         'user_id',
         'bar_weight',
@@ -24,6 +25,7 @@ class WarmupPreference extends Model
         return $this->belongsTo(User::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

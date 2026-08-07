@@ -7,10 +7,11 @@ import UpdateProfileInformationForm from './Partials/UpdateProfileInformationFor
 import UpdateNotificationPreferencesForm from './Partials/UpdateNotificationPreferencesForm.vue'
 import { Head } from '@inertiajs/vue3'
 
-defineProps({
+const props = defineProps({
     mustVerifyEmail: Boolean,
     status: String,
     notificationPreferences: Object,
+    hasPushSubscription: Boolean,
 })
 </script>
 
@@ -35,7 +36,10 @@ defineProps({
 
             <!-- Notification Preferences -->
             <GlassCard class="animate-slide-up" style="animation-delay: 0.15s">
-                <UpdateNotificationPreferencesForm :preferences="notificationPreferences" />
+                <UpdateNotificationPreferencesForm
+                    :preferences="notificationPreferences"
+                    :has-push-subscription="props.hasPushSubscription"
+                />
             </GlassCard>
 
             <!-- Delete Account -->

@@ -30,6 +30,7 @@ class Exercise extends Model
     /** @use HasFactory<\Database\Factories\ExerciseFactory> */
     use HasFactory, LogsActivity;
 
+    #[\Override]
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
 
     /**
@@ -105,6 +106,7 @@ class Exercise extends Model
         }
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [
@@ -113,6 +115,7 @@ class Exercise extends Model
         ];
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         parent::booted();

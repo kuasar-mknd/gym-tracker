@@ -27,6 +27,7 @@ class DailyJournal extends Model
     /** @use HasFactory<\Database\Factories\DailyJournalFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'date',
         'content',
@@ -47,6 +48,7 @@ class DailyJournal extends Model
         return $this->belongsTo(User::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

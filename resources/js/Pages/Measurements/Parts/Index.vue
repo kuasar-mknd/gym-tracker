@@ -6,10 +6,11 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
+import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 
 const BodyPartDiffChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartDiffChart.vue'))
 
-const props = defineProps({
+defineProps({
     latestMeasurements: Array,
     commonParts: Array,
 })
@@ -20,7 +21,7 @@ const form = useForm({
     part: '',
     value: '',
     unit: 'cm',
-    measured_at: new Date().toISOString().substr(0, 10),
+    measured_at: todayAsCalendarDate(),
     notes: '',
 })
 
@@ -159,7 +160,7 @@ const selectCommonPart = (part) => {
                                     {{ item.current }} <span class="text-text-muted text-sm">{{ item.unit }}</span>
                                 </div>
                                 <div class="text-text-muted mt-1 text-xs">
-                                    {{ new Date(item.date).toLocaleDateString() }}
+                                    {{ parseCalendarDate(item.date)?.toLocaleDateString() }}
                                 </div>
                             </div>
                             <div

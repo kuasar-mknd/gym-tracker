@@ -17,31 +17,40 @@ use Filament\Tables\Table;
 
 class SupplementResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Supplément';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Suppléments';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Suppléments';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBeaker;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
+    #[\Override]
     public static function form(Schema $schema): Schema
     {
         return SupplementForm::configure($schema);
     }
 
+    #[\Override]
     public static function table(Table $table): Table
     {
         return SupplementsTable::configure($table);
     }
 
+    #[\Override]
     public static function getRelations(): array
     {
         return [];
     }
 
+    #[\Override]
     public static function getPages(): array
     {
         return [

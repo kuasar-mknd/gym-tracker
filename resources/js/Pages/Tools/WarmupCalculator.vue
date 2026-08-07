@@ -6,7 +6,7 @@
             <!-- Header -->
             <header class="animate-fade-in">
                 <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
+                    class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-4xl"
                 >
                     Calculateur<br />
                     <span class="text-gradient">d'Échauffement</span>
@@ -21,9 +21,12 @@
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Poids de travail</label>
+                            <label for="warmup-target-weight" class="font-display-label text-text-muted mb-2 block"
+                                >Poids de travail</label
+                            >
                             <div class="relative">
                                 <input
+                                    id="warmup-target-weight"
                                     type="number"
                                     v-model="targetWeight"
                                     placeholder="100"
@@ -36,9 +39,12 @@
                             </div>
                         </div>
                         <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Poids Barre</label>
+                            <label for="warmup-bar-weight" class="font-display-label text-text-muted mb-2 block"
+                                >Poids Barre</label
+                            >
                             <div class="relative">
                                 <input
+                                    id="warmup-bar-weight"
                                     type="number"
                                     v-model="form.bar_weight"
                                     placeholder="20"
@@ -107,8 +113,18 @@
                         </GlassButton>
                     </div>
 
+                    <p v-if="saveError" class="text-sm font-bold text-red-500" role="alert" dusk="warmup-save-error">
+                        {{ saveError }}
+                    </p>
+
                     <div class="space-y-4">
-                        <div class="text-text-muted grid grid-cols-12 gap-2 text-xs font-bold tracking-wider uppercase">
+                        <!-- Column headings, not labels: they sit above a repeated row,
+                             so each field carries its own name including the step it
+                             belongs to. -->
+                        <div
+                            class="text-text-muted grid grid-cols-12 gap-2 text-xs font-bold tracking-wider uppercase"
+                            aria-hidden="true"
+                        >
                             <div class="col-span-3">Pourcentage</div>
                             <div class="col-span-3">Répétitions</div>
                             <div class="col-span-5">Label (optionnel)</div>
@@ -121,7 +137,8 @@
                                     <input
                                         type="number"
                                         v-model="step.percent"
-                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                        :aria-label="`Pourcentage, palier ${index + 1}`"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -132,24 +149,28 @@
                                 <input
                                     type="number"
                                     v-model="step.reps"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                    :aria-label="`Répétitions, palier ${index + 1}`"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                                 />
                             </div>
                             <div class="col-span-5">
                                 <input
                                     type="text"
                                     v-model="step.label"
+                                    :aria-label="`Label, palier ${index + 1}`"
                                     placeholder="ex: Barre vide"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm placeholder-slate-400 transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base placeholder-slate-400 transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">
                                 <button
+                                    type="button"
                                     @click="removeStep(index)"
-                                    class="text-slate-400 transition-colors hover:text-red-500 active:scale-95"
+                                    class="relative text-slate-400 transition-colors before:absolute before:-inset-3.5 before:content-[''] hover:text-red-500 active:scale-95"
                                     :disabled="form.steps.length <= 1"
+                                    :aria-label="`Supprimer le palier ${index + 1}`"
                                 >
-                                    <span class="material-symbols-outlined text-lg">delete</span>
+                                    <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                                 </button>
                             </div>
                         </div>
@@ -160,12 +181,17 @@
                     </div>
 
                     <div class="border-t border-slate-200 pt-4 dark:border-slate-700">
-                        <label class="font-display-label text-text-muted mb-2 block">Arrondi (kg)</label>
-                        <div class="flex gap-2">
+                        <span id="warmup-rounding-label" class="font-display-label text-text-muted mb-2 block"
+                            >Arrondi (kg)</span
+                        >
+                        <div class="flex gap-2" role="group" aria-labelledby="warmup-rounding-label">
                             <button
                                 v-for="inc in [0.5, 1, 2.5, 5]"
                                 :key="inc"
+                                type="button"
                                 @click="form.rounding_increment = inc"
+                                :aria-label="`Arrondir au ${inc} kg`"
+                                :aria-pressed="form.rounding_increment === inc"
                                 class="flex-1 rounded-xl border py-2 text-sm font-bold backdrop-blur-md transition-all active:scale-95"
                                 :class="
                                     form.rounding_increment === inc
@@ -215,11 +241,20 @@ const removeStep = (index) => {
     }
 }
 
+const saveError = ref(null)
+
+/**
+ * The server validates every step — steps.*.percent max:100, steps.*.reps
+ * min:1 — and this had an onSuccess holding a comment and no onError at all.
+ * A rejected palier looked exactly like a saved one.
+ */
 const savePreferences = () => {
+    saveError.value = null
+
     form.post(route('tools.warmup.update'), {
         preserveScroll: true,
-        onSuccess: () => {
-            // Toast handled globally usually
+        onError: (errors) => {
+            saveError.value = Object.values(errors)[0] ?? "L'enregistrement a échoué. Réessaie."
         },
     })
 }

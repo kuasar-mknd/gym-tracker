@@ -142,7 +142,9 @@ class ExerciseLibraryTest extends DuskTestCase
                 $browser->loginAs(User::find($user->id))
                     ->{$size}()
                     ->visit('/exercises')
+                    ->disableAnimations()
                     ->waitFor('#main-content', 30)
+                    ->waitFor('@search-exercises', 10)
                     ->assertVisible('@create-exercise-btn')
                     ->assertVisible('@search-exercises')
                     ->assertNoConsoleExceptions();

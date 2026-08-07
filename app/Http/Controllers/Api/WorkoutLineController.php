@@ -70,6 +70,10 @@ class WorkoutLineController extends Controller
 
         $this->authorize('create', [WorkoutLine::class, $workout]);
 
+        // Carried in a header rather than the body: it names the attempt, not
+        // the resource, and has no business in the validated payload.
+        $validated['idempotency_key'] = $request->header('Idempotency-Key');
+
         $workoutLine = $action->execute($workout, $validated);
 
         $workoutLine->load(['exercise', 'sets']);

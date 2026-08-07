@@ -97,6 +97,10 @@ class SetController extends Controller
 
         $this->authorize('create', [\App\Models\Set::class, $workoutLine]);
 
+        // Carried in a header rather than the body: it names the attempt, not
+        // the resource, and has no business in the validated payload.
+        $validated['idempotency_key'] = $request->header('Idempotency-Key');
+
         $set = $action->execute($this->user(), $validated);
 
         return new SetResource($set->loadMissing('personalRecord'));

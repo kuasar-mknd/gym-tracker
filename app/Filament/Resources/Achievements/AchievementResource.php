@@ -17,31 +17,40 @@ use Filament\Tables\Table;
 
 class AchievementResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Badge';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Badges';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Badges';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedStar;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Gestion Contenu';
 
+    #[\Override]
     public static function form(Schema $schema): Schema
     {
         return AchievementForm::configure($schema);
     }
 
+    #[\Override]
     public static function table(Table $table): Table
     {
         return AchievementsTable::configure($table);
     }
 
+    #[\Override]
     public static function getRelations(): array
     {
         return [];
     }
 
+    #[\Override]
     public static function getPages(): array
     {
         return [

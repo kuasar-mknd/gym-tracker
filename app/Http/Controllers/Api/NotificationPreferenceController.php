@@ -47,7 +47,7 @@ class NotificationPreferenceController extends Controller
         $preference->user_id = (int) $this->user()->id;
         $preference->save();
 
-        return (new NotificationPreferenceResource($preference))
+        return new NotificationPreferenceResource($preference)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

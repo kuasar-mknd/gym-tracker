@@ -49,7 +49,7 @@ class HabitLogController extends Controller
         /** @var HabitLog $log */
         $log = HabitLog::create($validated);
 
-        return (new HabitLogResource($log))
+        return new HabitLogResource($log)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

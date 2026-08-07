@@ -14,6 +14,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     /**
      * Register any application services.
      */
+    #[\Override]
     public function register(): void
     {
         if (! config('telescope.enabled')) {
@@ -58,6 +59,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      *
      * This gate determines who can access Telescope in non-local environments.
      */
+    #[\Override]
     protected function gate(): void
     {
         Gate::define('viewTelescope', fn ($user): bool => in_array($user->email, []));

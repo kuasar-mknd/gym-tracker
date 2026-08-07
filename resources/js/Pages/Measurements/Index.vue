@@ -6,6 +6,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
 import { computed, ref, defineAsyncComponent } from 'vue'
+import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
@@ -27,7 +28,7 @@ const showAddForm = ref(false)
 const form = useForm({
     weight: '',
     body_fat: '',
-    measured_at: new Date().toISOString().substr(0, 10),
+    measured_at: todayAsCalendarDate(),
     notes: '',
 })
 
@@ -261,9 +262,7 @@ const latestBodyFat = computed(() => {
                                 </div>
                                 <div class="text-text-muted text-sm font-medium">
                                     {{
-                                        new Date(
-                                            measurement.measured_at.substring(0, 10) + 'T00:00:00',
-                                        ).toLocaleDateString('fr-FR', {
+                                        parseCalendarDate(measurement.measured_at)?.toLocaleDateString('fr-FR', {
                                             weekday: 'short',
                                             day: 'numeric',
                                             month: 'short',
@@ -276,10 +275,13 @@ const latestBodyFat = computed(() => {
                                 </div>
                             </div>
                             <button
+                                type="button"
                                 @click="deleteMeasurement(measurement.id)"
-                                class="text-text-muted/30 rounded-lg p-2 opacity-0 transition group-hover:opacity-100 hover:text-red-400"
+                                :aria-label="`Supprimer la mesure du ${measurement.measured_at.substring(0, 10)}`"
+                                class="text-text-muted/30 rounded-lg p-2 opacity-100 transition hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                             >
                                 <svg
+                                    aria-hidden="true"
                                     class="h-5 w-5"
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"

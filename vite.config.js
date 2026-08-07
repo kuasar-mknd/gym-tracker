@@ -25,6 +25,20 @@ export default defineConfig({
             filename: 'sw.js',
             registerType: 'autoUpdate',
             injectRegister: 'auto',
+            /**
+             * Le worker est écrit dans public/build. Laissé à lui-même il est
+             * donc enregistré depuis /build/sw.js, ce qui lui donne la portée
+             * /build/ : il ne contrôle aucune page de l'application.
+             *
+             * buildBase décide de l'URL d'enregistrement, et valait '/build/' —
+             * le navigateur refusait donc la portée '/' demandée, quatre fois
+             * par chargement dans la console. Ajouter une route /sw.js portant
+             * Service-Worker-Allowed ne suffisait pas : rien ne l'enregistrait.
+             * C'est cette URL-là qu'il faut demander.
+             */
+            base: '/',
+            buildBase: '/',
+            scope: '/',
             manifest: {
                 name: 'Gym Tracker',
                 short_name: 'GymTracker',
@@ -57,14 +71,20 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks(id) {
-                    if (id.includes('node_modules')) {
-                        if (id.includes('chart.js') || id.includes('vue-chartjs')) {
-                            return 'chartjs';
-                        }
-                        if (id.includes('vue') || id.includes('@inertiajs/vue3')) {
-                            return 'vue-core';
-                        }
-                        return 'vendor';
+                    /**
+                     * Only the runtime every page genuinely needs.
+                     *
+                     * A `return 'vendor'` catch-all here put ALL of node_modules
+                     * in one chunk that main.js imports, so the 263 KB of
+                     * chart.js rode along on every page — the workout screen
+                     * included, which draws no charts at all. Naming chart.js
+                     * its own chunk did not help: a manual chunk is still a
+                     * static edge from the entry that reaches it. Letting
+                     * Rollup split the rest by actual use is what makes the
+                     * charts load with the pages that draw them.
+                     */
+                    if (id.includes('node_modules') && (id.includes('/vue/') || id.includes('@inertiajs'))) {
+                        return 'vue-core';
                     }
                 },
             },

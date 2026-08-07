@@ -21,9 +21,10 @@
                 <div class="space-y-6">
                     <!-- Gender Selection -->
                     <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Sexe</label>
-                        <div class="grid grid-cols-2 gap-3">
+                        <span id="macro-gender-label" class="font-display-label text-text-muted mb-2 block">Sexe</span>
+                        <div class="grid grid-cols-2 gap-3" role="group" aria-labelledby="macro-gender-label">
                             <button
+                                type="button"
                                 @click="form.gender = 'male'"
                                 :aria-pressed="form.gender === 'male'"
                                 class="focus-visible:ring-electric-orange flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
@@ -36,6 +37,7 @@
                                 <span class="font-display text-lg font-black uppercase">Homme</span>
                             </button>
                             <button
+                                type="button"
                                 @click="form.gender = 'female'"
                                 :aria-pressed="form.gender === 'female'"
                                 class="focus-visible:ring-hot-pink flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
@@ -75,11 +77,14 @@
 
                     <!-- Goal -->
                     <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Objectif</label>
-                        <div class="grid grid-cols-3 gap-3">
+                        <span id="macro-goal-label" class="font-display-label text-text-muted mb-2 block"
+                            >Objectif</span
+                        >
+                        <div class="grid grid-cols-3 gap-3" role="group" aria-labelledby="macro-goal-label">
                             <button
                                 v-for="goalOption in ['cut', 'maintain', 'bulk']"
                                 :key="goalOption"
+                                type="button"
                                 @click="form.goal = goalOption"
                                 :aria-pressed="form.goal === goalOption"
                                 class="focus-visible:ring-electric-orange flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
@@ -143,6 +148,15 @@
                             >
                                 Enregistrer
                             </GlassButton>
+
+                            <p
+                                v-if="Object.keys(form.errors).length"
+                                class="mt-3 text-sm font-bold text-red-500"
+                                role="alert"
+                                dusk="macro-error"
+                            >
+                                {{ Object.values(form.errors)[0] }}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -214,17 +228,19 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
+import { triggerHaptic } from '@/composables/useHaptics'
+import { macroTargets } from '@/Utils/formulas'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 
-const props = defineProps({
+defineProps({
     history: {
         type: Array,
         required: true,
@@ -252,63 +268,16 @@ const isValid = computed(() => {
     return form.age > 0 && form.height > 0 && form.weight > 0
 })
 
-const multipliers = {
-    sedentary: 1.2,
-    light: 1.375,
-    moderate: 1.55,
-    very: 1.725,
-    extra: 1.9,
-}
-
-const calculatedResults = computed(() => {
-    if (!isValid.value) return { tdee: 0, targetCalories: 0, protein: 0, fat: 0, carbs: 0 }
-
-    const weight = parseFloat(form.weight)
-    const height = parseFloat(form.height)
-    const age = parseFloat(form.age)
-    const activity = multipliers[form.activity_level]
-
-    // BMR
-    let bmr
-    if (form.gender === 'male') {
-        bmr = 10 * weight + 6.25 * height - 5 * age + 5
-    } else {
-        bmr = 10 * weight + 6.25 * height - 5 * age - 161
-    }
-
-    const tdee = Math.round(bmr * activity)
-
-    let target = tdee
-    if (form.goal === 'cut') target -= 500
-    if (form.goal === 'bulk') target += 300
-
-    if (form.gender === 'male' && target < 1500) target = 1500
-    if (form.gender === 'female' && target < 1200) target = 1200
-
-    // Macros
-    const protein = Math.round(weight * 2)
-    let fat = Math.round(weight * 0.9)
-
-    let proteinCal = protein * 4
-    let fatCal = fat * 9
-
-    let remaining = target - (proteinCal + fatCal)
-
-    if (remaining < 0) {
-        fat = Math.max(30, Math.round((target - proteinCal) / 9))
-        remaining = target - (proteinCal + fat * 9)
-    }
-
-    const carbs = Math.max(0, Math.round(remaining / 4))
-
-    return {
-        tdee,
-        targetCalories: Math.round(target),
-        protein,
-        fat,
-        carbs,
-    }
-})
+const calculatedResults = computed(() =>
+    macroTargets({
+        weight: form.weight,
+        height: form.height,
+        age: form.age,
+        gender: form.gender,
+        activityLevel: form.activity_level,
+        goal: form.goal,
+    }),
+)
 
 const saveCalculation = () => {
     if (!isValid.value) return
@@ -318,6 +287,7 @@ const saveCalculation = () => {
         onSuccess: () => {
             // Optional: reset form or show success message
         },
+        onError: () => triggerHaptic('error'),
     })
 }
 

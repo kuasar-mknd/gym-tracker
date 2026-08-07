@@ -116,4 +116,68 @@ return [
 
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Serializable Classes
+    |--------------------------------------------------------------------------
+    |
+    | Passed to unserialize() as "allowed_classes" when reading cached values,
+    | so a leaked APP_KEY cannot be turned into remote code execution through a
+    | deserialization gadget chain in some vendor package. Laravel 13 ships this
+    | as `false` for new applications; this app caches Eloquent models, so it
+    | needs an explicit list instead.
+    |
+    | Anything absent from this list comes back as __PHP_Incomplete_Class rather
+    | than throwing, which fails quietly at runtime — so the list is deliberately
+    | generous. Over-listing only weakens the guard slightly; under-listing
+    | breaks a feature without saying so. Every app model, DTO and enum is
+    | allowed regardless of whether it is cached today, and the vendor entries
+    | are limited to the container types Eloquent results are made of.
+    |
+    | tests/Feature/Cache/SerializableClassesTest.php round-trips the real cached
+    | values through this list and fails if a class is missing.
+    |
+    */
+
+    'serializable_classes' => [
+        ...array_map(
+            fn (string $model): string => 'App\\Models\\'.$model,
+            [
+                'Achievement', 'Admin', 'BaseMeasurement', 'BodyMeasurement', 'BodyPartMeasurement',
+                'DailyJournal', 'Exercise', 'Fast', 'Goal', 'Habit', 'HabitLog', 'IntervalTimer',
+                'MacroCalculation', 'NotificationPreference', 'PersonalRecord', 'Plate', 'Set',
+                'Supplement', 'SupplementLog', 'User', 'UserAchievement', 'WarmupPreference',
+                'WaterLog', 'WilksScore', 'Workout', 'WorkoutLine', 'WorkoutTemplate',
+                'WorkoutTemplateLine', 'WorkoutTemplateSet',
+            ]
+        ),
+
+        App\DTOs\Stats\BodyFatHistoryPoint::class,
+        App\DTOs\Stats\DailyVolumeTrendPoint::class,
+        App\DTOs\Stats\DistributionStat::class,
+        App\DTOs\Stats\DurationHistoryPoint::class,
+        App\DTOs\Stats\Exercise1RMProgressPoint::class,
+        App\DTOs\Stats\LatestBodyMetrics::class,
+        App\DTOs\Stats\MonthlyVolumePoint::class,
+        App\DTOs\Stats\MuscleDistributionStat::class,
+        App\DTOs\Stats\VolumeComparison::class,
+        App\DTOs\Stats\VolumeHistoryPoint::class,
+        App\DTOs\Stats\VolumeTrendPoint::class,
+        App\DTOs\Stats\WeeklyVolumeTrendPoint::class,
+        App\DTOs\Stats\WeightHistoryPoint::class,
+
+        App\Enums\ExerciseCategory::class,
+        App\Enums\GoalType::class,
+        App\Enums\PersonalRecordType::class,
+
+        // What Eloquent results are actually built out of.
+        Illuminate\Database\Eloquent\Collection::class,
+        Illuminate\Support\Collection::class,
+        Illuminate\Notifications\DatabaseNotification::class,
+        Illuminate\Support\Carbon::class,
+        Carbon\Carbon::class,
+        Carbon\CarbonImmutable::class,
+        stdClass::class,
+    ],
+
 ];

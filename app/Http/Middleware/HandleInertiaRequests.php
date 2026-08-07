@@ -7,7 +7,6 @@ namespace App\Http\Middleware;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
-use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -16,6 +15,7 @@ class HandleInertiaRequests extends Middleware
      *
      * @var string
      */
+    #[\Override]
     protected $rootView = 'app';
 
     /**
@@ -23,6 +23,7 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
+    #[\Override]
     public function share(Request $request): array
     {
         return [
@@ -34,16 +35,17 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->hasSession() ? $request->session()->get('success') : null,
                 'error' => $request->hasSession() ? $request->session()->get('error') : null,
             ],
-            'is_testing' => app()->environment('testing'),
+            // CI builds its Dusk env with APP_ENV=testing but .env.dusk.local
+            // keeps APP_ENV=local, so the environment check alone held on CI and
+            // silently did not locally — where the celebration overlay this flag
+            // exists to suppress fired mid-test and swallowed clicks. The
+            // explicit flag makes both runs agree.
+            'is_testing' => app()->environment('testing') || config('app.running_browser_tests') === true,
+            // Accompagne la route /__dev-login. Le serveur est le
+            // seul à savoir qu'il est en local : import.meta.env.DEV vaut false
+            // dans un build de production, que le serveur local sert quand même.
+            'is_local' => app()->environment('local'),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
-            'ziggy' => function () use ($request): array {
-                $ziggy = new Ziggy();
-
-                return [
-                    ...$ziggy->toArray(),
-                    'location' => $request->url(),
-                ];
-            },
         ];
     }
 

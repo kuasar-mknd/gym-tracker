@@ -17,31 +17,40 @@ use Filament\Tables\Table;
 
 class GoalResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Objectif';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Objectifs';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Objectifs';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFlag;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
+    #[\Override]
     public static function form(Schema $schema): Schema
     {
         return GoalForm::configure($schema);
     }
 
+    #[\Override]
     public static function table(Table $table): Table
     {
         return GoalsTable::configure($table);
     }
 
+    #[\Override]
     public static function getRelations(): array
     {
         return [];
     }
 
+    #[\Override]
     public static function getPages(): array
     {
         return [

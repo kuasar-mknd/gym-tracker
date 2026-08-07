@@ -55,7 +55,10 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/push-subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'update'])->name('push-subscriptions.update');
         Route::post('/push-subscriptions/delete', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
 
-        Route::resource('goals', \App\Http\Controllers\GoalController::class)->except(['index', 'show']);
+        // 'create' is excluded on purpose: goals are created from a form that
+        // expands on the index, so there is no create page and the generated
+        // route pointed at a controller method that does not exist.
+        Route::resource('goals', \App\Http\Controllers\GoalController::class)->except(['index', 'show', 'create']);
 
         Route::post('/workouts', [\App\Http\Controllers\WorkoutController::class, 'store'])->name('workouts.store');
         Route::patch('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'update'])->name('workouts.update');
@@ -121,5 +124,46 @@ Route::get('/auth/{provider}/redirect', [\App\Http\Controllers\Auth\SocialAuthCo
 Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback'])
     ->middleware('guest')
     ->name('social.callback');
+
+/**
+ * Le service worker est bâti dans public/build, donc servi depuis /build/sw.js,
+ * ce qui lui donne une portée de /build/ : il ne contrôlait aucune page de
+ * l'application. Un worker ne peut revendiquer une portée plus large que son
+ * propre chemin que si le serveur l'y autorise par cet en-tête.
+ */
+Route::get('/sw.js', function (): \Symfony\Component\HttpFoundation\Response {
+    $worker = public_path('build/sw.js');
+
+    abort_unless(is_file($worker), 404);
+
+    return response()->file($worker, [
+        'Content-Type' => 'application/javascript',
+        'Service-Worker-Allowed' => '/',
+        'Cache-Control' => 'no-cache, must-revalidate',
+    ]);
+})->name('service-worker');
+
+/**
+ * Raccourci de connexion pour le développement mobile.
+ *
+ * Ouvre une session sur le compte de démonstration, comme loginAs() le fait
+ * dans la suite de tests. Il existe parce qu'un simulateur iOS ne permet pas
+ * de saisir un « @ » au clavier, ce qui rend le formulaire de connexion
+ * inutilisable pour tester l'application sur appareil.
+ *
+ * La garde est ici, pas dans le lien qui y mène : hors environnement local la
+ * route n'est pas enregistrée, donc il n'y a rien à atteindre même en
+ * connaissant l'URL. DevLoginRouteTest le vérifie.
+ */
+if (app()->environment('local')) {
+    Route::get('/__dev-login', function (): \Illuminate\Http\RedirectResponse {
+        $user = \App\Models\User::where('email', 'test@example.com')->firstOrFail();
+
+        auth()->login($user);
+        request()->session()->regenerate();
+
+        return redirect()->route('dashboard');
+    });
+}
 
 require __DIR__.'/auth.php';

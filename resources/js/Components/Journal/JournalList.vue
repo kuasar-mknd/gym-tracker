@@ -1,5 +1,6 @@
 <script setup>
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import { parseCalendarDate } from '@/Utils/date'
 
 defineProps({
     journalsByMonth: { type: Object, required: true },
@@ -32,13 +33,13 @@ const emit = defineEmits(['edit', 'delete'])
                             <div class="text-center">
                                 <div class="text-text-muted text-xs uppercase">
                                     {{
-                                        new Date(journal.date + 'T00:00:00').toLocaleDateString('fr-FR', {
+                                        parseCalendarDate(journal.date)?.toLocaleDateString('fr-FR', {
                                             weekday: 'short',
                                         })
                                     }}
                                 </div>
                                 <div class="text-text-main text-2xl font-bold">
-                                    {{ new Date(journal.date + 'T00:00:00').getDate() }}
+                                    {{ parseCalendarDate(journal.date)?.getDate() }}
                                 </div>
                             </div>
 
@@ -96,7 +97,7 @@ const emit = defineEmits(['edit', 'delete'])
                                 </div>
 
                                 <div
-                                    class="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+                                    class="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
                                 >
                                     <button
                                         v-press

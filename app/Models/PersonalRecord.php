@@ -28,6 +28,7 @@ class PersonalRecord extends Model
     /** @use HasFactory<\Database\Factories\PersonalRecordFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'exercise_id',
@@ -71,6 +72,7 @@ class PersonalRecord extends Model
         return $this->belongsTo(Set::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [
