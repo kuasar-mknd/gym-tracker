@@ -703,10 +703,26 @@ const markUnsynced = (setId) => {
  * become visible instead of sitting in localStorage unread.
  */
 const handleSyncFailure = (event) => {
-    const setId = /\/sets\/(\d+)/.exec(event.detail?.url ?? '')?.[1]
+    const url = event.detail?.url ?? ''
+    const setId = /\/sets\/(\d+)/.exec(url)?.[1]
 
     if (setId) {
         markUnsynced(setId)
+
+        return
+    }
+
+    /**
+     * Only an id-bearing URL could be attached to a row, so a refused CREATE —
+     * `POST /api/v1/sets`, `POST /api/v1/workout-lines` — matched nothing and
+     * the user was told nothing at all. The write is recorded in SyncService's
+     * failed bucket either way; this is the part they can see.
+     *
+     * There is no row to mark, because the thing that failed is the row itself.
+     * Saying so plainly beats a silent gap in a workout.
+     */
+    if (/\/(sets|workout-lines)(\?|$)/.test(url)) {
+        reportEditFailure("Un élément de la séance n'a pas pu être enregistré.")
     }
 }
 

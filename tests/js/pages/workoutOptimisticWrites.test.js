@@ -466,3 +466,41 @@ describe('Workouts/Show — list identity', () => {
         expect(inputFor(1)).toBe(survivor)
     })
 })
+
+/**
+ * The badge matcher only recognised an id-bearing URL, so a refused CREATE —
+ * POST /api/v1/sets, POST /api/v1/workout-lines — matched nothing and the user
+ * was told nothing at all. There is no row to mark, because the thing that
+ * failed is the row itself.
+ */
+describe('Workouts/Show — a refused create', () => {
+    const announce = (url) => window.dispatchEvent(new CustomEvent('sync:failed', { detail: { url, status: 422 } }))
+
+    it('says something when a set could not be created', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        announce('/api/v1/sets')
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(true)
+    })
+
+    it('says something when an exercise could not be created', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        announce('/api/v1/workout-lines')
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(true)
+    })
+
+    it('still marks the row when the failure names one', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        announce('/api/v1/sets/42')
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(true)
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(false)
+    })
+})
