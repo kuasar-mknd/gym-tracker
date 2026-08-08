@@ -217,14 +217,24 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
     }
 
     /**
-     * The control for the test above: identical in every way except that the set
-     * has finished being created before anything is typed.
+     * The control, on its second question.
      *
-     * The cardio case passes and the timed one does not, and the only difference
-     * between them is that cardio types into a second field first, which takes
-     * long enough for the create to land. If this passes while the strict one
-     * fails, the create window is the trigger and not the time input itself —
-     * which is worth knowing before touching either.
+     * Its first was whether the create window mattered: it does not — waiting
+     * two seconds for the set to exist changed nothing, both this and the strict
+     * test end with an empty field. The probe then showed the node is not being
+     * replaced either. So neither timing nor the DOM identity explains it.
+     *
+     * What is left is the interaction itself. The cardio case, whose duration
+     * field is now markup-identical to this one, passes — and the only thing it
+     * does differently is fill another input in the row first, which leaves the
+     * row already focused. This control now taps the field before typing, which
+     * is what a person does and what Dusk's type() does not: it resolves the
+     * element and sends keys to it without ever clicking it.
+     *
+     * If this passes while the strict test still fails, the earlier failures were
+     * the harness typing into a never-focused lone time input — a test defect, to
+     * be fixed in the test. If it fails too, the field genuinely cannot be filled
+     * and the fix belongs in the app.
      */
     public function test_a_timed_duration_typed_once_the_set_exists_reaches_the_database(): void
     {
@@ -239,8 +249,9 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('@add-set-0', 15)
                 ->click('@add-set-0')
                 ->waitFor('@duration-input-0-0', 15)
-                // The one difference from the test above.
                 ->pause(2000)
+                // The one difference from the strict test.
+                ->click('@duration-input-0-0')
                 ->type('@duration-input-0-0', '001000')
                 ->assertInputValue('@duration-input-0-0', '00:10:00')
                 ->click('#main-content')
