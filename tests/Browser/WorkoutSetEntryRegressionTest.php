@@ -190,7 +190,15 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('@add-set-0', 15)
                 ->click('@add-set-0')
                 ->waitFor('@duration-input-0-0', 15)
+                /**
+                 * Marks the element itself, so the next assertion can say whether
+                 * the node the keystrokes went to is still the node on screen.
+                 * A replaced node and a re-written value both end as an empty
+                 * field, and they are fixed in different places.
+                 */
+                ->script('document.querySelector(\'[dusk="duration-input-0-0"]\').dataset.probe = "kept";')
                 ->type('@duration-input-0-0', '001000')
+                ->assertAttribute('@duration-input-0-0', 'data-probe', 'kept')
                 /**
                  * Asked before the value is committed, to separate two failures
                  * that look identical from the database.
@@ -204,6 +212,44 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                  * answer decides where to look, and guessing between them has
                  * already cost one wrong fix.
                  */
+                ->assertInputValue('@duration-input-0-0', '00:10:00')
+                ->click('#main-content')
+                ->pause(3000)
+                ->assertNoConsoleExceptions();
+        });
+
+        $set = $line->sets()->first();
+
+        $this->assertNotNull($set, 'the set never reached the database');
+        $this->assertSame(600, $set->duration_seconds, 'the duration typed was not the duration saved');
+    }
+
+    /**
+     * The control for the test above: identical in every way except that the set
+     * has finished being created before anything is typed.
+     *
+     * The cardio case passes and the timed one does not, and the only difference
+     * between them is that cardio types into a second field first, which takes
+     * long enough for the create to land. If this passes while the strict one
+     * fails, the create window is the trigger and not the time input itself —
+     * which is worth knowing before touching either.
+     */
+    public function test_a_timed_duration_typed_once_the_set_exists_reaches_the_database(): void
+    {
+        [$user, $workout, $line] = $this->aSessionWith('timed');
+
+        $this->browse(function (Browser $browser) use ($user, $workout): void {
+            $browser->loginAs(User::find($user->id))
+                ->resizeToIphone15()
+                ->visit('/workouts/'.$workout->id)
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitFor('@add-set-0', 15)
+                ->click('@add-set-0')
+                ->waitFor('@duration-input-0-0', 15)
+                // The one difference from the test above.
+                ->pause(2000)
+                ->type('@duration-input-0-0', '001000')
                 ->assertInputValue('@duration-input-0-0', '00:10:00')
                 ->click('#main-content')
                 ->pause(3000)
