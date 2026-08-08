@@ -219,6 +219,26 @@ const deleteSet = (setId) =>
 const NUMERIC_SET_FIELDS = ['weight', 'reps', 'distance_km', 'duration_seconds']
 
 /**
+ * What each kind of exercise measures — the same split the set row renders.
+ *
+ * A strength set has a weight and reps; a cardio one a distance and a duration;
+ * a timed one only a duration. Nothing else about a set is a measurement, and
+ * writing the other fields anyway put numbers in rows that have no business
+ * holding them.
+ */
+const MEASURED_FIELDS_BY_TYPE = {
+    strength: ['weight', 'reps'],
+    cardio: ['distance_km', 'duration_seconds'],
+    timed: ['duration_seconds'],
+}
+
+/**
+ * An unknown type renders no inputs at all, so it gets the strength pair rather
+ * than an empty set that could never be filled in.
+ */
+const measuredFieldsFor = (exercise) => MEASURED_FIELDS_BY_TYPE[exercise?.type] ?? MEASURED_FIELDS_BY_TYPE.strength
+
+/**
  * Flush (execute immediately) all pending debounced updates for a given set.
  * This prevents interleaved PATCH requests from overwriting each other's results.
  */
@@ -595,10 +615,27 @@ const addSet = (lineId) => {
 
     const lastSet = line.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
 
-    const weight = lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0)
-    const reps = lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10)
-    const distance = lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0)
-    const duration = lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30)
+    const prefilled = {
+        weight: lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0),
+        reps: lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10),
+        distance_km: lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0),
+        duration_seconds: lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30),
+    }
+
+    /**
+     * Only what this kind of exercise actually measures.
+     *
+     * All four were filled in and sent for every set regardless of type, so a
+     * cardio set was written with `reps: 10` and a weight of 0, and a timed one
+     * with those plus `distance_km: 0` — none of which the screen even shows for
+     * that exercise, and none of which the user typed. A reported 10 appearing
+     * out of nowhere is this: 10 is the reps pre-fill, and it was being written
+     * to rows whose exercise has no reps.
+     *
+     * The pre-fills that remain are the ones the user can see and correct.
+     */
+    const measured = measuredFieldsFor(line.exercise)
+    const values = Object.fromEntries(measured.map((field) => [field, prefilled[field]]))
 
     /**
      * Optimistic: add set immediately with a temp id. It carried the line id
@@ -608,11 +645,8 @@ const addSet = (lineId) => {
     const tempSet = {
         id: `temp-${++tempIdCounter}`,
         is_completed: false,
-        weight: weight,
-        reps: reps,
-        distance_km: distance,
-        duration_seconds: duration,
         is_warmup: false,
+        ...values,
     }
     if (!Array.isArray(line.sets)) line.sets = []
     line.sets.push(tempSet)
@@ -644,10 +678,7 @@ const addSet = (lineId) => {
 
             const sent = {
                 is_completed: false,
-                weight: weight,
-                reps: reps,
-                distance_km: distance,
-                duration_seconds: duration,
+                ...values,
             }
 
             return SyncService.post(route('api.v1.sets.store'), {

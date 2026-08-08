@@ -117,6 +117,64 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
     }
 
     /**
+     * A new set used to be filled in with all four measurements whatever the
+     * exercise measured, so a cardio row was written with `reps: 10` and a
+     * weight of 0 — neither of which its row renders, and neither of which
+     * anyone typed. That reps pre-fill of 10 is where a 10 nobody entered came
+     * from.
+     */
+    public function test_a_cardio_set_is_not_given_reps_or_a_weight_nobody_entered(): void
+    {
+        [$user, $workout, $line] = $this->aSessionWith('cardio');
+
+        $this->browse(function (Browser $browser) use ($user, $workout): void {
+            $browser->loginAs(User::find($user->id))
+                ->resizeToIphone15()
+                ->visit('/workouts/'.$workout->id)
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitFor('@add-set-0', 15)
+                ->click('@add-set-0')
+                ->waitFor('@distance-input-0-0', 15)
+                ->pause(2000)
+                ->assertNoConsoleExceptions();
+        });
+
+        $set = $line->sets()->first();
+
+        $this->assertNotNull($set, 'the set never reached the database');
+        $this->assertNull($set->reps, 'a cardio set was given reps the user never entered');
+        $this->assertNull($set->weight, 'a cardio set was given a weight the user never entered');
+    }
+
+    /**
+     * The mirror of the above: a strength set has no distance and no duration.
+     */
+    public function test_a_strength_set_is_not_given_a_distance_or_a_duration_nobody_entered(): void
+    {
+        [$user, $workout, $line] = $this->aSessionWith('strength');
+
+        $this->browse(function (Browser $browser) use ($user, $workout): void {
+            $browser->loginAs(User::find($user->id))
+                ->resizeToIphone15()
+                ->visit('/workouts/'.$workout->id)
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitFor('@add-set-0', 15)
+                ->click('@add-set-0')
+                ->waitFor('@weight-input-0-0', 15)
+                ->pause(2000)
+                ->assertNoConsoleExceptions();
+        });
+
+        $set = $line->sets()->first();
+
+        $this->assertNotNull($set, 'the set never reached the database');
+        $this->assertNull($set->distance_km, 'a strength set was given a distance the user never entered');
+        $this->assertNull($set->duration_seconds, 'a strength set was given a duration the user never entered');
+    }
+
+    /**
      * The same field, on an exercise that only has a duration.
      */
     public function test_a_timed_duration_reaches_the_database(): void

@@ -234,6 +234,78 @@ describe('Workouts/Show — duration entry on a cardio exercise', () => {
 })
 
 /**
+ * A new set was filled in with all four measurements whatever the exercise
+ * measured, so a cardio set was created carrying `reps: 10` and a weight of 0 —
+ * fields its row does not even render — and a timed one carried a distance of 0
+ * on top. Numbers the user never entered, on an exercise that has no such field.
+ * The reported "10 out of nowhere" is the reps pre-fill landing in rows that
+ * have no reps.
+ */
+describe('Workouts/Show — a new set carries only what its exercise measures', () => {
+    const createdSet = { id: 77 }
+
+    const addSetOn = async (exercise) => {
+        post.mockResolvedValue({ data: { data: createdSet } })
+
+        const workout = {
+            id: 1,
+            name: 'Séance',
+            started_at: '2026-07-29T08:00:00.000000Z',
+            ended_at: null,
+            workout_lines: [{ id: 10, order: 0, exercise, sets: [] }],
+        }
+
+        const wrapper = await mountPage(workout)
+
+        await wrapper.find('[dusk="add-set-0"]').trigger('click')
+        await flushPromises()
+
+        return wrapper
+    }
+
+    it('sends a cardio set with no weight and no reps', async () => {
+        await addSetOn(CARDIO)
+
+        const [, body] = post.mock.calls.at(-1)
+
+        expect(Object.keys(body).sort()).toEqual(
+            ['distance_km', 'duration_seconds', 'is_completed', 'workout_line_id'].sort(),
+        )
+        expect(body).not.toHaveProperty('reps')
+        expect(body).not.toHaveProperty('weight')
+    })
+
+    it('sends a timed set with only a duration', async () => {
+        await addSetOn({ ...CARDIO, id: 7, type: 'timed' })
+
+        const [, body] = post.mock.calls.at(-1)
+
+        expect(Object.keys(body).sort()).toEqual(['duration_seconds', 'is_completed', 'workout_line_id'].sort())
+        expect(body).not.toHaveProperty('distance_km')
+        expect(body).not.toHaveProperty('reps')
+    })
+
+    it('sends a strength set with no distance and no duration', async () => {
+        await addSetOn(STRENGTH)
+
+        const [, body] = post.mock.calls.at(-1)
+
+        expect(Object.keys(body).sort()).toEqual(['is_completed', 'reps', 'weight', 'workout_line_id'].sort())
+        expect(body).not.toHaveProperty('distance_km')
+        expect(body).not.toHaveProperty('duration_seconds')
+    })
+
+    it('leaves the row itself without the fields its exercise does not measure', async () => {
+        const wrapper = await addSetOn(CARDIO)
+        const set = wrapper.vm.localWorkout.workout_lines[0].sets[0]
+
+        expect(set).not.toHaveProperty('reps')
+        expect(set).not.toHaveProperty('weight')
+        expect(set.distance_km).toBe(0)
+    })
+})
+
+/**
  * Two PATCHes for one field are ordinary — the debounce is flushed by validating
  * a set, and the next keystroke starts another — and nothing makes them come
  * home in the order they left.
