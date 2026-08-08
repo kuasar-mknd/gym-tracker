@@ -1388,15 +1388,18 @@ onUnmounted(() => {
                       swipe state reset, inputs re-created, and a field being
                       edited losing focus mid-keystroke.
 
-                      The set's id has exactly the same defect and outlived that
-                      fix. An optimistic row wears a placeholder until the server
-                      answers, and `tempSet.id = realSetId` then changes the key —
-                      so Vue tore down the row and built a new one, throwing away
-                      the half-typed value in the input and re-rendering it from
-                      the model. Adding a set and typing into it straight away is
-                      the normal way to use this screen, and the faster you are
-                      the more reliably you lost the entry. rowKey is issued once
-                      and survives the id swap.
+                      The set's id has the same defect and outlived that fix: an
+                      optimistic row wears a placeholder until the server answers,
+                      and `tempSet.id = realSetId` then changes the key, so Vue
+                      tears the row down and builds a new one — swipe state and
+                      inputs included — at the moment the user is most likely to
+                      be filling it in.
+
+                      Demonstrated, and no more than that: the guard in
+                      workoutSetEntry.test.js fails without this, showing the node
+                      really is replaced. It was written while chasing a lost
+                      duration entry and did NOT fix it, so nothing here should be
+                      read as a diagnosis of that.
                     -->
                     <SwipeableRow v-for="(set, index) in line.sets" :key="rowKey(set)">
                         <!-- The row was swipeable with no action behind it: dragging
