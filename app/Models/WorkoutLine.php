@@ -57,11 +57,23 @@ class WorkoutLine extends Model
     }
 
     /**
+     * The sets of this line, in the order they were added.
+     *
+     * Ordered explicitly, because without an ORDER BY the database is free to
+     * hand back whatever the index it picked happens to give. This table carries
+     * sets_workout_line_id_weight_reps_index (workout_line_id, weight, reps)
+     * alongside the plain workout_line_id one, and when the optimiser chooses it
+     * the sets come back sorted BY WEIGHT — so correcting the weight of a set
+     * moved it up or down the list on the next load. Creation order is the only
+     * order a set has, and every caller of this relation renders it as such: the
+     * session screen, the API, the exercise history, and the template copied out
+     * of a workout.
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Set, $this>
      */
     public function sets(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(Set::class);
+        return $this->hasMany(Set::class)->orderBy('id');
     }
 
     /**

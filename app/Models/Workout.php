@@ -42,11 +42,18 @@ class Workout extends Model
     }
 
     /**
+     * The exercises of this session, in the order they were added.
+     *
+     * `order` alone does not settle it: the column defaults to 0, so every line
+     * written before CreateWorkoutLineAction started assigning max+1 shares the
+     * same value and their relative order is whatever the database feels like.
+     * `id` breaks the tie the only way that means anything here.
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutLine, $this>
      */
     public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(WorkoutLine::class)->orderBy('order');
+        return $this->hasMany(WorkoutLine::class)->orderBy('order')->orderBy('id');
     }
 
     public function getActivitylogOptions(): LogOptions

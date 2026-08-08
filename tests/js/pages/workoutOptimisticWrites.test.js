@@ -228,7 +228,9 @@ describe('Workouts/Show — a refused edit reverts', () => {
         await new Promise((resolve) => setTimeout(resolve, 1100))
         await flushPromises()
 
-        expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: '999' })
+        // A number, not the DOM's string: the column is numeric and `'80' !== 80`
+        // made every comparison on this page disagree with itself.
+        expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: 999 })
         expect(lines(wrapper)[0].sets[0].weight).toBe(80)
     })
 })
@@ -292,7 +294,7 @@ describe('Workouts/Show — leaving the page mid-edit', () => {
         wrapper.unmount()
         await flushPromises()
 
-        expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: '105' })
+        expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: 105 })
     })
 })
 
