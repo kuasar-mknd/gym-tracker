@@ -136,6 +136,23 @@ const timerRun = ref(0)
 let tempIdCounter = 0
 
 /**
+ * A row's identity for Vue, which must not change while the row is on screen.
+ *
+ * Ids do change here: an optimistic row wears `temp-4` until the server answers
+ * and is then given the real one. Keying a v-for on that made the key change
+ * under a row the user was typing into, and Vue answers a changed key by
+ * destroying the node and building a new one — the input, its half-typed value
+ * and its focus with it.
+ *
+ * So optimistic rows carry a key issued once at creation, and rows that came
+ * from the server fall back to their id, which for them never changes. The two
+ * cannot collide: one is a string with a prefix, the other a number.
+ */
+let rowKeyCounter = 0
+const newRowKey = () => `row-${++rowKeyCounter}`
+const rowKey = (row) => row._rowKey ?? row.id
+
+/**
  * Placeholder ids never leave this component. Every mutation that names a line
  * or a set asks here for the id to actually send, and waits if the creation is
  * still in flight — see Utils/pendingIds for what sending `temp-3` cost.
@@ -410,6 +427,7 @@ const addExercise = (exerciseId) => {
     // Optimistic: add line immediately
     const tempLine = {
         id: `temp-${++tempIdCounter}`,
+        _rowKey: newRowKey(),
         exercise_id: exerciseId,
         exercise: { ...exercise },
         sets: [],
@@ -644,6 +662,7 @@ const addSet = (lineId) => {
      */
     const tempSet = {
         id: `temp-${++tempIdCounter}`,
+        _rowKey: newRowKey(),
         is_completed: false,
         is_warmup: false,
         ...values,
@@ -1313,9 +1332,14 @@ onUnmounted(() => {
                 <p v-else class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
             </GlassCard>
 
+            <!-- Same reasoning as the set rows below: a line's id changes from
+                 placeholder to real one when its create lands, and re-keying on
+                 it rebuilt the whole exercise card — every set input inside it
+                 included — at the exact moment the user was filling in the first
+                 set of the exercise they had just added. -->
             <GlassCard
                 v-for="(line, lineIndex) in localWorkout.workout_lines"
-                :key="line.id"
+                :key="rowKey(line)"
                 :dusk="`exercise-card-${lineIndex}`"
                 :data-line-id="line.id"
                 :dusk-id="`exercise-line-${line.id}`"
@@ -1358,12 +1382,23 @@ onUnmounted(() => {
 
                 <div class="space-y-2">
                     <!--
-                      Keyed on the set alone. Folding the index in made the key
-                      change for every row below a deletion, so Vue destroyed and
-                      rebuilt them all: swipe state reset, inputs re-created, and
-                      a field being edited losing focus mid-keystroke.
+                      Keyed on something that never changes for the life of the
+                      row. Folding the index in made the key change for every row
+                      below a deletion, so Vue destroyed and rebuilt them all:
+                      swipe state reset, inputs re-created, and a field being
+                      edited losing focus mid-keystroke.
+
+                      The set's id has exactly the same defect and outlived that
+                      fix. An optimistic row wears a placeholder until the server
+                      answers, and `tempSet.id = realSetId` then changes the key —
+                      so Vue tore down the row and built a new one, throwing away
+                      the half-typed value in the input and re-rendering it from
+                      the model. Adding a set and typing into it straight away is
+                      the normal way to use this screen, and the faster you are
+                      the more reliably you lost the entry. rowKey is issued once
+                      and survives the id swap.
                     -->
-                    <SwipeableRow v-for="(set, index) in line.sets" :key="set.id">
+                    <SwipeableRow v-for="(set, index) in line.sets" :key="rowKey(set)">
                         <!-- The row was swipeable with no action behind it: dragging
                              it snapped it open onto an empty background and left it
                              there. Same delete the row's own button calls, reached

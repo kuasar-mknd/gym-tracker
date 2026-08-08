@@ -234,6 +234,53 @@ describe('Workouts/Show — duration entry on a cardio exercise', () => {
 })
 
 /**
+ * An optimistic row wears a placeholder id until the server answers, and
+ * `tempSet.id = realSetId` then changed the v-for key under it. Vue answers a
+ * changed key by destroying the node and building a new one, so the input the
+ * user was typing into was replaced mid-entry: the half-typed value went with
+ * it and the field re-rendered from the model.
+ *
+ * Adding a set and typing into it immediately is the normal way to use this
+ * screen, and the faster you were the more reliably you lost the entry. A
+ * browser test caught this — a duration typed straight after adding a timed set
+ * came back as the pre-fill.
+ */
+describe('Workouts/Show — a row being typed into while its create lands', () => {
+    it('keeps the same input element when the exercise is given its real id', async () => {
+        const lineCreated = deferred()
+        post.mockImplementation((url) =>
+            url.includes('workout-lines')
+                ? lineCreated.promise
+                : Promise.resolve({ data: { data: { id: 55, weight: 0, reps: 10 } } }),
+        )
+
+        const wrapper = await mountPage({
+            id: 1,
+            name: 'Séance',
+            started_at: '2026-07-29T08:00:00.000000Z',
+            ended_at: null,
+            workout_lines: [],
+        })
+
+        wrapper.vm.showAddExercise = true
+        await wrapper.vm.$nextTick()
+        await wrapper.find(`[dusk="select-exercise-${STRENGTH.id}"]`).trigger('click')
+        await flushPromises()
+
+        await wrapper.find('[dusk="add-set-0"]').trigger('click')
+        await flushPromises()
+
+        const before = wrapper.find('[dusk="weight-input-0-0"]').element
+
+        lineCreated.resolve({ data: { data: { id: 10, order: 0, exercise: STRENGTH, sets: [] } } })
+        await flushPromises()
+
+        expect(wrapper.vm.localWorkout.workout_lines[0].id).toBe(10)
+        expect(wrapper.find('[dusk="weight-input-0-0"]').element).toBe(before)
+    })
+})
+
+/**
  * A new set was filled in with all four measurements whatever the exercise
  * measured, so a cardio set was created carrying `reps: 10` and a weight of 0 —
  * fields its row does not even render — and a timed one carried a distance of 0
