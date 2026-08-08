@@ -811,6 +811,14 @@ const nextWrite = (key) => (writeSeq[key] = (writeSeq[key] ?? 0) + 1)
 const isLatestWrite = (key, seq) => writeSeq[key] === seq
 
 /**
+ * The write currently in flight for each set and field, so the next one can
+ * queue behind it rather than overlap it. See `execute` in updateSet.
+ *
+ * @type {Map<string, Promise>}
+ */
+const fieldWriteChains = new Map()
+
+/**
  * The value the server last confirmed for a field, which is the only value a
  * rollback may restore.
  *
@@ -892,7 +900,7 @@ const updateSet = (set, field, rawValue) => {
 
     const seq = nextWrite(timerKey)
 
-    const execute = () =>
+    const send = () =>
         patchSet(set, { [field]: value })
             .then((response) => {
                 clearDraftField(set.id, field)
@@ -944,6 +952,27 @@ const updateSet = (set, field, rawValue) => {
                 )
             })
 
+    /**
+     * Queues this write behind the one before it for the same field.
+     *
+     * The sequence guard above settles which ANSWER is worth believing, and that
+     * alone is not enough: it protects the screen while leaving the database to
+     * whichever request the server happened to handle last. Two PATCHes for one
+     * field really can overlap — a flush pushes the first one out and the next
+     * keystroke starts another — and the older value landing second is written,
+     * permanently, over the newer one. The user's last word has to be the last
+     * word in the row too.
+     *
+     * Settled rather than resolved: a refused write must not wedge the field.
+     */
+    const execute = () => {
+        const inOrder = (fieldWriteChains.get(timerKey) ?? Promise.resolve()).catch(() => {}).then(send)
+
+        fieldWriteChains.set(timerKey, inOrder)
+
+        return inOrder
+    }
+
     writeDraftField(set.id, field, value)
 
     updateTimers[timerKey] = {
@@ -964,6 +993,11 @@ const removeSet = (setId) => {
             clearTimeout(updateTimers[timerKey].timerId)
             delete updateTimers[timerKey]
         }
+
+        // Nothing may queue behind a row that no longer exists, and the entries
+        // would otherwise outlive every set the page ever showed.
+        fieldWriteChains.delete(timerKey)
+        confirmedValues.delete(timerKey)
     })
 
     // The row is going away; its draft must not outlive it and be replayed

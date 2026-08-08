@@ -266,6 +266,44 @@ describe('Workouts/Show — replies that arrive out of order', () => {
     })
 
     /**
+     * Guarding which answer to believe protects the screen and leaves the
+     * database to whichever request the server handled last. With both PATCHes
+     * in flight at once the older value could be written over the newer one,
+     * permanently — so they go out one at a time.
+     */
+    it('does not put two writes for one field on the wire at once', async () => {
+        const first = deferred()
+        const sent = []
+
+        patch.mockImplementation((url, body) => {
+            sent.push(body.weight)
+
+            return sent.length === 1 ? first.promise : Promise.resolve({ data: { data: { weight: body.weight } } })
+        })
+
+        const wrapper = await mountPage(strengthWorkout)
+        const set = firstSet(wrapper)
+
+        wrapper.vm.updateSet(set, 'weight', 100)
+        wrapper.vm.flushPendingUpdates(42)
+        await flushPromises()
+
+        wrapper.vm.updateSet(set, 'weight', 110)
+        wrapper.vm.flushPendingUpdates(42)
+        await flushPromises()
+
+        // The second write is still queued: the first has not come back.
+        expect(sent).toEqual([100])
+
+        first.resolve({ data: { data: { weight: 100 } } })
+        await flushPromises()
+
+        // Sent second, so it is the row's final value on the server too.
+        expect(sent).toEqual([100, 110])
+        expect(firstSet(wrapper).weight).toBe(110)
+    })
+
+    /**
      * `previousValue` was read off the set at call time, so typing twice inside
      * the debounce window captured the first typed value — one the server had
      * never accepted — and a refusal "restored" it.
