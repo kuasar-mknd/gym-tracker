@@ -1538,6 +1538,22 @@ onUnmounted(() => {
                             </template>
 
                             <template v-else-if="line.exercise.type === 'timed'">
+                                <!--
+                                  min-w-0 flex-1, like every other input in this
+                                  row. This was the one field with a bare w-full:
+                                  a flex item's min-width defaults to auto, so it
+                                  cannot shrink below its content and a 100% basis
+                                  pushes the row wider than the card it sits in.
+
+                                  It is also the only field this screen has that
+                                  could not be filled in. The cardio duration input
+                                  is identical to this one character for character
+                                  apart from the width class, and typing into that
+                                  one works; typing into this one leaves it empty,
+                                  whether the set has just been created or has
+                                  existed for seconds. That is the difference left
+                                  once the timing explanation was ruled out.
+                                -->
                                 <input
                                     type="time"
                                     step="1"
@@ -1547,7 +1563,7 @@ onUnmounted(() => {
                                     :disabled="isFinished"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
                                     :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-full rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
                             </template>
 

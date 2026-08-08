@@ -189,29 +189,21 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitFor('@add-set-0', 15)
                 ->click('@add-set-0')
-                ->waitFor('@duration-input-0-0', 15)
-                /**
-                 * Marks the element itself, so the next assertion can say whether
-                 * the node the keystrokes went to is still the node on screen.
-                 * A replaced node and a re-written value both end as an empty
-                 * field, and they are fixed in different places.
-                 */
-                ->script('document.querySelector(\'[dusk="duration-input-0-0"]\').dataset.probe = "kept";')
-                ->type('@duration-input-0-0', '001000')
+                ->waitFor('@duration-input-0-0', 15);
+
+            /**
+             * Its own statement: script() returns the evaluated values, not the
+             * browser, so chaining anything onto it calls a Browser method on an
+             * array. That mistake cost this measurement a whole CI round.
+             *
+             * The mark says whether the node the keystrokes went to is still the
+             * node on screen. A replaced node and a re-written value both end as
+             * an empty field and are fixed in different places.
+             */
+            $browser->script('document.querySelector(\'[dusk="duration-input-0-0"]\').dataset.probe = "kept";');
+
+            $browser->type('@duration-input-0-0', '001000')
                 ->assertAttribute('@duration-input-0-0', 'data-probe', 'kept')
-                /**
-                 * Asked before the value is committed, to separate two failures
-                 * that look identical from the database.
-                 *
-                 * This test fails with the duration still at its pre-fill of 30
-                 * and no PATCH sent at all, while the cardio case above — same
-                 * field, same handler, same starting value — passes. The only
-                 * difference is that this one types the instant the row appears,
-                 * so the set is still being created. Either the keystrokes never
-                 * reached the field, or they did and the commit was lost; the
-                 * answer decides where to look, and guessing between them has
-                 * already cost one wrong fix.
-                 */
                 ->assertInputValue('@duration-input-0-0', '00:10:00')
                 ->click('#main-content')
                 ->pause(3000)
