@@ -1540,19 +1540,17 @@ onUnmounted(() => {
                             <template v-else-if="line.exercise.type === 'timed'">
                                 <!--
                                   min-w-0 flex-1, like every other input in this
-                                  row. This was the one field with a bare w-full:
-                                  a flex item's min-width defaults to auto, so it
-                                  cannot shrink below its content and a 100% basis
-                                  pushes the row wider than the card it sits in.
+                                  row. This was the one field with a bare w-full,
+                                  and a flex item's min-width defaults to auto, so
+                                  it cannot shrink below its content and a 100%
+                                  basis pushes the row wider than its card.
 
-                                  It is also the only field this screen has that
-                                  could not be filled in. The cardio duration input
-                                  is identical to this one character for character
-                                  apart from the width class, and typing into that
-                                  one works; typing into this one leaves it empty,
-                                  whether the set has just been created or has
-                                  existed for seconds. That is the difference left
-                                  once the timing explanation was ruled out.
+                                  A consistency fix and nothing more. It was made
+                                  while chasing a duration that could not be typed
+                                  into on this exercise type, and it did NOT fix
+                                  that — the field is still empty after typing.
+                                  Read this as "the odd one out now matches its
+                                  siblings", not as a diagnosis.
                                 -->
                                 <input
                                     type="time"
