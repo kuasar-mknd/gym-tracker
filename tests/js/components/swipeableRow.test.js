@@ -2,16 +2,42 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 
-const mountRow = (props = {}) =>
+const mountRow = (props = {}, slots = {}) =>
     mount(SwipeableRow, {
         props,
         slots: {
             'action-left': '<button type="button" data-testid="edit">Modifier</button>',
             'action-right': '<button type="button" data-testid="delete">Supprimer</button>',
             default: '<a href="/workouts/1">Séance</a>',
+            ...slots,
         },
         attachTo: document.body,
     })
+
+/** A set row, and a session card: their only action is the delete on the right. */
+const mountDeleteOnlyRow = () =>
+    mount(SwipeableRow, {
+        slots: {
+            'action-right': '<button type="button" data-testid="delete">Supprimer</button>',
+            default: '<a href="/workouts/1">Séance</a>',
+        },
+        attachTo: document.body,
+    })
+
+const drag = async (wrapper, from, to) => {
+    const content = wrapper.find('.relative.z-10')
+
+    await content.trigger('touchstart', { touches: [{ clientX: from, clientY: 10 }] })
+    await content.trigger('touchmove', { touches: [{ clientX: to, clientY: 10 }] })
+}
+
+const sideOpacity = (wrapper, side) =>
+    Number.parseFloat(
+        wrapper
+            .find(`.absolute.inset-y-0.${side}-0`)
+            .attributes('style')
+            .match(/opacity:\s*([\d.]+)/)[1],
+    )
 
 const actionsLayer = (wrapper) => wrapper.find('.absolute.inset-0')
 
@@ -167,6 +193,64 @@ describe('SwipeableRow', () => {
         // not the full 200 the finger travelled.
         expect(dragged).toBeGreaterThan(64)
         expect(rightAction().attributes('style')).toContain(`width: ${dragged}px`)
+
+        wrapper.unmount()
+    })
+
+    /**
+     * Sizing an action to the offset keeps it from bleeding through the content
+     * beside it, but not through content that moved *towards* it. A right action
+     * is anchored to the right edge, so a swipe to the right slides the glass
+     * over it instead of away from it, and the values were washed red by an
+     * action that was uncovering nothing.
+     */
+    it('draws only the action the swipe is uncovering', async () => {
+        const wrapper = mountRow()
+
+        await drag(wrapper, 100, 200)
+
+        expect(translateOf(wrapper)).toBeGreaterThan(0)
+        expect(sideOpacity(wrapper, 'left')).toBe(1)
+        expect(sideOpacity(wrapper, 'right')).toBe(0)
+
+        wrapper.unmount()
+    })
+
+    it('draws the other one the other way', async () => {
+        const wrapper = mountRow()
+
+        await drag(wrapper, 200, 100)
+
+        expect(translateOf(wrapper)).toBeLessThan(0)
+        expect(sideOpacity(wrapper, 'right')).toBe(1)
+        expect(sideOpacity(wrapper, 'left')).toBe(0)
+
+        wrapper.unmount()
+    })
+
+    /**
+     * A set row has only a delete. Pulling it the other way used to slide the
+     * whole row off its card to reveal bare background — and, once the action
+     * stopped being half the row, the delete panel itself through the glass.
+     */
+    it('does not follow a drag towards a side with no action', async () => {
+        const wrapper = mountDeleteOnlyRow()
+
+        await drag(wrapper, 100, 260)
+
+        expect(translateOf(wrapper)).toBe(0)
+        expect(sideOpacity(wrapper, 'right')).toBe(0)
+
+        wrapper.unmount()
+    })
+
+    it('still follows a drag towards the side that has one', async () => {
+        const wrapper = mountDeleteOnlyRow()
+
+        await drag(wrapper, 260, 100)
+
+        expect(translateOf(wrapper)).toBeLessThan(0)
+        expect(sideOpacity(wrapper, 'right')).toBe(1)
 
         wrapper.unmount()
     })
