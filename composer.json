@@ -32,7 +32,7 @@
         "spatie/laravel-activitylog": "^4.0",
         "spatie/laravel-backup": "^10.3",
         "spatie/laravel-csp": "^3.21",
-        "spatie/laravel-query-builder": "^6.4",
+        "spatie/laravel-query-builder": "^7.3",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
