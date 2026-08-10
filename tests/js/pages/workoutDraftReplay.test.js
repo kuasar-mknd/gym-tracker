@@ -4,6 +4,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 const patch = vi.fn()
 
 const failedRequests = vi.fn(() => [])
+const clearFailedRequests = vi.fn()
 
 vi.mock('@/Utils/SyncService', () => ({
     default: {
@@ -12,6 +13,7 @@ vi.mock('@/Utils/SyncService', () => ({
         delete: vi.fn(),
         get: vi.fn(),
         failedRequests: () => failedRequests(),
+        clearFailedRequests: () => clearFailedRequests(),
     },
 }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: vi.fn() }))
@@ -76,6 +78,7 @@ const draft = () => JSON.parse(localStorage.getItem(DRAFT_KEY))
 beforeEach(() => {
     localStorage.clear()
     patch.mockReset()
+    clearFailedRequests.mockReset()
     failedRequests.mockReturnValue([])
 })
 
@@ -155,6 +158,34 @@ describe('Workouts/Show — offline draft replay', () => {
         const wrapper = await mountPage()
 
         expect(marker(wrapper).exists()).toBe(true)
+
+        wrapper.unmount()
+    })
+
+    /**
+     * The bucket is written on every refusal and was emptied by nobody:
+     * clearFailedRequests() had no caller anywhere in the app. One create the
+     * server turned down therefore announced itself on every visit to the
+     * session, for ever, with no way to acknowledge it — which is what it was
+     * reported as, a banner that "appears by default when you open a session".
+     */
+    it('acknowledges the stored refusals it has just shown', async () => {
+        failedRequests.mockReturnValue([{ url: '/api/v1/sets', data: { workout_line_id: 10 } }])
+
+        const wrapper = await mountPage()
+
+        expect(clearFailedRequests).toHaveBeenCalledTimes(1)
+
+        wrapper.unmount()
+    })
+
+    it('says nothing on a mount with nothing to report', async () => {
+        failedRequests.mockReturnValue([])
+
+        const wrapper = await mountPage()
+
+        expect(clearFailedRequests).not.toHaveBeenCalled()
+        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(false)
 
         wrapper.unmount()
     })

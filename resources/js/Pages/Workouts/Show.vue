@@ -814,12 +814,58 @@ const handleSyncFailure = (event) => {
      * the user was told nothing at all. The write is recorded in SyncService's
      * failed bucket either way; this is the part they can see.
      *
-     * There is no row to mark, because the thing that failed is the row itself.
-     * Saying so plainly beats a silent gap in a workout.
+     * There is no row to mark, because the thing that failed is the row itself,
+     * so the message has to carry the identification instead — and name the
+     * exercise. "An item of the session" leaves someone scrolling their own
+     * workout trying to work out which set never made it.
      */
     if (/\/(sets|workout-lines)(\?|$)/.test(url)) {
-        reportEditFailure("Un élément de la séance n'a pas pu être enregistré.")
+        reportEditFailure(describeFailedCreate(url, event.detail?.data))
     }
+}
+
+/** The request body, whether it was queued as an object or already serialised. */
+const payloadOf = (data) => {
+    if (typeof data !== 'string') {
+        return data ?? {}
+    }
+
+    try {
+        return JSON.parse(data) ?? {}
+    } catch {
+        return {}
+    }
+}
+
+const exerciseNamed = (exerciseId) =>
+    localExercises.value.find((exercise) => String(exercise.id) === String(exerciseId))?.name
+
+/**
+ * Names what the server refused, falling back to the old wording only when the
+ * payload cannot be tied to anything on screen — a set whose line has since been
+ * removed, say. Being vague is better than being wrong about which set it was.
+ */
+const describeFailedCreate = (url, data) => {
+    const payload = payloadOf(data)
+    const generic = "Un élément de la séance n'a pas pu être enregistré."
+
+    if (/\/workout-lines(\?|$)/.test(url)) {
+        const name = exerciseNamed(payload.exercise_id)
+
+        return name ? `« ${name} » n'a pas pu être ajouté à la séance.` : "Un exercice n'a pas pu être ajouté."
+    }
+
+    const line = localWorkout.value.workout_lines?.find(
+        (candidate) => String(candidate.id) === String(payload.workout_line_id),
+    )
+
+    if (!line) {
+        return generic
+    }
+
+    const position = (line.sets?.length ?? 0) || 1
+
+    return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
 }
 
 /**
@@ -842,8 +888,28 @@ const reportEditFailure = (message) => {
     }, 6000)
 }
 
+/**
+ * Announces what was refused while the page was away — once.
+ *
+ * The failed bucket is written on every refusal and, until now, emptied by
+ * nobody: `clearFailedRequests()` had no caller anywhere in the app. So a single
+ * create the server turned down went on announcing itself on every single visit
+ * to the session, for ever, with no way to acknowledge it. That is not a warning
+ * any more, it is furniture, and the user reported it as exactly that.
+ *
+ * The payload goes through too, so the message can name what failed instead of
+ * saying "an item of the session".
+ */
 const markQueuedFailuresOnMount = () => {
-    SyncService.failedRequests().forEach((failure) => handleSyncFailure({ detail: { url: failure.url } }))
+    const failures = SyncService.failedRequests()
+
+    if (failures.length === 0) {
+        return
+    }
+
+    failures.forEach((failure) => handleSyncFailure({ detail: { url: failure.url, data: failure.data } }))
+
+    SyncService.clearFailedRequests()
 }
 
 /**

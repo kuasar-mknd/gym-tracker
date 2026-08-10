@@ -487,21 +487,63 @@ describe('Workouts/Show — list identity', () => {
  * failed is the row itself.
  */
 describe('Workouts/Show — a refused create', () => {
-    const announce = (url) => window.dispatchEvent(new CustomEvent('sync:failed', { detail: { url, status: 422 } }))
+    const announce = (url, data) =>
+        window.dispatchEvent(new CustomEvent('sync:failed', { detail: { url, status: 422, data } }))
 
-    it('says something when a set could not be created', async () => {
+    const message = (wrapper) => wrapper.find('[dusk="set-edit-error"]').text()
+
+    /**
+     * "An item of the session could not be saved" is true and useless: it leaves
+     * someone scrolling their own workout trying to work out which set never
+     * made it. The payload travels with the event so this can name it.
+     */
+    it('names the exercise whose set could not be created', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        announce('/api/v1/sets', { workout_line_id: 10, weight: 60 })
+        await wrapper.vm.$nextTick()
+
+        expect(message(wrapper)).toContain('Développé couché')
+        expect(message(wrapper)).toContain('série')
+    })
+
+    /** The queue serialises some bodies before they are replayed. */
+    it('reads a payload that was already serialised', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        announce('/api/v1/sets', JSON.stringify({ workout_line_id: 10 }))
+        await wrapper.vm.$nextTick()
+
+        expect(message(wrapper)).toContain('Développé couché')
+    })
+
+    it('names the exercise that could not be added', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        announce('/api/v1/workout-lines', { exercise_id: 5 })
+        await wrapper.vm.$nextTick()
+
+        expect(message(wrapper)).toContain('Développé couché')
+    })
+
+    /**
+     * Vague beats wrong: a payload that no longer matches anything on screen —
+     * a line deleted since — must not name whichever row happens to be first.
+     */
+    it('falls back to the general wording when it cannot tell what failed', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        announce('/api/v1/sets', { workout_line_id: 999 })
+        await wrapper.vm.$nextTick()
+
+        expect(message(wrapper)).toContain('Un élément de la séance')
+        expect(message(wrapper)).not.toContain('Développé couché')
+    })
+
+    it('still says something when the event carries no payload at all', async () => {
         const wrapper = await mountPage(workoutWithSet)
 
         announce('/api/v1/sets')
-        await wrapper.vm.$nextTick()
-
-        expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(true)
-    })
-
-    it('says something when an exercise could not be created', async () => {
-        const wrapper = await mountPage(workoutWithSet)
-
-        announce('/api/v1/workout-lines')
         await wrapper.vm.$nextTick()
 
         expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(true)
