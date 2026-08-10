@@ -117,4 +117,57 @@ describe('SwipeableRow', () => {
 
         wrapper.unmount()
     })
+
+    /**
+     * An action is exactly the strip the content has uncovered, and never wider.
+     *
+     * Each action used to be half the row, with the content sitting on top of
+     * the other half — and the content is glass, `bg-white/10` over a row at
+     * `bg-white/80`. A red delete panel behind that does not stay behind it: on
+     * an open row it came through as a pink wash across the values. Fading the
+     * layer in with the drag was supposed to hide that, but the fade is complete
+     * by 20px and the row opens at 80, so by the time it mattered opacity was 1.
+     *
+     * Widths are the assertion that can be made without layout: jsdom gives
+     * every element a zero rect, so an overlap cannot be measured here. What it
+     * can hold is that the action is never asked to be wider than the gap.
+     */
+    it('sizes an action to the strip the content uncovers, never wider', async () => {
+        const wrapper = mountRow()
+        const widthOf = (side) =>
+            wrapper
+                .find(`.absolute.inset-y-0.${side}-0`)
+                .attributes('style')
+                .match(/width:\s*([\d.]+)px/)[1]
+
+        expect(widthOf('right')).toBe('80')
+        expect(widthOf('left')).toBe('80')
+
+        await wrapper.find('[data-testid="delete"]').trigger('focusin')
+
+        expect(Number(widthOf('right'))).toBe(Math.abs(translateOf(wrapper)))
+
+        wrapper.unmount()
+    })
+
+    /** An over-drag uncovers more than the snap width; the action has to follow. */
+    it('grows with an over-drag rather than leaving a gap', async () => {
+        const wrapper = mountRow({ actionThreshold: 64 })
+        const content = wrapper.find('.relative.z-10')
+        const rightAction = () => wrapper.find('.absolute.inset-y-0.right-0')
+
+        expect(rightAction().attributes('style')).toContain('width: 64px')
+
+        await content.trigger('touchstart', { touches: [{ clientX: 300, clientY: 10 }] })
+        await content.trigger('touchmove', { touches: [{ clientX: 100, clientY: 10 }] })
+
+        const dragged = Math.abs(translateOf(wrapper))
+
+        // Past the threshold the drag is damped, so this is well beyond 64 but
+        // not the full 200 the finger travelled.
+        expect(dragged).toBeGreaterThan(64)
+        expect(rightAction().attributes('style')).toContain(`width: ${dragged}px`)
+
+        wrapper.unmount()
+    })
 })

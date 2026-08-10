@@ -357,7 +357,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                 @click="confirmDeletion(workout)"
                                 :dusk="`delete-workout-${workout.id}`"
                                 :aria-label="`Supprimer la séance ${workout.name || 'sans nom'}`"
-                                class="flex h-full w-full items-center justify-end pr-6 text-white transition-all active:scale-95"
+                                class="flex h-full w-full items-center justify-center text-white transition-all active:scale-95"
                                 style="
                                     background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
                                     box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2);

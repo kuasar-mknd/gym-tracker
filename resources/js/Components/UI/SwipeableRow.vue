@@ -47,6 +47,21 @@ const actionStyle = computed(() => ({
     transition: isDragging.value ? 'none' : 'opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
 }))
 
+/**
+ * An action is exactly as wide as the strip the content has uncovered.
+ *
+ * It used to be half the row, which the content then sat on top of — and the
+ * content is glass, `bg-white/10` over a row at `bg-white/80`. A red delete
+ * panel behind that does not stay behind it: it came through as a pink wash
+ * across the middle of the row, over the values. Fading the layer in with the
+ * drag was meant to hide that, but the fade completes long before the row is
+ * open, so by the time it mattered the opacity was already 1.
+ *
+ * Sized to the offset, the two layers never overlap and there is nothing to
+ * bleed. It stays at least the snap width so the action is fully drawn at rest.
+ */
+const actionWidth = computed(() => `${Math.max(props.actionThreshold, Math.abs(offset.value))}px`)
+
 // Methods
 function onTouchStart(e) {
     if (props.disabled) return
@@ -175,20 +190,26 @@ defineExpose({ close })
         <div
             v-if="!disabled"
             ref="actionsLayer"
-            class="absolute inset-0 flex w-full"
+            class="absolute inset-0"
             :style="actionStyle"
             @focusin="onActionFocus"
             @focusout="onActionBlur"
         >
             <!-- Left Action Slot (revealed when swiping right) -->
-            <div ref="leftAction" class="flex w-1/2 items-center justify-start pl-4" v-if="$slots['action-left']">
+            <div
+                ref="leftAction"
+                class="absolute inset-y-0 left-0 flex items-stretch overflow-hidden"
+                :style="{ width: actionWidth }"
+                v-if="$slots['action-left']"
+            >
                 <slot name="action-left" />
             </div>
 
             <!-- Right Action Slot (revealed when swiping left) -->
             <div
                 ref="rightAction"
-                class="ml-auto flex w-1/2 items-center justify-end pr-4"
+                class="absolute inset-y-0 right-0 flex items-stretch overflow-hidden"
+                :style="{ width: actionWidth }"
                 v-if="$slots['action-right']"
             >
                 <slot name="action-right" />

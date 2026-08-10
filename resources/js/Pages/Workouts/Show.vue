@@ -1344,7 +1344,7 @@ onUnmounted(() => {
                                 @click="removeSet(set.id)"
                                 :dusk="`swipe-remove-set-${lineIndex}-${index}`"
                                 :aria-label="`Supprimer la série ${index + 1}`"
-                                class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
+                                class="flex h-full w-full items-center justify-center bg-red-500 text-white"
                             >
                                 <span class="flex flex-col items-center" aria-hidden="true">
                                     <span class="material-symbols-outlined text-2xl">delete</span>
