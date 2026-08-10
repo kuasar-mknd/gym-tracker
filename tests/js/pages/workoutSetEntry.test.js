@@ -129,54 +129,29 @@ beforeEach(() => {
 afterEach(() => localStorage.clear())
 
 /**
- * A time input reports an EMPTY string for as long as its segments are
- * incomplete, and the handler used to run `val.split(':').map(Number)` on it
- * regardless: `['']` leaves m and s undefined, and the arithmetic yields NaN.
+ * The duration used to be read out of an `<input type="time">`, which reports an
+ * EMPTY value while its segments are incomplete — and the handler ran
+ * `val.split(':').map(Number)` on it regardless, so a NaN was written onto the
+ * set, wiped the field mid-entry and reached the database as null.
  *
- * That NaN was written onto the set, which both wiped the field the user was
- * typing into — `secondsToTime(NaN)` is '00:00:00', a different string from what
- * the browser held, so Vue assigned it back over the half-typed value — and
- * reached the database, because `JSON.stringify(NaN)` is `null`. The duration
- * could not be entered, and a duration nobody typed was saved.
+ * That whole class of failure is gone with the string: DurationWheel emits whole
+ * seconds. What is worth guarding now is the seam — that the page records the
+ * seconds it is handed, and still refuses anything that is not a number, since
+ * `updateSet` is what stood between NaN and the payload.
  */
-describe('Workouts/Show — duration entry on a cardio exercise', () => {
-    it('leaves the set alone while the time field is still incomplete', async () => {
+describe('Workouts/Show — duration entry', () => {
+    const wheel = (wrapper, dusk) => {
+        const component = wrapper.findComponent(`[dusk="${dusk}"]`)
+
+        expect(component.exists(), `no duration wheel marked ${dusk}`).toBe(true)
+
+        return component
+    }
+
+    it('records the seconds the wheel emits, and sends them', async () => {
         const wrapper = await mountPage(cardioWorkout)
 
-        await type(wrapper, 'duration-input-0-0', '')
-
-        expect(firstSet(wrapper).duration_seconds).toBe(600)
-
-        await new Promise((resolve) => setTimeout(resolve, 1100))
-        await flushPromises()
-
-        expect(patch).not.toHaveBeenCalled()
-    })
-
-    it('never writes NaN onto the set or into a payload', async () => {
-        const wrapper = await mountPage(cardioWorkout)
-
-        // Every one of these leaves the set untouched: an incomplete entry is not
-        // a value, and committing anything for it — NaN, or the 0 that
-        // `Number('')` quietly produces — is a number the user never typed.
-        for (const partial of ['', ':', '--:--:--', '00:', '00: :30', 'abc']) {
-            await type(wrapper, 'duration-input-0-0', partial)
-
-            expect(firstSet(wrapper).duration_seconds, `"${partial}" changed the set`).toBe(600)
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1100))
-        await flushPromises()
-
-        expect(payloads().some((body) => 'duration_seconds' in body && !Number.isFinite(body.duration_seconds))).toBe(
-            false,
-        )
-    })
-
-    it('commits a complete value in seconds', async () => {
-        const wrapper = await mountPage(cardioWorkout)
-
-        await type(wrapper, 'duration-input-0-0', '00:25:30')
+        await wheel(wrapper, 'duration-input-0-0').vm.$emit('update:modelValue', 1530)
 
         expect(firstSet(wrapper).duration_seconds).toBe(1530)
 
@@ -186,29 +161,41 @@ describe('Workouts/Show — duration entry on a cardio exercise', () => {
         expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { duration_seconds: 1530 })
     })
 
-    it('accepts the two-part value Firefox reports when seconds are hidden', async () => {
+    it('hands the wheel the seconds the set holds', async () => {
         const wrapper = await mountPage(cardioWorkout)
 
-        await type(wrapper, 'duration-input-0-0', '00:25')
+        expect(wheel(wrapper, 'duration-input-0-0').props('modelValue')).toBe(600)
+    })
 
-        expect(firstSet(wrapper).duration_seconds).toBe(1500)
+    it('records a zero duration, which is a value someone chose', async () => {
+        const wrapper = await mountPage(cardioWorkout)
+
+        await wheel(wrapper, 'duration-input-0-0').vm.$emit('update:modelValue', 0)
+
+        expect(firstSet(wrapper).duration_seconds).toBe(0)
     })
 
     /**
-     * `new Date(s * 1000).toISOString().substr(11, 8)` is a clock reading, not a
-     * duration: it wrapped anything from 24h up back around, and threw RangeError
-     * on a non-finite value — in the middle of a render, taking the page with it.
-     * A time input cannot display 25 hours either, but the formatter's job is to
-     * report the seconds it was given rather than a different, plausible number.
+     * `updateSet` is the last guard before the payload, and NaN reaching it is
+     * exactly how a duration nobody entered used to be saved — `JSON.stringify`
+     * turns it into null. The wheel cannot emit one, but the guard is what makes
+     * that a component detail rather than the only thing standing in the way.
      */
-    it('formats a duration by arithmetic rather than as a clock reading', async () => {
+    it('refuses a duration that is not a number', async () => {
         const wrapper = await mountPage(cardioWorkout)
 
-        expect(wrapper.vm.secondsToTime(1530)).toBe('00:25:30')
-        expect(wrapper.vm.secondsToTime(90061)).toBe('25:01:01')
-        expect(wrapper.vm.secondsToTime(NaN)).toBe('00:00:00')
-        expect(wrapper.vm.secondsToTime(null)).toBe('00:00:00')
-        expect(wrapper.vm.secondsToTime(-5)).toBe('00:00:00')
+        for (const rubbish of [NaN, Infinity, 'abc', undefined]) {
+            await wheel(wrapper, 'duration-input-0-0').vm.$emit('update:modelValue', rubbish)
+
+            expect(firstSet(wrapper).duration_seconds, `${String(rubbish)} changed the set`).toBe(600)
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1100))
+        await flushPromises()
+
+        expect(payloads().some((body) => 'duration_seconds' in body && !Number.isFinite(body.duration_seconds))).toBe(
+            false,
+        )
     })
 
     /**

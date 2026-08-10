@@ -23,6 +23,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
+import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
 import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErrors'
 import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
@@ -1073,84 +1074,15 @@ const removeSet = (setId) => {
 const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
 
 /**
- * Plain arithmetic, not a Date.
+ * The duration is no longer parsed out of a string here.
  *
- * This was `new Date(s * 1000).toISOString().substr(11, 8)`, which is a clock
- * reading and not a duration: anything from 24h up wrapped silently back to
- * 00:00:00, and a non-finite value made toISOString throw RangeError in the
- * middle of a render. Durations here are minutes, but nothing stops a set from
- * holding a larger number and the field should show it rather than lie or crash.
+ * It was read from an <input type="time">, which reports an EMPTY value while
+ * its segments are incomplete — and the old parser did `val.split(':')` on it
+ * regardless, so a NaN was written onto the set, wiped the field mid-typing and
+ * reached the database as null. DurationWheel emits whole seconds and nothing
+ * else, so there is no string to mis-parse and no incomplete state to guard.
+ * The formatting it needs lives with it.
  */
-const secondsToTime = (value) => {
-    const total = Number(value)
-
-    if (!Number.isFinite(total) || total <= 0) {
-        return '00:00:00'
-    }
-
-    const seconds = Math.floor(total)
-    const pad = (n) => String(n).padStart(2, '0')
-
-    return `${pad(Math.floor(seconds / 3600))}:${pad(Math.floor((seconds % 3600) / 60))}:${pad(seconds % 60)}`
-}
-
-/**
- * Seconds from an <input type="time"> value, or null when there is no value to
- * read yet.
- *
- * A time input reports an EMPTY string for as long as its segments are
- * incomplete, and this used to do `val.split(':').map(Number)` on it: `['']`
- * gives m and s undefined, and `0 * 3600 + NaN * 60 + NaN` is NaN. That NaN was
- * written straight onto the set, which had two consequences and both were
- * visible to the user.
- *
- * It re-rendered the field. `secondsToTime(NaN)` is '00:00:00', a different
- * string from what the browser held, so Vue assigned it back onto the element
- * and the half-typed value was wiped with the caret thrown back to the hours
- * segment — the field genuinely could not be filled in.
- *
- * And it reached the database. `JSON.stringify(NaN)` is `null`, so the PATCH
- * cleared the duration, and the localStorage draft kept a null to replay on the
- * next mount. Values nobody typed, exactly as reported.
- *
- * Returning null says "nothing to commit" so the caller can leave the set alone.
- */
-const timeToSeconds = (val) => {
-    if (typeof val !== 'string' || val.trim() === '') {
-        return null
-    }
-
-    const parts = val.split(':')
-
-    if (parts.length < 2 || parts.length > 3) {
-        return null
-    }
-
-    // Firefox omits the seconds segment when it is not shown, so a two-part
-    // value is legitimate rather than something to refuse.
-    const [hours, minutes, seconds = '0'] = parts
-
-    // Digits, not "whatever Number() will swallow". `Number('')` is 0, so a
-    // half-written '00:' would otherwise commit a duration of zero — the same
-    // phantom value by a quieter route.
-    if (![hours, minutes, seconds].every((part) => /^\d+$/.test(part))) {
-        return null
-    }
-
-    const numbers = [hours, minutes, seconds].map(Number)
-
-    return numbers[0] * 3600 + numbers[1] * 60 + Math.floor(numbers[2])
-}
-
-const updateDurationFromTime = (set, val) => {
-    const seconds = timeToSeconds(val)
-
-    if (seconds === null) {
-        return
-    }
-
-    updateSet(set, 'duration_seconds', seconds)
-}
 
 /**
  * What a numeric field is worth once it leaves the DOM.
@@ -1524,44 +1456,22 @@ onUnmounted(() => {
                                     class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
                                 <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">km</span>
-                                <input
-                                    type="time"
-                                    step="1"
-                                    :value="secondsToTime(set.duration_seconds)"
-                                    @focus="$event.target.select()"
-                                    @change="(e) => updateDurationFromTime(set, e.target.value)"
+                                <DurationWheel
+                                    :model-value="set.duration_seconds"
+                                    @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
                                     :disabled="isFinished"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
-                                    :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-32 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                 />
                             </template>
 
                             <template v-else-if="line.exercise.type === 'timed'">
-                                <!--
-                                  min-w-0 flex-1, like every other input in this
-                                  row. This was the one field with a bare w-full,
-                                  and a flex item's min-width defaults to auto, so
-                                  it cannot shrink below its content and a 100%
-                                  basis pushes the row wider than its card.
-
-                                  A consistency fix and nothing more. It was made
-                                  while chasing a duration that appeared to be
-                                  untypable here, which turned out to be Dusk's
-                                  type() and not this field — see typeTime() in
-                                  DuskTestCase. Read this as "the odd one out now
-                                  matches its siblings", not as a diagnosis.
-                                -->
-                                <input
-                                    type="time"
-                                    step="1"
-                                    :value="secondsToTime(set.duration_seconds)"
-                                    @focus="$event.target.select()"
-                                    @change="(e) => updateDurationFromTime(set, e.target.value)"
+                                <DurationWheel
+                                    :model-value="set.duration_seconds"
+                                    @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
                                     :disabled="isFinished"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
-                                    :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                 />
                             </template>
 
