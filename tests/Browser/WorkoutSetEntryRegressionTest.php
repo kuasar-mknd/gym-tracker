@@ -176,6 +176,9 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
 
     /**
      * The same field, on an exercise that only has a duration.
+     *
+     * Typed while the create that gives the set its real id may still be in
+     * flight, so this also covers the row surviving that id swap.
      */
     public function test_a_timed_duration_reaches_the_database(): void
     {
@@ -192,17 +195,17 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('@duration-input-0-0', 15);
 
             /**
-             * Its own statement: script() returns the evaluated values, not the
-             * browser, so chaining anything onto it calls a Browser method on an
-             * array. That mistake cost this measurement a whole CI round.
+             * Marks the node before the id swap so the assertion below can tell
+             * that the field typed into is still the field on screen — a row
+             * rebuilt around the real id would drop this attribute and take the
+             * entry with it.
              *
-             * The mark says whether the node the keystrokes went to is still the
-             * node on screen. A replaced node and a re-written value both end as
-             * an empty field and are fixed in different places.
+             * Its own statement: script() returns the evaluated values, not the
+             * browser, so chaining onto it calls a Browser method on an array.
              */
             $browser->script('document.querySelector(\'[dusk="duration-input-0-0"]\').dataset.probe = "kept";');
 
-            $browser->type('@duration-input-0-0', '001000')
+            $browser->typeTime('@duration-input-0-0', '001000')
                 ->assertAttribute('@duration-input-0-0', 'data-probe', 'kept')
                 ->assertInputValue('@duration-input-0-0', '00:10:00')
                 ->click('#main-content')
@@ -217,24 +220,12 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
     }
 
     /**
-     * The control, on its second question.
+     * The same entry, made after the set has finished being created.
      *
-     * Its first was whether the create window mattered: it does not — waiting
-     * two seconds for the set to exist changed nothing, both this and the strict
-     * test end with an empty field. The probe then showed the node is not being
-     * replaced either. So neither timing nor the DOM identity explains it.
-     *
-     * What is left is the interaction itself. The cardio case, whose duration
-     * field is now markup-identical to this one, passes — and the only thing it
-     * does differently is fill another input in the row first, which leaves the
-     * row already focused. This control now taps the field before typing, which
-     * is what a person does and what Dusk's type() does not: it resolves the
-     * element and sends keys to it without ever clicking it.
-     *
-     * If this passes while the strict test still fails, the earlier failures were
-     * the harness typing into a never-focused lone time input — a test defect, to
-     * be fixed in the test. If it fails too, the field genuinely cannot be filled
-     * and the fix belongs in the app.
+     * The test above types into the row while the POST that gives the set its
+     * real id may still be in flight; this one waits for that to land first, so
+     * the two together cover a duration typed either side of the placeholder-to-
+     * real id swap. Both must reach the database.
      */
     public function test_a_timed_duration_typed_once_the_set_exists_reaches_the_database(): void
     {
@@ -249,10 +240,9 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('@add-set-0', 15)
                 ->click('@add-set-0')
                 ->waitFor('@duration-input-0-0', 15)
+                // The one difference from the test above: the create has landed.
                 ->pause(2000)
-                // The one difference from the strict test.
-                ->click('@duration-input-0-0')
-                ->type('@duration-input-0-0', '001000')
+                ->typeTime('@duration-input-0-0', '001000')
                 ->assertInputValue('@duration-input-0-0', '00:10:00')
                 ->click('#main-content')
                 ->pause(3000)

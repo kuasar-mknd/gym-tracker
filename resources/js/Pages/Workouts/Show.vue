@@ -1546,11 +1546,11 @@ onUnmounted(() => {
                                   basis pushes the row wider than its card.
 
                                   A consistency fix and nothing more. It was made
-                                  while chasing a duration that could not be typed
-                                  into on this exercise type, and it did NOT fix
-                                  that — the field is still empty after typing.
-                                  Read this as "the odd one out now matches its
-                                  siblings", not as a diagnosis.
+                                  while chasing a duration that appeared to be
+                                  untypable here, which turned out to be Dusk's
+                                  type() and not this field — see typeTime() in
+                                  DuskTestCase. Read this as "the odd one out now
+                                  matches its siblings", not as a diagnosis.
                                 -->
                                 <input
                                     type="time"

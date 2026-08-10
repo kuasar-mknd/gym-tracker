@@ -7,6 +7,7 @@ namespace Tests;
 use Facebook\WebDriver\Chrome\ChromeOptions;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
+use Facebook\WebDriver\WebDriverKeys;
 use Illuminate\Support\Collection;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
@@ -35,6 +36,39 @@ abstract class DuskTestCase extends BaseTestCase
                 style.innerHTML = '* { transition: none !important; animation: none !important; scroll-behavior: auto !important; }';
                 document.head.appendChild(style);
             ");
+
+            return $this;
+        });
+
+        /**
+         * Fills an <input type="time"> the way a person fills one.
+         *
+         * type() is clear() then sendKeys(), and neither half survives a time
+         * input: clear() empties every segment AND blurs the field, and the
+         * burst of keys that follows lands on an element that has just been
+         * re-focused mid-sequence. Measured on this very field, '001000' comes
+         * out as 00:00:00 and cardio's '002530' as 00:53:00 — both wrong, so
+         * this is the harness and not the page. Typed by hand, one digit at a
+         * time, both are exact.
+         *
+         * A time input is segments, not text: focus lands on one of hh/mm/ss
+         * and each digit fills the current one and advances. So tap it, walk
+         * left to hours wherever the tap landed — the geometric centre is
+         * hours today and would silently become minutes if the row were ever
+         * relaid out — and then send the digits singly.
+         */
+        Browser::macro('typeTime', function (string $selector, string $digits): object {
+            /** @var Browser $this */
+            $this->click($selector);
+
+            $keyboard = fn (string $key) => $this->driver->switchTo()->activeElement()->sendKeys($key);
+
+            $keyboard(WebDriverKeys::ARROW_LEFT);
+            $keyboard(WebDriverKeys::ARROW_LEFT);
+
+            foreach (str_split($digits) as $digit) {
+                $keyboard($digit);
+            }
 
             return $this;
         });
