@@ -33,6 +33,13 @@ const props = defineProps({
     /** Names the control for assistive technology, e.g. "Durée, série 1, Planche". */
     label: { type: String, required: true },
     dusk: { type: String, default: null },
+    /**
+     * Whether the trigger takes the row's spare width. A timed row holds nothing
+     * else, so it should; a cardio row shares with the distance, and a duration
+     * that grew would squeeze that to a sliver — hh:mm:ss needs a fixed ~100px
+     * and no more.
+     */
+    fill: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -128,31 +135,37 @@ const onScroll = (key) => {
     }
 }
 
-const scrollTo = (key, value, smooth = false) => {
+/**
+ * Assigns scrollTop rather than calling scrollTo: the jump is meant to be
+ * instant here — a keyboard step that animated would fight the next keypress —
+ * and Element.scrollTo is not implemented in jsdom, which would put the wheel
+ * out of reach of a unit test for no gain.
+ */
+const scrollTo = (key, value) => {
     const column = columnRefs.value[key]
     if (!column) return
 
-    column.scrollTo({ top: value * ITEM, behavior: smooth ? 'smooth' : 'auto' })
+    column.scrollTop = value * ITEM
     curve(column)
 }
 
 /** Keyboard, which is also the only way an automated test can drive a wheel. */
 const onKey = (event, column) => {
     const step = { ArrowUp: -1, ArrowDown: 1, PageUp: -10, PageDown: 10 }[event.key]
-    let next = null
+    let target
 
     if (step !== undefined) {
-        next = draft.value[column.key] + step
+        target = draft.value[column.key] + step
     } else if (event.key === 'Home') {
-        next = 0
+        target = 0
     } else if (event.key === 'End') {
-        next = column.max
+        target = column.max
     } else {
         return
     }
 
     event.preventDefault()
-    next = Math.min(Math.max(next, 0), column.max)
+    const next = Math.min(Math.max(target, 0), column.max)
     draft.value[column.key] = next
     scrollTo(column.key, next)
     triggerHaptic('selection')
@@ -193,7 +206,8 @@ const setColumnRef = (key) => (element) => {
         :dusk="dusk"
         :aria-label="`${label} : ${spoken}`"
         :data-seconds="modelValue ?? ''"
-        class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold tabular-nums disabled:opacity-60"
+        class="text-text-main h-11 shrink-0 rounded-xl border-2 border-slate-200 px-2 text-center font-bold tabular-nums disabled:opacity-60"
+        :class="fill ? 'w-full min-w-32 flex-1' : 'w-auto'"
         @click="show"
     >
         {{ formatted }}

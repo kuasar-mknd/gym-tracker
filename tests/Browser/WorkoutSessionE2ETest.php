@@ -135,14 +135,14 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->click('[dusk="add-set-1"]')
                 ->waitFor('@distance-input-1-0', 15)
                 ->type('@distance-input-1-0', '5.5')
-                ->type('@duration-input-1-0', '002530');
+                ->pickDuration('@duration-input-1-0', 0, 25, 30);
 
             // 6. Fill Timed set
             $browser->waitFor('@add-set-2', 15);
             $browser->script("document.querySelector('[dusk=\"add-set-2\"]').scrollIntoView({block: 'center'});");
             $browser->click('[dusk="add-set-2"]')
                 ->waitFor('@duration-input-2-0', 15)
-                ->type('@duration-input-2-0', '001000');
+                ->pickDuration('@duration-input-2-0', 0, 10, 0);
 
             // 6b. Verify RECOMMENDED values for Recommender Ex (Index 4)
             // It should be 110kg x 3 reps (most frequent in the LAST workout)

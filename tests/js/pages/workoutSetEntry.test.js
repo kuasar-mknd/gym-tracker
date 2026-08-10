@@ -184,7 +184,11 @@ describe('Workouts/Show — duration entry', () => {
     it('refuses a duration that is not a number', async () => {
         const wrapper = await mountPage(cardioWorkout)
 
-        for (const rubbish of [NaN, Infinity, 'abc', undefined]) {
+        // Not `undefined` or `null`: those mean "the field was cleared", which is
+        // a value someone can legitimately arrive at. What must never land is a
+        // number that is not one — NaN is what `JSON.stringify` turns into null
+        // on the wire, and that is how a duration nobody entered got saved.
+        for (const rubbish of [NaN, Infinity, -Infinity, 'abc']) {
             await wheel(wrapper, 'duration-input-0-0').vm.$emit('update:modelValue', rubbish)
 
             expect(firstSet(wrapper).duration_seconds, `${String(rubbish)} changed the set`).toBe(600)

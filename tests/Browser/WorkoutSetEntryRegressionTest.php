@@ -101,8 +101,8 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->click('@add-set-0')
                 ->waitFor('@distance-input-0-0', 15)
                 ->type('@distance-input-0-0', '5.5')
-                ->type('@duration-input-0-0', '002530')
-                // Leaves both fields, which is what commits them.
+                ->pickDuration('@duration-input-0-0', 0, 25, 30)
+                // Leaves the distance field, which is what commits it.
                 ->click('#main-content')
                 // Outlasts the one-second debounce with room to spare.
                 ->pause(3000)
@@ -205,9 +205,9 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
              */
             $browser->script('document.querySelector(\'[dusk="duration-input-0-0"]\').dataset.probe = "kept";');
 
-            $browser->typeTime('@duration-input-0-0', '001000')
+            $browser->pickDuration('@duration-input-0-0', 0, 10, 0)
                 ->assertAttribute('@duration-input-0-0', 'data-probe', 'kept')
-                ->assertInputValue('@duration-input-0-0', '00:10:00')
+                ->assertSeeIn('@duration-input-0-0', '00:10:00')
                 ->click('#main-content')
                 ->pause(3000)
                 ->assertNoConsoleExceptions();
@@ -242,8 +242,8 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('@duration-input-0-0', 15)
                 // The one difference from the test above: the create has landed.
                 ->pause(2000)
-                ->typeTime('@duration-input-0-0', '001000')
-                ->assertInputValue('@duration-input-0-0', '00:10:00')
+                ->pickDuration('@duration-input-0-0', 0, 10, 0)
+                ->assertSeeIn('@duration-input-0-0', '00:10:00')
                 ->click('#main-content')
                 ->pause(3000)
                 ->assertNoConsoleExceptions();

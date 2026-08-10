@@ -41,36 +41,33 @@ abstract class DuskTestCase extends BaseTestCase
         });
 
         /**
-         * Fills an <input type="time"> the way a person fills one.
+         * Picks a duration on the hh:mm:ss wheels.
          *
-         * type() is clear() then sendKeys(), and neither half survives a time
-         * input: clear() empties every segment AND blurs the field, and the
-         * burst of keys that follows lands on an element that has just been
-         * re-focused mid-sequence. Measured on this very field, '001000' comes
-         * out as 00:00:00 and cardio's '002530' as 00:53:00 — both wrong, so
-         * this is the harness and not the page. Typed by hand, one digit at a
-         * time, both are exact.
+         * The wheels are scroll containers, and a flick is not something
+         * WebDriver can perform — but each column is a spinbutton, so the
+         * keyboard drives it exactly as assistive technology would. Home puts a
+         * column at zero whatever it was showing, then PageDown counts by ten
+         * and ArrowDown by one, which keeps this to a handful of keystrokes
+         * rather than sixty.
          *
-         * A time input is segments, not text: focus lands on one of hh/mm/ss
-         * and each digit fills the current one and advances. So tap it, walk
-         * left to hours wherever the tap landed — the geometric centre is
-         * hours today and would silently become minutes if the row were ever
-         * relaid out — and then send the digits singly.
+         * Unlike the <input type="time"> this replaced, the keys can be sent as
+         * one burst: each keydown is handled on its own and nothing here depends
+         * on the browser's segment-advance timing.
          */
-        Browser::macro('typeTime', function (string $selector, string $digits): object {
+        Browser::macro('pickDuration', function (string $selector, int $hours, int $minutes, int $seconds): object {
             /** @var Browser $this */
-            $this->click($selector);
+            $this->click($selector)->waitFor($selector.'-hours', 10);
 
-            $keyboard = fn (string $key) => $this->driver->switchTo()->activeElement()->sendKeys($key);
-
-            $keyboard(WebDriverKeys::ARROW_LEFT);
-            $keyboard(WebDriverKeys::ARROW_LEFT);
-
-            foreach (str_split($digits) as $digit) {
-                $keyboard($digit);
+            foreach (['hours' => $hours, 'minutes' => $minutes, 'seconds' => $seconds] as $part => $value) {
+                $this->keys(
+                    $selector.'-'.$part,
+                    WebDriverKeys::HOME,
+                    ...array_fill(0, intdiv($value, 10), WebDriverKeys::PAGE_DOWN),
+                    ...array_fill(0, $value % 10, WebDriverKeys::ARROW_DOWN),
+                );
             }
 
-            return $this;
+            return $this->click($selector.'-confirm')->waitUntilMissing($selector.'-hours', 10);
         });
 
         Browser::macro('assertNoConsoleExceptions', function (): object {

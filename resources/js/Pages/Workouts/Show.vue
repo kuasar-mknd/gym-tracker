@@ -1460,6 +1460,7 @@ onUnmounted(() => {
                                     :model-value="set.duration_seconds"
                                     @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
                                     :disabled="isFinished"
+                                    :fill="false"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
                                     :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                 />
