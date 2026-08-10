@@ -160,10 +160,25 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitFor('@weight-input-0-1', 15)
                 ->type('@weight-input-0-1', '85')
                 ->type('@reps-input-0-1', '3')
-                ->pause(1500) // Wait for debounce to save
-                ->script("document.querySelector('[dusk=\"remove-set-0-1\"]').scrollIntoView({block: 'center'});");
-            $browser->waitFor('@remove-set-0-1', 10)
-                ->click('@remove-set-0-1')
+                ->pause(1500); // Wait for debounce to save
+
+            /**
+             * The row's own delete is hidden at this width — a phone swipes
+             * instead — so this goes through the swipe action, reached the way a
+             * keyboard reaches it. A flick is not something WebDriver can
+             * perform, but focusing the action opens the row, which is exactly
+             * what SwipeableRow does so the gesture is not the only way in.
+             *
+             * Focus comes before waitFor: the action rests at opacity 0, so it
+             * is present long before it is visible.
+             */
+            $browser->script(
+                "document.querySelector('[dusk=\"swipe-remove-set-0-1\"]').scrollIntoView({block: 'center'});"
+                ."document.querySelector('[dusk=\"swipe-remove-set-0-1\"]').focus();"
+            );
+
+            $browser->waitFor('@swipe-remove-set-0-1', 10)
+                ->click('@swipe-remove-set-0-1')
                 ->waitUntilMissing('@weight-input-0-1', 15);
 
             // 6d. Modify workout settings

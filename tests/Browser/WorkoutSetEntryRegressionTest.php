@@ -256,6 +256,42 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
     }
 
     /**
+     * A row carries two ways to delete a set, and only one of them works on any
+     * given input. The swipe needs touch — SwipeableRow listens for nothing else
+     * — so the button has to stay wherever there is a mouse. On a phone it is
+     * redundant clutter beside a gesture that already does the job.
+     */
+    public function test_a_set_row_offers_the_delete_its_input_can_actually_reach(): void
+    {
+        [$user, $workout] = $this->aSessionWith('strength');
+
+        $this->browse(function (Browser $browser) use ($user, $workout): void {
+            $browser->loginAs(User::find($user->id))
+                ->resizeToIphone15()
+                ->visit('/workouts/'.$workout->id)
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitFor('@add-set-0', 15)
+                ->click('@add-set-0')
+                ->waitFor('@weight-input-0-0', 15);
+
+            $shown = fn (): bool => (bool) $browser->script(
+                'return document.querySelector(\'[dusk="remove-set-0-0"]\').offsetParent !== null;'
+            )[0];
+
+            $this->assertFalse($shown(), 'the row keeps a delete button a phone does not need');
+
+            // Wide enough for a pointer, where the swipe is unavailable.
+            $browser->resize(900, 900)->pause(300);
+
+            $this->assertTrue($shown(), 'a pointer is left with no way to delete a set');
+
+            // The swipe action is there either way, and reachable without one.
+            $browser->assertPresent('@swipe-remove-set-0-0');
+        });
+    }
+
+    /**
      * A set has no order of its own: the database hands them back by id, and the
      * id goes to whichever INSERT arrives first. Both creates used to be in
      * flight at once, so tapping twice in quick succession could write the

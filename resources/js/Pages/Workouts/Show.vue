@@ -1241,7 +1241,11 @@ onUnmounted(() => {
                 v-press
                 @click="showSettingsModal = true"
                 dusk="workout-settings-button"
-                class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition-all"
+                :class="[
+                    'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
+                    'border border-white bg-white/60 transition-all',
+                    'dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400',
+                ]"
                 aria-label="Paramètres de la séance"
             >
                 <span class="material-symbols-outlined" aria-hidden="true">settings</span>
@@ -1481,7 +1485,15 @@ onUnmounted(() => {
                                 v-press="{ haptic: 'warning' }"
                                 @click="removeSet(set.id)"
                                 :dusk="`remove-set-${lineIndex}-${index}`"
-                                class="relative ml-auto text-slate-300 before:absolute before:-inset-2.5 before:content-[''] hover:text-red-500"
+                                :class="[
+                                    'relative ml-auto text-slate-300 hover:text-red-500',
+                                    'before:absolute before:-inset-2.5 before:content-[\'\']',
+                                    // Redundant on a phone, where the row swipes.
+                                    // Kept from sm up, where there is no swipe at
+                                    // all: SwipeableRow listens for touch events
+                                    // only, so a mouse has no other way to delete.
+                                    'hidden sm:block',
+                                ]"
                                 aria-label="Supprimer la série"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">delete</span>
