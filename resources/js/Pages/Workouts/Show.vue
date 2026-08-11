@@ -23,6 +23,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
+import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
 import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErrors'
 import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
@@ -136,6 +137,23 @@ const timerRun = ref(0)
 let tempIdCounter = 0
 
 /**
+ * A row's identity for Vue, which must not change while the row is on screen.
+ *
+ * Ids do change here: an optimistic row wears `temp-4` until the server answers
+ * and is then given the real one. Keying a v-for on that made the key change
+ * under a row the user was typing into, and Vue answers a changed key by
+ * destroying the node and building a new one — the input, its half-typed value
+ * and its focus with it.
+ *
+ * So optimistic rows carry a key issued once at creation, and rows that came
+ * from the server fall back to their id, which for them never changes. The two
+ * cannot collide: one is a string with a prefix, the other a number.
+ */
+let rowKeyCounter = 0
+const newRowKey = () => `row-${++rowKeyCounter}`
+const rowKey = (row) => row._rowKey ?? row.id
+
+/**
  * Placeholder ids never leave this component. Every mutation that names a line
  * or a set asks here for the id to actually send, and waits if the creation is
  * still in flight — see Utils/pendingIds for what sending `temp-3` cost.
@@ -212,6 +230,33 @@ const deleteSet = (setId) =>
     })
 
 /**
+ * The set fields this screen edits. Every one of them is a number in the
+ * database, so a value arriving from an input — always a string — is normalised
+ * before it goes anywhere near the row or the payload.
+ */
+const NUMERIC_SET_FIELDS = ['weight', 'reps', 'distance_km', 'duration_seconds']
+
+/**
+ * What each kind of exercise measures — the same split the set row renders.
+ *
+ * A strength set has a weight and reps; a cardio one a distance and a duration;
+ * a timed one only a duration. Nothing else about a set is a measurement, and
+ * writing the other fields anyway put numbers in rows that have no business
+ * holding them.
+ */
+const MEASURED_FIELDS_BY_TYPE = {
+    strength: ['weight', 'reps'],
+    cardio: ['distance_km', 'duration_seconds'],
+    timed: ['duration_seconds'],
+}
+
+/**
+ * An unknown type renders no inputs at all, so it gets the strength pair rather
+ * than an empty set that could never be filled in.
+ */
+const measuredFieldsFor = (exercise) => MEASURED_FIELDS_BY_TYPE[exercise?.type] ?? MEASURED_FIELDS_BY_TYPE.strength
+
+/**
  * Flush (execute immediately) all pending debounced updates for a given set.
  * This prevents interleaved PATCH requests from overwriting each other's results.
  */
@@ -238,26 +283,27 @@ const flushAllPendingUpdates = () => {
     return Promise.allSettled(inFlight.filter(Boolean))
 }
 
+/**
+ * @returns {Promise} settled once every flushed write for this set has landed.
+ */
 const flushPendingUpdates = (setId) => {
-    const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
-    fields.forEach((field) => {
+    const inFlight = NUMERIC_SET_FIELDS.map((field) => {
         const timerKey = `${setId}_${field}`
-        if (updateTimers[timerKey]) {
-            clearTimeout(updateTimers[timerKey].timerId)
-            // Execute the pending update immediately
-            if (typeof updateTimers[timerKey].execute === 'function') {
-                updateTimers[timerKey].execute()
-            }
-            delete updateTimers[timerKey]
-        }
+        const pending = updateTimers[timerKey]
+
+        if (!pending) return null
+
+        clearTimeout(pending.timerId)
+        delete updateTimers[timerKey]
+
+        // Execute the pending update immediately
+        return pending.execute?.()
     })
+
+    return Promise.allSettled(inFlight.filter(Boolean))
 }
 
-const toggleSetCompletion = (set, exerciseRestTime) => {
-    // Flush any pending debounced updates for this set BEFORE toggling
-    // to ensure value changes are sent before the completion toggle
-    flushPendingUpdates(set.id)
-
+const toggleSetCompletion = async (set, exerciseRestTime) => {
     const newState = !set.is_completed
     const previousState = set.is_completed
 
@@ -268,7 +314,20 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
         timerRun.value += 1
         showTimer.value = true
     }
-    patchSet(set, { is_completed: newState })
+
+    /**
+     * Awaited, not merely started.
+     *
+     * The pending value writes were flushed and the completion PATCH sent in the
+     * same tick, so both were in flight at once against the same row with no
+     * ordering between them. Whichever answer came back second was applied over
+     * the first, which is how validating a set right after typing into it could
+     * put the old weight back on screen. The set's numbers are settled first;
+     * only then does it get marked done.
+     */
+    await flushPendingUpdates(set.id)
+
+    return patchSet(set, { is_completed: newState })
         .then((response) => {
             // Only merge back the fields we sent + metadata to avoid overwriting
             // concurrent optimistic updates (e.g. weight/reps changes)
@@ -369,6 +428,7 @@ const addExercise = (exerciseId) => {
     // Optimistic: add line immediately
     const tempLine = {
         id: `temp-${++tempIdCounter}`,
+        _rowKey: newRowKey(),
         exercise_id: exerciseId,
         exercise: { ...exercise },
         sets: [],
@@ -510,8 +570,7 @@ const removeLine = (lineId) => {
     confirmAction.value = () => {
         // Clear any pending updates for sets in this line
         line.sets?.forEach((set) => {
-            const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
-            fields.forEach((field) => {
+            NUMERIC_SET_FIELDS.forEach((field) => {
                 const timerKey = `${set.id}_${field}`
                 if (updateTimers[timerKey]) {
                     clearTimeout(updateTimers[timerKey].timerId)
@@ -548,6 +607,26 @@ const removeLine = (lineId) => {
     showConfirmModal.value = true
 }
 
+/**
+ * The last set-create issued for each exercise, so the next one can queue behind
+ * it instead of racing it.
+ *
+ * A set has no order of its own — the database hands them back by id, and the id
+ * is decided by whichever INSERT reaches the server first. Tapping "Ajouter une
+ * série" twice in quick succession sent two POSTs at once, so the second set
+ * could be written first and come back BEFORE the first one on the next load.
+ * Sets appearing in an order the user did not create them in, specifically when
+ * going fast, is exactly the reported symptom.
+ *
+ * Keyed on the line object rather than its id: a line's id changes from
+ * placeholder to real one when its create lands, and sets added on either side
+ * of that moment still have to share one chain. The object identity is stable —
+ * addExercise mutates the line in place and never replaces it.
+ *
+ * @type {WeakMap<object, Promise>}
+ */
+const setCreateChains = new WeakMap()
+
 // ⚡ Perf: Optimistic addSet — no router.reload
 const addSet = (lineId) => {
     const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
@@ -555,10 +634,27 @@ const addSet = (lineId) => {
 
     const lastSet = line.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
 
-    const weight = lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0)
-    const reps = lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10)
-    const distance = lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0)
-    const duration = lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30)
+    const prefilled = {
+        weight: lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0),
+        reps: lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10),
+        distance_km: lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0),
+        duration_seconds: lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30),
+    }
+
+    /**
+     * Only what this kind of exercise actually measures.
+     *
+     * All four were filled in and sent for every set regardless of type, so a
+     * cardio set was written with `reps: 10` and a weight of 0, and a timed one
+     * with those plus `distance_km: 0` — none of which the screen even shows for
+     * that exercise, and none of which the user typed. A reported 10 appearing
+     * out of nowhere is this: 10 is the reps pre-fill, and it was being written
+     * to rows whose exercise has no reps.
+     *
+     * The pre-fills that remain are the ones the user can see and correct.
+     */
+    const measured = measuredFieldsFor(line.exercise)
+    const values = Object.fromEntries(measured.map((field) => [field, prefilled[field]]))
 
     /**
      * Optimistic: add set immediately with a temp id. It carried the line id
@@ -567,12 +663,10 @@ const addSet = (lineId) => {
      */
     const tempSet = {
         id: `temp-${++tempIdCounter}`,
+        _rowKey: newRowKey(),
         is_completed: false,
-        weight: weight,
-        reps: reps,
-        distance_km: distance,
-        duration_seconds: duration,
         is_warmup: false,
+        ...values,
     }
     if (!Array.isArray(line.sets)) line.sets = []
     line.sets.push(tempSet)
@@ -589,8 +683,12 @@ const addSet = (lineId) => {
         markUnsynced(tempSet.id)
     }
 
-    const creation = pendingIds
-        .resolve(lineId)
+    // Settled, not resolved: a create that failed must not stop the next set
+    // from being sent, only from overtaking it.
+    const previousCreate = (setCreateChains.get(line) ?? Promise.resolve()).catch(() => null)
+
+    const creation = previousCreate
+        .then(() => pendingIds.resolve(lineId))
         .then((realLineId) => {
             if (realLineId === null) {
                 markUnsynced(tempSet.id)
@@ -600,10 +698,7 @@ const addSet = (lineId) => {
 
             const sent = {
                 is_completed: false,
-                weight: weight,
-                reps: reps,
-                distance_km: distance,
-                duration_seconds: duration,
+                ...values,
             }
 
             return SyncService.post(route('api.v1.sets.store'), {
@@ -670,6 +765,7 @@ const addSet = (lineId) => {
             return null
         })
 
+    setCreateChains.set(line, creation)
     pendingIds.track(tempSet.id, creation)
 }
 
@@ -718,12 +814,58 @@ const handleSyncFailure = (event) => {
      * the user was told nothing at all. The write is recorded in SyncService's
      * failed bucket either way; this is the part they can see.
      *
-     * There is no row to mark, because the thing that failed is the row itself.
-     * Saying so plainly beats a silent gap in a workout.
+     * There is no row to mark, because the thing that failed is the row itself,
+     * so the message has to carry the identification instead — and name the
+     * exercise. "An item of the session" leaves someone scrolling their own
+     * workout trying to work out which set never made it.
      */
     if (/\/(sets|workout-lines)(\?|$)/.test(url)) {
-        reportEditFailure("Un élément de la séance n'a pas pu être enregistré.")
+        reportEditFailure(describeFailedCreate(url, event.detail?.data))
     }
+}
+
+/** The request body, whether it was queued as an object or already serialised. */
+const payloadOf = (data) => {
+    if (typeof data !== 'string') {
+        return data ?? {}
+    }
+
+    try {
+        return JSON.parse(data) ?? {}
+    } catch {
+        return {}
+    }
+}
+
+const exerciseNamed = (exerciseId) =>
+    localExercises.value.find((exercise) => String(exercise.id) === String(exerciseId))?.name
+
+/**
+ * Names what the server refused, falling back to the old wording only when the
+ * payload cannot be tied to anything on screen — a set whose line has since been
+ * removed, say. Being vague is better than being wrong about which set it was.
+ */
+const describeFailedCreate = (url, data) => {
+    const payload = payloadOf(data)
+    const generic = "Un élément de la séance n'a pas pu être enregistré."
+
+    if (/\/workout-lines(\?|$)/.test(url)) {
+        const name = exerciseNamed(payload.exercise_id)
+
+        return name ? `« ${name} » n'a pas pu être ajouté à la séance.` : "Un exercice n'a pas pu être ajouté."
+    }
+
+    const line = localWorkout.value.workout_lines?.find(
+        (candidate) => String(candidate.id) === String(payload.workout_line_id),
+    )
+
+    if (!line) {
+        return generic
+    }
+
+    const position = (line.sets?.length ?? 0) || 1
+
+    return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
 }
 
 /**
@@ -746,51 +888,175 @@ const reportEditFailure = (message) => {
     }, 6000)
 }
 
+/**
+ * Announces what was refused while the page was away — once.
+ *
+ * The failed bucket is written on every refusal and, until now, emptied by
+ * nobody: `clearFailedRequests()` had no caller anywhere in the app. So a single
+ * create the server turned down went on announcing itself on every single visit
+ * to the session, for ever, with no way to acknowledge it. That is not a warning
+ * any more, it is furniture, and the user reported it as exactly that.
+ *
+ * The payload goes through too, so the message can name what failed instead of
+ * saying "an item of the session".
+ */
 const markQueuedFailuresOnMount = () => {
-    SyncService.failedRequests().forEach((failure) => handleSyncFailure({ detail: { url: failure.url } }))
+    const failures = SyncService.failedRequests()
+
+    if (failures.length === 0) {
+        return
+    }
+
+    failures.forEach((failure) => handleSyncFailure({ detail: { url: failure.url, data: failure.data } }))
+
+    SyncService.clearFailedRequests()
+}
+
+/**
+ * Counts the writes issued per set and field, so a reply can be checked against
+ * the state of the world rather than trusted because it arrived.
+ *
+ * Two PATCHes for one field are ordinary here — the debounce is flushed by
+ * validating a set, and the next keystroke starts another one — and nothing
+ * makes them come home in the order they left. `set[field] = response…[field]`
+ * applied whichever landed last, so an older reply carrying the older number
+ * overwrote what the user had just typed. That is the value "revenant tout
+ * seul" the report describes, and the request it belongs to had succeeded.
+ */
+const writeSeq = {}
+const nextWrite = (key) => (writeSeq[key] = (writeSeq[key] ?? 0) + 1)
+const isLatestWrite = (key, seq) => writeSeq[key] === seq
+
+/**
+ * The write currently in flight for each set and field, so the next one can
+ * queue behind it rather than overlap it. See `execute` in updateSet.
+ *
+ * @type {Map<string, Promise>}
+ */
+const fieldWriteChains = new Map()
+
+/**
+ * The value the server last confirmed for a field, which is the only value a
+ * rollback may restore.
+ *
+ * `previousValue` used to be read off the set at call time. Type B then C inside
+ * the debounce window and the second call captures B — a value that never
+ * reached the database — so a refusal of C "restored" B and the row ended up
+ * showing something the server had never agreed to.
+ */
+const confirmedValues = new Map()
+const confirmedKey = (setId, field) => `${setId}_${field}`
+
+const rememberConfirmed = (setId, field, value) => {
+    confirmedValues.set(confirmedKey(setId, field), value)
+}
+
+const lastConfirmed = (set, field, fallback) => {
+    const key = confirmedKey(set.id, field)
+
+    return confirmedValues.has(key) ? confirmedValues.get(key) : fallback
+}
+
+/**
+ * Keeps one draft per set holding only the fields still in flight.
+ *
+ * The draft was `JSON.stringify(set)` under a single key, removed outright the
+ * moment ANY field came back accepted. Correcting a weight and then the reps
+ * within the same second meant the weight's success deleted the draft that was
+ * holding the reps, whose PATCH had not left yet — close the app in that window
+ * and the entry is gone. Only the field that was actually confirmed is dropped
+ * now, and the key disappears when nothing is left to protect.
+ */
+const draftKey = (setId) => `draft_set_${setId}`
+
+const readDraft = (setId) => {
+    try {
+        return JSON.parse(localStorage.getItem(draftKey(setId)) || '{}')
+    } catch {
+        return {}
+    }
+}
+
+const writeDraftField = (setId, field, value) => {
+    localStorage.setItem(draftKey(setId), JSON.stringify({ ...readDraft(setId), [field]: value }))
+}
+
+const clearDraftField = (setId, field) => {
+    const { [field]: _dropped, ...rest } = readDraft(setId)
+
+    if (Object.keys(rest).filter((key) => key !== 'syncRejected').length === 0) {
+        localStorage.removeItem(draftKey(setId))
+
+        return
+    }
+
+    localStorage.setItem(draftKey(setId), JSON.stringify(rest))
 }
 
 // ⚡ Perf: Optimistic updateSet — no router.reload
 const updateTimers = {}
-const updateSet = (set, field, value) => {
+const updateSet = (set, field, rawValue) => {
+    const value = NUMERIC_SET_FIELDS.includes(field) ? toNumberOrNull(rawValue) : rawValue
+
+    // Not a number and not an empty field: there is nothing to record. Writing
+    // it anyway is how NaN used to reach both the row and the payload.
+    if (value === undefined) {
+        return
+    }
+
     // Skip API calls for temp sets that haven't been created on the server yet
     if (String(set.id).startsWith('temp-')) {
         set[field] = value
         return
     }
 
-    /**
-     * Genuinely the previous value, which it was not while these inputs used
-     * v-model. v-model writes on every keystroke, so by the time @change fired
-     * the object already held the new value — `previousValue` captured it, and
-     * the rollback below restored exactly what the server had just refused.
-     * The inputs are bound one-way now: nothing writes here but this function.
-     */
-    const previousValue = set[field]
+    const previousValue = lastConfirmed(set, field, set[field])
     set[field] = value
     const timerKey = `${set.id}_${field}`
     if (updateTimers[timerKey]?.timerId) clearTimeout(updateTimers[timerKey].timerId)
 
-    const execute = () =>
+    const seq = nextWrite(timerKey)
+
+    const send = () =>
         patchSet(set, { [field]: value })
             .then((response) => {
+                clearDraftField(set.id, field)
+
                 // Only merge back the specific field we updated + metadata
                 // to avoid overwriting concurrent optimistic updates
-                if (response.data?.data) {
-                    set[field] = response.data.data[field]
-                    set.updated_at = response.data.data.updated_at
-                }
-                localStorage.removeItem(`draft_set_${set.id}`)
-            })
-            .catch((err) => {
-                localStorage.removeItem(`draft_set_${set.id}`)
-
-                const kind = classifySyncError(err)
-
-                if (kind === SYNC_OFFLINE) {
+                if (!response.data?.data) {
                     return
                 }
 
+                rememberConfirmed(set.id, field, response.data.data[field])
+
+                // A newer write for this field has gone out since. Its answer is
+                // the one that describes the row; this one is history.
+                if (!isLatestWrite(timerKey, seq)) {
+                    return
+                }
+
+                set[field] = response.data.data[field]
+                set.updated_at = response.data.data.updated_at
+            })
+            .catch((err) => {
+                const kind = classifySyncError(err)
+
+                if (kind === SYNC_OFFLINE) {
+                    // SyncService owns it now; a draft would be a second copy of
+                    // the same pending write.
+                    clearDraftField(set.id, field)
+
+                    return
+                }
+
+                // Superseded by a later edit, which is on screen and has its own
+                // request in flight. Reverting here would undo that instead.
+                if (!isLatestWrite(timerKey, seq)) {
+                    return
+                }
+
+                clearDraftField(set.id, field)
                 set[field] = previousValue
 
                 // The revert was the only feedback, announced by a haptic pulse:
@@ -803,7 +1069,28 @@ const updateSet = (set, field, value) => {
                 )
             })
 
-    localStorage.setItem(`draft_set_${set.id}`, JSON.stringify(set))
+    /**
+     * Queues this write behind the one before it for the same field.
+     *
+     * The sequence guard above settles which ANSWER is worth believing, and that
+     * alone is not enough: it protects the screen while leaving the database to
+     * whichever request the server happened to handle last. Two PATCHes for one
+     * field really can overlap — a flush pushes the first one out and the next
+     * keystroke starts another — and the older value landing second is written,
+     * permanently, over the newer one. The user's last word has to be the last
+     * word in the row too.
+     *
+     * Settled rather than resolved: a refused write must not wedge the field.
+     */
+    const execute = () => {
+        const inOrder = (fieldWriteChains.get(timerKey) ?? Promise.resolve()).catch(() => {}).then(send)
+
+        fieldWriteChains.set(timerKey, inOrder)
+
+        return inOrder
+    }
+
+    writeDraftField(set.id, field, value)
 
     updateTimers[timerKey] = {
         timerId: setTimeout(() => {
@@ -817,14 +1104,22 @@ const updateSet = (set, field, value) => {
 // ⚡ Perf: Optimistic removeSet — no router.reload
 const removeSet = (setId) => {
     // Clear any pending updates for this set to prevent 404s
-    const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
-    fields.forEach((field) => {
+    NUMERIC_SET_FIELDS.forEach((field) => {
         const timerKey = `${setId}_${field}`
         if (updateTimers[timerKey]) {
             clearTimeout(updateTimers[timerKey].timerId)
             delete updateTimers[timerKey]
         }
+
+        // Nothing may queue behind a row that no longer exists, and the entries
+        // would otherwise outlive every set the page ever showed.
+        fieldWriteChains.delete(timerKey)
+        confirmedValues.delete(timerKey)
     })
+
+    // The row is going away; its draft must not outlive it and be replayed
+    // against an id that no longer exists on the next mount.
+    localStorage.removeItem(draftKey(setId))
 
     // Find the line and set
     for (const line of localWorkout.value.workout_lines) {
@@ -844,10 +1139,34 @@ const removeSet = (setId) => {
 
 const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
 
-const secondsToTime = (s) => (s ? new Date(s * 1000).toISOString().substr(11, 8) : '00:00:00')
-const updateDurationFromTime = (set, val) => {
-    const [h, m, s] = val.split(':').map(Number)
-    updateSet(set, 'duration_seconds', h * 3600 + m * 60 + s)
+/**
+ * The duration is no longer parsed out of a string here.
+ *
+ * It was read from an <input type="time">, which reports an EMPTY value while
+ * its segments are incomplete — and the old parser did `val.split(':')` on it
+ * regardless, so a NaN was written onto the set, wiped the field mid-typing and
+ * reached the database as null. DurationWheel emits whole seconds and nothing
+ * else, so there is no string to mis-parse and no incomplete state to guard.
+ * The formatting it needs lives with it.
+ */
+
+/**
+ * What a numeric field is worth once it leaves the DOM.
+ *
+ * `e.target.value` is a string, always. Storing it as one made `80` and `'80'`
+ * two different values to every `!==` on this page — addSet's post-create diff
+ * fired a redundant PATCH on every single set it created — and let a partial
+ * entry travel as-is. An empty field is a cleared value, which the column is
+ * nullable for; anything unparseable is not a value at all and is dropped.
+ */
+const toNumberOrNull = (value) => {
+    if (value === '' || value === null || value === undefined) {
+        return null
+    }
+
+    const parsed = Number(value)
+
+    return Number.isFinite(parsed) ? parsed : undefined
 }
 
 const filteredExercises = computed(() => {
@@ -988,7 +1307,11 @@ onUnmounted(() => {
                 v-press
                 @click="showSettingsModal = true"
                 dusk="workout-settings-button"
-                class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition-all"
+                :class="[
+                    'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
+                    'border border-white bg-white/60 transition-all',
+                    'dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400',
+                ]"
                 aria-label="Paramètres de la séance"
             >
                 <span class="material-symbols-outlined" aria-hidden="true">settings</span>
@@ -1011,9 +1334,14 @@ onUnmounted(() => {
                 <p v-else class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
             </GlassCard>
 
+            <!-- Same reasoning as the set rows below: a line's id changes from
+                 placeholder to real one when its create lands, and re-keying on
+                 it rebuilt the whole exercise card — every set input inside it
+                 included — at the exact moment the user was filling in the first
+                 set of the exercise they had just added. -->
             <GlassCard
                 v-for="(line, lineIndex) in localWorkout.workout_lines"
-                :key="line.id"
+                :key="rowKey(line)"
                 :dusk="`exercise-card-${lineIndex}`"
                 :data-line-id="line.id"
                 :dusk-id="`exercise-line-${line.id}`"
@@ -1056,12 +1384,26 @@ onUnmounted(() => {
 
                 <div class="space-y-2">
                     <!--
-                      Keyed on the set alone. Folding the index in made the key
-                      change for every row below a deletion, so Vue destroyed and
-                      rebuilt them all: swipe state reset, inputs re-created, and
-                      a field being edited losing focus mid-keystroke.
+                      Keyed on something that never changes for the life of the
+                      row. Folding the index in made the key change for every row
+                      below a deletion, so Vue destroyed and rebuilt them all:
+                      swipe state reset, inputs re-created, and a field being
+                      edited losing focus mid-keystroke.
+
+                      The set's id has the same defect and outlived that fix: an
+                      optimistic row wears a placeholder until the server answers,
+                      and `tempSet.id = realSetId` then changes the key, so Vue
+                      tears the row down and builds a new one — swipe state and
+                      inputs included — at the moment the user is most likely to
+                      be filling it in.
+
+                      Demonstrated, and no more than that: the guard in
+                      workoutSetEntry.test.js fails without this, showing the node
+                      really is replaced. It was written while chasing a lost
+                      duration entry and did NOT fix it, so nothing here should be
+                      read as a diagnosis of that.
                     -->
-                    <SwipeableRow v-for="(set, index) in line.sets" :key="set.id">
+                    <SwipeableRow v-for="(set, index) in line.sets" :key="rowKey(set)">
                         <!-- The row was swipeable with no action behind it: dragging
                              it snapped it open onto an empty background and left it
                              there. Same delete the row's own button calls, reached
@@ -1072,7 +1414,7 @@ onUnmounted(() => {
                                 @click="removeSet(set.id)"
                                 :dusk="`swipe-remove-set-${lineIndex}-${index}`"
                                 :aria-label="`Supprimer la série ${index + 1}`"
-                                class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
+                                class="flex h-full w-full items-center justify-center bg-red-500 text-white"
                             >
                                 <span class="flex flex-col items-center" aria-hidden="true">
                                     <span class="material-symbols-outlined text-2xl">delete</span>
@@ -1184,30 +1526,23 @@ onUnmounted(() => {
                                     class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
                                 <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">km</span>
-                                <input
-                                    type="time"
-                                    step="1"
-                                    :value="secondsToTime(set.duration_seconds)"
-                                    @focus="$event.target.select()"
-                                    @input="(e) => updateDurationFromTime(set, e.target.value)"
+                                <DurationWheel
+                                    :model-value="set.duration_seconds"
+                                    @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
                                     :disabled="isFinished"
+                                    :fill="false"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
-                                    :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-32 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                 />
                             </template>
 
                             <template v-else-if="line.exercise.type === 'timed'">
-                                <input
-                                    type="time"
-                                    step="1"
-                                    :value="secondsToTime(set.duration_seconds)"
-                                    @focus="$event.target.select()"
-                                    @input="(e) => updateDurationFromTime(set, e.target.value)"
+                                <DurationWheel
+                                    :model-value="set.duration_seconds"
+                                    @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
                                     :disabled="isFinished"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
-                                    :aria-label="`Durée, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-full rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                 />
                             </template>
 
@@ -1216,7 +1551,15 @@ onUnmounted(() => {
                                 v-press="{ haptic: 'warning' }"
                                 @click="removeSet(set.id)"
                                 :dusk="`remove-set-${lineIndex}-${index}`"
-                                class="relative ml-auto text-slate-300 before:absolute before:-inset-2.5 before:content-[''] hover:text-red-500"
+                                :class="[
+                                    'relative ml-auto text-slate-300 hover:text-red-500',
+                                    'before:absolute before:-inset-2.5 before:content-[\'\']',
+                                    // Redundant on a phone, where the row swipes.
+                                    // Kept from sm up, where there is no swipe at
+                                    // all: SwipeableRow listens for touch events
+                                    // only, so a mouse has no other way to delete.
+                                    'hidden sm:block',
+                                ]"
                                 aria-label="Supprimer la série"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">delete</span>

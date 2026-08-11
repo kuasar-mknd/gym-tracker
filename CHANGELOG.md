@@ -7,6 +7,15 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Séries d'une séance** (#1319) :
+    - **Durée des exercices cardio et chronométrés** : le champ durée écrivait `NaN` sur la série tant que ses segments étaient incomplets, ce qui réinitialisait le champ pendant la frappe et enregistrait `null` en base. La valeur n'est plus lue qu'une fois complète, et le formatage d'une durée repose sur de l'arithmétique plutôt que sur `Date` (plus de repli silencieux au-delà de 24 h, plus de `RangeError` en plein rendu).
+    - **Valeurs numériques** : les champs poids, reps, distance et durée sont normalisés en nombres (`''` devient `null`) au lieu de circuler comme chaînes.
+    - **Ordre des séries** : `WorkoutLine::sets()` trie désormais explicitement par `id`. Sans `ORDER BY`, MySQL pouvait rendre les séries triées par poids via `sets_workout_line_id_weight_reps_index`, ce qui les déplaçait dès qu'un poids était corrigé. `Workout::workoutLines()` départage par `id` les lignes partageant la même valeur `order`.
+    - **Création de séries successives** : les `POST` d'un même exercice sont sérialisés, deux séries ajoutées coup sur coup ne pouvant plus être écrites dans l'ordre inverse des taps.
+    - **Valeurs fantômes selon le type d'exercice** : une nouvelle série était créée avec les quatre mesures quel que soit l'exercice. Une série cardio partait donc avec `reps: 10` et un poids de 0, et une série chronométrée avec en plus `distance_km: 0` — des champs que sa ligne n'affiche même pas et que personne n'avait saisis. C'est de là que venait un 10 apparu de nulle part : c'est la valeur de pré-remplissage des reps, écrite dans des lignes qui n'ont pas de reps. Une série ne porte plus que ce que son exercice mesure.
+    - **Saisie rapide** : une réponse périmée n'écrase plus une valeur plus récente, un refus rétablit la dernière valeur confirmée par le serveur, la validation d'une série attend l'envoi des valeurs en attente, et les brouillons hors-ligne sont conservés par champ.
+
 ## [1.4.28] - 2026-04-10
 
 ### Sécurité

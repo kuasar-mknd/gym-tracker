@@ -7,6 +7,7 @@ namespace Tests;
 use Facebook\WebDriver\Chrome\ChromeOptions;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
+use Facebook\WebDriver\WebDriverKeys;
 use Illuminate\Support\Collection;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
@@ -37,6 +38,36 @@ abstract class DuskTestCase extends BaseTestCase
             ");
 
             return $this;
+        });
+
+        /**
+         * Picks a duration on the hh:mm:ss wheels.
+         *
+         * The wheels are scroll containers, and a flick is not something
+         * WebDriver can perform — but each column is a spinbutton, so the
+         * keyboard drives it exactly as assistive technology would. Home puts a
+         * column at zero whatever it was showing, then PageDown counts by ten
+         * and ArrowDown by one, which keeps this to a handful of keystrokes
+         * rather than sixty.
+         *
+         * Unlike the <input type="time"> this replaced, the keys can be sent as
+         * one burst: each keydown is handled on its own and nothing here depends
+         * on the browser's segment-advance timing.
+         */
+        Browser::macro('pickDuration', function (string $selector, int $hours, int $minutes, int $seconds): object {
+            /** @var Browser $this */
+            $this->click($selector)->waitFor($selector.'-hours', 10);
+
+            foreach (['hours' => $hours, 'minutes' => $minutes, 'seconds' => $seconds] as $part => $value) {
+                $this->keys(
+                    $selector.'-'.$part,
+                    WebDriverKeys::HOME,
+                    ...array_fill(0, intdiv($value, 10), WebDriverKeys::PAGE_DOWN),
+                    ...array_fill(0, $value % 10, WebDriverKeys::ARROW_DOWN),
+                );
+            }
+
+            return $this->click($selector.'-confirm')->waitUntilMissing($selector.'-hours', 10);
         });
 
         Browser::macro('assertNoConsoleExceptions', function (): object {

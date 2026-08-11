@@ -85,7 +85,12 @@ describe('SyncService.processQueue', () => {
         expect(service.queue).toEqual([])
     })
 
-    it('announces the refusal so the interface can say something', async () => {
+    /**
+     * The payload rides along with the announcement. Without it a listener can
+     * only ever say "an item of the session could not be saved" — a URL carries
+     * no name, and on a refused CREATE there is not even an id in it.
+     */
+    it('announces the refusal, with what was refused', async () => {
         localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch('/api/v1/sets/7')]))
         request.mockRejectedValue({ response: { status: 422 } })
 
@@ -98,7 +103,11 @@ describe('SyncService.processQueue', () => {
         window.removeEventListener('sync:failed', listener)
 
         expect(listener).toHaveBeenCalledTimes(1)
-        expect(listener.mock.calls[0][0].detail).toEqual({ url: '/api/v1/sets/7', status: 422 })
+        expect(listener.mock.calls[0][0].detail).toEqual({
+            url: '/api/v1/sets/7',
+            status: 422,
+            data: { weight: 100 },
+        })
     })
 
     it('survives a reload with the refused mutations intact', async () => {

@@ -8,7 +8,7 @@ use App\Models\Workout;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-it('creates a workout with current date and clears caches', function (): void {
+it('names a workout by its date alone, and clears caches', function (): void {
     Carbon::setTestNow('2024-05-15 14:00:00');
 
     $user = User::factory()->create();
@@ -27,13 +27,13 @@ it('creates a workout with current date and clears caches', function (): void {
 
     expect($workout)->toBeInstanceOf(Workout::class)
         ->and($workout->user_id)->toBe($user->id)
-        ->and($workout->name)->toBe('Séance du 15/05/2024')
+        ->and($workout->name)->toBe('15/05/2024')
         ->and($workout->started_at->toDateTimeString())->toBe('2024-05-15 14:00:00');
 
     $this->assertDatabaseHas('workouts', [
         'id' => $workout->id,
         'user_id' => $user->id,
-        'name' => 'Séance du 15/05/2024',
+        'name' => '15/05/2024',
         'started_at' => '2024-05-15 14:00:00',
     ]);
 

@@ -62,7 +62,7 @@ const emit = defineEmits([
         <template #action-left>
             <button
                 @click="emit('start-edit', exercise)"
-                class="flex h-full w-full items-center justify-start bg-blue-500 pl-6 text-white"
+                class="flex h-full w-full items-center justify-center bg-blue-500 text-white"
                 data-testid="edit-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
@@ -75,7 +75,7 @@ const emit = defineEmits([
         <template #action-right>
             <button
                 @click="emit('delete', exercise.id)"
-                class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
+                class="flex h-full w-full items-center justify-center bg-red-500 text-white"
                 data-testid="delete-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">

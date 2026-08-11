@@ -263,7 +263,11 @@ class SyncService {
 
         window.dispatchEvent(
             new CustomEvent('sync:failed', {
-                detail: { url: config.url, status: error?.response?.status ?? null },
+                // The payload travels with the event so a listener can say WHAT
+                // was refused. A URL alone can only ever produce "an item of the
+                // session" — true, and of no use to someone who now has to work
+                // out which of their sets is missing.
+                detail: { url: config.url, status: error?.response?.status ?? null, data: config.data },
             }),
         )
     }
