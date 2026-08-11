@@ -18,8 +18,8 @@ class FetchExercisesApiAction
     public function execute(User $user): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return QueryBuilder::for(Exercise::class)
-            ->allowedFilters(['name', 'type', 'category'])
-            ->allowedSorts(['name', 'created_at'])
+            ->allowedFilters('name', 'type', 'category')
+            ->allowedSorts('name', 'created_at')
             ->defaultSort('name')
             ->where(function ($query) use ($user): void {
                 $query->whereNull('user_id')

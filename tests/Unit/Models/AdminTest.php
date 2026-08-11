@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Models;
 
 use App\Models\Admin;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Support\LogOptions;
 use Tests\TestCase;
 
 class AdminTest extends TestCase
@@ -17,9 +17,9 @@ class AdminTest extends TestCase
 
         $this->assertInstanceOf(LogOptions::class, $options);
 
-        // Properties are public in Spatie\Activitylog\LogOptions
+        // Properties are public in Spatie\Activitylog\Support\LogOptions
         $this->assertEquals(['name', 'email'], $options->logAttributes);
         $this->assertTrue($options->logOnlyDirty);
-        $this->assertFalse($options->submitEmptyLogs);
+        $this->assertFalse($options->logEmptyChanges);
     }
 }

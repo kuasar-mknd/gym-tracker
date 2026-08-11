@@ -58,8 +58,15 @@ class CelebrationSuppressionTest extends DuskTestCase
                 ->visit(route('dashboard'))
                 ->waitFor('#main-content', 30);
 
+            /**
+             * Inertia 3 moved the initial page off the app element's `data-page`
+             * attribute and into a `<script data-page="app" type="application/json">`
+             * whose text IS the payload — the old `future.useScriptElementForInitialPage`,
+             * now always on. Read as an attribute it yields the string "app",
+             * and JSON.parse throws.
+             */
             $isTesting = $browser->script(
-                'return JSON.parse(document.querySelector("[data-page]").dataset.page).props.is_testing;'
+                'return JSON.parse(document.querySelector("script[data-page]").textContent).props.is_testing;'
             )[0];
 
             $this->assertTrue(

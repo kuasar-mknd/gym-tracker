@@ -1,0 +1,101 @@
+# Every Material Symbols icon this app renders.
+#
+# The self-hosted material-symbols-outlined.woff2 contains these and nothing
+# else — 9.7 KiB instead of the 1,099 KiB variable face the app used to fetch
+# from Google on every cold start.
+#
+# Adding an icon to a component means adding it here and regenerating the font:
+#
+#   curl -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
+#     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36' \
+#     "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&icon_names=$(paste -sd, - < resources/fonts/material-symbols.txt)"
+#
+# then download the woff2 the returned @font-face points at, over
+# resources/fonts/material-symbols-outlined.woff2.
+#
+# tests/Feature/IconSubsetTest.php fails if a component renders a name that is
+# not in this list, so a forgotten icon is a red build rather than a word
+# spelled out where a glyph should be.
+accessibility_new
+add
+add_circle
+apps
+arrow_back
+arrow_downward
+arrow_forward
+arrow_forward_ios
+assignment_add
+autorenew
+bar_chart
+bar_chart_4_bars
+bedtime
+bolt
+book
+calculate
+calendar_month
+cancel
+check
+check_circle
+chevron_left
+chevron_right
+close
+cloud_off
+dashboard
+delete
+directions_run
+edit
+emoji_events
+error
+event_busy
+exercise
+expand_more
+fitness_center
+grid_view
+group
+handyman
+history
+inventory_2
+keyboard
+library_books
+local_cafe
+local_drink
+local_fire_department
+logout
+medication
+menu
+menu_book
+monitor_heart
+monitor_weight
+no_drinks
+notifications
+pause
+person
+person_edit
+pie_chart
+play_arrow
+play_circle
+repeat
+restart_alt
+restaurant
+savings
+schedule
+search
+search_off
+self_improvement
+settings
+show_chart
+spa
+star
+stars
+straighten
+task_alt
+timer
+timer_off
+touch_app
+tour
+trending_down
+trending_up
+visibility
+visibility_off
+water_bottle
+water_drop

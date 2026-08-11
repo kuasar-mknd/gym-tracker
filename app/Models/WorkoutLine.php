@@ -7,7 +7,7 @@ namespace App\Models;
 use App\Services\RecommendedValuesService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -115,7 +115,7 @@ class WorkoutLine extends Model
         return LogOptions::defaults()
             ->logOnly(['exercise.name', 'order', 'notes'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
     #[\Override]

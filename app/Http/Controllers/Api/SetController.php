@@ -56,7 +56,7 @@ class SetController extends Controller
         $this->authorize('viewAny', Set::class);
 
         $sets = QueryBuilder::for(Set::class)
-            ->allowedFilters(['workout_line_id'])
+            ->allowedFilters('workout_line_id')
             // Bolt: Optimize belongsTo filtering with INNER JOIN
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')

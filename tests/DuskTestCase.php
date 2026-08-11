@@ -72,14 +72,22 @@ abstract class DuskTestCase extends BaseTestCase
 
         Browser::macro('assertNoConsoleExceptions', function (): object {
             /** @var Browser $this */
+            /**
+             * Three blanket suppressions used to sit here — 'Failed to send
+             * logs', 'navigator.vibrate' and 'Cross-Origin-Opener-Policy'.
+             * Counted across the 74 console transcripts one full run leaves
+             * behind, each occurred exactly zero times, at any level. They were
+             * also unreachable by construction: all three describe warnings,
+             * and the filter below only ever sees SEVERE.
+             *
+             * They are gone rather than kept "just in case", because a
+             * suppression nobody can point to an occurrence of is indistinguishable
+             * from one that will quietly swallow a real error later. If CI
+             * proves one is needed, it comes back with the transcript attached.
+             */
             $logs = $this->driver->manage()->getLog('browser');
             $failures = collect($logs)->filter(
-                fn ($log): bool => ($log['level'] ?? '') === 'SEVERE' &&
-                    ! str_contains((string) ($log['message'] ?? ''), 'Failed to send logs') &&
-                    ! str_contains((string) ($log['message'] ?? ''), 'navigator.vibrate') &&
-                    // SecurityHeaders sends COOP for production HTTPS; browsers log an
-                    // advisory when it arrives over a plain-http, non-localhost origin.
-                    ! str_contains((string) ($log['message'] ?? ''), 'Cross-Origin-Opener-Policy')
+                fn ($log): bool => ($log['level'] ?? '') === 'SEVERE'
             );
 
             \PHPUnit\Framework\Assert::assertTrue(

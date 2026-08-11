@@ -33,7 +33,7 @@ class BodyMeasurementController extends Controller
         $this->authorize('viewAny', BodyMeasurement::class);
 
         $measurements = QueryBuilder::for(BodyMeasurement::class)
-            ->allowedSorts(['measured_at', 'weight', 'created_at'])
+            ->allowedSorts('measured_at', 'weight', 'created_at')
             ->defaultSort('-measured_at')
             ->where('user_id', $this->user()->id)
             ->paginate();
