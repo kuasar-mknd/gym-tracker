@@ -12,7 +12,7 @@ const props = defineProps({
     },
 })
 
-// Color mapping matching tailwind.config.js and Exercises/Index.vue
+// Color mapping matching the @theme block in resources/css/app.css and Exercises/Index.vue
 const categoryColors = {
     Pectoraux: '#FF5500', // electric-orange
     Dos: '#8800FF', // vivid-violet
