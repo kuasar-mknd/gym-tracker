@@ -61,6 +61,40 @@ const menuGroups = [
                 color: 'text-hot-pink',
                 bgColor: 'bg-pink-100/50',
             },
+            // These four features are routed, tested and fully working, but nothing
+            // in the app linked to them — they were reachable only by typing the URL.
+            {
+                name: 'Mensurations',
+                icon: 'accessibility_new',
+                route: 'body-parts.index',
+                description: 'Tour de bras, taille…',
+                color: 'text-rose-500',
+                bgColor: 'bg-rose-100/50',
+            },
+            {
+                name: 'Habitudes',
+                icon: 'task_alt',
+                route: 'habits.index',
+                description: 'Suivi quotidien',
+                color: 'text-violet-500',
+                bgColor: 'bg-violet-100/50',
+            },
+            {
+                name: 'Journal',
+                icon: 'menu_book',
+                route: 'daily-journals.index',
+                description: 'Notes et ressenti',
+                color: 'text-teal-500',
+                bgColor: 'bg-teal-100/50',
+            },
+            {
+                name: 'Compléments',
+                icon: 'medication',
+                route: 'supplements.index',
+                description: 'Suivi des prises',
+                color: 'text-lime-600',
+                bgColor: 'bg-lime-100/50',
+            },
         ],
     },
     {

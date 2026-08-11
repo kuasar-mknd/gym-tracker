@@ -23,7 +23,7 @@ class UserController extends Controller
         $this->authorize('viewAny', User::class);
 
         $query = QueryBuilder::for(User::class)
-            ->allowedSorts(['name', 'email', 'created_at'])
+            ->allowedSorts('name', 'email', 'created_at')
             ->paginate();
 
         return UserResource::collection($query);

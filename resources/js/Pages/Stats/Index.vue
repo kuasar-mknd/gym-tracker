@@ -47,10 +47,10 @@ const handlePeriodChange = (period) => {
     <AuthenticatedLayout liquid-variant="cyan-magenta">
         <div class="space-y-6">
             <!-- Header -->
-            <header class="animate-fade-in flex items-start justify-between">
+            <header class="animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h1
-                        class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
+                        class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-4xl"
                     >
                         Mon<br />
                         <span class="text-gradient-cyan-magenta">Évolution</span>
@@ -58,7 +58,9 @@ const handlePeriodChange = (period) => {
                 </div>
 
                 <!-- Period Selector -->
-                <div class="border-glass-border flex rounded-xl border bg-white/50 p-1 shadow-sm backdrop-blur-sm">
+                <div
+                    class="border-glass-border flex shrink-0 rounded-xl border bg-white/50 p-1 shadow-sm backdrop-blur-sm"
+                >
                     <button
                         v-for="period in periods"
                         :key="period.value"

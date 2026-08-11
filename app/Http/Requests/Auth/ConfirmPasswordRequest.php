@@ -54,6 +54,7 @@ class ConfirmPasswordRequest extends FormRequest
         RateLimiter::clear($this->throttleKey());
     }
 
+    #[\Override]
     protected function prepareForValidation(): void
     {
         if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
@@ -68,6 +69,7 @@ class ConfirmPasswordRequest extends FormRequest
         }
     }
 
+    #[\Override]
     protected function passedValidation(): void
     {
         $this->clearRateLimiter();

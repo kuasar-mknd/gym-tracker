@@ -16,6 +16,6 @@ class ExerciseTest extends TestCase
 
         $this->assertEquals(['name', 'type', 'category', 'default_rest_time'], $options->logAttributes);
         $this->assertTrue($options->logOnlyDirty);
-        $this->assertFalse($options->submitEmptyLogs);
+        $this->assertFalse($options->logEmptyChanges);
     }
 }

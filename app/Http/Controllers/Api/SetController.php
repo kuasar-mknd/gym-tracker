@@ -56,7 +56,7 @@ class SetController extends Controller
         $this->authorize('viewAny', Set::class);
 
         $sets = QueryBuilder::for(Set::class)
-            ->allowedFilters(['workout_line_id'])
+            ->allowedFilters('workout_line_id')
             // Bolt: Optimize belongsTo filtering with INNER JOIN
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
@@ -96,6 +96,10 @@ class SetController extends Controller
         $workoutLine = \App\Models\WorkoutLine::findOrFail($validated['workout_line_id']);
 
         $this->authorize('create', [\App\Models\Set::class, $workoutLine]);
+
+        // Carried in a header rather than the body: it names the attempt, not
+        // the resource, and has no business in the validated payload.
+        $validated['idempotency_key'] = $request->header('Idempotency-Key');
 
         $set = $action->execute($this->user(), $validated);
 

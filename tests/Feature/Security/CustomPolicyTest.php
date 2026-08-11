@@ -105,7 +105,11 @@ class CustomPolicyTest extends TestCase
 
         $directives = $this->getDirectivesFromPolicy($policy);
 
-        $this->assertContains('https://fonts.googleapis.com', $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        /**
+         * bunny.net is still allowed because Horizon, Telescope, Pulse and
+         * Filament each pull their dashboard font from it, and none of those
+         * views are ours to change.
+         */
         $this->assertContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::STYLE)]);
 
         $this->assertContains('data:', $directives[$this->getDirectiveKey(Directive::IMG)]);
@@ -113,8 +117,16 @@ class CustomPolicyTest extends TestCase
         $this->assertContains('https://www.svgrepo.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
 
         $this->assertContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::FONT)]);
-        $this->assertContains('https://fonts.gstatic.com', $directives[$this->getDirectiveKey(Directive::FONT)]);
         $this->assertContains('data:', $directives[$this->getDirectiveKey(Directive::FONT)]);
+
+        /**
+         * The app's own fonts are served from this origin now, so nothing it
+         * renders has any reason to reach Google. Asserted as absent rather
+         * than simply dropped from the list above: an allowance that creeps
+         * back in is exactly the kind of change that passes review unnoticed.
+         */
+        $this->assertNotContains('https://fonts.googleapis.com', $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertNotContains('https://fonts.gstatic.com', $directives[$this->getDirectiveKey(Directive::FONT)]);
 
         $this->assertContains('https://fcm.googleapis.com', $directives[$this->getDirectiveKey(Directive::CONNECT)]);
         $this->assertContains('https://updates.push.apple.com', $directives[$this->getDirectiveKey(Directive::CONNECT)]);

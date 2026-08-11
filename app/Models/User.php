@@ -18,8 +18,8 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -53,6 +53,7 @@ final class User extends Authenticatable implements MustVerifyEmail
      *
      * @var list<string>
      */
+    #[\Override]
     protected $fillable = [
         'name',
         'email',
@@ -64,6 +65,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     /**
      * @var list<string>
      */
+    #[\Override]
     protected $hidden = [
         'password',
         'remember_token',
@@ -122,7 +124,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         return LogOptions::defaults()
             ->logOnly(['name', 'email', 'avatar', 'default_rest_time'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
     public function getUnreadNotificationsCountCached(): int
@@ -140,6 +142,7 @@ final class User extends Authenticatable implements MustVerifyEmail
      *
      * @return array<string, string>
      */
+    #[\Override]
     protected function casts(): array
     {
         return [

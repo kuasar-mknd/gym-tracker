@@ -16,6 +16,7 @@ class Plate extends Model
     /** @use HasFactory<\Database\Factories\PlateFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'weight',
         'quantity',
@@ -29,6 +30,7 @@ class Plate extends Model
         return $this->belongsTo(User::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

@@ -183,32 +183,22 @@ describe('WorkoutTemplateController', function (): void {
     });
 
     describe('unimplemented routes', function (): void {
+        /*
+         * Only show is left here. There is no Templates/Show page and nothing
+         * links to the route, so its 404 is honest.
+         *
+         * edit and update used to sit alongside it, and their 404 was not: the
+         * page, the update action, its request and the policy ability all
+         * existed and were wired to the API controller, while the web methods
+         * aborted and nothing in the interface linked to templates.edit. They
+         * are covered for real in WorkoutTemplatesControllerTest now.
+         */
         it('returns 404 for show', function (): void {
             $user = User::factory()->create();
             $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
 
             $response = $this->actingAs($user)
                 ->get(route('templates.show', $template));
-
-            $response->assertNotFound();
-        });
-
-        it('returns 404 for edit', function (): void {
-            $user = User::factory()->create();
-            $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
-
-            $response = $this->actingAs($user)
-                ->get(route('templates.edit', $template));
-
-            $response->assertNotFound();
-        });
-
-        it('returns 404 for update', function (): void {
-            $user = User::factory()->create();
-            $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
-
-            $response = $this->actingAs($user)
-                ->patch(route('templates.update', $template));
 
             $response->assertNotFound();
         });

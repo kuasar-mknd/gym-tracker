@@ -20,6 +20,7 @@ class WorkoutTemplate extends Model
     /** @use HasFactory<\Database\Factories\WorkoutTemplateFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'name',
         'description',

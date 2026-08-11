@@ -7,6 +7,36 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Sécurité
+- **`nanoid`** : `radix-vue` épinglait la 5.1.6, dans la plage de [GHSA-28wg-ghj8-5hjv](https://github.com/advisories/GHSA-28wg-ghj8-5hjv) (un générateur non sécurisé boucle indéfiniment sur une taille négative). Contrainte en `^5.1.16`, portée à `radix-vue` seul : `postcss` dépend de la branche 3.x, que l'avis ne concerne pas.
+
+- **Polices auto-hébergées.** Les quatre requêtes bloquantes vers `fonts.googleapis.com` sont supprimées : la PWA installée n'avait aucune police hors-ligne, chaque démarrage à froid attendait un tiers, et l'IP de chaque visiteur partait chez Google au chargement. Les faces sont servies par l'application, empreintées par Vite et précachées par le service worker — `woff2` manquait au glob de précache, donc les ajouter sans ça n'aurait rien changé pour l'offline. `fonts.googleapis.com` et `fonts.gstatic.com` sont retirés de la CSP ; `fonts.bunny.net` reste, Horizon, Telescope, Pulse et Filament s'en servant pour leurs tableaux de bord.
+- **Jeu d'icônes réduit à ce qui est affiché** : la face variable complète de Material Symbols pesait 1 099 Kio et couvrait tout le catalogue. Le sous-ensemble des 83 icônes réellement rendues pèse 9,7 Kio. `tests/Feature/IconSubsetTest.php` échoue si un composant rend une icône absente du jeu — sans quoi elle s'afficherait en toutes lettres.
+
+### Corrigé — en marge des dépendances
+- **`Permissions-Policy` malformé** : l'en-tête déclarait `vr=()`, un nom de brouillon jamais entré au registre. Les navigateurs rejetaient le jeton et le signalaient sur chaque réponse (154 fois par passe de tests navigateur, sans que rien ne l'attrape, `assertNoConsoleExceptions` ne regardant que les erreurs `SEVERE`). WebXR n'était donc pas bloqué du tout. Le nom correct est `xr-spatial-tracking`.
+- **`Archivo Black` était chargé pour un champ que rien n'affiche** : `glass-input-fat` n'a qu'un consommateur, `GlassFatInput.vue`, qu'aucune page n'importe et que `main.js` n'enregistre pas — extrait de `GlassInput` en #795 sans jamais être branché, puis entretenu pendant quatre PR. Servir la police n'a donc rien changé à l'écran, contrairement à ce qu'annonçait cette entrée. Composant, utilitaire, jeton `--font-fat` et les deux faces (15,8 Kio) sont retirés ; le grand champ numérique reste à écrire le jour où une séance en voudra un.
+- **`Barlow Condensed` était téléchargé en six graisses et jamais rendu** : l'utilitaire `font-condensed` n'a aucun usage. Police et jeton retirés.
+
+### Modifié
+- **Dépendances portées à leur dernière version.** Au-delà des mises à jour compatibles :
+    - **spatie/laravel-query-builder 6 → 7** : les méthodes `allowed*()` sont devenues strictement variadiques, donc les 22 sites d'appel passent leurs filtres, tris et inclusions un par un plutôt qu'en tableau. La config publiée est réalignée (`count_suffix` et `exists_suffix` fusionnés en `suffixes`, `disable_invalid_includes_query_exception` au singulier, ajout de `delimiter` et `filter_value_splitting_enabled`).
+    - **spatie/laravel-activitylog 4 → 5** : les changements suivis quittent `properties` pour une colonne `attribute_changes`, et `batch_uuid` disparaît avec le système de lots. Une migration réécrit les lignes existantes ; sans elle tout l'historique s'afficherait comme une modification vide.
+    - **Inertia 2 → 3**, serveur et client ensemble.
+    - **laravel-notification-channels/webpush 10 → 11**, **laravel/mcp 0.5 → 0.9**, **laravel/boost 2.4 → 2.5**.
+    - **Image de build Node 25 → 24 (LTS)** : la CI testait les assets en 24 et l'image en construisait d'autres en 25.
+    - **Redis 7.4 → 8** en production, où le `compose.yaml` de développement suivait déjà la 8.
+    - **actions/stale v10 → v11**.
+
+### Corrigé
+- **Séries d'une séance** (#1319) :
+    - **Durée des exercices cardio et chronométrés** : le champ durée écrivait `NaN` sur la série tant que ses segments étaient incomplets, ce qui réinitialisait le champ pendant la frappe et enregistrait `null` en base. La valeur n'est plus lue qu'une fois complète, et le formatage d'une durée repose sur de l'arithmétique plutôt que sur `Date` (plus de repli silencieux au-delà de 24 h, plus de `RangeError` en plein rendu).
+    - **Valeurs numériques** : les champs poids, reps, distance et durée sont normalisés en nombres (`''` devient `null`) au lieu de circuler comme chaînes.
+    - **Ordre des séries** : `WorkoutLine::sets()` trie désormais explicitement par `id`. Sans `ORDER BY`, MySQL pouvait rendre les séries triées par poids via `sets_workout_line_id_weight_reps_index`, ce qui les déplaçait dès qu'un poids était corrigé. `Workout::workoutLines()` départage par `id` les lignes partageant la même valeur `order`.
+    - **Création de séries successives** : les `POST` d'un même exercice sont sérialisés, deux séries ajoutées coup sur coup ne pouvant plus être écrites dans l'ordre inverse des taps.
+    - **Valeurs fantômes selon le type d'exercice** : une nouvelle série était créée avec les quatre mesures quel que soit l'exercice. Une série cardio partait donc avec `reps: 10` et un poids de 0, et une série chronométrée avec en plus `distance_km: 0` — des champs que sa ligne n'affiche même pas et que personne n'avait saisis. C'est de là que venait un 10 apparu de nulle part : c'est la valeur de pré-remplissage des reps, écrite dans des lignes qui n'ont pas de reps. Une série ne porte plus que ce que son exercice mesure.
+    - **Saisie rapide** : une réponse périmée n'écrase plus une valeur plus récente, un refus rétablit la dernière valeur confirmée par le serveur, la validation d'une série attend l'envoi des valeurs en attente, et les brouillons hors-ligne sont conservés par champ.
+
 ## [1.4.28] - 2026-04-10
 
 ### Sécurité

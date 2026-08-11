@@ -13,8 +13,10 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListExercises extends ListRecords
 {
+    #[\Override]
     protected static string $resource = ExerciseResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

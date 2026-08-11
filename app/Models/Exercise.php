@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -30,6 +30,7 @@ class Exercise extends Model
     /** @use HasFactory<\Database\Factories\ExerciseFactory> */
     use HasFactory, LogsActivity;
 
+    #[\Override]
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
 
     /**
@@ -65,7 +66,7 @@ class Exercise extends Model
         return LogOptions::defaults()
             ->logOnly(['name', 'type', 'category', 'default_rest_time'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
     /**
@@ -105,6 +106,7 @@ class Exercise extends Model
         }
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [
@@ -113,6 +115,7 @@ class Exercise extends Model
         ];
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         parent::booted();

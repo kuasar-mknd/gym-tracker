@@ -135,14 +135,14 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->click('[dusk="add-set-1"]')
                 ->waitFor('@distance-input-1-0', 15)
                 ->type('@distance-input-1-0', '5.5')
-                ->type('@duration-input-1-0', '002530');
+                ->pickDuration('@duration-input-1-0', 0, 25, 30);
 
             // 6. Fill Timed set
             $browser->waitFor('@add-set-2', 15);
             $browser->script("document.querySelector('[dusk=\"add-set-2\"]').scrollIntoView({block: 'center'});");
             $browser->click('[dusk="add-set-2"]')
                 ->waitFor('@duration-input-2-0', 15)
-                ->type('@duration-input-2-0', '001000');
+                ->pickDuration('@duration-input-2-0', 0, 10, 0);
 
             // 6b. Verify RECOMMENDED values for Recommender Ex (Index 4)
             // It should be 110kg x 3 reps (most frequent in the LAST workout)
@@ -160,10 +160,25 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitFor('@weight-input-0-1', 15)
                 ->type('@weight-input-0-1', '85')
                 ->type('@reps-input-0-1', '3')
-                ->pause(1500) // Wait for debounce to save
-                ->script("document.querySelector('[dusk=\"remove-set-0-1\"]').scrollIntoView({block: 'center'});");
-            $browser->waitFor('@remove-set-0-1', 10)
-                ->click('@remove-set-0-1')
+                ->pause(1500); // Wait for debounce to save
+
+            /**
+             * The row's own delete is hidden at this width — a phone swipes
+             * instead — so this goes through the swipe action, reached the way a
+             * keyboard reaches it. A flick is not something WebDriver can
+             * perform, but focusing the action opens the row, which is exactly
+             * what SwipeableRow does so the gesture is not the only way in.
+             *
+             * Focus comes before waitFor: the action rests at opacity 0, so it
+             * is present long before it is visible.
+             */
+            $browser->script(
+                "document.querySelector('[dusk=\"swipe-remove-set-0-1\"]').scrollIntoView({block: 'center'});"
+                ."document.querySelector('[dusk=\"swipe-remove-set-0-1\"]').focus();"
+            );
+
+            $browser->waitFor('@swipe-remove-set-0-1', 10)
+                ->click('@swipe-remove-set-0-1')
                 ->waitUntilMissing('@weight-input-0-1', 15);
 
             // 6d. Modify workout settings

@@ -23,7 +23,7 @@ class WarmupPreferenceController extends Controller
         $this->authorize('viewAny', WarmupPreference::class);
 
         $preferences = QueryBuilder::for(WarmupPreference::class)
-            ->allowedSorts(['created_at', 'updated_at'])
+            ->allowedSorts('created_at', 'updated_at')
             ->where('user_id', $this->user()->id)
             ->get();
 
@@ -42,7 +42,7 @@ class WarmupPreferenceController extends Controller
 
         $preference = WarmupPreference::create($validated);
 
-        return (new WarmupPreferenceResource($preference))
+        return new WarmupPreferenceResource($preference)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

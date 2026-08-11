@@ -51,7 +51,7 @@ class AchievementController extends Controller implements HasMiddleware
         $this->authorize('viewAny', Achievement::class);
 
         $query = QueryBuilder::for(Achievement::class)
-            ->allowedSorts(['name', 'created_at', 'required_value'])
+            ->allowedSorts('name', 'created_at', 'required_value')
             ->paginate();
 
         return AchievementResource::collection($query);

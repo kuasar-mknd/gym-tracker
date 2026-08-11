@@ -20,6 +20,22 @@ use Inertia\Inertia;
 class GoalController extends Controller
 {
     /**
+     * The measurement goals a user can set. The create form and the edit form
+     * both fill their select from this list, so it lives in one place — a
+     * second hand-written copy is how the two screens drift apart.
+     *
+     * No @var here: PHP Insights rejects any @var on a class constant outright,
+     * and PHPStan reads the shape off the literal anyway.
+     */
+    private const array MEASUREMENT_TYPES = [
+        ['value' => 'weight', 'label' => 'Poids de corps'],
+        ['value' => 'waist', 'label' => 'Tour de taille'],
+        ['value' => 'body_fat', 'label' => 'Masse grasse (%)'],
+        ['value' => 'chest', 'label' => 'Tour de poitrine'],
+        ['value' => 'arms', 'label' => 'Tour de bras'],
+    ];
+
+    /**
      * Create a new GoalController instance.
      *
      * @param  \App\Services\GoalService  $goalService  The service responsible for updating goal progress.
@@ -46,13 +62,42 @@ class GoalController extends Controller
                 ->get()
                 ->append(['unit']),
             'exercises' => Exercise::getCachedForUser($this->user()->id),
-            'measurementTypes' => [
-                ['value' => 'weight', 'label' => 'Poids de corps'],
-                ['value' => 'waist', 'label' => 'Tour de taille'],
-                ['value' => 'body_fat', 'label' => 'Masse grasse (%)'],
-                ['value' => 'chest', 'label' => 'Tour de poitrine'],
-                ['value' => 'arms', 'label' => 'Tour de bras'],
+            'measurementTypes' => self::MEASUREMENT_TYPES,
+        ]);
+    }
+
+    /**
+     * Show the form for editing an existing goal.
+     *
+     * The deadline is cast to a date, so it serialises as a full ISO timestamp.
+     * An `<input type="date">` only accepts `Y-m-d`, and silently renders blank
+     * for anything else — which would have looked like a goal that never had a
+     * deadline, and quietly cleared it on the next save. It is formatted here.
+     *
+     * @return \Inertia\Response The Inertia response rendering the 'Goals/Edit' page.
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException If the goal is not the user's.
+     */
+    public function edit(Goal $goal): \Inertia\Response
+    {
+        $this->authorize('update', $goal);
+
+        return Inertia::render('Goals/Edit', [
+            'goal' => [
+                'id' => $goal->id,
+                'title' => $goal->title,
+                'type' => $goal->type->value,
+                'target_value' => $goal->target_value,
+                'start_value' => $goal->start_value,
+                // Empty string rather than null: these feed inputs whose value
+                // is typed String|Number, and the create form seeds them the
+                // same way. The request middleware turns them back into null.
+                'exercise_id' => $goal->exercise_id ?? '',
+                'measurement_type' => $goal->measurement_type ?? '',
+                'deadline' => $goal->deadline?->format('Y-m-d') ?? '',
             ],
+            'exercises' => Exercise::getCachedForUser($this->user()->id),
+            'measurementTypes' => self::MEASUREMENT_TYPES,
         ]);
     }
 

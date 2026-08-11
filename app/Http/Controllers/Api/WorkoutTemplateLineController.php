@@ -24,7 +24,7 @@ class WorkoutTemplateLineController extends Controller
         $this->authorize('viewAny', WorkoutTemplateLine::class);
 
         $lines = QueryBuilder::for(WorkoutTemplateLine::class)
-            ->allowedFilters(['workout_template_id'])
+            ->allowedFilters('workout_template_id')
             // Bolt: Optimize belongsTo filtering with INNER JOIN
             ->join('workout_templates', 'workout_template_lines.workout_template_id', '=', 'workout_templates.id')
             ->where('workout_templates.user_id', $request->user()?->id)

@@ -2,6 +2,7 @@
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import Modal from '@/Components/UI/Modal.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
@@ -45,46 +46,46 @@ const closeModal = () => {
             Supprimer mon compte
         </GlassButton>
 
-        <!-- Deletion Modal -->
-        <Teleport to="body">
-            <div v-if="confirmingUserDeletion" class="glass-overlay animate-fade-in" @click.self="closeModal">
-                <div
-                    class="fixed inset-x-4 top-auto bottom-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2"
-                >
-                    <div class="glass-modal animate-slide-up p-6">
-                        <h2 class="text-text-main text-lg font-semibold">Confirmer la suppression</h2>
+        <!--
+          Rendered through Modal, which uses a native <dialog> opened with
+          showModal(). That is what supplies the dialog role, aria-modal, the
+          focus trap and Escape-to-close — none of which the hand-rolled overlay
+          this replaced had. Deleting an account is the last screen where a
+          keyboard user should be able to tab out into the page behind it.
+        -->
+        <Modal :show="confirmingUserDeletion" max-width="md" aria-labelledby="delete-account-title" @close="closeModal">
+            <div class="p-6">
+                <h2 id="delete-account-title" class="text-text-main text-lg font-semibold">Confirmer la suppression</h2>
 
-                        <p class="text-text-muted mt-2 text-sm">
-                            Cette action est irréversible. Entre ton mot de passe pour confirmer.
-                        </p>
+                <p class="text-text-muted mt-2 text-sm">
+                    Cette action est irréversible. Entre ton mot de passe pour confirmer.
+                </p>
 
-                        <div class="mt-4">
-                            <GlassInput
-                                v-model="form.password"
-                                ref="passwordInput"
-                                type="password"
-                                placeholder="Mot de passe"
-                                :error="form.errors.password"
-                                @keyup.enter="deleteUser"
-                                data-testid="delete-password-input"
-                            />
-                        </div>
+                <div class="mt-4">
+                    <GlassInput
+                        v-model="form.password"
+                        ref="passwordInput"
+                        type="password"
+                        placeholder="Mot de passe"
+                        :error="form.errors.password"
+                        @keyup.enter="deleteUser"
+                        data-testid="delete-password-input"
+                    />
+                </div>
 
-                        <div class="mt-6 flex justify-end gap-3">
-                            <GlassButton @click="closeModal" data-testid="cancel-delete-button"> Annuler </GlassButton>
+                <div class="mt-6 flex justify-end gap-3">
+                    <GlassButton @click="closeModal" data-testid="cancel-delete-button"> Annuler </GlassButton>
 
-                            <GlassButton
-                                variant="danger"
-                                :loading="form.processing"
-                                @click="deleteUser"
-                                data-testid="confirm-delete-button"
-                            >
-                                Supprimer
-                            </GlassButton>
-                        </div>
-                    </div>
+                    <GlassButton
+                        variant="danger"
+                        :loading="form.processing"
+                        @click="deleteUser"
+                        data-testid="confirm-delete-button"
+                    >
+                        Supprimer
+                    </GlassButton>
                 </div>
             </div>
-        </Teleport>
+        </Modal>
     </GlassCard>
 </template>

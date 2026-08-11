@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { watch, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
@@ -9,7 +9,6 @@ import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
-import { triggerHaptic } from '@/composables/useHaptics'
 
 defineProps({
     pageTitle: {
@@ -30,7 +29,6 @@ defineProps({
     },
 })
 
-const showingNavigationDropdown = ref(false)
 const page = usePage()
 
 const toasts = {
@@ -105,7 +103,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         <button
                             v-press
                             @click="$page.props.flash[type] = null"
-                            class="text-slate-400 hover:text-slate-600"
+                            class="min-h-touch min-w-touch flex items-center justify-center text-slate-400 hover:text-slate-600"
                             aria-label="Fermer"
                         >
                             <span class="material-symbols-outlined text-base">close</span>
@@ -160,7 +158,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="text-text-muted hover:text-electric-orange relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-700"
+                            class="text-text-muted hover:text-electric-orange relative flex size-11 shrink-0 items-center justify-center rounded-xl border border-white bg-white/60 transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-700"
                             :aria-label="
                                 $page.props.auth.user.unread_notifications_count > 0
                                     ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
@@ -249,7 +247,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                 <Link
                     v-press
                     :href="route('notifications.index')"
-                    class="text-text-muted relative flex h-10 w-10 items-center justify-center rounded-xl border border-white bg-white/60 transition-all dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
+                    class="text-text-muted relative flex size-11 shrink-0 items-center justify-center rounded-xl border border-white bg-white/60 transition-all dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
                     :aria-label="
                         $page.props.auth.user.unread_notifications_count > 0
                             ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`

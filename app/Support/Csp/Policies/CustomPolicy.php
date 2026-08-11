@@ -11,6 +11,7 @@ use Spatie\Csp\Presets\Basic;
 
 class CustomPolicy extends Basic
 {
+    #[\Override]
     public function configure(Policy $policy): void
     {
         // Don't call parent::configure() because Basic preset adds a nonce to STYLE,
@@ -73,14 +74,21 @@ class CustomPolicy extends Basic
 
     protected function configureExternalResources(Policy $policy): void
     {
+        /**
+         * fonts.googleapis.com and fonts.gstatic.com are gone with the fonts
+         * themselves — those are self-hosted now, so the app has no reason to
+         * let a page reach Google for a stylesheet or a face.
+         *
+         * fonts.bunny.net stays: Horizon, Telescope, Pulse and Filament all
+         * pull their dashboard font from it, and none of them are ours to
+         * re-host.
+         */
         $policy
-            ->add(Directive::STYLE, 'https://fonts.googleapis.com')
             ->add(Directive::STYLE, 'https://fonts.bunny.net')
             ->add(Directive::IMG, 'data:')
             ->add(Directive::IMG, 'https://ui-avatars.com')
             ->add(Directive::IMG, 'https://www.svgrepo.com')
             ->add(Directive::FONT, 'https://fonts.bunny.net')
-            ->add(Directive::FONT, 'https://fonts.gstatic.com')
             ->add(Directive::FONT, 'data:')
             ->add(Directive::CONNECT, 'https://fcm.googleapis.com')
             ->add(Directive::CONNECT, 'https://updates.push.apple.com')

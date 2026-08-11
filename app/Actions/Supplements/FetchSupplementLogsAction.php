@@ -21,9 +21,9 @@ class FetchSupplementLogsAction
     public function execute(User $user, int $perPage): LengthAwarePaginator
     {
         return QueryBuilder::for(SupplementLog::class)
-            ->allowedFilters(['supplement_id'])
-            ->allowedSorts(['consumed_at', 'created_at'])
-            ->allowedIncludes(['supplement'])
+            ->allowedFilters('supplement_id')
+            ->allowedSorts('consumed_at', 'created_at')
+            ->allowedIncludes('supplement')
             ->where('user_id', $user->id)
             ->paginate($perPage);
     }

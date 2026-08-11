@@ -37,15 +37,29 @@ const props = defineProps({
     history: Object,
 })
 
+// `type` is validated server-side against a fixed list — StoreFastRequest:
+// in:16:8,18:6,20:4,24:0,36:0,48:0,custom — so it is data, not something to
+// carve out of the label. It used to be derived with label.split(' ')[0],
+// which yields '16:8', '18:6' and '20:4' correctly and then '24h' and '36h',
+// neither of which the server accepts: two of the five options could never
+// start a fast, and the page rendered no error to say why.
 const fastingTypes = [
-    { label: '16:8 (Leangains)', hours: 16 },
-    { label: '18:6', hours: 18 },
-    { label: '20:4 (Warrior)', hours: 20 },
-    { label: '24h (OMAD)', hours: 24 },
-    { label: '36h (Monk)', hours: 36 },
+    { value: '16:8', label: '16:8 (Leangains)', hours: 16 },
+    { value: '18:6', label: '18:6', hours: 18 },
+    { value: '20:4', label: '20:4 (Warrior)', hours: 20 },
+    { value: '24:0', label: '24h (OMAD)', hours: 24 },
+    { value: '36:0', label: '36h (Monk)', hours: 36 },
 ]
 
-const selectedType = ref(fastingTypes[0])
+// A <select> can only ever hand back a string. Binding the objects directly made
+// every option render value="[object Object]", so picking anything other than the
+// default left selectedType as that string — .hours became NaN and .label.split()
+// threw, silently killing the "Commencer" button.
+const selectedTypeValue = ref(fastingTypes[0].value)
+
+const selectedType = computed(
+    () => fastingTypes.find((type) => type.value === selectedTypeValue.value) ?? fastingTypes[0],
+)
 
 const startForm = useForm({
     start_time: '',
@@ -113,7 +127,7 @@ const startFast = () => {
         .transform((data) => ({
             ...data,
             target_duration_minutes: selectedType.value.hours * 60,
-            type: selectedType.value.label.split(' ')[0],
+            type: selectedType.value.value,
         }))
         .post(route('tools.fasting.store'))
 }
@@ -121,6 +135,12 @@ const startFast = () => {
 const endFast = () => {
     endForm.end_time = dayjs().format('YYYY-MM-DD HH:mm:ss')
     endForm.patch(route('tools.fasting.update', props.activeFast.id))
+}
+
+const goToPage = (url) => {
+    if (url) {
+        router.visit(url)
+    }
 }
 
 const deleteFast = (id) => {
@@ -211,14 +231,33 @@ const formatHistoryDuration = (start, end) => {
 
                 <form @submit.prevent="startFast" class="space-y-4">
                     <GlassSelect
-                        v-model="selectedType"
+                        v-model="selectedTypeValue"
                         label="Type de jeûne"
-                        :options="fastingTypes.map((t) => ({ value: t, label: t.label }))"
+                        dusk="fasting-type-select"
+                        :options="fastingTypes.map((t) => ({ value: t.value, label: t.label }))"
+                        :error="startForm.errors.type"
                     />
 
                     <div>
-                        <GlassInput type="datetime-local" v-model="startForm.start_time" label="Début" />
+                        <GlassInput
+                            type="datetime-local"
+                            v-model="startForm.start_time"
+                            label="Début"
+                            :error="startForm.errors.start_time"
+                        />
                     </div>
+
+                    <!-- The request adds a `base` error when a fast is already
+                         running and the controller a `message` one; neither maps
+                         to a field, so without this the rejection is invisible. -->
+                    <p
+                        v-if="Object.keys(startForm.errors).length"
+                        class="text-sm font-bold text-red-500"
+                        role="alert"
+                        dusk="fasting-error"
+                    >
+                        {{ Object.values(startForm.errors)[0] }}
+                    </p>
 
                     <GlassButton type="submit" variant="primary" :loading="startForm.processing" class="mt-4 w-full">
                         Commencer
@@ -265,15 +304,48 @@ const formatHistoryDuration = (start, end) => {
                             <span class="text-text-main font-mono text-sm" v-if="fast.end_time">
                                 {{ formatHistoryDuration(fast.start_time, fast.end_time) }}
                             </span>
+                            <!-- Icon-only and destructive: it had no name at all. -->
                             <button
+                                type="button"
                                 @click="deleteFast(fast.id)"
-                                class="text-red-400 transition-colors hover:text-red-300"
+                                :aria-label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
+                                class="focus-visible:ring-electric-orange relative rounded-lg p-1 text-red-400 transition-colors before:absolute before:-inset-2.5 before:content-[''] hover:text-red-300 focus-visible:ring-2 focus-visible:outline-none"
                             >
-                                <span class="material-symbols-outlined text-lg">delete</span>
+                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>
                         </div>
                     </div>
                 </div>
+
+                <!-- Paginated 10 to a page server-side, with nothing here to reach
+                     page 2: every fast older than the tenth was unreachable. -->
+                <nav
+                    v-if="history.last_page > 1"
+                    class="mt-6 flex items-center justify-center gap-4"
+                    aria-label="Pagination de l'historique des jeûnes"
+                >
+                    <GlassButton
+                        :disabled="!history.prev_page_url"
+                        @click="goToPage(history.prev_page_url)"
+                        aria-label="Page précédente"
+                        dusk="fasting-prev"
+                    >
+                        <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                    </GlassButton>
+
+                    <span class="text-text-muted text-sm font-bold" aria-live="polite">
+                        Page {{ history.current_page }} sur {{ history.last_page }}
+                    </span>
+
+                    <GlassButton
+                        :disabled="!history.next_page_url"
+                        @click="goToPage(history.next_page_url)"
+                        aria-label="Page suivante"
+                        dusk="fasting-next"
+                    >
+                        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                    </GlassButton>
+                </nav>
             </GlassCard>
         </div>
     </AuthenticatedLayout>

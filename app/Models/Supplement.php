@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Supplement extends Model
 {
@@ -19,6 +19,7 @@ class Supplement extends Model
 
     use LogsActivity;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'name',
@@ -66,9 +67,10 @@ class Supplement extends Model
         return LogOptions::defaults()
             ->logOnly(['name', 'brand', 'dosage', 'servings_remaining', 'low_stock_threshold'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

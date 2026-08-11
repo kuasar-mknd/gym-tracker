@@ -8,8 +8,8 @@ use App\Enums\GoalType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Activitylog\LogOptions;
-use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -33,6 +33,7 @@ class Goal extends Model
     /** @use HasFactory<\Database\Factories\GoalFactory> */
     use HasFactory, LogsActivity;
 
+    #[\Override]
     protected $fillable = [
         'title',
         'type',
@@ -76,9 +77,10 @@ class Goal extends Model
         return LogOptions::defaults()
             ->logOnly(['title', 'type', 'target_value', 'current_value', 'deadline', 'completed_at'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [
@@ -86,7 +88,10 @@ class Goal extends Model
             'target_value' => 'double',
             'current_value' => 'double',
             'start_value' => 'double',
-            'deadline' => 'date',
+            // A deadline is a calendar day. Cast bare, it serialised as an
+            // instant in UTC and the card read a day early wherever the browser
+            // was not ahead of UTC.
+            'deadline' => 'date:Y-m-d',
             'completed_at' => 'datetime',
         ];
     }

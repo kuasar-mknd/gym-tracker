@@ -37,7 +37,7 @@ class WorkoutLineController extends Controller
         $this->authorize('viewAny', WorkoutLine::class);
 
         $lines = QueryBuilder::for(WorkoutLine::class)
-            ->allowedFilters(['workout_id'])
+            ->allowedFilters('workout_id')
             // Bolt: Optimize belongsTo filtering with INNER JOIN
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $this->user()->id)
@@ -69,6 +69,10 @@ class WorkoutLineController extends Controller
         $workout = Workout::findOrFail($validated['workout_id']);
 
         $this->authorize('create', [WorkoutLine::class, $workout]);
+
+        // Carried in a header rather than the body: it names the attempt, not
+        // the resource, and has no business in the validated payload.
+        $validated['idempotency_key'] = $request->header('Idempotency-Key');
 
         $workoutLine = $action->execute($workout, $validated);
 

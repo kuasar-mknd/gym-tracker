@@ -7,7 +7,8 @@ namespace App\Models;
 use App\Services\RecommendedValuesService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -15,6 +16,9 @@ use Spatie\Activitylog\LogOptions;
  * @property int $exercise_id
  * @property int $order
  * @property string|null $notes
+ * @property string|null $idempotency_key names the client attempt that created this row, so a
+ *                                        replayed create returns it instead of making a second one. Deliberately absent from
+ *                                        $fillable: it identifies the attempt, never something a payload may set.
  * @property-read \App\Models\Workout $workout
  * @property-read \App\Models\Exercise $exercise
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Set> $sets
@@ -22,8 +26,9 @@ use Spatie\Activitylog\LogOptions;
 class WorkoutLine extends Model
 {
     /** @use HasFactory<\Database\Factories\WorkoutLineFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
+    #[\Override]
     protected $fillable = [
         'exercise_id',
         'order',
@@ -33,6 +38,7 @@ class WorkoutLine extends Model
     /**
      * @var list<string>
      */
+    #[\Override]
     protected $appends = [];
 
     /**
@@ -52,11 +58,23 @@ class WorkoutLine extends Model
     }
 
     /**
+     * The sets of this line, in the order they were added.
+     *
+     * Ordered explicitly, because without an ORDER BY the database is free to
+     * hand back whatever the index it picked happens to give. This table carries
+     * sets_workout_line_id_weight_reps_index (workout_line_id, weight, reps)
+     * alongside the plain workout_line_id one, and when the optimiser chooses it
+     * the sets come back sorted BY WEIGHT — so correcting the weight of a set
+     * moved it up or down the list on the next load. Creation order is the only
+     * order a set has, and every caller of this relation renders it as such: the
+     * session screen, the API, the exercise history, and the template copied out
+     * of a workout.
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Set, $this>
      */
     public function sets(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(Set::class);
+        return $this->hasMany(Set::class)->orderBy('id');
     }
 
     /**
@@ -98,9 +116,10 @@ class WorkoutLine extends Model
         return LogOptions::defaults()
             ->logOnly(['exercise.name', 'order', 'notes'])
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs();
+            ->dontLogEmptyChanges();
     }
 
+    #[\Override]
     protected static function booted(): void
     {
         $clearCache = function (self $line): void {
@@ -111,8 +130,27 @@ class WorkoutLine extends Model
 
         static::saved($clearCache);
         static::deleted($clearCache);
+
+        /**
+         * Gives back the volume of the sets this line is about to take with it.
+         *
+         * sets.workout_line_id is ON DELETE CASCADE, so the database removes
+         * those rows itself and Eloquent never hears about it — Set::deleted
+         * does not fire, and the volume they contributed stays in
+         * users.total_volume and workouts.workout_volume for good. Every
+         * exercise ever removed from a session has been inflating those two
+         * counters since.
+         *
+         * Summed in one query and released once, rather than deleting each set
+         * through the model: the rows are going regardless, and the counters
+         * only care about the total.
+         */
+        static::deleted(function (self $line): void {
+            $line->workout?->recomputeVolume();
+        });
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

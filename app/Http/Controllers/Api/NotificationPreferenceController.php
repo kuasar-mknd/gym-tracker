@@ -26,7 +26,7 @@ class NotificationPreferenceController extends Controller
         /** @var QueryBuilder<NotificationPreference> $preferences */
         $preferences = clone QueryBuilder::for(NotificationPreference::class)->where('user_id', $this->user()->id);
 
-        $preferences->allowedSorts(['type', 'created_at']);
+        $preferences->allowedSorts('type', 'created_at');
 
         $preferences = $preferences->get();
 
@@ -47,7 +47,7 @@ class NotificationPreferenceController extends Controller
         $preference->user_id = (int) $this->user()->id;
         $preference->save();
 
-        return (new NotificationPreferenceResource($preference))
+        return new NotificationPreferenceResource($preference)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

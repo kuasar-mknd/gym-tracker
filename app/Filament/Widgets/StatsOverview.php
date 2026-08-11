@@ -13,8 +13,10 @@ use Illuminate\Support\Carbon;
 
 class StatsOverview extends StatsOverviewWidget
 {
+    #[\Override]
     protected ?string $pollingInterval = '30s';
 
+    #[\Override]
     protected function getStats(): array
     {
         return [

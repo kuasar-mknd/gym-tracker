@@ -1,4 +1,12 @@
 <script setup>
+/* eslint-disable vue/no-mutating-props --
+ * The parent owns the Inertia useForm object and hands it down so this component
+ * can v-model straight into its fields. Writing to a prop object's properties is
+ * legal in Vue — the prop binding itself is never reassigned — and it is the
+ * pattern this codebase uses for every shared form. The rule cannot tell that
+ * apart from writing through a data prop, which is a real hazard and stays
+ * reported everywhere else.
+ */
 /**
  * ExerciseCard Component
  *
@@ -9,14 +17,14 @@
  * It relies on parent state to determine if it is currently being edited.
  */
 
-import { router } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
-const props = defineProps({
+defineProps({
     /** The exercise object to display. */
     exercise: { type: Object, required: true },
     /** Determines if the component should display the inline edit form. */
@@ -54,7 +62,7 @@ const emit = defineEmits([
         <template #action-left>
             <button
                 @click="emit('start-edit', exercise)"
-                class="flex h-full w-full items-center justify-start bg-blue-500 pl-6 text-white"
+                class="flex h-full w-full items-center justify-center bg-blue-500 text-white"
                 data-testid="edit-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
@@ -67,7 +75,7 @@ const emit = defineEmits([
         <template #action-right>
             <button
                 @click="emit('delete', exercise.id)"
-                class="flex h-full w-full items-center justify-end bg-red-500 pr-6 text-white"
+                class="flex h-full w-full items-center justify-center bg-red-500 text-white"
                 data-testid="delete-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
@@ -88,12 +96,16 @@ const emit = defineEmits([
             data-testid="exercise-card"
         >
             <!-- View Mode -->
-            <div
-                v-if="!isEditing"
-                class="flex cursor-pointer items-center justify-between"
-                @click="router.visit(route('exercises.show', { exercise: exercise.id }))"
-            >
-                <div class="flex items-center gap-4">
+            <div v-if="!isEditing" class="flex items-center justify-between">
+                <!-- A Link, not a div @click: this is the only way into an exercise
+                     detail page, and a div is neither focusable nor operable by
+                     Enter. The action buttons stay OUTSIDE the anchor — nesting
+                     buttons inside an <a> is invalid and hijacks the navigation. -->
+                <Link
+                    :href="route('exercises.show', { exercise: exercise.id })"
+                    :dusk="`open-exercise-${exercise.id}`"
+                    class="focus-visible:ring-electric-orange flex min-w-0 flex-1 items-center gap-4 rounded-2xl focus-visible:ring-2 focus-visible:outline-none"
+                >
                     <div
                         :class="[
                             'flex size-14 items-center justify-center rounded-2xl',
@@ -116,9 +128,9 @@ const emit = defineEmits([
                             {{ typeLabel(exercise.type) }}
                         </div>
                     </div>
-                </div>
+                </Link>
                 <div
-                    class="flex items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+                    class="flex shrink-0 items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
                 >
                     <button
                         @click.stop="emit('start-edit', exercise)"

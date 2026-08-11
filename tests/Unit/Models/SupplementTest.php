@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Models;
 
 use App\Models\Supplement;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Support\LogOptions;
 use Tests\TestCase;
 
 class SupplementTest extends TestCase
@@ -24,6 +24,6 @@ class SupplementTest extends TestCase
         $this->assertContains('low_stock_threshold', $options->logAttributes);
 
         $this->assertTrue($options->logOnlyDirty);
-        $this->assertFalse($options->submitEmptyLogs);
+        $this->assertFalse($options->logEmptyChanges);
     }
 }

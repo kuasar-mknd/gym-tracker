@@ -12,6 +12,7 @@ import {
     Filler,
 } from 'chart.js'
 import { computed, ref } from 'vue'
+import { parseCalendarDate } from '@/Utils/date'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
@@ -40,11 +41,13 @@ const currentMetricConfig = computed(() => {
 
 const chartData = computed(() => {
     // Sort data by date ascending
-    const sortedData = [...props.data].sort((a, b) => new Date(a.date) - new Date(b.date))
+    // Y-m-d sorts correctly as a string; there is no reason to build two
+    // Date objects per comparison, let alone from a calendar day.
+    const sortedData = [...props.data].sort((a, b) => String(a.date).localeCompare(String(b.date)))
 
     return {
         labels: sortedData.map((item) => {
-            const date = new Date(item.date)
+            const date = parseCalendarDate(item.date)
             return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
         }),
         datasets: [

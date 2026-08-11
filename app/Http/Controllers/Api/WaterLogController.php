@@ -27,11 +27,11 @@ class WaterLogController extends Controller
         $this->authorize('viewAny', WaterLog::class);
 
         $logs = QueryBuilder::for(WaterLog::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::exact('amount'),
                 AllowedFilter::scope('consumed_at_between', 'consumedAtBetween'),
-            ])
-            ->allowedSorts(['consumed_at', 'amount', 'created_at'])
+            )
+            ->allowedSorts('consumed_at', 'amount', 'created_at')
             ->defaultSort('-consumed_at')
             ->where('user_id', $this->user()->id)
             ->paginate();
@@ -58,7 +58,7 @@ class WaterLogController extends Controller
         $log->user_id = $userId;
         $log->save();
 
-        return (new WaterLogResource($log))
+        return new WaterLogResource($log)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

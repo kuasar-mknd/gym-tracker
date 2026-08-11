@@ -20,12 +20,12 @@ class FetchHabitLogsIndexApiAction
     public function execute(User $user): LengthAwarePaginator
     {
         return QueryBuilder::for(HabitLog::class)
-            ->allowedIncludes(['habit'])
-            ->allowedFilters([
+            ->allowedIncludes('habit')
+            ->allowedFilters(
                 AllowedFilter::exact('habit_id'),
                 AllowedFilter::scope('date_between', 'whereDateBetween'),
-            ])
-            ->allowedSorts(['date', 'created_at'])
+            )
+            ->allowedSorts('date', 'created_at')
             ->defaultSort('-date')
             // Bolt: Optimize belongsTo filtering with INNER JOIN
             ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')

@@ -21,8 +21,8 @@ class FetchHabitsIndexApiAction
     public function execute(User $user, array $requestData): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Habit::class)
-            ->allowedIncludes(['logs'])
-            ->allowedSorts(['name', 'created_at', 'goal_times_per_week'])
+            ->allowedIncludes('logs')
+            ->allowedSorts('name', 'created_at', 'goal_times_per_week')
             ->defaultSort('name')
             ->where('user_id', $user->id);
 

@@ -20,7 +20,8 @@ class WorkoutFactory extends Factory
     {
         return [
             'user_id' => \App\Models\User::factory(),
-            'name' => 'Séance du '.$this->faker->date('d/m/Y'),
+            // What CreateWorkoutAction gives a real one: the date, on its own.
+            'name' => $this->faker->date('d/m/Y'),
             'started_at' => now(),
         ];
     }

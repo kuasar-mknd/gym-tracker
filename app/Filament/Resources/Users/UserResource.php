@@ -17,31 +17,40 @@ use Filament\Tables\Table;
 
 class UserResource extends Resource
 {
+    #[\Override]
     protected static ?string $modelLabel = 'Utilisateur';
 
+    #[\Override]
     protected static ?string $pluralModelLabel = 'Utilisateurs';
 
+    #[\Override]
     protected static ?string $navigationLabel = 'Utilisateurs';
 
+    #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
+    #[\Override]
     protected static \UnitEnum|string|null $navigationGroup = 'Données Utilisateur';
 
+    #[\Override]
     public static function form(Schema $schema): Schema
     {
         return UserForm::configure($schema);
     }
 
+    #[\Override]
     public static function table(Table $table): Table
     {
         return UsersTable::configure($table);
     }
 
+    #[\Override]
     public static function getRelations(): array
     {
         return [];
     }
 
+    #[\Override]
     public static function getPages(): array
     {
         return [

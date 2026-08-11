@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './fonts.css';
 @variant dark (&:where(.dark, .dark *));
 
 @plugin '@tailwindcss/forms';
@@ -11,8 +12,6 @@
         Space Grotesk, Inter, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: Archivo, sans-serif;
-    --font-condensed: Barlow Condensed, sans-serif;
-    --font-fat: Archivo Black, sans-serif;
 
     --color-electric-orange: #ff5500;
     --color-vivid-violet: #8800ff;
@@ -368,28 +367,6 @@
             0 0 0 4px rgba(255, 85, 0, 0.1),
             0 8px 20px rgba(0, 0, 0, 0.08);
         transform: scale(1.02);
-    }
-}
-
-@utility glass-input-fat {
-    /* Large numeric input for workout */
-    font-family: 'Archivo Black', sans-serif;
-    font-size: 3rem;
-    line-height: 1;
-    text-align: center;
-    background: transparent;
-    border: none;
-    color: var(--text-main);
-    caret-color: var(--electric-orange);
-    padding: 0;
-
-    @media (min-width: 640px) {
-        font-size: 4.5rem;
-    }
-
-    &:focus-visible {
-        outline: none;
-        transform: scale(1.05);
     }
 }
 
@@ -868,6 +845,12 @@
         --pearl-white: #0f172a;
     }
 
+    /*
+     * The page scrolls here, and only here. Both declarations belong on the
+     * root: the viewport takes its overflow and its overscroll behaviour from
+     * <html>, so this is what clips sideways drift and what stops the iOS
+     * rubber-band and pull-to-refresh.
+     */
     html {
         font-family: 'Space Grotesk', 'Inter', sans-serif;
         -webkit-font-smoothing: antialiased;
@@ -876,14 +859,26 @@
         overscroll-behavior: none;
     }
 
+    /*
+     * Deliberately no overflow and no overscroll-behavior on <body>. Together
+     * they made the app unscrollable.
+     *
+     * `overflow-x: hidden` turns <body> into a scroll container — CSS computes
+     * the other axis to `auto` as soon as one axis is not `visible`. <body> is
+     * as tall as its own content, so that container has nothing to scroll
+     * inside it: every wheel and every swipe landed on a scroller already at
+     * its limit, and `overscroll-behavior: none` then forbade handing the
+     * gesture up to the viewport. The page could still be scrolled from
+     * JavaScript, which is why it looked intermittent rather than broken.
+     *
+     * <html> above already clips horizontally, so nothing is lost by leaving
+     * this off.
+     */
     body {
         background-color: var(--pearl-white);
         min-height: 100vh;
         min-height: 100dvh;
         color: var(--text-main);
-        overflow-x: hidden;
-        overscroll-behavior: none;
-        -webkit-overflow-scrolling: touch;
     }
 
     /* Selection styling */
@@ -921,5 +916,21 @@
         100% {
             background-position: -200% 0;
         }
+    }
+}
+
+/* Unlayered so it outranks every layered animation rule in the cascade.
+   Entry animations start at opacity:0, so neutralising the delay is what
+   keeps deferred content from staying invisible. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-delay: 0s !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-delay: 0s !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

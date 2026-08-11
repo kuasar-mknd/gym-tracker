@@ -10,8 +10,10 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListSupplements extends ListRecords
 {
+    #[\Override]
     protected static string $resource = SupplementResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

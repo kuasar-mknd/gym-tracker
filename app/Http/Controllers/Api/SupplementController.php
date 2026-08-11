@@ -42,9 +42,9 @@ class SupplementController extends Controller
         $this->authorize('viewAny', Supplement::class);
 
         $supplements = QueryBuilder::for(Supplement::class)
-            ->allowedIncludes(['latestLog'])
-            ->allowedFilters(['name', 'brand'])
-            ->allowedSorts(['name', 'created_at', 'servings_remaining'])
+            ->allowedIncludes('latestLog')
+            ->allowedFilters('name', 'brand')
+            ->allowedSorts('name', 'created_at', 'servings_remaining')
             ->defaultSort('name')
             ->where('user_id', $this->user()->id)
             ->paginate();
@@ -81,7 +81,7 @@ class SupplementController extends Controller
         $supplement->user_id = $userId;
         $supplement->save();
 
-        return (new SupplementResource($supplement))
+        return new SupplementResource($supplement)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }

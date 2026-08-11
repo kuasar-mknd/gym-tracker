@@ -24,10 +24,6 @@ const filteredAchievements = computed(() => {
     }
     return props.achievements.filter((a) => a.category === currentCategory.value)
 })
-
-const getCategoryLabel = (category) => {
-    return categories.find((c) => c.value === category)?.label || category
-}
 </script>
 
 <template>
@@ -51,7 +47,7 @@ const getCategoryLabel = (category) => {
 
         <div class="space-y-6 pb-24">
             <!-- Categories -->
-            <div class="scrollbar-none animate-slide-up flex gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
+            <div class="animate-slide-up flex scrollbar-none gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
                 <button
                     v-for="cat in categories"
                     :key="cat.value"

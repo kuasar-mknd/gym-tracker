@@ -10,8 +10,10 @@ use Filament\Resources\Pages\EditRecord;
 
 class EditGoal extends EditRecord
 {
+    #[\Override]
     protected static string $resource = GoalResource::class;
 
+    #[\Override]
     protected function getHeaderActions(): array
     {
         return [

@@ -21,9 +21,12 @@
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Poids Cible</label>
+                            <label for="plate-target-weight" class="font-display-label text-text-muted mb-2 block"
+                                >Poids Cible</label
+                            >
                             <div class="relative">
                                 <input
+                                    id="plate-target-weight"
                                     type="number"
                                     v-model="targetWeight"
                                     placeholder="100"
@@ -36,9 +39,12 @@
                             </div>
                         </div>
                         <div>
-                            <label class="font-display-label text-text-muted mb-2 block">Poids Barre</label>
+                            <label for="plate-bar-weight" class="font-display-label text-text-muted mb-2 block"
+                                >Poids Barre</label
+                            >
                             <div class="relative">
                                 <input
+                                    id="plate-bar-weight"
                                     type="number"
                                     v-model="barWeight"
                                     placeholder="20"
@@ -199,7 +205,7 @@
                                     type="button"
                                     aria-label="Supprimer la plaque"
                                     title="Supprimer la plaque"
-                                    class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all group-hover:opacity-100 hover:bg-red-600"
+                                    class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-100 shadow-md transition-all hover:bg-red-600 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                                 >
                                     <span class="material-symbols-outlined text-sm">close</span>
                                 </button>
@@ -216,20 +222,36 @@
                 <h2 class="font-display text-text-main text-xl font-black uppercase italic">Ajouter une plaque</h2>
 
                 <div class="space-y-4">
+                    <!-- GlassInput renders this exact label markup itself, and wires
+                         its `for` to the input it generates. -->
                     <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Poids (kg)</label>
-                        <GlassInput type="number" v-model="newPlate.weight" placeholder="ex: 20" step="0.5" />
+                        <GlassInput
+                            type="number"
+                            label="Poids (kg)"
+                            v-model="newPlate.weight"
+                            placeholder="ex: 20"
+                            step="0.5"
+                            :error="newPlate.errors.weight"
+                        />
                     </div>
                     <div>
-                        <label class="font-display-label text-text-muted mb-2 block">Quantité (total)</label>
-                        <GlassInput type="number" v-model="newPlate.quantity" placeholder="ex: 4" />
+                        <GlassInput
+                            type="number"
+                            label="Quantité (total)"
+                            v-model="newPlate.quantity"
+                            placeholder="ex: 4"
+                            :error="newPlate.errors.quantity"
+                        />
                         <p class="text-text-muted mt-2 text-xs">Nombre total de plaques disponibles (pas de paires)</p>
                     </div>
                 </div>
 
                 <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
                     <GlassButton @click="addingPlate = false" variant="ghost">Annuler</GlassButton>
-                    <GlassButton @click="savePlate" variant="primary" :disabled="form.processing"
+                    <!-- Was :disabled="form.processing", where `form` was an empty
+                         useForm({}) that never submits — so it read false forever
+                         and the button stayed live through the request. -->
+                    <GlassButton @click="savePlate" variant="primary" :disabled="newPlate.processing"
                         >Enregistrer</GlassButton
                     >
                 </div>
@@ -262,8 +284,6 @@ const newPlate = useForm({
     weight: '',
     quantity: '',
 })
-
-const form = useForm({})
 
 const savePlate = () => {
     newPlate.post(route('plates.store'), {

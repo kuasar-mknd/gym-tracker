@@ -23,9 +23,12 @@
                         <div class="space-y-6 p-6">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="font-display-label text-text-muted mb-2 block">Poids Soulevé</label>
+                                    <label for="orm-weight" class="font-display-label text-text-muted mb-2 block"
+                                        >Poids Soulevé</label
+                                    >
                                     <div class="relative">
                                         <input
+                                            id="orm-weight"
                                             type="number"
                                             v-model="weight"
                                             placeholder="100"
@@ -40,9 +43,12 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="font-display-label text-text-muted mb-2 block">Répétitions</label>
+                                    <label for="orm-reps" class="font-display-label text-text-muted mb-2 block"
+                                        >Répétitions</label
+                                    >
                                     <div class="relative">
                                         <input
+                                            id="orm-reps"
                                             type="number"
                                             v-model="reps"
                                             placeholder="5"
@@ -142,23 +148,14 @@
 import { ref, computed, defineAsyncComponent } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import { oneRepMax as epley } from '@/Utils/formulas'
 
 const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
 
 const weight = ref('')
 const reps = ref('')
 
-const oneRepMax = computed(() => {
-    const w = parseFloat(weight.value)
-    const r = parseFloat(reps.value)
-
-    if (!w || !r || w <= 0 || r <= 0) return 0
-
-    if (r === 1) return w
-
-    // Epley Formula
-    return w * (1 + r / 30)
-})
+const oneRepMax = computed(() => epley(weight.value, reps.value))
 
 const percentages = computed(() => {
     const max = oneRepMax.value

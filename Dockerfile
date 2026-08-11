@@ -1,6 +1,6 @@
 # Multi-stage build for Gym Tracker
 # 1. Base image for runtime dependencies
-FROM dunglas/frankenphp:1-php8.4 AS base
+FROM dunglas/frankenphp:1-php8.5 AS base
 
 RUN install-php-extensions \
     pcntl \
@@ -20,7 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # 2. Builder stage for Frontend assets
-FROM --platform=$BUILDPLATFORM node:25-slim AS frontend-builder
+# 24 is the active LTS line, and the one CI builds with. 25 and 26 are not LTS
+# yet, and the image was on 25 while CI tested on 24 — so the assets that
+# shipped were never the assets that were tested.
+FROM --platform=$BUILDPLATFORM node:24-slim AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps

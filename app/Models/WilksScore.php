@@ -13,6 +13,7 @@ class WilksScore extends Model
     /** @use HasFactory<\Database\Factories\WilksScoreFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'body_weight',
@@ -30,6 +31,7 @@ class WilksScore extends Model
         return $this->belongsTo(User::class);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

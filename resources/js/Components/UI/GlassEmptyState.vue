@@ -39,14 +39,6 @@ const glowColors = {
     cyan: 'bg-cyan-pure',
     green: 'bg-neon-green',
 }
-
-const shadowColors = {
-    orange: 'shadow-glow-orange',
-    violet: 'shadow-glow-violet',
-    pink: 'shadow-glow-pink',
-    cyan: 'shadow-glow-cyan',
-    green: 'shadow-neon',
-}
 </script>
 
 <template>

@@ -14,14 +14,31 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    hasPushSubscription: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const page = usePage()
 const vapidPublicKey = page.props.vapidPublicKey
 
 const pushSupported = 'Notification' in window && 'serviceWorker' in navigator
-const pushPermission = ref(typeof Notification !== 'undefined' ? Notification.permission : 'default')
 const isSubscribing = ref(false)
+const pushError = ref(null)
+
+/**
+ * Whether the server holds a subscription for this user — the only thing that
+ * decides whether a push can actually be delivered.
+ *
+ * The interface used to key off Notification.permission instead, which the
+ * browser grants *before* the subscription reaches the server. When that
+ * request failed, the banner disappeared (its condition wanted permission !==
+ * 'granted') and the "Envoyer aussi en Push" checkboxes appeared. The user
+ * enabled them, saved, received nothing, and had no way back — the banner that
+ * would let them retry was gone.
+ */
+const pushRegistered = ref(props.hasPushSubscription)
 
 const form = reactive({
     preferences: {
@@ -54,44 +71,59 @@ const urlBase64ToUint8Array = (base64String) => {
 }
 
 const enablePush = async () => {
-    if (!pushSupported || !vapidPublicKey) {
-        console.error('Push notifications not supported or VAPID key missing')
-        return
-    }
-
     isSubscribing.value = true
+    pushError.value = null
+
+    let subscription = null
+
     try {
         const permission = await Notification.requestPermission()
-        pushPermission.value = permission
 
-        if (permission === 'granted') {
-            // Force registration update to ensure we have the latest SW
-            const registration = await navigator.serviceWorker.ready
+        if (permission !== 'granted') {
+            // requestPermission() resolves straight to 'denied' once the user has
+            // blocked it, so without this the click is another dead end.
+            pushError.value =
+                'Ton navigateur a refusé les notifications. Autorise-les dans ses réglages, puis réessaie.'
 
-            // Unsubscribe existing if any to avoid stale subscriptions
-            const existingSub = await registration.pushManager.getSubscription()
-            if (existingSub) {
-                await existingSub.unsubscribe()
-            }
-
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-            })
-
-            // Save subscription to backend using window.axios for CSRF/auth
-            const api = window.axios || axios
-            await api.post(route('push-subscriptions.update'), subscription)
-
-            // Enable push toggles by default if just activated
-            form.push_preferences.personal_record = true
-            form.push_preferences.training_reminder = true
-
-            // Save preferences immediately
-            updatePreferences()
+            return
         }
-    } catch (error) {
-        console.error('Push subscription failed:', error)
+
+        // Force registration update to ensure we have the latest SW
+        const registration = await navigator.serviceWorker.ready
+
+        // Unsubscribe existing if any to avoid stale subscriptions
+        const existingSub = await registration.pushManager.getSubscription()
+        if (existingSub) {
+            await existingSub.unsubscribe()
+        }
+
+        subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        })
+
+        // Save subscription to backend using window.axios for CSRF/auth
+        const api = window.axios || axios
+        await api.post(route('push-subscriptions.update'), subscription)
+
+        pushRegistered.value = true
+
+        // Enable push toggles by default if just activated
+        form.push_preferences.personal_record = true
+        form.push_preferences.training_reminder = true
+
+        // Save preferences immediately
+        updatePreferences()
+    } catch {
+        // A browser subscription the server does not hold can never deliver
+        // anything, and every later attempt discards it anyway (see the
+        // unsubscribe above). Dropping it is the only state that stays true.
+        if (subscription) {
+            await subscription.unsubscribe().catch(() => {})
+        }
+
+        pushRegistered.value = false
+        pushError.value = "L'activation des notifications push a échoué. Réessaie."
     } finally {
         isSubscribing.value = false
     }
@@ -100,6 +132,7 @@ const enablePush = async () => {
 const updatePreferences = () => {
     isSaving.value = true
     errors.value = {}
+    pushError.value = null
 
     SyncService.patch(route('profile.preferences.update'), form)
         .then(() => {
@@ -118,7 +151,14 @@ const updatePreferences = () => {
             }
             if (err.response?.status === 422) {
                 errors.value = err.response.data.errors
+
+                return
             }
+
+            // 419 on an expired CSRF token, 403, 500, a dropped connection. This
+            // branch did not exist, so the toggles kept values the server never
+            // stored and nothing said so.
+            pushError.value = "Tes préférences n'ont pas pu être enregistrées. Réessaie."
         })
         .finally(() => {
             isSaving.value = false
@@ -135,7 +175,7 @@ const updatePreferences = () => {
             <div class="space-y-4">
                 <!-- Web Push Banner -->
                 <div
-                    v-if="pushSupported && pushPermission !== 'granted' && vapidPublicKey"
+                    v-if="pushSupported && !pushRegistered && vapidPublicKey"
                     class="border-accent-primary/20 bg-accent-primary/10 mb-6 rounded-xl border p-4"
                 >
                     <div class="flex items-center justify-between gap-4">
@@ -170,7 +210,7 @@ const updatePreferences = () => {
                         description="Être notifié quand vous battez un record."
                     />
 
-                    <div v-if="pushPermission === 'granted'" class="ml-2 flex items-center gap-2">
+                    <div v-if="pushRegistered" class="ml-2 flex items-center gap-2">
                         <Checkbox v-model:checked="form.push_preferences.personal_record" />
                         <label class="text-text-muted text-xs dark:text-slate-400">Envoyer aussi en Push</label>
                     </div>
@@ -184,7 +224,7 @@ const updatePreferences = () => {
                         description="Rappels automatiques après quelques jours d'inactivité."
                     />
 
-                    <div v-if="pushPermission === 'granted'" class="ml-2 flex items-center gap-2">
+                    <div v-if="pushRegistered" class="ml-2 flex items-center gap-2">
                         <Checkbox v-model:checked="form.push_preferences.training_reminder" />
                         <label class="text-text-muted text-xs dark:text-slate-400">Envoyer aussi en Push</label>
                     </div>
@@ -215,7 +255,11 @@ const updatePreferences = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <GlassButton :loading="isSaving">Sauvegarder</GlassButton>
+                <!-- GlassButton defaults to type="button", so without this the click
+                     never fires the form's @submit and nothing was ever saved. -->
+                <GlassButton type="submit" dusk="save-notification-preferences" :loading="isSaving">
+                    Sauvegarder
+                </GlassButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
@@ -226,6 +270,10 @@ const updatePreferences = () => {
                     <p v-if="recentlySuccessful" class="text-sm text-emerald-400">Enregistré.</p>
                 </Transition>
             </div>
+
+            <p v-if="pushError" class="text-sm font-bold text-red-500" role="alert" dusk="notification-push-error">
+                {{ pushError }}
+            </p>
         </form>
     </GlassSection>
 </template>

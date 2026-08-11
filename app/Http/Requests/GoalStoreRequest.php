@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\Goal;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -38,8 +39,36 @@ class GoalStoreRequest extends FormRequest
                 }),
             ],
             'measurement_type' => ['required_if:type,measurement', 'nullable', 'string', 'max:255'],
-            'deadline' => ['nullable', 'date', 'after:today'],
+            'deadline' => $this->deadlineIsUnchanged()
+                ? ['nullable', 'date']
+                : ['nullable', 'date', 'after:today'],
             'start_value' => ['nullable', 'numeric'],
         ];
+    }
+
+    /**
+     * A deadline in the future is the right rule when a goal is being set, and
+     * a trap on every edit afterwards: resubmitting the form resends the stored
+     * date, so a goal whose deadline had passed could no longer be changed at
+     * all — precisely when you want to fix it.
+     *
+     * The future check therefore applies only to a deadline the user is
+     * actually moving. On the create route no goal is bound, so it always does.
+     */
+    private function deadlineIsUnchanged(): bool
+    {
+        $goal = $this->route('goal');
+
+        if (! $goal instanceof Goal) {
+            return false;
+        }
+
+        $submitted = $this->input('deadline');
+
+        if ($submitted !== null && ! is_string($submitted)) {
+            return false;
+        }
+
+        return $goal->deadline?->format('Y-m-d') === $submitted;
     }
 }

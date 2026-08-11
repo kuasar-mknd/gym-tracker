@@ -23,7 +23,10 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
+import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
+import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErrors'
+import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
 import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
@@ -44,46 +47,263 @@ if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workou
     localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
 }
 
+/**
+ * Rebuilds from the server's copy without discarding what it has not heard of.
+ *
+ * This watch used to assign the incoming props wholesale. Any ordinary Inertia
+ * round trip on this page — renaming the session, correcting its start time —
+ * therefore threw away every row still being created and every value the server
+ * had refused, without a word. The user renamed their workout and the sets they
+ * had just added disappeared.
+ *
+ * The server is authoritative for everything it knows about. It is not
+ * authoritative about rows it has never been told of, nor about values it
+ * rejected while the user kept theirs on screen.
+ */
+const mergeServerWorkout = (server, local) => {
+    const merged = JSON.parse(JSON.stringify(server))
+
+    if (merged.workout_lines && !Array.isArray(merged.workout_lines)) {
+        merged.workout_lines = Object.values(merged.workout_lines)
+    }
+
+    if (!Array.isArray(merged.workout_lines)) {
+        merged.workout_lines = []
+    }
+
+    const localLines = Array.isArray(local?.workout_lines) ? local.workout_lines : []
+
+    merged.workout_lines.forEach((line) => {
+        if (!Array.isArray(line.sets)) line.sets = []
+
+        const localLine = localLines.find((candidate) => candidate.id === line.id)
+
+        if (!localLine) return
+
+        const localSets = Array.isArray(localLine.sets) ? localLine.sets : []
+
+        // Still being created, or waiting in the offline queue.
+        localSets.filter((set) => isTemporaryId(set.id)).forEach((set) => line.sets.push(set))
+
+        // Marked unsynced means the server's copy is the stale one; taking it
+        // would quietly undo an edit the user can see on screen.
+        line.sets.forEach((set, index) => {
+            const localSet = localSets.find((candidate) => candidate.id === set.id)
+
+            if (localSet && unsyncedSetIds.value.has(String(set.id))) {
+                line.sets[index] = localSet
+            }
+        })
+    })
+
+    // Whole exercises the server has never heard of.
+    localLines.filter((line) => isTemporaryId(line.id)).forEach((line) => merged.workout_lines.push(line))
+
+    return merged
+}
+
 // Sync with Inertia props when they change (e.g. after redirect-based actions)
 watch(
     () => props.workout,
     (newVal) => {
-        localWorkout.value = JSON.parse(JSON.stringify(newVal))
-        if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workout_lines)) {
-            localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
-        }
+        localWorkout.value = mergeServerWorkout(newVal, localWorkout.value)
     },
 )
+
+/**
+ * A closed session is a record, not a workspace.
+ *
+ * The page had no idea a workout could be finished and rendered the full live
+ * editor regardless. SetPolicy refuses every write to a closed session, so each
+ * control answered 403 — and only the two that revert visibly said anything at
+ * all. Adding an exercise, adding a set and deleting one simply did nothing.
+ */
+const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const showTimer = ref(false)
 const timerDuration = ref(90)
 
+/**
+ * Counts rest periods, so each one gets a fresh timer.
+ *
+ * The timer only reset itself while it was NOT running, and completing a set
+ * while it was already counting down neither remounted it nor restarted it. The
+ * second set of a superset was therefore given whatever was left of the first
+ * one's rest — the shorter the gap between sets, the shorter the rest, which is
+ * precisely backwards.
+ */
+const timerRun = ref(0)
+
 let tempIdCounter = 0
+
+/**
+ * A row's identity for Vue, which must not change while the row is on screen.
+ *
+ * Ids do change here: an optimistic row wears `temp-4` until the server answers
+ * and is then given the real one. Keying a v-for on that made the key change
+ * under a row the user was typing into, and Vue answers a changed key by
+ * destroying the node and building a new one — the input, its half-typed value
+ * and its focus with it.
+ *
+ * So optimistic rows carry a key issued once at creation, and rows that came
+ * from the server fall back to their id, which for them never changes. The two
+ * cannot collide: one is a string with a prefix, the other a number.
+ */
+let rowKeyCounter = 0
+const newRowKey = () => `row-${++rowKeyCounter}`
+const rowKey = (row) => row._rowKey ?? row.id
+
+/**
+ * Placeholder ids never leave this component. Every mutation that names a line
+ * or a set asks here for the id to actually send, and waits if the creation is
+ * still in flight — see Utils/pendingIds for what sending `temp-3` cost.
+ */
+const pendingIds = new PendingIds()
+
+/**
+ * Placeholders whose create is sitting in the offline queue rather than in
+ * flight. Anything added on top of one has to wait for the drain, and say so
+ * meanwhile.
+ */
+const queuedLineIds = new Set()
+const replayListeners = new Set()
+
+/**
+ * Resolves to the id a queued create eventually produced, once the queue
+ * actually drains.
+ *
+ * Without this, a create that went offline resolved to "no such row", so a set
+ * added to an exercise that was still queued was refused on the spot and never
+ * revisited: the queue drained, the exercise appeared on the server, and the
+ * set belonged to nobody. It is the same shape as the placeholder-id bug one
+ * level up, and it outlived the fix for it.
+ */
+const awaitReplay = (queueId) =>
+    new Promise((resolve) => {
+        if (!queueId) {
+            resolve(null)
+
+            return
+        }
+
+        const onReplayed = (event) => {
+            if (event.detail?.queueId !== queueId) return
+
+            window.removeEventListener('sync:replayed', onReplayed)
+            replayListeners.delete(onReplayed)
+            resolve(event.detail.data?.id ?? null)
+        }
+
+        replayListeners.add(onReplayed)
+        window.addEventListener('sync:replayed', onReplayed)
+    })
+
+/**
+ * The only two ways this screen may talk to the server about a set.
+ *
+ * Both wait out a creation still in flight, so the URL always carries an id the
+ * server issued. When the row has no server-side counterpart they reject with
+ * the `isOffline` shape every caller here already understands: keep the value
+ * on screen, change nothing, and mark it unsynced rather than send a request
+ * that can only be refused.
+ */
+const patchSet = (set, payload) =>
+    pendingIds.resolve(set.id).then((realId) => {
+        if (realId === null) {
+            markUnsynced(set.id)
+
+            return Promise.reject({ isOffline: true, message: 'Set not created server-side yet' })
+        }
+
+        return SyncService.patch(route('api.v1.sets.update', { set: realId }), payload)
+    })
+
+const deleteSet = (setId) =>
+    pendingIds.resolve(setId).then((realId) => {
+        if (realId === null) {
+            pendingIds.forget(setId)
+
+            return Promise.reject({ isOffline: true, message: 'Set not created server-side yet' })
+        }
+
+        return SyncService.delete(route('api.v1.sets.destroy', { set: realId }))
+    })
+
+/**
+ * The set fields this screen edits. Every one of them is a number in the
+ * database, so a value arriving from an input — always a string — is normalised
+ * before it goes anywhere near the row or the payload.
+ */
+const NUMERIC_SET_FIELDS = ['weight', 'reps', 'distance_km', 'duration_seconds']
+
+/**
+ * What each kind of exercise measures — the same split the set row renders.
+ *
+ * A strength set has a weight and reps; a cardio one a distance and a duration;
+ * a timed one only a duration. Nothing else about a set is a measurement, and
+ * writing the other fields anyway put numbers in rows that have no business
+ * holding them.
+ */
+const MEASURED_FIELDS_BY_TYPE = {
+    strength: ['weight', 'reps'],
+    cardio: ['distance_km', 'duration_seconds'],
+    timed: ['duration_seconds'],
+}
+
+/**
+ * An unknown type renders no inputs at all, so it gets the strength pair rather
+ * than an empty set that could never be filled in.
+ */
+const measuredFieldsFor = (exercise) => MEASURED_FIELDS_BY_TYPE[exercise?.type] ?? MEASURED_FIELDS_BY_TYPE.strength
 
 /**
  * Flush (execute immediately) all pending debounced updates for a given set.
  * This prevents interleaved PATCH requests from overwriting each other's results.
  */
-const flushPendingUpdates = (setId) => {
-    const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
-    fields.forEach((field) => {
-        const timerKey = `${setId}_${field}`
-        if (updateTimers[timerKey]) {
-            clearTimeout(updateTimers[timerKey].timerId)
-            // Execute the pending update immediately
-            if (typeof updateTimers[timerKey].execute === 'function') {
-                updateTimers[timerKey].execute()
-            }
-            delete updateTimers[timerKey]
-        }
+/**
+ * Sends everything still sitting in the debounce, and says when it has landed.
+ *
+ * Two moments need this and neither could wait out the timer: leaving the page,
+ * and closing the session. SetPolicy refuses writes to a finished workout, so a
+ * value typed a second before tapping Terminer used to go out after the workout
+ * was closed and come back 403 — reverted on screen, with the page already gone.
+ */
+const flushAllPendingUpdates = () => {
+    const inFlight = Object.keys(updateTimers).map((key) => {
+        const pending = updateTimers[key]
+
+        if (!pending) return null
+
+        clearTimeout(pending.timerId)
+        delete updateTimers[key]
+
+        return pending.execute?.()
     })
+
+    return Promise.allSettled(inFlight.filter(Boolean))
 }
 
-const toggleSetCompletion = (set, exerciseRestTime) => {
-    // Flush any pending debounced updates for this set BEFORE toggling
-    // to ensure value changes are sent before the completion toggle
-    flushPendingUpdates(set.id)
+/**
+ * @returns {Promise} settled once every flushed write for this set has landed.
+ */
+const flushPendingUpdates = (setId) => {
+    const inFlight = NUMERIC_SET_FIELDS.map((field) => {
+        const timerKey = `${setId}_${field}`
+        const pending = updateTimers[timerKey]
 
+        if (!pending) return null
+
+        clearTimeout(pending.timerId)
+        delete updateTimers[timerKey]
+
+        // Execute the pending update immediately
+        return pending.execute?.()
+    })
+
+    return Promise.allSettled(inFlight.filter(Boolean))
+}
+
+const toggleSetCompletion = async (set, exerciseRestTime) => {
     const newState = !set.is_completed
     const previousState = set.is_completed
 
@@ -91,11 +311,23 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
     set.is_completed = newState
     if (newState) {
         timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
+        timerRun.value += 1
         showTimer.value = true
     }
-    SyncService.patch(route('api.v1.sets.update', { set: set.id }), {
-        is_completed: newState,
-    })
+
+    /**
+     * Awaited, not merely started.
+     *
+     * The pending value writes were flushed and the completion PATCH sent in the
+     * same tick, so both were in flight at once against the same row with no
+     * ordering between them. Whichever answer came back second was applied over
+     * the first, which is how validating a set right after typing into it could
+     * put the old weight back on screen. The set's numbers are settled first;
+     * only then does it get marked done.
+     */
+    await flushPendingUpdates(set.id)
+
+    return patchSet(set, { is_completed: newState })
         .then((response) => {
             // Only merge back the fields we sent + metadata to avoid overwriting
             // concurrent optimistic updates (e.g. weight/reps changes)
@@ -130,7 +362,15 @@ const showFinishModal = ref(false)
 const finishWorkout = () => {
     showFinishModal.value = true
 }
-const confirmFinishWorkout = () => {
+const confirmFinishWorkout = async () => {
+    /**
+     * Awaited, not merely started. Closing the session revokes the right to
+     * write to its sets, so the last value typed has to be accepted before the
+     * workout is finished — otherwise it arrives at a closed session, is refused
+     * 403, and is reverted on a page that has already navigated away.
+     */
+    await flushAllPendingUpdates()
+
     router.patch(
         route('workouts.update', { workout: localWorkout.value.id }),
         { is_finished: true },
@@ -188,6 +428,7 @@ const addExercise = (exerciseId) => {
     // Optimistic: add line immediately
     const tempLine = {
         id: `temp-${++tempIdCounter}`,
+        _rowKey: newRowKey(),
         exercise_id: exerciseId,
         exercise: { ...exercise },
         sets: [],
@@ -199,29 +440,72 @@ const addExercise = (exerciseId) => {
     showAddExercise.value = false
     searchQuery.value = ''
 
-    SyncService.post(route('api.v1.workout-lines.store'), {
+    const creation = SyncService.post(route('api.v1.workout-lines.store'), {
         workout_id: localWorkout.value.id,
         exercise_id: exerciseId,
     })
         .then((response) => {
-            // Replace temp line with server data
             const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-            if (idx !== -1 && response.data?.data) {
-                localWorkout.value.workout_lines[idx] = response.data.data
+            const created = response.data?.data
+
+            if (!created) {
+                return null
             }
+
+            if (idx !== -1) {
+                /**
+                 * Mutated in place, never replaced.
+                 *
+                 * Assigning a new object into the slot fixed one bug and made a
+                 * subtler one: addSet captures `line` when the user taps, and
+                 * pushes its optimistic set into THAT object's sets array. Swap
+                 * the slot for a fresh object with a fresh array and addSet is
+                 * left holding a detached copy — its own findIndex then never
+                 * finds the set again, so the row stays on a placeholder id for
+                 * as long as the page lives.
+                 *
+                 * Keeping the object and the array identity means every closure,
+                 * debounce timer and v-model binding already pointing at this
+                 * line stays pointing at the real one.
+                 */
+                const { sets: createdSets, ...lineFields } = created
+                const line = localWorkout.value.workout_lines[idx]
+
+                if (!Array.isArray(line.sets)) line.sets = []
+                Object.assign(line, lineFields)
+
+                // A line the server has just created has no sets of its own, but
+                // a replayed create can return one that does.
+                for (const set of createdSets ?? []) {
+                    if (!line.sets.some((existing) => existing.id === set.id)) line.sets.push(set)
+                }
+            }
+
+            return created.id
         })
         .catch((err) => {
-            if (!err.isOffline) {
-                // Rollback
-                const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-                if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
-                triggerHaptic('error')
+            if (err.isOffline) {
+                // Queued, not lost. Waiting for the drain to report the real id
+                // is what lets a set added onto this exercise reach the server
+                // at all; answering null here stranded it permanently.
+                queuedLineIds.add(tempLine.id)
+
+                return awaitReplay(err.queueId)
             }
+
+            const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
+            if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
+            triggerHaptic('error')
+
+            return null
         })
+
+    pendingIds.track(tempLine.id, creation)
 }
 
 const createAndAddExercise = async () => {
     createExerciseForm.processing = true
+    createExerciseForm.clearErrors()
     try {
         const response = await fetch(route('exercises.store'), {
             method: 'POST',
@@ -242,9 +526,28 @@ const createAndAddExercise = async () => {
             localExercises.value.push(exercise)
             addExercise(exercise.id)
             showCreateForm.value = false
+
+            return
         }
+
+        // Anything other than 2xx used to fall through here and do nothing at
+        // all: the modal stayed open with no message, so the user just kept
+        // tapping. Surface the server's validation errors instead.
+        if (response.status === 422) {
+            const { errors = {} } = await response.json()
+
+            Object.entries(errors).forEach(([field, messages]) => {
+                createExerciseForm.setError(field, [].concat(messages)[0])
+            })
+        } else {
+            createExerciseForm.setError('name', 'La création a échoué. Réessaie dans un instant.')
+        }
+
+        triggerHaptic('error')
     } catch (e) {
         console.error(e)
+        createExerciseForm.setError('name', 'Connexion impossible. Vérifie ta connexion réseau.')
+        triggerHaptic('error')
     } finally {
         createExerciseForm.processing = false
     }
@@ -267,8 +570,7 @@ const removeLine = (lineId) => {
     confirmAction.value = () => {
         // Clear any pending updates for sets in this line
         line.sets?.forEach((set) => {
-            const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
-            fields.forEach((field) => {
+            NUMERIC_SET_FIELDS.forEach((field) => {
                 const timerKey = `${set.id}_${field}`
                 if (updateTimers[timerKey]) {
                     clearTimeout(updateTimers[timerKey].timerId)
@@ -282,15 +584,48 @@ const removeLine = (lineId) => {
         const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
         showConfirmModal.value = false
 
-        SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: lineId })).catch((err) => {
-            if (!err.isOffline && removedLine) {
-                localWorkout.value.workout_lines.splice(idx, 0, removedLine)
-                triggerHaptic('error')
-            }
-        })
+        // Waits out a creation still in flight rather than deleting `temp-1`,
+        // which 404s and leaves the row on the server after the user removed it.
+        pendingIds
+            .resolve(lineId)
+            .then((realLineId) => {
+                if (realLineId === null) {
+                    pendingIds.forget(lineId)
+
+                    return
+                }
+
+                return SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: realLineId }))
+            })
+            .catch((err) => {
+                if (!err.isOffline && removedLine) {
+                    localWorkout.value.workout_lines.splice(idx, 0, removedLine)
+                    triggerHaptic('error')
+                }
+            })
     }
     showConfirmModal.value = true
 }
+
+/**
+ * The last set-create issued for each exercise, so the next one can queue behind
+ * it instead of racing it.
+ *
+ * A set has no order of its own — the database hands them back by id, and the id
+ * is decided by whichever INSERT reaches the server first. Tapping "Ajouter une
+ * série" twice in quick succession sent two POSTs at once, so the second set
+ * could be written first and come back BEFORE the first one on the next load.
+ * Sets appearing in an order the user did not create them in, specifically when
+ * going fast, is exactly the reported symptom.
+ *
+ * Keyed on the line object rather than its id: a line's id changes from
+ * placeholder to real one when its create lands, and sets added on either side
+ * of that moment still have to share one chain. The object identity is stable —
+ * addExercise mutates the line in place and never replaces it.
+ *
+ * @type {WeakMap<object, Promise>}
+ */
+const setCreateChains = new WeakMap()
 
 // ⚡ Perf: Optimistic addSet — no router.reload
 const addSet = (lineId) => {
@@ -299,85 +634,463 @@ const addSet = (lineId) => {
 
     const lastSet = line.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
 
-    const weight = lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0)
-    const reps = lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10)
-    const distance = lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0)
-    const duration = lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30)
+    const prefilled = {
+        weight: lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0),
+        reps: lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10),
+        distance_km: lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0),
+        duration_seconds: lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30),
+    }
 
-    // Optimistic: add set immediately with temp ID
+    /**
+     * Only what this kind of exercise actually measures.
+     *
+     * All four were filled in and sent for every set regardless of type, so a
+     * cardio set was written with `reps: 10` and a weight of 0, and a timed one
+     * with those plus `distance_km: 0` — none of which the screen even shows for
+     * that exercise, and none of which the user typed. A reported 10 appearing
+     * out of nowhere is this: 10 is the reps pre-fill, and it was being written
+     * to rows whose exercise has no reps.
+     *
+     * The pre-fills that remain are the ones the user can see and correct.
+     */
+    const measured = measuredFieldsFor(line.exercise)
+    const values = Object.fromEntries(measured.map((field) => [field, prefilled[field]]))
+
+    /**
+     * Optimistic: add set immediately with a temp id. It carried the line id
+     * too, which nothing ever read — the set already lives inside its line —
+     * while being exactly the placeholder that must not reach a payload.
+     */
     const tempSet = {
         id: `temp-${++tempIdCounter}`,
-        workout_line_id: lineId,
+        _rowKey: newRowKey(),
         is_completed: false,
-        weight: weight,
-        reps: reps,
-        distance_km: distance,
-        duration_seconds: duration,
         is_warmup: false,
+        ...values,
     }
+    if (!Array.isArray(line.sets)) line.sets = []
     line.sets.push(tempSet)
 
-    SyncService.post(route('api.v1.sets.store'), {
-        workout_line_id: lineId,
-        is_completed: false,
-        weight: weight,
-        reps: reps,
-        distance_km: distance,
-        duration_seconds: duration,
-    })
-        .then((response) => {
-            // Replace temp set with server data
-            const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
-            if (setIdx !== -1 && response.data?.data) {
-                line.sets[setIdx] = response.data.data
+    /**
+     * The line may itself still be a placeholder — adding a set right after the
+     * exercise is the most ordinary thing to do on this screen. Sending
+     * `workout_line_id: "temp-1"` earned a 422 live, and when the same payload
+     * was replayed from the offline queue it took the set with it.
+     */
+    // The exercise is queued rather than in flight, so this set is going nowhere
+    // until the drain. Say so now rather than leaving the row looking saved.
+    if (queuedLineIds.has(lineId)) {
+        markUnsynced(tempSet.id)
+    }
+
+    // Settled, not resolved: a create that failed must not stop the next set
+    // from being sent, only from overtaking it.
+    const previousCreate = (setCreateChains.get(line) ?? Promise.resolve()).catch(() => null)
+
+    const creation = previousCreate
+        .then(() => pendingIds.resolve(lineId))
+        .then((realLineId) => {
+            if (realLineId === null) {
+                markUnsynced(tempSet.id)
+
+                return null
             }
+
+            const sent = {
+                is_completed: false,
+                ...values,
+            }
+
+            return SyncService.post(route('api.v1.sets.store'), {
+                workout_line_id: realLineId,
+                ...sent,
+            }).then((response) => {
+                const created = response.data?.data
+
+                if (!created) {
+                    return null
+                }
+
+                /**
+                 * The server owns the identity, the user owns the values.
+                 *
+                 * Assigning the server's copy over the row reverted whatever the
+                 * user typed while the create was in flight — and typing into a
+                 * set the instant you add it is the normal way to use this
+                 * screen. The payload left with the old numbers, so the server's
+                 * answer necessarily carries them back; taking it wholesale
+                 * overwrote the new ones on screen and left the database holding
+                 * values the user had already corrected.
+                 *
+                 * Mutating in place also keeps the row identity that v-model and
+                 * the per-set debounce timers are bound to.
+                 */
+                const edited = Object.fromEntries(
+                    Object.keys(sent)
+                        .filter((field) => tempSet[field] !== sent[field])
+                        .map((field) => [field, tempSet[field]]),
+                )
+
+                const realSetId = created.id
+
+                // It is in the database now, under either id it has worn.
+                clearUnsynced(tempSet.id, realSetId)
+
+                tempSet.id = realSetId
+                tempSet.created_at = created.created_at
+                tempSet.updated_at = created.updated_at
+                tempSet.personal_record = created.personal_record
+
+                // Typed after the payload left, so the server has never heard it.
+                if (Object.keys(edited).length > 0) {
+                    SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
+                        if (!err.isOffline) markUnsynced(realSetId)
+                    })
+                }
+
+                return realSetId
+            })
         })
         .catch((err) => {
-            if (!err.isOffline) {
-                const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
-                if (setIdx !== -1) line.sets.splice(setIdx, 1)
-                triggerHaptic('error')
+            if (err.isOffline) {
+                markUnsynced(tempSet.id)
+
+                return null
             }
+
+            const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
+            if (setIdx !== -1) line.sets.splice(setIdx, 1)
+            triggerHaptic('error')
+
+            return null
         })
+
+    setCreateChains.set(line, creation)
+    pendingIds.track(tempSet.id, creation)
+}
+
+/**
+ * Sets whose value is on screen but not in the database.
+ *
+ * Drafts written while offline are replayed on mount. When the server refuses
+ * one, the value stays — throwing away an edit the user made earlier, with no
+ * feedback, is worse than showing it unsaved — so the row is marked instead.
+ * A refusal is recorded in the draft itself so the next mount stops retrying
+ * something a 4xx says will never be accepted.
+ */
+const unsyncedSetIds = ref(new Set())
+
+/**
+ * Clears the marker once the row genuinely reaches the database. Without this
+ * the warning was add-only: a set that synced on the next drain kept telling
+ * the user it had not been saved, for as long as the page stayed open.
+ */
+const clearUnsynced = (...setIds) => {
+    setIds.forEach((setId) => unsyncedSetIds.value.delete(String(setId)))
+}
+
+const markUnsynced = (setId) => {
+    unsyncedSetIds.value.add(String(setId))
+}
+
+/**
+ * SyncService keeps the mutations a server refused rather than dropping them,
+ * and announces each one. Most of them are set updates, so this is where they
+ * become visible instead of sitting in localStorage unread.
+ */
+const handleSyncFailure = (event) => {
+    const url = event.detail?.url ?? ''
+    const setId = /\/sets\/(\d+)/.exec(url)?.[1]
+
+    if (setId) {
+        markUnsynced(setId)
+
+        return
+    }
+
+    /**
+     * Only an id-bearing URL could be attached to a row, so a refused CREATE —
+     * `POST /api/v1/sets`, `POST /api/v1/workout-lines` — matched nothing and
+     * the user was told nothing at all. The write is recorded in SyncService's
+     * failed bucket either way; this is the part they can see.
+     *
+     * There is no row to mark, because the thing that failed is the row itself,
+     * so the message has to carry the identification instead — and name the
+     * exercise. "An item of the session" leaves someone scrolling their own
+     * workout trying to work out which set never made it.
+     */
+    if (/\/(sets|workout-lines)(\?|$)/.test(url)) {
+        reportEditFailure(describeFailedCreate(url, event.detail?.data))
+    }
+}
+
+/** The request body, whether it was queued as an object or already serialised. */
+const payloadOf = (data) => {
+    if (typeof data !== 'string') {
+        return data ?? {}
+    }
+
+    try {
+        return JSON.parse(data) ?? {}
+    } catch {
+        return {}
+    }
+}
+
+const exerciseNamed = (exerciseId) =>
+    localExercises.value.find((exercise) => String(exercise.id) === String(exerciseId))?.name
+
+/**
+ * Names what the server refused, falling back to the old wording only when the
+ * payload cannot be tied to anything on screen — a set whose line has since been
+ * removed, say. Being vague is better than being wrong about which set it was.
+ */
+const describeFailedCreate = (url, data) => {
+    const payload = payloadOf(data)
+    const generic = "Un élément de la séance n'a pas pu être enregistré."
+
+    if (/\/workout-lines(\?|$)/.test(url)) {
+        const name = exerciseNamed(payload.exercise_id)
+
+        return name ? `« ${name} » n'a pas pu être ajouté à la séance.` : "Un exercice n'a pas pu être ajouté."
+    }
+
+    const line = localWorkout.value.workout_lines?.find(
+        (candidate) => String(candidate.id) === String(payload.workout_line_id),
+    )
+
+    if (!line) {
+        return generic
+    }
+
+    const position = (line.sets?.length ?? 0) || 1
+
+    return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
+}
+
+/**
+ * A rejected edit reverts on screen, which is the right behaviour while the user
+ * is looking at the field — but it needs to say why, in something you can read.
+ */
+const editError = ref(null)
+let editErrorTimer = null
+
+const reportEditFailure = (message) => {
+    editError.value = message
+    triggerHaptic('error')
+
+    if (editErrorTimer) {
+        clearTimeout(editErrorTimer)
+    }
+
+    editErrorTimer = setTimeout(() => {
+        editError.value = null
+    }, 6000)
+}
+
+/**
+ * Announces what was refused while the page was away — once.
+ *
+ * The failed bucket is written on every refusal and, until now, emptied by
+ * nobody: `clearFailedRequests()` had no caller anywhere in the app. So a single
+ * create the server turned down went on announcing itself on every single visit
+ * to the session, for ever, with no way to acknowledge it. That is not a warning
+ * any more, it is furniture, and the user reported it as exactly that.
+ *
+ * The payload goes through too, so the message can name what failed instead of
+ * saying "an item of the session".
+ */
+const markQueuedFailuresOnMount = () => {
+    const failures = SyncService.failedRequests()
+
+    if (failures.length === 0) {
+        return
+    }
+
+    failures.forEach((failure) => handleSyncFailure({ detail: { url: failure.url, data: failure.data } }))
+
+    SyncService.clearFailedRequests()
+}
+
+/**
+ * Counts the writes issued per set and field, so a reply can be checked against
+ * the state of the world rather than trusted because it arrived.
+ *
+ * Two PATCHes for one field are ordinary here — the debounce is flushed by
+ * validating a set, and the next keystroke starts another one — and nothing
+ * makes them come home in the order they left. `set[field] = response…[field]`
+ * applied whichever landed last, so an older reply carrying the older number
+ * overwrote what the user had just typed. That is the value "revenant tout
+ * seul" the report describes, and the request it belongs to had succeeded.
+ */
+const writeSeq = {}
+const nextWrite = (key) => (writeSeq[key] = (writeSeq[key] ?? 0) + 1)
+const isLatestWrite = (key, seq) => writeSeq[key] === seq
+
+/**
+ * The write currently in flight for each set and field, so the next one can
+ * queue behind it rather than overlap it. See `execute` in updateSet.
+ *
+ * @type {Map<string, Promise>}
+ */
+const fieldWriteChains = new Map()
+
+/**
+ * The value the server last confirmed for a field, which is the only value a
+ * rollback may restore.
+ *
+ * `previousValue` used to be read off the set at call time. Type B then C inside
+ * the debounce window and the second call captures B — a value that never
+ * reached the database — so a refusal of C "restored" B and the row ended up
+ * showing something the server had never agreed to.
+ */
+const confirmedValues = new Map()
+const confirmedKey = (setId, field) => `${setId}_${field}`
+
+const rememberConfirmed = (setId, field, value) => {
+    confirmedValues.set(confirmedKey(setId, field), value)
+}
+
+const lastConfirmed = (set, field, fallback) => {
+    const key = confirmedKey(set.id, field)
+
+    return confirmedValues.has(key) ? confirmedValues.get(key) : fallback
+}
+
+/**
+ * Keeps one draft per set holding only the fields still in flight.
+ *
+ * The draft was `JSON.stringify(set)` under a single key, removed outright the
+ * moment ANY field came back accepted. Correcting a weight and then the reps
+ * within the same second meant the weight's success deleted the draft that was
+ * holding the reps, whose PATCH had not left yet — close the app in that window
+ * and the entry is gone. Only the field that was actually confirmed is dropped
+ * now, and the key disappears when nothing is left to protect.
+ */
+const draftKey = (setId) => `draft_set_${setId}`
+
+const readDraft = (setId) => {
+    try {
+        return JSON.parse(localStorage.getItem(draftKey(setId)) || '{}')
+    } catch {
+        return {}
+    }
+}
+
+const writeDraftField = (setId, field, value) => {
+    localStorage.setItem(draftKey(setId), JSON.stringify({ ...readDraft(setId), [field]: value }))
+}
+
+const clearDraftField = (setId, field) => {
+    const { [field]: _dropped, ...rest } = readDraft(setId)
+
+    if (Object.keys(rest).filter((key) => key !== 'syncRejected').length === 0) {
+        localStorage.removeItem(draftKey(setId))
+
+        return
+    }
+
+    localStorage.setItem(draftKey(setId), JSON.stringify(rest))
 }
 
 // ⚡ Perf: Optimistic updateSet — no router.reload
 const updateTimers = {}
-const updateSet = (set, field, value) => {
+const updateSet = (set, field, rawValue) => {
+    const value = NUMERIC_SET_FIELDS.includes(field) ? toNumberOrNull(rawValue) : rawValue
+
+    // Not a number and not an empty field: there is nothing to record. Writing
+    // it anyway is how NaN used to reach both the row and the payload.
+    if (value === undefined) {
+        return
+    }
+
     // Skip API calls for temp sets that haven't been created on the server yet
     if (String(set.id).startsWith('temp-')) {
         set[field] = value
         return
     }
 
-    const previousValue = set[field]
+    const previousValue = lastConfirmed(set, field, set[field])
     set[field] = value
     const timerKey = `${set.id}_${field}`
     if (updateTimers[timerKey]?.timerId) clearTimeout(updateTimers[timerKey].timerId)
 
-    const execute = () => {
-        SyncService.patch(route('api.v1.sets.update', { set: set.id }), { [field]: value })
+    const seq = nextWrite(timerKey)
+
+    const send = () =>
+        patchSet(set, { [field]: value })
             .then((response) => {
+                clearDraftField(set.id, field)
+
                 // Only merge back the specific field we updated + metadata
                 // to avoid overwriting concurrent optimistic updates
-                if (response.data?.data) {
-                    set[field] = response.data.data[field]
-                    set.updated_at = response.data.data.updated_at
+                if (!response.data?.data) {
+                    return
                 }
-                localStorage.removeItem(`draft_set_${set.id}`)
+
+                rememberConfirmed(set.id, field, response.data.data[field])
+
+                // A newer write for this field has gone out since. Its answer is
+                // the one that describes the row; this one is history.
+                if (!isLatestWrite(timerKey, seq)) {
+                    return
+                }
+
+                set[field] = response.data.data[field]
+                set.updated_at = response.data.data.updated_at
             })
             .catch((err) => {
-                if (!err.isOffline) {
-                    set[field] = previousValue
-                    localStorage.removeItem(`draft_set_${set.id}`)
-                    triggerHaptic('error')
-                } else {
-                    localStorage.removeItem(`draft_set_${set.id}`)
+                const kind = classifySyncError(err)
+
+                if (kind === SYNC_OFFLINE) {
+                    // SyncService owns it now; a draft would be a second copy of
+                    // the same pending write.
+                    clearDraftField(set.id, field)
+
+                    return
                 }
+
+                // Superseded by a later edit, which is on screen and has its own
+                // request in flight. Reverting here would undo that instead.
+                if (!isLatestWrite(timerKey, seq)) {
+                    return
+                }
+
+                clearDraftField(set.id, field)
+                set[field] = previousValue
+
+                // The revert was the only feedback, announced by a haptic pulse:
+                // nothing at all on a desktop, and nothing for anyone who has
+                // haptics off. The value snapped back with no reason given.
+                reportEditFailure(
+                    kind === SYNC_PERMANENT
+                        ? 'Cette valeur a été refusée. La précédente est rétablie.'
+                        : "Impossible d'enregistrer. La valeur précédente est rétablie.",
+                )
             })
+
+    /**
+     * Queues this write behind the one before it for the same field.
+     *
+     * The sequence guard above settles which ANSWER is worth believing, and that
+     * alone is not enough: it protects the screen while leaving the database to
+     * whichever request the server happened to handle last. Two PATCHes for one
+     * field really can overlap — a flush pushes the first one out and the next
+     * keystroke starts another — and the older value landing second is written,
+     * permanently, over the newer one. The user's last word has to be the last
+     * word in the row too.
+     *
+     * Settled rather than resolved: a refused write must not wedge the field.
+     */
+    const execute = () => {
+        const inOrder = (fieldWriteChains.get(timerKey) ?? Promise.resolve()).catch(() => {}).then(send)
+
+        fieldWriteChains.set(timerKey, inOrder)
+
+        return inOrder
     }
 
-    localStorage.setItem(`draft_set_${set.id}`, JSON.stringify(set))
+    writeDraftField(set.id, field, value)
 
     updateTimers[timerKey] = {
         timerId: setTimeout(() => {
@@ -391,21 +1104,29 @@ const updateSet = (set, field, value) => {
 // ⚡ Perf: Optimistic removeSet — no router.reload
 const removeSet = (setId) => {
     // Clear any pending updates for this set to prevent 404s
-    const fields = ['weight', 'reps', 'distance_km', 'duration_seconds']
-    fields.forEach((field) => {
+    NUMERIC_SET_FIELDS.forEach((field) => {
         const timerKey = `${setId}_${field}`
         if (updateTimers[timerKey]) {
             clearTimeout(updateTimers[timerKey].timerId)
             delete updateTimers[timerKey]
         }
+
+        // Nothing may queue behind a row that no longer exists, and the entries
+        // would otherwise outlive every set the page ever showed.
+        fieldWriteChains.delete(timerKey)
+        confirmedValues.delete(timerKey)
     })
+
+    // The row is going away; its draft must not outlive it and be replayed
+    // against an id that no longer exists on the next mount.
+    localStorage.removeItem(draftKey(setId))
 
     // Find the line and set
     for (const line of localWorkout.value.workout_lines) {
         const setIdx = line.sets.findIndex((s) => s.id === setId)
         if (setIdx !== -1) {
             const removedSet = line.sets.splice(setIdx, 1)[0]
-            SyncService.delete(route('api.v1.sets.destroy', { set: setId })).catch((err) => {
+            deleteSet(setId).catch((err) => {
                 if (!err.isOffline) {
                     line.sets.splice(setIdx, 0, removedSet)
                     triggerHaptic('error')
@@ -418,10 +1139,34 @@ const removeSet = (setId) => {
 
 const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
 
-const secondsToTime = (s) => (s ? new Date(s * 1000).toISOString().substr(11, 8) : '00:00:00')
-const updateDurationFromTime = (set, val) => {
-    const [h, m, s] = val.split(':').map(Number)
-    updateSet(set, 'duration_seconds', h * 3600 + m * 60 + s)
+/**
+ * The duration is no longer parsed out of a string here.
+ *
+ * It was read from an <input type="time">, which reports an EMPTY value while
+ * its segments are incomplete — and the old parser did `val.split(':')` on it
+ * regardless, so a NaN was written onto the set, wiped the field mid-typing and
+ * reached the database as null. DurationWheel emits whole seconds and nothing
+ * else, so there is no string to mis-parse and no incomplete state to guard.
+ * The formatting it needs lives with it.
+ */
+
+/**
+ * What a numeric field is worth once it leaves the DOM.
+ *
+ * `e.target.value` is a string, always. Storing it as one made `80` and `'80'`
+ * two different values to every `!==` on this page — addSet's post-create diff
+ * fired a redundant PATCH on every single set it created — and let a partial
+ * entry travel as-is. An empty field is a cleared value, which the column is
+ * nullable for; anything unparseable is not a value at all and is dropped.
+ */
+const toNumberOrNull = (value) => {
+    if (value === '' || value === null || value === undefined) {
+        return null
+    }
+
+    const parsed = Number(value)
+
+    return Number.isFinite(parsed) ? parsed : undefined
 }
 
 const filteredExercises = computed(() => {
@@ -435,6 +1180,8 @@ const handleFabAddExercise = () => {
 
 onMounted(() => {
     window.addEventListener('open-add-exercise', handleFabAddExercise)
+    window.addEventListener('sync:failed', handleSyncFailure)
+    markQueuedFailuresOnMount()
 
     // Restore set drafts if any exist and haven't synced
     const keysToRemove = []
@@ -465,12 +1212,36 @@ onMounted(() => {
                             payload.duration_seconds = draftData.duration_seconds
                         }
 
-                        SyncService.patch(route('api.v1.sets.update', { set: set.id }), payload)
+                        // Already refused once. Keep the value visible and marked,
+                        // but stop asking: a 4xx does not become a 2xx.
+                        if (draftData.syncRejected) {
+                            markUnsynced(set.id)
+
+                            return
+                        }
+
+                        patchSet(set, payload)
                             .then(() => {
                                 localStorage.removeItem(key)
                             })
                             .catch((err) => {
-                                if (err.isOffline) localStorage.removeItem(key)
+                                const kind = classifySyncError(err)
+
+                                if (kind === SYNC_OFFLINE) {
+                                    // SyncService queued it; the draft would be a
+                                    // second copy of the same pending write.
+                                    localStorage.removeItem(key)
+
+                                    return
+                                }
+
+                                if (kind === SYNC_PERMANENT) {
+                                    localStorage.setItem(key, JSON.stringify({ ...draftData, syncRejected: true }))
+                                }
+
+                                // Transient failures keep the draft untouched so the
+                                // next mount tries again.
+                                markUnsynced(set.id)
                             })
                     }
                 })
@@ -484,18 +1255,63 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener('open-add-exercise', handleFabAddExercise)
+    window.removeEventListener('sync:failed', handleSyncFailure)
+
+    // One per create still waiting on the offline queue; the page may well be
+    // left before the drain ever comes.
+    replayListeners.forEach((listener) => window.removeEventListener('sync:replayed', listener))
+    replayListeners.clear()
+
+    /**
+     * Sends whatever is still sitting in the debounce.
+     *
+     * A value typed a fraction of a second before leaving the page is an edit
+     * the user made. It used to be left to fire on its own a second later, into
+     * a component that no longer exists: if the server refused it, the revert
+     * and the message landed on refs nobody was rendering, so the edit was lost
+     * without a word. Flushing here sends it while there is still something to
+     * report to — and SyncService records a refusal durably either way.
+     */
+    flushAllPendingUpdates()
+
+    if (editErrorTimer) {
+        clearTimeout(editErrorTimer)
+    }
 })
 </script>
 
 <template>
     <Head :title="localWorkout.name || 'Séance'" />
     <AuthenticatedLayout :page-title="localWorkout.name" :show-back="true" back-route="workouts.index">
+        <!-- Fixed rather than in the flow: the set being edited can be anywhere
+             down a long session, and a message that scrolls out of view is the
+             same as no message. -->
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="-translate-y-2 opacity-0"
+            leave-active-class="transition duration-150 ease-in"
+            leave-to-class="-translate-y-2 opacity-0"
+        >
+            <div
+                v-if="editError"
+                role="alert"
+                dusk="set-edit-error"
+                class="fixed inset-x-3 top-20 z-50 rounded-2xl border border-red-500/30 bg-red-500/95 px-4 py-3 text-sm font-bold text-white shadow-lg backdrop-blur-md"
+            >
+                {{ editError }}
+            </div>
+        </Transition>
+
         <template #header-actions>
             <button
                 v-press
                 @click="showSettingsModal = true"
                 dusk="workout-settings-button"
-                class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md transition-all"
+                :class="[
+                    'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
+                    'border border-white bg-white/60 transition-all',
+                    'dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400',
+                ]"
                 aria-label="Paramètres de la séance"
             >
                 <span class="material-symbols-outlined" aria-hidden="true">settings</span>
@@ -508,24 +1324,45 @@ onUnmounted(() => {
                 class="flex flex-col items-center justify-center p-12 text-center"
             >
                 <h3 class="font-display text-text-main mb-4 text-2xl font-black uppercase italic">Séance vide</h3>
-                <GlassButton variant="primary" @click="showAddExercise = true" dusk="add-first-exercise"
+                <GlassButton
+                    v-if="!isFinished"
+                    variant="primary"
+                    @click="showAddExercise = true"
+                    dusk="add-first-exercise"
                     >Ajouter un exercice</GlassButton
                 >
+                <p v-else class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
             </GlassCard>
 
+            <!-- Same reasoning as the set rows below: a line's id changes from
+                 placeholder to real one when its create lands, and re-keying on
+                 it rebuilt the whole exercise card — every set input inside it
+                 included — at the exact moment the user was filling in the first
+                 set of the exercise they had just added. -->
             <GlassCard
                 v-for="(line, lineIndex) in localWorkout.workout_lines"
-                :key="line.id"
+                :key="rowKey(line)"
                 :dusk="`exercise-card-${lineIndex}`"
                 :data-line-id="line.id"
                 :dusk-id="`exercise-line-${line.id}`"
             >
                 <div class="mb-4 flex items-center justify-between">
                     <div>
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                        <!--
+                          text-text-main is near-black and has no dark variant of
+                          its own, so in dark mode the exercise name was rendered
+                          at 2.20:1 against the page and its category at 1.71:1 —
+                          both far under the 4.5:1 that ordinary text needs, and
+                          under even the 3:1 allowed for large text. The name of
+                          the exercise you are working on was effectively
+                          invisible.
+                        -->
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic dark:text-white">
                             {{ line.exercise.name }}
                         </h3>
-                        <p class="text-text-muted text-xs font-bold uppercase">{{ line.exercise.category }}</p>
+                        <p class="text-text-muted text-xs font-bold uppercase dark:text-slate-300">
+                            {{ line.exercise.category }}
+                        </p>
                     </div>
                     <button
                         v-press="{ haptic: 'warning' }"
@@ -546,16 +1383,56 @@ onUnmounted(() => {
                 </div>
 
                 <div class="space-y-2">
-                    <SwipeableRow v-for="(set, index) in line.sets" :key="`${set.id}-${index}`">
+                    <!--
+                      Keyed on something that never changes for the life of the
+                      row. Folding the index in made the key change for every row
+                      below a deletion, so Vue destroyed and rebuilt them all:
+                      swipe state reset, inputs re-created, and a field being
+                      edited losing focus mid-keystroke.
+
+                      The set's id has the same defect and outlived that fix: an
+                      optimistic row wears a placeholder until the server answers,
+                      and `tempSet.id = realSetId` then changes the key, so Vue
+                      tears the row down and builds a new one — swipe state and
+                      inputs included — at the moment the user is most likely to
+                      be filling it in.
+
+                      Demonstrated, and no more than that: the guard in
+                      workoutSetEntry.test.js fails without this, showing the node
+                      really is replaced. It was written while chasing a lost
+                      duration entry and did NOT fix it, so nothing here should be
+                      read as a diagnosis of that.
+                    -->
+                    <SwipeableRow v-for="(set, index) in line.sets" :key="rowKey(set)">
+                        <!-- The row was swipeable with no action behind it: dragging
+                             it snapped it open onto an empty background and left it
+                             there. Same delete the row's own button calls, reached
+                             the way Workouts/Index and ExerciseCard already do it. -->
+                        <template #action-right>
+                            <button
+                                type="button"
+                                @click="removeSet(set.id)"
+                                :dusk="`swipe-remove-set-${lineIndex}-${index}`"
+                                :aria-label="`Supprimer la série ${index + 1}`"
+                                class="flex h-full w-full items-center justify-center bg-red-500 text-white"
+                            >
+                                <span class="flex flex-col items-center" aria-hidden="true">
+                                    <span class="material-symbols-outlined text-2xl">delete</span>
+                                    <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
+                                </span>
+                            </button>
+                        </template>
+
                         <div
-                            class="flex items-center gap-3 rounded-2xl border border-white bg-white/80 p-4 shadow-sm"
+                            class="flex items-center gap-2 rounded-2xl border border-white bg-white/80 p-3 shadow-sm"
                             :class="{ 'opacity-50': set.is_completed }"
                         >
                             <button
                                 v-press
                                 @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
+                                :disabled="isFinished"
                                 :dusk="`complete-set-${lineIndex}-${index}`"
-                                class="group relative flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-all"
+                                class="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
                                 :class="
                                     set.is_completed ? 'bg-neon-green text-text-main' : 'bg-slate-100 text-slate-300'
                                 "
@@ -587,71 +1464,102 @@ onUnmounted(() => {
                                 </div>
                             </button>
                             <div
-                                class="text-text-muted flex h-11 w-8 items-center justify-center rounded-lg bg-slate-100 text-sm font-black"
+                                class="text-text-muted relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black"
                             >
                                 {{ index + 1 }}
+
+                                <!-- The value on screen is not the value in the
+                                     database. Said out loud rather than left to a
+                                     colour, and not with a title attribute, which
+                                     a touch device never shows. -->
+                                <span
+                                    v-if="unsyncedSetIds.has(String(set.id))"
+                                    class="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-amber-500 text-white"
+                                    :dusk="`set-unsynced-${lineIndex}-${index}`"
+                                    role="img"
+                                    :aria-label="`Série ${index + 1} non enregistrée`"
+                                >
+                                    <span class="material-symbols-outlined text-[10px]" aria-hidden="true"
+                                        >cloud_off</span
+                                    >
+                                </span>
                             </div>
 
                             <template v-if="line.exercise.type === 'strength'">
                                 <input
                                     type="number"
-                                    v-model="set.weight"
+                                    inputmode="decimal"
+                                    :value="set.weight"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                    :disabled="isFinished"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
-                                    class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
+                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold">kg</span>
+                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">kg</span>
                                 <input
                                     type="number"
-                                    v-model="set.reps"
+                                    inputmode="numeric"
+                                    :value="set.reps"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'reps', e.target.value)"
+                                    :disabled="isFinished"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
-                                    class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
+                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold">reps</span>
+                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">reps</span>
                             </template>
 
                             <template v-else-if="line.exercise.type === 'cardio'">
                                 <input
                                     type="number"
                                     step="0.1"
-                                    v-model="set.distance_km"
+                                    inputmode="decimal"
+                                    :value="set.distance_km"
                                     @focus="$event.target.select()"
                                     @change="(e) => updateSet(set, 'distance_km', e.target.value)"
+                                    :disabled="isFinished"
                                     :dusk="`distance-input-${lineIndex}-${index}`"
-                                    class="text-text-main h-11 w-20 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
+                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
                                 />
-                                <span class="text-text-muted text-xs font-bold">km</span>
-                                <input
-                                    type="time"
-                                    step="1"
-                                    :value="secondsToTime(set.duration_seconds)"
-                                    @focus="$event.target.select()"
-                                    @input="(e) => updateDurationFromTime(set, e.target.value)"
+                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">km</span>
+                                <DurationWheel
+                                    :model-value="set.duration_seconds"
+                                    @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
+                                    :disabled="isFinished"
+                                    :fill="false"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
-                                    class="text-text-main h-11 w-32 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                 />
                             </template>
 
                             <template v-else-if="line.exercise.type === 'timed'">
-                                <input
-                                    type="time"
-                                    step="1"
-                                    :value="secondsToTime(set.duration_seconds)"
-                                    @focus="$event.target.select()"
-                                    @input="(e) => updateDurationFromTime(set, e.target.value)"
+                                <DurationWheel
+                                    :model-value="set.duration_seconds"
+                                    @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
+                                    :disabled="isFinished"
                                     :dusk="`duration-input-${lineIndex}-${index}`"
-                                    class="text-text-main h-11 w-full rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                 />
                             </template>
 
                             <button
+                                v-if="!isFinished"
                                 v-press="{ haptic: 'warning' }"
                                 @click="removeSet(set.id)"
                                 :dusk="`remove-set-${lineIndex}-${index}`"
-                                class="ml-auto text-slate-300 hover:text-red-500"
+                                :class="[
+                                    'relative ml-auto text-slate-300 hover:text-red-500',
+                                    'before:absolute before:-inset-2.5 before:content-[\'\']',
+                                    // Redundant on a phone, where the row swipes.
+                                    // Kept from sm up, where there is no swipe at
+                                    // all: SwipeableRow listens for touch events
+                                    // only, so a mouse has no other way to delete.
+                                    'hidden sm:block',
+                                ]"
                                 aria-label="Supprimer la série"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">delete</span>
@@ -661,6 +1569,7 @@ onUnmounted(() => {
                 </div>
 
                 <button
+                    v-if="!isFinished"
                     v-press
                     @click="addSet(line.id)"
                     :dusk="`add-set-${lineIndex}`"
@@ -670,7 +1579,7 @@ onUnmounted(() => {
                 </button>
             </GlassCard>
 
-            <div v-if="localWorkout.workout_lines.length > 0" class="mt-8 space-y-3 px-1">
+            <div v-if="localWorkout.workout_lines.length > 0 && !isFinished" class="mt-8 space-y-3 px-1">
                 <GlassButton
                     variant="secondary"
                     @click="showAddExercise = true"
@@ -713,28 +1622,36 @@ onUnmounted(() => {
                         />
                     </div>
                     <div class="max-h-[60vh] space-y-3 overflow-y-auto">
-                        <div
+                        <button
                             v-if="filteredExercises.length === 0 && searchQuery"
+                            type="button"
                             @click="quickCreate"
                             dusk="quick-create-exercise"
-                            class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center transition-all hover:border-emerald-500"
+                            class="flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center transition-all hover:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
                         >
-                            <p class="text-text-muted mb-2 text-sm italic">Aucun résultat pour "{{ searchQuery }}"</p>
+                            <span class="text-text-muted mb-2 block text-sm italic"
+                                >Aucun résultat pour "{{ searchQuery }}"</span
+                            >
                             <span class="font-bold tracking-wider text-emerald-600 uppercase"
                                 >Créer "{{ searchQuery }}"</span
                             >
-                        </div>
+                        </button>
 
-                        <div
+                        <!-- button, not div: adding an exercise is the primary action of this
+                             screen and was unreachable by keyboard and screen readers.
+                             Spans rather than h4/p — flow content is invalid inside a button
+                             and produced a phantom heading level in the outline. -->
+                        <button
                             v-for="exercise in filteredExercises"
                             :key="exercise.id"
+                            type="button"
                             @click="addExercise(exercise.id)"
                             :dusk="`select-exercise-${exercise.id}`"
-                            class="glass-panel-light hover:border-electric-orange/50 cursor-pointer rounded-2xl p-4 transition-all"
+                            class="glass-panel-light hover:border-electric-orange/50 focus-visible:ring-electric-orange block w-full cursor-pointer rounded-2xl p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
                         >
-                            <h4 class="text-text-main font-bold dark:text-white">{{ exercise.name }}</h4>
-                            <p class="text-text-muted text-xs uppercase">{{ exercise.category }}</p>
-                        </div>
+                            <span class="text-text-main block font-bold dark:text-white">{{ exercise.name }}</span>
+                            <span class="text-text-muted block text-xs uppercase">{{ exercise.category }}</span>
+                        </button>
                     </div>
                 </div>
 
@@ -743,7 +1660,7 @@ onUnmounted(() => {
                     <div class="flex items-center gap-4">
                         <button
                             @click="showCreateForm = false"
-                            class="text-text-muted hover:text-text-main"
+                            class="text-text-muted hover:text-text-main relative before:absolute before:-inset-2.5 before:content-['']"
                             aria-label="Retour"
                         >
                             <span class="material-symbols-outlined">arrow_back</span>
@@ -752,7 +1669,13 @@ onUnmounted(() => {
                     </div>
 
                     <form @submit.prevent="createAndAddExercise" class="space-y-4">
-                        <GlassInput v-model="createExerciseForm.name" label="Nom" dusk="new-exercise-name" required />
+                        <GlassInput
+                            v-model="createExerciseForm.name"
+                            label="Nom"
+                            dusk="new-exercise-name"
+                            :error="createExerciseForm.errors.name"
+                            required
+                        />
 
                         <div class="grid grid-cols-2 gap-4">
                             <GlassSelect
@@ -812,6 +1735,7 @@ onUnmounted(() => {
 
         <RestTimer
             v-if="showTimer"
+            :key="timerRun"
             :duration="timerDuration"
             @finished="showTimer = false"
             @close="showTimer = false"

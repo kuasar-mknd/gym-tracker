@@ -25,7 +25,7 @@ class WorkoutTemplateSetController extends Controller
         $this->authorize('viewAny', WorkoutTemplateSet::class);
 
         $sets = QueryBuilder::for(WorkoutTemplateSet::class)
-            ->allowedFilters(['workout_template_line_id'])
+            ->allowedFilters('workout_template_line_id')
             // Bolt: Optimize belongsTo filtering with INNER JOIN
             ->join('workout_template_lines', 'workout_template_sets.workout_template_line_id', '=', 'workout_template_lines.id')
             ->join('workout_templates', 'workout_template_lines.workout_template_id', '=', 'workout_templates.id')

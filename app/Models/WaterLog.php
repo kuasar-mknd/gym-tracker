@@ -15,6 +15,7 @@ class WaterLog extends Model
     /** @use HasFactory<\Database\Factories\WaterLogFactory> */
     use HasFactory;
 
+    #[\Override]
     protected $fillable = [
         'user_id',
         'amount',
@@ -45,6 +46,7 @@ class WaterLog extends Model
         ]);
     }
 
+    #[\Override]
     protected function casts(): array
     {
         return [

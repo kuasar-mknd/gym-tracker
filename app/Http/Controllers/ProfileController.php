@@ -54,6 +54,11 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => true,
             'status' => session('status'),
+            // Whether *we* hold a subscription, which is not the same thing as the
+            // browser having granted permission. The page used to infer one from
+            // the other, so a subscription the server never stored still switched
+            // the interface into its "push is on" state.
+            'hasPushSubscription' => $this->user()->pushSubscriptions()->exists(),
             'notificationPreferences' => $this->user()->notificationPreferences()->get()->mapWithKeys(fn ($pref): array => [
                 $pref->type => [
                     'is_enabled' => $pref->is_enabled,

@@ -3,16 +3,35 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
+import { ref } from 'vue'
 
-const props = defineProps({
+defineProps({
     templates: {
         type: Array,
         default: () => [],
     },
 })
 
+// Tracks the template being launched: without it a double tap posts twice and
+// creates two workouts, which the user then has to delete by hand.
+const executingTemplateId = ref(null)
+
 const executeTemplate = (templateId) => {
-    router.post(route('templates.execute', { template: templateId }))
+    if (executingTemplateId.value !== null) {
+        return
+    }
+
+    executingTemplateId.value = templateId
+
+    router.post(
+        route('templates.execute', { template: templateId }),
+        {},
+        {
+            onFinish: () => {
+                executingTemplateId.value = null
+            },
+        },
+    )
 }
 
 const deleteTemplate = (templateId) => {
@@ -95,12 +114,32 @@ const deleteTemplate = (templateId) => {
                                 </p>
                             </div>
                             <div class="flex gap-2">
-                                <button
-                                    @click="deleteTemplate(template.id)"
-                                    class="text-text-muted rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 hover:bg-red-500/10 hover:text-red-500 active:scale-95"
-                                    title="Supprimer"
+                                <!-- The edit page existed and had no way in: nothing
+                                     linked to templates.edit anywhere. -->
+                                <Link
+                                    :href="route('templates.edit', { template: template.id })"
+                                    :dusk="`edit-template-${template.id}`"
+                                    :aria-label="`Modifier ${template.name}`"
+                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 hover:bg-slate-500/10 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
-                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <span class="material-symbols-outlined block text-xl" aria-hidden="true">edit</span>
+                                </Link>
+                                <!-- title= is not a name on a touch device, where there
+                                     is no hover to reveal it. -->
+                                <button
+                                    type="button"
+                                    @click="deleteTemplate(template.id)"
+                                    :dusk="`delete-template-${template.id}`"
+                                    :aria-label="`Supprimer ${template.name}`"
+                                    class="text-text-muted focus-visible:ring-accent-primary rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 hover:bg-red-500/10 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                >
+                                    <svg
+                                        class="h-5 w-5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        aria-hidden="true"
+                                    >
                                         <path
                                             stroke-linecap="round"
                                             stroke-linejoin="round"
@@ -133,8 +172,15 @@ const deleteTemplate = (templateId) => {
                     </div>
 
                     <div class="mt-6">
-                        <GlassButton variant="primary" class="w-full" @click="executeTemplate(template.id)">
-                            Lancer cette séance
+                        <GlassButton
+                            variant="primary"
+                            class="w-full"
+                            :disabled="executingTemplateId !== null"
+                            :loading="executingTemplateId === template.id"
+                            :dusk="`execute-template-${template.id}`"
+                            @click="executeTemplate(template.id)"
+                        >
+                            {{ executingTemplateId === template.id ? 'Lancement…' : 'Lancer cette séance' }}
                         </GlassButton>
                     </div>
                 </GlassCard>

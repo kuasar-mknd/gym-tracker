@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 
 class UserActivityChart extends ChartWidget
 {
+    #[\Override]
     protected ?string $heading = 'User Registrations';
 
     protected function getType(): string
@@ -17,6 +18,7 @@ class UserActivityChart extends ChartWidget
         return 'bar';
     }
 
+    #[\Override]
     protected function getData(): array
     {
         $usersPerMonth = $this->getUsersPerMonth();

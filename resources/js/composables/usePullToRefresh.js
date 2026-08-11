@@ -58,10 +58,14 @@ export function usePullToRefresh(options = {}) {
         if (pullDistance.value > threshold) {
             isRefreshing.value = true
             pullDistance.value = threshold // Snap to threshold
-            triggerHaptic('time') // Haptic feedback on trigger
+            triggerHaptic('timer') // Haptic feedback on trigger
 
             try {
                 await onRefresh()
+            } catch {
+                // Nothing escapes a touch handler: an unhandled rejection here
+                // would surface as a global error rather than a failed refresh.
+                // The indicator is reset below either way.
             } finally {
                 setTimeout(() => {
                     isRefreshing.value = false
