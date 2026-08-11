@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Services\RecommendedValuesService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 /**
@@ -25,7 +26,7 @@ use Spatie\Activitylog\Support\LogOptions;
 class WorkoutLine extends Model
 {
     /** @use HasFactory<\Database\Factories\WorkoutLineFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     #[\Override]
     protected $fillable = [
