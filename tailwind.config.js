@@ -18,7 +18,6 @@ export default {
                 sans: ['Space Grotesk', 'Inter', ...defaultTheme.fontFamily.sans],
                 display: ['Archivo', 'sans-serif'],
                 condensed: ['Barlow Condensed', 'sans-serif'],
-                fat: ['Archivo Black', 'sans-serif'],
             },
             colors: {
                 // New Liquid Glass Light palette
