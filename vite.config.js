@@ -39,6 +39,16 @@ export default defineConfig({
             base: '/',
             buildBase: '/',
             scope: '/',
+            /**
+             * woff2 is not in the default glob, so the self-hosted faces were
+             * emitted, fingerprinted, and then left out of the precache — the
+             * app would have kept fetching them over the network and shown
+             * nothing but fallback type offline. The point of self-hosting is
+             * that the second visit needs no network at all.
+             */
+            injectManifest: {
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+            },
             manifest: {
                 name: 'Gym Tracker',
                 short_name: 'GymTracker',
