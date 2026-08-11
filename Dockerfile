@@ -28,7 +28,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 
-COPY vite.config.js tailwind.config.js ./
+COPY vite.config.js ./
 COPY resources/ ./resources/
 RUN npm run build
 

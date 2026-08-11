@@ -7,6 +7,17 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/**
+ * La détection automatique de v4 scanne tout fichier non ignoré par git, y
+ * compris la prose. Une entrée de CHANGELOG citant `glass-card` suffisait à
+ * faire émettre l'utilitaire du même nom, alors qu'aucun composant ne s'en
+ * sert : de la documentation qui gonfle la feuille de style. Le markdown ne
+ * rend rien, il n'a donc rien à dire sur les classes à générer.
+ */
+@source not '../../CHANGELOG.md';
+@source not '../../docs';
+@source not '../../*.md';
+
 @theme {
     --font-sans:
         Space Grotesk, Inter, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
