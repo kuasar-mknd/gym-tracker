@@ -15,7 +15,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Corrigé — en marge des dépendances
 - **`Permissions-Policy` malformé** : l'en-tête déclarait `vr=()`, un nom de brouillon jamais entré au registre. Les navigateurs rejetaient le jeton et le signalaient sur chaque réponse (154 fois par passe de tests navigateur, sans que rien ne l'attrape, `assertNoConsoleExceptions` ne regardant que les erreurs `SEVERE`). WebXR n'était donc pas bloqué du tout. Le nom correct est `xr-spatial-tracking`.
-- **`Archivo Black` était utilisé sans jamais être chargé** : `glass-input-fat`, le grand champ numérique d'une séance, le demande depuis toujours et retombait silencieusement sur le sans-serif système. La police est désormais servie — changement visuel sur ce champ.
+- **`Archivo Black` était chargé pour un champ que rien n'affiche** : `glass-input-fat` n'a qu'un consommateur, `GlassFatInput.vue`, qu'aucune page n'importe et que `main.js` n'enregistre pas — extrait de `GlassInput` en #795 sans jamais être branché, puis entretenu pendant quatre PR. Servir la police n'a donc rien changé à l'écran, contrairement à ce qu'annonçait cette entrée. Composant, utilitaire, jeton `--font-fat` et les deux faces (15,8 Kio) sont retirés ; le grand champ numérique reste à écrire le jour où une séance en voudra un.
 - **`Barlow Condensed` était téléchargé en six graisses et jamais rendu** : l'utilitaire `font-condensed` n'a aucun usage. Police et jeton retirés.
 
 ### Modifié

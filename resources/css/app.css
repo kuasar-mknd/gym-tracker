@@ -12,7 +12,6 @@
         Space Grotesk, Inter, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: Archivo, sans-serif;
-    --font-fat: Archivo Black, sans-serif;
 
     --color-electric-orange: #ff5500;
     --color-vivid-violet: #8800ff;
@@ -368,28 +367,6 @@
             0 0 0 4px rgba(255, 85, 0, 0.1),
             0 8px 20px rgba(0, 0, 0, 0.08);
         transform: scale(1.02);
-    }
-}
-
-@utility glass-input-fat {
-    /* Large numeric input for workout */
-    font-family: 'Archivo Black', sans-serif;
-    font-size: 3rem;
-    line-height: 1;
-    text-align: center;
-    background: transparent;
-    border: none;
-    color: var(--text-main);
-    caret-color: var(--electric-orange);
-    padding: 0;
-
-    @media (min-width: 640px) {
-        font-size: 4.5rem;
-    }
-
-    &:focus-visible {
-        outline: none;
-        transform: scale(1.05);
     }
 }
 
