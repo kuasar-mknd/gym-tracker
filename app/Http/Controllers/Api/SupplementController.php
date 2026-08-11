@@ -42,9 +42,9 @@ class SupplementController extends Controller
         $this->authorize('viewAny', Supplement::class);
 
         $supplements = QueryBuilder::for(Supplement::class)
-            ->allowedIncludes(['latestLog'])
-            ->allowedFilters(['name', 'brand'])
-            ->allowedSorts(['name', 'created_at', 'servings_remaining'])
+            ->allowedIncludes('latestLog')
+            ->allowedFilters('name', 'brand')
+            ->allowedSorts('name', 'created_at', 'servings_remaining')
             ->defaultSort('name')
             ->where('user_id', $this->user()->id)
             ->paginate();

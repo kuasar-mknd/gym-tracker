@@ -21,7 +21,7 @@ class PlateController extends Controller
         $this->authorize('viewAny', Plate::class);
 
         $plates = QueryBuilder::for(Plate::class)
-            ->allowedSorts(['weight', 'quantity', 'created_at'])
+            ->allowedSorts('weight', 'quantity', 'created_at')
             ->defaultSort('weight')
             ->where('user_id', Auth::id())
             ->paginate();

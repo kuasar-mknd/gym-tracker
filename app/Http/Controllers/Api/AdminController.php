@@ -40,7 +40,7 @@ class AdminController extends Controller implements HasMiddleware
         $this->authorize('viewAny', Admin::class);
 
         $query = QueryBuilder::for(Admin::class)
-            ->allowedSorts(['name', 'email', 'created_at'])
+            ->allowedSorts('name', 'email', 'created_at')
             ->paginate();
 
         return AdminResource::collection($query);

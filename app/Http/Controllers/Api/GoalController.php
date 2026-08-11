@@ -38,8 +38,8 @@ class GoalController extends Controller
         $this->authorize('viewAny', Goal::class);
 
         $goals = QueryBuilder::for(Goal::class)
-            ->allowedIncludes(['exercise'])
-            ->allowedSorts(['deadline', 'progress', 'created_at'])
+            ->allowedIncludes('exercise')
+            ->allowedSorts('deadline', 'progress', 'created_at')
             ->defaultSort('-created_at')
             ->where('user_id', Auth::id())
             ->paginate();

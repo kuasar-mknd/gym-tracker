@@ -44,8 +44,8 @@ class WorkoutController extends Controller
         $this->authorize('viewAny', Workout::class);
 
         $workouts = \Spatie\QueryBuilder\QueryBuilder::for(Workout::class)
-            ->allowedIncludes(['workoutLines', 'workoutLines.exercise', 'workoutLines.sets'])
-            ->allowedSorts(['started_at', 'ended_at', 'created_at'])
+            ->allowedIncludes('workoutLines', 'workoutLines.exercise', 'workoutLines.sets')
+            ->allowedSorts('started_at', 'ended_at', 'created_at')
             ->defaultSort('-started_at')
             ->where('user_id', $this->user()->id)
             ->paginate();
