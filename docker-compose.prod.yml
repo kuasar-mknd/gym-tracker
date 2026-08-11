@@ -102,7 +102,7 @@ services:
             - backend
 
     redis:
-        image: redis:7.4-alpine
+        image: redis:8-alpine
         restart: always
         command: >
             redis-server
