@@ -62,15 +62,13 @@
     "overrides": {
         "serialize-javascript": "^7.1.0",
         "brace-expansion": "^5.0.9",
-        "radix-vue": {
-            "nanoid": "^5.1.16"
-        }
+        "nanoid@5": "^5.1.16"
     },
     "pnpm": {
         "overrides": {
             "serialize-javascript": "^7.1.0",
             "brace-expansion": "^5.0.9",
-            "radix-vue>nanoid": "^5.1.16"
+            "nanoid@5": "^5.1.16"
         }
     },
     "optionalDependencies": {
