@@ -3,6 +3,10 @@
     "name": "gym-tracker",
     "private": true,
     "type": "module",
+    "engines": {
+        "node": ">=24",
+        "npm": ">=11"
+    },
     "scripts": {
         "dev": "vite",
         "build": "vite build",

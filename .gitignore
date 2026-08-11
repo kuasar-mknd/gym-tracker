@@ -39,6 +39,11 @@ _ide_helper_models.php
 frankenphp
 
 *.txt
+# The icon subset is source, not a stray note: the self-hosted Material Symbols
+# face is generated from it and a test reads it. The blanket *.txt above
+# swallowed it silently — `git add -A` committed the fonts beside it and said
+# nothing — so the build failed only on CI, where the file did not exist.
+!/resources/fonts/material-symbols.txt
 /lang/vendor
 /resources/views/vendor
 /storage/app/GymTracker
