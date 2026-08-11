@@ -150,7 +150,7 @@ class AccessibleNamesTest extends DuskTestCase
                 ->waitFor('@workout-settings-button', 15)
                 ->assertScript("document.documentElement.classList.contains('dark')", false);
 
-            $ratios = $browser->script(<<<'JS'
+            $ratios = $browser->script(<<<'MEASURE'
                 return (function () {
                     /**
                      * Colours are normalised by painting them, not by reading the
@@ -220,7 +220,7 @@ class AccessibleNamesTest extends DuskTestCase
                         notifications: ratio(document.querySelector('a[href*="notifications"]')),
                     });
                 })();
-            JS)[0];
+            MEASURE)[0];
 
             $ratios = json_decode((string) $ratios, true);
 
