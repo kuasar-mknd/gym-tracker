@@ -1,0 +1,75 @@
+name: Auto Release
+
+# Publie une release de correctif quand une montée de dépendance Dependabot a
+# été fusionnée ET que la CI est verte sur main.
+#
+# Le déclencheur est `workflow_run` sur la CI, et non `push` : c'est ce qui donne
+# son sens au « si tout fonctionne ». Sur un push, la release partirait avant que
+# les tests, Dusk et la construction de l'image aient rendu leur verdict.
+on:
+    workflow_run:
+        workflows: ['CI']
+        types: [completed]
+        branches: [main]
+
+permissions:
+    contents: write
+
+jobs:
+    release:
+        if: github.event.workflow_run.conclusion == 'success'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+              with:
+                  ref: ${{ github.event.workflow_run.head_sha }}
+                  # Les tags sont nécessaires pour calculer la version suivante.
+                  fetch-depth: 0
+
+            - name: Identify the merged pull request
+              id: pr
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  author=$(gh api "repos/$REPO/commits/$HEAD_SHA/pulls" \
+                      --jq '.[0].user.login // ""' 2>/dev/null || echo "")
+                  echo "author=$author" >> "$GITHUB_OUTPUT"
+                  echo "Auteur de la PR fusionnée : ${author:-aucune}"
+
+            # Toute autre origine est ignorée : une release automatique sur du
+            # travail applicatif retirerait à un humain le choix du moment et du
+            # numéro de version.
+            - name: Compute the next patch version
+              id: version
+              if: steps.pr.outputs.author == 'dependabot[bot]'
+              run: |
+                  latest=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+                  latest=${latest:-v0.0.0}
+                  version=${latest#v}
+                  major=${version%%.*}
+                  rest=${version#*.}
+                  minor=${rest%%.*}
+                  patch=${rest#*.}
+                  next="v${major}.${minor}.$((patch + 1))"
+                  echo "next=$next" >> "$GITHUB_OUTPUT"
+                  echo "$latest -> $next"
+
+            - name: Create the release
+              if: steps.version.outputs.next != ''
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NEXT: ${{ steps.version.outputs.next }}
+                  HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+              # `gh release create` plutôt qu'un tag poussé : un tag créé avec le
+              # GITHUB_TOKEN ne déclenche aucun workflow, donc release.yml ne se
+              # réveillerait jamais. La release est donc publiée directement ici.
+              # release.yml reste en place pour les tags posés à la main.
+              run: |
+                  gh release create "$NEXT" \
+                      --target "$HEAD_SHA" \
+                      --title "$NEXT" \
+                      --generate-notes \
+                      --latest
