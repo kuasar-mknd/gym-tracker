@@ -2,10 +2,10 @@ name: CI
 
 on:
     push:
-        branches: ['main', 'fix/e2e-stability', 'reboot-main']
+        branches: ['main']
         tags: ['v*']
     pull_request:
-        branches: ['main', 'fix/e2e-stability', 'reboot-main']
+        branches: ['main']
 
 env:
     FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

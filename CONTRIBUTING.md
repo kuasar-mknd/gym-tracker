@@ -103,7 +103,7 @@ vendor/bin/sail artisan test --coverage
 
 - **Pint** pour le formatage : `vendor/bin/sail bin pint`
 - **Rector** pour la modernisation : `vendor/bin/sail bin rector process`
-- **PHPStan** (Larastan) niveau Max : `vendor/bin/sail artisan phpstan:analyse`
+- **PHPStan** (Larastan) niveau Max : `vendor/bin/sail bin phpstan analyse --memory-limit=2G`
 - Suit les conventions Laravel
 - Utilise les type hints PHP 8.4 stricts (`declare(strict_types=1);`)
 - Crée des Form Requests pour la validation
@@ -136,7 +136,7 @@ vendor/bin/sail artisan test --coverage
 - [ ] Tests passent (`vendor/bin/sail artisan test`)
 - [ ] Code formaté (`vendor/bin/sail npm run format` & `vendor/bin/sail bin pint`)
 - [ ] Rector appliqué (`vendor/bin/sail bin rector process`)
-- [ ] PHPStan propre (`vendor/bin/sail artisan phpstan:analyse`)
+- [ ] PHPStan propre (`vendor/bin/sail bin phpstan analyse --memory-limit=2G`)
 - [ ] Pas de `console.log` ou `dd()` oubliés
 - [ ] Documentation mise à jour si nécessaire
 
