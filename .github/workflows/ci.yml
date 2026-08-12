@@ -123,6 +123,15 @@ jobs:
                   cp .env.example .env
                   php artisan key:generate
 
+            # The service container grants `sail` access to gym_tracker_testing only.
+            # Paratest creates one shard database per process, so the user also needs
+            # rights over the gym_tracker_testing_test_N pattern or every Feature test
+            # fails with access denied. Underscores are GRANT wildcards, hence escaped.
+            - name: Grant Paratest Shard Databases
+              run: |
+                  # shellcheck disable=SC2016 # the backticks are MySQL identifier quotes, not a subshell
+                  php -r '(new PDO("mysql:host=127.0.0.1;port=3306", "root", "password"))->exec("GRANT ALL PRIVILEGES ON `gym\\_tracker\\_testing\\_test\\_%`.* TO \"sail\"@\"%\"");'
+
             - name: Execute tests
               env:
                   DB_CONNECTION: mysql
@@ -132,7 +141,7 @@ jobs:
                   DB_USERNAME: sail
                   DB_PASSWORD: password
                   TELESCOPE_ENABLED: false
-              run: php artisan test
+              run: php artisan test -p
 
     browser-tests:
         runs-on: ubuntu-latest
