@@ -12,6 +12,19 @@ final class UserPolicy
 {
     use HandlesAuthorization;
 
+    /**
+     * Whether the authenticated identity is the very user being acted upon.
+     *
+     * The instanceof check is load-bearing: the back-office authenticates
+     * App\Models\Admin on the "admin" guard, a separate table with its own id
+     * sequence. Comparing identifiers alone let an admin holding no permission
+     * act on the User that happened to share their id.
+     */
+    private function isSelf(AuthUser $authUser, User $user): bool
+    {
+        return $authUser instanceof User && $authUser->getKey() === $user->getKey();
+    }
+
     public function viewAny(AuthUser $authUser): bool
     {
         return $authUser->can('ViewAny:User');
@@ -19,7 +32,7 @@ final class UserPolicy
 
     public function view(AuthUser $authUser, User $user): bool
     {
-        return $authUser->getAuthIdentifier() === $user->getAuthIdentifier() || $authUser->can('View:User');
+        return $this->isSelf($authUser, $user) || $authUser->can('View:User');
     }
 
     public function create(AuthUser $authUser): bool
@@ -29,22 +42,22 @@ final class UserPolicy
 
     public function update(AuthUser $authUser, User $user): bool
     {
-        return $authUser->getAuthIdentifier() === $user->getAuthIdentifier() || $authUser->can('Update:User');
+        return $this->isSelf($authUser, $user) || $authUser->can('Update:User');
     }
 
     public function delete(AuthUser $authUser, User $user): bool
     {
-        return $authUser->getAuthIdentifier() === $user->getAuthIdentifier() || $authUser->can('Delete:User');
+        return $this->isSelf($authUser, $user) || $authUser->can('Delete:User');
     }
 
     public function restore(AuthUser $authUser, User $user): bool
     {
-        return $authUser->getAuthIdentifier() === $user->getAuthIdentifier() || $authUser->can('Restore:User');
+        return $this->isSelf($authUser, $user) || $authUser->can('Restore:User');
     }
 
     public function forceDelete(AuthUser $authUser, User $user): bool
     {
-        return $authUser->getAuthIdentifier() === $user->getAuthIdentifier() || $authUser->can('ForceDelete:User');
+        return $this->isSelf($authUser, $user) || $authUser->can('ForceDelete:User');
     }
 
     public function forceDeleteAny(AuthUser $authUser): bool
@@ -59,7 +72,7 @@ final class UserPolicy
 
     public function replicate(AuthUser $authUser, User $user): bool
     {
-        return $authUser->getAuthIdentifier() === $user->getAuthIdentifier() || $authUser->can('Replicate:User');
+        return $this->isSelf($authUser, $user) || $authUser->can('Replicate:User');
     }
 
     public function reorder(AuthUser $authUser): bool
