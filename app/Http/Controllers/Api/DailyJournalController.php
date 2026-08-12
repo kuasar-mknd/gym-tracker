@@ -30,7 +30,7 @@ class DailyJournalController extends Controller
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Get(
-        path: '/api/v1/daily-journals',
+        path: '/daily-journals',
         summary: 'List daily journals',
         tags: ['Daily Journals'],
     )]
@@ -80,7 +80,7 @@ class DailyJournalController extends Controller
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Post(
-        path: '/api/v1/daily-journals',
+        path: '/daily-journals',
         summary: 'Create a new daily journal',
         tags: ['Daily Journals'],
     )]
@@ -126,7 +126,7 @@ class DailyJournalController extends Controller
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Get(
-        path: '/api/v1/daily-journals/{id}',
+        path: '/daily-journals/{id}',
         summary: 'Get a specific daily journal',
         tags: ['Daily Journals'],
     )]
@@ -170,7 +170,7 @@ class DailyJournalController extends Controller
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Put(
-        path: '/api/v1/daily-journals/{id}',
+        path: '/daily-journals/{id}',
         summary: 'Update an existing daily journal',
         tags: ['Daily Journals'],
     )]
@@ -223,7 +223,7 @@ class DailyJournalController extends Controller
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
      */
     #[OA\Delete(
-        path: '/api/v1/daily-journals/{id}',
+        path: '/daily-journals/{id}',
         summary: 'Delete a daily journal',
         tags: ['Daily Journals'],
     )]
