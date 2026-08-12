@@ -55,25 +55,6 @@ class Set extends Model
     }
 
     /**
-     * Get the volume of the set (weight * reps).
-     */
-    public function getVolume(): float
-    {
-        return (float) ($this->weight ?? 0) * (int) ($this->reps ?? 0);
-    }
-
-    /**
-     * Get the original volume of the set before changes.
-     */
-    public function getOriginalVolume(): float
-    {
-        $weight = $this->getOriginal('weight');
-        $reps = $this->getOriginal('reps');
-
-        return (is_numeric($weight) ? (float) $weight : 0.0) * (is_numeric($reps) ? (int) $reps : 0);
-    }
-
-    /**
      * Update the total volume for the user and the workout.
      */
     public function updateVolumes(): void

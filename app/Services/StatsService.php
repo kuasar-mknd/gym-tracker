@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DTOs\Stats\BodyFatHistoryPoint;
-use App\DTOs\Stats\DailyVolumeTrendPoint;
 use App\DTOs\Stats\DistributionStat;
 use App\DTOs\Stats\DurationHistoryPoint;
 use App\DTOs\Stats\Exercise1RMProgressPoint;
@@ -48,14 +47,6 @@ final readonly class StatsService
     }
 
     /**
-     * @return array<int, DailyVolumeTrendPoint>
-     */
-    public function getDailyVolumeTrend(User $user, int $days = 7): array
-    {
-        return $this->volumeStats->getDailyVolumeTrend($user, $days);
-    }
-
-    /**
      * @return array<int, MuscleDistributionStat>
      */
     public function getMuscleDistribution(User $user, int $days = 30): array
@@ -76,25 +67,9 @@ final readonly class StatsService
         return $this->volumeStats->getMonthlyVolumeComparison($user);
     }
 
-    /**
-     * @return array<int, WeightHistoryPoint>
-     */
-    public function getWeightHistory(User $user, int $days = 90): array
-    {
-        return $this->bodyStats->getWeightHistory($user, $days);
-    }
-
     public function getLatestBodyMetrics(User $user): LatestBodyMetrics
     {
         return $this->bodyStats->getLatestBodyMetrics($user);
-    }
-
-    /**
-     * @return array<int, BodyFatHistoryPoint>
-     */
-    public function getBodyFatHistory(User $user, int $days = 90): array
-    {
-        return $this->bodyStats->getBodyFatHistory($user, $days);
     }
 
     /**

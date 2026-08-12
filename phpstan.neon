@@ -1,5 +1,6 @@
 includes:
     - vendor/larastan/larastan/extension.neon
+    - vendor/shipmonk/dead-code-detector/rules.neon
     # Les 430 erreurs que l'analyse de tests/ met au jour sont figees ici plutot
     # qu'ignorees : le fichier ne doit que retrecir. Le plus gros poste, 138
     # dereferencements de modele potentiellement nul, fait planter un test au lieu
@@ -18,6 +19,26 @@ parameters:
     treatPhpDocTypesAsCertain: false
 
     ignoreErrors:
+        # Les DTO de statistiques sont serialises en JSON vers les props Inertia :
+        # leurs proprietes promues sont bien lues, par json_encode et non par du
+        # PHP. Le detecteur ne peut pas le voir, et les supprimer casserait les
+        # graphiques. Le contrat de cles est couvert par StatsChartPointsContractTest.
+        - identifier: shipmonk.deadProperty.neverRead
+          path: app/DTOs/*
+        # forceDeleteAny / restoreAny / replicate / reorder sont generes par
+        # Filament-Shield sur chaque policy. Ils sont inatteignables aujourd'hui
+        # (aucune ressource Filament ne les declenche) mais font partie du contrat
+        # que Shield regenere : les supprimer les verrait revenir au prochain
+        # `shield:generate`.
+        - identifier: shipmonk.deadMethod
+          path: app/Policies/*
+          message: '#::(forceDeleteAny|restoreAny|replicate|reorder)$#'
+        # Documente en OpenAPI mais jamais route : routes/api.php sert /api/v1/status
+        # depuis une closure qui duplique la reponse. Divergence doc/implementation
+        # a traiter avec la regeneration de la spec (#1344), pas par une suppression
+        # qui retirerait la doc du seul endpoint documente.
+        - identifier: shipmonk.deadMethod
+          path: app/Http/Controllers/Api/Swagger.php
         # Pest lie $this au TestCase a l'execution, mais l'analyse statique ne voit
         # que le TestCall renvoye par it()/test(). Toute l'API de test ($this->get,
         # actingAs, assertDatabaseHas...) apparait donc comme inexistante. Ce sont
