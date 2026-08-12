@@ -103,10 +103,12 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->type('@distance-input-0-0', '5.5')
                 ->pickDuration('@duration-input-0-0', 0, 25, 30)
                 // Leaves the distance field, which is what commits it.
-                ->click('#main-content')
-                // Outlasts the one-second debounce with room to spare.
-                ->pause(3000)
-                ->assertNoConsoleExceptions();
+                ->click('#main-content');
+
+            // Debounced write: wait for the row this test asserts on below.
+            $this->waitForDatabase(fn (): bool => (int) ($workout->workoutLines()->first()?->sets()->first()?->duration_seconds ?? 0) === 1530);
+
+            $browser->assertNoConsoleExceptions();
         });
 
         $set = $line->sets()->first();
@@ -208,9 +210,12 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
             $browser->pickDuration('@duration-input-0-0', 0, 10, 0)
                 ->assertAttribute('@duration-input-0-0', 'data-probe', 'kept')
                 ->assertSeeIn('@duration-input-0-0', '00:10:00')
-                ->click('#main-content')
-                ->pause(3000)
-                ->assertNoConsoleExceptions();
+                ->click('#main-content');
+
+            // Debounced write: wait for the row this test asserts on below.
+            $this->waitForDatabase(fn (): bool => (int) ($workout->workoutLines()->first()?->sets()->first()?->duration_seconds ?? 0) === 600);
+
+            $browser->assertNoConsoleExceptions();
         });
 
         $set = $line->sets()->first();
@@ -244,9 +249,12 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->pause(2000)
                 ->pickDuration('@duration-input-0-0', 0, 10, 0)
                 ->assertSeeIn('@duration-input-0-0', '00:10:00')
-                ->click('#main-content')
-                ->pause(3000)
-                ->assertNoConsoleExceptions();
+                ->click('#main-content');
+
+            // Debounced write: wait for the row this test asserts on below.
+            $this->waitForDatabase(fn (): bool => (int) ($workout->workoutLines()->first()?->sets()->first()?->duration_seconds ?? 0) === 600);
+
+            $browser->assertNoConsoleExceptions();
         });
 
         $set = $line->sets()->first();
@@ -319,10 +327,13 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('@weight-input-0-1', 15)
                 ->type('@weight-input-0-0', '60')
                 ->type('@weight-input-0-1', '80')
-                ->click('#main-content')
-                // The held create, the one queued behind it, and both debounces.
-                ->pause(9000)
-                ->assertNoConsoleExceptions();
+                ->click('#main-content');
+
+            // The held create, the one queued behind it, and both debounces: wait
+            // for both rows rather than for a duration long enough to cover them.
+            $this->waitForDatabase(fn (): bool => $workout->workoutLines()->first()?->sets()->get()->map(fn ($s): float => (float) $s->weight)->all() === [60.0, 80.0]);
+
+            $browser->assertNoConsoleExceptions();
         });
 
         $weights = $line->sets()->get()->map(fn (Set $set): float => (float) $set->weight)->all();
@@ -361,9 +372,13 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 // on the wire and held when the correction below is made.
                 ->pause(1500)
                 ->type('@weight-input-0-0', '110')
-                ->click('#main-content')
-                ->pause(7000)
-                ->assertNoConsoleExceptions()
+                ->click('#main-content');
+
+            // Wait for the correction to have overtaken the value it replaces —
+            // exactly what is asserted below — instead of a duration sized to hope.
+            $this->waitForDatabase(fn (): bool => (float) ($workout->workoutLines()->first()?->sets()->first()?->weight ?? 0) === 110.0);
+
+            $browser->assertNoConsoleExceptions()
                 ->assertInputValue('@weight-input-0-0', '110');
         });
 

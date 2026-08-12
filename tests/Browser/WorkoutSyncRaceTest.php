@@ -107,9 +107,13 @@ class WorkoutSyncRaceTest extends DuskTestCase
                 ->click('[dusk="add-set-0"]')
                 ->waitFor('[dusk="weight-input-0-0"]', 10)
                 ->type('[dusk="weight-input-0-0"]', '92.5')
-                ->click('#main-content')
-                ->pause(3000)
-                ->assertNoConsoleExceptions();
+                ->click('#main-content');
+
+            // The write is debounced: wait for the outcome this test asserts below
+            // rather than for a duration guessed to be long enough.
+            $this->waitForDatabase(fn (): bool => (float) ($workout->workoutLines()->first()?->sets()->first()?->weight ?? 0) === 92.5);
+
+            $browser->assertNoConsoleExceptions();
         });
 
         $line = $workout->workoutLines()->first();
