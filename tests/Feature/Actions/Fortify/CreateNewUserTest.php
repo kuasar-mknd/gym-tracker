@@ -49,7 +49,7 @@ it('creates the user and never stores the password in clear text', function (): 
 it('rejects an e-mail that is already registered', function (): void {
     User::factory()->create(['email' => 'taken@example.com']);
 
-    expect(fn () => createNewUserAction()->create([
+    expect(fn (): \App\Models\User => createNewUserAction()->create([
         'name' => 'Imposteur',
         'email' => 'taken@example.com',
         'password' => 'correct-horse-8',
@@ -63,7 +63,7 @@ it('rejects an e-mail that is already registered', function (): void {
 });
 
 it('rejects a registration without a name', function (): void {
-    expect(fn () => createNewUserAction()->create([
+    expect(fn (): \App\Models\User => createNewUserAction()->create([
         'name' => '',
         'email' => 'nameless@example.com',
         'password' => 'correct-horse-8',
@@ -76,7 +76,7 @@ it('rejects a registration without a name', function (): void {
 });
 
 it('rejects a malformed e-mail address', function (): void {
-    expect(fn () => createNewUserAction()->create([
+    expect(fn (): \App\Models\User => createNewUserAction()->create([
         'name' => 'Sam Dulex',
         'email' => 'not-an-email',
         'password' => 'correct-horse-8',
@@ -101,7 +101,7 @@ it('accepts a 255 character name but rejects a 256 character one', function (): 
 
     expect(DB::table('users')->where('id', $user->id)->value('name'))->toBe($accepted);
 
-    expect(fn () => createNewUserAction()->create([
+    expect(fn (): \App\Models\User => createNewUserAction()->create([
         'name' => $rejected,
         'email' => 'too-long@example.com',
         'password' => 'correct-horse-8',
@@ -114,7 +114,7 @@ it('accepts a 255 character name but rejects a 256 character one', function (): 
 });
 
 it('applies the shared password policy at registration', function (): void {
-    expect(fn () => createNewUserAction()->create([
+    expect(fn (): \App\Models\User => createNewUserAction()->create([
         'name' => 'Sam Dulex',
         'email' => 'weak@example.com',
         'password' => 'short7c',
@@ -127,7 +127,7 @@ it('applies the shared password policy at registration', function (): void {
 });
 
 it('rejects a registration whose password confirmation does not match', function (): void {
-    expect(fn () => createNewUserAction()->create([
+    expect(fn (): \App\Models\User => createNewUserAction()->create([
         'name' => 'Sam Dulex',
         'email' => 'mismatch@example.com',
         'password' => 'correct-horse-8',
