@@ -25,12 +25,6 @@ parameters:
 			path: tests/Browser/DeadControlsTest.php
 
 		-
-			message: '#^Cannot access property \$id on App\\Models\\Exercise\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Browser/ExerciseLibraryTest.php
-
-		-
 			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
 			identifier: argument.type
 			count: 2
