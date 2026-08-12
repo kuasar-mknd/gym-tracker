@@ -59,8 +59,11 @@ jobs:
             - name: Lint JS (Prettier + ESLint)
               run: npm run lint:js
 
-            - name: Run JS Unit Tests
-              run: npm run test
+            # --coverage rather than a bare run: the thresholds in vitest.config.js
+            # are a ratchet on the frontend, which is the least-tested half of the
+            # app. Without this step nothing stops a PR from removing JS tests.
+            - name: Run JS Unit Tests (with coverage thresholds)
+              run: npm run test:coverage
 
             - name: Build Assets
               run: npm run build
