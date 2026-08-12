@@ -15,6 +15,33 @@ class RestTimerTest extends DuskTestCase
 {
     use DatabaseTruncation;
 
+    /**
+     * Remaining rest time, in seconds, read from the "M:SS" timer.
+     */
+    private function timerSecondsLeft(Browser $browser): int
+    {
+        [$minutes, $seconds] = array_map('intval', explode(':', trim($browser->text('[role="timer"]'))));
+
+        return $minutes * 60 + $seconds;
+    }
+
+    /**
+     * Uncheck the set, then check it again to raise a fresh rest timer.
+     *
+     * Both clicks target the same toggle, so the second one must not fire until
+     * the first has been applied. Waiting on the button's own aria-label is what
+     * makes that deterministic: a fixed pause used to lose the race whenever the
+     * CI runner was slower than the delay, which is where this test flaked.
+     */
+    private function retriggerRestTimer(Browser $browser): Browser
+    {
+        return $browser->click('[dusk="complete-set-0-0"]')
+            ->waitFor('[dusk="complete-set-0-0"][aria-label="Valider la série"]', 10)
+            ->click('[dusk="complete-set-0-0"]')
+            ->waitFor('[dusk="complete-set-0-0"][aria-label="Annuler la série"]', 10)
+            ->waitFor('[dusk="skip-rest-timer"]', 15);
+    }
+
     private function performTimerLifecycle(Browser $browser, string $sizeMacro): void
     {
         $user = User::factory()->create([
@@ -65,31 +92,26 @@ class RestTimerTest extends DuskTestCase
                 ->waitFor('[dusk="skip-rest-timer"]', 15)
                 ->assertSee('REPOS');
 
-            // 2. Test Add Time (+30s)
-            $initialTime = $browser->text('[role="timer"]');
+            // 2. Add Time (+30s) — the countdown is ticking down, so the only stable
+            // fact is that the remaining time went UP. Waiting on that condition also
+            // removes the race a fixed pause left open on a slow runner.
+            $secondsLeft = fn (): int => $this->timerSecondsLeft($browser);
+            $before = $secondsLeft();
+
             $browser->click('@add-30s')
-                ->pause(500);
-            $newTime = $browser->text('[role="timer"]');
-            // We don't assert exact time because it's ticking, but it should be "higher" in some sense
-            // or we just verify it didn't crash. Given the ticking, MM:SS comparison is tricky.
+                ->waitUsing(10, 100, fn (): bool => $secondsLeft() > $before, 'Le minuteur n’a pas augmenté après +30s');
 
             // 3. Close via "X" button
             $browser->click('@close-timer-x')
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10);
 
             // 4. Trigger again and close via "Fermer" button
-            $browser->click('[dusk="complete-set-0-0"]') // Uncheck
-                ->pause(500)
-                ->click('[dusk="complete-set-0-0"]') // Check again
-                ->waitFor('[dusk="skip-rest-timer"]', 15)
+            $this->retriggerRestTimer($browser)
                 ->click('@close-timer')
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10);
 
             // 5. Trigger again and use "Skip" (Passer)
-            $browser->click('[dusk="complete-set-0-0"]') // Uncheck
-                ->pause(500)
-                ->click('[dusk="complete-set-0-0"]') // Check again
-                ->waitFor('[dusk="skip-rest-timer"]', 15)
+            $this->retriggerRestTimer($browser)
                 ->click('@skip-rest-timer')
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10)
                 ->assertNoConsoleExceptions();

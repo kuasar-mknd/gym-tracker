@@ -136,6 +136,30 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
+     * Block until a condition on the database holds, or fail.
+     *
+     * The workout page writes through a debounced request, so tests used to sit
+     * on a fixed ->pause() long enough for it to land. That is a guess: too short
+     * and the assertion races the write on a slow runner, too long and every run
+     * pays for it. Polling the outcome the test already asserts turns the guess
+     * into a condition, and returns as soon as it is met.
+     */
+    protected function waitForDatabase(callable $condition, int $seconds = 15, string $message = 'the write never reached the database'): void
+    {
+        $deadline = microtime(true) + $seconds;
+
+        do {
+            if ($condition() === true) {
+                return;
+            }
+
+            usleep(100_000);
+        } while (microtime(true) < $deadline);
+
+        $this->fail(sprintf('Waited %d seconds: %s', $seconds, $message));
+    }
+
+    /**
      * Create the RemoteWebDriver instance.
      */
     #[\Override]

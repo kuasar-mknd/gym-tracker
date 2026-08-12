@@ -54,14 +54,18 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->pause(500);
 
             // 3. Test Filter by Category
+            // Le filtrage est un re-rendu Vue : attendre son résultat, pas une durée.
+            // Avec un simple pause(), l'assertion pouvait porter sur le DOM d'avant
+            // le filtrage et passer au vert sans que le filtre ait rien fait.
             $browser->click('@category-pill-Jambes')
-                ->pause(500)
+                ->waitForText('SQUAT', 10)
+                ->waitUntilMissingText('BENCH PRESS', 10)
                 ->assertSee('SQUAT')
                 ->assertDontSee('BENCH PRESS')
                 ->assertDontSee('DEADLIFT');
 
             $browser->click('@category-pill-all')
-                ->pause(500)
+                ->waitForText('BENCH PRESS', 10)
                 ->assertSee('BENCH PRESS');
 
             // 4. Create Exercise
