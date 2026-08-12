@@ -2,6 +2,7 @@
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { computed } from 'vue'
+import { formatVolumeTick } from '@/Utils/volumeAxis'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
@@ -47,10 +48,7 @@ const chartOptions = {
             ticks: {
                 color: '#64748B',
                 font: { size: 10, weight: 'bold' },
-                callback: (value) => {
-                    if (value >= 1000) return (value / 1000).toFixed(1) + 'k'
-                    return value
-                },
+                callback: formatVolumeTick,
             },
         },
         x: {
