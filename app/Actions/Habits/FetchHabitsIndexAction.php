@@ -91,24 +91,6 @@ final class FetchHabitsIndexAction
     }
 
     /**
-     * Legacy method for backward compatibility if needed, but should be replaced by deferred loading.
-     *
-     * @return array{
-     *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
-     *     weekDates: array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>,
-     *     consistencyData: array<int, array{date: string, count: int}>,
-     *     history: array<int, array{date: string, full_date: string, count: int}>
-     * }
-     */
-    public function execute(User $user): array
-    {
-        return array_merge(
-            $this->getImmediateData($user),
-            $this->getStatsData($user)
-        );
-    }
-
-    /**
      * Get the dates for the current week.
      *
      * @return array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>

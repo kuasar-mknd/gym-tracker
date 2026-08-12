@@ -52,7 +52,8 @@
         "pestphp/pest-plugin-laravel": "^4.0",
         "phpunit/phpunit": "^12.5",
         "rector/rector": "^2.3",
-        "roave/security-advisories": "dev-latest"
+        "roave/security-advisories": "dev-latest",
+        "shipmonk/dead-code-detector": "^1.3"
     },
     "autoload": {
         "psr-4": {
