@@ -2,6 +2,7 @@
 import { Bar } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { computed } from 'vue'
+import { formatVolumeTick } from '@/Utils/volumeAxis'
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
 
@@ -47,15 +48,7 @@ const chartOptions = {
             ticks: {
                 color: '#64748B',
                 font: { size: 10, weight: 'bold' },
-                callback: (value) => {
-                    // toFixed(1), not toFixed(0). Rounding to the thousand
-                    // before adding the k crushes every finer scale: with the
-                    // 500 kg step Chart.js picks for smaller volumes, the tick
-                    // at 1500 was labelled "2k" and the axis read
-                    // "1k, 2k, 2k, 3k, 3k". VolumeTrendChart already did this.
-                    if (value >= 1000) return (value / 1000).toFixed(1) + 'k'
-                    return value
-                },
+                callback: formatVolumeTick,
             },
         },
         x: {

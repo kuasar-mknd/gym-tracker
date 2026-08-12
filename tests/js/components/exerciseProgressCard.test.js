@@ -32,6 +32,55 @@ beforeEach(() => {
 })
 
 describe('ExerciseProgressCard', () => {
+    it('invites a choice, and asks the server nothing, until an exercise is picked', () => {
+        const wrapper = mountCard()
+
+        expect(wrapper.text()).toContain('Choisis un exercice pour voir ton évolution')
+        expect(wrapper.text()).not.toContain('Pas assez de données')
+        expect(get).not.toHaveBeenCalled()
+
+        wrapper.unmount()
+    })
+
+    it('offers every exercise it was given, by name', () => {
+        const wrapper = mountCard()
+
+        expect(wrapper.findComponent({ name: 'GlassSelect' }).props('options')).toEqual([
+            { value: 1, label: 'Développé couché' },
+            { value: 2, label: 'Squat' },
+        ])
+
+        wrapper.unmount()
+    })
+
+    /**
+     * The retry button hands back whatever is selected, and nothing guarantees
+     * that is still an exercise. Without the guard the component would build a
+     * route to /stats.exercise/ and ask the server for a null exercise.
+     */
+    it('does not fire a request for an exercise that is not selected', async () => {
+        const wrapper = mountCard()
+
+        await wrapper.vm.fetchExerciseProgress(null)
+
+        expect(get).not.toHaveBeenCalled()
+
+        wrapper.unmount()
+    })
+
+    it('blames the exercise, not the network, when the server returns no points', async () => {
+        get.mockResolvedValue({ data: { progress: [] } })
+
+        const wrapper = mountCard()
+        await select(wrapper, 1)
+
+        expect(wrapper.text()).toContain('Pas assez de données pour cet exercice')
+        expect(wrapper.find('[dusk="exercise-progress-error"]').exists()).toBe(false)
+        expect(wrapper.findComponent({ name: 'OneRepMaxChart' }).exists()).toBe(false)
+
+        wrapper.unmount()
+    })
+
     it('renders the curve when the request succeeds', async () => {
         get.mockResolvedValue({ data: { progress: [{ date: '2026-07-01', oneRepMax: 100 }] } })
 
