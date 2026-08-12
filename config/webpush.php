@@ -7,7 +7,9 @@ return [
      * These keys must be safely stored and should not change.
      */
     'vapid' => [
-        'subject' => env('VAPID_SUBJECT'),
+        // web-push throws when the subject is missing (VAPID.php:49), so fall
+        // back to the app URL rather than let every push notification fail.
+        'subject' => env('VAPID_SUBJECT') ?: env('APP_URL'),
         'public_key' => env('VAPID_PUBLIC_KEY'),
         'private_key' => env('VAPID_PRIVATE_KEY'),
         'pem_file' => env('VAPID_PEM_FILE'),
