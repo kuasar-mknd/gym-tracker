@@ -18,7 +18,7 @@ use OpenApi\Attributes as OA;
 class Swagger
 {
     #[OA\Get(
-        path: '/api/v1/status',
+        path: '/status',
         summary: 'Status check',
         tags: ['System']
     )]

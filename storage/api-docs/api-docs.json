@@ -12,14 +12,14 @@
         }
     ],
     "paths": {
-        "/exercises": {
+        "/body-measurements": {
             "get": {
                 "tags": [
-                    "Exercises"
+                    "BodyMeasurements"
                 ],
-                "summary": "Get list of exercises",
+                "summary": "Get list of body measurements",
                 "description": "Display a listing of the resource.",
-                "operationId": "600c5637bf3a0ab6ecc915f8bf92cc2d",
+                "operationId": "e9b4a5c9b161d21dace62f9a913054d1",
                 "responses": {
                     "200": {
                         "description": "Successful operation"
@@ -30,16 +30,1094 @@
                 }
             }
         },
-        "/api/v1/status": {
+        "/body-part-measurements": {
+            "get": {
+                "tags": [
+                    "BodyPartMeasurements"
+                ],
+                "summary": "Get list of body part measurements",
+                "description": "Display a listing of the resource.",
+                "operationId": "0dd05aa27f2d22d7dbddb9b31b9e2f40",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            }
+        },
+        "/daily-journals": {
+            "get": {
+                "tags": [
+                    "Daily Journals"
+                ],
+                "summary": "List daily journals",
+                "description": "Display a listing of the user's daily journals.",
+                "operationId": "1225e88c5ba3f07f0ef9500b5928ff2a",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Daily Journals"
+                ],
+                "summary": "Create a new daily journal",
+                "description": "Store a newly created daily journal.",
+                "operationId": "fe556d1f9bd70d4aca38eee699d3e7ec",
+                "requestBody": {
+                    "description": "Daily journal data",
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Journal created successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/daily-journals/{id}": {
+            "get": {
+                "tags": [
+                    "Daily Journals"
+                ],
+                "summary": "Get a specific daily journal",
+                "description": "Display the specified daily journal.",
+                "operationId": "682ef6f47d63061f74a080d5d706a0c5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Journal ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Journal not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Daily Journals"
+                ],
+                "summary": "Update an existing daily journal",
+                "description": "Update the specified daily journal in storage.",
+                "operationId": "f932eef0a1e5d31d68d3d1ee9fcbf7b6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Journal ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Updated daily journal data",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Journal updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Journal not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Daily Journals"
+                ],
+                "summary": "Delete a daily journal",
+                "description": "Remove the specified daily journal from storage.",
+                "operationId": "06e1f40bd787c783e354f5b277002f4b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Journal ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Journal deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Journal not found"
+                    }
+                }
+            }
+        },
+        "/exercises": {
+            "get": {
+                "tags": [
+                    "Exercises"
+                ],
+                "summary": "List user and global exercises",
+                "description": "Display a listing of the user's exercises.\n\nRetrieves a paginated list of exercises belonging to the authenticated user,\nas well as global exercises (where user_id is null).\nSupports filtering by name, type, and category, and sorting by name and created_at.",
+                "operationId": "600c5637bf3a0ab6ecc915f8bf92cc2d",
+                "parameters": [
+                    {
+                        "name": "filter[name]",
+                        "in": "query",
+                        "description": "Filter by exercise name",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[type]",
+                        "in": "query",
+                        "description": "Filter by exercise type",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[category]",
+                        "in": "query",
+                        "description": "Filter by exercise category",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sort by field (e.g., name, -created_at)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "name",
+                                "-name",
+                                "created_at",
+                                "-created_at"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Exercises"
+                ],
+                "summary": "Create a new exercise",
+                "description": "Store a newly created exercise in storage.\n\nValidates the request data and creates a new custom exercise for the user.",
+                "operationId": "71cc123a7fcc6b4cba1a371a650dc2eb",
+                "responses": {
+                    "201": {
+                        "description": "Exercise created successfully"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/exercises/{id}": {
+            "get": {
+                "tags": [
+                    "Exercises"
+                ],
+                "summary": "Get a specific exercise",
+                "description": "Display the specified exercise.\n\nRetrieves the details of a specific exercise.",
+                "operationId": "d75de5fbda16cab9684ed52374cd6c76",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the exercise",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Exercise not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Exercises"
+                ],
+                "summary": "Update an exercise",
+                "description": "Update the specified exercise in storage.\n\nModifies the details of an existing exercise.\nOnly the user who created the exercise can update it.",
+                "operationId": "b60a77951ee2502eea772ed691664e8a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the exercise",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Exercise updated successfully"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Exercise not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Exercises"
+                ],
+                "summary": "Delete an exercise",
+                "description": "Remove the specified exercise from storage.\n\nPermanently deletes a custom exercise.\nOnly the user who created the exercise can delete it.",
+                "operationId": "51f1bd947ce1d25c7a1d431dda152d6d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the exercise to delete",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Exercise deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Exercise not found"
+                    }
+                }
+            }
+        },
+        "/fasts": {
+            "get": {
+                "tags": [
+                    "Fasts"
+                ],
+                "summary": "List user fasts",
+                "description": "Display a listing of the user's fasts.\n\nRetrieves a paginated list of fasting records belonging to the authenticated user.",
+                "operationId": "26e3c7e4428f50f76b51a49e93b48593",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Fasts"
+                ],
+                "summary": "Create a new fast",
+                "description": "Store a newly created fast in storage.\n\nValidates the request data and starts a new active fast for the user.",
+                "operationId": "ebb78a542de19b36da891904ae127243",
+                "responses": {
+                    "201": {
+                        "description": "Fast created successfully"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/fasts/{id}": {
+            "get": {
+                "tags": [
+                    "Fasts"
+                ],
+                "summary": "Get a specific fast",
+                "description": "Display the specified fast.\n\nRetrieves the details of a specific fasting record.",
+                "operationId": "f7ffd26a0aea02faccb46c8620e20296",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the fast",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Fast not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Fasts"
+                ],
+                "summary": "Update a fast",
+                "description": "Update the specified fast in storage.\n\nModifies the details of an existing fast, for example ending an active fast.",
+                "operationId": "3b6609af720b9780ab6194cf1e540b5e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the fast",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fast updated successfully"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Fast not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Fasts"
+                ],
+                "summary": "Delete a fast",
+                "description": "Remove the specified fast from storage.\n\nPermanently deletes a fasting record from the user's history.",
+                "operationId": "f8ecf5cccf982f32d371d1119f66602d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the fast to delete",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Fast deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Fast not found"
+                    }
+                }
+            }
+        },
+        "/goals": {
+            "get": {
+                "tags": [
+                    "Goals"
+                ],
+                "summary": "Get list of goals",
+                "description": "Display a listing of the user's goals.\n\nRetrieves a paginated list of goals belonging to the authenticated user.\nSupports sorting and including the related exercise.",
+                "operationId": "ade9bdb09d2491dd10ebc655489f5688",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Goals"
+                ],
+                "summary": "Create a new goal",
+                "description": "Store a newly created goal in storage.",
+                "operationId": "4b3554baf009c6109ae16d72cdda0434",
+                "responses": {
+                    "201": {
+                        "description": "Goal created successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/goals/{goal}": {
+            "get": {
+                "tags": [
+                    "Goals"
+                ],
+                "summary": "Get a specific goal",
+                "description": "Display the specified goal.",
+                "operationId": "aaa034c1b0d233a20e965e159335c74d",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Goal not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Goals"
+                ],
+                "summary": "Update an existing goal",
+                "description": "Update the specified goal in storage.",
+                "operationId": "6513a7b44c401ab0b1faaf56077d1bef",
+                "responses": {
+                    "200": {
+                        "description": "Goal updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Goal not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Goals"
+                ],
+                "summary": "Delete a goal",
+                "description": "Remove the specified goal from storage.",
+                "operationId": "34a67836a0cc206376a2c37907370cb5",
+                "responses": {
+                    "204": {
+                        "description": "Goal deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Goal not found"
+                    }
+                }
+            }
+        },
+        "/habits": {
+            "get": {
+                "tags": [
+                    "Habits"
+                ],
+                "summary": "Get list of habits",
+                "description": "Display a listing of the user's habits.\n\nRetrieves all active habits for the authenticated user, supporting\noptional pagination.",
+                "operationId": "cef58a2ebece719f3ef7b12c81fdd8d8",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Habits"
+                ],
+                "summary": "Create a new habit",
+                "description": "Store a newly created habit in storage.\n\nValidates the request data and uses the CreateHabitAction to persist\nthe habit.",
+                "operationId": "bef6169900f4bd50a95f10f45723833e",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/habits/{habit}": {
+            "get": {
+                "tags": [
+                    "Habits"
+                ],
+                "summary": "Get a specific habit",
+                "description": "Display the specified habit.\n\nRetrieves a single habit by its ID, along with its most recent logs.",
+                "operationId": "14a7311f172cef8ba6c94596000eb28b",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Habits"
+                ],
+                "summary": "Update a habit",
+                "description": "Update the specified habit in storage.\n\nValidates the request data and updates the existing habit model.",
+                "operationId": "4ddf0b44ecb996375a09d05d094d0dea",
+                "responses": {
+                    "200": {
+                        "description": "Updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Habits"
+                ],
+                "summary": "Delete a habit",
+                "description": "Remove the specified habit from storage.\n\nDeletes the given habit model from the database.",
+                "operationId": "f44aface612a0a5b799826bd70240fc5",
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/habit-logs": {
+            "get": {
+                "tags": [
+                    "HabitLogs"
+                ],
+                "summary": "Get list of habit logs",
+                "operationId": "95ce7c8483918acd6fd36b7010c835b8",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "HabitLogs"
+                ],
+                "summary": "Create a new habit log",
+                "operationId": "254839ee020baffada55105537e75986",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/habit-logs/{habit_log}": {
+            "get": {
+                "tags": [
+                    "HabitLogs"
+                ],
+                "summary": "Get a specific habit log",
+                "operationId": "4dd55193753fca96f3821dce3c5afdaa",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "HabitLogs"
+                ],
+                "summary": "Update a habit log",
+                "operationId": "644de0fa6510b17a809b9c2c1b8c5d11",
+                "responses": {
+                    "200": {
+                        "description": "Updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "HabitLogs"
+                ],
+                "summary": "Delete a habit log",
+                "operationId": "ad1c34a969880439d78bf127ebd6ecdc",
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/sets": {
+            "get": {
+                "tags": [
+                    "Sets"
+                ],
+                "summary": "Get list of workout sets",
+                "description": "Display a listing of the sets for the authenticated user.\n\nRetrieves a paginated list of sets belonging to the user's workouts.\nSupports filtering by workout_line_id.",
+                "operationId": "3a88d55da41d120b8965c12e93efc788",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Sets"
+                ],
+                "summary": "Create a new set",
+                "description": "Store a newly created set in storage.\n\nValidates the request, ensures the user owns the associated workout line,\nand saves the new set.",
+                "operationId": "3641c29fa680893543d4195819184210",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/sets/{set}": {
+            "get": {
+                "tags": [
+                    "Sets"
+                ],
+                "summary": "Get a specific set",
+                "description": "Display the specified set.\n\nRetrieves the details of a specific set if the authenticated user owns it.",
+                "operationId": "794d5156acf519ddbfb4941b217ea162",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Sets"
+                ],
+                "summary": "Update a set",
+                "description": "Update the specified set in storage.\n\nValidates the request, applies updates to the set, and clears volume-related user statistics.",
+                "operationId": "6b2db5499bd020f4dea87012382fff6b",
+                "responses": {
+                    "200": {
+                        "description": "Updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Sets"
+                ],
+                "summary": "Delete a set",
+                "description": "Remove the specified set from storage.\n\nDeletes the set from the database and clears volume-related user statistics.",
+                "operationId": "e81dd38b4881fd73a13d6c215e847be5",
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/supplements": {
+            "get": {
+                "tags": [
+                    "Supplements"
+                ],
+                "summary": "Get list of supplements",
+                "description": "Display a listing of the user's supplements.\n\nRetrieves a paginated list of supplements belonging to the authenticated user.\nSupports filtering by name/brand, sorting, and eager loading the latest log.",
+                "operationId": "013aab63375fe25a69af7dafb9a1f716",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Supplements"
+                ],
+                "summary": "Create a new supplement",
+                "description": "Store a newly created supplement in storage.\n\nValidates the request data and creates a new supplement record for the authenticated user.",
+                "operationId": "e64859d8de01b499d48278e4b83533d1",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/supplements/{supplement}": {
+            "get": {
+                "tags": [
+                    "Supplements"
+                ],
+                "summary": "Get a specific supplement",
+                "description": "Display the specified supplement.\n\nRetrieves the details of a specific supplement record, along with its latest usage log.",
+                "operationId": "9f15c64b3b1e00f376e43353dffcf1be",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Supplements"
+                ],
+                "summary": "Update a supplement",
+                "description": "Update the specified supplement in storage.\n\nValidates the incoming request and modifies the details of an existing supplement.",
+                "operationId": "dc545bff7c470e93e6304b353ba2bf2c",
+                "responses": {
+                    "200": {
+                        "description": "Updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Supplements"
+                ],
+                "summary": "Delete a supplement",
+                "description": "Remove the specified supplement from storage.\n\nPermanently deletes a supplement record from the user's inventory.",
+                "operationId": "75b4cc8ab7e48d433e7e358e9469c03c",
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/status": {
             "get": {
                 "tags": [
                     "System"
                 ],
                 "summary": "Status check",
-                "operationId": "248735a489e60f2b4d5ea97c803e838a",
+                "operationId": "509dcc989e6f8a03ca0d0cad5fe398b7",
                 "responses": {
                     "200": {
                         "description": "OK"
+                    }
+                }
+            }
+        },
+        "/water-logs": {
+            "get": {
+                "tags": [
+                    "Water Logs"
+                ],
+                "summary": "Get list of water logs",
+                "operationId": "bc12d75ef8d1615280e81ce4fc3a357e",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Water Logs"
+                ],
+                "summary": "Create a new water log",
+                "operationId": "b224ee86efd6fee695bfe5aa50f3e524",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/water-logs/{water_log}": {
+            "get": {
+                "tags": [
+                    "Water Logs"
+                ],
+                "summary": "Get a specific water log",
+                "operationId": "52d7061e19ac40d740595f7916720959",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Water Logs"
+                ],
+                "summary": "Update a water log",
+                "operationId": "155c30014a403a4c8ed0716a2d1135ce",
+                "responses": {
+                    "200": {
+                        "description": "Updated successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Water Logs"
+                ],
+                "summary": "Delete a water log",
+                "operationId": "3b1314cd26edc5fa5db7d34b11362370",
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
                     }
                 }
             }
@@ -50,7 +1128,7 @@
                     "Workouts"
                 ],
                 "summary": "Get list of workouts",
-                "description": "Display a listing of the resource.",
+                "description": "Display a listing of the user's workouts.\n\nRetrieves a paginated list of workouts belonging to the authenticated user.\nSupports sorting (e.g., `-started_at`) and eager loading of relationships\nsuch as `workoutLines`, `workoutLines.exercise`, and `workoutLines.sets`.",
                 "operationId": "4280fece98b0aa18dedc34607b9bbd3b",
                 "responses": {
                     "200": {
@@ -60,21 +1138,290 @@
                         "description": "Unauthenticated"
                     }
                 }
+            },
+            "post": {
+                "tags": [
+                    "Workouts"
+                ],
+                "summary": "Create a new workout",
+                "description": "Store a newly created workout in storage.\n\nValidates the request data and creates a new workout for the authenticated user.\nDispatches a background job to recalculate user statistics after creation.",
+                "operationId": "fc4937f9a7a6189a31102a5acae21bd5",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/workouts/{workout}": {
+            "get": {
+                "tags": [
+                    "Workouts"
+                ],
+                "summary": "Get a specific workout",
+                "description": "Display the specified workout.\n\nRetrieves the details of a specific workout, eager loading its lines, exercises,\nand sets. It also batch-loads recommended values for the workout lines to\noptimize performance.",
+                "operationId": "869a37ef677157978f28c727b42269d0",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Workouts"
+                ],
+                "summary": "Update a workout",
+                "description": "Update the specified workout in storage.\n\nValidates the request data and updates the existing workout.\nDispatches a background job to recalculate the user's statistics\nbased on the updated workout data.",
+                "operationId": "5929a1a689ed5a2cb76a08bb72766920",
+                "responses": {
+                    "200": {
+                        "description": "Updated successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Workouts"
+                ],
+                "summary": "Delete a workout",
+                "description": "Remove the specified workout from storage.\n\nDeletes the given workout and dispatches a background job to recalculate\nthe user's statistics, removing the impact of the deleted workout.",
+                "operationId": "0a1e951a17b9b9ac66e372c853926ee1",
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/workout-templates": {
+            "get": {
+                "tags": [
+                    "Workout Templates"
+                ],
+                "summary": "Get list of workout templates",
+                "description": "Display a listing of the user's workout templates.\n\nRetrieves a paginated list of workout templates belonging to the authenticated user.\nSupports sorting and eager loading of relationships.",
+                "operationId": "7907d23bf1d875a73b7504df692122ac",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Workout Templates"
+                ],
+                "summary": "Create a new workout template",
+                "description": "Store a newly created workout template in storage.\n\nValidates the request data and creates a new workout template for the user.",
+                "operationId": "8d2d4b7ab9a1a0106ff23e4e82435325",
+                "responses": {
+                    "201": {
+                        "description": "Created successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/workout-templates/{id}": {
+            "get": {
+                "tags": [
+                    "Workout Templates"
+                ],
+                "summary": "Get a specific workout template",
+                "description": "Display the specified workout template.\n\nRetrieves the details of a specific workout template, including its lines, sets, and exercises.",
+                "operationId": "a7589adddb9a4afeb63e6298d275b0cc",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the workout template",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Workout Templates"
+                ],
+                "summary": "Update a workout template",
+                "description": "Update the specified workout template in storage.\n\nModifies the details of an existing workout template.",
+                "operationId": "7d381fda019dfbc76d9c516414e05681",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the workout template",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Workout Templates"
+                ],
+                "summary": "Delete a workout template",
+                "description": "Remove the specified workout template from storage.\n\nPermanently deletes a workout template.",
+                "operationId": "d0c2e02161f06de8f6d5617c38aa337b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the workout template to delete",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
             }
         }
     },
     "tags": [
         {
+            "name": "BodyMeasurements",
+            "description": "BodyMeasurements"
+        },
+        {
+            "name": "BodyPartMeasurements",
+            "description": "BodyPartMeasurements"
+        },
+        {
+            "name": "Daily Journals",
+            "description": "Daily Journals"
+        },
+        {
             "name": "Exercises",
             "description": "Exercises"
+        },
+        {
+            "name": "Fasts",
+            "description": "Fasts"
+        },
+        {
+            "name": "Goals",
+            "description": "Goals"
+        },
+        {
+            "name": "Habits",
+            "description": "Habits"
+        },
+        {
+            "name": "HabitLogs",
+            "description": "HabitLogs"
+        },
+        {
+            "name": "Sets",
+            "description": "Sets"
+        },
+        {
+            "name": "Supplements",
+            "description": "Supplements"
         },
         {
             "name": "System",
             "description": "System"
         },
         {
+            "name": "Water Logs",
+            "description": "Water Logs"
+        },
+        {
             "name": "Workouts",
             "description": "Workouts"
+        },
+        {
+            "name": "Workout Templates",
+            "description": "Workout Templates"
         }
     ]
 }

@@ -377,6 +377,21 @@ jobs:
             # Bloquant : ce gate n'est vert que parce qu'un composer-unused.php
             # documente les deux seuls faux positifs. Il echoue aussi sur une
             # exclusion "zombie", donc le fichier reste force de suivre composer.json.
+            # La spec commitee documentait 3 chemins sur 142 routes api/v1, figee
+            # depuis janvier. La regenerer ne suffit pas : sans ce controle elle
+            # rederive au premier endpoint ajoute. Le job echoue si le fichier
+            # commite differe de ce que les annotations produisent.
+            - name: OpenAPI Spec Freshness
+              run: |
+                  cp .env.example .env
+                  php artisan key:generate
+                  cp storage/api-docs/api-docs.json /tmp/api-docs.committed.json
+                  php artisan l5-swagger:generate
+                  if ! diff -u /tmp/api-docs.committed.json storage/api-docs/api-docs.json; then
+                      echo "::error::La spec OpenAPI commitee est perimee. Lancer: php artisan l5-swagger:generate"
+                      exit 1
+                  fi
+
             - name: Unused Composer Dependencies
               run: ./vendor/bin/composer-unused --no-progress
 
