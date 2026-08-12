@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Browser;
 
 use App\Models\Exercise;
+use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -218,15 +219,21 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // Use JS click to be sure it's triggered even if something overlaps slightly
             $browser->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
 
-            $browser->pause(3000); // Give time for the async PR job and UI update
+            // Le trophée était auparavant enveloppé dans un try/catch, au motif d'un
+            // "job asynchrone". Il n'y en a pas : QUEUE_CONNECTION vaut sync en test,
+            // le record est donc calculé dans la requête elle-même. Le pause(3000)
+            // ne couvrait qu'un aléa de rendu, et l'assertion avalée ne vérifiait
+            // plus rien sur aucun viewport.
+            //
+            // On attend le fait métier — le record écrit en base — puis on EXIGE le
+            // badge : si la ligne existe et que le badge manque, c'est un vrai défaut
+            // d'affichage, et le test doit échouer.
+            $this->waitForDatabase(
+                fn (): bool => PersonalRecord::query()->where('user_id', $user->id)->exists(),
+                message: 'le record personnel n\'a jamais été enregistré'
+            );
 
-            // Verify PR trophy (Optional in CI due to timing issues with async jobs)
-            try {
-                $browser->waitFor('@pr-trophy-0-0', 10);
-            } catch (\Exception $e) {
-                // We just log it and continue if the trophy is missing
-                // This prevents blocking the whole CI for a non-critical UI flake
-            }
+            $browser->waitFor('@pr-trophy-0-0', 15);
 
             $browser->waitFor('[dusk="skip-rest-timer"]', 20)
                 ->click('[dusk="skip-rest-timer"]');
