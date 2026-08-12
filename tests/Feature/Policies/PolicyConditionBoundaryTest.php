@@ -47,14 +47,14 @@ describe('a finished workout is frozen', function (): void {
         $owner = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $owner->id, 'ended_at' => null]);
 
-        expect((new WorkoutPolicy())->update($owner, $workout))->toBeTrue();
+        expect(new WorkoutPolicy()->update($owner, $workout))->toBeTrue();
     });
 
     it('refuses to edit a workout once it has ended', function (): void {
         $owner = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $owner->id, 'ended_at' => now()]);
 
-        expect((new WorkoutPolicy())->update($owner, $workout))->toBeFalse();
+        expect(new WorkoutPolicy()->update($owner, $workout))->toBeFalse();
     });
 
     /**
@@ -65,7 +65,7 @@ describe('a finished workout is frozen', function (): void {
         $owner = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $owner->id, 'ended_at' => now()]);
 
-        expect((new WorkoutPolicy())->delete($owner, $workout))->toBeTrue();
+        expect(new WorkoutPolicy()->delete($owner, $workout))->toBeTrue();
     });
 
     it('freezes the sets of a finished workout, and only those', function (): void {
@@ -214,10 +214,10 @@ describe('the admin branch bypasses ownership, not permissions', function (): vo
     it('gives an application user free rein over the collection level abilities', function (): void {
         $user = User::factory()->create();
 
-        expect((new WorkoutPolicy())->viewAny($user))->toBeTrue()
-            ->and((new WorkoutPolicy())->create($user))->toBeTrue()
-            ->and((new ExercisePolicy())->viewAny($user))->toBeTrue()
-            ->and((new ExercisePolicy())->create($user))->toBeTrue();
+        expect(new WorkoutPolicy()->viewAny($user))->toBeTrue()
+            ->and(new WorkoutPolicy()->create($user))->toBeTrue()
+            ->and(new ExercisePolicy()->viewAny($user))->toBeTrue()
+            ->and(new ExercisePolicy()->create($user))->toBeTrue();
     });
 });
 

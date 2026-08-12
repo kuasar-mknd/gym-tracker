@@ -176,7 +176,7 @@ it('sweeps every record scoped policy in app/Policies', function (): void {
                 return false;
             }
 
-            $parameters = (new ReflectionMethod($class, 'view'))->getParameters();
+            $parameters = new ReflectionMethod($class, 'view')->getParameters();
 
             if (count($parameters) !== 2) {
                 return false;

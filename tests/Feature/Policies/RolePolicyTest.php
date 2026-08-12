@@ -90,7 +90,7 @@ it('grants nothing at all to a principal with no permissions', function (string 
     $actor = $principal === 'admin' ? Admin::factory()->create() : User::factory()->create();
     $policy = new RolePolicy();
 
-    $abilityMethods = collect((new ReflectionClass(RolePolicy::class))->getMethods(ReflectionMethod::IS_PUBLIC))
+    $abilityMethods = collect(new ReflectionClass(RolePolicy::class)->getMethods(ReflectionMethod::IS_PUBLIC))
         ->reject(fn (ReflectionMethod $method): bool => $method->isStatic() || $method->getNumberOfParameters() !== 1)
         ->map(fn (ReflectionMethod $method): string => $method->getName())
         ->values();

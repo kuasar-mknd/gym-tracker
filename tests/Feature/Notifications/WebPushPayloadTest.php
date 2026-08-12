@@ -153,7 +153,7 @@ describe('TrainingReminder::toWebPush', function (): void {
     it('falls back to the default message when null is passed explicitly', function (): void {
         $user = User::factory()->create();
 
-        expect(new TrainingReminder(null)->toWebPush($user, null)->toArray()['body'])
+        expect(new TrainingReminder()->toWebPush($user, null)->toArray()['body'])
             ->toBe("C'est le moment de s'entraîner ! 💪");
     });
 });

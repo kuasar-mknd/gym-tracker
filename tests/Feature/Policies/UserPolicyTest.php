@@ -130,7 +130,7 @@ it('grants a permission-less admin nothing over another account', function (): v
     $victim = userWithIdOtherThan($admin);
     $policy = new UserPolicy();
 
-    $methods = collect((new ReflectionClass(UserPolicy::class))->getMethods(ReflectionMethod::IS_PUBLIC))
+    $methods = collect(new ReflectionClass(UserPolicy::class)->getMethods(ReflectionMethod::IS_PUBLIC))
         ->reject(fn (ReflectionMethod $method): bool => $method->isStatic())
         ->filter(fn (ReflectionMethod $method): bool => $method->getReturnType() instanceof ReflectionNamedType
             && $method->getReturnType()->getName() === 'bool')
@@ -139,7 +139,7 @@ it('grants a permission-less admin nothing over another account', function (): v
 
     $granted = $methods
         ->filter(function (string $method) use ($policy, $admin, $victim): bool {
-            $arity = (new ReflectionMethod(UserPolicy::class, $method))->getNumberOfParameters();
+            $arity = new ReflectionMethod(UserPolicy::class, $method)->getNumberOfParameters();
 
             return ($arity === 2 ? $policy->{$method}($admin, $victim) : $policy->{$method}($admin)) === true;
         })
