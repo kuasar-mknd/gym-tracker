@@ -203,12 +203,20 @@ it('updates a template and rebuilds its exercise lines', function (): void {
 
     $template->refresh()->load('workoutTemplateLines.workoutTemplateSets');
 
+    $firstLine = $template->workoutTemplateLines->get(0);
+    $secondLine = $template->workoutTemplateLines->get(1);
+    \PHPUnit\Framework\Assert::assertNotNull($firstLine, 'the rebuilt template has no first line');
+    \PHPUnit\Framework\Assert::assertNotNull($secondLine, 'the rebuilt template has no second line');
+
+    $firstSet = $firstLine->workoutTemplateSets->get(0);
+    \PHPUnit\Framework\Assert::assertNotNull($firstSet, 'the first line of the rebuilt template has no set');
+
     expect($template->name)->toBe('Après')
         ->and($template->description)->toBe('Deux exercices')
         ->and($template->workoutTemplateLines)->toHaveCount(2)
-        ->and($template->workoutTemplateLines[0]->exercise_id)->toBe($added->id)
-        ->and($template->workoutTemplateLines[1]->exercise_id)->toBe($kept->id)
-        ->and($template->workoutTemplateLines[0]->workoutTemplateSets[0]->reps)->toBe(10);
+        ->and($firstLine->exercise_id)->toBe($added->id)
+        ->and($secondLine->exercise_id)->toBe($kept->id)
+        ->and($firstSet->reps)->toBe(10);
 
     // The rebuild must not leave the replaced line's sets behind.
     $this->assertDatabaseMissing('workout_template_lines', ['id' => $stale->id]);

@@ -15,6 +15,22 @@ use function Pest\Laravel\putJson;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
+/**
+ * A freshly created account, signed in for the request under test.
+ *
+ * Handed back rather than parked on $this by beforeEach: Pest binds the test
+ * closure at run time, so a fixture held on the test case reaches the body
+ * untyped and every read of it analyses as a possible null dereference.
+ */
+function signInAsJournalAuthor(): User
+{
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user);
+
+    return $user;
+}
+
 describe('Guest', function (): void {
     test('cannot list journals', function (): void {
         getJson(route('api.v1.daily-journals.index'))->assertUnauthorized();
@@ -41,14 +57,11 @@ describe('Guest', function (): void {
 });
 
 describe('Authenticated', function (): void {
-    beforeEach(function (): void {
-        $this->user = User::factory()->create();
-        Sanctum::actingAs($this->user);
-    });
-
     describe('Index', function (): void {
         test('user can list their journals', function (): void {
-            DailyJournal::factory()->count(3)->create(['user_id' => $this->user->id]);
+            $user = signInAsJournalAuthor();
+
+            DailyJournal::factory()->count(3)->create(['user_id' => $user->id]);
             DailyJournal::factory()->create(['user_id' => User::factory()->create()->id]); // Other user's journal
 
             $response = getJson(route('api.v1.daily-journals.index'));
@@ -65,8 +78,10 @@ describe('Authenticated', function (): void {
         });
 
         test('journals are ordered by date desc', function (): void {
-            $journal1 = DailyJournal::factory()->create(['user_id' => $this->user->id, 'date' => now()->subDays(2)->format('Y-m-d')]);
-            $journal2 = DailyJournal::factory()->create(['user_id' => $this->user->id, 'date' => now()->format('Y-m-d')]);
+            $user = signInAsJournalAuthor();
+
+            $journal1 = DailyJournal::factory()->create(['user_id' => $user->id, 'date' => now()->subDays(2)->format('Y-m-d')]);
+            $journal2 = DailyJournal::factory()->create(['user_id' => $user->id, 'date' => now()->format('Y-m-d')]);
 
             $response = getJson(route('api.v1.daily-journals.index'));
 
@@ -77,6 +92,8 @@ describe('Authenticated', function (): void {
 
     describe('Store', function (): void {
         test('user can create a journal entry', function (): void {
+            $user = signInAsJournalAuthor();
+
             $data = [
                 'date' => now()->format('Y-m-d'),
                 'content' => 'Great day!',
@@ -95,21 +112,25 @@ describe('Authenticated', function (): void {
                 ->assertJsonPath('data.mood_score', 5);
 
             assertDatabaseHas('daily_journals', [
-                'user_id' => $this->user->id,
+                'user_id' => $user->id,
                 'date' => $data['date'],
                 'mood_score' => 5,
             ]);
         });
 
         test('validation: date is required', function (): void {
+            signInAsJournalAuthor();
+
             postJson(route('api.v1.daily-journals.store'), ['content' => 'No date'])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['date']);
         });
 
         test('validation: unique date per user', function (): void {
+            $user = signInAsJournalAuthor();
+
             DailyJournal::factory()->create([
-                'user_id' => $this->user->id,
+                'user_id' => $user->id,
                 'date' => '2023-01-01',
             ]);
 
@@ -122,6 +143,8 @@ describe('Authenticated', function (): void {
         });
 
         test('validation: numeric ranges', function (): void {
+            signInAsJournalAuthor();
+
             $data = [
                 'date' => now()->format('Y-m-d'),
                 'mood_score' => 6, // max 5
@@ -145,7 +168,9 @@ describe('Authenticated', function (): void {
 
     describe('Show', function (): void {
         test('user can view their journal', function (): void {
-            $journal = DailyJournal::factory()->create(['user_id' => $this->user->id]);
+            $user = signInAsJournalAuthor();
+
+            $journal = DailyJournal::factory()->create(['user_id' => $user->id]);
 
             getJson(route('api.v1.daily-journals.show', $journal))
                 ->assertOk()
@@ -153,6 +178,8 @@ describe('Authenticated', function (): void {
         });
 
         test('user cannot view others journal', function (): void {
+            signInAsJournalAuthor();
+
             $otherUser = User::factory()->create();
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 
@@ -163,8 +190,10 @@ describe('Authenticated', function (): void {
 
     describe('Update', function (): void {
         test('user can update their journal', function (): void {
+            $user = signInAsJournalAuthor();
+
             $journal = DailyJournal::factory()->create([
-                'user_id' => $this->user->id,
+                'user_id' => $user->id,
                 'mood_score' => 3,
             ]);
 
@@ -179,6 +208,8 @@ describe('Authenticated', function (): void {
         });
 
         test('user cannot update others journal', function (): void {
+            signInAsJournalAuthor();
+
             $otherUser = User::factory()->create();
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 
@@ -187,8 +218,10 @@ describe('Authenticated', function (): void {
         });
 
         test('validation: cannot update date to existing date', function (): void {
-            DailyJournal::factory()->create(['user_id' => $this->user->id, 'date' => '2023-01-01']);
-            $journal = DailyJournal::factory()->create(['user_id' => $this->user->id, 'date' => '2023-01-02']);
+            $user = signInAsJournalAuthor();
+
+            DailyJournal::factory()->create(['user_id' => $user->id, 'date' => '2023-01-01']);
+            $journal = DailyJournal::factory()->create(['user_id' => $user->id, 'date' => '2023-01-02']);
 
             putJson(route('api.v1.daily-journals.update', $journal), ['date' => '2023-01-01'])
                 ->assertUnprocessable()
@@ -198,7 +231,9 @@ describe('Authenticated', function (): void {
 
     describe('Destroy', function (): void {
         test('user can delete their journal', function (): void {
-            $journal = DailyJournal::factory()->create(['user_id' => $this->user->id]);
+            $user = signInAsJournalAuthor();
+
+            $journal = DailyJournal::factory()->create(['user_id' => $user->id]);
 
             deleteJson(route('api.v1.daily-journals.destroy', $journal))
                 ->assertNoContent();
@@ -207,6 +242,8 @@ describe('Authenticated', function (): void {
         });
 
         test('user cannot delete others journal', function (): void {
+            signInAsJournalAuthor();
+
             $otherUser = User::factory()->create();
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 

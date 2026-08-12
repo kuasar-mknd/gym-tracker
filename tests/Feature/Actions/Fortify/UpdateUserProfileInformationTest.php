@@ -8,6 +8,8 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
+use function PHPUnit\Framework\assertNotNull;
+
 beforeEach(function (): void {
     $this->updateProfile = app(UpdateUserProfileInformation::class);
     Notification::fake();
@@ -50,6 +52,7 @@ it('keeps the verification timestamp and sends nothing when the e-mail is unchan
     ]);
 
     $fresh = $user->fresh();
+    assertNotNull($fresh, "L'utilisateur a disparu de la base apres la mise a jour du profil.");
 
     expect($fresh->name)->toBe('Nouveau Nom')
         ->and($fresh->email)->toBe('same@example.com')
@@ -114,5 +117,5 @@ it('rejects a name longer than 255 characters', function (): void {
         expect($exception->errors())->toHaveKey('name');
     });
 
-    expect($user->fresh()->name)->toBe('Ancien Nom');
+    expect($user->refresh()->name)->toBe('Ancien Nom');
 });

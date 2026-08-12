@@ -34,13 +34,13 @@ class AchievementTest extends TestCase
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,
-            'achievement_id' => Achievement::where('slug', 'first-workout')->first()->id,
+            'achievement_id' => Achievement::where('slug', 'first-workout')->firstOrFail()->id,
         ]);
 
         Notification::assertSentTo(
             $user,
             AchievementUnlocked::class,
-            fn ($notification, $channels): bool => $notification->achievement->slug === 'first-workout'
+            fn (AchievementUnlocked $notification, $channels): bool => $notification->achievement->slug === 'first-workout'
         );
     }
 
@@ -63,7 +63,7 @@ class AchievementTest extends TestCase
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,
-            'achievement_id' => Achievement::where('slug', 'heavy-lifter-100')->first()->id,
+            'achievement_id' => Achievement::where('slug', 'heavy-lifter-100')->firstOrFail()->id,
         ]);
     }
 
@@ -98,7 +98,7 @@ class AchievementTest extends TestCase
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,
-            'achievement_id' => Achievement::where('slug', 'streak-3')->first()->id,
+            'achievement_id' => Achievement::where('slug', 'streak-3')->firstOrFail()->id,
         ]);
     }
 }

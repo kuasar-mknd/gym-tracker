@@ -6,6 +6,7 @@ use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Assert;
 
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -18,12 +19,16 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 describe('Habits API', function (): void {
     beforeEach(function (): void {
-        $this->user = User::factory()->create();
-        Sanctum::actingAs($this->user);
+        $user = User::factory()->create();
+        $this->user = $user;
+        Sanctum::actingAs($user);
     });
 
     test('user can list habits', function (): void {
-        Habit::factory()->count(3)->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+        Habit::factory()->count(3)->create(['user_id' => $user->id]);
 
         $response = getJson(route('api.v1.habits.index'));
 
@@ -32,6 +37,9 @@ describe('Habits API', function (): void {
     });
 
     test('user can create habit', function (): void {
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
         $data = [
             'name' => 'Drink Water',
             'goal_times_per_week' => 7,
@@ -46,13 +54,16 @@ describe('Habits API', function (): void {
             ->assertJsonPath('data.goal_times_per_week', 7);
 
         assertDatabaseHas('habits', [
-            'user_id' => $this->user->id,
+            'user_id' => $user->id,
             'name' => 'Drink Water',
         ]);
     });
 
     test('user can update habit', function (): void {
-        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+        $habit = Habit::factory()->create(['user_id' => $user->id]);
 
         $data = ['name' => 'Updated Name'];
 
@@ -68,7 +79,10 @@ describe('Habits API', function (): void {
     });
 
     test('user can delete habit', function (): void {
-        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+        $habit = Habit::factory()->create(['user_id' => $user->id]);
 
         $response = deleteJson(route('api.v1.habits.destroy', $habit));
 
@@ -112,7 +126,10 @@ describe('Habits API', function (): void {
     });
 
     test('update validates numeric ranges', function (): void {
-        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+        $habit = Habit::factory()->create(['user_id' => $user->id]);
 
         $response = putJson(route('api.v1.habits.update', $habit), [
             'goal_times_per_week' => 8,
@@ -123,8 +140,11 @@ describe('Habits API', function (): void {
     });
 
     test('update allows partial updates', function (): void {
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
         $habit = Habit::factory()->create([
-            'user_id' => $this->user->id,
+            'user_id' => $user->id,
             'name' => 'Old Name',
             'goal_times_per_week' => 5,
         ]);
@@ -141,12 +161,16 @@ describe('Habits API', function (): void {
 
 describe('Habit Logs API', function (): void {
     beforeEach(function (): void {
-        $this->user = User::factory()->create();
-        Sanctum::actingAs($this->user);
+        $user = User::factory()->create();
+        $this->user = $user;
+        Sanctum::actingAs($user);
     });
 
     test('user can create habit log', function (): void {
-        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+        $habit = Habit::factory()->create(['user_id' => $user->id]);
 
         $data = [
             'habit_id' => $habit->id,
@@ -175,7 +199,10 @@ describe('Habit Logs API', function (): void {
     });
 
     test('user can list habit logs', function (): void {
-        $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+        $habit = Habit::factory()->create(['user_id' => $user->id]);
         HabitLog::factory()->count(3)->create(['habit_id' => $habit->id]);
 
         $response = getJson(route('api.v1.habit-logs.index'));

@@ -757,20 +757,8 @@ parameters:
 			path: app/Providers/HorizonServiceProvider.php
 
 		-
-			message: '#^Cannot access property \$email on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Providers/HorizonServiceProvider.php
-
-		-
 			message: '#^Call to function in_array\(\) with arguments mixed, array\{\} and true will always evaluate to false\.$#'
 			identifier: function.impossibleType
-			count: 1
-			path: app/Providers/TelescopeServiceProvider.php
-
-		-
-			message: '#^Cannot access property \$email on mixed\.$#'
-			identifier: property.nonObject
 			count: 1
 			path: app/Providers/TelescopeServiceProvider.php
 
@@ -1357,18 +1345,6 @@ parameters:
 			path: tests/Browser/SilentFormFailuresTest.php
 
 		-
-			message: '#^Cannot access property \$ended_at on App\\Models\\Workout\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Browser/WorkoutCompletionTest.php
-
-		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 2
-			path: tests/Browser/WorkoutCompletionTest.php
-
-		-
 			message: '#^Cannot use array destructuring on mixed\.$#'
 			identifier: offsetAccess.nonArray
 			count: 1
@@ -1391,24 +1367,6 @@ parameters:
 			identifier: encapsedStringPart.nonString
 			count: 1
 			path: tests/Browser/WorkoutRowOverflowTest.php
-
-		-
-			message: '#^Cannot access property \$ended_at on App\\Models\\Workout\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Browser/WorkoutSessionE2ETest.php
-
-		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Browser/WorkoutSessionE2ETest.php
-
-		-
-			message: '#^Cannot access property \$weight on App\\Models\\Set\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Browser/WorkoutSetEntryRegressionTest.php
 
 		-
 			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
@@ -1465,48 +1423,6 @@ parameters:
 			path: tests/Feature/Accessibility/ViewportAccessibilityTest.php
 
 		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/CreateWorkoutActionTest.php
-
-		-
-			message: '#^Cannot access property \$user on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/CreateWorkoutActionTest.php
-
-		-
-			message: '#^Cannot access property \$exercise_id on App\\Models\\WorkoutLine\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$is_warmup on App\\Models\\Set\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$reps on App\\Models\\Set\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$sets on App\\Models\\WorkoutLine\|null\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$weight on App\\Models\\Set\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
-
-		-
 			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<App\\Models\\WorkoutTemplate\|null\>\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1516,12 +1432,6 @@ parameters:
 			message: '#^Cannot access property \$description on mixed\.$#'
 			identifier: property.nonObject
 			count: 1
-			path: tests/Feature/Actions/CreateWorkoutTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$id on App\\Models\\WorkoutTemplateLine\|null\.$#'
-			identifier: property.nonObject
-			count: 3
 			path: tests/Feature/Actions/CreateWorkoutTemplateActionTest.php
 
 		-
@@ -1573,12 +1483,6 @@ parameters:
 			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
 
 		-
-			message: '#^Cannot access property \$workoutTemplateSets on App\\Models\\WorkoutTemplateLine\|null\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
-
-		-
 			message: '#^Offset ''best_1rm'' might not exist on array\{id\: int, workout_id\: int, workout_name\: string, formatted_date\: string, best_1rm\: float, sets\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\}\|null\.$#'
 			identifier: offsetAccess.notFound
 			count: 2
@@ -1597,60 +1501,6 @@ parameters:
 			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
 
 		-
-			message: '#^Cannot access property \$exercise on App\\Models\\WorkoutTemplateLine\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
-
-		-
-			message: '#^Cannot access property \$id on App\\Models\\Exercise\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
-
-		-
-			message: '#^Cannot access property \$id on App\\Models\\WorkoutTemplate\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
-
-		-
-			message: '#^Cannot access property \$name on App\\Models\\Exercise\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
-
-		-
-			message: '#^Cannot access property \$workoutTemplateLines on App\\Models\\WorkoutTemplate\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
-
-		-
-			message: '#^Cannot access property \$workout_template_lines_count on App\\Models\\WorkoutTemplate\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
-
-		-
-			message: '#^Cannot access property \$workout_template_sets_count on App\\Models\\WorkoutTemplateLine\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
-
-		-
-			message: '#^Cannot access property \$exists on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
-
-		-
 			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
 			identifier: argument.type
 			count: 6
@@ -1661,30 +1511,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
-
-		-
-			message: '#^Cannot access property \$decaySeconds on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
-
-		-
-			message: '#^Cannot access property \$key on mixed\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
-
-		-
-			message: '#^Cannot access property \$maxAttempts on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
-
-		-
-			message: '#^Trying to invoke Closure\|null but it might not be a callable\.$#'
-			identifier: callable.nonCallable
-			count: 2
-			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
 
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'
@@ -1717,46 +1543,10 @@ parameters:
 			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
 
 		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
-
-		-
-			message: '#^Cannot access property \$password on mixed\.$#'
-			identifier: property.nonObject
-			count: 4
-			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
-
-		-
 			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
 			identifier: argument.type
 			count: 4
 			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
-
-		-
-			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 6
-			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
-
-		-
-			message: '#^Cannot access property \$email on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
-
-		-
-			message: '#^Cannot access property \$email_verified_at on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
-
-		-
-			message: '#^Cannot access property \$name on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
 
 		-
 			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
@@ -1807,36 +1597,6 @@ parameters:
 			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
 
 		-
-			message: '#^Cannot access property \$is_warmup on App\\Models\\WorkoutTemplateSet\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$order on App\\Models\\WorkoutTemplateLine\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$reps on App\\Models\\WorkoutTemplateSet\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$weight on App\\Models\\WorkoutTemplateSet\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
-
-		-
-			message: '#^Cannot access property \$workoutTemplateSets on App\\Models\\WorkoutTemplateLine\|null\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
-
-		-
 			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 2
@@ -1867,30 +1627,6 @@ parameters:
 			path: tests/Feature/ActivityLogUpgradeTest.php
 
 		-
-			message: '#^Cannot access property \$attribute_changes on Spatie\\Activitylog\\Models\\Activity\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/ActivityLogUpgradeTest.php
-
-		-
-			message: '#^Cannot access property \$attribute_changes on stdClass\|null\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/ActivityLogUpgradeTest.php
-
-		-
-			message: '#^Cannot access property \$event on Spatie\\Activitylog\\Models\\Activity\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/ActivityLogUpgradeTest.php
-
-		-
-			message: '#^Cannot access property \$properties on stdClass\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/ActivityLogUpgradeTest.php
-
-		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
 			count: 6
@@ -1909,7 +1645,7 @@ parameters:
 			path: tests/Feature/ActivityLogUpgradeTest.php
 
 		-
-			message: '#^Parameter \#1 \$migration of class class@anonymous/tests/Feature/ActivityLogUpgradeTest\.php\:132 constructor expects object, mixed given\.$#'
+			message: '#^Parameter \#1 \$migration of class class@anonymous/tests/Feature/ActivityLogUpgradeTest\.php\:133 constructor expects object, mixed given\.$#'
 			identifier: argument.type
 			count: 1
 			path: tests/Feature/ActivityLogUpgradeTest.php
@@ -1919,12 +1655,6 @@ parameters:
 			identifier: property.nonObject
 			count: 5
 			path: tests/Feature/Api/GoalControllerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 6
-			path: tests/Feature/Api/HabitControllerTest.php
 
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'
@@ -1945,28 +1675,10 @@ parameters:
 			path: tests/Feature/Api/PlateControllerTest.php
 
 		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 7
-			path: tests/Feature/Api/UserAchievementControllerTest.php
-
-		-
 			message: '#^Parameter \#1 \$user of function Pest\\Laravel\\actingAs expects Illuminate\\Contracts\\Auth\\Authenticatable, mixed given\.$#'
 			identifier: argument.type
 			count: 12
 			path: tests/Feature/Api/V1/AchievementControllerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 10
-			path: tests/Feature/Api/V1/DailyJournalTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 8
-			path: tests/Feature/Api/V1/FastTest.php
 
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'
@@ -1977,38 +1689,8 @@ parameters:
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'
 			identifier: property.nonObject
-			count: 8
-			path: tests/Feature/Api/V1/HabitControllerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/Api/V1/IntervalTimerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
 			count: 5
 			path: tests/Feature/Api/V1/MacroCalculationControllerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 12
-			path: tests/Feature/Api/V1/SupplementLogTest.php
-
-		-
-			message: '#^Cannot access property \$id on App\\Models\\Supplement\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Api/V1/SupplementTest.php
-
-		-
-			message: '#^Cannot access property \$password on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Api/V1/UserControllerTest.php
 
 		-
 			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, string\|null given\.$#'
@@ -2025,26 +1707,8 @@ parameters:
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'
 			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/Api/V1/WilksScoreTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
 			count: 7
 			path: tests/Feature/Api/V1/WorkoutLineControllerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 4
-			path: tests/Feature/Api/V1/WorkoutTemplateSecurityTest.php
-
-		-
-			message: '#^Parameter \#1 \$user of static method Laravel\\Sanctum\\Sanctum\<Laravel\\Sanctum\\PersonalAccessToken\>\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable\|Laravel\\Sanctum\\HasApiTokens, mixed given\.$#'
-			identifier: argument.type
-			count: 4
-			path: tests/Feature/Api/V1/WorkoutTemplateSecurityTest.php
 
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'
@@ -2062,43 +1726,7 @@ parameters:
 			message: '#^Cannot access property \$id on mixed\.$#'
 			identifier: property.nonObject
 			count: 5
-			path: tests/Feature/Api/V1/WorkoutTemplateTest.php
-
-		-
-			message: '#^Parameter \#1 \$user of static method Laravel\\Sanctum\\Sanctum\<Laravel\\Sanctum\\PersonalAccessToken\>\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable\|Laravel\\Sanctum\\HasApiTokens, mixed given\.$#'
-			identifier: argument.type
-			count: 11
-			path: tests/Feature/Api/V1/WorkoutTemplateTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 5
 			path: tests/Feature/Api/WarmupPreferenceControllerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 13
-			path: tests/Feature/Api/WorkoutTemplateLineControllerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 7
-			path: tests/Feature/Api/WorkoutTemplateSetControllerTest.php
-
-		-
-			message: '#^Binary operation "\." between ''/reset\-password/'' and mixed results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: tests/Feature/Auth/PasswordResetTest.php
-
-		-
-			message: '#^Cannot access property \$token on mixed\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Auth/PasswordResetTest.php
 
 		-
 			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, string\|null given\.$#'
@@ -2165,24 +1793,6 @@ parameters:
 			identifier: staticMethod.notFound
 			count: 2
 			path: tests/Feature/Controllers/BodyMeasurementControllerTest.php
-
-		-
-			message: '#^Cannot access property \$read_at on Illuminate\\Notifications\\DatabaseNotification\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Controllers/NotificationControllerTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Controllers/PushSubscriptionControllerTest.php
-
-		-
-			message: '#^Parameter \#1 \$user of function Pest\\Laravel\\actingAs expects Illuminate\\Contracts\\Auth\\Authenticatable, mixed given\.$#'
-			identifier: argument.type
-			count: 4
-			path: tests/Feature/Controllers/PushSubscriptionControllerTest.php
 
 		-
 			message: '#^Cannot access offset ''is_local'' on mixed\.$#'
@@ -2269,12 +1879,6 @@ parameters:
 			path: tests/Feature/Filament/GoalResourceTest.php
 
 		-
-			message: '#^Cannot access property \$name on Spatie\\Permission\\Models\\Role\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Filament/RoleResourceTest.php
-
-		-
 			message: '#^Parameter \#1 \$record of static method Filament\\Resources\\Resource\<Illuminate\\Database\\Eloquent\\Model,Filament\\Resources\\ResourceConfiguration\>\:\:canDelete\(\) expects Illuminate\\Database\\Eloquent\\Model, Spatie\\Permission\\Contracts\\Role given\.$#'
 			identifier: argument.type
 			count: 1
@@ -2287,12 +1891,6 @@ parameters:
 			path: tests/Feature/Filament/RoleResourceTest.php
 
 		-
-			message: '#^Cannot access property \$user_id on App\\Models\\Supplement\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Filament/SupplementResourceTest.php
-
-		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
 			count: 1
@@ -2302,18 +1900,6 @@ parameters:
 			message: '#^Binary operation "\+" between mixed and 1 results in an error\.$#'
 			identifier: binaryOp.invalid
 			count: 3
-			path: tests/Feature/Filament/UserResourceTest.php
-
-		-
-			message: '#^Cannot access property \$email on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Filament/UserResourceTest.php
-
-		-
-			message: '#^Cannot access property \$name on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
 			path: tests/Feature/Filament/UserResourceTest.php
 
 		-
@@ -2407,42 +1993,6 @@ parameters:
 			path: tests/Feature/InertiaPagePathTest.php
 
 		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/IntervalTimerControllerTest.php
-
-		-
-			message: '#^Cannot access property \$target_calories on App\\Models\\MacroCalculation\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/MacroCalculatorTest.php
-
-		-
-			message: '#^Cannot access property \$tdee on App\\Models\\MacroCalculation\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/MacroCalculatorTest.php
-
-		-
-			message: '#^Cannot access property \$achievement on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Models/AchievementTest.php
-
-		-
-			message: '#^Cannot access property \$id on App\\Models\\Achievement\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Models/AchievementTest.php
-
-		-
-			message: '#^Cannot access property \$slug on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Models/AchievementTest.php
-
-		-
 			message: '#^Cannot access offset ''current'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 2
@@ -2479,54 +2029,6 @@ parameters:
 			path: tests/Feature/Models/BodyPartMeasurementTest.php
 
 		-
-			message: '#^Cannot access property \$completed_at on App\\Models\\Goal\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Models/GoalTest.php
-
-		-
-			message: '#^Cannot access property \$current_value on App\\Models\\Goal\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Models/GoalTest.php
-
-		-
-			message: '#^Cannot access property \$progress_pct on App\\Models\\Goal\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Models/GoalTest.php
-
-		-
-			message: '#^Cannot access property \$date on App\\Models\\HabitLog\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Models/HabitTest.php
-
-		-
-			message: '#^Cannot access property \$sets on App\\Models\\WorkoutLine\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Models/SetOrderingTest.php
-
-		-
-			message: '#^Cannot access property \$total_volume on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Models/SetTest.php
-
-		-
-			message: '#^Cannot access property \$workout_volume on App\\Models\\Workout\|null\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Models/SetTest.php
-
-		-
-			message: '#^Cannot access property \$consumed_at on App\\Models\\WaterLog\|null\.$#'
-			identifier: property.nonObject
-			count: 7
-			path: tests/Feature/Models/WaterLogTest.php
-
-		-
 			message: '#^Anonymous function should return string but returns string\|null\.$#'
 			identifier: return.type
 			count: 1
@@ -2545,18 +2047,6 @@ parameters:
 			path: tests/Feature/Navigation/NoOrphanedFeatureTest.php
 
 		-
-			message: '#^Cannot access property \$exercise_id on App\\Models\\PersonalRecord\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
-
-		-
-			message: '#^Parameter \#1 \$personalRecord of class App\\Notifications\\PersonalRecordAchieved constructor expects App\\Models\\PersonalRecord, App\\Models\\PersonalRecord\|null given\.$#'
-			identifier: argument.type
-			count: 3
-			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
-
-		-
 			message: '#^Parameter \#1 \$time of static method Carbon\\Carbon\:\:parse\(\) expects Carbon\\Month\|Carbon\\WeekDay\|DateTimeInterface\|float\|int\|string\|null, mixed given\.$#'
 			identifier: argument.type
 			count: 4
@@ -2567,18 +2057,6 @@ parameters:
 			identifier: argument.type
 			count: 3
 			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
-
-		-
-			message: '#^Cannot access property \$type on App\\Models\\PersonalRecord\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Notifications/NotificationChannelRoutingTest.php
-
-		-
-			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<mixed\>\:\:\$not\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Notifications/WebPushPayloadTest.php
 
 		-
 			message: '#^Anonymous function should return Minishlink\\WebPush\\WebPush&Mockery\\MockInterface but returns Mockery\\MockInterface\.$#'
@@ -2611,18 +2089,6 @@ parameters:
 			path: tests/Feature/Notifications/WebPushPayloadTest.php
 
 		-
-			message: '#^Cannot access property \$not on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Notifications/WebPushPayloadTest.php
-
-		-
-			message: '#^Function makePersonalRecordFixture\(\) should return App\\Models\\PersonalRecord but returns App\\Models\\PersonalRecord\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Notifications/WebPushPayloadTest.php
-
-		-
 			message: '#^Cannot access property \$id on mixed\.$#'
 			identifier: property.nonObject
 			count: 10
@@ -2633,30 +2099,6 @@ parameters:
 			identifier: argument.type
 			count: 16
 			path: tests/Feature/PageRenderingTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 10
-			path: tests/Feature/PersonalRecordCorrectionTest.php
-
-		-
-			message: '#^Parameter \#1 \$user of closure expects App\\Models\\User, mixed given\.$#'
-			identifier: argument.type
-			count: 6
-			path: tests/Feature/PersonalRecordCorrectionTest.php
-
-		-
-			message: '#^Parameter \#2 \$exercise of closure expects App\\Models\\Exercise, mixed given\.$#'
-			identifier: argument.type
-			count: 6
-			path: tests/Feature/PersonalRecordCorrectionTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/PlateControllerTest.php
 
 		-
 			message: '#^Anonymous function should return App\\Models\\WarmupPreference but returns App\\Models\\WarmupPreference\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WarmupPreference\>\.$#'
@@ -2941,18 +2383,6 @@ parameters:
 			path: tests/Feature/ServiceWorkerRouteTest.php
 
 		-
-			message: '#^Cannot access property \$achievement on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Services/AchievementServiceTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Services/AchievementServiceTest.php
-
-		-
 			message: '#^Cannot access offset ''latest_achievement'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -2968,12 +2398,6 @@ parameters:
 			message: '#^Cannot access offset ''user'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 2
-			path: tests/Feature/Services/NotificationServiceTest.php
-
-		-
-			message: '#^Cannot access property \$id on Illuminate\\Notifications\\DatabaseNotification\|null\.$#'
-			identifier: property.nonObject
-			count: 1
 			path: tests/Feature/Services/NotificationServiceTest.php
 
 		-
@@ -2993,18 +2417,6 @@ parameters:
 			identifier: encapsedStringPart.nonString
 			count: 1
 			path: tests/Feature/Services/StatsCacheTest.php
-
-		-
-			message: '#^Cannot access property \$headers on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Services/StatsChartPointsContractTest.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
-			path: tests/Feature/Services/StatsChartPointsContractTest.php
 
 		-
 			message: '#^Cannot access offset ''category'' on mixed\.$#'
@@ -3067,34 +2479,10 @@ parameters:
 			path: tests/Feature/SocialAuthTest.php
 
 		-
-			message: '#^Cannot access property \$provider on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/SocialAuthTest.php
-
-		-
-			message: '#^Cannot access property \$provider_id on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/SocialAuthTest.php
-
-		-
 			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, mixed given\.$#'
 			identifier: argument.type
 			count: 2
 			path: tests/Feature/SocialAuthTest.php
-
-		-
-			message: '#^Cannot access property \$current_streak on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 8
-			path: tests/Feature/StreakTest.php
-
-		-
-			message: '#^Cannot access property \$longest_streak on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: tests/Feature/StreakTest.php
 
 		-
 			message: '#^Cannot access offset ''brand'' on mixed\.$#'
@@ -3139,60 +2527,6 @@ parameters:
 			path: tests/Feature/SupplementIndexShapeTest.php
 
 		-
-			message: '#^Cannot access property \$id on App\\Models\\Set\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
-			message: '#^Cannot access property \$total_volume on App\\Models\\User\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
-			message: '#^Cannot access property \$total_volume on mixed\.$#'
-			identifier: property.nonObject
-			count: 6
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
-			message: '#^Cannot access property \$workout_volume on App\\Models\\Workout\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
-			message: '#^Cannot access property \$workout_volume on mixed\.$#'
-			identifier: property.nonObject
-			count: 4
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
-			message: '#^Cannot cast mixed to float\.$#'
-			identifier: cast.double
-			count: 10
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
-			message: '#^Parameter \#1 \$workout of function lineWithVolume expects App\\Models\\Workout, mixed given\.$#'
-			identifier: argument.type
-			count: 7
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
-			message: '#^Parameter \#2 \$exercise of function lineWithVolume expects App\\Models\\Exercise, mixed given\.$#'
-			identifier: argument.type
-			count: 7
-			path: tests/Feature/VolumeCountersTest.php
-
-		-
 			message: '#^Cannot access offset ''bar_weight'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -3223,28 +2557,10 @@ parameters:
 			path: tests/Feature/WarmupCalculatorTest.php
 
 		-
-			message: '#^Cannot access property \$steps on App\\Models\\WarmupPreference\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/WarmupCalculatorTest.php
-
-		-
 			message: '#^Cannot access property \$id on mixed\.$#'
 			identifier: property.nonObject
 			count: 2
 			path: tests/Feature/WaterControllerTest.php
-
-		-
-			message: '#^Cannot access property \$score on App\\Models\\WilksScore\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/WilksScoreTest.php
-
-		-
-			message: '#^Cannot access property \$ended_at on App\\Models\\Workout\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/WorkoutCompletionTest.php
 
 		-
 			message: '#^Cannot access offset ''exercise\.name'' on mixed\.$#'
@@ -3277,24 +2593,6 @@ parameters:
 			path: tests/Feature/WorkoutManagementTest.php
 
 		-
-			message: '#^Cannot access property \$exercise_id on App\\Models\\WorkoutTemplateLine\|null\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: tests/Feature/WorkoutTemplatesControllerTest.php
-
-		-
-			message: '#^Cannot access property \$reps on App\\Models\\WorkoutTemplateSet\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/WorkoutTemplatesControllerTest.php
-
-		-
-			message: '#^Cannot access property \$workoutTemplateSets on App\\Models\\WorkoutTemplateLine\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/WorkoutTemplatesControllerTest.php
-
-		-
 			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:once\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -3317,12 +2615,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: tests/Unit/Actions/Tools/Concerns/CalculatesMacrosTest.php
-
-		-
-			message: '#^Cannot access property \$activity_level on stdClass\|null\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Unit/Actions/Tools/CreateMacroCalculationActionTest.php
 
 		-
 			message: '#^Cannot cast mixed to float\.$#'

@@ -154,7 +154,7 @@ it("réaffecte un supplément à un autre utilisateur depuis l'édition", functi
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($supplement->fresh()->user_id)->toBe($second->getKey());
+    expect($supplement->refresh()->user_id)->toBe($second->getKey());
 });
 
 it('interdit la gestion des suppléments à un admin sans les permissions Supplement', function (): void {

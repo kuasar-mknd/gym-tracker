@@ -9,19 +9,17 @@ use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-beforeEach(function (): void {
-    $this->user = User::factory()->create();
-    $this->otherUser = User::factory()->create();
-});
-
 test('user cannot create workout template with other users private exercise even if system exercise exists', function (): void {
-    Sanctum::actingAs($this->user);
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+
+    Sanctum::actingAs($user);
 
     // Create a system exercise (this makes sure the OR condition doesn't bypass the ID check)
     Exercise::factory()->create(['user_id' => null]);
 
     // Create a private exercise for the other user
-    $privateExercise = Exercise::factory()->create(['user_id' => $this->otherUser->id]);
+    $privateExercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
 
     $data = [
         'name' => 'Malicious Template',
@@ -39,15 +37,18 @@ test('user cannot create workout template with other users private exercise even
 });
 
 test('user cannot update workout template with other users private exercise even if system exercise exists', function (): void {
-    Sanctum::actingAs($this->user);
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+
+    Sanctum::actingAs($user);
 
     // Create a system exercise
     Exercise::factory()->create(['user_id' => null]);
 
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
 
     // Create a private exercise for the other user
-    $privateExercise = Exercise::factory()->create(['user_id' => $this->otherUser->id]);
+    $privateExercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
 
     $data = [
         'name' => 'Updated Malicious Template',
@@ -65,7 +66,7 @@ test('user cannot update workout template with other users private exercise even
 });
 
 test('user can create workout template with system exercise', function (): void {
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs(User::factory()->create());
 
     // Create a system exercise (null user_id)
     $systemExercise = Exercise::factory()->create(['user_id' => null]);
@@ -85,10 +86,12 @@ test('user can create workout template with system exercise', function (): void 
 });
 
 test('user can create workout template with own private exercise', function (): void {
-    Sanctum::actingAs($this->user);
+    $user = User::factory()->create();
+
+    Sanctum::actingAs($user);
 
     // Create a private exercise for the current user
-    $ownExercise = Exercise::factory()->create(['user_id' => $this->user->id]);
+    $ownExercise = Exercise::factory()->create(['user_id' => $user->id]);
 
     $data = [
         'name' => 'Valid Own Template',

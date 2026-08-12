@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
+use PHPUnit\Framework\Assert;
 
 it('updates workout template name and description', function (): void {
     $user = User::factory()->create();
@@ -105,27 +106,30 @@ it('updates workout template lines and sets', function (): void {
 
     // Verify first line
     $newLine1 = $updatedTemplate->workoutTemplateLines->firstWhere('exercise_id', $exercise2->id);
-    expect($newLine1)->not->toBeNull()
-        ->and($newLine1->order)->toBe(0)
+    Assert::assertNotNull($newLine1, 'no template line was written for the second exercise');
+    expect($newLine1->order)->toBe(0)
         ->and($newLine1->workoutTemplateSets)->toHaveCount(2);
 
     $set1 = $newLine1->workoutTemplateSets->firstWhere('order', 0);
+    Assert::assertNotNull($set1, 'the first line has no set at order 0');
     expect($set1->reps)->toBe(8)
         ->and($set1->weight)->toBe('60.00')
         ->and($set1->is_warmup)->toBeFalse();
 
     $set2 = $newLine1->workoutTemplateSets->firstWhere('order', 1);
+    Assert::assertNotNull($set2, 'the first line has no set at order 1');
     expect($set2->reps)->toBe(6)
         ->and($set2->weight)->toBe('70.00')
         ->and($set2->is_warmup)->toBeTrue();
 
     // Verify second line
     $newLine2 = $updatedTemplate->workoutTemplateLines->firstWhere('exercise_id', $exercise1->id);
-    expect($newLine2)->not->toBeNull()
-        ->and($newLine2->order)->toBe(1)
+    Assert::assertNotNull($newLine2, 'no template line was written for the first exercise');
+    expect($newLine2->order)->toBe(1)
         ->and($newLine2->workoutTemplateSets)->toHaveCount(1);
 
     $set3 = $newLine2->workoutTemplateSets->firstWhere('order', 0);
+    Assert::assertNotNull($set3, 'the second line has no set at order 0');
     expect($set3->reps)->toBe(12)
         ->and($set3->weight)->toBeNull()
         ->and($set3->is_warmup)->toBeFalse();

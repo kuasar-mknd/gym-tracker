@@ -16,11 +16,12 @@ beforeEach(function (): void {
 
 it('liste les utilisateurs existants dans la table', function (): void {
     $users = User::factory()->count(3)->create();
+    $first = $users->firstOrFail();
 
     Livewire::test(ListUsers::class)
         ->assertCanSeeTableRecords($users)
-        ->assertSee($users[0]->name)
-        ->assertSee($users[0]->email);
+        ->assertSee($first->name)
+        ->assertSee($first->email);
 });
 
 it('affiche les colonnes de streak avec la valeur réelle du modèle', function (): void {

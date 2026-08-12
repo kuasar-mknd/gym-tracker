@@ -12,6 +12,8 @@ use App\Services\Stats\BodyStatsService;
 use App\Services\Stats\VolumeStatsService;
 use Carbon\Carbon;
 
+use function Pest\Laravel\actingAs;
+
 /**
  * Ces trois DTO ne servent qu'à une chose : traverser Inertia et arriver dans
  * un graphique Chart.js. Le contrat n'est donc pas la classe PHP, c'est le nom
@@ -193,14 +195,14 @@ describe('la prop différée bodyStats de Measurements/Index', function (): void
         // La version d'asset est calculée pendant la requête (hash du manifest
         // Vite) : on la lit sur une première visite plutôt que de la deviner,
         // sinon Inertia répond 409 au rechargement partiel.
-        $version = (string) $this->actingAs($user)
+        $version = (string) actingAs($user)
             ->withHeader('X-Inertia', 'true')
             ->get(route('body-measurements.index'))
             ->headers->get('X-Inertia-Version');
 
         expect($version)->not->toBe('');
 
-        $response = $this->actingAs($user)
+        $response = actingAs($user)
             ->withHeaders([
                 'X-Inertia' => 'true',
                 'X-Inertia-Version' => $version,

@@ -53,7 +53,7 @@ test('sets come back in the order they were created', function () use ($lineWith
     $expected = Set::where('workout_line_id', $line->id)->orderBy('id')->pluck('id')->all();
 
     expect($line->sets()->pluck('id')->all())->toBe($expected);
-    expect($line->fresh()->sets->pluck('id')->all())->toBe($expected);
+    expect(WorkoutLine::findOrFail($line->id)->sets->pluck('id')->all())->toBe($expected);
 });
 
 test('eager loading a workout keeps its sets in creation order', function () use ($lineWithDescendingWeights): void {
@@ -62,7 +62,7 @@ test('eager loading a workout keeps its sets in creation order', function () use
 
     $workout = Workout::with('workoutLines.sets')->findOrFail($line->workout_id);
 
-    expect($workout->workoutLines->first()->sets->pluck('id')->all())->toBe($expected);
+    expect($workout->workoutLines->firstOrFail()->sets->pluck('id')->all())->toBe($expected);
 });
 
 test('the session screen renders sets in creation order', function () use ($lineWithDescendingWeights): void {
@@ -75,7 +75,7 @@ test('the session screen renders sets in creation order', function () use ($line
 
     $data = app(FetchWorkoutShowAction::class)->execute($user, $workout);
 
-    expect($data['workout']->workoutLines->first()->sets->pluck('id')->all())->toBe($expected);
+    expect($data['workout']->workoutLines->firstOrFail()->sets->pluck('id')->all())->toBe($expected);
 });
 
 /**

@@ -103,8 +103,8 @@ class SocialAuthTest extends TestCase
         $response = $this->get(route('social.callback', 'github'));
 
         $this->assertAuthenticatedAs($user);
-        $this->assertEquals('github', $user->fresh()->provider);
-        $this->assertEquals('112233', $user->fresh()->provider_id);
+        $this->assertEquals('github', $user->refresh()->provider);
+        $this->assertEquals('112233', $user->refresh()->provider_id);
         $response->assertRedirect(route('dashboard'));
     }
 }

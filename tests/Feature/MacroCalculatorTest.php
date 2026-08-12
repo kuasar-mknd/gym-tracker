@@ -52,7 +52,7 @@ class MacroCalculatorTest extends TestCase
 
         // Verify calculation logic (BMR: 10*80 + 6.25*180 - 5*25 + 5 = 800 + 1125 - 125 + 5 = 1805)
         // TDEE: 1805 * 1.55 = 2797.75 -> 2798
-        $calculation = MacroCalculation::first();
+        $calculation = MacroCalculation::firstOrFail();
         $this->assertEquals(2798, $calculation->tdee);
         $this->assertEquals(2798, $calculation->target_calories); // maintain
     }

@@ -38,8 +38,12 @@ parameters:
         # Dans les tests, les valeurs viennent de reponses JSON et de datasets :
         # elles sont mixed par nature. Cette famille represente 1543 des 2187
         # erreurs a level max, toutes dans tests/, et aucune ne designe un defaut.
-        # property.nonObject n'est PAS ignore : ce sont les 138 modeles
-        # potentiellement nuls qui font planter un test au lieu de l'echouer.
+        # property.nonObject n'est PAS ignore. Nuance mesuree en le drainant :
+        # tous ne sont pas des modeles nuls. Une partie est du mixed venant des
+        # fixtures Pest posees sur $this dans beforeEach — PHPStan resout $this
+        # a Pest\PendingCalls\TestCall, donc $this->user est mixed. Les deux
+        # familles meritent d'etre vues : la premiere fait planter un test, la
+        # seconde masque toute verification de type sur la fixture.
         - identifier: method.nonObject
           path: tests/*
         - identifier: staticMethod.dynamicCall

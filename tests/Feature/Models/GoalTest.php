@@ -56,7 +56,7 @@ class GoalTest extends TestCase
             'reps' => 5,
         ]);
 
-        $this->assertEquals(80, $goal->fresh()->current_value);
+        $this->assertEquals(80, $goal->refresh()->current_value);
     }
 
     public function test_goal_marks_as_completed_when_target_reached(): void
@@ -80,8 +80,8 @@ class GoalTest extends TestCase
             'reps' => 1,
         ]);
 
-        $this->assertNotNull($goal->fresh()->completed_at);
-        $this->assertEquals(100, $goal->fresh()->progress_pct);
+        $this->assertNotNull($goal->refresh()->completed_at);
+        $this->assertEquals(100, $goal->refresh()->progress_pct);
     }
 
     public function test_measurement_goal_updates_on_measurement_save(): void
@@ -101,7 +101,7 @@ class GoalTest extends TestCase
             'measured_at' => now(),
         ]);
 
-        $this->assertEquals(85, $goal->fresh()->current_value);
-        $this->assertEquals(50, $goal->fresh()->progress_pct); // (90-85)/(90-80) = 5/10 = 50%
+        $this->assertEquals(85, $goal->refresh()->current_value);
+        $this->assertEquals(50, $goal->refresh()->progress_pct); // (90-85)/(90-80) = 5/10 = 50%
     }
 }

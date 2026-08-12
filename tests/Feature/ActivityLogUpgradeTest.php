@@ -19,10 +19,11 @@ it('records a model change in the column v5 reads', function (): void {
 
     $exercise->update(['name' => 'Front squat']);
 
-    $activity = Activity::query()->latest('id')->first();
+    // firstOrFail plutot que first : sans ligne journalisee, le test doit echouer
+    // en nommant ce qui manque, pas planter sur un acces de propriete sur null.
+    $activity = Activity::query()->latest('id')->firstOrFail();
 
-    expect($activity)->not->toBeNull()
-        ->and($activity->event)->toBe('updated')
+    expect($activity->event)->toBe('updated')
         ->and($activity->attribute_changes['attributes']['name'])->toBe('Front squat')
         ->and($activity->attribute_changes['old']['name'])->toBe('Squat');
 });
@@ -65,7 +66,7 @@ it('moves v4 rows into the split columns', function (): void {
 
     migrationUnderTest()->splitProperties();
 
-    $row = DB::table('activity_log')->where('id', $id)->first();
+    $row = DB::table('activity_log')->where('id', $id)->sole();
 
     // Compared key by key rather than whole: MySQL reorders the keys of a json
     // column on write, so asserting the array as a unit tests the storage
@@ -90,7 +91,7 @@ it('leaves a row that only ever held custom properties alone', function (): void
 
     migrationUnderTest()->splitProperties();
 
-    $row = DB::table('activity_log')->where('id', $id)->first();
+    $row = DB::table('activity_log')->where('id', $id)->sole();
 
     expect($row->attribute_changes)->toBeNull()
         ->and(json_decode((string) $row->properties, true))->toBe(['ip' => '203.0.113.4']);
@@ -111,7 +112,7 @@ it('empties properties when the changes were all it held', function (): void {
 
     migrationUnderTest()->splitProperties();
 
-    $row = DB::table('activity_log')->where('id', $id)->first();
+    $row = DB::table('activity_log')->where('id', $id)->sole();
 
     expect($row->properties)->toBeNull()
         ->and(json_decode((string) $row->attribute_changes, true))

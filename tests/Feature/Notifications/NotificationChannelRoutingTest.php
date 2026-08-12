@@ -12,6 +12,7 @@ use App\Notifications\AchievementUnlocked;
 use App\Notifications\PersonalRecordAchieved;
 use App\Notifications\TrainingReminder;
 use NotificationChannels\WebPush\WebPushChannel;
+use PHPUnit\Framework\Assert;
 
 /*
  * via() decides whether the user's phone buzzes. It is gated on the
@@ -254,7 +255,10 @@ describe('the enum-typed record survives the round trip into via()', function ()
             'type' => PersonalRecordType::MaxWeight,
         ]);
 
-        expect($record->fresh()->type)->toBe(PersonalRecordType::MaxWeight)
+        $reloaded = $record->fresh();
+        Assert::assertNotNull($reloaded, 'the personal record was not persisted');
+
+        expect($reloaded->type)->toBe(PersonalRecordType::MaxWeight)
             ->and(new PersonalRecordAchieved($record)->via($user))
             ->toBe(['database', WebPushChannel::class]);
     });

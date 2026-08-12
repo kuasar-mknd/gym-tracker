@@ -384,7 +384,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
 
         $this->assertSame(
             110.0,
-            (float) $set->fresh()->weight,
+            (float) $set->refresh()->weight,
             'the correction was overtaken by the value it replaced'
         );
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Fast;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Assert;
 
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -23,13 +24,17 @@ describe('Guest', function (): void {
 
 describe('Authenticated', function (): void {
     beforeEach(function (): void {
-        $this->user = User::factory()->create();
-        Sanctum::actingAs($this->user);
+        $user = User::factory()->create();
+        $this->user = $user;
+        Sanctum::actingAs($user);
     });
 
     describe('Index', function (): void {
         test('user can list their fasts', function (): void {
-            Fast::factory()->count(3)->create(['user_id' => $this->user->id]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            Fast::factory()->count(3)->create(['user_id' => $user->id]);
 
             $response = getJson(route('api.v1.fasts.index'));
 
@@ -57,6 +62,9 @@ describe('Authenticated', function (): void {
 
     describe('Store', function (): void {
         test('user can create a fast', function (): void {
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
             $data = [
                 'start_time' => now()->toDateTimeString(),
                 'target_duration_minutes' => 16 * 60,
@@ -71,13 +79,16 @@ describe('Authenticated', function (): void {
                 ->assertJsonPath('data.status', 'active'); // Default status
 
             assertDatabaseHas('fasts', [
-                'user_id' => $this->user->id,
+                'user_id' => $user->id,
                 'type' => '16:8',
             ]);
         });
 
         test('user cannot create a fast if one is already active', function (): void {
-            Fast::factory()->create(['user_id' => $this->user->id, 'status' => 'active']);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            Fast::factory()->create(['user_id' => $user->id, 'status' => 'active']);
 
             $data = [
                 'start_time' => now()->toDateTimeString(),
@@ -99,7 +110,10 @@ describe('Authenticated', function (): void {
 
     describe('Show', function (): void {
         test('user can view their fast', function (): void {
-            $fast = Fast::factory()->create(['user_id' => $this->user->id]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            $fast = Fast::factory()->create(['user_id' => $user->id]);
 
             getJson(route('api.v1.fasts.show', $fast))
                 ->assertOk()
@@ -117,7 +131,10 @@ describe('Authenticated', function (): void {
 
     describe('Update', function (): void {
         test('user can update their fast', function (): void {
-            $fast = Fast::factory()->create(['user_id' => $this->user->id, 'status' => 'active']);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            $fast = Fast::factory()->create(['user_id' => $user->id, 'status' => 'active']);
 
             putJson(route('api.v1.fasts.update', $fast), ['status' => 'completed'])
                 ->assertOk()
@@ -127,7 +144,10 @@ describe('Authenticated', function (): void {
         });
 
         test('user can update fast details', function (): void {
-            $fast = Fast::factory()->create(['user_id' => $this->user->id, 'target_duration_minutes' => 60]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            $fast = Fast::factory()->create(['user_id' => $user->id, 'target_duration_minutes' => 60]);
 
             putJson(route('api.v1.fasts.update', $fast), ['target_duration_minutes' => 90])
                 ->assertOk()
@@ -145,7 +165,10 @@ describe('Authenticated', function (): void {
         });
 
         test('validation: status must be valid', function (): void {
-            $fast = Fast::factory()->create(['user_id' => $this->user->id]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            $fast = Fast::factory()->create(['user_id' => $user->id]);
 
             putJson(route('api.v1.fasts.update', $fast), ['status' => 'invalid_status'])
                 ->assertUnprocessable()
@@ -155,7 +178,10 @@ describe('Authenticated', function (): void {
 
     describe('Destroy', function (): void {
         test('user can delete their fast', function (): void {
-            $fast = Fast::factory()->create(['user_id' => $this->user->id]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            $fast = Fast::factory()->create(['user_id' => $user->id]);
 
             deleteJson(route('api.v1.fasts.destroy', $fast))
                 ->assertNoContent();

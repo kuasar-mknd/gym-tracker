@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Models\WilksScore;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Assert;
 
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -23,13 +24,17 @@ describe('Guest', function (): void {
 
 describe('Authenticated', function (): void {
     beforeEach(function (): void {
-        $this->user = User::factory()->create();
-        Sanctum::actingAs($this->user);
+        $user = User::factory()->create();
+        $this->user = $user;
+        Sanctum::actingAs($user);
     });
 
     describe('Index', function (): void {
         test('user can list their wilks scores', function (): void {
-            WilksScore::factory()->count(3)->create(['user_id' => $this->user->id]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            WilksScore::factory()->count(3)->create(['user_id' => $user->id]);
 
             $response = getJson(route('api.v1.wilks-scores.index'));
 
@@ -57,6 +62,9 @@ describe('Authenticated', function (): void {
 
     describe('Store', function (): void {
         test('user can create a wilks score', function (): void {
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
             $data = [
                 'body_weight' => 80.5,
                 'lifted_weight' => 150.5,
@@ -75,7 +83,7 @@ describe('Authenticated', function (): void {
                 ->assertJsonPath('data.score', 300.5);
 
             assertDatabaseHas('wilks_scores', [
-                'user_id' => $this->user->id,
+                'user_id' => $user->id,
                 'score' => 300.5,
             ]);
         });
@@ -103,7 +111,10 @@ describe('Authenticated', function (): void {
 
     describe('Show', function (): void {
         test('user can view their wilks score', function (): void {
-            $score = WilksScore::factory()->create(['user_id' => $this->user->id]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            $score = WilksScore::factory()->create(['user_id' => $user->id]);
 
             getJson(route('api.v1.wilks-scores.show', $score))
                 ->assertOk()
@@ -121,7 +132,10 @@ describe('Authenticated', function (): void {
 
     describe('Update', function (): void {
         test('user can update their wilks score', function (): void {
-            $score = WilksScore::factory()->create(['user_id' => $this->user->id]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            $score = WilksScore::factory()->create(['user_id' => $user->id]);
 
             putJson(route('api.v1.wilks-scores.update', $score), ['score' => 500.5])
                 ->assertOk()
@@ -141,7 +155,10 @@ describe('Authenticated', function (): void {
 
     describe('Destroy', function (): void {
         test('user can delete their wilks score', function (): void {
-            $score = WilksScore::factory()->create(['user_id' => $this->user->id]);
+            $user = $this->user;
+            Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+            $score = WilksScore::factory()->create(['user_id' => $user->id]);
 
             deleteJson(route('api.v1.wilks-scores.destroy', $score))
                 ->assertNoContent();

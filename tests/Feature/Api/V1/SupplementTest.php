@@ -20,7 +20,7 @@ test('users can list their supplements', function (): void {
         ->getJson(route('api.v1.supplements.index'))
         ->assertOk()
         ->assertJsonCount(3, 'data')
-        ->assertJsonFragment(['id' => $supplements->first()->id])
+        ->assertJsonFragment(['id' => $supplements->firstOrFail()->id])
         ->assertJsonMissing(['id' => $otherUserSupplement->id]);
 });
 

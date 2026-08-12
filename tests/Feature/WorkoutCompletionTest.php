@@ -26,7 +26,7 @@ class WorkoutCompletionTest extends TestCase
         ]);
 
         $response->assertSessionHasNoErrors();
-        $this->assertNotNull($workout->fresh()->ended_at);
+        $this->assertNotNull($workout->refresh()->ended_at);
         // Should redirect back or to dashboard depending on implementation, but update usually redirects back or to generic route.
         // In our Vue component we handle the redirect, but the controller likely returns a redirect.
     }

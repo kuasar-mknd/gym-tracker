@@ -9,11 +9,21 @@ use function Pest\Laravel\postJson;
 
 uses()->group('controllers', 'push-subscriptions');
 
-beforeEach(function (): void {
-    $this->user = User::factory()->create();
-});
+/**
+ * The account each test subscribes and unsubscribes.
+ *
+ * Handed back rather than parked on $this by beforeEach: Pest binds the test
+ * closure at run time, so a fixture held on the test case reaches the body
+ * untyped and every read of it analyses as a possible null dereference.
+ */
+function aPushSubscriber(): User
+{
+    return User::factory()->create();
+}
 
 it('allows an authenticated user to create or update a push subscription', function (): void {
+    $user = aPushSubscriber();
+
     $payload = [
         'endpoint' => 'https://fcm.googleapis.com/fcm/send/test-endpoint',
         'keys' => [
@@ -22,19 +32,21 @@ it('allows an authenticated user to create or update a push subscription', funct
         ],
     ];
 
-    actingAs($this->user)
+    actingAs($user)
         ->postJson(route('push-subscriptions.update'), $payload)
         ->assertOk()
         ->assertJson(['message' => 'Abonnement enregistré avec succès.']);
 
     $this->assertDatabaseHas('push_subscriptions', [
         'subscribable_type' => User::class,
-        'subscribable_id' => $this->user->id,
+        'subscribable_id' => $user->id,
         'endpoint' => $payload['endpoint'],
     ]);
 });
 
 it('requires authentication to update a push subscription', function (): void {
+    aPushSubscriber();
+
     postJson(route('push-subscriptions.update'), [
         'endpoint' => 'https://fcm.googleapis.com/fcm/send/test-endpoint',
         'keys' => [
@@ -45,7 +57,7 @@ it('requires authentication to update a push subscription', function (): void {
 });
 
 it('validates required fields for updating a push subscription', function (array $payload, array $errors): void {
-    actingAs($this->user)
+    actingAs(aPushSubscriber())
         ->postJson(route('push-subscriptions.update'), $payload)
         ->assertUnprocessable()
         ->assertJsonValidationErrors($errors);
@@ -91,39 +103,43 @@ it('validates required fields for updating a push subscription', function (array
 ]);
 
 it('allows an authenticated user to delete a push subscription', function (): void {
+    $user = aPushSubscriber();
+
     $endpoint = 'https://fcm.googleapis.com/fcm/send/test-endpoint-to-delete';
 
     // First create a subscription
-    $this->user->updatePushSubscription(
+    $user->updatePushSubscription(
         $endpoint,
         'test-p256dh-key',
         'test-auth-key'
     );
 
     $this->assertDatabaseHas('push_subscriptions', [
-        'subscribable_id' => $this->user->id,
+        'subscribable_id' => $user->id,
         'endpoint' => $endpoint,
     ]);
 
-    actingAs($this->user)
+    actingAs($user)
         ->postJson(route('push-subscriptions.destroy'), ['endpoint' => $endpoint])
         ->assertOk()
         ->assertJson(['message' => 'Abonnement supprimé avec succès.']);
 
     $this->assertDatabaseMissing('push_subscriptions', [
-        'subscribable_id' => $this->user->id,
+        'subscribable_id' => $user->id,
         'endpoint' => $endpoint,
     ]);
 });
 
 it('requires authentication to delete a push subscription', function (): void {
+    aPushSubscriber();
+
     postJson(route('push-subscriptions.destroy'), [
         'endpoint' => 'https://fcm.googleapis.com/fcm/send/test-endpoint',
     ])->assertUnauthorized();
 });
 
 it('validates required fields for deleting a push subscription', function (array $payload, array $errors): void {
-    actingAs($this->user)
+    actingAs(aPushSubscriber())
         ->postJson(route('push-subscriptions.destroy'), $payload)
         ->assertUnprocessable()
         ->assertJsonValidationErrors($errors);

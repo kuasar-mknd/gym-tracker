@@ -72,7 +72,7 @@ it('creates a template correctly from a workout', function (): void {
     expect($template->workoutTemplateLines)->toHaveCount(2);
 
     // Line 1 assertions
-    $templateLine1 = $template->workoutTemplateLines->where('order', 1)->first();
+    $templateLine1 = $template->workoutTemplateLines->where('order', 1)->firstOrFail();
     expect($templateLine1)
         ->not->toBeNull()
         ->exercise_id->toBe($line1->exercise_id);
@@ -96,7 +96,7 @@ it('creates a template correctly from a workout', function (): void {
         ->is_warmup->toBeFalse();
 
     // Line 2 assertions
-    $templateLine2 = $template->workoutTemplateLines->where('order', 2)->first();
+    $templateLine2 = $template->workoutTemplateLines->where('order', 2)->firstOrFail();
     expect($templateLine2)
         ->not->toBeNull()
         ->exercise_id->toBe($line2->exercise_id);

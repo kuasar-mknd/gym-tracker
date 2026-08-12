@@ -49,7 +49,7 @@ test('user can mark a notification as read', function (): void {
 
     $response->assertRedirect();
 
-    expect($notification->fresh()->read_at)->not->toBeNull();
+    expect($notification->refresh()->read_at)->not->toBeNull();
 });
 
 test('user cannot mark another users notification as read', function (): void {
@@ -67,7 +67,7 @@ test('user cannot mark another users notification as read', function (): void {
 
     $response->assertRedirect();
 
-    expect($notification->fresh()->read_at)->toBeNull();
+    expect($notification->refresh()->read_at)->toBeNull();
 });
 
 test('user can mark all notifications as read', function (): void {

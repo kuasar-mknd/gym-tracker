@@ -63,7 +63,7 @@ class WarmupCalculatorTest extends TestCase
             'rounding_increment' => 1.0,
         ]);
 
-        $pref = WarmupPreference::where('user_id', $user->id)->first();
+        $pref = WarmupPreference::where('user_id', $user->id)->firstOrFail();
         $this->assertEquals($steps, $pref->steps);
     }
 

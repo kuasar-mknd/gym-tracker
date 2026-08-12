@@ -36,7 +36,7 @@ describe('PersonalRecordAchieved::toArray', function (): void {
             'type' => PersonalRecordType::MaxWeight,
             'value' => 102.5,
             'achieved_at' => Carbon::parse('2026-03-04 09:30:00'),
-        ])->fresh();
+        ])->refresh();
 
         $data = new PersonalRecordAchieved($record)->toArray($user);
 
@@ -57,7 +57,7 @@ describe('PersonalRecordAchieved::toArray', function (): void {
         $record = PersonalRecord::factory()->create([
             'user_id' => $user->id,
             'achieved_at' => Carbon::parse('2026-03-04 09:30:00'),
-        ])->fresh();
+        ])->refresh();
 
         $achievedAt = new PersonalRecordAchieved($record)->toArray($user)['achieved_at'];
 
@@ -80,7 +80,7 @@ describe('PersonalRecordAchieved::toArray', function (): void {
             'type' => PersonalRecordType::Max1RM,
             'value' => 187.25,
             'achieved_at' => Carbon::parse('2026-03-04 09:30:00'),
-        ])->fresh();
+        ])->refresh();
 
         $user->notify(new PersonalRecordAchieved($record));
 

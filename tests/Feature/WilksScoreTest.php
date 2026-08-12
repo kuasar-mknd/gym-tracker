@@ -47,7 +47,7 @@ class WilksScoreTest extends TestCase
         ]);
 
         // Verify score calculation (approximate)
-        $score = WilksScore::first()->score;
+        $score = WilksScore::firstOrFail()->score;
         $this->assertTrue($score > 0);
     }
 
