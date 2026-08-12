@@ -1,5 +1,11 @@
 name: Auto-Merge
 
+# Dependabot uniquement. Le job `user-merge`, qui fusionnait automatiquement
+# toute PR de kuasar-mknd n'ayant qu'un seul auteur de commit, a ete retire :
+# le travail humain ou assiste passe desormais par une relecture explicite.
+# Seules les montees de dependances — donc les correctifs de securite — sont
+# fusionnees sans intervention.
+
 on: pull_request
 
 permissions:
@@ -21,28 +27,6 @@ jobs:
               if: |
                   steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
                   steps.metadata.outputs.update-type == 'version-update:semver-minor'
-              run: |
-                  gh pr merge --auto --squash "$PR_URL"
-              env:
-                  PR_URL: ${{ github.event.pull_request.html_url }}
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    user-merge:
-        runs-on: ubuntu-latest
-        if: github.event.pull_request.user.login == 'kuasar-mknd'
-        steps:
-            - name: Check contributor count
-              id: check_contributors
-              run: |
-                  CONTRIBUTORS_COUNT=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json commits --jq '[.commits[].authors[].email] | unique | length')
-                  echo "count=$CONTRIBUTORS_COUNT" >> "$GITHUB_OUTPUT"
-              env:
-                  PR_NUMBER: ${{ github.event.pull_request.number }}
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  GITHUB_REPOSITORY: ${{ github.repository }}
-
-            - name: Approve and auto-merge kuasar-mknd PRs
-              if: steps.check_contributors.outputs.count == '1'
               run: |
                   gh pr merge --auto --squash "$PR_URL"
               env:
