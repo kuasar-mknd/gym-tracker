@@ -24,7 +24,10 @@ Route::middleware('auth')->group(function (): void {
 
     Route::resource('supplements', \App\Http\Controllers\SupplementController::class)->only(['index']);
     Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['index']);
-    Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index', 'show']);
+    // 'show' is excluded for the same reason as 'create' below: there is no
+    // Goals/Show page and GoalController has no show() method, so the generated
+    // route answered 500. Goals are consulted from the index.
+    Route::resource('goals', \App\Http\Controllers\GoalController::class)->only(['index']);
     Route::resource('templates', \App\Http\Controllers\WorkoutTemplateController::class)->only(['index', 'show', 'create', 'edit']);
     Route::resource('exercises', \App\Http\Controllers\ExerciseController::class)->only(['index', 'show']);
     Route::resource('body-measurements', \App\Http\Controllers\BodyMeasurementController::class)->only(['index']);
