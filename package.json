@@ -15,6 +15,7 @@
         "lint:js": "prettier --check \"resources/**/*.{js,vue,css}\" \"tests/js/**/*.js\" && eslint .",
         "lint:php": "./vendor/bin/phpstan analyze --memory-limit=2G",
         "test": "vitest run",
+        "test:coverage": "vitest run --coverage",
         "test:js": "vitest run",
         "prepare": "husky"
     },
