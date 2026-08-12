@@ -20,7 +20,12 @@ const route = (name) => {
                 if (pattern === undefined) return currentRoute
                 if (!currentRoute) return false
 
-                return new RegExp(`^${pattern.replace(/\./g, '\\.').replace(/\*/g, '.*')}$`).test(currentRoute)
+                // Tous les métacaractères sont échappés d'abord — l'antislash
+                // compris, que l'ancienne version laissait passer — puis seule
+                // l'étoile est réactivée en joker, comme le fait Ziggy.
+                const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+                return new RegExp(`^${escaped.replace(/\\\*/g, '.*')}$`).test(currentRoute)
             },
         }
     }
