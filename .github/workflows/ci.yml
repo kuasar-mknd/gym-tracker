@@ -387,7 +387,10 @@ jobs:
                   php artisan key:generate
                   cp storage/api-docs/api-docs.json /tmp/api-docs.committed.json
                   php artisan l5-swagger:generate
-                  diff -u /tmp/api-docs.committed.json storage/api-docs/api-docs.json \ || { echo "::error::La spec OpenAPI commitee est perimee. Lancer: php artisan l5-swagger:generate"; exit 1; }
+                  if ! diff -u /tmp/api-docs.committed.json storage/api-docs/api-docs.json; then
+                      echo "::error::La spec OpenAPI commitee est perimee. Lancer: php artisan l5-swagger:generate"
+                      exit 1
+                  fi
 
             - name: Unused Composer Dependencies
               run: ./vendor/bin/composer-unused --no-progress
