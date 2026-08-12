@@ -296,6 +296,60 @@ jobs:
             - name: PHP Lint (Pint)
               run: ./vendor/bin/pint --test
 
+    # Ces trois jobs ne declarent volontairement AUCUN `needs:` : un job "skipped"
+    # compte comme "passed" pour la protection de branche, donc le chainer derriere
+    # un autre viderait la garantie qu'il est cense apporter.
+    #
+    # Ils n'ont pas non plus de `name:` : les contextes de protection de ce depot
+    # sont les identifiants de job, pas des libelles. En ajouter un renommerait le
+    # contexte et casserait le cablage des checks requis.
+    semgrep:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+
+            # Image officielle plutot que `pipx install semgrep` : la version est
+            # deterministe et ne depend pas de ce que le runner embarque.
+            - name: Semgrep (default + php + owasp-top-ten)
+              run: |
+                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:latest \
+                    semgrep scan --config p/default --config p/php --config p/owasp-top-ten \
+                    --severity ERROR --error .
+
+    secrets:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+              with:
+                  # L'action TruffleHog fait un scan GIT, pas un scan du repertoire :
+                  # sans l'historique complet, la SHA de base d'une PR est absente et
+                  # l'action echoue. fetch-depth: 0 est donc obligatoire ici.
+                  fetch-depth: 0
+
+            - name: TruffleHog
+              uses: trufflesecurity/trufflehog@main
+              with:
+                  path: ./
+                  base: ''
+                  head: ''
+                  # --exclude-detectors=Lob n'est pas du confort : sans lui, un scan
+                  # de l'historique complet remonte 25 faux positifs, tous des noms de
+                  # methodes de test faisant exactement 40 caracteres, que le detecteur
+                  # du service postal americain prend pour des cles. Avec le flag, zero
+                  # resultat sur tout l'historique.
+                  extra_args: --results=verified,unknown --exclude-detectors=Lob
+
+    workflows:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+
+            - name: actionlint
+              run: docker run --rm -v "$PWD":/repo:ro -w /repo rhysd/actionlint:latest -color
+
     audit:
         runs-on: ubuntu-latest
         needs: [setup-php, laravel-tests]
@@ -319,6 +373,19 @@ jobs:
 
             - name: Composer Audit
               run: composer audit
+
+            # Le job audit n'avait aucun Node : npm audit resout depuis
+            # package-lock.json, donc ni `npm ci` ni cache ne sont necessaires.
+            - name: Setup Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+
+            # Sans --omit=dev : dans ce depot, plusieurs paquets marques dev dans le
+            # lock sont bundles par Vite et partent bien au navigateur. Les exclure
+            # rendrait le gate aveugle sur du code qui atteint la production.
+            - name: NPM Audit
+              run: npm audit --audit-level=high
 
             - name: PHP Insights
               run: ./vendor/bin/phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90
@@ -439,6 +506,9 @@ jobs:
             - name: Create manifest list and push
               working-directory: /tmp/digests
               run: |
+                  # shellcheck disable=SC2046 # word splitting is intended: each digest and
+                  # each tag must become its own argument. Quoting collapses them into one
+                  # and breaks the multi-arch manifest.
                   docker buildx imagetools create $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *) \
                   --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
                   $(echo "${{ steps.meta.outputs.tags }}" | xargs -I {} echo "--tag {}")
