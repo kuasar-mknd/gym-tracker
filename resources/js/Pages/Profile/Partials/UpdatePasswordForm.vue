@@ -45,6 +45,7 @@ const updatePassword = () => {
             <GlassInput
                 v-model="form.current_password"
                 ref="currentPasswordInput"
+                dusk="current-password-input"
                 type="password"
                 label="Mot de passe actuel"
                 :error="form.errors.current_password"
@@ -54,6 +55,7 @@ const updatePassword = () => {
             <GlassInput
                 v-model="form.password"
                 ref="passwordInput"
+                dusk="new-password-input"
                 type="password"
                 label="Nouveau mot de passe"
                 :error="form.errors.password"
@@ -62,6 +64,7 @@ const updatePassword = () => {
 
             <GlassInput
                 v-model="form.password_confirmation"
+                dusk="confirm-password-input"
                 type="password"
                 label="Confirmer le mot de passe"
                 :error="form.errors.password_confirmation"

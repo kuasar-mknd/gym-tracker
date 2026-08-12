@@ -6,6 +6,7 @@ namespace Tests\Browser;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
@@ -46,6 +47,14 @@ class ProfileEditTest extends DuskTestCase
                 ->waitForText('Enregistré ✓', 15)
                 ->assertInputValue('@profile-name-input', $newName);
 
+            // « Enregistré ✓ » est un message, pas une preuve. Sans cette
+            // vérification, un formulaire qui affiche le succès sans rien écrire
+            // passait au vert.
+            $this->waitForDatabase(
+                fn (): bool => $user->fresh()?->name === $newName,
+                message: 'le profil affichait « Enregistré » sans que le nom atteigne la base'
+            );
+
             // Add padding to bottom of body to allow scrolling elements above the floating nav
             $browser->script("document.body.style.paddingBottom = '500px';");
 
@@ -53,12 +62,35 @@ class ProfileEditTest extends DuskTestCase
             $browser->script("document.querySelector('input[autocomplete=\"current-password\"]').scrollIntoView({block: 'center'});");
             $browser->pause(500);
 
+            // Les sélecteurs par autocomplete ne suffisaient pas : chaque GlassInput
+            // est un composant à part, donc input[autocomplete="new-password"]:last-of-type
+            // matche AUSSI le premier champ. Dusk prenait la première occurrence et
+            // laissait la confirmation vide, donc la validation échouait — sans que
+            // personne ne le voie, faute d'assertion sur la base.
             $browser->assertSee('Mot de passe')
-                ->type('input[autocomplete="current-password"]', 'password123')
-                ->type('input[autocomplete="new-password"]', 'newpassword123')
-                ->type('input[autocomplete="new-password"]:last-of-type', 'newpassword123')
-                ->click('[data-testid="update-password-button"]')
-                ->waitForText('Enregistré ✓', 15);
+                ->type('@current-password-input', 'password123')
+                ->type('@new-password-input', 'newpassword123')
+                ->type('@confirm-password-input', 'newpassword123')
+                ->click('[data-testid="update-password-button"]');
+
+            // Aucune attente sur « Enregistré ✓ » ici : UpdateProfileInformationForm
+            // affiche EXACTEMENT le même texte, encore visible depuis l'étape
+            // précédente. C'est ce faux positif qui masquait l'échec — la seule
+            // preuve qui vaille est l'état du mot de passe en base, ci-dessous.
+
+            // Le parcours le plus important à vérifier réellement : on assère que
+            // le NOUVEAU mot de passe authentifie, et que l'ancien ne le fait plus.
+            // Un test qui se contente du message ne distingue pas un changement
+            // effectif d'un formulaire qui ne fait rien.
+            $this->waitForDatabase(
+                fn (): bool => Hash::check('newpassword123', (string) $user->fresh()?->password),
+                message: 'le mot de passe affichait « Enregistré » sans être changé'
+            );
+
+            $this->assertFalse(
+                Hash::check('password123', (string) $user->fresh()?->password),
+                'l\'ancien mot de passe authentifie encore'
+            );
 
             // Verify Delete Account Section
             $browser->script("document.querySelector('[data-testid=\"delete-account-button\"]').scrollIntoView({block: 'center'});");

@@ -79,8 +79,17 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->waitUntilMissing('@exercise-modal-title', 15)
                 ->waitForText(strtoupper($newExerciseName), 15);
 
+            // Le nom affiché ne prouve pas l'écriture : Inertia rend la réponse du
+            // serveur, mais rien ici ne distinguait un rendu optimiste d'une vraie
+            // création. On vérifie la ligne, et les attributs saisis avec elle.
+            $this->assertDatabaseHas('exercises', [
+                'name' => $newExerciseName,
+                'user_id' => $user->id,
+                'type' => 'strength',
+            ]);
+
             // 5. Edit Exercise (Inline)
-            $exercise = Exercise::where('name', $newExerciseName)->first();
+            $exercise = Exercise::where('name', $newExerciseName)->firstOrFail();
             $updatedName = 'Updated Pull Up '.time().random_int(0, 999);
 
             // Ensure card is visible
@@ -95,6 +104,11 @@ class ExerciseLibraryTest extends DuskTestCase
                 ->waitUntilMissing('@edit-exercise-name', 10)
                 ->assertSee(strtoupper($updatedName));
 
+            $this->waitForDatabase(
+                fn (): bool => $exercise->fresh()?->name === $updatedName,
+                message: 'le renommage est resté à l\'écran sans atteindre la base'
+            );
+
             // 6. Delete Exercise
             // Click the delete button revealed by script (simulating swipe result)
             $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').scrollIntoView({block: 'center'});");
@@ -102,8 +116,15 @@ class ExerciseLibraryTest extends DuskTestCase
             $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').click();");
 
             $browser->acceptDialog()
-                ->pause(1000)
+                ->waitUntilMissingText(strtoupper($updatedName), 10)
                 ->assertDontSee(strtoupper($updatedName));
+
+            // Disparaître de l'écran n'est pas être supprimé : sans cette
+            // vérification, un retrait purement côté client passait au vert.
+            $this->waitForDatabase(
+                fn (): bool => $exercise->fresh() === null,
+                message: 'l\'exercice a disparu de l\'écran mais pas de la base'
+            );
         } catch (\Exception $e) {
             $browser->screenshot('exercise-library-lifecycle-failure-'.$sizeMacro);
             throw $e;
