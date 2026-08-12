@@ -63,7 +63,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
         ]);
 
         try {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->{$sizeMacro}()
                 ->visit("/workouts/{$workout->id}")
                 ->disableAnimations()
@@ -253,7 +253,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->pause(1000)
                 ->click('#confirm-finish-button');
 
-            $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::find($workout->id)->ended_at !== null);
+            $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::findOrFail($workout->id)->ended_at !== null);
 
             $browser->visit('/dashboard')
                 ->waitFor('#dashboard-header', 30)

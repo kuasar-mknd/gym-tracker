@@ -15,13 +15,11 @@ use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
-beforeEach(function (): void {
-    $this->user = User::factory()->create();
-    Sanctum::actingAs($this->user);
-});
-
 test('can list workout template sets for authenticated user', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
     WorkoutTemplateSet::factory(3)->create([
         'workout_template_line_id' => $line->id,
@@ -42,7 +40,10 @@ test('can list workout template sets for authenticated user', function (): void 
 });
 
 test('can filter workout template sets by workout_template_line_id', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
 
     $line1 = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
     WorkoutTemplateSet::factory(2)->create([
@@ -61,7 +62,10 @@ test('can filter workout template sets by workout_template_line_id', function ()
 });
 
 test('can create a workout template set', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
     $response = postJson('/api/v1/workout-template-sets', [
@@ -88,6 +92,8 @@ test('can create a workout template set', function (): void {
 });
 
 test('cannot create a workout template set with invalid data', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
     $response = postJson('/api/v1/workout-template-sets', []);
 
     $response->assertUnprocessable()
@@ -95,6 +101,8 @@ test('cannot create a workout template set with invalid data', function (): void
 });
 
 test('cannot create a workout template set for another user\'s template line', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
@@ -111,7 +119,10 @@ test('cannot create a workout template set for another user\'s template line', f
 });
 
 test('can view a specific workout template set', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
     $set = WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $line->id]);
 
@@ -122,6 +133,8 @@ test('can view a specific workout template set', function (): void {
 });
 
 test('cannot view another user\'s workout template set', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
@@ -133,7 +146,10 @@ test('cannot view another user\'s workout template set', function (): void {
 });
 
 test('can update a workout template set', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
     $set = WorkoutTemplateSet::factory()->create([
         'workout_template_line_id' => $line->id,
@@ -166,7 +182,10 @@ test('can update a workout template set', function (): void {
 });
 
 test('cannot update a workout template set with invalid data', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
     $set = WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $line->id]);
 
@@ -180,6 +199,8 @@ test('cannot update a workout template set with invalid data', function (): void
 });
 
 test('cannot update another user\'s workout template set', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
@@ -194,7 +215,10 @@ test('cannot update another user\'s workout template set', function (): void {
 });
 
 test('can delete a workout template set', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
     $set = WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $line->id]);
 
@@ -208,6 +232,8 @@ test('can delete a workout template set', function (): void {
 });
 
 test('cannot delete another user\'s workout template set', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);

@@ -15,13 +15,11 @@ use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
-beforeEach(function (): void {
-    $this->user = User::factory()->create();
-    Sanctum::actingAs($this->user);
-});
-
 test('can list workout template lines for authenticated user', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     WorkoutTemplateLine::factory(3)->create([
         'workout_template_id' => $template->id,
     ]);
@@ -40,12 +38,15 @@ test('can list workout template lines for authenticated user', function (): void
 });
 
 test('can filter workout template lines by workout_template_id', function (): void {
-    $template1 = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template1 = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     WorkoutTemplateLine::factory(2)->create([
         'workout_template_id' => $template1->id,
     ]);
 
-    $template2 = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $template2 = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     WorkoutTemplateLine::factory(3)->create([
         'workout_template_id' => $template2->id,
     ]);
@@ -57,8 +58,11 @@ test('can filter workout template lines by workout_template_id', function (): vo
 });
 
 test('can create a workout template line', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
-    $exercise = Exercise::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+    $exercise = Exercise::factory()->create(['user_id' => $user->id]);
 
     $response = postJson('/api/v1/workout-template-lines', [
         'workout_template_id' => $template->id,
@@ -77,6 +81,8 @@ test('can create a workout template line', function (): void {
 });
 
 test('cannot create a workout template line with invalid data', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
     $response = postJson('/api/v1/workout-template-lines', []);
 
     $response->assertUnprocessable()
@@ -84,9 +90,12 @@ test('cannot create a workout template line with invalid data', function (): voi
 });
 
 test('cannot create a workout template line for another user\'s template', function (): void {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
-    $exercise = Exercise::factory()->create(['user_id' => $this->user->id]);
+    $exercise = Exercise::factory()->create(['user_id' => $user->id]);
 
     $response = postJson('/api/v1/workout-template-lines', [
         'workout_template_id' => $template->id,
@@ -99,7 +108,10 @@ test('cannot create a workout template line for another user\'s template', funct
 });
 
 test('cannot create a workout template line with another user\'s exercise', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $otherUser = User::factory()->create();
     $exercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
 
@@ -114,7 +126,10 @@ test('cannot create a workout template line with another user\'s exercise', func
 });
 
 test('can view a specific workout template line', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
     $response = getJson('/api/v1/workout-template-lines/'.$line->id);
@@ -124,6 +139,8 @@ test('can view a specific workout template line', function (): void {
 });
 
 test('cannot view another user\'s workout template line', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
@@ -134,9 +151,12 @@ test('cannot view another user\'s workout template line', function (): void {
 });
 
 test('can update a workout template line', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
-    $newExercise = Exercise::factory()->create(['user_id' => $this->user->id]);
+    $newExercise = Exercise::factory()->create(['user_id' => $user->id]);
 
     $response = putJson('/api/v1/workout-template-lines/'.$line->id, [
         'exercise_id' => $newExercise->id,
@@ -154,7 +174,10 @@ test('can update a workout template line', function (): void {
 });
 
 test('cannot update a workout template line with invalid exercise', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
     $response = putJson('/api/v1/workout-template-lines/'.$line->id, [
@@ -166,10 +189,13 @@ test('cannot update a workout template line with invalid exercise', function ():
 });
 
 test('cannot update another user\'s workout template line', function (): void {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
-    $newExercise = Exercise::factory()->create(['user_id' => $this->user->id]);
+    $newExercise = Exercise::factory()->create(['user_id' => $user->id]);
 
     $response = putJson('/api/v1/workout-template-lines/'.$line->id, [
         'exercise_id' => $newExercise->id,
@@ -180,7 +206,10 @@ test('cannot update another user\'s workout template line', function (): void {
 });
 
 test('can delete a workout template line', function (): void {
-    $template = WorkoutTemplate::factory()->create(['user_id' => $this->user->id]);
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);
 
     $response = deleteJson('/api/v1/workout-template-lines/'.$line->id);
@@ -193,6 +222,8 @@ test('can delete a workout template line', function (): void {
 });
 
 test('cannot delete another user\'s workout template line', function (): void {
+    Sanctum::actingAs(User::factory()->create());
+
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
     $line = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id]);

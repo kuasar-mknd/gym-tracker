@@ -43,9 +43,17 @@ class WaterLogTest extends TestCase
         $results = WaterLog::consumedAtBetween(['2023-01-01', '2023-01-05'])->get();
 
         $this->assertCount(3, $results);
-        $this->assertEquals('2023-01-01 12:00:00', $results[0]->consumed_at->format('Y-m-d H:i:s'));
-        $this->assertEquals('2023-01-03 12:00:00', $results[1]->consumed_at->format('Y-m-d H:i:s'));
-        $this->assertEquals('2023-01-05 12:00:00', $results[2]->consumed_at->format('Y-m-d H:i:s'));
+
+        $first = $results->get(0);
+        $second = $results->get(1);
+        $third = $results->get(2);
+        $this->assertNotNull($first, 'Le 1er log de la plage est absent du resultat.');
+        $this->assertNotNull($second, 'Le 2e log de la plage est absent du resultat.');
+        $this->assertNotNull($third, 'Le 3e log de la plage est absent du resultat.');
+
+        $this->assertEquals('2023-01-01 12:00:00', $first->consumed_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2023-01-03 12:00:00', $second->consumed_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2023-01-05 12:00:00', $third->consumed_at->format('Y-m-d H:i:s'));
     }
 
     public function test_scope_consumed_at_between_with_comma_separated_string(): void
@@ -70,8 +78,14 @@ class WaterLogTest extends TestCase
         $results = WaterLog::consumedAtBetween('2023-01-01,2023-01-05')->get();
 
         $this->assertCount(2, $results);
-        $this->assertEquals('2023-01-01 12:00:00', $results[0]->consumed_at->format('Y-m-d H:i:s'));
-        $this->assertEquals('2023-01-05 12:00:00', $results[1]->consumed_at->format('Y-m-d H:i:s'));
+
+        $first = $results->get(0);
+        $second = $results->get(1);
+        $this->assertNotNull($first, 'Le 1er log de la plage est absent du resultat.');
+        $this->assertNotNull($second, 'Le 2e log de la plage est absent du resultat.');
+
+        $this->assertEquals('2023-01-01 12:00:00', $first->consumed_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2023-01-05 12:00:00', $second->consumed_at->format('Y-m-d H:i:s'));
     }
 
     public function test_scope_consumed_at_between_with_single_date(): void
@@ -96,7 +110,13 @@ class WaterLogTest extends TestCase
         $results = WaterLog::consumedAtBetween('2023-01-01')->get();
 
         $this->assertCount(2, $results);
-        $this->assertEquals('2023-01-01 00:00:00', $results[0]->consumed_at->format('Y-m-d H:i:s'));
-        $this->assertEquals('2023-01-01 23:59:59', $results[1]->consumed_at->format('Y-m-d H:i:s'));
+
+        $first = $results->get(0);
+        $second = $results->get(1);
+        $this->assertNotNull($first, 'Le 1er log de la journee est absent du resultat.');
+        $this->assertNotNull($second, 'Le 2e log de la journee est absent du resultat.');
+
+        $this->assertEquals('2023-01-01 00:00:00', $first->consumed_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2023-01-01 23:59:59', $second->consumed_at->format('Y-m-d H:i:s'));
     }
 }

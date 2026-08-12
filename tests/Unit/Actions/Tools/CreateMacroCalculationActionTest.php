@@ -47,7 +47,7 @@ test('execute maps activity level to multiplier and creates calculation', functi
     ]);
 
     // Test the float explicitly in PHP with tolerance since DB float formats can drift
-    $dbRecord = DB::table('macro_calculations')->where('id', $calculation->id)->first();
+    $dbRecord = DB::table('macro_calculations')->where('id', $calculation->id)->sole();
     expect(round((float) $dbRecord->activity_level, 2))->toBe($roundedMultiplier);
 
 })->with([

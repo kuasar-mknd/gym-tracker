@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Assert;
 
 uses(RefreshDatabase::class);
 
@@ -13,10 +14,13 @@ beforeEach(function (): void {
 });
 
 it('returns habits for authenticated user', function (): void {
-    Habit::factory()->count(3)->create(['user_id' => $this->user->id]);
+    $user = $this->user;
+    Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+    Habit::factory()->count(3)->create(['user_id' => $user->id]);
     Habit::factory()->count(2)->create(); // other user's habits
 
-    $response = $this->actingAs($this->user)->getJson('/api/v1/habits');
+    $response = $this->actingAs($user)->getJson('/api/v1/habits');
 
     $response->assertStatus(200)
         ->assertJsonCount(3, 'data');
@@ -29,20 +33,23 @@ it('returns unauthenticated for guest', function (): void {
 });
 
 it('creates habit with valid data', function (): void {
+    $user = $this->user;
+    Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
     $data = [
         'name' => 'Read a book',
         'description' => 'Read at least 10 pages',
         'goal_times_per_week' => 5,
     ];
 
-    $response = $this->actingAs($this->user)->postJson('/api/v1/habits', $data);
+    $response = $this->actingAs($user)->postJson('/api/v1/habits', $data);
 
     $response->assertStatus(201)
         ->assertJsonPath('data.name', 'Read a book')
         ->assertJsonPath('data.goal_times_per_week', 5);
 
     $this->assertDatabaseHas('habits', [
-        'user_id' => $this->user->id,
+        'user_id' => $user->id,
         'name' => 'Read a book',
     ]);
 });
@@ -60,9 +67,12 @@ it('returns validation error for invalid data on store', function (): void {
 });
 
 it('returns habit for owner', function (): void {
-    $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+    $user = $this->user;
+    Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
 
-    $response = $this->actingAs($this->user)->getJson("/api/v1/habits/{$habit->id}");
+    $habit = Habit::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->getJson("/api/v1/habits/{$habit->id}");
 
     $response->assertStatus(200)
         ->assertJsonPath('data.id', $habit->id);
@@ -78,13 +88,16 @@ it('returns forbidden for other users habit on show', function (): void {
 });
 
 it('modifies habit with valid data', function (): void {
-    $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+    $user = $this->user;
+    Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+    $habit = Habit::factory()->create(['user_id' => $user->id]);
 
     $data = [
         'name' => 'Updated Habit Name',
     ];
 
-    $response = $this->actingAs($this->user)->putJson("/api/v1/habits/{$habit->id}", $data);
+    $response = $this->actingAs($user)->putJson("/api/v1/habits/{$habit->id}", $data);
 
     $response->assertStatus(200)
         ->assertJsonPath('data.name', 'Updated Habit Name');
@@ -96,13 +109,16 @@ it('modifies habit with valid data', function (): void {
 });
 
 it('returns validation error for invalid data on update', function (): void {
-    $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+    $user = $this->user;
+    Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+    $habit = Habit::factory()->create(['user_id' => $user->id]);
 
     $data = [
         'goal_times_per_week' => 10, // max is 7
     ];
 
-    $response = $this->actingAs($this->user)->putJson("/api/v1/habits/{$habit->id}", $data);
+    $response = $this->actingAs($user)->putJson("/api/v1/habits/{$habit->id}", $data);
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['goal_times_per_week']);
@@ -122,9 +138,12 @@ it('returns forbidden for other users habit on update', function (): void {
 });
 
 it('deletes habit for owner', function (): void {
-    $habit = Habit::factory()->create(['user_id' => $this->user->id]);
+    $user = $this->user;
+    Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
 
-    $response = $this->actingAs($this->user)->deleteJson("/api/v1/habits/{$habit->id}");
+    $habit = Habit::factory()->create(['user_id' => $user->id]);
+
+    $response = $this->actingAs($user)->deleteJson("/api/v1/habits/{$habit->id}");
 
     $response->assertStatus(204);
 

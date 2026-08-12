@@ -83,7 +83,7 @@ it('charge le rôle existant dans le formulaire et enregistre son renommage', fu
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($role->fresh()->name)->toBe('role_renomme');
+    expect($role->refresh()->name)->toBe('role_renomme');
 });
 
 it('interdit la gestion des rôles à un admin sans les permissions Role', function (): void {

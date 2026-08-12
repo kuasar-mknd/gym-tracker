@@ -46,9 +46,12 @@ it('orders workout templates chronologically by newest first', function (): void
     $result = $action->execute($user);
 
     expect($result)->toHaveCount(3);
-    expect($result[0]->id)->toBe($template2->id);
-    expect($result[1]->id)->toBe($template3->id);
-    expect($result[2]->id)->toBe($template1->id);
+
+    $ordered = $result->all();
+
+    expect($ordered[0]->id)->toBe($template2->id);
+    expect($ordered[1]->id)->toBe($template3->id);
+    expect($ordered[2]->id)->toBe($template1->id);
 });
 
 it('loads the correct line counts and eager loads up to 3 exercises', function (): void {
@@ -77,7 +80,7 @@ it('loads the correct line counts and eager loads up to 3 exercises', function (
 
     expect($result)->toHaveCount(1);
 
-    $fetchedTemplate = $result->first();
+    $fetchedTemplate = $result->firstOrFail();
 
     // Check line counts
     expect($fetchedTemplate->workout_template_lines_count)->toBe(4);
@@ -86,11 +89,22 @@ it('loads the correct line counts and eager loads up to 3 exercises', function (
     expect($fetchedTemplate->workoutTemplateLines)->toHaveCount(3);
 
     // Check correct fields on nested relations and counts
-    $firstLine = $fetchedTemplate->workoutTemplateLines->first();
+    $firstLine = $fetchedTemplate->workoutTemplateLines->firstOrFail();
 
     expect($firstLine->workout_template_sets_count)->toBe(1);
-    expect($firstLine->exercise->id)->toBe($exercises[0]->id);
-    expect($firstLine->exercise->name)->toBe($exercises[0]->name);
+
+    // Read the relation as eager loaded rather than re-querying it: the last
+    // assertion below checks exactly which columns the eager load selected.
+    $loadedExercise = $firstLine->exercise;
+
+    if ($loadedExercise === null) {
+        throw new RuntimeException('The eager-loaded template line carries no exercise.');
+    }
+
+    $expectedExercise = $exercises->firstOrFail();
+
+    expect($loadedExercise->id)->toBe($expectedExercise->id);
+    expect($loadedExercise->name)->toBe($expectedExercise->name);
     // Ensure only requested columns are loaded on exercise
-    expect(array_keys($firstLine->exercise->getAttributes()))->toEqualCanonicalizing(['id', 'name']);
+    expect(array_keys($loadedExercise->getAttributes()))->toEqualCanonicalizing(['id', 'name']);
 });

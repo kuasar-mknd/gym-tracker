@@ -22,14 +22,12 @@ describe('Guest', function (): void {
 });
 
 describe('Authenticated', function (): void {
-    beforeEach(function (): void {
-        $this->user = User::factory()->create();
-        Sanctum::actingAs($this->user);
-    });
-
     describe('Index', function (): void {
         test('user can list their timers', function (): void {
-            IntervalTimer::factory()->count(3)->create(['user_id' => $this->user->id]);
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            IntervalTimer::factory()->count(3)->create(['user_id' => $user->id]);
 
             $response = getJson(route('api.v1.interval-timers.index'));
 
@@ -45,6 +43,9 @@ describe('Authenticated', function (): void {
 
     describe('Store', function (): void {
         test('user can create a timer', function (): void {
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
             $data = [
                 'name' => 'Tabata',
                 'work_seconds' => 20,
@@ -60,12 +61,14 @@ describe('Authenticated', function (): void {
                 ->assertJsonPath('data.work_seconds', 20);
 
             assertDatabaseHas('interval_timers', [
-                'user_id' => $this->user->id,
+                'user_id' => $user->id,
                 'name' => 'Tabata',
             ]);
         });
 
         test('validation: required fields', function (): void {
+            Sanctum::actingAs(User::factory()->create());
+
             postJson(route('api.v1.interval-timers.store'), [])
                 ->assertUnprocessable()
                 ->assertJsonValidationErrors(['name', 'work_seconds', 'rest_seconds', 'rounds']);
@@ -74,7 +77,10 @@ describe('Authenticated', function (): void {
 
     describe('Show', function (): void {
         test('user can view their timer', function (): void {
-            $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id]);
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $timer = IntervalTimer::factory()->create(['user_id' => $user->id]);
 
             getJson(route('api.v1.interval-timers.show', $timer))
                 ->assertOk()
@@ -82,6 +88,8 @@ describe('Authenticated', function (): void {
         });
 
         test('user cannot view others timer', function (): void {
+            Sanctum::actingAs(User::factory()->create());
+
             $otherUser = User::factory()->create();
             $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
@@ -92,7 +100,10 @@ describe('Authenticated', function (): void {
 
     describe('Update', function (): void {
         test('user can update their timer', function (): void {
-            $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id, 'name' => 'Old Name']);
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $timer = IntervalTimer::factory()->create(['user_id' => $user->id, 'name' => 'Old Name']);
 
             putJson(route('api.v1.interval-timers.update', $timer), [
                 'name' => 'New Name',
@@ -108,6 +119,8 @@ describe('Authenticated', function (): void {
         });
 
         test('user cannot update others timer', function (): void {
+            Sanctum::actingAs(User::factory()->create());
+
             $otherUser = User::factory()->create();
             $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
@@ -124,7 +137,10 @@ describe('Authenticated', function (): void {
 
     describe('Destroy', function (): void {
         test('user can delete their timer', function (): void {
-            $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id]);
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $timer = IntervalTimer::factory()->create(['user_id' => $user->id]);
 
             deleteJson(route('api.v1.interval-timers.destroy', $timer))
                 ->assertNoContent();
@@ -133,6 +149,8 @@ describe('Authenticated', function (): void {
         });
 
         test('user cannot delete others timer', function (): void {
+            Sanctum::actingAs(User::factory()->create());
+
             $otherUser = User::factory()->create();
             $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 

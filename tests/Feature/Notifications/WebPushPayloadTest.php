@@ -37,7 +37,7 @@ function makePersonalRecordFixture(PersonalRecordType $type, string $exerciseNam
         'type' => $type,
         'value' => $value,
         'achieved_at' => Carbon\CarbonImmutable::parse('2026-03-04 09:30:00'),
-    ])->fresh();
+    ])->refresh();
 }
 
 describe('PersonalRecordAchieved::toWebPush', function (): void {
@@ -63,9 +63,9 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
 
         expect($body)
             ->toContain('Soulevé de Terre')
-            ->toContain('187.25kg')
-            ->not->toContain('187.3')
-            ->not->toContain('{');
+            ->toContain('187.25kg');
+        expect($body)->not->toContain('187.3');
+        expect($body)->not->toContain('{');
     });
 
     it('labels every record type it knows about', function (PersonalRecordType $type, string $expectedLabel): void {

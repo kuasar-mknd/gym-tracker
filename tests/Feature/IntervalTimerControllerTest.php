@@ -5,15 +5,13 @@ declare(strict_types=1);
 use App\Models\IntervalTimer;
 use App\Models\User;
 
-beforeEach(function (): void {
-    $this->user = User::factory()->create();
-});
-
 describe('IntervalTimerController Index', function (): void {
     it('allows an authenticated user to view their interval timers', function (): void {
-        IntervalTimer::factory()->count(3)->create(['user_id' => $this->user->id]);
+        $user = User::factory()->create();
 
-        $response = $this->actingAs($this->user)->get(route('tools.interval-timer.index'));
+        IntervalTimer::factory()->count(3)->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->get(route('tools.interval-timer.index'));
 
         $response->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -31,6 +29,8 @@ describe('IntervalTimerController Index', function (): void {
 
 describe('IntervalTimerController Store', function (): void {
     it('allows an authenticated user to create an interval timer', function (): void {
+        $user = User::factory()->create();
+
         $data = [
             'name' => 'Tabata',
             'work_seconds' => 20,
@@ -39,13 +39,13 @@ describe('IntervalTimerController Store', function (): void {
             'warmup_seconds' => 60,
         ];
 
-        $response = $this->actingAs($this->user)->post(route('tools.interval-timer.store'), $data);
+        $response = $this->actingAs($user)->post(route('tools.interval-timer.store'), $data);
 
         $response->assertRedirect(route('tools.interval-timer.index'))
             ->assertSessionHas('success', 'Timer created successfully.');
 
         $this->assertDatabaseHas('interval_timers', [
-            'user_id' => $this->user->id,
+            'user_id' => $user->id,
             'name' => 'Tabata',
             'work_seconds' => 20,
             'rest_seconds' => 10,
@@ -55,6 +55,8 @@ describe('IntervalTimerController Store', function (): void {
     });
 
     it('returns validation errors for invalid data', function (): void {
+        $user = User::factory()->create();
+
         $data = [
             'name' => '', // required
             'work_seconds' => 0, // min 1
@@ -63,7 +65,7 @@ describe('IntervalTimerController Store', function (): void {
             'warmup_seconds' => -1, // min 0
         ];
 
-        $response = $this->actingAs($this->user)->post(route('tools.interval-timer.store'), $data);
+        $response = $this->actingAs($user)->post(route('tools.interval-timer.store'), $data);
 
         $response->assertSessionHasErrors(['name', 'work_seconds', 'rest_seconds', 'rounds', 'warmup_seconds']);
     });
@@ -71,7 +73,9 @@ describe('IntervalTimerController Store', function (): void {
 
 describe('IntervalTimerController Update', function (): void {
     it('allows an authenticated user to update their interval timer', function (): void {
-        $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id]);
+        $user = User::factory()->create();
+
+        $timer = IntervalTimer::factory()->create(['user_id' => $user->id]);
 
         $data = [
             'name' => 'Updated Tabata',
@@ -81,7 +85,7 @@ describe('IntervalTimerController Update', function (): void {
             'warmup_seconds' => 30,
         ];
 
-        $response = $this->actingAs($this->user)->patch(route('tools.interval-timer.update', $timer), $data);
+        $response = $this->actingAs($user)->patch(route('tools.interval-timer.update', $timer), $data);
 
         $response->assertRedirect(route('tools.interval-timer.index'))
             ->assertSessionHas('success', 'Timer updated successfully.');
@@ -94,19 +98,23 @@ describe('IntervalTimerController Update', function (): void {
     });
 
     it('returns validation errors for invalid update data', function (): void {
-        $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id]);
+        $user = User::factory()->create();
+
+        $timer = IntervalTimer::factory()->create(['user_id' => $user->id]);
 
         $data = [
             'name' => '',
             'work_seconds' => 0,
         ];
 
-        $response = $this->actingAs($this->user)->patch(route('tools.interval-timer.update', $timer), $data);
+        $response = $this->actingAs($user)->patch(route('tools.interval-timer.update', $timer), $data);
 
         $response->assertSessionHasErrors(['name', 'work_seconds']);
     });
 
     it('returns 403 forbidden when a user tries to update another users interval timer', function (): void {
+        $user = User::factory()->create();
+
         $otherUser = User::factory()->create();
         $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
@@ -118,7 +126,7 @@ describe('IntervalTimerController Update', function (): void {
             'warmup_seconds' => 60,
         ];
 
-        $response = $this->actingAs($this->user)->patch(route('tools.interval-timer.update', $timer), $data);
+        $response = $this->actingAs($user)->patch(route('tools.interval-timer.update', $timer), $data);
 
         $response->assertForbidden();
 
@@ -131,9 +139,11 @@ describe('IntervalTimerController Update', function (): void {
 
 describe('IntervalTimerController Destroy', function (): void {
     it('allows an authenticated user to delete their interval timer', function (): void {
-        $timer = IntervalTimer::factory()->create(['user_id' => $this->user->id]);
+        $user = User::factory()->create();
 
-        $response = $this->actingAs($this->user)->delete(route('tools.interval-timer.destroy', $timer));
+        $timer = IntervalTimer::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->delete(route('tools.interval-timer.destroy', $timer));
 
         $response->assertRedirect(route('tools.interval-timer.index'))
             ->assertSessionHas('success', 'Timer deleted successfully.');
@@ -144,10 +154,12 @@ describe('IntervalTimerController Destroy', function (): void {
     });
 
     it('returns 403 forbidden when a user tries to delete another users interval timer', function (): void {
+        $user = User::factory()->create();
+
         $otherUser = User::factory()->create();
         $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
-        $response = $this->actingAs($this->user)->delete(route('tools.interval-timer.destroy', $timer));
+        $response = $this->actingAs($user)->delete(route('tools.interval-timer.destroy', $timer));
 
         $response->assertForbidden();
 

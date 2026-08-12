@@ -84,7 +84,7 @@ test('user can toggle a habit', function (): void {
         ->post(route('habits.toggle', $habit), ['date' => $date])
         ->assertRedirect();
 
-    $log = \App\Models\HabitLog::where('habit_id', $habit->id)->first();
+    $log = \App\Models\HabitLog::where('habit_id', $habit->id)->firstOrFail();
     expect($log)->not->toBeNull();
     expect($log->date->toDateString())->toBe($date);
 

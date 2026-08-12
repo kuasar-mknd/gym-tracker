@@ -8,30 +8,37 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+use function PHPUnit\Framework\assertIsString;
+use function PHPUnit\Framework\assertNotNull;
+
 beforeEach(function (): void {
     $this->updateUserPassword = app(UpdateUserPassword::class);
-    $this->user = User::factory()->create();
-    $this->actingAs($this->user);
 });
 
 it('replaces the password with a new hash when the current password is correct', function (): void {
-    $this->updateUserPassword->update($this->user, [
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $this->updateUserPassword->update($user, [
         'current_password' => 'password',
         'password' => 'brand-new-secret',
         'password_confirmation' => 'brand-new-secret',
     ]);
 
-    $stored = DB::table('users')->where('id', $this->user->id)->value('password');
+    $stored = DB::table('users')->where('id', $user->id)->value('password');
 
-    expect($stored)->toBeString()
-        ->and($stored)->not->toBe('brand-new-secret')
+    assertIsString($stored, "La colonne password de l'utilisateur ne contient pas de chaine.");
+    expect($stored)->not->toBe('brand-new-secret')
         ->and($stored)->toStartWith('$')
         ->and(Hash::check('brand-new-secret', $stored))->toBeTrue()
         ->and(Hash::check('password', $stored))->toBeFalse();
 });
 
 it('refuses to change the password when the current password is wrong', function (): void {
-    expect(fn () => $this->updateUserPassword->update($this->user, [
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    expect(fn () => $this->updateUserPassword->update($user, [
         'current_password' => 'not-my-password',
         'password' => 'brand-new-secret',
         'password_confirmation' => 'brand-new-secret',
@@ -42,22 +49,34 @@ it('refuses to change the password when the current password is wrong', function
             ->not->toBe(trans('validation.current_password'));
     });
 
-    expect(Hash::check('password', $this->user->fresh()->password))->toBeTrue();
+    $stored = $user->refresh()->password;
+
+    assertNotNull($stored, "L'utilisateur n'a plus de mot de passe en base.");
+    expect(Hash::check('password', $stored))->toBeTrue();
 });
 
 it('refuses to change the password when the current password is missing', function (): void {
-    expect(fn () => $this->updateUserPassword->update($this->user, [
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    expect(fn () => $this->updateUserPassword->update($user, [
         'password' => 'brand-new-secret',
         'password_confirmation' => 'brand-new-secret',
     ]))->toThrow(function (ValidationException $exception): void {
         expect($exception->errors())->toHaveKey('current_password');
     });
 
-    expect(Hash::check('password', $this->user->fresh()->password))->toBeTrue();
+    $stored = $user->refresh()->password;
+
+    assertNotNull($stored, "L'utilisateur n'a plus de mot de passe en base.");
+    expect(Hash::check('password', $stored))->toBeTrue();
 });
 
 it('applies the shared password policy to the new password', function (): void {
-    expect(fn () => $this->updateUserPassword->update($this->user, [
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    expect(fn () => $this->updateUserPassword->update($user, [
         'current_password' => 'password',
         'password' => 'short7c',
         'password_confirmation' => 'short7c',
@@ -66,11 +85,17 @@ it('applies the shared password policy to the new password', function (): void {
             ->and($exception->errors())->toHaveKey('password');
     });
 
-    expect(Hash::check('password', $this->user->fresh()->password))->toBeTrue();
+    $stored = $user->refresh()->password;
+
+    assertNotNull($stored, "L'utilisateur n'a plus de mot de passe en base.");
+    expect(Hash::check('password', $stored))->toBeTrue();
 });
 
 it('requires the new password to be confirmed', function (): void {
-    expect(fn () => $this->updateUserPassword->update($this->user, [
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    expect(fn () => $this->updateUserPassword->update($user, [
         'current_password' => 'password',
         'password' => 'brand-new-secret',
         'password_confirmation' => 'a-different-secret',
@@ -78,5 +103,8 @@ it('requires the new password to be confirmed', function (): void {
         expect($exception->errors())->toHaveKey('password');
     });
 
-    expect(Hash::check('password', $this->user->fresh()->password))->toBeTrue();
+    $stored = $user->refresh()->password;
+
+    assertNotNull($stored, "L'utilisateur n'a plus de mot de passe en base.");
+    expect(Hash::check('password', $stored))->toBeTrue();
 });

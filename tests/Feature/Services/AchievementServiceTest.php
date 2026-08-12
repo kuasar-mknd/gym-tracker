@@ -9,6 +9,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Notifications\AchievementUnlocked;
 use App\Services\AchievementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -44,7 +45,7 @@ test('it awards count achievement', function (): void {
     Notification::assertSentTo(
         $user,
         \App\Notifications\AchievementUnlocked::class,
-        fn ($notification): bool => $notification->achievement->id === $achievement->id
+        fn (AchievementUnlocked $notification): bool => $notification->achievement->id === $achievement->id
     );
 });
 

@@ -90,7 +90,7 @@ class NotificationServiceTest extends TestCase
         $this->assertEquals(1, $this->service->getUnreadCount($user));
 
         // Mark as read via controller
-        $notification = $user->unreadNotifications()->first();
+        $notification = $user->unreadNotifications()->firstOrFail();
         $response = $this->post(route('notifications.mark-as-read', $notification->id));
 
         $response->assertRedirect();

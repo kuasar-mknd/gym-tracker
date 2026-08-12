@@ -209,8 +209,8 @@ class SetTest extends TestCase
             'reps' => 10,
         ]);
 
-        $this->assertEquals(500, $user->fresh()->total_volume);
-        $this->assertEquals(500, $workout->fresh()->workout_volume);
+        $this->assertEquals(500, $user->refresh()->total_volume);
+        $this->assertEquals(500, $workout->refresh()->workout_volume);
     }
 
     public function test_it_updates_volumes_on_set_update(): void
@@ -231,8 +231,8 @@ class SetTest extends TestCase
 
         $set->update(['weight' => 60, 'reps' => 10]);
 
-        $this->assertEquals(600, $user->fresh()->total_volume);
-        $this->assertEquals(600, $workout->fresh()->workout_volume);
+        $this->assertEquals(600, $user->refresh()->total_volume);
+        $this->assertEquals(600, $workout->refresh()->workout_volume);
     }
 
     public function test_it_decrements_volumes_on_set_deletion(): void
@@ -253,8 +253,8 @@ class SetTest extends TestCase
 
         $set->delete();
 
-        $this->assertEquals(0, $user->fresh()->total_volume);
-        $this->assertEquals(0, $workout->fresh()->workout_volume);
+        $this->assertEquals(0, $user->refresh()->total_volume);
+        $this->assertEquals(0, $workout->refresh()->workout_volume);
     }
 
     public function test_it_handles_missing_relations_gracefully(): void

@@ -97,7 +97,7 @@ describe('Authenticated', function (): void {
                 'default_rest_time' => 90,
             ]);
 
-            $createdUser = User::where('email', 'newuser@example.com')->first();
+            $createdUser = User::where('email', 'newuser@example.com')->firstOrFail();
             expect(Hash::check('secret123', $createdUser->password))->toBeTrue();
         });
 
@@ -176,8 +176,7 @@ describe('Authenticated', function (): void {
                 'name' => 'New Name',
             ]);
 
-            $updatedUser = $userToUpdate->fresh();
-            expect(Hash::check('newsecret123', $updatedUser->password))->toBeTrue();
+            expect(Hash::check('newsecret123', $userToUpdate->refresh()->password))->toBeTrue();
         });
 
         test('unauthorized user cannot update a user', function (): void {

@@ -21,15 +21,15 @@ class StreakTest extends TestCase
         $d1 = Carbon::parse('2023-01-01 12:00:00');
         $user->workouts()->create(['started_at' => $d1, 'ended_at' => $d1->copy()->addHour()]);
 
-        $this->assertEquals(1, $user->fresh()->current_streak);
-        $this->assertEquals(1, $user->fresh()->longest_streak);
+        $this->assertEquals(1, $user->refresh()->current_streak);
+        $this->assertEquals(1, $user->refresh()->longest_streak);
 
         // Day 2
         $d2 = Carbon::parse('2023-01-02 12:00:00');
         $user->workouts()->create(['started_at' => $d2, 'ended_at' => $d2->copy()->addHour()]);
 
-        $this->assertEquals(2, $user->fresh()->current_streak);
-        $this->assertEquals(2, $user->fresh()->longest_streak);
+        $this->assertEquals(2, $user->refresh()->current_streak);
+        $this->assertEquals(2, $user->refresh()->longest_streak);
     }
 
     public function test_streak_does_not_increment_twice_same_day(): void
@@ -39,13 +39,13 @@ class StreakTest extends TestCase
         $d1 = Carbon::parse('2023-01-01 10:00:00');
         $user->workouts()->create(['started_at' => $d1, 'ended_at' => $d1->copy()->addHour()]);
 
-        $this->assertEquals(1, $user->fresh()->current_streak);
+        $this->assertEquals(1, $user->refresh()->current_streak);
 
         // Later same day
         $d1_later = Carbon::parse('2023-01-01 18:00:00');
         $user->workouts()->create(['started_at' => $d1_later, 'ended_at' => $d1_later->copy()->addHour()]);
 
-        $this->assertEquals(1, $user->fresh()->current_streak);
+        $this->assertEquals(1, $user->refresh()->current_streak);
     }
 
     public function test_streak_resets_after_missed_day(): void
@@ -55,16 +55,16 @@ class StreakTest extends TestCase
         // Day 1
         $d1 = Carbon::parse('2023-01-01 12:00:00');
         $user->workouts()->create(['started_at' => $d1]);
-        $this->assertEquals(1, $user->fresh()->current_streak);
+        $this->assertEquals(1, $user->refresh()->current_streak);
 
         // Skip Day 2, workout on Day 3
         $d3 = Carbon::parse('2023-01-03 12:00:00');
         $user->workouts()->create(['started_at' => $d3]);
 
         // Should reset to 1
-        $this->assertEquals(1, $user->fresh()->current_streak);
+        $this->assertEquals(1, $user->refresh()->current_streak);
         // Longest streak remains 1
-        $this->assertEquals(1, $user->fresh()->longest_streak);
+        $this->assertEquals(1, $user->refresh()->longest_streak);
     }
 
     public function test_longest_streak_persists(): void
@@ -76,13 +76,13 @@ class StreakTest extends TestCase
         $user->workouts()->create(['started_at' => Carbon::parse('2023-01-02')]);
         $user->workouts()->create(['started_at' => Carbon::parse('2023-01-03')]);
 
-        $this->assertEquals(3, $user->fresh()->current_streak);
-        $this->assertEquals(3, $user->fresh()->longest_streak);
+        $this->assertEquals(3, $user->refresh()->current_streak);
+        $this->assertEquals(3, $user->refresh()->longest_streak);
 
         // Break streak (Day 5)
         $user->workouts()->create(['started_at' => Carbon::parse('2023-01-05')]);
 
-        $this->assertEquals(1, $user->fresh()->current_streak);
-        $this->assertEquals(3, $user->fresh()->longest_streak);
+        $this->assertEquals(1, $user->refresh()->current_streak);
+        $this->assertEquals(3, $user->refresh()->longest_streak);
     }
 }

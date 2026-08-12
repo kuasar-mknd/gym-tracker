@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Plate;
 use App\Models\User;
+use PHPUnit\Framework\Assert;
 
 beforeEach(function (): void {
     $this->user = User::factory()->create();
@@ -11,9 +12,12 @@ beforeEach(function (): void {
 
 describe('PlateController Index', function (): void {
     it('allows an authenticated user to view their plates', function (): void {
-        Plate::factory()->count(3)->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
 
-        $response = $this->actingAs($this->user)->get(route('plates.index'));
+        Plate::factory()->count(3)->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->get(route('plates.index'));
 
         $response->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -31,17 +35,20 @@ describe('PlateController Index', function (): void {
 
 describe('PlateController Store', function (): void {
     it('allows a user to create a plate', function (): void {
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
         $plateData = [
             'weight' => 20,
             'quantity' => 2,
         ];
 
-        $response = $this->actingAs($this->user)->post(route('plates.store'), $plateData);
+        $response = $this->actingAs($user)->post(route('plates.store'), $plateData);
 
         $response->assertRedirect();
 
         $this->assertDatabaseHas('plates', [
-            'user_id' => $this->user->id,
+            'user_id' => $user->id,
             'weight' => 20,
             'quantity' => 2,
         ]);
@@ -85,14 +92,17 @@ describe('PlateController Store', function (): void {
 
 describe('PlateController Update', function (): void {
     it('allows a user to update their own plate', function (): void {
-        $plate = Plate::factory()->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+        $plate = Plate::factory()->create(['user_id' => $user->id]);
 
         $updateData = [
             'weight' => 25,
             'quantity' => 4,
         ];
 
-        $response = $this->actingAs($this->user)->put(route('plates.update', $plate), $updateData);
+        $response = $this->actingAs($user)->put(route('plates.update', $plate), $updateData);
 
         $response->assertRedirect();
 
@@ -104,14 +114,17 @@ describe('PlateController Update', function (): void {
     });
 
     it('returns validation error if updated quantity is invalid', function (): void {
-        $plate = Plate::factory()->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
+
+        $plate = Plate::factory()->create(['user_id' => $user->id]);
 
         $updateData = [
             'weight' => 25,
             'quantity' => 150, // Over max 100
         ];
 
-        $response = $this->actingAs($this->user)->put(route('plates.update', $plate), $updateData);
+        $response = $this->actingAs($user)->put(route('plates.update', $plate), $updateData);
 
         $response->assertInvalid(['quantity']);
     });
@@ -143,9 +156,12 @@ describe('PlateController Update', function (): void {
 
 describe('PlateController Destroy', function (): void {
     it('allows a user to delete their own plate', function (): void {
-        $plate = Plate::factory()->create(['user_id' => $this->user->id]);
+        $user = $this->user;
+        Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
 
-        $response = $this->actingAs($this->user)->delete(route('plates.destroy', $plate));
+        $plate = Plate::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->delete(route('plates.destroy', $plate));
 
         $response->assertRedirect();
 

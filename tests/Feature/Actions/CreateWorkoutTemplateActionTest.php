@@ -83,7 +83,7 @@ it('creates a workout template with exercises and sets', function (): void {
     $this->assertDatabaseCount('workout_template_sets', 3);
 
     // Check sets for exercise 1
-    $line1 = $template->workoutTemplateLines()->where('exercise_id', $exercise1->id)->first();
+    $line1 = $template->workoutTemplateLines()->where('exercise_id', $exercise1->id)->firstOrFail();
     $this->assertDatabaseHas('workout_template_sets', [
         'workout_template_line_id' => $line1->id,
         'reps' => 10,
@@ -100,7 +100,7 @@ it('creates a workout template with exercises and sets', function (): void {
     ]);
 
     // Check sets for exercise 2
-    $line2 = $template->workoutTemplateLines()->where('exercise_id', $exercise2->id)->first();
+    $line2 = $template->workoutTemplateLines()->where('exercise_id', $exercise2->id)->firstOrFail();
     $this->assertDatabaseHas('workout_template_sets', [
         'workout_template_line_id' => $line2->id,
         'reps' => 12,
