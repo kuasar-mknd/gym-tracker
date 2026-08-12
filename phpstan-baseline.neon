@@ -1,0 +1,1351 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Cannot access offset ''notifications''\|''settings'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Cannot access offset ''settings'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Parameter \#2 \$arrays of function array_intersect expects an array of values castable to string, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/DeadControlsTest.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\Exercise\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Browser/ExerciseLibraryTest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Browser/ExerciseLibraryTest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/ExerciseManagementTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true and ''Escape closed the…'' will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Browser/PageBrowserTest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/RestTimerTest.php
+
+		-
+			message: '#^Cannot access property \$ended_at on App\\Models\\Workout\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Browser/WorkoutCompletionTest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Browser/WorkoutCompletionTest.php
+
+		-
+			message: '#^Cannot access property \$ended_at on App\\Models\\Workout\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Browser/WorkoutSessionE2ETest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/WorkoutSessionE2ETest.php
+
+		-
+			message: '#^Cannot access property \$weight on App\\Models\\Set\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Browser/WorkoutSetEntryRegressionTest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 8
+			path: tests/Browser/WorkoutSetEntryRegressionTest.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>duration_seconds" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 3
+			path: tests/Browser/WorkoutSetEntryRegressionTest.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>weight" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: tests/Browser/WorkoutSetEntryRegressionTest.php
+
+		-
+			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Browser/WorkoutSyncRaceTest.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>weight" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: tests/Browser/WorkoutSyncRaceTest.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 1
+			path: tests/DuskTestCase.php
+
+		-
+			message: '#^Parameter \#1 \$selenium_server_url of static method Facebook\\WebDriver\\Remote\\RemoteWebDriver\:\:create\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/DuskTestCase.php
+
+		-
+			message: '#^Cannot access property \$exercise_id on App\\Models\\WorkoutLine\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$is_warmup on App\\Models\\Set\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$reps on App\\Models\\Set\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$sets on App\\Models\\WorkoutLine\|null\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$weight on App\\Models\\Set\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/CreateWorkoutFromTemplateActionTest.php
+
+		-
+			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<App\\Models\\WorkoutTemplate\|null\>\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Actions/CreateWorkoutTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\WorkoutTemplateLine\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/CreateWorkoutTemplateActionTest.php
+
+		-
+			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<App\\Models\\WorkoutTemplate\|null\>\:\:\$user_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
+
+		-
+			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<mixed\>\:\:\$exercise_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
+
+		-
+			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<mixed\>\:\:\$reps\.$#'
+			identifier: property.notFound
+			count: 3
+			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
+
+		-
+			message: '#^Cannot access property \$workoutTemplateSets on App\\Models\\WorkoutTemplateLine\|null\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
+
+		-
+			message: '#^Cannot call method isoFormat\(\) on Illuminate\\Support\\Carbon\|string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
+
+		-
+			message: '#^Offset ''best_1rm'' might not exist on array\{id\: int, workout_id\: int, workout_name\: string, formatted_date\: string, best_1rm\: float, sets\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\}\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 2
+			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
+
+		-
+			message: '#^Offset ''formatted_date'' might not exist on array\{id\: int, workout_id\: int, workout_name\: string, formatted_date\: string, best_1rm\: float, sets\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\}\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
+
+		-
+			message: '#^Offset ''workout_id'' might not exist on array\{id\: int, workout_id\: int, workout_name\: string, formatted_date\: string, best_1rm\: float, sets\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\}\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 3
+			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
+
+		-
+			message: '#^Cannot access property \$exercise on App\\Models\\WorkoutTemplateLine\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\Exercise\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\WorkoutTemplate\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
+
+		-
+			message: '#^Cannot access property \$name on App\\Models\\Exercise\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
+
+		-
+			message: '#^Cannot access property \$workoutTemplateLines on App\\Models\\WorkoutTemplate\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
+
+		-
+			message: '#^Cannot access property \$workout_template_lines_count on App\\Models\\WorkoutTemplate\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
+
+		-
+			message: '#^Cannot access property \$workout_template_sets_count on App\\Models\\WorkoutTemplateLine\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
+
+		-
+			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
+			identifier: argument.type
+			count: 6
+			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
+
+		-
+			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
+
+		-
+			message: '#^Trying to invoke Closure\|null but it might not be a callable\.$#'
+			identifier: callable.nonCallable
+			count: 2
+			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
+
+		-
+			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
+
+		-
+			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
+
+		-
+			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
+			identifier: argument.type
+			count: 4
+			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
+
+		-
+			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
+
+		-
+			message: '#^Cannot access property \$email on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
+
+		-
+			message: '#^Cannot access property \$email_verified_at on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
+
+		-
+			message: '#^Cannot access property \$name on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
+
+		-
+			message: '#^Cannot call method equalTo\(\) on string\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
+
+		-
+			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
+
+		-
+			message: '#^Unable to resolve the template type TAndValue in call to method Pest\\Expectation\<mixed\>\:\:and\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
+
+		-
+			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andReturn\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/Actions/HandleSocialCallbackActionTest.php
+
+		-
+			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andThrow\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Actions/HandleSocialCallbackActionTest.php
+
+		-
+			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<array\<int, string\>\>\:\:\$not\.$#'
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
+
+		-
+			message: '#^Offset ''current'' might not exist on array\{part\: string, current\: float, unit\: string, date\: non\-falsy\-string, diff\: float\}\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 3
+			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
+
+		-
+			message: '#^Offset ''date'' might not exist on array\{part\: string, current\: float, unit\: string, date\: non\-falsy\-string, diff\: float\}\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 3
+			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
+
+		-
+			message: '#^Offset ''diff'' might not exist on array\{part\: string, current\: float, unit\: string, date\: non\-falsy\-string, diff\: float\}\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 3
+			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
+
+		-
+			message: '#^Cannot access property \$is_warmup on App\\Models\\WorkoutTemplateSet\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$order on App\\Models\\WorkoutTemplateLine\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$reps on App\\Models\\WorkoutTemplateSet\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$weight on App\\Models\\WorkoutTemplateSet\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$workoutTemplateSets on App\\Models\\WorkoutTemplateLine\|null\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Actions/UpdateWorkoutTemplateActionTest.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: tests/Feature/Actions/Workouts/CreateSetActionTest.php
+
+		-
+			message: '#^Call to an undefined method object\:\:splitProperties\(\)\.$#'
+			identifier: method.notFound
+			count: 3
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access offset ''attributes'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access offset ''name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access offset ''old'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access property \$attribute_changes on Spatie\\Activitylog\\Models\\Activity\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access property \$attribute_changes on stdClass\|null\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access property \$event on Spatie\\Activitylog\\Models\\Activity\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access property \$properties on stdClass\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Offset ''attributes'' might not exist on Illuminate\\Support\\Collection\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Offset ''old'' might not exist on Illuminate\\Support\\Collection\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\Supplement\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Api/V1/SupplementTest.php
+
+		-
+			message: '#^Cannot access property \$password on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Api/V1/UserControllerTest.php
+
+		-
+			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Api/V1/UserControllerTest.php
+
+		-
+			message: '#^Cannot call method hasVerifiedEmail\(\) on App\\Models\\User\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: tests/Feature/Auth/EmailVerificationTest.php
+
+		-
+			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Auth/PasswordUpdateTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of method App\\Services\\NotificationService\:\:getLatestAchievement\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Cache/SerializableClassesTest.php
+
+		-
+			message: '#^Cannot access offset ''habits'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/CalendarDatesReachThePageTest.php
+
+		-
+			message: '#^Cannot access offset ''props'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/CalendarDatesReachThePageTest.php
+
+		-
+			message: '#^Cannot access offset ''weekDates'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/CalendarDatesReachThePageTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\(int\|string\), mixed\>\|iterable\<\(int\|string\), mixed\>\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/CalendarDatesReachThePageTest.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 3
+			path: tests/Feature/CalendarDatesReachThePageTest.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 3
+			path: tests/Feature/CalendarDatesReachThePageTest.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: tests/Feature/Controllers/BodyMeasurementControllerTest.php
+
+		-
+			message: '#^Cannot access property \$read_at on Illuminate\\Notifications\\DatabaseNotification\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Controllers/NotificationControllerTest.php
+
+		-
+			message: '#^Cannot access offset ''is_local'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/DevLoginRouteTest.php
+
+		-
+			message: '#^Cannot access offset ''props'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/DevLoginRouteTest.php
+
+		-
+			message: '#^Call to an undefined method Livewire\\Component\:\:getData\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Call to an undefined method Livewire\\Component\:\:getStats\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Cannot cast Illuminate\\Contracts\\Support\\Htmlable\|string\|null to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Function filamentStatsOverviewValues\(\) should return array\<string, int\|string\> but returns array\<bool\|float\|Illuminate\\Contracts\\Support\\Htmlable\|int\|string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Feature/Filament/ExerciseResourceTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: tests/Feature/Filament/GoalResourceTest.php
+
+		-
+			message: '#^Cannot access property \$name on Spatie\\Permission\\Models\\Role\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Filament/RoleResourceTest.php
+
+		-
+			message: '#^Parameter \#1 \$record of static method Filament\\Resources\\Resource\<Illuminate\\Database\\Eloquent\\Model,Filament\\Resources\\ResourceConfiguration\>\:\:canDelete\(\) expects Illuminate\\Database\\Eloquent\\Model, Spatie\\Permission\\Contracts\\Role given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Filament/RoleResourceTest.php
+
+		-
+			message: '#^Parameter \#1 \$record of static method Filament\\Resources\\Resource\<Illuminate\\Database\\Eloquent\\Model,Filament\\Resources\\ResourceConfiguration\>\:\:canEdit\(\) expects Illuminate\\Database\\Eloquent\\Model, Spatie\\Permission\\Contracts\\Role given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Filament/RoleResourceTest.php
+
+		-
+			message: '#^Cannot access property \$user_id on App\\Models\\Supplement\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Filament/SupplementResourceTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Feature/Filament/SupplementResourceTest.php
+
+		-
+			message: '#^Binary operation "\+" between mixed and 1 results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 3
+			path: tests/Feature/Filament/UserResourceTest.php
+
+		-
+			message: '#^Cannot access property \$email on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Filament/UserResourceTest.php
+
+		-
+			message: '#^Cannot access property \$name on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Filament/UserResourceTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Feature/Filament/WorkoutResourceTest.php
+
+		-
+			message: '#^Cannot call method format\(\) on Illuminate\\Support\\Carbon\|null\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: tests/Feature/GoalEditingTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Feature/GoalServicePerformanceTest.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int\<0, max\>,string\|false\>\:\:map\(\) expects callable\(string\|false, int\<0, max\>\)\: string, Closure\(string\)\: string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/IconSubsetTest.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int\<0, max\>,string\|false\>\:\:reject\(\) expects bool\|\(callable\(string\|false, int\<0, max\>\)\: bool\)\|string, Closure\(string\)\: bool given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/IconSubsetTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<int\<0, max\>, string\>\|iterable\<int\<0, max\>, string\>\|null, list\<string\>\|false given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/IconSubsetTest.php
+
+		-
+			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<mixed\>\:\:\$not\.$#'
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/InertiaPagePathTest.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: tests/Feature/InertiaPagePathTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: tests/Feature/InertiaPagePathTest.php
+
+		-
+			message: '#^Part \$path \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: tests/Feature/InertiaPagePathTest.php
+
+		-
+			message: '#^Cannot access property \$target_calories on App\\Models\\MacroCalculation\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/MacroCalculatorTest.php
+
+		-
+			message: '#^Cannot access property \$tdee on App\\Models\\MacroCalculation\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/MacroCalculatorTest.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\Achievement\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Models/AchievementTest.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: tests/Feature/Models/BodyPartMeasurementTest.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: tests/Feature/Models/BodyPartMeasurementTest.php
+
+		-
+			message: '#^Cannot access property \$completed_at on App\\Models\\Goal\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Models/GoalTest.php
+
+		-
+			message: '#^Cannot access property \$current_value on App\\Models\\Goal\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Models/GoalTest.php
+
+		-
+			message: '#^Cannot access property \$progress_pct on App\\Models\\Goal\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Models/GoalTest.php
+
+		-
+			message: '#^Cannot access property \$date on App\\Models\\HabitLog\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Models/HabitTest.php
+
+		-
+			message: '#^Cannot access property \$sets on App\\Models\\WorkoutLine\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Models/SetOrderingTest.php
+
+		-
+			message: '#^Cannot access property \$total_volume on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Models/SetTest.php
+
+		-
+			message: '#^Cannot access property \$workout_volume on App\\Models\\Workout\|null\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Models/SetTest.php
+
+		-
+			message: '#^Cannot access property \$consumed_at on App\\Models\\WaterLog\|null\.$#'
+			identifier: property.nonObject
+			count: 7
+			path: tests/Feature/Models/WaterLogTest.php
+
+		-
+			message: '#^Cannot call method format\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 7
+			path: tests/Feature/Models/WaterLogTest.php
+
+		-
+			message: '#^Anonymous function should return string but returns string\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Navigation/NoOrphanedFeatureTest.php
+
+		-
+			message: '#^Function referencedRouteNames\(\) should return Illuminate\\Support\\Collection\<int, string\> but returns Illuminate\\Support\\Collection\<int, non\-empty\-string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Navigation/NoOrphanedFeatureTest.php
+
+		-
+			message: '#^Parameter \#1 \$name of function isThirdPartyPanel expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Navigation/NoOrphanedFeatureTest.php
+
+		-
+			message: '#^Cannot access property \$exercise_id on App\\Models\\PersonalRecord\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
+
+		-
+			message: '#^Cannot call method format\(\) on array\<int, mixed\>\|bool\|float\|Illuminate\\Support\\Carbon\|int\|string\|null\.$#'
+			identifier: method.nonObject
+			count: 4
+			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
+
+		-
+			message: '#^Parameter \#1 \$personalRecord of class App\\Notifications\\PersonalRecordAchieved constructor expects App\\Models\\PersonalRecord, App\\Models\\PersonalRecord\|null given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
+
+		-
+			message: '#^Parameter \#1 \$timeZone of method Carbon\\Carbon\:\:setTimezone\(\) expects DateTimeZone\|int\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
+
+		-
+			message: '#^Cannot access property \$type on App\\Models\\PersonalRecord\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Notifications/NotificationChannelRoutingTest.php
+
+		-
+			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<mixed\>\:\:\$not\.$#'
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
+			message: '#^Anonymous function should return Minishlink\\WebPush\\WebPush&Mockery\\MockInterface but returns Mockery\\MockInterface\.$#'
+			identifier: return.type
+			count: 2
+			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
+			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andReturnUsing\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
+			message: '#^Cannot access offset ''action'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
+			message: '#^Cannot access offset ''title'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
+			message: '#^Cannot access offset 0 on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
+			message: '#^Function makePersonalRecordFixture\(\) should return App\\Models\\PersonalRecord but returns App\\Models\\PersonalRecord\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
+			message: '#^Anonymous function should return App\\Models\\WarmupPreference but returns App\\Models\\WarmupPreference\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WarmupPreference\>\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Call to an undefined method object\:\:delete\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Call to an undefined method object\:\:update\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Call to an undefined method object\:\:view\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int\<0, max\>,string\|false\>\:\:map\(\) expects callable\(string\|false, int\<0, max\>\)\: non\-falsy\-string, Closure\(string\)\: non\-falsy\-string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Parameter \#1 \$items of method Illuminate\\Support\\Collection\<string,string\>\:\:merge\(\) expects Illuminate\\Contracts\\Support\\Arrayable\<string, ''AdminPolicy''\|''ExercisePolicy''\|''UserAchievementPoli…''\|''UserPolicy''\>\|iterable\<string, ''AdminPolicy''\|''ExercisePolicy''\|''UserAchievementPoli…''\|''UserPolicy''\>, array\{''AdminPolicy'', ''ExercisePolicy'', ''UserAchievementPoli…'', ''UserPolicy''\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<int\<0, max\>, string\>\|iterable\<int\<0, max\>, string\>\|null, list\<string\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Unable to resolve the template type TAndValue in call to method Pest\\Expectation\<mixed\>\:\:and\(\)$#'
+			identifier: argument.templateType
+			count: 3
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function expect$#'
+			identifier: argument.templateType
+			count: 3
+			path: tests/Feature/Policies/OwnershipBoundaryTest.php
+
+		-
+			message: '#^Function adminGranted\(\) has parameter \$abilities with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/Feature/Policies/PolicyConditionBoundaryTest.php
+
+		-
+			message: '#^Function adminGranted\(\) should return App\\Models\\Admin but returns App\\Models\\Admin\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Policies/PolicyConditionBoundaryTest.php
+
+		-
+			message: '#^Function adminWithRoleAbilities\(\) has parameter \$abilities with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/Feature/Policies/RolePolicyTest.php
+
+		-
+			message: '#^Function adminWithRoleAbilities\(\) should return App\\Models\\Admin but returns App\\Models\\Admin\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Policies/RolePolicyTest.php
+
+		-
+			message: '#^Parameter \#1 \$class of static method Illuminate\\Support\\Facades\\Gate\:\:getPolicyFor\(\) expects object\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Policies/RolePolicyTest.php
+
+		-
+			message: '#^Function adminWithUserAbilities\(\) has parameter \$abilities with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/Feature/Policies/UserPolicyTest.php
+
+		-
+			message: '#^Function adminWithUserAbilities\(\) should return App\\Models\\Admin but returns App\\Models\\Admin\|null\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Policies/UserPolicyTest.php
+
+		-
+			message: '#^Argument of an invalid type Illuminate\\Routing\\RouteCollectionInterface supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Access to an undefined property UnitEnum\:\:\$value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: tests/Feature/Security/CustomPolicyTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Feature/Security/CustomPolicyTest.php
+
+		-
+			message: '#^Method Tests\\Feature\\Security\\CustomPolicyTest\:\:getDirectivesFromPolicy\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/Feature/Security/CustomPolicyTest.php
+
+		-
+			message: '#^Method Tests\\Feature\\Security\\CustomPolicyTest\:\:getDirectivesFromPolicy\(\) should return array but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Security/CustomPolicyTest.php
+
+		-
+			message: '#^Offset 1 might not exist on array\{\}\|array\{non\-falsy\-string, non\-empty\-string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 2
+			path: tests/Feature/Security/GlobalCspTest.php
+
+		-
+			message: '#^Cannot call method get\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: tests/Feature/Security/PasswordUpdateRateLimitTest.php
+
+		-
+			message: '#^Offset 1 might not exist on array\{\}\|array\{non\-falsy\-string, non\-empty\-string\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 2
+			path: tests/Feature/Security/PulseCspTest.php
+
+		-
+			message: '#^Parameter \#1 \.\.\.\$roles of method App\\Models\\Admin\:\:assignRole\(\) expects array\|BackedEnum\|Illuminate\\Support\\Collection\|int\|Spatie\\Permission\\Contracts\\Role\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Security/PulseCspTest.php
+
+		-
+			message: '#^Parameter \#2 \$instance of method Illuminate\\Foundation\\Testing\\TestCase\:\:instance\(\) expects object, array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Security/WebRoutesSecurityTest.php
+
+		-
+			message: '#^Unable to resolve the template type TInstance in call to method Illuminate\\Foundation\\Testing\\TestCase\:\:instance\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: tests/Feature/Security/WebRoutesSecurityTest.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: tests/Feature/Security/WorkoutControllerSecurityTest.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: tests/Feature/Security/WorkoutControllerSecurityTest.php
+
+		-
+			message: '#^Cannot access offset ''latest_achievement'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/Services/NotificationServiceTest.php
+
+		-
+			message: '#^Cannot access offset ''unread_notifications_count'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/Services/NotificationServiceTest.php
+
+		-
+			message: '#^Cannot access offset ''user'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Services/NotificationServiceTest.php
+
+		-
+			message: '#^Cannot access property \$id on Illuminate\\Notifications\\DatabaseNotification\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Services/NotificationServiceTest.php
+
+		-
+			message: '#^Part \$newVersion \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: tests/Feature/Services/StatsCacheTest.php
+
+		-
+			message: '#^Part \$version \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: tests/Feature/Services/StatsCacheTest.php
+
+		-
+			message: '#^Unable to resolve the template type TKey in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: tests/Feature/Services/StatsTest.php
+
+		-
+			message: '#^Unable to resolve the template type TValue in call to function collect$#'
+			identifier: argument.templateType
+			count: 2
+			path: tests/Feature/Services/StatsTest.php
+
+		-
+			message: '#^Access to an undefined property Mockery\\MockInterface\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 3
+			path: tests/Feature/SocialAuthTest.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Testing\\TestResponse\:\:getTargetUrl\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Feature/SocialAuthTest.php
+
+		-
+			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andReturn\(\)\.$#'
+			identifier: method.notFound
+			count: 18
+			path: tests/Feature/SocialAuthTest.php
+
+		-
+			message: '#^Cannot access property \$provider on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/SocialAuthTest.php
+
+		-
+			message: '#^Cannot access property \$provider_id on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/SocialAuthTest.php
+
+		-
+			message: '#^Cannot access property \$current_streak on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 8
+			path: tests/Feature/StreakTest.php
+
+		-
+			message: '#^Cannot access property \$longest_streak on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/StreakTest.php
+
+		-
+			message: '#^Cannot access offset ''brand'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/SupplementIndexShapeTest.php
+
+		-
+			message: '#^Cannot access offset ''dosage'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/SupplementIndexShapeTest.php
+
+		-
+			message: '#^Cannot access offset ''low_stock_threshold'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/SupplementIndexShapeTest.php
+
+		-
+			message: '#^Cannot access offset ''props'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/SupplementIndexShapeTest.php
+
+		-
+			message: '#^Cannot access offset ''servings_remaining'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/SupplementIndexShapeTest.php
+
+		-
+			message: '#^Cannot access offset ''supplements'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/SupplementIndexShapeTest.php
+
+		-
+			message: '#^Cannot access offset 0 on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/SupplementIndexShapeTest.php
+
+		-
+			message: '#^Cannot access property \$id on App\\Models\\Set\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Cannot access property \$total_volume on App\\Models\\User\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Cannot access property \$workout_volume on App\\Models\\Workout\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Cannot call method update\(\) on App\\Models\\Set\|null\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Cannot access property \$steps on App\\Models\\WarmupPreference\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/WarmupCalculatorTest.php
+
+		-
+			message: '#^Cannot access property \$score on App\\Models\\WilksScore\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/WilksScoreTest.php
+
+		-
+			message: '#^Cannot access property \$ended_at on App\\Models\\Workout\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/WorkoutCompletionTest.php
+
+		-
+			message: '#^Cannot access offset ''exercise\.name'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/WorkoutLineActivityLogTest.php
+
+		-
+			message: '#^Offset ''attributes'' might not exist on Illuminate\\Support\\Collection\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 2
+			path: tests/Feature/WorkoutLineActivityLogTest.php
+
+		-
+			message: '#^Offset ''old'' might not exist on Illuminate\\Support\\Collection\|null\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: tests/Feature/WorkoutLineActivityLogTest.php
+
+		-
+			message: '#^Cannot access property \$exercise_id on App\\Models\\WorkoutTemplateLine\|null\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/WorkoutTemplatesControllerTest.php
+
+		-
+			message: '#^Cannot access property \$reps on App\\Models\\WorkoutTemplateSet\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/WorkoutTemplatesControllerTest.php
+
+		-
+			message: '#^Cannot access property \$workoutTemplateSets on App\\Models\\WorkoutTemplateLine\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/WorkoutTemplatesControllerTest.php
+
+		-
+			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:once\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: tests/Unit/Actions/HandleSocialCallbackActionTest.php
+
+		-
+			message: '#^Method class@anonymous/tests/Unit/Actions/Tools/Concerns/CalculatesMacrosTest\.php\:7\:\:testCalculation\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/Unit/Actions/Tools/Concerns/CalculatesMacrosTest.php
+
+		-
+			message: '#^Method class@anonymous/tests/Unit/Actions/Tools/Concerns/CalculatesMacrosTest\.php\:7\:\:testCalculation\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: tests/Unit/Actions/Tools/Concerns/CalculatesMacrosTest.php
+
+		-
+			message: '#^Parameter \#1 \$data of method class@anonymous/tests/Unit/Actions/Tools/Concerns/CalculatesMacrosTest\.php\:7\:\:performCalculation\(\) expects array\{gender\: string, age\: int, height\: float, weight\: float, activity_level\: string, goal\: string\}, array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Unit/Actions/Tools/Concerns/CalculatesMacrosTest.php
+
+		-
+			message: '#^Cannot access property \$activity_level on stdClass\|null\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Unit/Actions/Tools/CreateMacroCalculationActionTest.php
+
+		-
+			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
+			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Unit/ExampleTest.php
+
+		-
+			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
+			identifier: staticMethod.notFound
+			count: 2
+			path: tests/Unit/Models/UserCacheTest.php
+
+		-
+			message: '#^Call to function method_exists\(\) with ''App\\\\Models\\\\User'' and ''hasEnabledTwoFactor…'' will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: tests/Unit/Models/UserSerializationTest.php
+
+		-
+			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:once\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Unit/Models/UserTest.php
+
+		-
+			message: '#^Argument of an invalid type Illuminate\\Routing\\RouteCollectionInterface supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: tests/Unit/RouteIntegrityTest.php
+
+		-
+			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andReturnSelf\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: tests/Unit/Support/Csp/Policies/PulsePolicyTest.php
+
+		-
+			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:with\(\)\.$#'
+			identifier: method.notFound
+			count: 6
+			path: tests/Unit/Support/Csp/Policies/PulsePolicyTest.php
+
+		-
+			message: '#^Parameter \#1 \$policy of method App\\Support\\Csp\\Policies\\PulsePolicy\:\:configure\(\) expects Spatie\\Csp\\Policy, Mockery\\MockInterface given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Unit/Support/Csp/Policies/PulsePolicyTest.php

@@ -1,5 +1,10 @@
 includes:
     - vendor/larastan/larastan/extension.neon
+    # Les 430 erreurs que l'analyse de tests/ met au jour sont figees ici plutot
+    # qu'ignorees : le fichier ne doit que retrecir. Le plus gros poste, 138
+    # dereferencements de modele potentiellement nul, fait planter un test au lieu
+    # de le faire echouer proprement — voir #1341.
+    - phpstan-baseline.neon
 
 parameters:
     paths:
@@ -13,10 +18,23 @@ parameters:
     treatPhpDocTypesAsCertain: false
 
     ignoreErrors:
+        # Pest lie $this au TestCase a l'execution, mais l'analyse statique ne voit
+        # que le TestCall renvoye par it()/test(). Toute l'API de test ($this->get,
+        # actingAs, assertDatabaseHas...) apparait donc comme inexistante. Ce sont
+        # des faux positifs de construction, pas de la dette : 1850 erreurs dont
+        # l'immense majorite vient de la.
+        - identifier: method.notFound
+          path: tests/*
+          message: '#Pest\\PendingCalls\\TestCall#'
+        - identifier: property.notFound
+          path: tests/*
+          message: '#Pest\\PendingCalls\\TestCall#'
+        # Les macros Dusk sont enregistrees dans DuskTestCase::setUp.
+        - identifier: method.notFound
+          path: tests/Browser/*
+          message: '#Laravel\\Dusk\\Browser#'
 
     excludePaths:
-        - ./*/*/FileToBeExcluded.php
-        - tests/*
 
     scanFiles:
 
