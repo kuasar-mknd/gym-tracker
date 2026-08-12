@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Rules\PublicPushEndpoint;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdatePushSubscriptionRequest extends FormRequest
@@ -24,7 +25,10 @@ class UpdatePushSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'endpoint' => 'required|url',
+            // `url` alone accepts any scheme and any host, so the stored endpoint
+            // could point the server at its own network — the WebPush channel
+            // POSTs to it on every notification. See App\Rules\PublicPushEndpoint.
+            'endpoint' => ['required', 'url', new PublicPushEndpoint()],
             'keys.auth' => 'required',
             'keys.p256dh' => 'required',
         ];
