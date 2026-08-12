@@ -374,6 +374,12 @@ jobs:
             - name: Composer Audit
               run: composer audit
 
+            # Bloquant : ce gate n'est vert que parce qu'un composer-unused.php
+            # documente les deux seuls faux positifs. Il echoue aussi sur une
+            # exclusion "zombie", donc le fichier reste force de suivre composer.json.
+            - name: Unused Composer Dependencies
+              run: ./vendor/bin/composer-unused --no-progress
+
             # Le job audit n'avait aucun Node : npm audit resout depuis
             # package-lock.json, donc ni `npm ci` ni cache ne sont necessaires.
             - name: Setup Node
