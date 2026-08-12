@@ -262,6 +262,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { calculatePlates, actualWeight as plateActualWeight } from '@/Utils/plates'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -300,38 +301,9 @@ const deletePlate = (plate) => {
     }
 }
 
-const calculatedPlates = computed(() => {
-    if (!targetWeight.value || !barWeight.value || targetWeight.value <= barWeight.value) {
-        return []
-    }
+const calculatedPlates = computed(() => calculatePlates(targetWeight.value, barWeight.value, props.plates))
 
-    let remainingWeight = (targetWeight.value - barWeight.value) / 2
-    const result = []
-
-    const inventory = props.plates
-        .map((p) => ({ ...p, weight: parseFloat(p.weight) }))
-        .sort((a, b) => b.weight - a.weight)
-
-    for (const plate of inventory) {
-        const availablePairs = Math.floor(plate.quantity / 2)
-        let pairsToUse = 0
-
-        while (remainingWeight >= plate.weight && pairsToUse < availablePairs) {
-            remainingWeight -= plate.weight
-            pairsToUse++
-            result.push({ weight: plate.weight })
-        }
-
-        if (remainingWeight < 0.01) remainingWeight = 0
-    }
-
-    return result
-})
-
-const actualWeight = computed(() => {
-    const platesWeight = calculatedPlates.value.reduce((sum, p) => sum + p.weight, 0) * 2
-    return barWeight.value + platesWeight
-})
+const actualWeight = computed(() => plateActualWeight(calculatedPlates.value, barWeight.value))
 
 const getPlateSize = (weight) => {
     const max = 180

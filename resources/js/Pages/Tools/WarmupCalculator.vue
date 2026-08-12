@@ -211,6 +211,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { calculateWarmupSets } from '@/Utils/warmup'
 import { Head, useForm } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -260,32 +261,11 @@ const savePreferences = () => {
 }
 
 // Round to nearest increment
-const roundWeight = (weight, increment) => {
-    return Math.round(weight / increment) * increment
-}
-
-const calculatedSets = computed(() => {
-    return form.steps.map((step) => {
-        let weight
-
-        if (step.percent === 0) {
-            weight = form.bar_weight
-        } else {
-            const rawWeight = targetWeight.value * (step.percent / 100)
-            // Ensure we don't go below bar weight
-            weight = Math.max(form.bar_weight, roundWeight(rawWeight, form.rounding_increment))
-        }
-
-        // Calculate plates per side
-        const weightForPlates = Math.max(0, weight - form.bar_weight)
-        const perSide = weightForPlates / 2
-        const plateLoad = perSide > 0 ? `${perSide}kg` : 'Vide'
-
-        return {
-            ...step,
-            weight: weight,
-            plateLoad: plateLoad,
-        }
-    })
-})
+const calculatedSets = computed(() =>
+    calculateWarmupSets(form.steps, {
+        targetWeight: targetWeight.value,
+        barWeight: form.bar_weight,
+        roundingIncrement: form.rounding_increment,
+    }),
+)
 </script>

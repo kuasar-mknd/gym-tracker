@@ -32,9 +32,9 @@ export default defineConfig({
        * meet is a threshold somebody deletes.
        */
       thresholds: {
-        statements: 23,
-        branches: 19,
-        functions: 15,
+        statements: 24,
+        branches: 20,
+        functions: 16,
         lines: 24
       }
     }
