@@ -1,6 +1,8 @@
 includes:
     - vendor/larastan/larastan/extension.neon
     - vendor/shipmonk/dead-code-detector/rules.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
     # Les 430 erreurs que l'analyse de tests/ met au jour sont figees ici plutot
     # qu'ignorees : le fichier ne doit que retrecir. Le plus gros poste, 138
     # dereferencements de modele potentiellement nul, fait planter un test au lieu
@@ -19,6 +21,20 @@ parameters:
     treatPhpDocTypesAsCertain: false
 
     ignoreErrors:
+        # PHPUnit, Livewire et le Builder Eloquent exposent des methodes statiques
+        # appelees dynamiquement ($this->assertX(), $query->where()). C'est
+        # l'idiome des frameworks, pas de la dette : 825 des 945 erreurs remontees
+        # par strict-rules viennent de la. Vigie porte exactement le meme ignore.
+        # La depreciation vient du framework, pas d'ici : Password::default()
+        # renvoie un Illuminate\Validation\Rules\Password, qui implemente le Rule
+        # deprecie et PAS ValidationRule. Retyper le PHPDoc en ValidationRule est
+        # faux — verifie, cela produit 4 erreurs return.type. Rien a corriger tant
+        # que Laravel n'a pas migre sa propre classe.
+        - identifier: return.deprecatedInterface
+          path: app/Actions/Fortify/PasswordValidationRules.php
+        - identifier: staticMethod.dynamicCall
+        - identifier: method.dynamicName
+          path: tests/*
         # Les DTO de statistiques sont serialises en JSON vers les props Inertia :
         # leurs proprietes promues sont bien lues, par json_encode et non par du
         # PHP. Le detecteur ne peut pas le voir, et les supprimer casserait les

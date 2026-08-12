@@ -1,6 +1,378 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Foreach overwrites \$line with its value variable\.$#'
+			identifier: foreach.valueOverwrite
+			count: 1
+			path: app/Actions/CreateWorkoutTemplateFromWorkoutAction.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Actions/Exercises/FetchExerciseHistoryAction.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Actions/Exercises/FetchExerciseHistoryAction.php
+
+		-
+			message: '#^Parameter \#1 \$input \(array\<string, string\>\) of method App\\Actions\\Fortify\\CreateNewUser\:\:create\(\) should be contravariant with parameter \$input \(array\) of method Laravel\\Fortify\\Contracts\\CreatesNewUsers\:\:create\(\)$#'
+			identifier: method.childParameterType
+			count: 1
+			path: app/Actions/Fortify/CreateNewUser.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 2
+			path: app/Actions/Habits/CreateHabitAction.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, App\\Models\\HabitLog\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Actions/Habits/ToggleHabitAction.php
+
+		-
+			message: '#^Access to an undefined property Laravel\\Socialite\\Contracts\\User\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Actions/HandleSocialCallbackAction.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, App\\Models\\BodyPartMeasurement\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Actions/Measurements/FetchBodyPartMeasurementsIndexAction.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, string\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Actions/ResolveSocialUserAction.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, App\\Models\\User\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Actions/ResolveSocialUserAction.php
+
+		-
+			message: '#^PHPDoc tag @var with type Carbon\\Carbon is not subtype of type string\.$#'
+			identifier: varTag.type
+			count: 1
+			path: app/Actions/Tools/FetchWaterHistoryAction.php
+
+		-
+			message: '#^Only booleans are allowed in &&, stdClass\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 2
+			path: app/Actions/Workouts/FetchWorkoutsIndexAction.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|false\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Console/Commands/TrainingReminderCommand.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Filament/Widgets/UserActivityChart.php
+
+		-
+			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\NotificationPreference\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\NotificationPreference\>\.$#'
+			identifier: varTag.type
+			count: 1
+			path: app/Http/Controllers/Api/NotificationPreferenceController.php
+
+		-
+			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\WorkoutTemplate\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\WorkoutTemplate\>\.$#'
+			identifier: varTag.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkoutTemplateController.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\User\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Http/Controllers/Controller.php
+
+		-
+			message: '#^Only booleans are allowed in \|\|, string\|null given on the right side\.$#'
+			identifier: booleanOr.rightNotBoolean
+			count: 1
+			path: app/Http/Controllers/ExerciseController.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, App\\Models\\WarmupPreference\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Http/Controllers/WarmupController.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, App\\Models\\Workout\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Http/Controllers/WorkoutController.php
+
+		-
+			message: '#^Only booleans are allowed in &&, Illuminate\\Support\\Carbon\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Notifications\\DatabaseNotification\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\User\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Http/Requests/Api/StoreFastRequest.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\Habit\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Http/Requests/ToggleHabitRequest.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Admin\|App\\Models\\User\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Http/Requests/UpdateSupplementLogRequest.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Http/Resources/DailyJournalResource.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, int\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Models/Exercise.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, int given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Models/WorkoutLine.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\User given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Only booleans are allowed in &&, float\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Only booleans are allowed in &&, int given on the right side\.$#'
+			identifier: booleanAnd.rightNotBoolean
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Only booleans are allowed in &&, int\|null given on the right side\.$#'
+			identifier: booleanAnd.rightNotBoolean
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments mixed, array\{\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Providers/HorizonServiceProvider.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments mixed, array\{\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Providers/TelescopeServiceProvider.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Providers/TelescopeServiceProvider.php
+
+		-
+			message: '#^Call to function array_filter\(\) requires parameter \#2 to be passed to avoid loose comparison semantics\.$#'
+			identifier: arrayFilter.strict
+			count: 1
+			path: app/Rules/PublicPushEndpoint.php
+
+		-
+			message: '#^Only booleans are allowed in &&, Illuminate\\Support\\Carbon\|null given on the right side\.$#'
+			identifier: booleanAnd.rightNotBoolean
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 2
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, string\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Variable property access on App\\Models\\BodyMeasurement\.$#'
+			identifier: property.dynamicName
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\PersonalRecord\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\User given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, float\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 2
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only numeric types are allowed in \*, float\|null given on the left side\.$#'
+			identifier: mul.leftNonNumeric
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only numeric types are allowed in \*, int\|null given on the right side\.$#'
+			identifier: mul.rightNonNumeric
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^PHPDoc tag @var with type list\<string\> is not subtype of type array\<int, non\-falsy\-string\>\.$#'
+			identifier: varTag.type
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/RecommendedValuesService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\WorkoutLine\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/RecommendedValuesService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/RecommendedValuesService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\BodyMeasurement\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Services/Stats/BodyStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\BodyMeasurement\|null given on the right side\.$#'
+			identifier: booleanAnd.rightNotBoolean
+			count: 1
+			path: app/Services/Stats/BodyStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, stdClass\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Services/Stats/VolumeStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, Carbon\\Carbon\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Services/Stats/VolumeStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\Workout\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, mixed given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 2
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 3
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, bool\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Services/StreakService.php
+
+		-
 			message: '#^Cannot access offset ''notifications''\|''settings'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -505,6 +877,12 @@ parameters:
 			path: tests/Feature/Cache/SerializableClassesTest.php
 
 		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: tests/Feature/Cache/SerializableClassesTest.php
+
+		-
 			message: '#^Cannot access offset ''habits'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 2
@@ -667,6 +1045,18 @@ parameters:
 			path: tests/Feature/GoalServicePerformanceTest.php
 
 		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|false given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: tests/Feature/IconSubsetTest.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, int\|false given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: tests/Feature/IconSubsetTest.php
+
+		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int\<0, max\>,string\|false\>\:\:map\(\) expects callable\(string\|false, int\<0, max\>\)\: string, Closure\(string\)\: string given\.$#'
 			identifier: argument.type
 			count: 2
@@ -705,6 +1095,12 @@ parameters:
 		-
 			message: '#^Part \$path \(mixed\) of encapsed string cannot be cast to string\.$#'
 			identifier: encapsedStringPart.nonString
+			count: 1
+			path: tests/Feature/InertiaPagePathTest.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
 			count: 1
 			path: tests/Feature/InertiaPagePathTest.php
 
@@ -1057,6 +1453,12 @@ parameters:
 			path: tests/Feature/Security/WorkoutControllerSecurityTest.php
 
 		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: tests/Feature/ServiceWorkerRouteTest.php
+
+		-
 			message: '#^Cannot access offset ''latest_achievement'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -1091,6 +1493,12 @@ parameters:
 			identifier: encapsedStringPart.nonString
 			count: 1
 			path: tests/Feature/Services/StatsCacheTest.php
+
+		-
+			message: '#^Loose comparison via "\=\=" is not allowed\.$#'
+			identifier: equal.notAllowed
+			count: 6
+			path: tests/Feature/Services/StatsTest.php
 
 		-
 			message: '#^Unable to resolve the template type TKey in call to function collect$#'
@@ -1301,6 +1709,12 @@ parameters:
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Unit/ExampleTest.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|false given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: tests/Unit/FeatureTestIsolationTest.php
 
 		-
 			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'

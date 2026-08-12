@@ -19,7 +19,7 @@ class SocialAuthController extends Controller
      */
     public function redirect(string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
-        if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
+        if (! in_array($provider, self::ALLOWED_PROVIDERS, true)) {
             abort(404);
         }
 
@@ -31,7 +31,7 @@ class SocialAuthController extends Controller
      */
     public function callback(HandleSocialCallbackAction $action, string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
-        if (! in_array($provider, self::ALLOWED_PROVIDERS)) {
+        if (! in_array($provider, self::ALLOWED_PROVIDERS, true)) {
             abort(404);
         }
         try {
