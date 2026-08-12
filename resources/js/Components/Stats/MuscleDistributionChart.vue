@@ -18,13 +18,18 @@ const chartData = computed(() => {
         datasets: [
             {
                 data: props.data.map((item) => item.volume),
+                // Une couleur par catégorie de App\Enums\ExerciseCategory. Il en
+                // manquait une : la septième part n'avait pas de couleur définie et
+                // retombait sur le défaut de Chart.js, donc ne se distinguait plus.
+                // Le bleu comble le plus grand écart de teinte de la palette.
                 backgroundColor: [
                     '#FF5500', // Orange
-                    '#FF0080', // Pink
+                    '#FF0080', // Rose
                     '#8800FF', // Violet
+                    '#2979FF', // Bleu
                     '#00E5FF', // Cyan
-                    '#00FF88', // Green
-                    '#FFD600', // Yellow
+                    '#00FF88', // Vert
+                    '#FFD600', // Jaune
                 ],
                 borderWidth: 0,
                 hoverOffset: 15,
