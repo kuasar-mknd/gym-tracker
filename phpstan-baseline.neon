@@ -1,7 +1,1081 @@
 parameters:
 	ignoreErrors:
 		-
+			message: '#^Cannot cast mixed to int\.$#'
+			identifier: cast.int
+			count: 4
+			path: app/Actions/Calendar/FetchCalendarEventsAction.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 3
+			path: app/Actions/Calendar/FetchCalendarEventsAction.php
+
+		-
+			message: '#^Method App\\Actions\\Calendar\\FetchCalendarEventsAction\:\:getWorkouts\(\) should return Illuminate\\Support\\Collection\<int, array\{id\: int, name\: string, date\: string, started_at\: string, exercises_count\: int, preview_exercises\: array\<int, string\>\}\> but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Actions/Calendar/FetchCalendarEventsAction.php
+
+		-
+			message: '#^Parameter \#1 \$workoutIds of method App\\Actions\\Calendar\\FetchCalendarEventsAction\:\:getWorkoutPreviews\(\) expects array\<int, mixed\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Calendar/FetchCalendarEventsAction.php
+
+		-
+			message: '#^Possibly invalid array key type mixed\.$#'
+			identifier: offsetAccess.invalidOffset
+			count: 1
+			path: app/Actions/Calendar/FetchCalendarEventsAction.php
+
+		-
+			message: '#^Foreach overwrites \$line with its value variable\.$#'
+			identifier: foreach.valueOverwrite
+			count: 1
+			path: app/Actions/CreateWorkoutTemplateFromWorkoutAction.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Actions/Exercises/FetchExerciseHistoryAction.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Actions/Exercises/FetchExerciseHistoryAction.php
+
+		-
+			message: '#^Cannot call method limit\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/FetchWorkoutTemplatesAction.php
+
+		-
+			message: '#^Cannot call method orderBy\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/FetchWorkoutTemplatesAction.php
+
+		-
+			message: '#^Cannot call method select\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/FetchWorkoutTemplatesAction.php
+
+		-
+			message: '#^Cannot call method with\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/FetchWorkoutTemplatesAction.php
+
+		-
+			message: '#^Cannot call method withCount\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/FetchWorkoutTemplatesAction.php
+
+		-
+			message: '#^Parameter \#1 \$input \(array\<string, string\>\) of method App\\Actions\\Fortify\\CreateNewUser\:\:create\(\) should be contravariant with parameter \$input \(array\) of method Laravel\\Fortify\\Contracts\\CreatesNewUsers\:\:create\(\)$#'
+			identifier: method.childParameterType
+			count: 1
+			path: app/Actions/Fortify/CreateNewUser.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 2
+			path: app/Actions/Habits/CreateHabitAction.php
+
+		-
+			message: '#^Cannot call method whereBetween\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/Habits/FetchHabitsIndexAction.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, App\\Models\\HabitLog\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Actions/Habits/ToggleHabitAction.php
+
+		-
+			message: '#^Access to an undefined property Laravel\\Socialite\\Contracts\\User\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Actions/HandleSocialCallbackAction.php
+
+		-
+			message: '#^Cannot access offset ''email_verified'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Actions/HandleSocialCallbackAction.php
+
+		-
+			message: '#^Cannot access offset ''verified'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Actions/HandleSocialCallbackAction.php
+
+		-
+			message: '#^Cannot access offset ''verified_email'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Actions/HandleSocialCallbackAction.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, App\\Models\\BodyPartMeasurement\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Actions/Measurements/FetchBodyPartMeasurementsIndexAction.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, string\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Actions/ResolveSocialUserAction.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, App\\Models\\User\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Actions/ResolveSocialUserAction.php
+
+		-
+			message: '#^PHPDoc tag @var with type Carbon\\Carbon is not subtype of type string\.$#'
+			identifier: varTag.type
+			count: 1
+			path: app/Actions/Tools/FetchWaterHistoryAction.php
+
+		-
+			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany\<App\\Models\\WorkoutTemplateLine,App\\Models\\WorkoutTemplate,Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WorkoutTemplateLine\>\>\:\:create\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/WorkoutTemplates/CreateWorkoutTemplateLineAction.php
+
+		-
+			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany\<App\\Models\\WorkoutTemplateSet,App\\Models\\WorkoutTemplateLine,Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WorkoutTemplateSet\>\>\:\:create\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/WorkoutTemplates/CreateWorkoutTemplateSetAction.php
+
+		-
+			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany\<App\\Models\\Set,App\\Models\\WorkoutLine,Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Set\>\>\:\:make\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Workouts/CreateSetAction.php
+
+		-
+			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany\<App\\Models\\WorkoutLine,App\\Models\\Workout,Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WorkoutLine\>\>\:\:make\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Workouts/CreateWorkoutLineAction.php
+
+		-
+			message: '#^Cannot call method with\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/Workouts/FetchWorkoutsIndexAction.php
+
+		-
+			message: '#^Cannot call method withCount\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Actions/Workouts/FetchWorkoutsIndexAction.php
+
+		-
+			message: '#^Only booleans are allowed in &&, stdClass\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 2
+			path: app/Actions/Workouts/FetchWorkoutsIndexAction.php
+
+		-
+			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Model\:\:fill\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/Workouts/UpdateWorkoutAction.php
+
+		-
+			message: '#^Cannot call method on\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Console/Commands/TrainingReminderCommand.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Console/Commands/TrainingReminderCommand.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|false\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Console/Commands/TrainingReminderCommand.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Filament/Widgets/UserActivityChart.php
+
+		-
+			message: '#^Cannot access offset ''per_page'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Api/DailyJournalController.php
+
+		-
+			message: '#^Cannot call method latest\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/HabitController.php
+
+		-
+			message: '#^Cannot call method limit\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/Api/HabitController.php
+
+		-
+			message: '#^Parameter \#2 \$requestData of method App\\Actions\\Habits\\FetchHabitsIndexApiAction\:\:execute\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Api/HabitController.php
+
+		-
+			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\NotificationPreference\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\NotificationPreference\>\.$#'
+			identifier: varTag.type
+			count: 1
+			path: app/Http/Controllers/Api/NotificationPreferenceController.php
+
+		-
+			message: '#^Cannot access offset ''exercise_id'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Api/PersonalRecordController.php
+
+		-
+			message: '#^Cannot access offset ''per_page'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: app/Http/Controllers/Api/SupplementLogController.php
+
+		-
+			message: '#^Cannot cast mixed to int\.$#'
+			identifier: cast.int
+			count: 1
+			path: app/Http/Controllers/Api/SupplementLogController.php
+
+		-
+			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\WorkoutTemplate\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\WorkoutTemplate\>\.$#'
+			identifier: varTag.type
+			count: 1
+			path: app/Http/Controllers/Api/WorkoutTemplateController.php
+
+		-
+			message: '#^Parameter \#1 \$credentials of method App\\Http\\Controllers\\Auth\\NewPasswordController\:\:resetPassword\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/NewPasswordController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Actions\\Auth\\SendPasswordResetLinkAction\:\:execute\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/PasswordResetLinkController.php
+
+		-
+			message: '#^Parameter \#1 \$input of method App\\Actions\\CreateUserAction\:\:execute\(\) expects array\<string, string\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\User\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Http/Controllers/Controller.php
+
+		-
+			message: '#^Only booleans are allowed in \|\|, string\|null given on the right side\.$#'
+			identifier: booleanOr.rightNotBoolean
+			count: 1
+			path: app/Http/Controllers/ExerciseController.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, App\\Models\\WarmupPreference\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Http/Controllers/WarmupController.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, App\\Models\\Workout\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Http/Controllers/WorkoutController.php
+
+		-
+			message: '#^Method App\\Http\\Middleware\\ConditionalCspHeaders\:\:handle\(\) should return Symfony\\Component\\HttpFoundation\\Response but returns mixed\.$#'
+			identifier: return.type
+			count: 2
+			path: app/Http/Middleware/ConditionalCspHeaders.php
+
+		-
+			message: '#^Only booleans are allowed in &&, Illuminate\\Support\\Carbon\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Notifications\\DatabaseNotification\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Binary operation "\." between ''\<script nonce\="'' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: app/Http/Middleware/PulseNonceMiddleware.php
+
+		-
+			message: '#^Binary operation "\." between ''\<style nonce\="'' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: app/Http/Middleware/PulseNonceMiddleware.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/DailyJournalStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/NotificationPreferenceStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/NotificationPreferenceUpdateRequest.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\User\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Http/Requests/Api/StoreFastRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/StoreHabitLogRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutLineStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/Api/WorkoutLineStoreRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutLineStoreRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutLineUpdateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutLineUpdateRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutLineUpdateRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutTemplateLineStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/Api/WorkoutTemplateLineStoreRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutTemplateLineStoreRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutTemplateLineUpdateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutTemplateLineUpdateRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutTemplateLineUpdateRequest.php
+
+		-
+			message: '#^Cannot call method orWhereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutTemplateStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/Api/WorkoutTemplateStoreRequest.php
+
+		-
+			message: '#^Cannot call method orWhereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/Api/WorkoutTemplateUpdateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/Api/WorkoutTemplateUpdateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/DailyJournalUpdateRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/ExerciseStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/ExerciseStoreRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/ExerciseStoreRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/ExerciseUpdateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/ExerciseUpdateRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/ExerciseUpdateRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/GoalStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/GoalStoreRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/GoalStoreRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/GoalUpdateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/GoalUpdateRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/GoalUpdateRequest.php
+
+		-
+			message: '#^Cannot call method from\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/PersonalRecordStoreRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/PersonalRecordStoreRequest.php
+
+		-
+			message: '#^Cannot call method select\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/PersonalRecordStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Http/Requests/PersonalRecordStoreRequest.php
+
+		-
+			message: '#^Cannot call method whereIn\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/PersonalRecordStoreRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/PersonalRecordStoreRequest.php
+
+		-
+			message: '#^Cannot call method from\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/PersonalRecordUpdateRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/PersonalRecordUpdateRequest.php
+
+		-
+			message: '#^Cannot call method select\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/PersonalRecordUpdateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 3
+			path: app/Http/Requests/PersonalRecordUpdateRequest.php
+
+		-
+			message: '#^Cannot call method whereIn\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/PersonalRecordUpdateRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/PersonalRecordUpdateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/StoreHabitLogRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/StoreSupplementLogRequest.php
+
+		-
+			message: '#^Cannot call method orWhereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/StoreWorkoutTemplateRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 2
+			path: app/Http/Requests/StoreWorkoutTemplateRequest.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\Habit\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Http/Requests/ToggleHabitRequest.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_keys expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/UpdateNotificationPreferencesRequest.php
+
+		-
+			message: '#^Trying to invoke mixed but it''s not a callable\.$#'
+			identifier: callable.nonCallable
+			count: 1
+			path: app/Http/Requests/UpdateNotificationPreferencesRequest.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_keys expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/UpdateProfilePreferencesRequest.php
+
+		-
+			message: '#^Trying to invoke mixed but it''s not a callable\.$#'
+			identifier: callable.nonCallable
+			count: 1
+			path: app/Http/Requests/UpdateProfilePreferencesRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/UpdateSupplementLogRequest.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Admin\|App\\Models\\User\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Http/Requests/UpdateSupplementLogRequest.php
+
+		-
+			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/WorkoutLineStoreRequest.php
+
+		-
+			message: '#^Cannot call method where\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/WorkoutLineStoreRequest.php
+
+		-
+			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Requests/WorkoutLineStoreRequest.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Http/Resources/DailyJournalResource.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, int\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Models/Exercise.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, int given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Models/WorkoutLine.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\User given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Only booleans are allowed in &&, float\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Only booleans are allowed in &&, int given on the right side\.$#'
+			identifier: booleanAnd.rightNotBoolean
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Only booleans are allowed in &&, int\|null given on the right side\.$#'
+			identifier: booleanAnd.rightNotBoolean
+			count: 1
+			path: app/Providers/AppServiceProvider.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments mixed, array\{\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Providers/HorizonServiceProvider.php
+
+		-
+			message: '#^Cannot access property \$email on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Providers/HorizonServiceProvider.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments mixed, array\{\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Providers/TelescopeServiceProvider.php
+
+		-
+			message: '#^Cannot access property \$email on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: app/Providers/TelescopeServiceProvider.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Providers/TelescopeServiceProvider.php
+
+		-
+			message: '#^Anonymous function should return string\|null but returns mixed\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Rules/PublicPushEndpoint.php
+
+		-
+			message: '#^Call to function array_filter\(\) requires parameter \#2 to be passed to avoid loose comparison semantics\.$#'
+			identifier: arrayFilter.strict
+			count: 1
+			path: app/Rules/PublicPushEndpoint.php
+
+		-
+			message: '#^Only booleans are allowed in &&, Illuminate\\Support\\Carbon\|null given on the right side\.$#'
+			identifier: booleanAnd.rightNotBoolean
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 2
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, string\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Variable property access on App\\Models\\BodyMeasurement\.$#'
+			identifier: property.dynamicName
+			count: 1
+			path: app/Services/GoalService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\PersonalRecord\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\User given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, float\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 2
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only numeric types are allowed in \*, float\|null given on the left side\.$#'
+			identifier: mul.leftNonNumeric
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only numeric types are allowed in \*, int\|null given on the right side\.$#'
+			identifier: mul.rightNonNumeric
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^PHPDoc tag @var with type list\<string\> is not subtype of type array\<int, non\-falsy\-string\>\.$#'
+			identifier: varTag.type
+			count: 1
+			path: app/Services/PersonalRecordService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/RecommendedValuesService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\WorkoutLine\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/RecommendedValuesService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: app/Services/RecommendedValuesService.php
+
+		-
+			message: '#^Cannot cast mixed to float\.$#'
+			identifier: cast.double
+			count: 4
+			path: app/Services/Stats/BodyStatsService.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 3
+			path: app/Services/Stats/BodyStatsService.php
+
+		-
+			message: '#^Method App\\Services\\Stats\\BodyStatsService\:\:getBodyFatHistory\(\) should return array\<int, App\\DTOs\\Stats\\BodyFatHistoryPoint\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Stats/BodyStatsService.php
+
+		-
+			message: '#^Method App\\Services\\Stats\\BodyStatsService\:\:getWeightHistory\(\) should return array\<int, App\\DTOs\\Stats\\WeightHistoryPoint\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Stats/BodyStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\BodyMeasurement\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Services/Stats/BodyStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\BodyMeasurement\|null given on the right side\.$#'
+			identifier: booleanAnd.rightNotBoolean
+			count: 1
+			path: app/Services/Stats/BodyStatsService.php
+
+		-
+			message: '#^Cannot cast mixed to float\.$#'
+			identifier: cast.double
+			count: 2
+			path: app/Services/Stats/ExerciseStatsService.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 2
+			path: app/Services/Stats/ExerciseStatsService.php
+
+		-
+			message: '#^Method App\\Services\\Stats\\ExerciseStatsService\:\:getExercise1RMProgress\(\) should return array\<int, App\\DTOs\\Stats\\Exercise1RMProgressPoint\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Stats/ExerciseStatsService.php
+
+		-
+			message: '#^Method App\\Services\\Stats\\ExerciseStatsService\:\:getMuscleDistribution\(\) should return array\<int, App\\DTOs\\Stats\\MuscleDistributionStat\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Stats/ExerciseStatsService.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 4
+			path: app/Services/Stats/VolumeStatsService.php
+
+		-
+			message: '#^Method App\\Services\\Stats\\VolumeStatsService\:\:getMonthlyVolumeHistory\(\) should return array\<int, App\\DTOs\\Stats\\MonthlyVolumePoint\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Stats/VolumeStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, stdClass\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Services/Stats/VolumeStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, Carbon\\Carbon\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Services/Stats/VolumeStatsService.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 3
+			path: app/Services/Stats/WorkoutStatsService.php
+
+		-
+			message: '#^Method App\\Services\\Stats\\WorkoutStatsService\:\:getDurationHistory\(\) should return array\<int, App\\DTOs\\Stats\\DurationHistoryPoint\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/Stats/WorkoutStatsService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, App\\Models\\Workout\|null given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 1
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Only booleans are allowed in &&, mixed given on the left side\.$#'
+			identifier: booleanAnd.leftNotBoolean
+			count: 2
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon\|null given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 3
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Only booleans are allowed in a ternary operator condition, null given\.$#'
+			identifier: ternary.condNotBoolean
+			count: 1
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, bool\|null given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: app/Services/StreakService.php
+
+		-
+			message: '#^Cannot call method random\(\) on mixed\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: database/factories/AdminFactory.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 3
+			path: database/migrations/2026_08_11_092854_move_activity_log_changes_out_of_properties.php
+
+		-
+			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Cannot access offset ''colorGroup'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Cannot access offset ''colors'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Cannot access offset ''colors''\|''icons'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Cannot access offset ''icons'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Cannot access offset ''label'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
 			message: '#^Cannot access offset ''notifications''\|''settings'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Cannot access offset ''pressed'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
 			path: tests/Browser/AccessibleNamesTest.php
@@ -13,16 +1087,52 @@ parameters:
 			path: tests/Browser/AccessibleNamesTest.php
 
 		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_column expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_unique expects an array of values castable to string, list given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
 			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
 			identifier: argument.type
 			count: 1
 			path: tests/Browser/AccessibleNamesTest.php
 
 		-
+			message: '#^Part \$index \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 2
+			path: tests/Browser/AccessibleNamesTest.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_intersect expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/DeadControlsTest.php
+
+		-
 			message: '#^Parameter \#2 \$arrays of function array_intersect expects an array of values castable to string, array\<mixed\> given\.$#'
 			identifier: argument.type
 			count: 1
 			path: tests/Browser/DeadControlsTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Browser/ExerciseFilterScopeTest.php
 
 		-
 			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
@@ -37,8 +1147,116 @@ parameters:
 			path: tests/Browser/ExerciseManagementTest.php
 
 		-
+			message: '#^Cannot access offset ''current'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Cannot access offset ''label'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Cannot access offset ''onScreen'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Cannot access offset ''opacity'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Cannot access offset ''pressed'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Cannot access offset ''tabIndex'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Cannot access offset ''tag'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Cannot use array destructuring on mixed\.$#'
+			identifier: offsetAccess.nonArray
+			count: 1
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Browser/KeyboardNavigationTest.php
+
+		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true and ''Escape closed the…'' will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
+			count: 1
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Cannot access offset ''focusInside'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Cannot access offset ''gapAbove'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Cannot access offset ''gapBelow'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Cannot access offset ''glassLayers'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Cannot access offset ''labelledby'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Cannot access offset ''modal'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Cannot access offset ''open'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/ModalSemanticsTest.php
+
+		-
+			message: '#^Cannot access offset ''titled'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
 			path: tests/Browser/ModalSemanticsTest.php
 
@@ -49,10 +1267,94 @@ parameters:
 			path: tests/Browser/PageBrowserTest.php
 
 		-
+			message: '#^Cannot access offset ''bodyHasSlackToScroll'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/PageScrollTest.php
+
+		-
+			message: '#^Cannot access offset ''bodyOverflowX'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/PageScrollTest.php
+
+		-
+			message: '#^Cannot access offset ''bodyOverflowY'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/PageScrollTest.php
+
+		-
+			message: '#^Cannot access offset ''bodyOverscrollY'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/PageScrollTest.php
+
+		-
+			message: '#^Cannot access offset ''htmlOverflowX'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/PageScrollTest.php
+
+		-
+			message: '#^Cannot access offset ''pageIsTallerThanViewport'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/PageScrollTest.php
+
+		-
+			message: '#^Cannot access offset ''pageOverflowsSideways'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Browser/PageScrollTest.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_intersect expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/PaginationReachabilityTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertCount\(\) expects Countable\|iterable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/PaginationReachabilityTest.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$arrays of function array_intersect expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/PaginationReachabilityTest.php
+
+		-
 			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
 			identifier: argument.type
 			count: 1
 			path: tests/Browser/RestTimerTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Browser/SecurityHeaderSyntaxTest.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),mixed\>\:\:map\(\) expects callable\(mixed, int\|string\)\: string, Closure\(array\)\: string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/SecurityHeaderSyntaxTest.php
+
+		-
+			message: '#^Parameter \#1 \$array of function array_unique expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/SilentFormFailuresTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertNotContains\(\) expects iterable, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Browser/SilentFormFailuresTest.php
 
 		-
 			message: '#^Cannot access property \$ended_at on App\\Models\\Workout\|null\.$#'
@@ -65,6 +1367,30 @@ parameters:
 			identifier: argument.type
 			count: 2
 			path: tests/Browser/WorkoutCompletionTest.php
+
+		-
+			message: '#^Cannot use array destructuring on mixed\.$#'
+			identifier: offsetAccess.nonArray
+			count: 1
+			path: tests/Browser/WorkoutRowOverflowTest.php
+
+		-
+			message: '#^Part \$height \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: tests/Browser/WorkoutRowOverflowTest.php
+
+		-
+			message: '#^Part \$overflow \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 2
+			path: tests/Browser/WorkoutRowOverflowTest.php
+
+		-
+			message: '#^Part \$width \(mixed\) of encapsed string cannot be cast to string\.$#'
+			identifier: encapsedStringPart.nonString
+			count: 1
+			path: tests/Browser/WorkoutRowOverflowTest.php
 
 		-
 			message: '#^Cannot access property \$ended_at on App\\Models\\Workout\|null\.$#'
@@ -121,10 +1447,34 @@ parameters:
 			path: tests/DuskTestCase.php
 
 		-
+			message: '#^Cannot access offset ''level'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/DuskTestCase.php
+
+		-
 			message: '#^Parameter \#1 \$selenium_server_url of static method Facebook\\WebDriver\\Remote\\RemoteWebDriver\:\:create\(\) expects string, mixed given\.$#'
 			identifier: argument.type
 			count: 1
 			path: tests/DuskTestCase.php
+
+		-
+			message: '#^Parameter \#1 \$html of function viewportContentFrom expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Accessibility/ViewportAccessibilityTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/CreateWorkoutActionTest.php
+
+		-
+			message: '#^Cannot access property \$user on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/CreateWorkoutActionTest.php
 
 		-
 			message: '#^Cannot access property \$exercise_id on App\\Models\\WorkoutLine\|null\.$#'
@@ -163,9 +1513,21 @@ parameters:
 			path: tests/Feature/Actions/CreateWorkoutTemplateActionTest.php
 
 		-
+			message: '#^Cannot access property \$description on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/CreateWorkoutTemplateActionTest.php
+
+		-
 			message: '#^Cannot access property \$id on App\\Models\\WorkoutTemplateLine\|null\.$#'
 			identifier: property.nonObject
 			count: 3
+			path: tests/Feature/Actions/CreateWorkoutTemplateActionTest.php
+
+		-
+			message: '#^Cannot access property \$user_id on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
 			path: tests/Feature/Actions/CreateWorkoutTemplateActionTest.php
 
 		-
@@ -187,16 +1549,34 @@ parameters:
 			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
 
 		-
+			message: '#^Cannot access property \$description on mixed\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
+
+		-
+			message: '#^Cannot access property \$is_warmup on mixed\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
+
+		-
+			message: '#^Cannot access property \$name on mixed\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
+
+		-
+			message: '#^Cannot access property \$weight on mixed\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
+
+		-
 			message: '#^Cannot access property \$workoutTemplateSets on App\\Models\\WorkoutTemplateLine\|null\.$#'
 			identifier: property.nonObject
 			count: 5
 			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
-
-		-
-			message: '#^Cannot call method isoFormat\(\) on Illuminate\\Support\\Carbon\|string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
 
 		-
 			message: '#^Offset ''best_1rm'' might not exist on array\{id\: int, workout_id\: int, workout_name\: string, formatted_date\: string, best_1rm\: float, sets\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\}\|null\.$#'
@@ -259,6 +1639,18 @@ parameters:
 			path: tests/Feature/Actions/FetchWorkoutTemplatesActionTest.php
 
 		-
+			message: '#^Cannot access property \$exists on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
+
+		-
 			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
 			identifier: argument.type
 			count: 6
@@ -271,10 +1663,40 @@ parameters:
 			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
 
 		-
+			message: '#^Cannot access property \$decaySeconds on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
+
+		-
+			message: '#^Cannot access property \$key on mixed\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
+
+		-
+			message: '#^Cannot access property \$maxAttempts on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
+
+		-
 			message: '#^Trying to invoke Closure\|null but it might not be a callable\.$#'
 			identifier: callable.nonCallable
 			count: 2
 			path: tests/Feature/Actions/Fortify/FortifyActionBindingsTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
+
+		-
+			message: '#^Cannot access property \$password on mixed\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
 
 		-
 			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
@@ -285,8 +1707,26 @@ parameters:
 		-
 			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, mixed given\.$#'
 			identifier: argument.type
-			count: 2
+			count: 5
 			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
+
+		-
+			message: '#^Cannot access offset 0 on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
+
+		-
+			message: '#^Cannot access property \$password on mixed\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
 
 		-
 			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
@@ -297,7 +1737,7 @@ parameters:
 		-
 			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, mixed given\.$#'
 			identifier: argument.type
-			count: 2
+			count: 6
 			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
 
 		-
@@ -316,12 +1756,6 @@ parameters:
 			message: '#^Cannot access property \$name on App\\Models\\User\|null\.$#'
 			identifier: property.nonObject
 			count: 2
-			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
-
-		-
-			message: '#^Cannot call method equalTo\(\) on string\|null\.$#'
-			identifier: method.nonObject
-			count: 1
 			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
 
 		-
@@ -457,6 +1891,12 @@ parameters:
 			path: tests/Feature/ActivityLogUpgradeTest.php
 
 		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 6
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
 			message: '#^Offset ''attributes'' might not exist on Illuminate\\Support\\Collection\|null\.$#'
 			identifier: offsetAccess.notFound
 			count: 1
@@ -467,6 +1907,96 @@ parameters:
 			identifier: offsetAccess.notFound
 			count: 1
 			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Parameter \#1 \$migration of class class@anonymous/tests/Feature/ActivityLogUpgradeTest\.php\:132 constructor expects object, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/ActivityLogUpgradeTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Api/GoalControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 6
+			path: tests/Feature/Api/HabitControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 13
+			path: tests/Feature/Api/NotificationPreferenceControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 13
+			path: tests/Feature/Api/PersonalRecordControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Api/PlateControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 7
+			path: tests/Feature/Api/UserAchievementControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of function Pest\\Laravel\\actingAs expects Illuminate\\Contracts\\Auth\\Authenticatable, mixed given\.$#'
+			identifier: argument.type
+			count: 12
+			path: tests/Feature/Api/V1/AchievementControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 10
+			path: tests/Feature/Api/V1/DailyJournalTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 8
+			path: tests/Feature/Api/V1/FastTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 11
+			path: tests/Feature/Api/V1/GoalTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 8
+			path: tests/Feature/Api/V1/HabitControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Api/V1/IntervalTimerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Api/V1/MacroCalculationControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 12
+			path: tests/Feature/Api/V1/SupplementLogTest.php
 
 		-
 			message: '#^Cannot access property \$id on App\\Models\\Supplement\|null\.$#'
@@ -487,10 +2017,88 @@ parameters:
 			path: tests/Feature/Api/V1/UserControllerTest.php
 
 		-
-			message: '#^Cannot call method hasVerifiedEmail\(\) on App\\Models\\User\|null\.$#'
-			identifier: method.nonObject
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Api/V1/WaterLogTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Api/V1/WilksScoreTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 7
+			path: tests/Feature/Api/V1/WorkoutLineControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: tests/Feature/Api/V1/WorkoutTemplateSecurityTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of static method Laravel\\Sanctum\\Sanctum\<Laravel\\Sanctum\\PersonalAccessToken\>\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable\|Laravel\\Sanctum\\HasApiTokens, mixed given\.$#'
+			identifier: argument.type
+			count: 4
+			path: tests/Feature/Api/V1/WorkoutTemplateSecurityTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 9
+			path: tests/Feature/Api/V1/WorkoutTemplateSetControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of static method Laravel\\Sanctum\\Sanctum\<Laravel\\Sanctum\\PersonalAccessToken\>\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable\|Laravel\\Sanctum\\HasApiTokens, mixed given\.$#'
+			identifier: argument.type
+			count: 14
+			path: tests/Feature/Api/V1/WorkoutTemplateSetControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Api/V1/WorkoutTemplateTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of static method Laravel\\Sanctum\\Sanctum\<Laravel\\Sanctum\\PersonalAccessToken\>\:\:actingAs\(\) expects Illuminate\\Contracts\\Auth\\Authenticatable\|Laravel\\Sanctum\\HasApiTokens, mixed given\.$#'
+			identifier: argument.type
+			count: 11
+			path: tests/Feature/Api/V1/WorkoutTemplateTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/Api/WarmupPreferenceControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 13
+			path: tests/Feature/Api/WorkoutTemplateLineControllerTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 7
+			path: tests/Feature/Api/WorkoutTemplateSetControllerTest.php
+
+		-
+			message: '#^Binary operation "\." between ''/reset\-password/'' and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: tests/Feature/Auth/PasswordResetTest.php
+
+		-
+			message: '#^Cannot access property \$token on mixed\.$#'
+			identifier: property.nonObject
 			count: 2
-			path: tests/Feature/Auth/EmailVerificationTest.php
+			path: tests/Feature/Auth/PasswordResetTest.php
 
 		-
 			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, string\|null given\.$#'
@@ -501,6 +2109,18 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$user of method App\\Services\\NotificationService\:\:getLatestAchievement\(\) expects App\\Models\\User, App\\Models\\User\|null given\.$#'
 			identifier: argument.type
+			count: 1
+			path: tests/Feature/Cache/SerializableClassesTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\(int\|string\), mixed\>\|iterable\<\(int\|string\), mixed\>\|null, iterable given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Cache/SerializableClassesTest.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
 			count: 1
 			path: tests/Feature/Cache/SerializableClassesTest.php
 
@@ -553,6 +2173,18 @@ parameters:
 			path: tests/Feature/Controllers/NotificationControllerTest.php
 
 		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 3
+			path: tests/Feature/Controllers/PushSubscriptionControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of function Pest\\Laravel\\actingAs expects Illuminate\\Contracts\\Auth\\Authenticatable, mixed given\.$#'
+			identifier: argument.type
+			count: 4
+			path: tests/Feature/Controllers/PushSubscriptionControllerTest.php
+
+		-
 			message: '#^Cannot access offset ''is_local'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -577,6 +2209,36 @@ parameters:
 			path: tests/Feature/Filament/DashboardWidgetsTest.php
 
 		-
+			message: '#^Cannot access offset ''data'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Cannot access offset ''datasets'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Cannot access offset ''label'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Cannot access offset ''labels'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Cannot access offset 0 on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
 			message: '#^Cannot cast Illuminate\\Contracts\\Support\\Htmlable\|string\|null to string\.$#'
 			identifier: cast.string
 			count: 1
@@ -585,6 +2247,12 @@ parameters:
 		-
 			message: '#^Function filamentStatsOverviewValues\(\) should return array\<string, int\|string\> but returns array\<bool\|float\|Illuminate\\Contracts\\Support\\Htmlable\|int\|string\>\.$#'
 			identifier: return.type
+			count: 1
+			path: tests/Feature/Filament/DashboardWidgetsTest.php
+
+		-
+			message: '#^Possibly invalid array key type mixed\.$#'
+			identifier: offsetAccess.invalidOffset
 			count: 1
 			path: tests/Feature/Filament/DashboardWidgetsTest.php
 
@@ -655,16 +2323,28 @@ parameters:
 			path: tests/Feature/Filament/WorkoutResourceTest.php
 
 		-
-			message: '#^Cannot call method format\(\) on Illuminate\\Support\\Carbon\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/GoalEditingTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Feature/GoalServicePerformanceTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 8
+			path: tests/Feature/HabitControllerTest.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|false given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: tests/Feature/IconSubsetTest.php
+
+		-
+			message: '#^Only booleans are allowed in an if condition, int\|false given\.$#'
+			identifier: if.condNotBoolean
+			count: 1
+			path: tests/Feature/IconSubsetTest.php
 
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int\<0, max\>,string\|false\>\:\:map\(\) expects callable\(string\|false, int\<0, max\>\)\: string, Closure\(string\)\: string given\.$#'
@@ -683,6 +2363,18 @@ parameters:
 			identifier: argument.type
 			count: 2
 			path: tests/Feature/IconSubsetTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 14
+			path: tests/Feature/IdempotentCreateTest.php
+
+		-
+			message: '#^Cannot cast mixed to float\.$#'
+			identifier: cast.double
+			count: 1
+			path: tests/Feature/IdempotentCreateTest.php
 
 		-
 			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<mixed\>\:\:\$not\.$#'
@@ -709,6 +2401,18 @@ parameters:
 			path: tests/Feature/InertiaPagePathTest.php
 
 		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: tests/Feature/InertiaPagePathTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/IntervalTimerControllerTest.php
+
+		-
 			message: '#^Cannot access property \$target_calories on App\\Models\\MacroCalculation\|null\.$#'
 			identifier: property.nonObject
 			count: 1
@@ -721,10 +2425,46 @@ parameters:
 			path: tests/Feature/MacroCalculatorTest.php
 
 		-
+			message: '#^Cannot access property \$achievement on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Models/AchievementTest.php
+
+		-
 			message: '#^Cannot access property \$id on App\\Models\\Achievement\|null\.$#'
 			identifier: property.nonObject
 			count: 3
 			path: tests/Feature/Models/AchievementTest.php
+
+		-
+			message: '#^Cannot access property \$slug on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Models/AchievementTest.php
+
+		-
+			message: '#^Cannot access offset ''current'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Models/BodyPartMeasurementTest.php
+
+		-
+			message: '#^Cannot access offset ''date'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/Models/BodyPartMeasurementTest.php
+
+		-
+			message: '#^Cannot access offset ''diff'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Models/BodyPartMeasurementTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\(int\|string\), mixed\>\|iterable\<\(int\|string\), mixed\>\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Models/BodyPartMeasurementTest.php
 
 		-
 			message: '#^Unable to resolve the template type TKey in call to function collect$#'
@@ -787,12 +2527,6 @@ parameters:
 			path: tests/Feature/Models/WaterLogTest.php
 
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 7
-			path: tests/Feature/Models/WaterLogTest.php
-
-		-
 			message: '#^Anonymous function should return string but returns string\|null\.$#'
 			identifier: return.type
 			count: 1
@@ -817,15 +2551,15 @@ parameters:
 			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
 
 		-
-			message: '#^Cannot call method format\(\) on array\<int, mixed\>\|bool\|float\|Illuminate\\Support\\Carbon\|int\|string\|null\.$#'
-			identifier: method.nonObject
-			count: 4
-			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
-
-		-
 			message: '#^Parameter \#1 \$personalRecord of class App\\Notifications\\PersonalRecordAchieved constructor expects App\\Models\\PersonalRecord, App\\Models\\PersonalRecord\|null given\.$#'
 			identifier: argument.type
 			count: 3
+			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
+
+		-
+			message: '#^Parameter \#1 \$time of static method Carbon\\Carbon\:\:parse\(\) expects Carbon\\Month\|Carbon\\WeekDay\|DateTimeInterface\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 4
 			path: tests/Feature/Notifications/DatabaseNotificationPayloadTest.php
 
 		-
@@ -877,10 +2611,52 @@ parameters:
 			path: tests/Feature/Notifications/WebPushPayloadTest.php
 
 		-
+			message: '#^Cannot access property \$not on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
 			message: '#^Function makePersonalRecordFixture\(\) should return App\\Models\\PersonalRecord but returns App\\Models\\PersonalRecord\|null\.$#'
 			identifier: return.type
 			count: 1
 			path: tests/Feature/Notifications/WebPushPayloadTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 10
+			path: tests/Feature/PageRenderingTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of function Pest\\Laravel\\actingAs expects Illuminate\\Contracts\\Auth\\Authenticatable, mixed given\.$#'
+			identifier: argument.type
+			count: 16
+			path: tests/Feature/PageRenderingTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 10
+			path: tests/Feature/PersonalRecordCorrectionTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of closure expects App\\Models\\User, mixed given\.$#'
+			identifier: argument.type
+			count: 6
+			path: tests/Feature/PersonalRecordCorrectionTest.php
+
+		-
+			message: '#^Parameter \#2 \$exercise of closure expects App\\Models\\Exercise, mixed given\.$#'
+			identifier: argument.type
+			count: 6
+			path: tests/Feature/PersonalRecordCorrectionTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 5
+			path: tests/Feature/PlateControllerTest.php
 
 		-
 			message: '#^Anonymous function should return App\\Models\\WarmupPreference but returns App\\Models\\WarmupPreference\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WarmupPreference\>\.$#'
@@ -949,6 +2725,12 @@ parameters:
 			path: tests/Feature/Policies/PolicyConditionBoundaryTest.php
 
 		-
+			message: '#^Parameter \#1 \$name of static method Spatie\\Permission\\Models\\Permission\:\:findOrCreate\(\) expects BackedEnum\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Policies/PolicyConditionBoundaryTest.php
+
+		-
 			message: '#^Function adminWithRoleAbilities\(\) has parameter \$abilities with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -967,6 +2749,12 @@ parameters:
 			path: tests/Feature/Policies/RolePolicyTest.php
 
 		-
+			message: '#^Parameter \#1 \$name of static method Spatie\\Permission\\Models\\Permission\:\:findOrCreate\(\) expects BackedEnum\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Policies/RolePolicyTest.php
+
+		-
 			message: '#^Function adminWithUserAbilities\(\) has parameter \$abilities with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -979,8 +2767,62 @@ parameters:
 			path: tests/Feature/Policies/UserPolicyTest.php
 
 		-
+			message: '#^Parameter \#1 \$name of static method Spatie\\Permission\\Models\\Permission\:\:findOrCreate\(\) expects BackedEnum\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Policies/UserPolicyTest.php
+
+		-
 			message: '#^Argument of an invalid type Illuminate\\Routing\\RouteCollectionInterface supplied for foreach, only iterables are supported\.$#'
 			identifier: foreach.nonIterable
+			count: 1
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Binary operation "\." between mixed and '' \-\> '' results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 2
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Binary operation "\." between non\-falsy\-string and mixed results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 2
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Cannot access property \$headers on mixed\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Function backofficeGuardedRoutes\(\) should return array\<string, string\> but returns array\<string\>\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Parameter \#1 \$haystack of function str_starts_with expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of function in_array expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Parameter \#3 \$subject of function preg_replace expects array\<float\|int\|string\>\|string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Security/BackofficeAuthorizationTest.php
+
+		-
+			message: '#^Possibly invalid array key type mixed\.$#'
+			identifier: offsetAccess.invalidOffset
 			count: 1
 			path: tests/Feature/Security/BackofficeAuthorizationTest.php
 
@@ -993,7 +2835,7 @@ parameters:
 		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
-			count: 1
+			count: 2
 			path: tests/Feature/Security/CustomPolicyTest.php
 
 		-
@@ -1009,15 +2851,33 @@ parameters:
 			path: tests/Feature/Security/CustomPolicyTest.php
 
 		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertContains\(\) expects iterable, mixed given\.$#'
+			identifier: argument.type
+			count: 31
+			path: tests/Feature/Security/CustomPolicyTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertNotContains\(\) expects iterable, mixed given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Feature/Security/CustomPolicyTest.php
+
+		-
 			message: '#^Offset 1 might not exist on array\{\}\|array\{non\-falsy\-string, non\-empty\-string\}\.$#'
 			identifier: offsetAccess.notFound
 			count: 2
 			path: tests/Feature/Security/GlobalCspTest.php
 
 		-
-			message: '#^Cannot call method get\(\) on mixed\.$#'
-			identifier: method.nonObject
+			message: '#^Cannot access offset 0 on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
 			count: 3
+			path: tests/Feature/Security/PasswordUpdateRateLimitTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 2
 			path: tests/Feature/Security/PasswordUpdateRateLimitTest.php
 
 		-
@@ -1033,6 +2893,12 @@ parameters:
 			path: tests/Feature/Security/PulseCspTest.php
 
 		-
+			message: '#^Parameter \#1 \$array of function array_filter expects array, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Feature/Security/RequestForgeryProtectionTest.php
+
+		-
 			message: '#^Parameter \#2 \$instance of method Illuminate\\Foundation\\Testing\\TestCase\:\:instance\(\) expects object, array given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1045,6 +2911,18 @@ parameters:
 			path: tests/Feature/Security/WebRoutesSecurityTest.php
 
 		-
+			message: '#^Cannot access offset ''exercises'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Security/WorkoutControllerSecurityTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\(int\|string\), mixed\>\|iterable\<\(int\|string\), mixed\>\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Security/WorkoutControllerSecurityTest.php
+
+		-
 			message: '#^Unable to resolve the template type TKey in call to function collect$#'
 			identifier: argument.templateType
 			count: 2
@@ -1055,6 +2933,24 @@ parameters:
 			identifier: argument.templateType
 			count: 2
 			path: tests/Feature/Security/WorkoutControllerSecurityTest.php
+
+		-
+			message: '#^Short ternary operator is not allowed\. Use null coalesce operator if applicable or consider using long ternary\.$#'
+			identifier: ternary.shortNotAllowed
+			count: 1
+			path: tests/Feature/ServiceWorkerRouteTest.php
+
+		-
+			message: '#^Cannot access property \$achievement on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Services/AchievementServiceTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Services/AchievementServiceTest.php
 
 		-
 			message: '#^Cannot access offset ''latest_achievement'' on mixed\.$#'
@@ -1081,6 +2977,12 @@ parameters:
 			path: tests/Feature/Services/NotificationServiceTest.php
 
 		-
+			message: '#^Cannot access offset int on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Services/RecommendedValuesServiceTest.php
+
+		-
 			message: '#^Part \$newVersion \(mixed\) of encapsed string cannot be cast to string\.$#'
 			identifier: encapsedStringPart.nonString
 			count: 1
@@ -1091,6 +2993,48 @@ parameters:
 			identifier: encapsedStringPart.nonString
 			count: 1
 			path: tests/Feature/Services/StatsCacheTest.php
+
+		-
+			message: '#^Cannot access property \$headers on mixed\.$#'
+			identifier: property.nonObject
+			count: 1
+			path: tests/Feature/Services/StatsChartPointsContractTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Feature/Services/StatsChartPointsContractTest.php
+
+		-
+			message: '#^Cannot access offset ''category'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Services/StatsTest.php
+
+		-
+			message: '#^Cannot access offset ''volume'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Feature/Services/StatsTest.php
+
+		-
+			message: '#^Cannot cast mixed to float\.$#'
+			identifier: cast.double
+			count: 3
+			path: tests/Feature/Services/StatsTest.php
+
+		-
+			message: '#^Loose comparison via "\=\=" is not allowed\.$#'
+			identifier: equal.notAllowed
+			count: 6
+			path: tests/Feature/Services/StatsTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of function collect expects Illuminate\\Contracts\\Support\\Arrayable\<\(int\|string\), mixed\>\|iterable\<\(int\|string\), mixed\>\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Feature/Services/StatsTest.php
 
 		-
 			message: '#^Unable to resolve the template type TKey in call to function collect$#'
@@ -1132,6 +3076,12 @@ parameters:
 			message: '#^Cannot access property \$provider_id on App\\Models\\User\|null\.$#'
 			identifier: property.nonObject
 			count: 1
+			path: tests/Feature/SocialAuthTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 2
 			path: tests/Feature/SocialAuthTest.php
 
 		-
@@ -1195,9 +3145,21 @@ parameters:
 			path: tests/Feature/VolumeCountersTest.php
 
 		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
 			message: '#^Cannot access property \$total_volume on App\\Models\\User\|null\.$#'
 			identifier: property.nonObject
 			count: 1
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Cannot access property \$total_volume on mixed\.$#'
+			identifier: property.nonObject
+			count: 6
 			path: tests/Feature/VolumeCountersTest.php
 
 		-
@@ -1207,16 +3169,70 @@ parameters:
 			path: tests/Feature/VolumeCountersTest.php
 
 		-
-			message: '#^Cannot call method update\(\) on App\\Models\\Set\|null\.$#'
-			identifier: method.nonObject
-			count: 2
+			message: '#^Cannot access property \$workout_volume on mixed\.$#'
+			identifier: property.nonObject
+			count: 4
 			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Cannot cast mixed to float\.$#'
+			identifier: cast.double
+			count: 10
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Parameter \#1 \$workout of function lineWithVolume expects App\\Models\\Workout, mixed given\.$#'
+			identifier: argument.type
+			count: 7
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Parameter \#2 \$exercise of function lineWithVolume expects App\\Models\\Exercise, mixed given\.$#'
+			identifier: argument.type
+			count: 7
+			path: tests/Feature/VolumeCountersTest.php
+
+		-
+			message: '#^Cannot access offset ''bar_weight'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/WarmupCalculatorTest.php
+
+		-
+			message: '#^Cannot access offset ''preference'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 3
+			path: tests/Feature/WarmupCalculatorTest.php
+
+		-
+			message: '#^Cannot access offset ''props'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/WarmupCalculatorTest.php
+
+		-
+			message: '#^Cannot access offset ''rounding_increment'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/WarmupCalculatorTest.php
+
+		-
+			message: '#^Cannot access offset ''steps'' on mixed\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Feature/WarmupCalculatorTest.php
 
 		-
 			message: '#^Cannot access property \$steps on App\\Models\\WarmupPreference\|null\.$#'
 			identifier: property.nonObject
 			count: 1
 			path: tests/Feature/WarmupCalculatorTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 2
+			path: tests/Feature/WaterControllerTest.php
 
 		-
 			message: '#^Cannot access property \$score on App\\Models\\WilksScore\|null\.$#'
@@ -1247,6 +3263,18 @@ parameters:
 			identifier: offsetAccess.notFound
 			count: 1
 			path: tests/Feature/WorkoutLineActivityLogTest.php
+
+		-
+			message: '#^Cannot access property \$id on mixed\.$#'
+			identifier: property.nonObject
+			count: 4
+			path: tests/Feature/WorkoutManagementTest.php
+
+		-
+			message: '#^Parameter \#1 \$user of function Pest\\Laravel\\actingAs expects Illuminate\\Contracts\\Auth\\Authenticatable, mixed given\.$#'
+			identifier: argument.type
+			count: 6
+			path: tests/Feature/WorkoutManagementTest.php
 
 		-
 			message: '#^Cannot access property \$exercise_id on App\\Models\\WorkoutTemplateLine\|null\.$#'
@@ -1297,10 +3325,22 @@ parameters:
 			path: tests/Unit/Actions/Tools/CreateMacroCalculationActionTest.php
 
 		-
+			message: '#^Cannot cast mixed to float\.$#'
+			identifier: cast.double
+			count: 1
+			path: tests/Unit/Actions/Tools/CreateMacroCalculationActionTest.php
+
+		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Unit/ExampleTest.php
+
+		-
+			message: '#^Only booleans are allowed in a negated boolean, int\|false given\.$#'
+			identifier: booleanNot.exprNotBoolean
+			count: 1
+			path: tests/Unit/FeatureTestIsolationTest.php
 
 		-
 			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
@@ -1325,6 +3365,30 @@ parameters:
 			identifier: foreach.nonIterable
 			count: 1
 			path: tests/Unit/RouteIntegrityTest.php
+
+		-
+			message: '#^Parameter \#1 \$action of function firstPartyControllerTarget expects string, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Unit/RouteIntegrityTest.php
+
+		-
+			message: '#^Parameter \#2 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Unit/RouteIntegrityTest.php
+
+		-
+			message: '#^Parameter \#3 \.\.\.\$values of function sprintf expects bool\|float\|int\|string\|null, mixed given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Unit/RouteIntegrityTest.php
+
+		-
+			message: '#^Cannot cast mixed to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Unit/Services/StatsServiceCacheTest.php
 
 		-
 			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andReturnSelf\(\)\.$#'

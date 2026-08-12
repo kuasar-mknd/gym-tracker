@@ -140,7 +140,11 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
-    'admin_allowed_ips' => array_filter(explode(',', (string) env('ADMIN_ALLOWED_IPS', ''))),
+    // trim() est necessaire : "1.2.3.4, 5.6.7.8" produisait une entree avec une
+    // espace de tete, qui ne correspondait jamais a une IP — un admin se voyait
+    // refuser l'acces sans que rien ne le signale. La comparaison est stricte
+    // depuis IpWhitelist, ce qui rend l'espace definitivement bloquante.
+    'admin_allowed_ips' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('ADMIN_ALLOWED_IPS', ''))))),
 
     'admin_initial_password' => env('ADMIN_INITIAL_PASSWORD', 'CHANGE_THIS_PASSWORD'),
 

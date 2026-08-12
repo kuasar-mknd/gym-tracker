@@ -19,7 +19,7 @@ class IpWhitelist
     {
         $allowedIps = config('app.admin_allowed_ips', []);
 
-        if ($allowedIps !== [] && ! in_array($request->ip(), (array) $allowedIps)) {
+        if ($allowedIps !== [] && ! in_array($request->ip(), (array) $allowedIps, true)) {
             // In production, we return a 404 to avoid revealing the existence of the backoffice
             if (app()->isProduction()) {
                 abort(404);
