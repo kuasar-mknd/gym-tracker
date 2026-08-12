@@ -16,8 +16,10 @@ parameters:
         - routes/
         - tests/
 
-    # Level 9 is the highest level
-    level: 9
+    # level: max suit automatiquement la derniere version de PHPStan, ce qui est
+    # voulu : une montee de version doit remonter ses nouvelles regles, pas les
+    # taire. Le baseline absorbe le residuel et ne doit que retrecir.
+    level: max
     treatPhpDocTypesAsCertain: false
 
     ignoreErrors:
@@ -32,6 +34,14 @@ parameters:
         # que Laravel n'a pas migre sa propre classe.
         - identifier: return.deprecatedInterface
           path: app/Actions/Fortify/PasswordValidationRules.php
+        # level: max exige que tout appel de methode porte sur un objet connu.
+        # Dans les tests, les valeurs viennent de reponses JSON et de datasets :
+        # elles sont mixed par nature. Cette famille represente 1543 des 2187
+        # erreurs a level max, toutes dans tests/, et aucune ne designe un defaut.
+        # property.nonObject n'est PAS ignore : ce sont les 138 modeles
+        # potentiellement nuls qui font planter un test au lieu de l'echouer.
+        - identifier: method.nonObject
+          path: tests/*
         - identifier: staticMethod.dynamicCall
         - identifier: method.dynamicName
           path: tests/*
