@@ -6,11 +6,26 @@ name: Auto Release
 # Le déclencheur est `workflow_run` sur la CI, et non `push` : c'est ce qui donne
 # son sens au « si tout fonctionne ». Sur un push, la release partirait avant que
 # les tests, Dusk et la construction de l'image aient rendu leur verdict.
+# EN PAUSE — decision #1373. Le declenchement automatique est retire le temps
+# d'arbitrer la politique de release ; la logique reste intacte et se relance a
+# la main. Pour reactiver, remettre le bloc workflow_run ci-dessous.
+#
+# Raison de la pause : le declencheur est bien limite a Dependabot, mais le
+# CONTENU d'une release ne l'est pas. `--generate-notes` couvre tout le delta
+# depuis le tag precedent, donc une montee de dependance publierait aussi le
+# travail applicatif accumule sur main. Mesure au moment de la decision :
+# 35 commits depuis v1.5.0, dont 10 seulement de Dependabot. Deux consequences
+# — Dependabot decidait du moment de publication du travail applicatif, et un
+# increment de patch sous-evaluait un lot contenant des correctifs de securite
+# et un changement de comportement.
 on:
-    workflow_run:
-        workflows: ['CI']
-        types: [completed]
-        branches: [main]
+    workflow_dispatch:
+
+# on:
+#     workflow_run:
+#         workflows: ['CI']
+#         types: [completed]
+#         branches: [main]
 
 permissions:
     contents: write
