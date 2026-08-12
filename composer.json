@@ -12,7 +12,6 @@
         "php": "^8.5",
         "bezhansalleh/filament-shield": "^4.0",
         "darkaonline/l5-swagger": "^11.1",
-        "doctrine/dbal": "^4.4",
         "filament/filament": "^5.0",
         "firebase/php-jwt": "^7.0",
         "inertiajs/inertia-laravel": "^3.3",
@@ -20,7 +19,6 @@
         "laravel/fortify": "^1.33",
         "laravel/framework": "^13.0",
         "laravel/horizon": "^5.42",
-        "laravel/mcp": "^0.9",
         "laravel/octane": "^2.13",
         "laravel/pulse": "^1.5",
         "laravel/sanctum": "^4.0",
@@ -38,6 +36,7 @@
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",
         "fakerphp/faker": "^1.23",
+        "icanhazstring/composer-unused": "^0.9.6",
         "larastan/larastan": "^3.0",
         "laravel/boost": "^2.5",
         "laravel/breeze": "^2.3",
