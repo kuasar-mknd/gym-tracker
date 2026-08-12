@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace Tests\Feature\Security;
 
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class PasswordUpdateRateLimitTest extends TestCase
 {
+    // tests/Pest.php applies RefreshDatabase through pest()->use(...)->in('Feature'),
+    // which only covers Pest files — not classic PHPUnit classes like this one. The
+    // class ran green anyway because sequential runs left a migrated database behind;
+    // under `test -p` each process gets its own database and the schema was missing.
+    use RefreshDatabase;
+
     public function test_password_update_is_rate_limited(): void
     {
         $user = User::factory()->create([
