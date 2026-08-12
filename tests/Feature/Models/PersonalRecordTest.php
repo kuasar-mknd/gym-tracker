@@ -128,4 +128,71 @@ class PersonalRecordTest extends TestCase
 
         $this->assertDatabaseEmpty('personal_records');
     }
+
+    /**
+     * PersonalRecordService::shouldSkipSync() écarte trois cas : l'échauffement,
+     * le poids absent et les reps absentes. Seul le premier était couvert.
+     *
+     * Ces tests appellent le service DIRECTEMENT, sans passer par la route : par
+     * HTTP, la validation du FormRequest rejette déjà un poids nul, si bien qu'un
+     * test passant par là vérifierait la validation et non le garde. Vérifié — il
+     * reste vert quand on supprime le garde.
+     *
+     * Ce que le garde protège : sans lui, processUpdates multiplierait un null,
+     * PHP le coercerait en 0, et un record personnel à 0 serait enregistré comme
+     * un résultat légitime.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('incompleteSets')]
+    public function test_an_incomplete_set_does_not_create_a_pr(array $attributes): void
+    {
+        $this->syncSet($attributes);
+
+        $this->assertDatabaseEmpty('personal_records');
+    }
+
+    /**
+     * @return array<string, array{array<string, mixed>}>
+     */
+    public static function incompleteSets(): array
+    {
+        return [
+            'poids absent' => [['weight' => null, 'reps' => 10]],
+            'reps absentes' => [['weight' => 80, 'reps' => null]],
+            'poids nul' => [['weight' => 0, 'reps' => 10]],
+            'reps nulles' => [['weight' => 80, 'reps' => 0]],
+        ];
+    }
+
+    /**
+     * Le pendant positif : sans lui, les cas ci-dessus passeraient aussi si la
+     * création de record était cassée pour tout le monde.
+     */
+    public function test_a_complete_set_creates_the_three_tracked_records(): void
+    {
+        $this->syncSet(['weight' => 80, 'reps' => 5]);
+
+        $this->assertDatabaseCount('personal_records', 3);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function syncSet(array $attributes): void
+    {
+        $user = \App\Models\User::factory()->create();
+        $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id]);
+        $workoutLine = \App\Models\WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => \App\Models\Exercise::factory()->create()->id,
+        ]);
+
+        $set = \App\Models\Set::factory()->create([
+            'workout_line_id' => $workoutLine->id,
+            'is_completed' => true,
+        ] + $attributes);
+
+        app(\App\Services\PersonalRecordService::class)->syncSetPRs($set->refresh());
+    }
 }
