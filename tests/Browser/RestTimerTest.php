@@ -20,7 +20,7 @@ class RestTimerTest extends DuskTestCase
      */
     private function timerSecondsLeft(Browser $browser): int
     {
-        [$minutes, $seconds] = array_map('intval', explode(':', trim($browser->text('[role="timer"]'))));
+        [$minutes, $seconds] = array_map(intval(...), explode(':', trim($browser->text('[role="timer"]'))));
 
         return $minutes * 60 + $seconds;
     }
