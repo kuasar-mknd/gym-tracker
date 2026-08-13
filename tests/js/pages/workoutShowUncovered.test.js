@@ -1515,3 +1515,83 @@ describe('Workouts/Show — the refusal banner', () => {
         expect(banner.text()).toContain('Développé couché')
     })
 })
+
+describe('validating and unvalidating a set in quick succession', () => {
+    /** A PATCH answer shaped like the API's, for a given completion state. */
+    const completionAnswer = (id, isCompleted, updatedAt) => ({
+        data: { data: { id, is_completed: isCompleted, personal_record: null, updated_at: updatedAt } },
+    })
+
+    it('keeps the last tap, whichever answer comes home first', async () => {
+        const wrapper = await mountPage()
+        const set = lines(wrapper)[0].sets[0]
+
+        const first = deferred()
+        const second = deferred()
+        patch.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+
+        // Tick, then untick, without waiting: the button is only disabled once
+        // the session is finished, so two PATCH for the same row really can be
+        // in flight together.
+        wrapper.vm.toggleSetCompletion(set, 90)
+        await flushPromises()
+        wrapper.vm.toggleSetCompletion(set, 90)
+        await flushPromises()
+
+        // The newer answer lands first, the older one after it — the ordering
+        // that used to tick the box back on and leave the server holding it.
+        second.resolve(completionAnswer(set.id, false, '2026-08-13T10:00:02Z'))
+        await flushPromises()
+        first.resolve(completionAnswer(set.id, true, '2026-08-13T10:00:01Z'))
+        await flushPromises()
+
+        expect(set.is_completed).toBe(false)
+        expect(set.updated_at).toBe('2026-08-13T10:00:02Z')
+    })
+
+    it('sends the second tap only once the first has been answered', async () => {
+        const wrapper = await mountPage()
+        const set = lines(wrapper)[0].sets[0]
+
+        const first = deferred()
+        patch.mockReturnValueOnce(first.promise)
+
+        wrapper.vm.toggleSetCompletion(set, 90)
+        await flushPromises()
+        wrapper.vm.toggleSetCompletion(set, 90)
+        await flushPromises()
+
+        // Queued, not overlapped. Two requests racing on one row is what the
+        // server sees as a lost update, whichever way the screen resolves it.
+        expect(patch).toHaveBeenCalledTimes(1)
+
+        first.resolve(completionAnswer(set.id, true, '2026-08-13T10:00:01Z'))
+        await flushPromises()
+
+        expect(patch).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not roll a stale refusal back over the newer tap', async () => {
+        const wrapper = await mountPage()
+        const set = lines(wrapper)[0].sets[0]
+
+        const first = deferred()
+        const second = deferred()
+        patch.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+
+        wrapper.vm.toggleSetCompletion(set, 90)
+        await flushPromises()
+        wrapper.vm.toggleSetCompletion(set, 90)
+        await flushPromises()
+
+        second.resolve(completionAnswer(set.id, false, '2026-08-13T10:00:02Z'))
+        await flushPromises()
+
+        // The overtaken request now fails. Its rollback belongs to a tap the
+        // user has already replaced, so it must not be applied.
+        first.reject({ response: { status: 500 } })
+        await flushPromises()
+
+        expect(set.is_completed).toBe(false)
+    })
+})
