@@ -37,17 +37,20 @@ export default defineConfig({
       exclude: ['resources/js/ziggy*.js'],
       reporter: ['text-summary', 'html'],
       /*
-       * Pinned to what the suite actually covers today, not to an ambition.
-       * This is a ratchet: raise it whenever coverage climbs, never lower it.
-       * The frontend is the least-tested half of this app (120 of 161 source
-       * files at 0%), so the floor is low on purpose — a threshold nobody can
-       * meet is a threshold somebody deletes.
+       * Pinned a point under what the suite actually covers, not to an
+       * ambition. This is a ratchet: raise it whenever coverage climbs, never
+       * lower it. A point of slack absorbs the rounding, so a legitimate
+       * refactor that shifts one statement does not turn CI red.
+       *
+       * The frontend was the least-tested half of this app — 120 of 161 source
+       * files sat at 0% and the floor was 24%. Raising it in step with each
+       * batch is what stops the next one from quietly giving the ground back.
        */
       thresholds: {
-        statements: 73,
-        branches: 68,
-        functions: 64,
-        lines: 73
+        statements: 83,
+        branches: 80,
+        functions: 79,
+        lines: 83
       }
     }
   }
