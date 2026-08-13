@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Console\Commands\SyncIconFont;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -68,14 +69,39 @@ function iconNamesInSource(): array
          * here is the safe direction: a false positive costs one line in the
          * subset list, a false negative costs a word drawn where a glyph
          * belongs.
+         *
+         * The scan follows the block, not the line. A lookup map carries the
+         * word `icon` only on the line that names it, and every value sits on a
+         * line of its own:
+         *
+         *     const themeIcons = {
+         *         system: 'brightness_auto',   <- no `icon` on this line
+         *         light: 'light_mode',
+         *         dark: 'dark_mode',
+         *     }
+         *
+         * A line-scoped sweep reads the declaration and none of the values,
+         * which is how `brightness_auto`, `light_mode` and `dark_mode` reached
+         * production absent from the subset: the theme toggle on the Plus tab
+         * drew its name as a word. So an open brace on an `icon` line keeps the
+         * sweep alive until it closes.
          */
+        $depth = 0;
+
         foreach (explode("\n", $source) as $line) {
-            if (! preg_match('/icon/i', $line)) {
+            $isIconLine = (bool) preg_match('/icon/i', $line);
+
+            if (! $isIconLine && $depth === 0) {
                 continue;
             }
 
             preg_match_all('/[\'"`]([a-z][a-z0-9_]{2,30})[\'"`]/', $line, $quoted);
             $names = [...$names, ...$quoted[1]];
+
+            $depth += substr_count($line, '{') + substr_count($line, '[')
+                - substr_count($line, '}') - substr_count($line, ']');
+
+            $depth = max($depth, 0);
         }
 
         // The habit picker is a bare array of names with no `icon` on the lines.
@@ -102,6 +128,10 @@ const NOT_ICONS = [
     // `{{ status === 'running' ? 'pause' : 'play_arrow' }}` — the operand of the
     // comparison, not one of the two names the branch can render.
     'running',
+    // The goal types switched on in GoalCard's `typeIcon`. That computed does
+    // carry the word icon, so following its block reaches the `case` labels —
+    // but what it returns is an emoji, never a ligature.
+    'weight', 'frequency', 'volume', 'measurement',
 ];
 
 it('ships every icon the interface can render', function (): void {
@@ -139,4 +169,29 @@ it('does not carry icons nothing renders', function (): void {
     $unused = array_values(array_diff($subset, iconNamesInSource()));
 
     expect($unused)->toBe([], 'Unused entries in the icon subset: '.implode(', ', $unused));
+});
+
+/**
+ * The two tests above compare the components against the list. Neither looks at
+ * the font, and the list is only the intent — the .woff2 is the artifact. An
+ * icon added to the list without regenerating renders exactly like one that was
+ * never added at all, and both tests stay green.
+ *
+ * `artisan icons:sync` therefore records the checksum of the list it built from,
+ * and this compares the two. It cannot read the glyphs out of the woff2 — that
+ * needs brotli, which PHP does not ship — but it catches the failure that
+ * actually happens: the list edited, the font forgotten.
+ */
+it('was built from the icon list it ships with', function (): void {
+    expect(SyncIconFont::checksumPath())->toBeReadableFile(
+        'No checksum recorded for the icon font. Run `artisan icons:sync`.'
+    );
+
+    $recorded = trim((string) file_get_contents(SyncIconFont::checksumPath()));
+
+    expect($recorded)->toBe(
+        SyncIconFont::checksum(SyncIconFont::iconNames()),
+        'The icon list changed but the font was not regenerated, so the new names '
+        .'would draw as words. Run `artisan icons:sync`.'
+    );
 });
