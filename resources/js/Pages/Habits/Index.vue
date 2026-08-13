@@ -210,7 +210,15 @@ const toggleHabit = (habit, date) => {
         {
             preserveScroll: true,
             preserveState: true,
-            only: ['habits'], // Optimization: only reload habits prop
+            /*
+             * `stats` belongs here with `habits`. It feeds the two thirty-day
+             * charts, and leaving it out did not merely delay them — it is a
+             * deferred prop, so without it the response carries no
+             * `deferredProps` metadata either, nothing re-triggers the load,
+             * and Inertia keeps the value from before the tick. Ticking a box
+             * moved the row and left both charts describing the previous state.
+             */
+            only: ['habits', 'stats'],
         },
     )
 }

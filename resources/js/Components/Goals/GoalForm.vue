@@ -53,7 +53,11 @@ const goalTypeOptions = [
 const titleTouched = ref(false)
 
 watch(
-    () => [props.form.type, props.form.exercise_id, props.form.measurement_type],
+    // target_value belongs here as much as the other three: all four branches
+    // below read it. Left out, the `|| '?'` fallback — meant for the moment the
+    // type is chosen and the target is not yet typed — became permanent, and
+    // the question mark was saved as the goal's title.
+    () => [props.form.type, props.form.exercise_id, props.form.measurement_type, props.form.target_value],
     () => {
         if (!props.autoTitle || titleTouched.value) {
             return

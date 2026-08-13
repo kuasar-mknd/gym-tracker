@@ -15,6 +15,18 @@ const props = defineProps({
 
 const currentYear = ref(props.year)
 const currentMonth = ref(props.month)
+
+/**
+ * Where the last tap was heading, which is not always what is on screen yet.
+ *
+ * `currentMonth` is what the grid draws, and it may only move once the data
+ * arrives. Stepping has to count from the month the user has already asked for, or
+ * taps made during the round trip all resolve to the same month and Inertia
+ * discards every request but the last.
+ */
+const pendingYear = ref(props.year)
+const pendingMonth = ref(props.month)
+
 const selectedDate = ref(null)
 
 const monthNames = [
@@ -75,9 +87,21 @@ const isToday = (dateStr) => {
     )
 }
 
+/**
+ * Steps a month, counting from where the user believes they are.
+ *
+ * The displayed month used to move only in `onSuccess`, so a second tap during
+ * the round trip started again from the month still on screen and asked for the
+ * one already in flight. Inertia interrupts the earlier visit, so only the last
+ * response lands: three quick taps forward advanced by one month, not three.
+ *
+ * Counting from `pendingMonth` fixes the arithmetic without moving the grid
+ * early — the header and the days still change only when the data for them
+ * arrives, which is what stops a month flashing up empty.
+ */
 const changeMonth = (delta) => {
-    let newMonth = currentMonth.value + delta
-    let newYear = currentYear.value
+    let newMonth = pendingMonth.value + delta
+    let newYear = pendingYear.value
 
     if (newMonth > 12) {
         newMonth = 1
@@ -87,6 +111,9 @@ const changeMonth = (delta) => {
         newYear--
     }
 
+    pendingMonth.value = newMonth
+    pendingYear.value = newYear
+
     router.visit(route('calendar.index', { year: newYear, month: newMonth }), {
         preserveState: true,
         preserveScroll: true,
@@ -94,6 +121,11 @@ const changeMonth = (delta) => {
             currentMonth.value = newMonth
             currentYear.value = newYear
             selectedDate.value = null // Reset selection on month change
+        },
+        onError: () => {
+            // The step never happened, so the next tap must not count from it.
+            pendingMonth.value = currentMonth.value
+            pendingYear.value = currentYear.value
         },
     })
 }
@@ -107,6 +139,11 @@ const goToToday = () => {
     const today = new Date()
     const targetMonth = today.getMonth() + 1
     const targetYear = today.getFullYear()
+
+    // Jumping home resets where stepping counts from, or the next arrow would
+    // step off the month this button just left.
+    pendingMonth.value = targetMonth
+    pendingYear.value = targetYear
 
     router.visit(route('calendar.index', { year: targetYear, month: targetMonth }), {
         preserveState: true,

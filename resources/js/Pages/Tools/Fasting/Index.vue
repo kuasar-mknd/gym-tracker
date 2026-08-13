@@ -22,7 +22,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
-import { ref, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 
 const FastingHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/FastingHistoryChart.vue'))
 import dayjs from 'dayjs'
@@ -109,13 +109,37 @@ const updateTimer = () => {
     progressPercentage.value = Math.min((diff / targetSeconds) * 100, 100)
 }
 
-onMounted(() => {
-    startForm.start_time = dayjs().format('YYYY-MM-DDTHH:mm')
+/**
+ * Arms and disarms the clock as the fast itself comes and goes.
+ *
+ * `onMounted` alone was not enough. Starting a fast posts through Inertia, and
+ * `router.post` preserves state by default, so this component is never
+ * remounted — the hook does not run a second time. Anyone opening the page
+ * without a fast in progress, which is the ordinary case, then pressed
+ * "Commencer" and watched the card appear stuck at 00:00:00 with an empty ring,
+ * for as long as they left it open.
+ */
+watch(
+    () => props.activeFast,
+    (fast) => {
+        clearInterval(timerInterval.value)
+        timerInterval.value = null
 
-    if (props.activeFast) {
+        if (!fast) {
+            elapsedSeconds.value = 0
+            progressPercentage.value = 0
+
+            return
+        }
+
         updateTimer()
         timerInterval.value = setInterval(updateTimer, 1000)
-    }
+    },
+    { immediate: true },
+)
+
+onMounted(() => {
+    startForm.start_time = dayjs().format('YYYY-MM-DDTHH:mm')
 })
 
 onUnmounted(() => {
