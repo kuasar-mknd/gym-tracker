@@ -105,7 +105,17 @@ describe('ticking a day', () => {
         expect(payload).toEqual({ date: '2026-02-10' })
         // A full reload here would throw away the open modal and jump the page
         // back to the top on every tick of a week's worth of habits.
-        expect(options).toMatchObject({ preserveScroll: true, preserveState: true, only: ['habits'] })
+        //
+        // `stats` is listed alongside `habits` because the two thirty-day charts
+        // live on it. Asking for `habits` alone did not merely delay them: it is
+        // a deferred prop, so the response carried no `deferredProps` metadata,
+        // nothing re-triggered the load, and both charts kept describing the
+        // state from before the tick.
+        expect(options).toMatchObject({
+            preserveScroll: true,
+            preserveState: true,
+            only: ['habits', 'stats'],
+        })
     })
 })
 

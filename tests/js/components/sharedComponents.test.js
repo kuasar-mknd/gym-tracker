@@ -257,7 +257,7 @@ describe('GoalForm', () => {
 
     /**
      * Stands in for the Inertia form the parent owns. Reactive, because the
-     * component watches three of its fields and v-models into the rest.
+     * component watches four of its fields and v-models into the rest.
      */
     const goalForm = (fields = {}) =>
         reactive({
@@ -539,6 +539,53 @@ describe('GoalForm', () => {
         await measurementWrapper.vm.$nextTick()
         expect(byMeasurement.title).toBe('Atteindre ? cm de Poitrine')
         measurementWrapper.unmount()
+    })
+
+    it('replaces the question mark as soon as the target is typed', async () => {
+        // The page puts the kind of goal in the left column and the target in
+        // the right, so this is the order most people fill it in. The watch
+        // listed the three selectors and not the target, so nothing re-ran the
+        // title when the number arrived: the placeholder stayed, and it was the
+        // placeholder that got saved as the goal's name.
+        const form = goalForm()
+        const wrapper = mountGoalForm(form, { autoTitle: true })
+
+        form.type = 'frequency'
+        await wrapper.vm.$nextTick()
+        expect(form.title).toBe('Atteindre ? séances au total')
+
+        form.target_value = '20'
+        await wrapper.vm.$nextTick()
+        expect(form.title).toBe('Atteindre 20 séances au total')
+
+        wrapper.unmount()
+    })
+
+    it('replaces it for a strength goal too, whichever field comes last', async () => {
+        const form = goalForm()
+        const wrapper = mountGoalForm(form, { autoTitle: true })
+
+        form.exercise_id = 3
+        await wrapper.vm.$nextTick()
+        expect(form.title).toBe('Soulever ? kg au Développé couché')
+
+        form.target_value = '100'
+        await wrapper.vm.$nextTick()
+        expect(form.title).toBe('Soulever 100 kg au Développé couché')
+
+        // And the other way round: target first, exercise second.
+        const reversed = goalForm()
+        const reversedWrapper = mountGoalForm(reversed, { autoTitle: true })
+
+        reversed.target_value = '80'
+        await reversedWrapper.vm.$nextTick()
+        reversed.exercise_id = 5
+        await reversedWrapper.vm.$nextTick()
+
+        expect(reversed.title).toBe('Soulever 80 kg au Squat')
+
+        wrapper.unmount()
+        reversedWrapper.unmount()
     })
 
     it('stops renaming the goal once a title has been typed', async () => {

@@ -336,3 +336,55 @@ describe('Fasting — pagination', () => {
         expect(wrapper.find('[dusk="fasting-prev"]').attributes('disabled')).toBeUndefined()
     })
 })
+
+describe('Fasting — le compteur quand le jeûne démarre en cours de route', () => {
+    it('arme l’horloge sur un jeûne qui apparaît sans remontage', async () => {
+        // Le cas ordinaire : on ouvre la page sans jeûne en cours, on appuie sur
+        // « Commencer ». `router.post` conserve l'état, donc le composant n'est
+        // jamais remonté et `onMounted` ne rejoue pas. L'horloge n'étant armée
+        // que là, la carte apparaissait figée à 00:00:00 avec un anneau vide,
+        // aussi longtemps que la page restait ouverte.
+        const wrapper = await mountPage({ activeFast: null })
+
+        await wrapper.setProps({ activeFast: runningFast(2 * 3600 + 3 * 60 + 9, 16 * 60) })
+        await flushPromises()
+
+        expect(elapsedReadout(wrapper)).toBe('02:03:09')
+
+        wrapper.unmount()
+    })
+
+    it('continue de compter seconde après seconde', async () => {
+        const wrapper = await mountPage({ activeFast: null })
+
+        await wrapper.setProps({ activeFast: runningFast(0, 16 * 60) })
+        await flushPromises()
+
+        expect(elapsedReadout(wrapper)).toBe('00:00:00')
+
+        // L'intervalle doit tourner, pas seulement avoir affiché une valeur une
+        // fois : c'est la différence entre une horloge et une capture.
+        vi.advanceTimersByTime(3000)
+        await flushPromises()
+
+        expect(elapsedReadout(wrapper)).toBe('00:00:03')
+
+        wrapper.unmount()
+    })
+
+    it('arrête l’horloge quand le jeûne se termine', async () => {
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+
+        await wrapper.setProps({ activeFast: null })
+        await flushPromises()
+
+        // Sans le désarmement, l'intervalle survivrait au jeûne et continuerait
+        // de lire `props.activeFast` à chaque seconde pour rien.
+        vi.advanceTimersByTime(5000)
+        await flushPromises()
+
+        expect(wrapper.text()).not.toContain('01:00:0')
+
+        wrapper.unmount()
+    })
+})

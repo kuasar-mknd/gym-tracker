@@ -153,6 +153,65 @@ describe('moving between months', () => {
         expect(visit.mock.calls[0][0]).toContain('"year":2026')
         expect(visit.mock.calls[0][0]).toContain('"month":6')
     })
+
+    it('counts each tap from the last one, not from what is still on screen', () => {
+        const wrapper = mountPage({ year: 2026, month: 3 })
+
+        // Three taps with no response in between — a phone with a slow
+        // connection, or an impatient thumb. The displayed month only moves in
+        // onSuccess, so counting from it asked for April three times; Inertia
+        // interrupts the earlier visits, and the user landed on April having
+        // pressed forward three times.
+        wrapper.vm.changeMonth(1)
+        wrapper.vm.changeMonth(1)
+        wrapper.vm.changeMonth(1)
+
+        expect(visit.mock.calls.map((call) => call[0])).toEqual([
+            expect.stringContaining('"month":4'),
+            expect.stringContaining('"month":5'),
+            expect.stringContaining('"month":6'),
+        ])
+    })
+
+    it('carries the year over when the taps cross December', () => {
+        const wrapper = mountPage({ year: 2026, month: 11 })
+
+        // November, December, then over into the next year.
+        wrapper.vm.changeMonth(1)
+        wrapper.vm.changeMonth(1)
+
+        expect(visit.mock.calls.map((call) => call[0])).toEqual([
+            expect.stringContaining('"year":2026,"month":12'),
+            expect.stringContaining('"year":2027,"month":1'),
+        ])
+    })
+
+    it('forgets a step the server refused', () => {
+        const wrapper = mountPage({ year: 2026, month: 3 })
+
+        wrapper.vm.changeMonth(1)
+        visit.mock.calls[0][1].onError()
+
+        wrapper.vm.changeMonth(1)
+
+        // The failed step never happened, so the next one starts from March
+        // again. Without the rollback the user would be stepping from a month
+        // they were never shown.
+        expect(visit.mock.calls[1][0]).toContain('"month":4')
+    })
+
+    it('steps from today after jumping home', () => {
+        const wrapper = mountPage({ year: 2026, month: 3 })
+
+        wrapper.vm.changeMonth(1)
+        wrapper.vm.goToToday()
+        wrapper.vm.changeMonth(1)
+
+        const today = new Date()
+        const expected = today.getMonth() + 2 > 12 ? 1 : today.getMonth() + 2
+
+        expect(visit.mock.calls.at(-1)[0]).toContain(`"month":${expected}`)
+    })
 })
 
 describe('picking a day', () => {
