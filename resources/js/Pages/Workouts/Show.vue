@@ -295,8 +295,6 @@ const flushAllPendingUpdates = () => {
     const inFlight = Object.keys(updateTimers).map((key) => {
         const pending = updateTimers[key]
 
-        if (!pending) return null
-
         clearTimeout(pending.timerId)
         delete updateTimers[key]
 
@@ -494,7 +492,6 @@ const addExercise = (exerciseId) => {
                 const { sets: createdSets, ...lineFields } = created
                 const line = localWorkout.value.workout_lines[idx]
 
-                if (!Array.isArray(line.sets)) line.sets = []
                 Object.assign(line, lineFields)
 
                 // A line the server has just created has no sets of its own, but
@@ -706,9 +703,7 @@ const addSet = (lineId) => {
         markUnsynced(tempSet.id)
     }
 
-    // Settled, not resolved: a create that failed must not stop the next set
-    // from being sent, only from overtaking it.
-    const previousCreate = (setCreateChains.get(line) ?? Promise.resolve()).catch(() => null)
+    const previousCreate = setCreateChains.get(line) ?? Promise.resolve()
 
     const creation = previousCreate
         .then(() => pendingIds.resolve(lineId))
@@ -774,6 +769,13 @@ const addSet = (lineId) => {
                 return realSetId
             })
         })
+        /**
+         * This is what makes the chain settle rather than reject, and it is
+         * load-bearing for more than this set: the next one waits on `creation`
+         * through `setCreateChains`, so a create that failed must not stop it
+         * from being sent — only from overtaking it. Returning null on every
+         * path is what keeps that promise resolvable.
+         */
         .catch((err) => {
             if (err.isOffline) {
                 markUnsynced(tempSet.id)
