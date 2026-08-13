@@ -348,22 +348,55 @@ const toggleSetCompletion = async (set, exerciseRestTime) => {
      */
     await flushPendingUpdates(set.id)
 
-    return patchSet(set, { is_completed: newState })
-        .then((response) => {
-            // Only merge back the fields we sent + metadata to avoid overwriting
-            // concurrent optimistic updates (e.g. weight/reps changes)
-            if (response.data?.data) {
-                set.is_completed = response.data.data.is_completed
-                set.personal_record = response.data.data.personal_record
-                set.updated_at = response.data.data.updated_at
-            }
-        })
-        .catch((err) => {
-            if (!err.isOffline) {
+    /**
+     * Sequenced and queued, exactly as the value writes are.
+     *
+     * The protection built in #1319 was written per set and per *field*, and
+     * the fields it listed were the four numeric ones. Completion was left
+     * out, although nothing stops two of its requests overlapping: the button
+     * is only disabled once the session is finished, so validating a set and
+     * unvalidating it a moment later sends two PATCH for the same row. Whichever
+     * answer landed second was applied — and it could be the older one, which
+     * ticked the box back on screen *and* left the server holding that value.
+     *
+     * `completion:` keys it separately from the numeric fields so that marking a
+     * set done still overlaps freely with typing into it; only completion
+     * against completion is serialised.
+     */
+    const writeKey = `completion:${set.id}`
+    const seq = nextWrite(writeKey)
+
+    const send = () =>
+        patchSet(set, { is_completed: newState })
+            .then((response) => {
+                // A reply that is no longer the latest word on this set is read
+                // for nothing: applying it would undo the tap that overtook it.
+                if (!isLatestWrite(writeKey, seq)) {
+                    return
+                }
+
+                // Only merge back the fields we sent + metadata to avoid overwriting
+                // concurrent optimistic updates (e.g. weight/reps changes)
+                if (response.data?.data) {
+                    set.is_completed = response.data.data.is_completed
+                    set.personal_record = response.data.data.personal_record
+                    set.updated_at = response.data.data.updated_at
+                }
+            })
+            .catch((err) => {
+                if (err.isOffline || !isLatestWrite(writeKey, seq)) {
+                    return
+                }
+
                 set.is_completed = previousState
                 reportSyncFailure('La série n’a pas pu être validée. Réessaie.')
-            }
-        })
+            })
+
+    const inOrder = (completionWriteChains.get(writeKey) ?? Promise.resolve()).catch(() => {}).then(send)
+
+    completionWriteChains.set(writeKey, inOrder)
+
+    return inOrder
 }
 
 const savingTemplate = ref(false)
@@ -959,6 +992,16 @@ const isLatestWrite = (key, seq) => writeSeq[key] === seq
  * @type {Map<string, Promise>}
  */
 const fieldWriteChains = new Map()
+
+/**
+ * The same, for completion. Kept apart from `fieldWriteChains` on purpose:
+ * marking a set done and typing into it are independent, and queueing one
+ * behind the other would make the tick wait on a debounce it has nothing to do
+ * with. Only completion against completion needs ordering.
+ *
+ * @type {Map<string, Promise>}
+ */
+const completionWriteChains = new Map()
 
 /**
  * The value the server last confirmed for a field, which is the only value a
