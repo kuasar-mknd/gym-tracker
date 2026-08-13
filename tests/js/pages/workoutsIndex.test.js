@@ -6,6 +6,35 @@ const post = vi.fn()
 const destroy = vi.fn()
 const haptic = vi.fn()
 
+/*
+ * The six charts are pulled in by defineAsyncComponent, so their import chain
+ * keeps resolving after the test file is done — `workoutDuration.js` was still
+ * loading when the environment tore down, and Vitest reported an unhandled
+ * EnvironmentTeardownError that failed the whole run while every test passed.
+ *
+ * Mocking the modules means the dynamic import resolves from the registry
+ * instead of walking the real chain. Nothing here asserts on a chart's
+ * internals; what the page hands one is asserted through its props.
+ */
+vi.mock('@/Components/Stats/WorkoutFrequencyChart.vue', () => ({
+    default: { name: 'WorkoutFrequencyChart', template: '<div />' },
+}))
+vi.mock('@/Components/Stats/WorkoutsPerMonthChart.vue', () => ({
+    default: { name: 'WorkoutsPerMonthChart', template: '<div />' },
+}))
+vi.mock('@/Components/Stats/MonthlyVolumeChart.vue', () => ({
+    default: { name: 'MonthlyVolumeChart', template: '<div />' },
+}))
+vi.mock('@/Components/Stats/WorkoutDurationChart.vue', () => ({
+    default: { name: 'WorkoutDurationChart', template: '<div />' },
+}))
+vi.mock('@/Components/Stats/VolumePerWorkoutChart.vue', () => ({
+    default: { name: 'VolumePerWorkoutChart', template: '<div />' },
+}))
+vi.mock('@/Components/Stats/WorkoutHistoryTimelineChart.vue', () => ({
+    default: { name: 'WorkoutHistoryTimelineChart', template: '<div />' },
+}))
+
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => haptic(...args) }))
 
 /**
