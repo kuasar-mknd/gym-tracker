@@ -67,6 +67,24 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 
         <LiquidBackground :variant="liquidVariant" />
 
+        <!--
+            Local only, and deliberately not dismissible: a database behind the
+            code fails at the write, never at the read, so the app looks healthy
+            while every save is refused. That is exactly how an afternoon was
+            lost to a column added days earlier — and the test suite cannot warn
+            about it, since it migrates a fresh database on every run.
+        -->
+        <div
+            v-if="$page.props.pending_migrations > 0"
+            class="sticky top-0 z-[90] bg-amber-500 px-4 py-2 text-center text-sm font-bold text-slate-900"
+            role="alert"
+            data-testid="pending-migrations-banner"
+        >
+            {{ $page.props.pending_migrations }} migration(s) en attente — lance
+            <code class="rounded bg-slate-900/15 px-1">sail artisan migrate</code>
+            avant de continuer, sinon les enregistrements échoueront sans le dire.
+        </div>
+
         <!-- Flash Toasts -->
         <div v-for="(cfg, type) in toasts" :key="type">
             <Transition
