@@ -691,24 +691,6 @@ parameters:
 			path: app/Http/Requests/UpdateSupplementLogRequest.php
 
 		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/WorkoutLineStoreRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/WorkoutLineStoreRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/WorkoutLineStoreRequest.php
-
-		-
 			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'
 			identifier: ternary.condNotBoolean
 			count: 1

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class WorkoutCompletionTest extends TestCase
@@ -57,7 +58,10 @@ class WorkoutCompletionTest extends TestCase
         ]);
         $exercise = Exercise::factory()->create();
 
-        $response = $this->actingAs($user)->post(route('workout-lines.store', $workout), [
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson(route('api.v1.workout-lines.store'), [
+            'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);
 
@@ -74,7 +78,9 @@ class WorkoutCompletionTest extends TestCase
         ]);
         $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-        $response = $this->actingAs($user)->delete(route('workout-lines.destroy', $line));
+        Sanctum::actingAs($user);
+
+        $response = $this->deleteJson(route('api.v1.workout-lines.destroy', $line));
 
         $response->assertForbidden();
     }
@@ -89,7 +95,10 @@ class WorkoutCompletionTest extends TestCase
         ]);
         $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-        $response = $this->actingAs($user)->post(route('sets.store', $line), [
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $line->id,
             'weight' => 100,
             'reps' => 10,
         ]);
@@ -108,7 +117,9 @@ class WorkoutCompletionTest extends TestCase
         $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $line->id]);
 
-        $response = $this->actingAs($user)->patch(route('sets.update', $set), [
+        Sanctum::actingAs($user);
+
+        $response = $this->patchJson(route('api.v1.sets.update', $set), [
             'weight' => 105,
         ]);
 
@@ -126,7 +137,9 @@ class WorkoutCompletionTest extends TestCase
         $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $line->id]);
 
-        $response = $this->actingAs($user)->delete(route('sets.destroy', $set));
+        Sanctum::actingAs($user);
+
+        $response = $this->deleteJson(route('api.v1.sets.destroy', $set));
 
         $response->assertForbidden();
     }
