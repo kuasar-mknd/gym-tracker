@@ -218,7 +218,7 @@ jobs:
                   DB_USERNAME=sail
                   DB_PASSWORD=password
 
-                  SESSION_DRIVER=cookie
+                  SESSION_DRIVER=database
                   CACHE_STORE=array
                   QUEUE_CONNECTION=sync
                   MAIL_MAILER=array

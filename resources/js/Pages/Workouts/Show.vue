@@ -39,6 +39,8 @@ const props = defineProps({
     workout: { type: Object, required: true },
     exercises: { type: Array, required: true },
 })
+
+const page = usePage()
 import { EXERCISE_CATEGORIES, EXERCISE_TYPES } from '@/Utils/constants'
 
 // ⚡ Perf: Use a mutable reactive ref instead of computed to support optimistic UI updates
@@ -199,6 +201,27 @@ const awaitReplay = (queueId) =>
     })
 
 /**
+ * Says out loud that the server refused something.
+ *
+ * Every failure path on this screen used to do the same two things — put the
+ * optimistic row back the way it was, and buzz. On a phone that is a vibration
+ * with no words; on a desktop it is nothing at all. So a 500 was indis-
+ * tinguable from a mis-tap, and an afternoon went by with the server rejecting
+ * every write while the screen just kept quietly undoing them.
+ *
+ * The layout already renders a toast from `flash.error` and clears it after
+ * eight seconds, so this borrows that rather than inventing a second channel.
+ * Offline is deliberately excluded: the queue handles it, the value stays on
+ * screen, and there is nothing for the user to do about it.
+ */
+const reportSyncFailure = (message) => {
+    const flash = page.props.flash ?? (page.props.flash = {})
+
+    flash.error = message
+    triggerHaptic('error')
+}
+
+/**
  * The only two ways this screen may talk to the server about a set.
  *
  * Both wait out a creation still in flight, so the URL always carries an id the
@@ -340,7 +363,7 @@ const toggleSetCompletion = async (set, exerciseRestTime) => {
         .catch((err) => {
             if (!err.isOffline) {
                 set.is_completed = previousState
-                triggerHaptic('error')
+                reportSyncFailure('La série n’a pas pu être validée. Réessaie.')
             }
         })
 }
@@ -495,7 +518,7 @@ const addExercise = (exerciseId) => {
 
             const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
             if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
-            triggerHaptic('error')
+            reportSyncFailure('L’exercice n’a pas pu être ajouté à la séance. Réessaie.')
 
             return null
         })
@@ -600,7 +623,7 @@ const removeLine = (lineId) => {
             .catch((err) => {
                 if (!err.isOffline && removedLine) {
                     localWorkout.value.workout_lines.splice(idx, 0, removedLine)
-                    triggerHaptic('error')
+                    reportSyncFailure('L’exercice n’a pas pu être retiré de la séance. Réessaie.')
                 }
             })
     }
@@ -760,7 +783,7 @@ const addSet = (lineId) => {
 
             const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
             if (setIdx !== -1) line.sets.splice(setIdx, 1)
-            triggerHaptic('error')
+            reportSyncFailure('La série n’a pas pu être ajoutée. Réessaie.')
 
             return null
         })
@@ -1129,7 +1152,7 @@ const removeSet = (setId) => {
             deleteSet(setId).catch((err) => {
                 if (!err.isOffline) {
                     line.sets.splice(setIdx, 0, removedSet)
-                    triggerHaptic('error')
+                    reportSyncFailure('La série n’a pas pu être supprimée. Réessaie.')
                 }
             })
             break

@@ -45,8 +45,47 @@ class HandleInertiaRequests extends Middleware
             // seul à savoir qu'il est en local : import.meta.env.DEV vaut false
             // dans un build de production, que le serveur local sert quand même.
             'is_local' => app()->environment('local'),
+            'pending_migrations' => $this->pendingMigrationCount(),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
         ];
+    }
+
+    /**
+     * How many migrations the database has not run, or null outside local.
+     *
+     * A schema behind the code fails at the write, not at the read: the page
+     * renders, the request 500s on the insert, and the frontend rolls its
+     * optimistic update back. Every mutation in the app broke that way for an
+     * afternoon because activity_log was missing a column added days earlier,
+     * and nothing anywhere said so — the test suite cannot see it either, since
+     * it migrates a fresh database every run.
+     *
+     * Counted only in local, and only for requests that will draw a page, so
+     * production never pays for it.
+     */
+    private function pendingMigrationCount(): ?int
+    {
+        if (! app()->environment('local')) {
+            return null;
+        }
+
+        try {
+            $migrator = app('migrator');
+
+            if (! $migrator->repositoryExists()) {
+                return null;
+            }
+
+            $ran = $migrator->getRepository()->getRan();
+
+            $paths = $migrator->paths();
+            $pending = $migrator->getMigrationFiles($paths === [] ? [database_path('migrations')] : $paths);
+
+            return count(array_diff(array_keys($pending), $ran));
+        } catch (\Throwable) {
+            // A database that cannot answer is its own, louder problem.
+            return null;
+        }
     }
 
     /**
