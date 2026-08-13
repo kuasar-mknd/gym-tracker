@@ -38,18 +38,6 @@ describe('PersonalRecordType : valeurs persistées', function (): void {
     });
 });
 
-describe('PersonalRecordType : libellés', function (): void {
-    it('replie les valeurs héritées sur le même libellé que les valeurs courantes', function (): void {
-        expect(PersonalRecordType::MaxWeight->label())->toBe('Poids Max')
-            ->and(PersonalRecordType::Strength->label())->toBe('Poids Max')
-            ->and(PersonalRecordType::Max1RM->label())->toBe('1RM Estimé')
-            ->and(PersonalRecordType::OneRM->label())->toBe('1RM Estimé')
-            ->and(PersonalRecordType::MaxVolumeSet->label())->toBe('Volume Max')
-            ->and(PersonalRecordType::Volume->label())->toBe('Volume Max')
-            ->and(PersonalRecordType::Cardio->label())->toBe('Cardio');
-    });
-});
-
 describe('PersonalRecordType : aller-retour par le cast du modèle', function (): void {
     it('écrit la valeur de backing et relit une instance d\'enum', function (PersonalRecordType $type): void {
         $user = User::factory()->create();
@@ -78,8 +66,8 @@ describe('PersonalRecordType : aller-retour par le cast du modèle', function ()
 
 /**
  * La notification de record lit l'enum pour construire le message poussé sur
- * le téléphone. C'est le seul endroit où le libellé n'est pas celui de
- * l'enum : il est réécrit en toutes lettres.
+ * le téléphone. C'est le seul endroit qui donne un libellé lisible à ces
+ * types : il est écrit en toutes lettres dans PersonalRecordAchieved.
  */
 describe('PersonalRecordType nomme le record dans la notification', function (): void {
     it('écrit le libellé long du type dans le message', function (PersonalRecordType $type, string $expectedLabel): void {

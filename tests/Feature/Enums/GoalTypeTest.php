@@ -44,15 +44,6 @@ describe('GoalType : valeurs persistées', function (): void {
     });
 });
 
-describe('GoalType : libellés', function (): void {
-    it('traduit chaque type en français', function (): void {
-        expect(GoalType::Weight->label())->toBe('Poids')
-            ->and(GoalType::Volume->label())->toBe('Volume')
-            ->and(GoalType::Frequency->label())->toBe('Fréquence')
-            ->and(GoalType::Measurement->label())->toBe('Mensuration');
-    });
-});
-
 describe('GoalType : aller-retour par le cast du modèle', function (): void {
     it('écrit la valeur de backing et relit une instance d\'enum', function (GoalType $type): void {
         $user = User::factory()->create();

@@ -885,24 +885,12 @@ parameters:
 		-
 			message: '#^Cannot cast mixed to float\.$#'
 			identifier: cast.double
-			count: 4
+			count: 2
 			path: app/Services/Stats/BodyStatsService.php
 
 		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
-			count: 3
-			path: app/Services/Stats/BodyStatsService.php
-
-		-
-			message: '#^Method App\\Services\\Stats\\BodyStatsService\:\:getBodyFatHistory\(\) should return array\<int, App\\DTOs\\Stats\\BodyFatHistoryPoint\> but returns array\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/Stats/BodyStatsService.php
-
-		-
-			message: '#^Method App\\Services\\Stats\\BodyStatsService\:\:getWeightHistory\(\) should return array\<int, App\\DTOs\\Stats\\WeightHistoryPoint\> but returns array\.$#'
-			identifier: return.type
 			count: 1
 			path: app/Services/Stats/BodyStatsService.php
 
@@ -2629,22 +2617,10 @@ parameters:
 			path: tests/Unit/FeatureTestIsolationTest.php
 
 		-
-			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: tests/Unit/Models/UserCacheTest.php
-
-		-
 			message: '#^Call to function method_exists\(\) with ''App\\\\Models\\\\User'' and ''hasEnabledTwoFactor…'' will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1
 			path: tests/Unit/Models/UserSerializationTest.php
-
-		-
-			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:once\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: tests/Unit/Models/UserTest.php
 
 		-
 			message: '#^Argument of an invalid type Illuminate\\Routing\\RouteCollectionInterface supplied for foreach, only iterables are supported\.$#'

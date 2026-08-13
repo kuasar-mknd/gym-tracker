@@ -12,40 +12,6 @@ use Illuminate\Support\Facades\Cache;
 
 final class BodyStatsService
 {
-    /**
-     * @return array<int, WeightHistoryPoint>
-     */
-    public function getWeightHistory(User $user, int $days = 90): array
-    {
-        return Cache::remember(
-            "stats.weight_history.{$user->id}.{$days}",
-            now()->addMinutes(30),
-            fn (): array => $user->bodyMeasurements()
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // This significantly reduces memory usage and execution time for large datasets.
-                ->toBase()
-                ->where('measured_at', '>=', now()->subDays($days))
-                ->orderBy('measured_at', 'asc')
-                ->get()
-                ->map(function (object $m): ?WeightHistoryPoint {
-                    $timestamp = strtotime((string) $m->measured_at);
-
-                    if ($timestamp === false) {
-                        return null;
-                    }
-
-                    return new WeightHistoryPoint(
-                        date('d/m', $timestamp),
-                        date('Y-m-d', $timestamp),
-                        (float) $m->weight,
-                    );
-                })
-                ->filter()
-                ->toArray()
-        );
-    }
-
     public function getLatestBodyMetrics(User $user): LatestBodyMetrics
     {
         return Cache::remember(
@@ -69,41 +35,6 @@ final class BodyStatsService
                     $latest?->body_fat,
                 );
             }
-        );
-    }
-
-    /**
-     * @return array<int, BodyFatHistoryPoint>
-     */
-    public function getBodyFatHistory(User $user, int $days = 90): array
-    {
-        return Cache::remember(
-            "stats.body_fat_history.{$user->id}.{$days}",
-            now()->addMinutes(30),
-            fn (): array => $user->bodyMeasurements()
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // This significantly reduces memory usage and execution time for large datasets.
-                ->toBase()
-                ->where('measured_at', '>=', now()->subDays($days))
-                ->whereNotNull('body_fat')
-                ->orderBy('measured_at', 'asc')
-                ->get()
-                ->map(function (object $m): ?BodyFatHistoryPoint {
-                    $timestamp = strtotime((string) $m->measured_at);
-
-                    if ($timestamp === false) {
-                        return null;
-                    }
-
-                    return new BodyFatHistoryPoint(
-                        date('d/m', $timestamp),
-                        date('Y-m-d', $timestamp),
-                        (float) $m->body_fat,
-                    );
-                })
-                ->filter()
-                ->toArray()
         );
     }
 

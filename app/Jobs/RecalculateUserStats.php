@@ -23,8 +23,8 @@ final class RecalculateUserStats implements ShouldQueue
      */
     public function handle(\App\Services\StatsService $statsService): void
     {
-        // ⚡ Bolt: Use surgical cache invalidation instead of broad clearUserStatsCache
-        // to prevent unnecessary invalidation of body measurement statistics when workout data changes.
+        // Invalidation ciblée : on ne touche pas au cache des mesures corporelles,
+        // qu'un changement de données de séance ne périme pas.
         $statsService->clearWorkoutRelatedStats($this->user);
         $statsService->clearWorkoutMetadataStats($this->user);
 

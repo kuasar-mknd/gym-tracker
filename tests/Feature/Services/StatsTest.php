@@ -167,9 +167,6 @@ test('stats page calculates monthly comparison correctly', function (): void {
         );
 
     \Carbon\Carbon::setTestNow();
-
-    // Clear cache to avoid affecting other tests if they run in same process
-    app(\App\Services\StatsService::class)->clearUserStatsCache($user);
 });
 
 test('can retrieve exercise progress (1RM)', function (): void {

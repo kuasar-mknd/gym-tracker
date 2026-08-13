@@ -38,18 +38,6 @@ describe('ExerciseCategory : valeurs persistées', function (): void {
     });
 });
 
-describe('ExerciseCategory : libellés', function (): void {
-    it('affiche le libellé accentué de chaque catégorie', function (): void {
-        expect(ExerciseCategory::Pectoraux->label())->toBe('Pectoraux')
-            ->and(ExerciseCategory::Epaules->label())->toBe('Épaules')
-            ->and(ExerciseCategory::Dos->label())->toBe('Dos')
-            ->and(ExerciseCategory::Jambes->label())->toBe('Jambes')
-            ->and(ExerciseCategory::Bras->label())->toBe('Bras')
-            ->and(ExerciseCategory::Abdominaux->label())->toBe('Abdominaux')
-            ->and(ExerciseCategory::Cardio->label())->toBe('Cardio');
-    });
-});
-
 describe('ExerciseCategory : aller-retour par le cast du modèle', function (): void {
     it('écrit la valeur de backing et relit une instance d\'enum', function (ExerciseCategory $category): void {
         $user = User::factory()->create();

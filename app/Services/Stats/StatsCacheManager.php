@@ -18,18 +18,6 @@ use Illuminate\Support\Facades\Cache;
 final class StatsCacheManager
 {
     /**
-     * Clear all statistics cache for a given user.
-     *
-     * @param  User  $user  The user whose stats cache should be cleared.
-     */
-    public function clearUserStatsCache(User $user): void
-    {
-        $this->clearWorkoutRelatedStats($user);
-        $this->clearWorkoutMetadataStats($user);
-        $this->clearBodyMeasurementStats($user);
-    }
-
-    /**
      * Clear cache specifically for workout metadata (e.g., name, notes) changes.
      * This affects historical volume and duration limits but not analytical aggregates.
      *
@@ -66,7 +54,6 @@ final class StatsCacheManager
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::forget("stats.volume_trend.{$user->id}.{$days}");
-            Cache::forget("stats.daily_volume.{$user->id}.{$days}");
             Cache::forget("stats.performance_overview.{$user->id}.{$days}");
         }
 
@@ -114,8 +101,6 @@ final class StatsCacheManager
         Cache::forget("stats.latest_metrics.{$user->id}");
 
         foreach ([7, 30, 90, 365] as $days) {
-            Cache::forget("stats.weight_history.{$user->id}.{$days}");
-            Cache::forget("stats.body_fat_history.{$user->id}.{$days}");
             Cache::forget("stats.body_progress.{$user->id}.{$days}");
         }
     }

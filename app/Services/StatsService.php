@@ -159,14 +159,6 @@ final readonly class StatsService
     }
 
     /**
-     * Clear the stats cache for a user.
-     */
-    public function clearUserStatsCache(User $user): void
-    {
-        $this->cacheManager->clearUserStatsCache($user);
-    }
-
-    /**
      * Clear only metadata related stats (name, notes).
      */
     public function clearWorkoutMetadataStats(User $user): void
@@ -180,14 +172,6 @@ final readonly class StatsService
     public function clearVolumeStats(User $user): void
     {
         $this->cacheManager->clearVolumeStats($user);
-    }
-
-    /**
-     * Clear stats cache related to workout duration and time of day.
-     */
-    public function clearDurationStats(User $user): void
-    {
-        $this->cacheManager->clearDurationStats($user);
     }
 
     /**
