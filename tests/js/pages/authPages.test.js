@@ -203,16 +203,29 @@ describe('Login', () => {
         expect(mountPage(Login).text()).not.toContain('Lien envoyé.')
     })
 
-    it('montre les trois fournisseurs quand le serveur ne dit rien', () => {
-        // The page defaults each provider to enabled, so a server that has not
-        // sent the flag at all must not lose the social buttons.
+    it('n’offre aucun fournisseur tant que le serveur ne l’a pas dit', () => {
+        // Fail closed, not open. This used to default each provider to enabled,
+        // and since the flag was never shared at all the default won every time
+        // — which is how the Apple button stayed on the page while every click
+        // on it answered 500. A button that cannot work is worse than a missing
+        // one: it looks like a way in.
         const wrapper = mountPage(Login)
+
+        expect(providersOffered(wrapper)).toEqual([])
+    })
+
+    it('offre les trois quand le serveur les déclare tous utilisables', () => {
+        const wrapper = mountPage(Login, {
+            page: { social_login_enabled: { google: true, github: true, apple: true } },
+        })
 
         expect(providersOffered(wrapper)).toEqual(['Google', 'GitHub', 'Apple'])
     })
 
     it('ne retire que le fournisseur désactivé', () => {
-        const wrapper = mountPage(Login, { page: { social_login_enabled: { google: false } } })
+        const wrapper = mountPage(Login, {
+            page: { social_login_enabled: { google: false, github: true, apple: true } },
+        })
 
         // Checked provider by provider rather than through the page text: a
         // single "Google is gone" assertion is just as happy when GitHub and
@@ -221,15 +234,21 @@ describe('Login', () => {
     })
 
     it('retire chacun des trois quand il est le seul désactivé', () => {
-        const github = mountPage(Login, { page: { social_login_enabled: { github: false } } })
-        const apple = mountPage(Login, { page: { social_login_enabled: { apple: false } } })
+        const github = mountPage(Login, {
+            page: { social_login_enabled: { google: true, github: false, apple: true } },
+        })
+        const apple = mountPage(Login, {
+            page: { social_login_enabled: { google: true, github: true, apple: false } },
+        })
 
         expect(providersOffered(github)).toEqual(['Google', 'Apple'])
         expect(providersOffered(apple)).toEqual(['Google', 'GitHub'])
     })
 
     it('envoie chaque bouton social vers son propre fournisseur', () => {
-        const wrapper = mountPage(Login)
+        const wrapper = mountPage(Login, {
+            page: { social_login_enabled: { google: true, github: true, apple: true } },
+        })
 
         // Paired label by label: the three links all pointing at Google would
         // satisfy any assertion made on the set of hrefs alone.

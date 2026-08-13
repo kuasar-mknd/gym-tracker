@@ -38,11 +38,6 @@ return static function (Configuration $config): Configuration {
     ]);
 
     return $config
-        // Resolved by string, never imported: Socialite::driver('apple') in
-        // HandleSocialCallbackAction, 'apple' in SocialAuthController::ALLOWED_PROVIDERS,
-        // and the credentials block at config/services.php:52. The package registers
-        // its driver from its own auto-discovered provider.
-        ->addNamedFilter(NamedFilter::fromString('socialiteproviders/apple'))
         // Used through the @routes Blade directive at resources/views/app.blade.php:42,
         // which no static analysis of PHP imports can see.
         ->addNamedFilter(NamedFilter::fromString('tightenco/ziggy'));
