@@ -22,7 +22,6 @@ const WaterHistoryChart = (await import('@/Components/Stats/WaterHistoryChart.vu
 const DashboardDurationChart = (await import('@/Components/Stats/DashboardDurationChart.vue')).default
 const RecentWorkoutsTimelineChart = (await import('@/Components/Stats/RecentWorkoutsTimelineChart.vue')).default
 const WorkoutHistoryTimelineChart = (await import('@/Components/Stats/WorkoutHistoryTimelineChart.vue')).default
-const RecentWorkoutsDurationChart = (await import('@/Components/Stats/RecentWorkoutsDurationChart.vue')).default
 
 const chartIn = (wrapper, name) => wrapper.findComponent({ name })
 
@@ -76,9 +75,9 @@ describe('WaterHistoryChart Y axis', () => {
 })
 
 /**
- * All four, not just the one. Each had written the same zero-for-unfinished
+ * All three, not just the one. Each had written the same zero-for-unfinished
  * expression by hand, so testing a single component would have left the other
- * three free to drift back — the same gap the calendar-day guard exists for.
+ * two free to drift back — the same gap the calendar-day guard exists for.
  *
  * The duration dataset is found by its label rather than its index: one of
  * these charts draws a line over bars and its durations are not dataset zero.
@@ -87,7 +86,6 @@ describe.each([
     ['DashboardDurationChart', DashboardDurationChart, 'Line'],
     ['RecentWorkoutsTimelineChart', RecentWorkoutsTimelineChart, 'Line'],
     ['WorkoutHistoryTimelineChart', WorkoutHistoryTimelineChart, 'Bar'],
-    ['RecentWorkoutsDurationChart', RecentWorkoutsDurationChart, 'Line'],
 ])('%s', (_name, component, chartType) => {
     it('plots nothing for the session still running rather than a zero', () => {
         const wrapper = mount(component, {
