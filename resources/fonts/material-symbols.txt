@@ -1,21 +1,20 @@
 # Every Material Symbols icon this app renders.
 #
 # The self-hosted material-symbols-outlined.woff2 contains these and nothing
-# else — 9.7 KiB instead of the 1,099 KiB variable face the app used to fetch
-# from Google on every cold start.
+# else — about 10 KiB instead of the 1,099 KiB variable face the app used to
+# fetch from Google on every cold start.
 #
-# Adding an icon to a component means adding it here and regenerating the font:
+# Adding an icon to a component means adding it here and regenerating:
 #
-#   curl -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
-#     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36' \
-#     "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&icon_names=$(paste -sd, - < resources/fonts/material-symbols.txt)"
+#   vendor/bin/sail artisan icons:sync
 #
-# then download the woff2 the returned @font-face points at, over
-# resources/fonts/material-symbols-outlined.woff2.
+# That writes the font and material-symbols.sha256, the checksum of the list it
+# was built from.
 #
-# tests/Feature/IconSubsetTest.php fails if a component renders a name that is
-# not in this list, so a forgotten icon is a red build rather than a word
-# spelled out where a glyph should be.
+# tests/Feature/IconSubsetTest.php holds three lines against drift: a name
+# rendered but absent here, a name here that nothing renders, and a list edited
+# without regenerating the font. All three draw a word where a glyph belongs,
+# and none of them fails anywhere else in the suite.
 accessibility_new
 add
 add_circle
@@ -31,6 +30,7 @@ bar_chart_4_bars
 bedtime
 bolt
 book
+brightness_auto
 calculate
 calendar_month
 cancel
@@ -40,6 +40,7 @@ chevron_left
 chevron_right
 close
 cloud_off
+dark_mode
 dashboard
 delete
 directions_run
@@ -57,6 +58,7 @@ history
 inventory_2
 keyboard
 library_books
+light_mode
 local_cafe
 local_drink
 local_fire_department
