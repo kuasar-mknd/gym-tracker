@@ -28,6 +28,65 @@ abstract class DuskTestCase extends BaseTestCase
 
         Browser::macro('resizeToIphoneMax', fn (): object => $this->resize(430, 932));
 
+        /**
+         * Clicks once the element has actually stopped moving.
+         *
+         * `scrollIntoView` returns before the page has finished scrolling, so
+         * the pattern it replaces — scroll, then click on the next line — aims
+         * at a coordinate the button has already left. Selenium then refuses
+         * with "element click intercepted: other element would receive the
+         * click", naming whatever slid under the cursor. On this app that is
+         * usually the heading of the card the previous step just added, which
+         * is why the failure looked random and only ever hit the longest test.
+         *
+         * Two conditions, both of them the ones Selenium itself checks: the
+         * element's box has to be in the same place twice running, and the
+         * point at its centre has to resolve back to it. Waiting for that is
+         * not a retry — the click only ever happens once, when it can land.
+         */
+        Browser::macro('clickWhenSettled', function (string $selector, int $seconds = 15): object {
+            /** @var Browser $this */
+            $probe = <<<'JS'
+                const el = document.querySelector(SELECTOR);
+                if (!el) { return null; }
+                el.scrollIntoView({ block: 'center', behavior: 'instant' });
+                const box = el.getBoundingClientRect();
+                if (box.width === 0 || box.height === 0) { return null; }
+                const x = box.left + box.width / 2;
+                const y = box.top + box.height / 2;
+                const hit = document.elementFromPoint(x, y);
+                return {
+                    top: Math.round(box.top),
+                    left: Math.round(box.left),
+                    onTop: !!hit && (hit === el || el.contains(hit)),
+                };
+            JS;
+
+            $script = str_replace('SELECTOR', json_encode($selector, JSON_THROW_ON_ERROR), $probe);
+            $previous = null;
+
+            $this->waitUsing($seconds, 100, function () use ($script, &$previous): bool {
+                /** @var Browser $this */
+                $now = $this->script($script)[0] ?? null;
+
+                if (! is_array($now) || $now['onTop'] !== true) {
+                    $previous = null;
+
+                    return false;
+                }
+
+                $settled = $previous !== null
+                    && $previous['top'] === $now['top']
+                    && $previous['left'] === $now['left'];
+
+                $previous = $now;
+
+                return $settled;
+            }, "[{$selector}] never stopped moving long enough to be clicked");
+
+            return $this->click($selector);
+        });
+
         Browser::macro('disableAnimations', function (): object {
             /** @var Browser $this */
             $this->script("
@@ -88,6 +147,20 @@ abstract class DuskTestCase extends BaseTestCase
             $logs = $this->driver->manage()->getLog('browser');
             $failures = collect($logs)->filter(
                 fn ($log): bool => ($log['level'] ?? '') === 'SEVERE'
+            )->reject(
+                /**
+                 * Chrome logs this at SEVERE, but it is the browser commenting
+                 * on the transport rather than the application failing: over
+                 * plain http the origin is not "potentially trustworthy", so
+                 * the COOP header is moot and it says so once per navigation.
+                 * CI serves https and never sees it; locally every Dusk test
+                 * against laravel.test failed on it, which is a fast way to
+                 * teach everyone that a red browser suite means nothing.
+                 */
+                fn ($log): bool => str_contains(
+                    (string) ($log['message'] ?? ''),
+                    'Cross-Origin-Opener-Policy header has been ignored'
+                )
             );
 
             \PHPUnit\Framework\Assert::assertTrue(

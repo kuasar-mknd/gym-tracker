@@ -76,25 +76,19 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->waitUntilMissing('[role="dialog"]', 15);
 
             // 2. Add Cardio exercise
-            $browser->waitFor('[dusk="add-exercise-existing"]', 15)
-                ->script("document.querySelector('[dusk=\"add-exercise-existing\"]').scrollIntoView({block: 'center'});");
-            $browser->click('[dusk="add-exercise-existing"]');
+            $browser->clickWhenSettled('[dusk="add-exercise-existing"]', 15);
             $browser->waitFor('input[placeholder="Rechercher..."]', 15)->type('input[placeholder="Rechercher..."]', 'Cardio Ex')
                 ->waitFor('@select-exercise-'.$cardioEx->id, 20)->click('@select-exercise-'.$cardioEx->id);
             $browser->waitUntilMissing('[role="dialog"]', 15);
 
             // 3. Add Timed exercise
-            $browser->waitFor('[dusk="add-exercise-existing"]', 15)
-                ->script("document.querySelector('[dusk=\"add-exercise-existing\"]').scrollIntoView({block: 'center'});");
-            $browser->click('[dusk="add-exercise-existing"]');
+            $browser->clickWhenSettled('[dusk="add-exercise-existing"]', 15);
             $browser->waitFor('input[placeholder="Rechercher..."]', 15)->type('input[placeholder="Rechercher..."]', 'Timed Ex')
                 ->waitFor('@select-exercise-'.$timedEx->id, 20)->click('@select-exercise-'.$timedEx->id);
             $browser->waitUntilMissing('[role="dialog"]', 15);
 
             // 3b. Create NEW exercise from workout
-            $browser->waitFor('[dusk="add-exercise-existing"]', 15)
-                ->script("document.querySelector('[dusk=\"add-exercise-existing\"]').scrollIntoView({block: 'center'});");
-            $browser->click('[dusk="add-exercise-existing"]');
+            $browser->clickWhenSettled('[dusk="add-exercise-existing"]', 15);
             $browser->waitFor('input[placeholder="Rechercher..."]', 15)->type('input[placeholder="Rechercher..."]', 'Brand New Exercise');
             $browser->waitFor('@quick-create-exercise', 15)->click('@quick-create-exercise');
             $browser->pause(500)
@@ -106,9 +100,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->waitUntilMissing('[role="dialog"]', 20);
 
             // 3c. Add Recommender Exercise (TESTING VALUES FROM LAST WORKOUT)
-            $browser->waitFor('[dusk="add-exercise-existing"]', 15)
-                ->script("document.querySelector('[dusk=\"add-exercise-existing\"]').scrollIntoView({block: 'center'});");
-            $browser->click('[dusk="add-exercise-existing"]');
+            $browser->clickWhenSettled('[dusk="add-exercise-existing"]', 15);
             $browser->waitFor('input[placeholder="Rechercher..."]', 15)->type('input[placeholder="Rechercher..."]', 'Recommender Ex')
                 ->waitFor('@select-exercise-'.$recommenderEx->id, 20)->click('@select-exercise-'.$recommenderEx->id);
             $browser->waitUntilMissing('[role="dialog"]', 15);
