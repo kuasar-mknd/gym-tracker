@@ -47,10 +47,10 @@ export default defineConfig({
        * batch is what stops the next one from quietly giving the ground back.
        */
       thresholds: {
-        statements: 83,
-        branches: 80,
-        functions: 79,
-        lines: 83
+        statements: 91,
+        branches: 86,
+        functions: 85,
+        lines: 91
       }
     }
   }
