@@ -44,10 +44,10 @@ export default defineConfig({
        * meet is a threshold somebody deletes.
        */
       thresholds: {
-        statements: 24,
-        branches: 20,
-        functions: 16,
-        lines: 24
+        statements: 73,
+        branches: 68,
+        functions: 64,
+        lines: 73
       }
     }
   }
