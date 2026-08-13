@@ -10,7 +10,7 @@ import globals from 'globals'
  */
 export default [
     {
-        ignores: ['public/**', 'vendor/**', 'node_modules/**', 'storage/**', 'bootstrap/**'],
+        ignores: ['public/**', 'vendor/**', 'node_modules/**', 'storage/**', 'bootstrap/**', '.claude/**'],
     },
     js.configs.recommended,
     ...pluginVue.configs['flat/recommended'],

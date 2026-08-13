@@ -13,6 +13,18 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.js'],
+    /*
+     * Git worktrees live under .claude/worktrees/, inside the project, so the
+     * default discovery walked into them and ran every branch's copy of the
+     * suite alongside this one: 2340 tests instead of 1050, and 768 "failures"
+     * from files that were edited on another branch. Coverage measured from
+     * that is meaningless, and a suite that is red for reasons nobody can act
+     * on is a suite people stop reading.
+     *
+     * CI never saw it — worktrees only exist on a developer's machine — which
+     * is exactly why it survived.
+     */
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
     coverage: {
       provider: 'v8',
       /*
