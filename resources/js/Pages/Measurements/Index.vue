@@ -63,8 +63,11 @@ const weightDiff = computed(() => {
 })
 
 const latestBodyFat = computed(() => {
-    if (props.measurements.length === 0) return null
+    // No empty-list guard: `find` already answers undefined on one, and the
+    // ternary below turns that into null. The guard that used to sit here
+    // changed nothing, which is why no mutation of it could ever fail a test.
     const latest = props.measurements.find((m) => m.body_fat !== null)
+
     return latest ? latest.body_fat : null
 })
 </script>

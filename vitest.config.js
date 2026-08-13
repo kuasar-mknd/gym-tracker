@@ -13,6 +13,18 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.js'],
+    /*
+     * Git worktrees live under .claude/worktrees/, inside the project, so the
+     * default discovery walked into them and ran every branch's copy of the
+     * suite alongside this one: 2340 tests instead of 1050, and 768 "failures"
+     * from files that were edited on another branch. Coverage measured from
+     * that is meaningless, and a suite that is red for reasons nobody can act
+     * on is a suite people stop reading.
+     *
+     * CI never saw it — worktrees only exist on a developer's machine — which
+     * is exactly why it survived.
+     */
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
     coverage: {
       provider: 'v8',
       /*
@@ -25,17 +37,20 @@ export default defineConfig({
       exclude: ['resources/js/ziggy*.js'],
       reporter: ['text-summary', 'html'],
       /*
-       * Pinned to what the suite actually covers today, not to an ambition.
-       * This is a ratchet: raise it whenever coverage climbs, never lower it.
-       * The frontend is the least-tested half of this app (120 of 161 source
-       * files at 0%), so the floor is low on purpose — a threshold nobody can
-       * meet is a threshold somebody deletes.
+       * Pinned a point under what the suite actually covers, not to an
+       * ambition. This is a ratchet: raise it whenever coverage climbs, never
+       * lower it. A point of slack absorbs the rounding, so a legitimate
+       * refactor that shifts one statement does not turn CI red.
+       *
+       * The frontend was the least-tested half of this app — 120 of 161 source
+       * files sat at 0% and the floor was 24%. Raising it in step with each
+       * batch is what stops the next one from quietly giving the ground back.
        */
       thresholds: {
-        statements: 24,
-        branches: 20,
-        functions: 16,
-        lines: 24
+        statements: 91,
+        branches: 86,
+        functions: 85,
+        lines: 91
       }
     }
   }
