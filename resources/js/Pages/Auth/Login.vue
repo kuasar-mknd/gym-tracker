@@ -109,7 +109,7 @@ const submit = () => {
 
             <div class="flex justify-center gap-4">
                 <a
-                    v-if="$page.props.social_login_enabled?.google ?? true"
+                    v-if="$page.props.social_login_enabled?.google"
                     :href="route('social.redirect', 'google')"
                     class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec Google"
@@ -122,7 +122,7 @@ const submit = () => {
                     />
                 </a>
                 <a
-                    v-if="$page.props.social_login_enabled?.github ?? true"
+                    v-if="$page.props.social_login_enabled?.github"
                     :href="route('social.redirect', 'github')"
                     class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec GitHub"
@@ -135,7 +135,7 @@ const submit = () => {
                     />
                 </a>
                 <a
-                    v-if="$page.props.social_login_enabled?.apple ?? true"
+                    v-if="$page.props.social_login_enabled?.apple"
                     :href="route('social.redirect', 'apple')"
                     class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-700 bg-black shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec Apple"

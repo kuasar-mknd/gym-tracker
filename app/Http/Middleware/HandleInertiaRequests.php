@@ -45,9 +45,35 @@ class HandleInertiaRequests extends Middleware
             // seul à savoir qu'il est en local : import.meta.env.DEV vaut false
             // dans un build de production, que le serveur local sert quand même.
             'is_local' => app()->environment('local'),
+            'social_login_enabled' => $this->configuredSocialProviders(),
             'pending_migrations' => $this->pendingMigrationCount(),
             'vapidPublicKey' => config('webpush.vapid.public_key'),
         ];
+    }
+
+    /**
+     * Which social sign-ins are actually usable, by provider.
+     *
+     * The login page already asked for this — `social_login_enabled?.apple ??
+     * true` — and nothing ever sent it, so the `?? true` won every time and all
+     * three buttons rendered unconditionally. Apple then answered 500 on every
+     * click, because the package was never wired to Socialite and no
+     * credentials were set either.
+     *
+     * A provider counts as usable only with both halves of its OAuth identity;
+     * a client id with no secret cannot complete the exchange, and offering the
+     * button anyway sends the user to an error page instead of to Apple.
+     *
+     * @return array<string, bool>
+     */
+    private function configuredSocialProviders(): array
+    {
+        return collect(['google', 'github', 'apple'])
+            ->mapWithKeys(fn (string $provider): array => [
+                $provider => filled(config("services.{$provider}.client_id"))
+                    && filled(config("services.{$provider}.client_secret")),
+            ])
+            ->all();
     }
 
     /**

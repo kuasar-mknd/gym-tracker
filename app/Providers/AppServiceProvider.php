@@ -9,10 +9,13 @@ use App\Models\Set;
 use App\Models\Workout;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use SocialiteProviders\Apple\Provider as AppleProvider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -43,6 +46,8 @@ final class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->registerAppleSocialiteDriver();
+
         if (config('app.env') === 'testing') {
             Gate::define('viewPulse', fn ($user = null): bool => true);
         }
@@ -153,5 +158,21 @@ final class AppServiceProvider extends ServiceProvider
         // ⚡ Bolt: Offload heavy goal sync to background jobs
         BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
         BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+    }
+
+    /**
+     * Teaches Socialite about Apple, which it does not ship.
+     *
+     * `socialiteproviders/apple` was in composer.json and nothing ever told
+     * Socialite it was there, so `Socialite::driver('apple')` threw
+     * "Driver [apple] not supported" — a 500 on the login page's third button,
+     * with or without credentials configured. Community providers announce
+     * themselves through this event; without a listener the package is inert.
+     */
+    private function registerAppleSocialiteDriver(): void
+    {
+        Event::listen(function (SocialiteWasCalled $event): void {
+            $event->extendSocialite('apple', AppleProvider::class);
+        });
     }
 }
