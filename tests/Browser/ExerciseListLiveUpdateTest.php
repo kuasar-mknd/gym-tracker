@@ -97,6 +97,19 @@ class ExerciseListLiveUpdateTest extends DuskTestCase
             // this one green, because the deletion is optimistic and never
             // waits for the server's list. It guards the round trip, not the
             // refresh.
+            //
+            // Waited for rather than asserted outright. The removal is
+            // optimistic: the row leaves the screen the moment it is tapped,
+            // before the DELETE has been answered. Reading the table straight
+            // after `waitUntilMissing` therefore raced the request, and lost on
+            // CI often enough to fail a suite that was otherwise green.
+            $this->waitForDatabase(
+                fn (): bool => Exercise::query()->whereKey($exercise->id)->doesntExist(),
+                15,
+                'the exercise left the screen but never left the database'
+            );
+
+            // The wait above is what makes this one honest rather than lucky.
             $this->assertDatabaseMissing('exercises', ['id' => $exercise->id]);
         });
     }
