@@ -157,10 +157,12 @@ abstract class DuskTestCase extends BaseTestCase
                  * against laravel.test failed on it, which is a fast way to
                  * teach everyone that a red browser suite means nothing.
                  */
-                fn ($log): bool => str_contains(
-                    (string) ($log['message'] ?? ''),
-                    'Cross-Origin-Opener-Policy header has been ignored'
-                )
+                static function (mixed $log): bool {
+                    $message = is_array($log) ? ($log['message'] ?? '') : '';
+
+                    return is_string($message)
+                        && str_contains($message, 'Cross-Origin-Opener-Policy header has been ignored');
+                }
             );
 
             \PHPUnit\Framework\Assert::assertTrue(
