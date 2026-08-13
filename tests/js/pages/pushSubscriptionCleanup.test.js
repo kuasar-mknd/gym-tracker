@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { reactive } from 'vue'
 
 /**
  * A subscription the browser has dropped has to be dropped on the server too.
