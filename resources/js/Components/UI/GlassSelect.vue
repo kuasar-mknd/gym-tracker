@@ -5,6 +5,15 @@
  * A reusable select component implementing the "Liquid Glass" aesthetic.
  * Consistent styling with GlassInput, supports dark mode, labels, errors.
  *
+ * `aria-describedby` is emitted only when there is an error to describe. Sent
+ * unconditionally it pointed at a hidden element on every healthy field, so a
+ * screen reader followed a reference to nothing — the same defect reported
+ * against GlassInput as point 3 of #1385.
+ *
+ * A caller passing `hide-label` must still pass `label`: the element is
+ * rendered `sr-only`, not dropped. Without one there is no accessible name at
+ * all, which is how three selects in this app ended up unnamed.
+ *
  * Usage:
  *   <GlassSelect v-model="selected" label="Catégorie" :options="categories" />
  *   <GlassSelect v-model="val" :options="[{ value: 'a', label: 'A' }]" />
@@ -97,7 +106,7 @@ const isRequired = computed(() => {
                 @change="$emit('update:modelValue', $event.target.value)"
                 :disabled="disabled"
                 :aria-invalid="!!error"
-                :aria-describedby="errorId"
+                :aria-describedby="error ? errorId : undefined"
                 :class="[
                     'glass-input w-full appearance-none pr-10 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white',
                     sizeClasses[size],

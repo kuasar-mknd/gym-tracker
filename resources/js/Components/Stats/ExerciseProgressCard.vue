@@ -16,15 +16,27 @@ const loadingExercise = ref(false)
 const loadFailed = ref(false)
 
 /**
- * The catch used to log and return, which left two wrong things on screen.
+ * Loads one exercise's curve, and applies an answer only while it is still the
+ * answer to the question being asked.
  *
- * The points were only ever assigned on success, so a failed request kept the
- * previously selected exercise's curve — rendered under the new exercise's
- * name. Wrong data, presented confidently.
+ * Two ways this went wrong, fixed at different times.
  *
- * And with no points at all the template fell through to "Pas assez de données
- * pour cet exercice", which is a claim about the exercise, not about the
- * request. A network failure was reported as an empty training history.
+ * The catch used to log and return. Points were assigned on success only, so a
+ * failed request kept the previously selected exercise's curve — rendered under
+ * the new exercise's name. And with no points the template fell through to
+ * "Pas assez de données pour cet exercice", a claim about the exercise rather
+ * than about the request: a network failure reported as an empty history.
+ *
+ * The second is that nothing sequenced the requests. Pick one exercise, pick
+ * another before the first has replied, and whichever response arrived last
+ * won — so a slow request could paint its curve under the name of the exercise
+ * now selected. The chart looked ordinary; only the numbers were someone
+ * else's.
+ *
+ * Comparing against `selectedExercise` rather than counting requests is what
+ * makes it right for the case that matters: coming back to an exercise while
+ * its own earlier request is still in flight, where a sequence number would
+ * discard an answer that happens to be correct.
  */
 const fetchExerciseProgress = async (exerciseId) => {
     if (!exerciseId) return
@@ -33,11 +45,24 @@ const fetchExerciseProgress = async (exerciseId) => {
     exerciseProgressData.value = []
     try {
         const response = await axios.get(route('stats.exercise', { exercise: exerciseId }))
+
+        if (exerciseId !== selectedExercise.value) {
+            return
+        }
+
         exerciseProgressData.value = response.data.progress
     } catch {
+        if (exerciseId !== selectedExercise.value) {
+            return
+        }
+
         loadFailed.value = true
     } finally {
-        loadingExercise.value = false
+        // The spinner belongs to the current request only; an overtaken one
+        // clearing it would announce a load that has not finished.
+        if (exerciseId === selectedExercise.value) {
+            loadingExercise.value = false
+        }
     }
 }
 
@@ -57,6 +82,7 @@ watch(selectedExercise, (newVal) => {
                 <GlassSelect
                     v-model="selectedExercise"
                     :options="exercises.map((ex) => ({ value: ex.id, label: ex.name }))"
+                    label="Exercice à afficher"
                     placeholder="Sélectionner un exercice"
                     hide-label
                 />
