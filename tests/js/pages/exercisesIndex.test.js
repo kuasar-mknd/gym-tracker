@@ -186,13 +186,42 @@ describe('Exercises/Index — filtrage et regroupement', () => {
         wrapper.unmount()
     })
 
-    it('efface la recherche depuis l’état « aucun résultat »', async () => {
+    it('réinitialise les filtres depuis l’état « aucun résultat »', async () => {
         const wrapper = mountPage([PECS, BACK])
 
         await wrapper.find('#search-exercises-input').setValue('squat bulgare')
 
-        const clear = wrapper.findAll('button').find((button) => button.text().includes('Effacer la recherche'))
-        await clear.trigger('click')
+        const reset = wrapper.findAll('button').find((button) => button.text().includes('Réinitialiser'))
+        await reset.trigger('click')
+
+        expect(renderedCards(wrapper)).toHaveLength(2)
+
+        wrapper.unmount()
+    })
+
+    /**
+     * Filtrer sur une catégorie vide n'est pas avoir une bibliothèque vide.
+     *
+     * La condition de l'état vide « général » ne regardait que `searchQuery`.
+     * Filtrer sur une catégorie où l'utilisateur n'a rien affichait donc « ta
+     * bibliothèque est vide » à quelqu'un qui possède des exercices, sans lui
+     * laisser deviner que c'est le filtre qui ne rend rien (#1389).
+     *
+     * Et l'état « aucun résultat », lui, citait la recherche sans condition :
+     * il se serait lu « Aucun résultat pour » suivi de rien.
+     */
+    it('distingue une catégorie vide d’une bibliothèque vide', async () => {
+        const wrapper = mountPage([PECS, BACK])
+
+        const chip = wrapper.findAll('button').find((button) => button.text().trim() === 'Jambes')
+        await chip.trigger('click')
+
+        expect(renderedCards(wrapper)).toHaveLength(0)
+        expect(wrapper.text()).not.toContain('Ta bibliothèque est vide')
+        expect(wrapper.text()).toContain('Aucun exercice dans cette catégorie')
+
+        const reset = wrapper.findAll('button').find((button) => button.text().includes('Réinitialiser'))
+        await reset.trigger('click')
 
         expect(renderedCards(wrapper)).toHaveLength(2)
 
