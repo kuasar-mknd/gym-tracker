@@ -113,13 +113,33 @@ const hasClearButton = computed(() => {
     return ['text', 'search', 'email', 'url', 'tel'].includes(props.type)
 })
 
+/**
+ * Un attribut booléen posé nu vaut la chaîne vide, pas `true`.
+ *
+ * `<GlassInput readonly />` — la forme habituelle en template — donne
+ * `attrs.readonly === ''`, et `!''` vaut `true` : le champ en lecture seule
+ * proposait donc un bouton pour l'effacer. La garde ne marchait que si
+ * l'appelant écrivait `:readonly="true"`. `false` et `undefined` sont les deux
+ * seules valeurs qui désactivent réellement l'attribut ; tout le reste, chaîne
+ * vide comprise, l'active.
+ */
+const attributeIsSet = (value) => value !== undefined && value !== false && value !== null
+
 const showClearButton = computed(() => {
+    /*
+     * La longueur est testée sur la chaîne, pas sur la véracité de la valeur.
+     *
+     * `props.modelValue &&` court-circuitait sur `0` avant même d'atteindre le
+     * test de longueur, si bien qu'un champ numérique valant zéro — un poids,
+     * un nombre de répétitions, un temps de repos — ne pouvait pas être vidé
+     * d'un clic. `null` et `undefined` deviennent la chaîne vide, ce qui est
+     * bien le cas où il n'y a rien à effacer.
+     */
     return (
         hasClearButton.value &&
-        props.modelValue &&
-        String(props.modelValue).length > 0 &&
-        !attrs.disabled &&
-        !attrs.readonly
+        String(props.modelValue ?? '').length > 0 &&
+        !attributeIsSet(attrs.disabled) &&
+        !attributeIsSet(attrs.readonly)
     )
 })
 
@@ -180,7 +200,7 @@ defineExpose({
                 @input="$emit('update:modelValue', $event.target.value)"
                 @focus="selectOnFocus ? $event.target.select() : null"
                 :aria-invalid="!!error"
-                :aria-describedby="errorId"
+                :aria-describedby="error ? errorId : undefined"
                 :class="[
                     'glass-input dark:placeholder:text-text-muted/50 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white',
                     sizeClasses[size],
