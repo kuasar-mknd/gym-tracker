@@ -168,21 +168,24 @@ describe('AuthenticatedLayout — flash messages', () => {
 
     /**
      * An error the user has to act on must outlast a confirmation they only
-     * glance at — and must still leave on its own. The two deadlines are
-     * compared to each other rather than to fixed millisecond figures: the
-     * error's timer is re-armed every time the flash changes, so clearing the
-     * success pushes the error's own deadline back, and the absolute number is
-     * an accident of that. The order of the two is the promise to the user.
+     * glance at — and must still leave on its own.
+     *
+     * The figures are asserted now, where this test used to compare the two
+     * deadlines to each other and say why it could not do better: every flash
+     * change re-armed every live toast, so clearing the success at 5 s pushed
+     * the error's own deadline back and it stayed 13 s instead of 8. The order
+     * held, the duration was an accident of what happened next. Fixed in #1387,
+     * so the configured deadline is now the thing worth asserting — an error
+     * that leaves after the success but at some unpredictable moment is exactly
+     * the bug that used to pass here.
      */
-    it('leaves an error up longer than a success', async () => {
+    it('leaves an error up for its own eight seconds, whatever else is on screen', async () => {
         vi.useFakeTimers()
         const wrapper = mountLayout({ flash: { success: 'Enregistré', error: 'Échec' } })
 
         const dismissed = await dismissalTimes(wrapper, ['Enregistré', 'Échec'])
 
-        expect(dismissed['Enregistré']).toBeGreaterThan(0)
-        expect(dismissed['Échec']).not.toBeNull()
-        expect(dismissed['Échec']).toBeGreaterThan(dismissed['Enregistré'])
+        expect(dismissed).toEqual({ Enregistré: 5000, Échec: 8000 })
     })
 
     /**
