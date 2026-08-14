@@ -1,10 +1,18 @@
-name: Signaler une CI rouge sur main
+name: Signaler un workflow rouge sur main
 
-# Une CI rouge sur main qui n'interpelle personne finit par devenir le decor.
+# Un rouge sur main qui n'interpelle personne finit par devenir le decor.
 #
-# Ce workflow ouvre une issue quand la CI echoue sur main, et se contente d'un
-# commentaire si une issue est deja ouverte pour la meme raison — sans quoi une
-# semaine de rouge produirait sept issues identiques et on cesserait de les lire.
+# Deux workflows sont surveilles, et pas seulement la CI :
+#
+#   CI               — ce qui casse sur main casse pour tout le monde.
+#   Mutation testing — depuis qu'elle garde la porte de promotion, une nuit
+#                      rouge BLOQUE la publication de l'image, donc le
+#                      deploiement. Un blocage que personne ne voit se decouvre
+#                      le jour ou l'on veut livrer, dans l'urgence.
+#
+# Une issue est ouverte, ou completee d'un commentaire si une issue est deja
+# ouverte pour le meme workflow — sans quoi une semaine de rouge produirait sept
+# issues identiques et on cesserait de les lire.
 #
 # LIMITE CONNUE, ecrite ici pour qu'elle ne se redecouvre pas : une fusion faite
 # avec le GITHUB_TOKEN — c'est le cas des PR Dependabot passees par auto-merge —
@@ -15,7 +23,7 @@ name: Signaler une CI rouge sur main
 # automatique inoperante.
 on:
     workflow_run:
-        workflows: ['CI']
+        workflows: ['CI', 'Mutation testing']
         types: [completed]
         branches: [main]
 
@@ -37,6 +45,7 @@ jobs:
                   RUN_ID: ${{ github.event.workflow_run.id }}
                   RUN_URL: ${{ github.event.workflow_run.html_url }}
                   SHA: ${{ github.event.workflow_run.head_sha }}
+                  WORKFLOW: ${{ github.event.workflow_run.name }}
               run: |
                   set -euo pipefail
 
@@ -49,7 +58,7 @@ jobs:
                   [ -n "$JOBS" ] || JOBS="cause inconnue"
 
                   BODY=$(cat <<EOF
-                  La CI a echoue sur \`main\`.
+                  **$WORKFLOW** a echoue sur \`main\`.
 
                   | | |
                   |---|---|
@@ -57,31 +66,37 @@ jobs:
                   | commit | \`$SHA\` |
                   | run | $RUN_URL |
 
-                  Ouvert automatiquement parce qu'une CI rouge sur \`main\` bloque
-                  toute promotion en production : le workflow de release refuse un
-                  tag dont le commit n'a pas une CI verte.
+                  Ouvert automatiquement parce que ce rouge **bloque la mise en
+                  production**. La publication de l'image exige, sur le commit
+                  exact du tag, une CI verte et une passe nocturne dont chaque
+                  part est verte — et la production suit l'image.
 
-                  Refermer cette issue quand \`main\` est de nouveau vert, en disant
-                  **pourquoi** c'etait rouge — un echec dont personne n'a etabli la
-                  cause revient.
+                  Refermer en disant **pourquoi** c'etait rouge : un echec dont
+                  personne n'a etabli la cause revient.
                   EOF
                   )
 
                   # Deduplique par label plutot que par titre : deux echecs de
                   # jobs differents restent le meme probleme tant que main est
                   # rouge, et sept issues identiques ne se lisent plus.
+                  # Un label par workflow : une CI rouge et une nuit rouge sont
+                  # deux problemes distincts, avec deux causes et deux
+                  # responsables possibles. Les fondre dans une seule issue
+                  # ferait perdre l'un des deux.
+                  LABEL="ci-rouge-$(echo "$WORKFLOW" | tr '[:upper:] ' '[:lower:]-')"
+
                   EXISTANTE=$(gh issue list --repo "$REPO" --state open \
-                    --label "ci-main-rouge" --limit 1 --json number --jq '.[0].number // empty')
+                    --label "$LABEL" --limit 1 --json number --jq '.[0].number // empty')
 
                   if [ -n "$EXISTANTE" ]; then
                       gh issue comment "$EXISTANTE" --repo "$REPO" --body "$BODY"
                       echo "Commente sur l'issue #$EXISTANTE."
                   else
-                      gh label create "ci-main-rouge" --repo "$REPO" \
-                        --color B60205 --description "CI rouge sur main" 2>/dev/null || true
+                      gh label create "$LABEL" --repo "$REPO" \
+                        --color B60205 --description "$WORKFLOW rouge sur main" 2>/dev/null || true
 
                       gh issue create --repo "$REPO" \
-                        --title "ci: main est rouge — $JOBS" \
-                        --label "ci-main-rouge" \
+                        --title "ci: $WORKFLOW est rouge sur main — $JOBS" \
+                        --label "$LABEL" \
                         --body "$BODY"
                   fi

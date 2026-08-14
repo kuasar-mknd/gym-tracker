@@ -50,12 +50,23 @@ jobs:
 
                   echo "commit $SHA (tag $TAG) — runs verts : CI=$CI, nuit=$NUIT"
 
-                  MANQUE=""
-                  [ "$CI" -gt 0 ] || MANQUE="$MANQUE\n  - la CI n'a pas de run vert sur ce commit"
-                  [ "$NUIT" -gt 0 ] || MANQUE="$MANQUE\n  - la passe nocturne n'a pas de run vert sur ce commit"
+                  # Une ligne d'erreur par manque, plutot qu'un message
+                  # assemble : `printf` sur une chaine construite mettrait la
+                  # variable dans le format, et GitHub ne rend de toute facon
+                  # pas les retours a la ligne dans une annotation ::error::.
+                  PROMOUVABLE=1
 
-                  if [ -n "$MANQUE" ]; then
-                      echo "::error::Ce commit n'est pas promouvable.$(printf "$MANQUE")"
+                  if [ "$CI" -eq 0 ]; then
+                      echo "::error::La CI n'a pas de run vert sur le commit $SHA."
+                      PROMOUVABLE=0
+                  fi
+
+                  if [ "$NUIT" -eq 0 ]; then
+                      echo "::error::La passe nocturne n'a pas de run vert sur le commit $SHA."
+                      PROMOUVABLE=0
+                  fi
+
+                  if [ "$PROMOUVABLE" -eq 0 ]; then
                       echo ""
                       echo "Pour debloquer, lancer la passe manquante sur le tag lui-meme :"
                       echo "  gh workflow run mutation.yml --ref $TAG"

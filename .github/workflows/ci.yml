@@ -509,22 +509,50 @@ jobs:
                   # maintenu a la main aurait sa propre facon de mentir. La CI,
                   # elle, n'est pas interrogee — ce job en fait partie et ne
                   # tourne que si `build` a reussi.
-                  NUIT=$(gh api \
-                    "repos/$REPO/actions/workflows/mutation.yml/runs?head_sha=$SHA&status=success" \
-                    --jq '.total_count' 2>/dev/null || echo 0)
+                  RUN=$(gh api \
+                    "repos/$REPO/actions/workflows/mutation.yml/runs?head_sha=$SHA" \
+                    --jq '[.workflow_runs[] | select(.status == "completed")] | first | .id // empty')
 
-                  echo "commit $SHA (tag $TAG) — runs nocturnes verts : $NUIT"
-
-                  if [ "$NUIT" -eq 0 ]; then
-                      echo "::error::La passe nocturne n'a pas de run vert sur ce commit : l'image ne sera pas publiee sous ce tag."
+                  if [ -z "$RUN" ]; then
+                      echo "::error::Aucune passe nocturne terminee sur ce commit : l'image ne sera pas publiee sous ce tag."
                       echo ""
-                      echo "Pour debloquer :"
-                      echo "  gh workflow run mutation.yml --ref $TAG"
+                      echo "Pour debloquer :  gh workflow run mutation.yml --ref $TAG"
                       echo ""
                       echo "La nuit tourne sur la pointe de main a 03h17 UTC. Un tag pose"
                       echo "apres elle n'est pas encore couvert : c'est voulu."
                       exit 1
                   fi
+
+                  # Chaque part est verifiee individuellement, et non la
+                  # conclusion du run.
+                  #
+                  # Un job portant `continue-on-error: true` echoue sans faire
+                  # echouer son run : interroger `status=success` aurait donc
+                  # laisse passer une nuit entierement rouge. Le reglage a ete
+                  # retire du workflow nocturne, mais le controle ne doit pas
+                  # dependre d'un reglage qui vit ailleurs et qu'un futur
+                  # `continue-on-error` remettrait en silence.
+                  ECHECS=$(gh api "repos/$REPO/actions/runs/$RUN/jobs" \
+                    --jq '[.jobs[] | select(.conclusion != "success") | "\(.name) [\(.conclusion)]"] | join(", ")')
+
+                  TOTAL=$(gh api "repos/$REPO/actions/runs/$RUN/jobs" --jq '.jobs | length')
+
+                  echo "commit $SHA (tag $TAG) — passe nocturne $RUN : $TOTAL part(s)"
+
+                  if [ "$TOTAL" -eq 0 ]; then
+                      echo "::error::La passe nocturne $RUN ne declare aucune part. Un run vide n'est pas un run vert."
+                      exit 1
+                  fi
+
+                  if [ -n "$ECHECS" ]; then
+                      echo "::error::La passe nocturne n'est pas entierement verte : $ECHECS"
+                      echo ""
+                      echo "L'image ne sera pas publiee sous ce tag. Corriger, puis relancer :"
+                      echo "  gh workflow run mutation.yml --ref $TAG"
+                      exit 1
+                  fi
+
+                  echo "Les $TOTAL parts sont vertes."
 
     merge:
         runs-on: ubuntu-latest
