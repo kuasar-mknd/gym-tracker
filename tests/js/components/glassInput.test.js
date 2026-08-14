@@ -185,3 +185,72 @@ describe('GlassInput — typing and focus', () => {
         expect(select).toHaveBeenCalled()
     })
 })
+
+/**
+ * Les trois défauts de #1385, chacun invisible depuis la forme d'appel courante.
+ */
+describe('GlassInput — ce que le bouton d’effacement croyait savoir', () => {
+    /**
+     * Un attribut booléen posé nu vaut la chaîne vide, jamais `true`.
+     *
+     * `!''` valant `true`, la garde `!attrs.readonly` laissait passer, et un
+     * champ en lecture seule proposait un bouton pour l'effacer. Elle ne
+     * marchait que si l'appelant écrivait `:readonly="true"` — ce que personne
+     * n'écrit. Le composant était donc juste pour la forme d'appel que ses
+     * tests employaient, et faux pour celle qu'emploient les pages.
+     */
+    it.each([
+        ['readonly', ''],
+        ['readonly', true],
+        ['disabled', ''],
+        ['disabled', true],
+    ])('cache le bouton quand %s vaut %j', (attribute, value) => {
+        const wrapper = mountInput({ type: 'text', modelValue: 'whey' }, { attrs: { [attribute]: value } })
+
+        expect(clearButton(wrapper).exists()).toBe(false)
+    })
+
+    it('le montre quand ni readonly ni disabled ne sont posés', () => {
+        const wrapper = mountInput({ type: 'text', modelValue: 'whey' })
+
+        expect(clearButton(wrapper).exists()).toBe(true)
+    })
+
+    /**
+     * Zéro est une valeur, pas une absence de valeur.
+     *
+     * `props.modelValue &&` court-circuitait avant d'atteindre le test de
+     * longueur, si bien qu'un champ valant `0` — un poids, des répétitions, un
+     * temps de repos — ne pouvait pas être vidé d'un clic.
+     */
+    it.each([
+        [0, true],
+        ['0', true],
+        ['', false],
+        [null, false],
+        [undefined, false],
+    ])('propose l’effacement pour %j : %s', (modelValue, expected) => {
+        const wrapper = mountInput({ type: 'text', modelValue })
+
+        expect(clearButton(wrapper).exists()).toBe(expected)
+    })
+
+    /**
+     * `aria-describedby` était émis en permanence. Sans erreur, il désignait un
+     * élément en `display: none` dont le seul contenu est une ligature
+     * material-symbols, elle-même `aria-hidden` : un lecteur d'écran suivait
+     * une référence vers du vide sur tous les champs sans erreur.
+     */
+    it('ne décrit le champ que lorsqu’il y a quelque chose à décrire', async () => {
+        const wrapper = mountInput({ type: 'text', modelValue: 'whey' })
+
+        expect(input(wrapper).attributes('aria-describedby')).toBeUndefined()
+
+        await wrapper.setProps({ error: 'Trop court' })
+
+        const described = input(wrapper).attributes('aria-describedby')
+
+        expect(described).toBeTruthy()
+        expect(wrapper.find(`#${described}`).text()).toContain('Trop court')
+    })
+})
