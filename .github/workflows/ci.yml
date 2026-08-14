@@ -480,9 +480,60 @@ jobs:
                   if-no-files-found: error
                   retention-days: 1
 
-    merge:
+    # La porte de promotion, posee sur ce qui compte vraiment.
+    #
+    # `release.yml` est garde par le meme controle, mais garder la release seule
+    # ne protegeait rien : pousser un tag `v*` declenche DEUX workflows
+    # independants — celui-ci, qui publie l'image, et release.yml, qui cree
+    # l'objet release. La production tire `ghcr.io/.../gym-tracker:v1`
+    # (docker-compose.prod.yml:43 et :130), c'est-a-dire un tag produit ICI.
+    # L'image serait donc partie meme avec la release bloquee.
+    #
+    # Ne s'applique qu'aux tags : sur `main`, `merge` publie `latest` et
+    # `sha-*`, que la production ne tire pas.
+    promotion:
+        if: startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
         needs: build
+        steps:
+            - name: Exiger une passe nocturne verte sur ce commit
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  REPO: ${{ github.repository }}
+                  SHA: ${{ github.sha }}
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  # L'API des runs est la source de verite : un marqueur
+                  # maintenu a la main aurait sa propre facon de mentir. La CI,
+                  # elle, n'est pas interrogee — ce job en fait partie et ne
+                  # tourne que si `build` a reussi.
+                  NUIT=$(gh api \
+                    "repos/$REPO/actions/workflows/mutation.yml/runs?head_sha=$SHA&status=success" \
+                    --jq '.total_count' 2>/dev/null || echo 0)
+
+                  echo "commit $SHA (tag $TAG) — runs nocturnes verts : $NUIT"
+
+                  if [ "$NUIT" -eq 0 ]; then
+                      echo "::error::La passe nocturne n'a pas de run vert sur ce commit : l'image ne sera pas publiee sous ce tag."
+                      echo ""
+                      echo "Pour debloquer :"
+                      echo "  gh workflow run mutation.yml --ref $TAG"
+                      echo ""
+                      echo "La nuit tourne sur la pointe de main a 03h17 UTC. Un tag pose"
+                      echo "apres elle n'est pas encore couvert : c'est voulu."
+                      exit 1
+                  fi
+
+    merge:
+        runs-on: ubuntu-latest
+        needs: [build, promotion]
+        # `promotion` est saute hors des tags, et un `needs` saute sauterait
+        # `merge` avec lui — donc `latest` ne serait plus publie sur main. La
+        # condition accepte explicitement les deux etats acceptables, et rien
+        # d'autre.
+        if: always() && needs.build.result == 'success' && (needs.promotion.result == 'success' || needs.promotion.result == 'skipped')
         permissions:
             contents: read
             packages: write
