@@ -22,6 +22,24 @@ parameters:
     level: max
     treatPhpDocTypesAsCertain: false
 
+    # Un appel depuis tests/ ne compte plus comme un usage.
+    #
+    # Sans ce reglage, le detecteur ne peut pas voir la forme de code mort la
+    # plus frequente ici : un symbole abandonne garde ses tests, donc il reste
+    # « reference ». CreateGoalAction avait un test unitaire ET un test feature
+    # pour zero appelant, et elle a survecu au nettoyage de #1367 pour cette
+    # raison exacte ; il a fallu la trouver a la main en #1396.
+    #
+    # Meme histoire pour deux composants Vue (#1392), les cinq routes web
+    # doublees (#1419), et les trois familles de #1421 — toutes trouvees par
+    # des analyses manuelles pendant que la CI restait verte.
+    shipmonkDeadCode:
+        usageExcluders:
+            tests:
+                enabled: true
+                devPaths:
+                    - tests/
+
     ignoreErrors:
         # PHPUnit, Livewire et le Builder Eloquent exposent des methodes statiques
         # appelees dynamiquement ($this->assertX(), $query->where()). C'est
@@ -60,9 +78,29 @@ parameters:
         # (aucune ressource Filament ne les declenche) mais font partie du contrat
         # que Shield regenere : les supprimer les verrait revenir au prochain
         # `shield:generate`.
+        # Le motif n'est plus ancre en fin de chaine : depuis l'activation de
+        # usageExcluders.tests, le message porte un suffixe explicatif.
         - identifier: shipmonk.deadMethod
           path: app/Policies/*
-          message: '#::(forceDeleteAny|restoreAny|replicate|reorder)$#'
+          message: '#::(forceDeleteAny|restoreAny|replicate|reorder)\b#'
+        # Les cas d'enum sont instancies a l'execution par from(), via les casts
+        # Eloquent — jamais ecrits en toutes lettres hors des tests. Le detecteur
+        # ne peut pas voir cette voie. Ce n'est pas une hypothese : #899 rapporte
+        # un `"Abdos" is not a valid backing value` en production, c'est-a-dire
+        # exactement ce chemin, sur une valeur absente de l'enum.
+        - identifier: shipmonk.deadEnumCase
+          path: app/Enums/*
+        # toWebPush est appele dynamiquement par WebPushChannel : via() renvoie
+        # la classe du canal, et le canal appelle la methode par son nom. Aucun
+        # appel statique n'existe donc, et n'a a exister.
+        - identifier: shipmonk.deadMethod
+          path: app/Notifications/*
+          message: '#::toWebPush\b#'
+        # N'etre appele que par des tests est le role d'une fabrique. L'excluder
+        # les signale par construction ; les supprimer reviendrait a supprimer la
+        # raison d'etre du fichier.
+        - identifier: shipmonk.deadMethod
+          path: database/factories/*
         # Documente en OpenAPI mais jamais route : routes/api.php sert /api/v1/status
         # depuis une closure qui duplique la reponse. Divergence doc/implementation
         # a traiter avec la regeneration de la spec (#1344), pas par une suppression
