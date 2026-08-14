@@ -70,6 +70,20 @@ const urlBase64ToUint8Array = (base64String) => {
     return outputArray
 }
 
+/**
+ * Tells the server to forget an endpoint the browser has just dropped.
+ *
+ * Deliberately swallows its own failure: the caller is either subscribing or
+ * recovering from a failed subscription, and neither should be derailed by a
+ * cleanup request. A missed one leaves the orphan this exists to prevent, which
+ * is no worse than the state before.
+ */
+const forgetOnServer = async (endpoint) => {
+    const api = window.axios || axios
+
+    await api.post(route('push-subscriptions.destroy'), { endpoint }).catch(() => {})
+}
+
 const enablePush = async () => {
     isSubscribing.value = true
     pushError.value = null
@@ -91,10 +105,21 @@ const enablePush = async () => {
         // Force registration update to ensure we have the latest SW
         const registration = await navigator.serviceWorker.ready
 
-        // Unsubscribe existing if any to avoid stale subscriptions
+        /*
+         * Dropped on the server as well as in the browser.
+         *
+         * Unsubscribing here only tells the browser to stop honouring the
+         * endpoint; the row stayed in `push_subscriptions` for good. Every
+         * re-activation left another orphan behind, and each one is an endpoint
+         * the app keeps pushing to — the provider answers 410 Gone every time,
+         * for a subscription nobody can receive.
+         */
         const existingSub = await registration.pushManager.getSubscription()
         if (existingSub) {
+            const staleEndpoint = existingSub.endpoint
+
             await existingSub.unsubscribe()
+            await forgetOnServer(staleEndpoint)
         }
 
         subscription = await registration.pushManager.subscribe({
@@ -119,7 +144,10 @@ const enablePush = async () => {
         // anything, and every later attempt discards it anyway (see the
         // unsubscribe above). Dropping it is the only state that stays true.
         if (subscription) {
+            const abandoned = subscription.endpoint
+
             await subscription.unsubscribe().catch(() => {})
+            await forgetOnServer(abandoned)
         }
 
         pushRegistered.value = false
