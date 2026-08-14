@@ -7,10 +7,69 @@ on:
 
 permissions:
     contents: write
+    actions: read
 
 jobs:
+    # Ce qui garde la production, c'est cette etape — pas une branche.
+    #
+    # L'alternative etait une branche `prod` dans laquelle on ne fusionne que du
+    # vert. Elle coute de la divergence, des conflits et des cherry-picks des le
+    # premier correctif urgent, et elle pose la question de laquelle des deux
+    # branches dit la verite. Ici `main` reste la seule verite, ce qui est en
+    # production reste identifie par un tag — deja immuable — et la porte est un
+    # controle, pas une reference git.
+    #
+    # Deux conditions, sur le commit exact que le tag designe :
+    #   1. la CI est verte — sans quoi on publierait un commit dont on ne sait rien ;
+    #   2. la passe nocturne est verte — c'est la qu'on met ce qui est trop lent
+    #      pour bloquer chaque PR.
+    promotion:
+        name: Verifier que ce commit est promouvable
+        runs-on: ubuntu-latest
+        steps:
+            - name: Exiger une CI et une nuit vertes sur ce commit
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  REPO: ${{ github.repository }}
+                  SHA: ${{ github.sha }}
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  # Interroge l'API plutot que de maintenir un marqueur : le
+                  # resultat des runs EST la source de verite, et un marqueur
+                  # aurait sa propre facon de mentir.
+                  verte() {
+                      local fichier="$1"
+                      gh api "repos/$REPO/actions/workflows/$fichier/runs?head_sha=$SHA&status=success" \
+                        --jq '.total_count' 2>/dev/null || echo 0
+                  }
+
+                  CI=$(verte "ci.yml")
+                  NUIT=$(verte "mutation.yml")
+
+                  echo "commit $SHA (tag $TAG) — runs verts : CI=$CI, nuit=$NUIT"
+
+                  MANQUE=""
+                  [ "$CI" -gt 0 ] || MANQUE="$MANQUE\n  - la CI n'a pas de run vert sur ce commit"
+                  [ "$NUIT" -gt 0 ] || MANQUE="$MANQUE\n  - la passe nocturne n'a pas de run vert sur ce commit"
+
+                  if [ -n "$MANQUE" ]; then
+                      echo "::error::Ce commit n'est pas promouvable.$(printf "$MANQUE")"
+                      echo ""
+                      echo "Pour debloquer, lancer la passe manquante sur le tag lui-meme :"
+                      echo "  gh workflow run mutation.yml --ref $TAG"
+                      echo "  gh workflow run ci.yml --ref $TAG"
+                      echo ""
+                      echo "La passe nocturne tourne sur la pointe de main a 03h17 UTC."
+                      echo "Un tag pose apres elle n'a donc pas encore ete couvert : c'est"
+                      echo "voulu, et c'est exactement ce que cette porte sert a dire."
+                      exit 1
+                  fi
+
     release:
         name: Create Release
+        needs: promotion
         runs-on: ubuntu-latest
         steps:
             - name: Checkout code

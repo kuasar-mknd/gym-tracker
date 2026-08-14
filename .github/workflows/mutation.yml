@@ -33,28 +33,34 @@ jobs:
         #
         # Les delais suivent la mesure locale, avec une marge d'environ le
         # double parce que les runners GitHub sont plus lents que la machine qui
-        # a servi a mesurer :
+        # a servi a mesurer.
         #
-        #   App\Services   3 205 s   53 min   -> 120
-        #   App\Policies     714 s   12 min   ->  60
-        #   App\Actions + App\DTOs, par difference, ~31 min au total ->  60
+        # Mesure en sequentiel, puis en parallele sur le meme perimetre :
+        #
+        #   App\Policies   714 s -> 319 s, score identique au mutant pres
+        #                   (94,28 %, 313 tues, 19 survivants)
+        #
+        # Soit 2,2x. Les delais ci-dessous partent de la mesure parallele pour
+        # Policies et d'une extrapolation du meme facteur pour les autres —
+        # Services, mesure a 3 205 s en sequentiel, devrait tomber vers 24 min.
+        # C'est une extrapolation, pas une mesure : d'ou 60 minutes et non 30.
         #
         # Un delai unique aurait ete cale sur Services et aurait laisse les
-        # trois autres parts capables de tourner deux heures sans que personne
-        # ne s'en apercoive.
+        # trois autres parts capables de tourner une heure sans que personne ne
+        # s'en apercoive.
         timeout-minutes: ${{ matrix.timeout }}
         strategy:
             fail-fast: false
             matrix:
                 include:
                     - scope: 'App\Services'
-                      timeout: 120
+                      timeout: 60
                     - scope: 'App\Policies'
-                      timeout: 60
+                      timeout: 30
                     - scope: 'App\Actions'
-                      timeout: 60
+                      timeout: 30
                     - scope: 'App\DTOs'
-                      timeout: 60
+                      timeout: 30
         services:
             mysql:
                 image: mysql:8.4
@@ -110,7 +116,9 @@ jobs:
                   DB_PASSWORD: password
                   TELESCOPE_ENABLED: false
               # `php artisan test`, jamais `vendor/bin/pest` : le wrapper artisan
-              # installe les hooks de Laravel que l'appel direct saute.
+              # installe les hooks de Laravel que l'appel direct saute. C'est ce
+              # qui rend `--parallel` utilisable ici — appele directement, il
+              # ferait tourner les dix processus sur la meme base.
               #
               # --covered-only : muter une ligne qu'aucun test ne couvre produit
               # un survivant qui ne dit rien de la qualite des tests, seulement
@@ -126,7 +134,7 @@ jobs:
                   # donc toujours vert : le job ne bloque pas, mais il doit dire
                   # la verite dans l'interface.
                   set -o pipefail
-                  php artisan test --mutate --covered-only \
+                  php artisan test --mutate --parallel --covered-only \
                     --class='${{ matrix.scope }}' \
                     | tee mutation-report.txt
 

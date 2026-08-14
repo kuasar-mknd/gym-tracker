@@ -1,0 +1,87 @@
+name: Signaler une CI rouge sur main
+
+# Une CI rouge sur main qui n'interpelle personne finit par devenir le decor.
+#
+# Ce workflow ouvre une issue quand la CI echoue sur main, et se contente d'un
+# commentaire si une issue est deja ouverte pour la meme raison — sans quoi une
+# semaine de rouge produirait sept issues identiques et on cesserait de les lire.
+#
+# LIMITE CONNUE, ecrite ici pour qu'elle ne se redecouvre pas : une fusion faite
+# avec le GITHUB_TOKEN — c'est le cas des PR Dependabot passees par auto-merge —
+# ne declenche AUCUN run sur main. GitHub ne reveille pas les workflows pour un
+# push effectue avec ce jeton. Il n'y a donc rien a signaler pour ces
+# fusions-la, non parce qu'elles sont vertes mais parce qu'elles ne sont pas
+# testees sur main du tout. Voir #1373, ou le meme mecanisme rendait la release
+# automatique inoperante.
+on:
+    workflow_run:
+        workflows: ['CI']
+        types: [completed]
+        branches: [main]
+
+permissions:
+    contents: read
+    issues: write
+    # Necessaire pour lire la liste des jobs du run en echec.
+    actions: read
+
+jobs:
+    signaler:
+        if: github.event.workflow_run.conclusion == 'failure'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Ouvrir ou completer l'issue
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  REPO: ${{ github.repository }}
+                  RUN_ID: ${{ github.event.workflow_run.id }}
+                  RUN_URL: ${{ github.event.workflow_run.html_url }}
+                  SHA: ${{ github.event.workflow_run.head_sha }}
+              run: |
+                  set -euo pipefail
+
+                  # Les jobs en echec, pas seulement le fait qu'il y en ait un :
+                  # « laravel-tests » et « browser-tests » n'appellent pas la
+                  # meme reaction, et le titre doit le dire sans avoir a ouvrir
+                  # le run.
+                  JOBS=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" \
+                    --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
+                  [ -n "$JOBS" ] || JOBS="cause inconnue"
+
+                  BODY=$(cat <<EOF
+                  La CI a echoue sur \`main\`.
+
+                  | | |
+                  |---|---|
+                  | jobs en echec | **$JOBS** |
+                  | commit | \`$SHA\` |
+                  | run | $RUN_URL |
+
+                  Ouvert automatiquement parce qu'une CI rouge sur \`main\` bloque
+                  toute promotion en production : le workflow de release refuse un
+                  tag dont le commit n'a pas une CI verte.
+
+                  Refermer cette issue quand \`main\` est de nouveau vert, en disant
+                  **pourquoi** c'etait rouge — un echec dont personne n'a etabli la
+                  cause revient.
+                  EOF
+                  )
+
+                  # Deduplique par label plutot que par titre : deux echecs de
+                  # jobs differents restent le meme probleme tant que main est
+                  # rouge, et sept issues identiques ne se lisent plus.
+                  EXISTANTE=$(gh issue list --repo "$REPO" --state open \
+                    --label "ci-main-rouge" --limit 1 --json number --jq '.[0].number // empty')
+
+                  if [ -n "$EXISTANTE" ]; then
+                      gh issue comment "$EXISTANTE" --repo "$REPO" --body "$BODY"
+                      echo "Commente sur l'issue #$EXISTANTE."
+                  else
+                      gh label create "ci-main-rouge" --repo "$REPO" \
+                        --color B60205 --description "CI rouge sur main" 2>/dev/null || true
+
+                      gh issue create --repo "$REPO" \
+                        --title "ci: main est rouge — $JOBS" \
+                        --label "ci-main-rouge" \
+                        --body "$BODY"
+                  fi
