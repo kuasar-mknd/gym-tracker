@@ -1,20 +1,16 @@
-# Every Material Symbols icon this app renders.
-#
-# The self-hosted material-symbols-outlined.woff2 contains these and nothing
-# else — about 10 KiB instead of the 1,099 KiB variable face the app used to
-# fetch from Google on every cold start.
-#
-# Adding an icon to a component means adding it here and regenerating:
 #
 #   vendor/bin/sail artisan icons:sync
-#
+# Adding an icon to a component means adding it here and regenerating:
+# Every Material Symbols icon this app renders.
 # That writes the font and material-symbols.sha256, the checksum of the list it
-# was built from.
-#
-# tests/Feature/IconSubsetTest.php holds three lines against drift: a name
-# rendered but absent here, a name here that nothing renders, and a list edited
-# without regenerating the font. All three draw a word where a glyph belongs,
+# The self-hosted material-symbols-outlined.woff2 contains these and nothing
 # and none of them fails anywhere else in the suite.
+# else — about 10 KiB instead of the 1,099 KiB variable face the app used to
+# fetch from Google on every cold start.
+# rendered but absent here, a name here that nothing renders, and a list edited
+# tests/Feature/IconSubsetTest.php holds three lines against drift: a name
+# was built from.
+# without regenerating the font. All three draw a word where a glyph belongs,
 accessibility_new
 add
 add_circle
@@ -96,6 +92,7 @@ timer_off
 touch_app
 tour
 trending_down
+trending_flat
 trending_up
 visibility
 visibility_off

@@ -89,11 +89,27 @@ describe('SummaryStatsGrid monthly comparison', () => {
         expect(value.classes()).toContain('text-emerald-500')
     })
 
-    it('reads +0% rather than a red NaN when the comparison has not arrived', () => {
+    /**
+     * `|| 0` ramenait l'absence de comparaison a une variation nulle et
+     * affichait « +0 % » : un chiffre vert a la place d'un mois precedent qui
+     * n'existe pas. Le tiret dit la meme chose sans pretendre mesurer (#1388).
+     *
+     * A ne pas confondre avec le test juste au-dessus : un mois reellement
+     * identique vaut bien +0 %, et c'est justement la distinction que le repli
+     * effacait.
+     */
+    it("affiche un tiret plutot qu'un +0 % quand il n'y a pas de mois precedent", () => {
         const value = comparison(mountGrid())
 
-        expect(value.text()).toBe('+0%')
-        expect(value.classes()).toContain('text-emerald-500')
+        expect(value.text()).toBe('—')
+        expect(value.classes()).not.toContain('text-emerald-500')
+        expect(value.classes()).not.toContain('text-red-500')
+    })
+
+    it("en fait autant quand le serveur dit explicitement qu'il n'y a rien a comparer", () => {
+        const value = comparison(mountGrid({ monthlyComparison: { percentage: null } }))
+
+        expect(value.text()).toBe('—')
     })
 })
 

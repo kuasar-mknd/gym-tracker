@@ -69,10 +69,45 @@ describe('WeeklyVolumeSection', () => {
         expect(comparison.classes()).toContain('text-red-500')
     })
 
-    it('says nothing when the two weeks match exactly', async () => {
+    /**
+     * Trois situations, et la condition n'en distinguait que deux — dans le
+     * mauvais sens. Elle n'ecartait que la valeur 0, donc :
+     *
+     * - deux semaines identiques ne disaient rien, alors qu'elles ont quelque
+     *   chose a dire : le volume n'a pas bouge ;
+     * - une comparaison absente passait le test et affichait la ligne avec un
+     *   pourcentage vide.
+     *
+     * Le serveur envoie desormais null quand il n'y a pas de semaine precedente,
+     * ce qui separe « pas de base » de « variation nulle » (#1388).
+     */
+    it('dit que le volume est stable quand les deux semaines se valent', async () => {
         const wrapper = await mountSection({ weeklyVolumeStats: { current_week_volume: 21500, percentage: 0 } })
 
+        const comparison = comparisonOf(wrapper)
+
+        expect(comparison.text()).toContain('Stable vs sem. passée')
+        expect(comparison.text()).toContain('trending_flat')
+        expect(comparison.classes()).not.toContain('text-red-500')
+        expect(comparison.classes()).not.toContain('text-emerald-600')
+    })
+
+    it("ne compare rien quand il n'y a pas de semaine precedente", async () => {
+        const wrapper = await mountSection({
+            weeklyVolumeStats: { current_week_volume: 21500, percentage: null },
+        })
+
+        expect(wrapper.find('p.justify-end').exists()).toBe(false)
         expect(wrapper.text()).not.toContain('vs sem. passée')
+        // Le volume de la semaine, lui, reste affiche : il est mesure, pas compare.
+        expect(volumeText(wrapper)).toBe((21500).toLocaleString())
+    })
+
+    it('ne compare rien non plus quand la cle manque tout court', async () => {
+        const wrapper = await mountSection({ weeklyVolumeStats: { current_week_volume: 21500 } })
+
+        expect(wrapper.find('p.justify-end').exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('%')
     })
 
     it('passes the trend on to the chart', async () => {

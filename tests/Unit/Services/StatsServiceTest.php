@@ -160,6 +160,56 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(25.0, $comparison->percentage);
     }
 
+    /**
+     * Une semaine sans semaine precedente n'a pas de variation, elle n'en a pas
+     * une nulle.
+     *
+     * La formule renvoyait 100 des que la periode precedente etait vide et que
+     * la courante ne l'etait pas, si bien que la premiere semaine suivie par un
+     * utilisateur s'affichait « +100 % vs sem. passee » : un gain invente contre
+     * une semaine qui n'existe pas, et d'autant plus credible qu'il ressemblait
+     * a un vrai chiffre. Mesure avant correction : current=500, previous=0,
+     * percentage=100.0 (#1388).
+     */
+    public function test_weekly_comparison_has_no_percentage_without_a_previous_week(): void
+    {
+        $user = User::factory()->create();
+
+        $workout = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->startOfWeek()->addHour(),
+        ]);
+        $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+        Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 50, 'reps' => 10]);
+
+        $comparison = $this->statsService->getWeeklyVolumeComparison($user);
+
+        $this->assertEquals(500, $comparison->current_volume);
+        $this->assertEquals(0, $comparison->previous_volume);
+        $this->assertNull($comparison->percentage);
+    }
+
+    /**
+     * Zero est un resultat, pas une absence : deux semaines au meme volume se
+     * comparent tres bien. C'est la distinction que la valeur de repli effacait.
+     */
+    public function test_weekly_comparison_reports_zero_when_the_two_weeks_match(): void
+    {
+        $user = User::factory()->create();
+
+        foreach ([now()->startOfWeek()->addHour(), now()->subWeek()->startOfWeek()->addHour()] as $startedAt) {
+            $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => $startedAt]);
+            $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+            Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 50, 'reps' => 10]);
+        }
+
+        $comparison = $this->statsService->getWeeklyVolumeComparison($user);
+
+        $this->assertEquals(500, $comparison->current_volume);
+        $this->assertEquals(500, $comparison->previous_volume);
+        $this->assertSame(0.0, $comparison->percentage);
+    }
+
     public function test_can_get_volume_history(): void
     {
         $user = User::factory()->create();

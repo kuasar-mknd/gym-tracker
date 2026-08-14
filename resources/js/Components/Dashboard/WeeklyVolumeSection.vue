@@ -1,12 +1,22 @@
 <script setup>
-import { defineAsyncComponent } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 
-defineProps({
+const props = defineProps({
     weeklyVolumeStats: { type: Object, required: true },
     weeklyVolumeTrend: { type: Array, required: true },
 })
+
+/**
+ * La variation a afficher, ou null s'il n'y en a pas.
+ *
+ * `undefined` et `null` sont ramenes au meme cas : le premier arrive quand la
+ * prop n'a pas la cle du tout, le second quand le serveur dit explicitement
+ * qu'il n'y a rien a comparer. Les distinguer ici ne servirait a rien — dans les
+ * deux cas il n'y a pas de comparaison a montrer.
+ */
+const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
 </script>
 
 <template>
@@ -27,18 +37,29 @@ defineProps({
                 >
                     {{ weeklyVolumeStats?.current_week_volume?.toLocaleString() || 0 }}
                 </p>
+                <!--
+                    Trois situations, et non deux.
+
+                    La condition n'ecartait que la valeur 0, donc une comparaison
+                    absente — `undefined` — passait le test et la ligne s'affichait
+                    avec un pourcentage vide. Et une variation nulle, elle, etait
+                    cachee alors qu'elle a un sens : le volume n'a pas bouge.
+
+                    Les deux cas etaient inverses. Le serveur envoie desormais null
+                    quand il n'y a rien a comparer, ce qui les separe (#1388).
+                -->
                 <p
-                    v-if="weeklyVolumeStats?.percentage !== 0"
+                    v-if="comparison !== null"
                     :class="[
                         'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
-                        weeklyVolumeStats?.percentage > 0 ? 'text-emerald-600' : 'text-red-500',
+                        comparison > 0 ? 'text-emerald-600' : comparison < 0 ? 'text-red-500' : 'text-text-muted',
                     ]"
                 >
                     <span class="material-symbols-outlined text-sm font-bold">
-                        {{ weeklyVolumeStats?.percentage > 0 ? 'trending_up' : 'trending_down' }}
+                        {{ comparison > 0 ? 'trending_up' : comparison < 0 ? 'trending_down' : 'trending_flat' }}
                     </span>
-                    {{ weeklyVolumeStats?.percentage > 0 ? '+' : '' }}{{ weeklyVolumeStats?.percentage }}% vs sem.
-                    passée
+                    <template v-if="comparison === 0">Stable vs sem. passée</template>
+                    <template v-else>{{ comparison > 0 ? '+' : '' }}{{ comparison }}% vs sem. passée</template>
                 </p>
             </div>
         </div>
