@@ -1292,6 +1292,18 @@ describe('Workouts/Show — editing a value', () => {
          * on screen carries any more, which is the same as not marking it.
          */
         expect([...wrapper.vm.unsyncedSetIds]).toEqual(['77'])
+
+        /**
+         * And it is on screen, which the state alone did not guarantee.
+         *
+         * The real id used to be written onto the raw object the closure held
+         * rather than the proxy inside `line.sets`, so it landed without
+         * tripping any tracker. State said 77, the row still rendered under
+         * `temp-2`, and the badge keyed on `set.id` never appeared — a set the
+         * server had refused looked saved (#1397). This assertion is the one
+         * that was missing.
+         */
+        expect(wrapper.find('[dusk="set-unsynced-0-1"]').exists()).toBe(true)
     })
 
     /**
