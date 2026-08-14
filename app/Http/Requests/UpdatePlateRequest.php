@@ -8,14 +8,12 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdatePlateRequest extends FormRequest
 {
-    use \App\Http\Requests\Concerns\AuthorizesBoundResource;
-
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->userMay('update', \App\Models\Plate::class);
+        return $this->user() !== null;
     }
 
     /**
