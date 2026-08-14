@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Models\User;
+use App\Services\Stats\StatsCacheManager;
 use App\Services\StatsService;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
@@ -33,7 +34,6 @@ class StatsServiceCacheTest extends TestCase
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
-            Cache::shouldReceive('forget')->once()->with("stats.daily_volume.{$user->id}.{$days}");
             Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");
         }
 
@@ -47,6 +47,10 @@ class StatsServiceCacheTest extends TestCase
         $this->statsService->clearVolumeStats($user);
     }
 
+    /**
+     * StatsService n'expose plus d'enveloppe pour les stats de durée : on vise
+     * directement le manager, que clearWorkoutRelatedStats() appelle en interne.
+     */
     public function test_clear_duration_stats_clears_correct_keys(): void
     {
         $user = User::factory()->make(['id' => 123]);
@@ -60,7 +64,7 @@ class StatsServiceCacheTest extends TestCase
             Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");
         }
 
-        $this->statsService->clearDurationStats($user);
+        app(StatsCacheManager::class)->clearDurationStats($user);
     }
 
     public function test_clear_workout_related_stats_clears_everything(): void
@@ -82,25 +86,10 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.latest_metrics.{$user->id}");
 
         foreach ([7, 30, 90, 365] as $days) {
-            Cache::shouldReceive('forget')->once()->with("stats.weight_history.{$user->id}.{$days}");
-            Cache::shouldReceive('forget')->once()->with("stats.body_fat_history.{$user->id}.{$days}");
             Cache::shouldReceive('forget')->once()->with("stats.body_progress.{$user->id}.{$days}");
         }
 
         $this->statsService->clearBodyMeasurementStats($user);
-    }
-
-    public function test_clear_user_stats_cache_clears_all_keys(): void
-    {
-        $user = User::factory()->make(['id' => 123]);
-
-        // Expect everything to be cleared
-        // Since clearUserStatsCache calls clearWorkoutRelatedStats, clearWorkoutMetadataStats, and clearBodyMeasurementStats,
-        // some keys (like volume_trend) might be cleared twice. We use atLeast()->once() for simplicity.
-        Cache::shouldReceive('forget')->atLeast()->once();
-        Cache::shouldReceive('put')->atLeast()->once();
-
-        $this->statsService->clearUserStatsCache($user);
     }
 
     public function test_clear_workout_metadata_stats_clears_correct_keys(): void

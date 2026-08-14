@@ -10,14 +10,4 @@ enum GoalType: string
     case Volume = 'volume';
     case Frequency = 'frequency';
     case Measurement = 'measurement';
-
-    public function label(): string
-    {
-        return match ($this) {
-            self::Weight => 'Poids',
-            self::Volume => 'Volume',
-            self::Frequency => 'Fréquence',
-            self::Measurement => 'Mensuration',
-        };
-    }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Stats;
 
-use App\DTOs\Stats\DailyVolumeTrendPoint;
 use App\DTOs\Stats\MonthlyVolumePoint;
 use App\DTOs\Stats\VolumeComparison;
 use App\DTOs\Stats\VolumeHistoryPoint;
@@ -64,50 +63,6 @@ final class VolumeStatsService
                 }
 
                 return $trend;
-            }
-        );
-    }
-
-    /**
-     * Retrieve the daily volume trend for the recent period.
-     *
-     * Calculates the total workout volume for each day over the specified
-     * number of days leading up to today.
-     *
-     * @param  User  $user  The user for whom to calculate the daily trend.
-     * @param  int  $days  The number of past days to include (default: 7).
-     * @return array<int, DailyVolumeTrendPoint> A list of daily volume data points.
-     */
-    public function getDailyVolumeTrend(User $user, int $days = 7): array
-    {
-        return Cache::remember(
-            "stats.daily_volume.{$user->id}.{$days}",
-            now()->addMinutes(30),
-            function () use ($user, $days): array {
-                $start = now()->subDays($days - 1)->startOfDay();
-                $results = $user->workouts()
-                    // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                    // Use toBase() to avoid hydrating Eloquent models as they are not needed for this aggregation.
-                    // This reduces memory usage and speeds up the query.
-                    ->toBase()
-                    ->whereBetween('started_at', [$start, now()->endOfDay()])
-                    ->selectRaw('DATE(started_at) as date, SUM(workout_volume) as daily_volume')
-                    ->groupBy('date')
-                    ->pluck('daily_volume', 'date')
-                    ->map(fn (mixed $value): float => is_numeric($value) ? floatval($value) : 0.0);
-
-                $data = [];
-                for ($i = 0; $i < $days; $i++) {
-                    $date = $start->copy()->addDays($i);
-                    $volume = $results[$date->format('Y-m-d')] ?? 0.0;
-                    $data[] = new DailyVolumeTrendPoint(
-                        $date->format('d/m'),
-                        $date->translatedFormat('D'),
-                        (float) $volume,
-                    );
-                }
-
-                return $data;
             }
         );
     }

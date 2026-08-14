@@ -117,17 +117,17 @@ class StatsCacheTest extends TestCase
             'started_at' => now()->subDay(),
         ]);
 
-        $weightKey = "stats.weight_history.{$user->id}.90";
-        Cache::put($weightKey, ['data'], 600);
+        $bodyKey = "stats.body_progress.{$user->id}.90";
+        Cache::put($bodyKey, ['data'], 600);
 
-        $this->assertTrue(Cache::has($weightKey));
+        $this->assertTrue(Cache::has($bodyKey));
 
         // Update workout DATE (causes full clear)
         $this->actingAs($user)->patch(route('workouts.update', $workout), [
             'started_at' => now()->subDays(2)->toDateTimeString(),
         ]);
 
-        $this->assertTrue(Cache::has($weightKey), 'Body measurement cache should NOT be cleared even with a full workout cache clear');
+        $this->assertTrue(Cache::has($bodyKey), 'Body measurement cache should NOT be cleared even with a full workout cache clear');
     }
 
     public function test_clear_workout_related_stats_invalidates_1rm_cache(): void

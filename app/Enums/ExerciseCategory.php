@@ -13,9 +13,4 @@ enum ExerciseCategory: string
     case Bras = 'Bras';
     case Abdominaux = 'Abdominaux';
     case Cardio = 'Cardio';
-
-    public function label(): string
-    {
-        return $this->value;
-    }
 }

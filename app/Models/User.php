@@ -127,16 +127,6 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->dontLogEmptyChanges();
     }
 
-    public function getUnreadNotificationsCountCached(): int
-    {
-        return app(\App\Services\NotificationService::class)->getUnreadCount($this);
-    }
-
-    public function getLatestAchievementCached(): ?Notification
-    {
-        return app(\App\Services\NotificationService::class)->getLatestAchievement($this);
-    }
-
     /**
      * Get the attributes that should be cast.
      *
