@@ -27,7 +27,27 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            /*
+             * Unique against the database, not merely against this Faker
+             * instance.
+             *
+             * `fake()->unique()` only remembers what it has drawn within one
+             * Faker instance, and that instance is rebuilt per test — while the
+             * unique constraint it is meant to satisfy lives in the database,
+             * across the whole run. That mismatch is the defect, whatever the
+             * rows happen to accumulate to.
+             *
+             * `safeEmail()` draws a name and a couple of digits at example.org,
+             * which is a wide enough pool to look safe and narrow enough to
+             * collide. Measured over 20 campaigns per size: 1 in 20 collide at
+             * 200 draws, 6 at 500, 13 at 1000, 20 out of 20 at 2000. CI landed
+             * on `Duplicate entry 'isaac23@example.org'` and failed a browser
+             * suite that was otherwise green.
+             *
+             * The random suffix removes the pool. The address still reads like
+             * one, which is what the fixture is for.
+             */
+            'email' => fake()->userName().'.'.Str::lower(Str::random(12)).'@example.org',
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
