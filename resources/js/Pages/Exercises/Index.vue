@@ -191,6 +191,29 @@ const filteredExercises = computed(() => {
     })
 })
 
+/**
+ * La bibliotheque est vide, ce qui n'est pas la meme chose qu'un filtre sans
+ * resultat.
+ *
+ * L'etat vide « general » — celui qui invite a creer son premier exercice —
+ * etait montre des que la liste filtree etait vide sans recherche textuelle.
+ * Filtrer sur une categorie ou l'utilisateur n'a rien affichait donc « ta
+ * bibliotheque est vide » a quelqu'un qui possede des dizaines d'exercices,
+ * sans lui laisser deviner que c'est le filtre qui ne rend rien (#1389).
+ *
+ * La question porte maintenant sur la bibliotheque elle-meme, pas sur ce que le
+ * filtre en laisse voir.
+ */
+const libraryIsEmpty = computed(() => localExercises.value.length === 0)
+
+/** Ce que l'utilisateur peut relacher pour revoir quelque chose. */
+const hasActiveFilter = computed(() => searchQuery.value !== '' || activeCategory.value !== 'all')
+
+const clearFilters = () => {
+    searchQuery.value = ''
+    activeCategory.value = 'all'
+}
+
 // Group filtered exercises by category for display
 const groupedExercises = computed(() => {
     const groups = {}
@@ -416,7 +439,7 @@ const typeLabel = (type) => {
             </GlassCard>
 
             <!-- Empty State -->
-            <div v-if="filteredExercises.length === 0 && !searchQuery" class="animate-slide-up">
+            <div v-if="libraryIsEmpty" class="animate-slide-up">
                 <GlassEmptyState
                     title="Aucun exercice pour l'instant"
                     description="Ta bibliothèque est vide. Commence par créer ton premier exercice pour sculpter ton corps !"
@@ -428,16 +451,21 @@ const typeLabel = (type) => {
                 />
             </div>
 
-            <!-- No Search Results -->
-            <div v-else-if="filteredExercises.length === 0" class="animate-slide-up">
+            <!-- Nothing matches the filters -->
+            <div v-else-if="filteredExercises.length === 0 && hasActiveFilter" class="animate-slide-up">
+                <!--
+                    Le titre citait la recherche sans condition et se lisait
+                    « Aucun résultat pour » suivi de rien quand seule la
+                    catégorie filtrait — le cas que cet état ne savait pas voir.
+                -->
                 <GlassEmptyState
-                    :title="'Aucun résultat pour ' + searchQuery"
-                    description="Essaie avec un autre mot-clé ou crée un nouvel exercice."
+                    :title="searchQuery ? 'Aucun résultat pour ' + searchQuery : 'Aucun exercice dans cette catégorie'"
+                    description="Essaie un autre filtre, ou crée un nouvel exercice."
                     icon="search_off"
                     color="violet"
                 >
                     <template #action>
-                        <GlassButton variant="secondary" @click="searchQuery = ''"> Effacer la recherche </GlassButton>
+                        <GlassButton variant="secondary" @click="clearFilters"> Réinitialiser les filtres </GlassButton>
                     </template>
                 </GlassEmptyState>
             </div>
