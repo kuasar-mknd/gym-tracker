@@ -58,7 +58,7 @@ final class FetchDashboardDataAction
      * Get consolidated weekly volume data (stats + trend).
      *
      * @param  \App\Models\User  $user  The authenticated user.
-     * @return array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
+     * @return array{stats: array{current_week_volume: float, percentage: float|null}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
      */
     public function getWeeklyVolumeData(User $user): array
     {
@@ -79,7 +79,7 @@ final class FetchDashboardDataAction
      *
      * @param  User  $user  The authenticated user.
      * @return array{
-     *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|int}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>},
+     *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|null}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>},
      *     workoutDistributions: array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
      * }
      */

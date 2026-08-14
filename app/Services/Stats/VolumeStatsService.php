@@ -262,10 +262,10 @@ final class VolumeStatsService
      * @param  User  $user  The user to calculate the comparison for.
      * @param  Carbon  $currentStart  The start date/time of the current period.
      * @param  Carbon  $prevStart  The start date/time of the previous period.
-     * @param  Carbon|null  $prevEnd  The end date/time of the previous period (optional).
-     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float} The calculated comparison metrics.
+     * @param  Carbon  $prevEnd  The end date/time of the previous period.
+     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float|null} The calculated metrics, with a null percentage when there is nothing to compare against.
      */
-    private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, ?Carbon $prevEnd = null): array
+    private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, Carbon $prevEnd): array
     {
         // ⚡ Bolt: PERFORMANCE OPTIMIZATION
         // Consolidate two SUM queries into a single database query using conditional aggregation.
@@ -274,18 +274,16 @@ final class VolumeStatsService
             ->toBase()
             ->where('started_at', '>=', $prevStart);
 
-        if ($prevEnd) {
-            $query->selectRaw('
-                SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
-                SUM(CASE WHEN started_at <= ? THEN workout_volume ELSE 0 END) as previous_volume
-            ', [$currentStart, $prevEnd]);
-        } else {
-            // ⚡ Bolt: Preserve exactly the original behavior where 'previous_volume' is the sum for the whole query if $prevEnd is null.
-            $query->selectRaw('
-                SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
-                SUM(workout_volume) as previous_volume
-            ', [$currentStart]);
-        }
+        // Le parametre etait optionnel, avec une branche de repli ou previous_volume
+        // valait la somme de toute la plage — donc en incluant la periode courante,
+        // ce qui rendait la difference systematiquement negative. Les deux seuls
+        // appelants passent $prevEnd, et l'ont toujours passe : la branche etait
+        // inatteignable, et le commentaire qui la disait « conserver exactement le
+        // comportement d'origine » protegeait du code que personne n'executait.
+        $query->selectRaw('
+            SUM(CASE WHEN started_at >= ? THEN workout_volume ELSE 0 END) as current_volume,
+            SUM(CASE WHEN started_at <= ? THEN workout_volume ELSE 0 END) as previous_volume
+        ', [$currentStart, $prevEnd]);
 
         /** @var \stdClass|null $stats */
         $stats = $query->first();
@@ -294,13 +292,27 @@ final class VolumeStatsService
         $previousVolume = is_numeric($stats?->previous_volume) ? (float) $stats->previous_volume : 0.0;
 
         $diff = $currentVolume - $previousVolume;
-        $percentage = $previousVolume > 0 ? $diff / $previousVolume * 100 : ($currentVolume > 0 ? 100 : 0);
+
+        /*
+         * Null, et non un chiffre, quand il n'y a rien a comparer.
+         *
+         * Une periode precedente a zero volume ne donne aucune base. La formule
+         * renvoyait 100 dans ce cas, et la premiere semaine suivie par un
+         * utilisateur s'affichait « +100 % vs sem. passee » : un gain invente
+         * contre une semaine qui n'existe pas, d'autant plus credible qu'il
+         * ressemble a un vrai chiffre. Mesure : current=500, previous=0,
+         * percentage=100.0 (#1388).
+         *
+         * Zero garde ainsi son sens propre — volume identique d'une periode a
+         * l'autre — au lieu d'etre confondu avec l'absence de comparaison.
+         */
+        $percentage = $previousVolume > 0 ? round($diff / $previousVolume * 100, 1) : null;
 
         return [
             'current_volume' => $currentVolume,
             'previous_volume' => $previousVolume,
             'difference' => $diff,
-            'percentage' => round($percentage, 1),
+            'percentage' => $percentage,
         ];
     }
 }

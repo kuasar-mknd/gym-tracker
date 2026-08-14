@@ -10,7 +10,8 @@ final readonly class VolumeComparison
         public float $current_volume,
         public float $previous_volume,
         public float $difference,
-        public float $percentage
+        /** Null quand la periode precedente est vide : il n'y a pas de comparaison a faire. */
+        public ?float $percentage
     ) {
     }
 }

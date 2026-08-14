@@ -11,10 +11,11 @@
  * with fallback skeletons.
  */
 
+import { computed } from 'vue'
 import { Deferred } from '@inertiajs/vue3'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 
-defineProps({
+const props = defineProps({
     /**
      * The trend array detailing the workout volume over a specific time period.
      * Used here to determine the total number of sessions.
@@ -44,6 +45,15 @@ defineProps({
      */
     deferredData: Object,
 })
+
+/**
+ * La variation mensuelle, ou null quand il n'y a pas de mois precedent.
+ *
+ * `undefined` et `null` sont ramenes au meme cas : le premier arrive quand la
+ * prop n'est pas encore la — la carte est derriere un Deferred — le second quand
+ * le serveur dit qu'il n'y a rien a comparer.
+ */
+const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null)
 </script>
 
 <template>
@@ -98,13 +108,27 @@ defineProps({
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="3rem" class="mx-auto mt-1" />
                 </template>
+                <!--
+                    `|| 0` traitait l'absence de comparaison comme une variation
+                    nulle et affichait « +0 % » : un chiffre a la place d'un mois
+                    precedent qui n'existe pas. Le tiret dit la meme chose sans
+                    pretendre mesurer quoi que ce soit (#1388).
+                -->
                 <div
+                    v-if="monthlyChange === null"
+                    class="font-display text-text-muted mt-1 text-2xl font-black"
+                    title="Pas de mois précédent à comparer"
+                >
+                    —
+                </div>
+                <div
+                    v-else
                     :class="[
                         'font-display mt-1 text-2xl font-black',
-                        (monthlyComparison?.percentage || 0) >= 0 ? 'text-emerald-500' : 'text-red-500',
+                        monthlyChange >= 0 ? 'text-emerald-500' : 'text-red-500',
                     ]"
                 >
-                    {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : '' }}{{ monthlyComparison?.percentage || 0 }}%
+                    {{ monthlyChange >= 0 ? '+' : '' }}{{ monthlyChange }}%
                 </div>
             </Deferred>
         </div>
