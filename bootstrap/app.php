@@ -4,14 +4,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-/*
- * The single answer the API gives for "not yours" and "not there".
- *
- * Kept as one constant because the whole point is that the two paths are
- * indistinguishable; two literals could drift apart without anyone noticing.
- */
-const API_NOT_FOUND_MESSAGE = 'Resource not found.';
-
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -52,6 +44,23 @@ return Application::configure(basePath: dirname(__DIR__))
         \Sentry\Laravel\Integration::handles($exceptions);
 
         /*
+         * The single answer the API gives for "not yours" and "not there".
+         *
+         * Built once and shared by both handlers below, because the whole point
+         * is that the two are indistinguishable; two literals could drift apart
+         * without anyone noticing.
+         *
+         * A closure rather than a constant: `artisan test -p` boots the
+         * application several times in one process, and a file-scope constant
+         * cannot be declared twice — which is how the first attempt failed CI
+         * while passing every local run, none of which was parallel.
+         */
+        $notFound = static fn (): \Illuminate\Http\JsonResponse => response()->json(
+            ['message' => 'Resource not found.'],
+            404,
+        );
+
+        /*
          * On the API, refusing a named resource must look like not finding one.
          *
          * The creation endpoints already behave that way: ownership rides in the
@@ -77,7 +86,7 @@ return Application::configure(basePath: dirname(__DIR__))
          * than left to each policy to declare. A policy with no `view` at all
          * denies, and the answer is the discreet one.
          */
-        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e, \Illuminate\Http\Request $request): ?\Symfony\Component\HttpFoundation\Response {
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e, \Illuminate\Http\Request $request) use ($notFound): ?\Symfony\Component\HttpFoundation\Response {
             if (! $request->is('api/*')) {
                 return null;
             }
@@ -99,7 +108,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            return response()->json(['message' => API_NOT_FOUND_MESSAGE], 404);
+            return $notFound();
         });
 
         /*
@@ -114,11 +123,11 @@ return Application::configure(basePath: dirname(__DIR__))
          * identical by construction rather than by a wording that has to be kept
          * in step with the framework's.
          */
-        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, \Illuminate\Http\Request $request): ?\Symfony\Component\HttpFoundation\Response {
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, \Illuminate\Http\Request $request) use ($notFound): ?\Symfony\Component\HttpFoundation\Response {
             if (! $request->is('api/*')) {
                 return null;
             }
 
-            return response()->json(['message' => API_NOT_FOUND_MESSAGE], 404);
+            return $notFound();
         });
     })->create();
