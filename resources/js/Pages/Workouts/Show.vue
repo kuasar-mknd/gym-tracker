@@ -714,15 +714,31 @@ const addSet = (lineId) => {
      * too, which nothing ever read — the set already lives inside its line —
      * while being exactly the placeholder that must not reach a payload.
      */
-    const tempSet = {
+    if (!Array.isArray(line.sets)) line.sets = []
+
+    line.sets.push({
         id: `temp-${++tempIdCounter}`,
         _rowKey: newRowKey(),
         is_completed: false,
         is_warmup: false,
         ...values,
-    }
-    if (!Array.isArray(line.sets)) line.sets = []
-    line.sets.push(tempSet)
+    })
+
+    /**
+     * Read back out of the array, not kept from before the push.
+     *
+     * `line.sets` lives inside a reactive ref, so what it hands back is a proxy;
+     * the literal above is the raw object behind it. Writing to the raw one —
+     * which is what holding on to it did — changes the value without tripping
+     * any tracker, so nothing re-renders.
+     *
+     * Invisible while everything works, because the row is already on screen
+     * showing what the user typed. It bit when the correction PATCH that
+     * follows was refused: `markUnsynced` then updated state correctly and the
+     * "not saved" badge never appeared, so a set the server had not kept looked
+     * saved. See #1397.
+     */
+    const tempSet = line.sets[line.sets.length - 1]
 
     /**
      * The line may itself still be a placeholder — adding a set right after the
