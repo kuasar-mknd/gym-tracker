@@ -6,6 +6,27 @@ vi.mock('@inertiajs/vue3', () => ({
     Link: { template: '<a><slot /></a>' },
 }))
 
+/*
+ * The fourteen charts are not loaded at all here.
+ *
+ * The page pulls them in through defineAsyncComponent, and those import chains
+ * keep resolving after the test that started them has returned. Whatever they
+ * log then lands once the worker is already closing, and Vitest ends the run on
+ * `EnvironmentTeardownError: Closing rpc while "onUserConsoleLog" was pending` —
+ * every test green, exit code 1, and the file it blames moves around as the
+ * suite grows. Measured at 2 runs in 8 before this.
+ *
+ * Awaiting the imports inside the test was the previous answer, and it only
+ * raced them: flushPromises drains the microtask queue, while a dynamic import
+ * goes through Vite's transform and can take longer than that. Stubbing the
+ * loader removes the race instead of trying to win it, and costs nothing —
+ * every assertion below reads the series off the component, never a chart.
+ */
+vi.mock('vue', async (importOriginal) => ({
+    ...(await importOriginal()),
+    defineAsyncComponent: () => ({ name: 'UnloadedChart', render: () => null }),
+}))
+
 import ExerciseShow from '@/Pages/Exercises/Show.vue'
 import { passesSlot } from './pageStubs'
 
@@ -25,15 +46,6 @@ const session = (date, sets, best1rm = 0) => ({
  * across all of them: the reversal, because a progression drawn backwards tells
  * the opposite story; and the guards, because a session with no sets or a set
  * with no weight is ordinary data here, not a corner case.
- */
-/*
- * Awaited, not merely mounted. The page pulls fourteen charts in through
- * defineAsyncComponent, and those import chains keep resolving after the test
- * that started them has returned. Whatever they log then lands once the worker
- * is already closing, and Vitest fails the run with `EnvironmentTeardownError:
- * Closing rpc while "onUserConsoleLog" was pending` — every test green, exit
- * code 1, and the file it blames moves around as the suite grows. Letting the
- * imports settle inside the test is what stops it.
  */
 const mountPage = async (history = []) => {
     const wrapper = mount(ExerciseShow, {
