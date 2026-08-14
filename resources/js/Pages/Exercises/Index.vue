@@ -81,8 +81,12 @@ const handleKeyDown = (e) => {
         searchInput.value?.focus()
     }
 
-    if (e.key === 'Escape' && document.activeElement === searchInput.value) {
-        searchInput.value?.blur()
+    // `searchInput` porte le proxy exposé par GlassInput, pas son élément
+    // racine : la comparaison portait donc sur un objet JS et n'était jamais
+    // vraie, quel que soit l'état du focus. Le champ concerné se reconnaît par
+    // l'input que le composant expose.
+    if (e.key === 'Escape' && document.activeElement === searchInput.value?.el) {
+        searchInput.value.blur()
         searchQuery.value = ''
     }
 }
@@ -201,7 +205,6 @@ const groupedExercises = computed(() => {
 })
 
 const typeLabel = (type) => {
-    if (!EXERCISE_TYPES) return type
     const found = EXERCISE_TYPES.find((t) => t.value === type)
     return found ? found.label : type
 }

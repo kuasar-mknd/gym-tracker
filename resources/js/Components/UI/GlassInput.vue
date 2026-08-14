@@ -130,8 +130,20 @@ const isRequired = computed(() => {
     return 'required' in attrs && attrs.required !== false
 })
 
+/**
+ * `defineExpose` remplace ce qu'une ref de template posée sur ce composant rend :
+ * le parent reçoit cet objet, jamais l'élément racine.
+ *
+ * Un parent qui veut savoir si le champ a le focus ne peut donc pas comparer sa
+ * ref à `document.activeElement` — la comparaison est insatisfiable, et la
+ * branche qu'elle garde ne s'exécute jamais. C'est ce qui rendait Échap inerte
+ * sur la recherche de la bibliothèque. `el` est ce qui rend ce test possible, et
+ * `blur` la contrepartie de `focus` dont il a besoin une fois qu'il passe.
+ */
 defineExpose({
+    el: input,
     focus: () => input.value?.focus(),
+    blur: () => input.value?.blur(),
     select: () => input.value?.select(),
 })
 </script>

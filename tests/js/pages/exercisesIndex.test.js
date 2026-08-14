@@ -335,6 +335,51 @@ describe('Exercises/Index — divers', () => {
         wrapper.unmount()
     })
 
+    /**
+     * Échap vide la recherche, ce qu'il n'a jamais fait.
+     *
+     * La garde comparait `document.activeElement` à `searchInput.value`, or
+     * cette ref est posée sur `GlassInput`, un composant : elle vaut le proxy
+     * qu'il expose et jamais un élément du DOM. La condition était donc
+     * insatisfiable et son corps mort. Et s'il avait été atteint, il appelait
+     * `blur()`, absent du `defineExpose` — l'optional chaining ne protège que
+     * la nullité de la ref, pas celle de la propriété, donc l'appel aurait levé.
+     *
+     * ⌘K marchait parce qu'il n'a pas de garde et n'appelle que `focus`, qui
+     * était exposé. Le raccourci qui marche cachait celui qui ne marchait pas.
+     */
+    it('vide la recherche avec Échap quand le champ a le focus', async () => {
+        const wrapper = mountPage([PECS, BACK])
+        const field = wrapper.find('#search-exercises-input')
+
+        await field.setValue('trac')
+        field.element.focus()
+        expect(document.activeElement).toBe(field.element)
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+        await wrapper.vm.$nextTick()
+
+        expect(field.element.value).toBe('')
+        expect(document.activeElement).not.toBe(field.element)
+
+        wrapper.unmount()
+    })
+
+    it("laisse la recherche tranquille quand Échap arrive d'ailleurs", async () => {
+        const wrapper = mountPage([PECS, BACK])
+        const field = wrapper.find('#search-exercises-input')
+
+        await field.setValue('trac')
+        field.element.blur()
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+        await wrapper.vm.$nextTick()
+
+        expect(field.element.value).toBe('trac')
+
+        wrapper.unmount()
+    })
+
     /*
      * Asserted through the listener registry rather than by dispatching a key
      * after unmount: the input is detached by then, so focusing it is a no-op
