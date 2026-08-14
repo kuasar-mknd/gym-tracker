@@ -1,0 +1,141 @@
+name: Mutation testing
+
+# Nocturne et jamais bloquant.
+#
+# Le mutation testing rejoue les tests qui couvrent chaque ligne mutee : le cout
+# se compte en dizaines de minutes, pas en secondes. Par PR ce n'est pas tenable,
+# et un job rouge toutes les nuits serait pire que pas de job — d'ou
+# continue-on-error, et aucun --min tant que plusieurs executions n'ont pas
+# etabli un score de reference stable (#1366).
+on:
+    schedule:
+        # 03h17 UTC : decale de l'heure ronde, ou la file des runners planifies
+        # de GitHub est la plus chargee.
+        - cron: '17 3 * * *'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    mutation:
+        runs-on: ubuntu-latest
+        continue-on-error: true
+        # Mesure locale du perimetre entier en une seule passe : 5 776 s, soit
+        # 96 minutes — et les runners GitHub sont plus lents que la machine qui
+        # a servi a mesurer. Un job unique aurait ete un pari sur la marge.
+        #
+        # Decoupe par namespace : chaque part a son propre delai, une part lente
+        # n'empeche pas les autres de publier, et fail-fast: false garantit
+        # qu'une part qui deborde ne coupe pas celles qui tournent encore. La
+        # passe de reference (~100 s) est repayee par part, ce qui est
+        # negligeable devant la mutation elle-meme.
+        #
+        # Les delais suivent la mesure locale, avec une marge d'environ le
+        # double parce que les runners GitHub sont plus lents que la machine qui
+        # a servi a mesurer :
+        #
+        #   App\Services   3 205 s   53 min   -> 120
+        #   App\Policies     714 s   12 min   ->  60
+        #   App\Actions + App\DTOs, par difference, ~31 min au total ->  60
+        #
+        # Un delai unique aurait ete cale sur Services et aurait laisse les
+        # trois autres parts capables de tourner deux heures sans que personne
+        # ne s'en apercoive.
+        timeout-minutes: ${{ matrix.timeout }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - scope: 'App\Services'
+                      timeout: 120
+                    - scope: 'App\Policies'
+                      timeout: 60
+                    - scope: 'App\Actions'
+                      timeout: 60
+                    - scope: 'App\DTOs'
+                      timeout: 60
+        services:
+            mysql:
+                image: mysql:8.4
+                env:
+                    MYSQL_ROOT_PASSWORD: password
+                    MYSQL_USER: sail
+                    MYSQL_PASSWORD: password
+                    MYSQL_DATABASE: gym_tracker_testing
+                ports:
+                    - 3306:3306
+                options: --health-cmd="mysqladmin ping -ppassword" --health-interval=10s --health-timeout=5s --health-retries=3
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.5'
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql, bcmath, soap, intl, readline
+                  coverage: pcov
+                  tools: composer:v2
+
+            - name: Install PHP dependencies
+              run: composer install --no-interaction --prefer-dist --no-progress
+
+            - name: Setup Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: npm
+
+            # La passe de reference execute la suite entiere, dont les tests qui
+            # rendent des pages Inertia et lisent le manifeste de Vite. Sans
+            # build, ceux-la echouent et le score n'a plus de sens.
+            - name: Build frontend assets
+              run: |
+                  npm ci
+                  npm run build
+
+            - name: Prepare Application
+              run: |
+                  cp .env.example .env
+                  php artisan key:generate
+
+            - name: Execute mutation testing
+              env:
+                  DB_CONNECTION: mysql
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 3306
+                  DB_DATABASE: gym_tracker_testing
+                  DB_USERNAME: sail
+                  DB_PASSWORD: password
+                  TELESCOPE_ENABLED: false
+              # `php artisan test`, jamais `vendor/bin/pest` : le wrapper artisan
+              # installe les hooks de Laravel que l'appel direct saute.
+              #
+              # --covered-only : muter une ligne qu'aucun test ne couvre produit
+              # un survivant qui ne dit rien de la qualite des tests, seulement
+              # de leur absence — ce que la couverture mesure deja.
+              #
+              # Le perimetre exclut App\Filament et App\Http : les ressources
+              # Filament sont surtout de la declaration, et les controleurs sont
+              # couverts par des tests de bout en bout dont la mutation coute
+              # cher pour un signal faible. La logique qui merite ce signal vit
+              # dans les actions, les services et les policies.
+              run: |
+                  # Sans pipefail, le statut de l'etape serait celui de `tee`,
+                  # donc toujours vert : le job ne bloque pas, mais il doit dire
+                  # la verite dans l'interface.
+                  set -o pipefail
+                  php artisan test --mutate --covered-only \
+                    --class='${{ matrix.scope }}' \
+                    | tee mutation-report.txt
+
+            - name: Upload report
+              if: always()
+              uses: actions/upload-artifact@v7
+              with:
+                  # Un nom par part, sans quoi les quatre televersements se
+                  # disputeraient le meme artefact.
+                  name: mutation-report-${{ strategy.job-index }}
+                  path: mutation-report.txt
+                  retention-days: 30
