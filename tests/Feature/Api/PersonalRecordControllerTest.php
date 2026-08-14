@@ -160,7 +160,7 @@ test('show: authenticated user cannot view other users personal record', functio
     $response = $this->actingAs($this->user)
         ->getJson(route('api.v1.personal-records.show', $pr));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('update: unauthenticated user cannot update personal record', function (): void {
@@ -199,7 +199,7 @@ test('update: authenticated user cannot update other users personal record', fun
             'value' => 150,
         ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('update: validates fields', function (): void {
@@ -242,6 +242,6 @@ test('destroy: authenticated user cannot delete other users personal record', fu
     $response = $this->actingAs($this->user)
         ->deleteJson(route('api.v1.personal-records.destroy', $pr));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
     $this->assertDatabaseHas('personal_records', ['id' => $pr->id]);
 });

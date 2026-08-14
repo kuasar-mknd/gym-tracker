@@ -154,7 +154,7 @@ describe('Authenticated', function (): void {
             $userToView = User::factory()->create();
 
             getJson(route('api.v1.users.show', $userToView))
-                ->assertForbidden();
+                ->assertNotFound();
         });
     });
 
@@ -185,7 +185,7 @@ describe('Authenticated', function (): void {
             $userToUpdate = User::factory()->create();
 
             putJson(route('api.v1.users.update', $userToUpdate), ['name' => 'Updated Name'])
-                ->assertForbidden();
+                ->assertNotFound();
         });
 
         test('validation: email unique ignore self', function (): void {
@@ -228,7 +228,7 @@ describe('Authenticated', function (): void {
             $userToDelete = User::factory()->create();
 
             deleteJson(route('api.v1.users.destroy', $userToDelete))
-                ->assertForbidden();
+                ->assertNotFound();
 
             assertDatabaseHas('users', ['id' => $userToDelete->id]);
         });

@@ -111,7 +111,7 @@ test('user cannot update another users set', function (): void {
     Sanctum::actingAs($user);
 
     patchJson(route('api.v1.sets.update', $otherSet), ['weight' => 100])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user cannot delete another users set', function (): void {
@@ -123,7 +123,7 @@ test('user cannot delete another users set', function (): void {
 
     Sanctum::actingAs($user);
 
-    deleteJson(route('api.v1.sets.destroy', $otherSet))->assertForbidden();
+    deleteJson(route('api.v1.sets.destroy', $otherSet))->assertNotFound();
 });
 
 // Validation Tests

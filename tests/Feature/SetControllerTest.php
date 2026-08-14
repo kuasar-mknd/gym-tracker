@@ -130,7 +130,7 @@ describe('SetController@update', function (): void {
         $response->assertJsonValidationErrors(['weight']);
     });
 
-    it('returns 403 if user is not authorized', function (): void {
+    it('hides a set belonging to someone else', function (): void {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'ended_at' => null]);
@@ -143,7 +143,7 @@ describe('SetController@update', function (): void {
             'weight' => 60,
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 
     it('returns 403 if workout is completed', function (): void {
@@ -177,7 +177,7 @@ describe('SetController@destroy', function (): void {
         $this->assertDatabaseMissing('sets', ['id' => $set->id]);
     });
 
-    it('returns 403 if user is not authorized', function (): void {
+    it('hides a set belonging to someone else', function (): void {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'ended_at' => null]);
@@ -188,7 +188,7 @@ describe('SetController@destroy', function (): void {
 
         $response = $this->deleteJson(route('api.v1.sets.destroy', $set));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
         $this->assertDatabaseHas('sets', ['id' => $set->id]);
     });
 

@@ -145,7 +145,7 @@ test('user cannot show other users workout template', function (): void {
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
 
     $this->getJson(route('api.v1.workout-templates.show', $template))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user can update own workout template', function (): void {
@@ -178,7 +178,7 @@ test('user cannot update other users workout template', function (): void {
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
 
     $this->putJson(route('api.v1.workout-templates.update', $template), ['name' => 'Updated Template Name'])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user can delete own workout template', function (): void {
@@ -199,7 +199,7 @@ test('user cannot delete other users workout template', function (): void {
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
 
     $this->deleteJson(route('api.v1.workout-templates.destroy', $template))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('workout_templates', ['id' => $template->id]);
 });

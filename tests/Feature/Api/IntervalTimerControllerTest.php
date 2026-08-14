@@ -74,7 +74,7 @@ test('user cannot view another users interval timer', function (): void {
 
     actingAs($user)
         ->getJson(route('api.v1.interval-timers.show', $timer))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('update modifies an existing interval timer', function (): void {
@@ -128,7 +128,7 @@ test('user cannot update another users interval timer', function (): void {
 
     actingAs($user)
         ->putJson(route('api.v1.interval-timers.update', $timer), $data)
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('destroy deletes an interval timer', function (): void {
@@ -151,7 +151,7 @@ test('user cannot delete another users interval timer', function (): void {
 
     actingAs($user)
         ->deleteJson(route('api.v1.interval-timers.destroy', $timer))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('interval_timers', [
         'id' => $timer->id,

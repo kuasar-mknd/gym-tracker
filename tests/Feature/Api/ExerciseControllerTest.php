@@ -113,7 +113,7 @@ test('authenticated user cannot view other user exercise', function (): void {
 
     actingAs($user)
         ->getJson(route('api.v1.exercises.show', $otherUserExercise))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('authenticated user can update own exercise', function (): void {
@@ -157,7 +157,7 @@ test('authenticated user cannot update other user exercise', function (): void {
             'name' => 'Updated Name',
             'type' => 'cardio',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('authenticated user can delete own exercise', function (): void {
@@ -188,7 +188,7 @@ test('authenticated user cannot delete other user exercise', function (): void {
 
     actingAs($user)
         ->deleteJson(route('api.v1.exercises.destroy', $otherUserExercise))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('exercises', ['id' => $otherUserExercise->id]);
 });

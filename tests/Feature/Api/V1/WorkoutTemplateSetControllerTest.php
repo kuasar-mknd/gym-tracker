@@ -154,8 +154,15 @@ test('user cannot create template set for other users template line', function (
         'order' => 1,
     ];
 
+    /*
+     * 422 et non 403 : l'appartenance voyage maintenant dans la regle de
+     * validation, comme chez les freres de cette famille. C'est le point du
+     * changement — la reponse doit etre la meme que pour une ligne inexistante,
+     * sans quoi le refus confirme une existence (#1418).
+     */
     $this->postJson(route('api.v1.workout-template-sets.store'), $data)
-        ->assertForbidden();
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['workout_template_line_id']);
 });
 
 test('user can show own workout template set', function (): void {
@@ -177,7 +184,7 @@ test('user cannot show other users workout template set', function (): void {
     $set = WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $line->id]);
 
     $this->getJson(route('api.v1.workout-template-sets.show', $set))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user can update own workout template set', function (): void {
@@ -252,7 +259,7 @@ test('user cannot update other users workout template set', function (): void {
     ];
 
     $this->putJson(route('api.v1.workout-template-sets.update', $set), $data)
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user can delete own workout template set', function (): void {
@@ -275,7 +282,7 @@ test('user cannot delete other users workout template set', function (): void {
     $set = WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $line->id]);
 
     $this->deleteJson(route('api.v1.workout-template-sets.destroy', $set))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('workout_template_sets', ['id' => $set->id]);
 });

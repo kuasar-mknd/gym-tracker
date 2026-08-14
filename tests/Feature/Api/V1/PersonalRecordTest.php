@@ -195,7 +195,7 @@ test('user cannot view other user personal record', function (): void {
 
     actingAs($user, 'sanctum')
         ->getJson(route('api.v1.personal-records.show', $pr))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user cannot update other user personal record', function (): void {
@@ -207,7 +207,7 @@ test('user cannot update other user personal record', function (): void {
         ->putJson(route('api.v1.personal-records.update', $pr), [
             'value' => 200,
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user cannot delete other user personal record', function (): void {
@@ -217,7 +217,7 @@ test('user cannot delete other user personal record', function (): void {
 
     actingAs($user, 'sanctum')
         ->deleteJson(route('api.v1.personal-records.destroy', $pr))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user cannot link personal record to another users workout', function (): void {

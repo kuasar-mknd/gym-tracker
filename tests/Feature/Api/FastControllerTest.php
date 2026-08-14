@@ -152,7 +152,7 @@ test('user cannot view another users fast', function (): void {
 
     actingAs($user)
         ->getJson(route('api.v1.fasts.show', $fast))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user can update their fast', function (): void {
@@ -204,7 +204,7 @@ test('user cannot update another users fast', function (): void {
         ->putJson(route('api.v1.fasts.update', $fast), [
             'status' => 'completed',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user can delete their fast', function (): void {
@@ -227,7 +227,7 @@ test('user cannot delete another users fast', function (): void {
 
     actingAs($user)
         ->deleteJson(route('api.v1.fasts.destroy', $fast))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('fasts', [
         'id' => $fast->id,

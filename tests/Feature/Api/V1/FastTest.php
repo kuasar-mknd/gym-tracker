@@ -125,7 +125,7 @@ describe('Authenticated', function (): void {
             $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
 
             getJson(route('api.v1.fasts.show', $fast))
-                ->assertForbidden();
+                ->assertNotFound();
         });
     });
 
@@ -161,7 +161,7 @@ describe('Authenticated', function (): void {
             $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
 
             putJson(route('api.v1.fasts.update', $fast), ['status' => 'completed'])
-                ->assertForbidden();
+                ->assertNotFound();
         });
 
         test('validation: status must be valid', function (): void {
@@ -194,7 +194,7 @@ describe('Authenticated', function (): void {
             $fast = Fast::factory()->create(['user_id' => $otherUser->id]);
 
             deleteJson(route('api.v1.fasts.destroy', $fast))
-                ->assertForbidden();
+                ->assertNotFound();
 
             assertDatabaseHas('fasts', ['id' => $fast->id]);
         });

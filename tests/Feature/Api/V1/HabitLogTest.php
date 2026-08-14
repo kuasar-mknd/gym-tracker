@@ -194,7 +194,7 @@ test('user cannot view other user habit log', function (): void {
 
     actingAs($user, 'sanctum')
         ->getJson(route('api.v1.habit-logs.show', $log))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user cannot update other user habit log', function (): void {
@@ -207,7 +207,7 @@ test('user cannot update other user habit log', function (): void {
         ->putJson(route('api.v1.habit-logs.update', $log), [
             'notes' => 'Updated Habit Log Notes',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user cannot delete other user habit log', function (): void {
@@ -218,5 +218,5 @@ test('user cannot delete other user habit log', function (): void {
 
     actingAs($user, 'sanctum')
         ->deleteJson(route('api.v1.habit-logs.destroy', $log))
-        ->assertForbidden();
+        ->assertNotFound();
 });

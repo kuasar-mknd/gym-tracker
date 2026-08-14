@@ -95,9 +95,9 @@ describe('Habits API', function (): void {
         $otherUser = User::factory()->create();
         $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
 
-        getJson(route('api.v1.habits.show', $habit))->assertForbidden();
-        putJson(route('api.v1.habits.update', $habit), ['name' => 'Hack'])->assertForbidden();
-        deleteJson(route('api.v1.habits.destroy', $habit))->assertForbidden();
+        getJson(route('api.v1.habits.show', $habit))->assertNotFound();
+        putJson(route('api.v1.habits.update', $habit), ['name' => 'Hack'])->assertNotFound();
+        deleteJson(route('api.v1.habits.destroy', $habit))->assertNotFound();
     });
 
     test('store validates required fields', function (): void {

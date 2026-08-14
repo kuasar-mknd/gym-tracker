@@ -126,7 +126,7 @@ describe('Authenticated', function (): void {
             $score = WilksScore::factory()->create(['user_id' => $otherUser->id]);
 
             getJson(route('api.v1.wilks-scores.show', $score))
-                ->assertForbidden();
+                ->assertNotFound();
         });
     });
 
@@ -149,7 +149,7 @@ describe('Authenticated', function (): void {
             $score = WilksScore::factory()->create(['user_id' => $otherUser->id]);
 
             putJson(route('api.v1.wilks-scores.update', $score), ['score' => 500.0])
-                ->assertForbidden();
+                ->assertNotFound();
         });
     });
 
@@ -171,7 +171,7 @@ describe('Authenticated', function (): void {
             $score = WilksScore::factory()->create(['user_id' => $otherUser->id]);
 
             deleteJson(route('api.v1.wilks-scores.destroy', $score))
-                ->assertForbidden();
+                ->assertNotFound();
 
             assertDatabaseHas('wilks_scores', ['id' => $score->id]);
         });

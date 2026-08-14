@@ -102,7 +102,7 @@ describe('Authenticated User', function (): void {
 
         $response = getJson(route('api.v1.warmup-preferences.show', $preference));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 
     test('user can update their warmup preference', function (): void {
@@ -141,7 +141,7 @@ describe('Authenticated User', function (): void {
             'bar_weight' => 25,
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 
     test('user can delete their warmup preference', function (): void {
@@ -170,7 +170,7 @@ describe('Authenticated User', function (): void {
 
         $response = deleteJson(route('api.v1.warmup-preferences.destroy', $preference));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
 
         assertDatabaseHas('warmup_preferences', ['id' => $preference->id]);
     });

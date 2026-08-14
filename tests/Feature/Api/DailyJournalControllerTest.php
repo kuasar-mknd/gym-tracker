@@ -54,7 +54,7 @@ it('returns 422 Unprocessable when creating a journal with invalid data', functi
     $response->assertJsonValidationErrors(['mood_score']);
 });
 
-it('returns 403 Forbidden when trying to view another user\'s journal', function (): void {
+it('hides another user\'s journal rather than refusing it', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $journal = DailyJournal::factory()->create([
@@ -63,5 +63,5 @@ it('returns 403 Forbidden when trying to view another user\'s journal', function
 
     $response = $this->actingAs($user)->getJson(route('api.v1.daily-journals.show', $journal));
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });

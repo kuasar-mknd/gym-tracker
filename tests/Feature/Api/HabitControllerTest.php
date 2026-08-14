@@ -78,13 +78,13 @@ it('returns habit for owner', function (): void {
         ->assertJsonPath('data.id', $habit->id);
 });
 
-it('returns forbidden for other users habit on show', function (): void {
+it('hides another user\'s habit on show', function (): void {
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
 
     $response = $this->actingAs($this->user)->getJson("/api/v1/habits/{$habit->id}");
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });
 
 it('modifies habit with valid data', function (): void {
@@ -124,7 +124,7 @@ it('returns validation error for invalid data on update', function (): void {
         ->assertJsonValidationErrors(['goal_times_per_week']);
 });
 
-it('returns forbidden for other users habit on update', function (): void {
+it('hides another user\'s habit on update', function (): void {
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
 
@@ -134,7 +134,7 @@ it('returns forbidden for other users habit on update', function (): void {
 
     $response = $this->actingAs($this->user)->putJson("/api/v1/habits/{$habit->id}", $data);
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });
 
 it('deletes habit for owner', function (): void {
@@ -152,13 +152,13 @@ it('deletes habit for owner', function (): void {
     ]);
 });
 
-it('returns forbidden for other users habit on destroy', function (): void {
+it('hides another user\'s habit on destroy', function (): void {
     $otherUser = User::factory()->create();
     $habit = Habit::factory()->create(['user_id' => $otherUser->id]);
 
     $response = $this->actingAs($this->user)->deleteJson("/api/v1/habits/{$habit->id}");
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 
     $this->assertDatabaseHas('habits', [
         'id' => $habit->id,

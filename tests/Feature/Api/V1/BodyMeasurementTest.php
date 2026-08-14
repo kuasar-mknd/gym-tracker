@@ -103,7 +103,7 @@ class BodyMeasurementTest extends TestCase
             'weight' => 80.0,
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_user_can_delete_own_measurement(): void
@@ -125,7 +125,7 @@ class BodyMeasurementTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/body-measurements/{$measurement->id}");
 
-        $response->assertForbidden();
+        $response->assertNotFound();
         $this->assertDatabaseHas('body_measurements', ['id' => $measurement->id]);
     }
 }

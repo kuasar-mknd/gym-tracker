@@ -62,7 +62,7 @@ test('user cannot view another users habit log', function (): void {
 
     actingAs($user)
         ->getJson(route('api.v1.habit-logs.show', $log))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user gets 404 for non-existent habit log', function (): void {
@@ -143,7 +143,7 @@ test('user cannot update another users habit log', function (): void {
 
     actingAs($user)
         ->putJson(route('api.v1.habit-logs.update', $log), ['notes' => 'Updated Habit Log Notes'])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user can delete their habit log', function (): void {
@@ -166,5 +166,5 @@ test('user cannot delete another users habit log', function (): void {
 
     actingAs($user)
         ->deleteJson(route('api.v1.habit-logs.destroy', $log))
-        ->assertForbidden();
+        ->assertNotFound();
 });

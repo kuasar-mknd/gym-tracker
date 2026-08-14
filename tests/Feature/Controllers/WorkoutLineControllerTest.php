@@ -169,7 +169,7 @@ describe('WorkoutLineController', function (): void {
 
             $response = $this->deleteJson(route('api.v1.workout-lines.destroy', $workoutLine));
 
-            $response->assertForbidden();
+            $response->assertNotFound();
             $this->assertDatabaseHas('workout_lines', [
                 'id' => $workoutLine->id,
             ]);

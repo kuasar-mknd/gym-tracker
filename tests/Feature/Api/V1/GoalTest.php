@@ -166,7 +166,7 @@ describe('Authenticated', function (): void {
             $goal = Goal::factory()->create(['user_id' => $otherUser->id]);
 
             getJson(route('api.v1.goals.show', $goal))
-                ->assertForbidden();
+                ->assertNotFound();
         });
 
         test('shows exercise if included', function (): void {
@@ -198,7 +198,7 @@ describe('Authenticated', function (): void {
             $goal = Goal::factory()->create(['user_id' => $otherUser->id]);
 
             putJson(route('api.v1.goals.update', $goal), ['title' => 'Updated Goal Title'])
-                ->assertForbidden();
+                ->assertNotFound();
         });
 
         test('validation: partial update', function (): void {
@@ -232,7 +232,7 @@ describe('Authenticated', function (): void {
             $goal = Goal::factory()->create(['user_id' => $otherUser->id]);
 
             deleteJson(route('api.v1.goals.destroy', $goal))
-                ->assertForbidden();
+                ->assertNotFound();
 
             assertDatabaseHas('goals', ['id' => $goal->id]);
         });

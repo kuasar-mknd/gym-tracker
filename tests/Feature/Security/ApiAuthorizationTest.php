@@ -28,7 +28,7 @@ class ApiAuthorizationTest extends TestCase
             'value' => 200,
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_user_cannot_update_another_users_interval_timer_via_api(): void
@@ -46,7 +46,7 @@ class ApiAuthorizationTest extends TestCase
             'rounds' => 10,
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_user_cannot_update_another_users_goal_via_api(): void
@@ -61,6 +61,6 @@ class ApiAuthorizationTest extends TestCase
             'title' => 'Stolen Goal',
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 }

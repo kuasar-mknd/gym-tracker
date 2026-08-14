@@ -26,10 +26,19 @@ test('StoreUserRequest enforces password defaults', function (): void {
     $response->assertJsonValidationErrors(['password']);
 });
 
+/*
+ * L'utilisateur se met a jour lui-meme, la ou ce test faisait modifier un
+ * inconnu par un « admin » qui n'avait aucun droit d'administration — un
+ * User::factory() nu. La regle de mot de passe n'etait donc jamais atteinte au
+ * titre de ce qu'elle verifie : la reponse 422 venait d'une validation qui
+ * tournait avant un refus d'autorisation, et ce refus repond maintenant 404
+ * pour ne pas confirmer l'existence du compte vise (#1418).
+ *
+ * Le test porte a nouveau sur ce que son nom annonce.
+ */
 test('UpdateUserRequest enforces password defaults', function (): void {
-    $admin = User::factory()->create();
     $user = User::factory()->create();
-    Sanctum::actingAs($admin);
+    Sanctum::actingAs($user);
 
     $response = $this->patchJson(route('api.v1.users.update', $user), [
         'password' => 'short',

@@ -53,7 +53,7 @@ test('cannot view another users water log', function (): void {
 
     $response = $this->getJson(route('api.v1.water-logs.show', $log));
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });
 
 test('can update a water log', function (): void {
@@ -78,7 +78,7 @@ test('cannot update another users water log', function (): void {
 
     $response = $this->putJson(route('api.v1.water-logs.update', $log), $data);
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });
 
 test('can delete a water log', function (): void {
@@ -97,5 +97,5 @@ test('cannot delete another users water log', function (): void {
 
     $response = $this->deleteJson(route('api.v1.water-logs.destroy', $log));
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });

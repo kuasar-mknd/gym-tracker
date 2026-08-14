@@ -86,7 +86,7 @@ class DailyJournalTest extends TestCase
 
         $response = $this->getJson(route('api.v1.daily-journals.show', $journal));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_can_update_daily_journal(): void
