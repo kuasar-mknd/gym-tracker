@@ -121,3 +121,91 @@ describe('GlassEmptyState', () => {
         expect(wrapper.find('[data-testid="empty-state-action"]').exists()).toBe(false)
     })
 })
+
+/**
+ * Les deux défauts de #1386, tous deux silencieux : rien n'échouait, l'icône
+ * sortait simplement fausse et la couleur simplement absente.
+ */
+describe('GlassEmptyState — ce que « court » voulait dire', () => {
+    /**
+     * `icon.length <= 2` compte les unités UTF-16, pas les caractères perçus.
+     * 💪 en vaut 2 et passait ; tous ceux qui portent un sélecteur de variante,
+     * un modificateur de genre ou une paire régionale en valent plus, et
+     * partaient dans la branche icône pour se rendre comme un nom de ligature
+     * inexistant — texte brut à l'écran, ou rien.
+     *
+     * La longueur était de toute façon la mauvaise question : ce qui distingue
+     * les deux, c'est qu'un nom de ligature s'écrit en ASCII minuscule.
+     */
+    it.each([
+        ['🏋️', 'sélecteur de variante, 3 unités'],
+        ['🏋️‍♂️', 'modificateur de genre, 6 unités'],
+        ['🇫🇷', 'paire régionale, 4 unités'],
+        ['👨‍👩‍👧‍👦', 'famille jointe par ZWJ, 11 unités'],
+    ])('rend %s en texte (%s)', (emoji) => {
+        const wrapper = mountState({ icon: emoji })
+
+        expect(iconSpans(wrapper)).toHaveLength(1)
+        expect(iconSpans(wrapper)[0].text()).toBe(emoji)
+        expect(iconSpans(wrapper)[0].classes()).not.toContain('material-symbols-outlined')
+    })
+
+    /**
+     * Le scanner de Tailwind ne lit que des chaînes littérales complètes : une
+     * classe assemblée à l'exécution — `text-${...}` — n'apparaît jamais dans
+     * le CSS généré. La classe est donc lue ici en toutes lettres, ce qui est
+     * exactement ce que le scanner doit pouvoir trouver dans la source.
+     */
+    it.each([
+        ['orange', 'text-electric-orange'],
+        ['violet', 'text-vivid-violet'],
+        ['pink', 'text-hot-pink'],
+        ['cyan', 'text-cyan-pure'],
+        ['green', 'text-neon-green'],
+    ])('peint l’icône de %s avec %s', (color, expected) => {
+        const wrapper = mountState({ icon: 'search_off', color })
+
+        expect(iconSpans(wrapper)[0].classes()).toContain(expected)
+    })
+
+    /**
+     * La contrepartie du test ci-dessus, et le seul des deux qui morde.
+     *
+     * Un littéral de gabarit rend exactement la même classe dans le DOM : les
+     * assertions ci-dessus passaient donc avec le code fautif. Ce qui manquait
+     * n'était pas la classe sur l'élément, c'était la règle dans la feuille —
+     * le scanner de Tailwind ne lit que des chaînes littérales complètes. Il
+     * faut regarder le fichier, pas le rendu.
+     *
+     * Mesuré dans le CSS généré, avant correctif : `text-electric-orange`,
+     * `text-vivid-violet`, `text-hot-pink` et `text-cyan-pure` étaient bien
+     * présents — non pas grâce à ce composant, mais parce que d'autres les
+     * écrivent en toutes lettres. `text-neon-green`, que personne d'autre
+     * n'emploie, était absent : `color="green"` peignait donc l'icône avec une
+     * classe sans règle. Quatre couleurs sur cinq marchaient par emprunt, ce
+     * qui est la pire façon de marcher — laquelle dépendait de fichiers sans
+     * rapport.
+     *
+     * Note pour plus tard : ce fichier de test nomme lui-même les cinq classes,
+     * et Tailwind scanne `tests/`. Elles resteront donc dans la feuille même si
+     * le composant régresse. C'est l'assertion sur la source, ci-dessous, qui
+     * attrape la régression — pas leur présence dans le CSS.
+     */
+    it('écrit les classes de couleur en toutes lettres dans la source', async () => {
+        const source = await import('@/Components/UI/GlassEmptyState.vue?raw').then((m) => m.default)
+
+        for (const expected of [
+            'text-electric-orange',
+            'text-vivid-violet',
+            'text-hot-pink',
+            'text-cyan-pure',
+            'text-neon-green',
+        ]) {
+            expect(source).toContain(expected)
+        }
+
+        // La liaison, pas la chaîne : le commentaire du composant cite
+        // l'anti-patron pour expliquer pourquoi il a été retiré.
+        expect(source).not.toContain(':class="`text-')
+    })
+})
