@@ -36,15 +36,36 @@ const toasts = {
     error: { icon: 'error', color: 'red', delay: 8000, id: null },
 }
 
+/*
+ * Chaque toast garde l'échéance posée à son apparition.
+ *
+ * Le watch se déclenche dès que l'une ou l'autre valeur bouge, et il ré-armait
+ * alors tout toast encore affiché — pas seulement celui qui venait de changer.
+ * Une erreur montrée en même temps qu'un succès voyait donc son compte à
+ * rebours redémarrer quand le succès disparaissait à 5 s : elle restait 13 s au
+ * lieu des 8 s configurées.
+ *
+ * Les deux délais sont réglés différemment à dessein — une erreur mérite d'être
+ * lue plus longtemps. Le ré-armement rendait ce réglage imprévisible, puisque la
+ * durée réelle dépendait de ce qui arrivait ensuite plutôt que de la nature du
+ * message (#1387).
+ *
+ * Comparer à la valeur précédente suffit : un message réémis à l'identique passe
+ * d'abord par null, quand son propre minuteur le retire, donc la transition est
+ * bien vue et le minuteur bien reposé.
+ */
 watch(
     () => [page.props.flash?.success, page.props.flash?.error],
-    ([s, e]) => {
-        ;[s, e].forEach((val, i) => {
+    (current, previous = []) => {
+        current.forEach((value, i) => {
             const key = Object.keys(toasts)[i]
-            if (val) {
-                clearTimeout(toasts[key].id)
-                toasts[key].id = setTimeout(() => page.props.flash && (page.props.flash[key] = null), toasts[key].delay)
+
+            if (!value || value === previous[i]) {
+                return
             }
+
+            clearTimeout(toasts[key].id)
+            toasts[key].id = setTimeout(() => page.props.flash && (page.props.flash[key] = null), toasts[key].delay)
         })
     },
     { immediate: true },
