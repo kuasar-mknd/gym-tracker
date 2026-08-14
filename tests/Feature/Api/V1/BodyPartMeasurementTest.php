@@ -74,7 +74,7 @@ test('show prevents access to other users measurements', function (): void {
 
     $response = $this->getJson(route('api.v1.body-part-measurements.show', $measurement));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('update modifies a body part measurement', function (): void {
@@ -113,7 +113,7 @@ test('update prevents modifying other users measurements', function (): void {
         'value' => 40.0,
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('destroy deletes a body part measurement', function (): void {
@@ -141,5 +141,5 @@ test('destroy prevents deleting other users measurements', function (): void {
 
     $response = $this->deleteJson(route('api.v1.body-part-measurements.destroy', $measurement));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });

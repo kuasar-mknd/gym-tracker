@@ -64,7 +64,7 @@ test('cannot view another users macro calculation', function (): void {
 
     $response = $this->getJson(route('api.v1.macro-calculations.show', $calculation));
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });
 
 test('can update a macro calculation', function (): void {
@@ -107,7 +107,7 @@ test('cannot update another users macro calculation', function (): void {
 
     $response = $this->putJson(route('api.v1.macro-calculations.update', $calculation), $data);
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });
 
 test('can delete a macro calculation', function (): void {
@@ -126,5 +126,5 @@ test('cannot delete another users macro calculation', function (): void {
 
     $response = $this->deleteJson(route('api.v1.macro-calculations.destroy', $calculation));
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });

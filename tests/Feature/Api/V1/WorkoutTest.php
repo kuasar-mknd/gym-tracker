@@ -154,7 +154,7 @@ class WorkoutTest extends TestCase
             'name' => 'Updated Name',
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_user_can_delete_own_workout(): void
@@ -176,7 +176,7 @@ class WorkoutTest extends TestCase
 
         $response = $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/workouts/{$workout->id}");
 
-        $response->assertForbidden();
+        $response->assertNotFound();
         $this->assertDatabaseHas('workouts', ['id' => $workout->id]);
     }
 }

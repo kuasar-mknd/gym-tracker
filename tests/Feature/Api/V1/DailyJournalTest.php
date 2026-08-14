@@ -184,7 +184,7 @@ describe('Authenticated', function (): void {
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 
             getJson(route('api.v1.daily-journals.show', $journal))
-                ->assertForbidden();
+                ->assertNotFound();
         });
     });
 
@@ -214,7 +214,7 @@ describe('Authenticated', function (): void {
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 
             putJson(route('api.v1.daily-journals.update', $journal), ['mood_score' => 5])
-                ->assertForbidden();
+                ->assertNotFound();
         });
 
         test('validation: cannot update date to existing date', function (): void {
@@ -248,7 +248,7 @@ describe('Authenticated', function (): void {
             $journal = DailyJournal::factory()->create(['user_id' => $otherUser->id]);
 
             deleteJson(route('api.v1.daily-journals.destroy', $journal))
-                ->assertForbidden();
+                ->assertNotFound();
         });
     });
 });

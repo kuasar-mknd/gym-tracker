@@ -18,6 +18,7 @@ use App\Models\Set;
 use App\Models\Supplement;
 use App\Models\SupplementLog;
 use App\Models\User;
+use App\Models\WarmupPreference;
 use App\Models\WaterLog;
 use App\Models\WilksScore;
 use App\Models\Workout;
@@ -48,7 +49,6 @@ use App\Policies\WorkoutPolicy;
 use App\Policies\WorkoutTemplateLinePolicy;
 use App\Policies\WorkoutTemplatePolicy;
 use App\Policies\WorkoutTemplateSetPolicy;
-use Database\Factories\WarmupPreferenceFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -84,8 +84,7 @@ function ownedRecordRecipes(): array
             ->load('workoutLine.workout')],
         'supplement' => [SupplementPolicy::class, fn (User $owner): Model => Supplement::factory()->create(['user_id' => $owner->id])],
         'supplement log' => [SupplementLogPolicy::class, fn (User $owner): Model => SupplementLog::factory()->create(['user_id' => $owner->id])],
-        // App\Models\WarmupPreference does not use HasFactory, so the factory is reached directly.
-        'warmup preference' => [WarmupPreferencePolicy::class, fn (User $owner): Model => WarmupPreferenceFactory::new()->create(['user_id' => $owner->id])],
+        'warmup preference' => [WarmupPreferencePolicy::class, fn (User $owner): Model => WarmupPreference::factory()->create(['user_id' => $owner->id])],
         'water log' => [WaterLogPolicy::class, fn (User $owner): Model => WaterLog::factory()->create(['user_id' => $owner->id])],
         'wilks score' => [WilksScorePolicy::class, fn (User $owner): Model => WilksScore::factory()->create(['user_id' => $owner->id])],
         'workout' => [WorkoutPolicy::class, fn (User $owner): Model => Workout::factory()->create(['user_id' => $owner->id, 'ended_at' => null])],

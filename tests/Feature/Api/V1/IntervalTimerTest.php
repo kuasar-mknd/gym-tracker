@@ -94,7 +94,7 @@ describe('Authenticated', function (): void {
             $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
             getJson(route('api.v1.interval-timers.show', $timer))
-                ->assertForbidden();
+                ->assertNotFound();
         });
     });
 
@@ -131,7 +131,7 @@ describe('Authenticated', function (): void {
                 'rounds' => 3,
                 'warmup_seconds' => 0,
             ])
-                ->assertForbidden();
+                ->assertNotFound();
         });
     });
 
@@ -155,7 +155,7 @@ describe('Authenticated', function (): void {
             $timer = IntervalTimer::factory()->create(['user_id' => $otherUser->id]);
 
             deleteJson(route('api.v1.interval-timers.destroy', $timer))
-                ->assertForbidden();
+                ->assertNotFound();
 
             assertDatabaseHas('interval_timers', ['id' => $timer->id]);
         });

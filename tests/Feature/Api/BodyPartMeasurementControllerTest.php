@@ -145,7 +145,7 @@ test('show returns measurement details', function (): void {
         ->assertJsonFragment(['id' => $measurement->id, 'part' => $measurement->part]);
 });
 
-test('show returns 403 for other user measurement', function (): void {
+test('show hides another user\'s measurement', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $measurement = BodyPartMeasurement::factory()->create(['user_id' => $otherUser->id]);
@@ -154,7 +154,7 @@ test('show returns 403 for other user measurement', function (): void {
 
     $response = $this->getJson(route('api.v1.body-part-measurements.show', $measurement));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('show returns 404 for non-existent measurement', function (): void {
@@ -207,7 +207,7 @@ test('update validation checks', function (): void {
         ->assertJsonValidationErrors(['value']);
 });
 
-test('update returns 403 for other user measurement', function (): void {
+test('update refuses another user\'s measurement without admitting it exists', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $measurement = BodyPartMeasurement::factory()->create(['user_id' => $otherUser->id]);
@@ -220,7 +220,7 @@ test('update returns 403 for other user measurement', function (): void {
         'measured_at' => now()->format('Y-m-d'),
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('destroy deletes measurement', function (): void {
@@ -235,7 +235,7 @@ test('destroy deletes measurement', function (): void {
     $this->assertDatabaseMissing('body_part_measurements', ['id' => $measurement->id]);
 });
 
-test('destroy returns 403 for other user measurement', function (): void {
+test('destroy refuses another user\'s measurement without admitting it exists', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $measurement = BodyPartMeasurement::factory()->create(['user_id' => $otherUser->id]);
@@ -243,5 +243,5 @@ test('destroy returns 403 for other user measurement', function (): void {
 
     $response = $this->deleteJson(route('api.v1.body-part-measurements.destroy', $measurement));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });

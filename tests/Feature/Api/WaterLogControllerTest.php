@@ -91,7 +91,7 @@ test('authenticated user cannot show other users water log', function (): void {
 
     $response = getJson(route('api.v1.water-logs.show', $log));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('authenticated user can update their water log', function (): void {
@@ -131,7 +131,7 @@ test('authenticated user cannot update other users water log', function (): void
 
     $response = putJson(route('api.v1.water-logs.update', $log), $data);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('update water log validation', function (): void {
@@ -170,7 +170,7 @@ test('authenticated user cannot delete other users water log', function (): void
 
     $response = deleteJson(route('api.v1.water-logs.destroy', $log));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 
     $this->assertDatabaseHas('water_logs', ['id' => $log->id]);
 });

@@ -102,7 +102,7 @@ test('users cannot view others supplements', function (): void {
 
     actingAs($user)
         ->getJson(route('api.v1.supplements.show', $supplement))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('users cannot update others supplements', function (): void {
@@ -116,7 +116,7 @@ test('users cannot update others supplements', function (): void {
             'servings_remaining' => 10,
             'low_stock_threshold' => 5,
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('users cannot delete others supplements', function (): void {
@@ -126,7 +126,7 @@ test('users cannot delete others supplements', function (): void {
 
     actingAs($user)
         ->deleteJson(route('api.v1.supplements.destroy', $supplement))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('unauthenticated users cannot access supplements', function (): void {

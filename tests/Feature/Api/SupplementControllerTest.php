@@ -83,7 +83,7 @@ describe('SupplementController API', function (): void {
 
             $response = $this->actingAs($user)->getJson(route('api.v1.supplements.show', $otherUserSupplement));
 
-            $response->assertForbidden();
+            $response->assertNotFound();
         });
 
         it('shows a supplement', function (): void {
@@ -115,7 +115,7 @@ describe('SupplementController API', function (): void {
                 'low_stock_threshold' => 5,
             ]);
 
-            $response->assertForbidden();
+            $response->assertNotFound();
         });
 
         it('validates required fields on update', function (): void {
@@ -168,7 +168,7 @@ describe('SupplementController API', function (): void {
 
             $response = $this->actingAs($user)->deleteJson(route('api.v1.supplements.destroy', $otherUserSupplement));
 
-            $response->assertForbidden();
+            $response->assertNotFound();
             $this->assertDatabaseHas('supplements', ['id' => $otherUserSupplement->id]);
         });
 

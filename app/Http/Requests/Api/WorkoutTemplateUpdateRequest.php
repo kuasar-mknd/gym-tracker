@@ -9,12 +9,14 @@ use Illuminate\Validation\Rule;
 
 class WorkoutTemplateUpdateRequest extends FormRequest
 {
+    use \App\Http\Requests\Concerns\AuthorizesBoundResource;
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->userMay('update', \App\Models\WorkoutTemplate::class);
     }
 
     /**

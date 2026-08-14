@@ -135,7 +135,7 @@ test('show: authenticated user cannot view other users notification preference',
     $response = $this->actingAs($this->user)
         ->getJson(route('api.v1.notification-preferences.show', $preference));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('update: unauthenticated user cannot update notification preference', function (): void {
@@ -178,7 +178,7 @@ test('update: authenticated user cannot update other users notification preferen
             'value' => 50,
         ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('update: validates unique type on update', function (): void {
@@ -227,6 +227,6 @@ test('destroy: authenticated user cannot delete other users notification prefere
     $response = $this->actingAs($this->user)
         ->deleteJson(route('api.v1.notification-preferences.destroy', $preference));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
     $this->assertDatabaseHas('notification_preferences', ['id' => $preference->id]);
 });

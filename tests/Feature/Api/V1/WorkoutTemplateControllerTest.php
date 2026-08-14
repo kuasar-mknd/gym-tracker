@@ -110,7 +110,7 @@ test('show returns workout template details', function (): void {
         ->assertJsonFragment(['id' => $template->id, 'name' => $template->name]);
 });
 
-test('show returns 403 for other user workout template', function (): void {
+test('show hides another user\'s workout template', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
@@ -119,7 +119,7 @@ test('show returns 403 for other user workout template', function (): void {
 
     $response = $this->getJson(route('api.v1.workout-templates.show', $template));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('show returns 404 for non-existent workout template', function (): void {
@@ -162,7 +162,7 @@ test('update modifies workout template', function (): void {
     ]);
 });
 
-test('update returns 403 for other user workout template', function (): void {
+test('update refuses another user\'s workout template without admitting it exists', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
@@ -170,7 +170,7 @@ test('update returns 403 for other user workout template', function (): void {
 
     $response = $this->putJson(route('api.v1.workout-templates.update', $template), ['name' => 'Updated Template Name']);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('update validates input', function (): void {
@@ -198,7 +198,7 @@ test('destroy deletes workout template', function (): void {
     $this->assertDatabaseMissing('workout_templates', ['id' => $template->id]);
 });
 
-test('destroy returns 403 for other user workout template', function (): void {
+test('destroy refuses another user\'s workout template without admitting it exists', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $otherUser->id]);
@@ -206,5 +206,5 @@ test('destroy returns 403 for other user workout template', function (): void {
 
     $response = $this->deleteJson(route('api.v1.workout-templates.destroy', $template));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });

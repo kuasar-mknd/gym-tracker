@@ -86,7 +86,7 @@ test('user cannot view another users supplement log', function (): void {
 
     $response = actingAs($user)->getJson(route('api.v1.supplement-logs.show', $log));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('user can update their supplement log', function (): void {
@@ -117,7 +117,7 @@ test('user cannot update another users supplement log', function (): void {
         'quantity' => 3,
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('user can delete their supplement log', function (): void {
@@ -136,6 +136,6 @@ test('user cannot delete another users supplement log', function (): void {
 
     $response = actingAs($user)->deleteJson(route('api.v1.supplement-logs.destroy', $log));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
     assertDatabaseHas('supplement_logs', ['id' => $log->id]);
 });

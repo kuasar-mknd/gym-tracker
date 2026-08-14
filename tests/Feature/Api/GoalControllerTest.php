@@ -150,7 +150,7 @@ describe('Authenticated User', function (): void {
 
         $response = getJson(route('api.v1.goals.show', $goal));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 
     test('user can update their goal', function (): void {
@@ -185,7 +185,7 @@ describe('Authenticated User', function (): void {
             'target_value' => 120,
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 
     test('user can delete their goal', function (): void {
@@ -208,7 +208,7 @@ describe('Authenticated User', function (): void {
 
         $response = deleteJson(route('api.v1.goals.destroy', $goal));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
 
         assertDatabaseHas('goals', ['id' => $goal->id]);
     });

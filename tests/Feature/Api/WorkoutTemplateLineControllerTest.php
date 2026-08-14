@@ -147,7 +147,7 @@ test('cannot view another user\'s workout template line', function (): void {
 
     $response = getJson('/api/v1/workout-template-lines/'.$line->id);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('can update a workout template line', function (): void {
@@ -202,7 +202,7 @@ test('cannot update another user\'s workout template line', function (): void {
         'order' => 5,
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('can delete a workout template line', function (): void {
@@ -230,7 +230,7 @@ test('cannot delete another user\'s workout template line', function (): void {
 
     $response = deleteJson('/api/v1/workout-template-lines/'.$line->id);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 
     assertDatabaseHas('workout_template_lines', [
         'id' => $line->id,

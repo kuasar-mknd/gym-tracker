@@ -126,12 +126,12 @@ describe('show', function (): void {
         $response->assertNotFound();
     });
 
-    it('returns 403 forbidden when unauthorized', function (): void {
+    it('hides an admin record from a user who may not see it', function (): void {
         $admin = Admin::factory()->create();
 
         $response = $this->getJson(route('api.v1.admins.show', $admin));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 });
 
@@ -176,7 +176,7 @@ describe('update', function (): void {
             ->assertJsonValidationErrors(['email']);
     });
 
-    it('returns 403 forbidden when unauthorized', function (): void {
+    it('hides an admin record from a user who may not see it', function (): void {
         $admin = Admin::factory()->create();
 
         $data = [
@@ -185,7 +185,7 @@ describe('update', function (): void {
 
         $response = $this->patchJson(route('api.v1.admins.update', $admin), $data);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 });
 
@@ -212,11 +212,11 @@ describe('destroy', function (): void {
         $response->assertNotFound();
     });
 
-    it('returns 403 forbidden when unauthorized', function (): void {
+    it('hides an admin record from a user who may not see it', function (): void {
         $admin = Admin::factory()->create();
 
         $response = $this->deleteJson(route('api.v1.admins.destroy', $admin));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 });

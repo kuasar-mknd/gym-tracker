@@ -146,7 +146,7 @@ describe('UserAchievement API', function (): void {
         // Trying to view specific achievement of other user
         $response = getJson(route('api.v1.user-achievements.show', $userAchievement));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     });
 
     test('index only returns own achievements', function (): void {

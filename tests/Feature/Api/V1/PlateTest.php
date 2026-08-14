@@ -76,7 +76,7 @@ class PlateTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->getJson("/api/v1/plates/{$plate->id}");
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_can_update_plate(): void
@@ -113,7 +113,7 @@ class PlateTest extends TestCase
                 'quantity' => 2,
             ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 
     public function test_can_destroy_plate(): void
@@ -138,6 +138,6 @@ class PlateTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')
             ->deleteJson("/api/v1/plates/{$plate->id}");
 
-        $response->assertForbidden();
+        $response->assertNotFound();
     }
 }

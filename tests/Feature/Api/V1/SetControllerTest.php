@@ -134,7 +134,7 @@ test('user cannot show another users set', function (): void {
 
     actingAs($user, 'sanctum')
         ->getJson(route('api.v1.sets.show', $otherSet))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user cannot update another users set', function (): void {
@@ -146,7 +146,7 @@ test('user cannot update another users set', function (): void {
 
     actingAs($user, 'sanctum')
         ->patchJson(route('api.v1.sets.update', $otherSet), ['weight' => 100])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('user cannot delete another users set', function (): void {
@@ -158,7 +158,7 @@ test('user cannot delete another users set', function (): void {
 
     actingAs($user, 'sanctum')
         ->deleteJson(route('api.v1.sets.destroy', $otherSet))
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 // Validation Tests

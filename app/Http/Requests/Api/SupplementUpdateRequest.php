@@ -8,12 +8,14 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class SupplementUpdateRequest extends FormRequest
 {
+    use \App\Http\Requests\Concerns\AuthorizesBoundResource;
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->userMay('update', \App\Models\Supplement::class);
     }
 
     /**

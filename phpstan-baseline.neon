@@ -2059,12 +2059,6 @@ parameters:
 			path: tests/Feature/PageRenderingTest.php
 
 		-
-			message: '#^Anonymous function should return App\\Models\\WarmupPreference but returns App\\Models\\WarmupPreference\|Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WarmupPreference\>\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Policies/OwnershipBoundaryTest.php
-
-		-
 			message: '#^Call to an undefined method object\:\:delete\(\)\.$#'
 			identifier: method.notFound
 			count: 2

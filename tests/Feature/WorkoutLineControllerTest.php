@@ -131,7 +131,7 @@ describe('WorkoutLineController@destroy', function (): void {
         $this->assertDatabaseMissing('workout_lines', ['id' => $workoutLine->id]);
     });
 
-    it('returns 403 if user is not authorized to delete the line', function (): void {
+    it('hides a line belonging to someone else', function (): void {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'ended_at' => null]);
@@ -141,7 +141,7 @@ describe('WorkoutLineController@destroy', function (): void {
 
         $response = $this->deleteJson(route('api.v1.workout-lines.destroy', $workoutLine));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
         $this->assertDatabaseHas('workout_lines', ['id' => $workoutLine->id]);
     });
 

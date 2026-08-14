@@ -104,7 +104,7 @@ test('cannot view another users supplement log', function (): void {
 
     $response = $this->getJson(route('api.v1.supplement-logs.show', $log));
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });
 
 test('can update a supplement log', function (): void {
@@ -155,7 +155,7 @@ test('cannot update another users supplement log', function (): void {
 
     $response = $this->putJson(route('api.v1.supplement-logs.update', $log), $data);
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });
 
 test('can delete a supplement log', function (): void {
@@ -198,5 +198,5 @@ test('cannot delete another users supplement log', function (): void {
 
     $response = $this->deleteJson(route('api.v1.supplement-logs.destroy', $log));
 
-    $response->assertStatus(403);
+    $response->assertStatus(404);
 });

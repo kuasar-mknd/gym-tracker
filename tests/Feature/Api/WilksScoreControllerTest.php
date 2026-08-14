@@ -45,7 +45,7 @@ test('user cannot view another users wilks score', function (): void {
 
     $response = actingAs($user)->getJson("/api/v1/wilks-scores/{$score->id}");
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('user can create a wilks score', function (): void {
@@ -136,7 +136,7 @@ test('user cannot update another users wilks score', function (): void {
         'body_weight' => 90,
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('user can delete their wilks score', function (): void {
@@ -157,7 +157,7 @@ test('user cannot delete another users wilks score', function (): void {
 
     $response = actingAs($user)->deleteJson("/api/v1/wilks-scores/{$score->id}");
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 
     $this->assertDatabaseHas('wilks_scores', ['id' => $score->id]);
 });

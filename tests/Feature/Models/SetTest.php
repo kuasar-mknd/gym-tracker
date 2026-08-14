@@ -160,7 +160,7 @@ class SetTest extends TestCase
         $this->patchJson(route('api.v1.sets.update', $set), [
             'weight' => 60,
             'reps' => 8,
-        ])->assertForbidden();
+        ])->assertNotFound();
     }
 
     public function test_allows_authenticated_user_to_delete_their_set(): void
@@ -201,7 +201,7 @@ class SetTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $this->deleteJson(route('api.v1.sets.destroy', $set))->assertForbidden();
+        $this->deleteJson(route('api.v1.sets.destroy', $set))->assertNotFound();
     }
 
     public function test_it_increments_volumes_on_set_creation(): void

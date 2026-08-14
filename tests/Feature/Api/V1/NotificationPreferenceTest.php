@@ -98,7 +98,7 @@ test('users cannot update others notification preference', function (): void {
         'is_enabled' => false,
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('users can delete their notification preference', function (): void {
@@ -123,5 +123,5 @@ test('users cannot delete others notification preference', function (): void {
 
     $response = $this->deleteJson("/api/v1/notification-preferences/{$preference->id}");
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });

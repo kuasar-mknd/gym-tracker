@@ -165,7 +165,7 @@ test('it cannot show another user\'s workout line', function (): void {
 
     $response = getJson("/api/v1/workout-lines/{$workoutLine->id}");
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('it can update a workout line', function (): void {
@@ -231,7 +231,7 @@ test('it cannot update another user\'s workout line', function (): void {
         'notes' => 'Updated Notes',
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('it can delete a workout line', function (): void {
@@ -262,7 +262,7 @@ test('it cannot delete another user\'s workout line', function (): void {
 
     $response = deleteJson("/api/v1/workout-lines/{$workoutLine->id}");
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 
     $this->assertDatabaseHas('workout_lines', [
         'id' => $workoutLine->id,

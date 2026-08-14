@@ -70,7 +70,7 @@ test('user without permission cannot view another user', function (): void {
 
     $response = $this->getJson("/api/v1/users/{$otherUser->id}");
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('unauthenticated user cannot view user', function (): void {
@@ -161,7 +161,7 @@ test('user without permission cannot update another user', function (): void {
         'name' => 'Hacked Name',
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('validation error on update', function (): void {
@@ -205,5 +205,5 @@ test('user without permission cannot delete another user', function (): void {
 
     $response = $this->deleteJson("/api/v1/users/{$otherUser->id}");
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });

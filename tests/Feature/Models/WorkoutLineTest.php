@@ -135,7 +135,7 @@ test('destroy forbids removing another users workout line', function (): void {
 
     Sanctum::actingAs($user);
 
-    deleteJson(route('api.v1.workout-lines.destroy', $line))->assertForbidden();
+    deleteJson(route('api.v1.workout-lines.destroy', $line))->assertNotFound();
 
     assertDatabaseHas('workout_lines', ['id' => $line->id]);
 });

@@ -113,7 +113,7 @@ test('cannot view another users habit log', function (): void {
 
     actingAs($user)
         ->getJson("/api/v1/habit-logs/{$log->id}")
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('authenticated user can update a habit log', function (): void {
@@ -144,7 +144,7 @@ test('cannot update another users habit log', function (): void {
 
     actingAs($user)
         ->putJson("/api/v1/habit-logs/{$log->id}", ['notes' => 'Updated notes'])
-        ->assertForbidden();
+        ->assertNotFound();
 });
 
 test('authenticated user can delete a habit log', function (): void {
@@ -169,7 +169,7 @@ test('cannot delete another users habit log', function (): void {
 
     actingAs($user)
         ->deleteJson("/api/v1/habit-logs/{$log->id}")
-        ->assertForbidden();
+        ->assertNotFound();
 
     assertDatabaseHas('habit_logs', [
         'id' => $log->id,

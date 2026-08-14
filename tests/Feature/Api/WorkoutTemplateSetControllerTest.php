@@ -142,7 +142,7 @@ test('cannot view another user\'s workout template set', function (): void {
 
     $response = getJson('/api/v1/workout-template-sets/'.$set->id);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('can update a workout template set', function (): void {
@@ -211,7 +211,7 @@ test('cannot update another user\'s workout template set', function (): void {
         'weight' => 60,
     ]);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('can delete a workout template set', function (): void {
@@ -241,7 +241,7 @@ test('cannot delete another user\'s workout template set', function (): void {
 
     $response = deleteJson('/api/v1/workout-template-sets/'.$set->id);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 
     assertDatabaseHas('workout_template_sets', [
         'id' => $set->id,

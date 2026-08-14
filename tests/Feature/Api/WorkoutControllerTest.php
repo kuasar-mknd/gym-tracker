@@ -95,7 +95,7 @@ test('show returns workout details', function (): void {
         ->assertJsonFragment(['id' => $workout->id, 'name' => $workout->name]);
 });
 
-test('show returns 403 for other user workout', function (): void {
+test('show hides another user\'s workout', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -104,7 +104,7 @@ test('show returns 403 for other user workout', function (): void {
 
     $response = $this->getJson(route('api.v1.workouts.show', $workout));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('show returns 404 for non-existent workout', function (): void {
@@ -140,7 +140,7 @@ test('update modifies workout and dispatches job', function (): void {
     Queue::assertPushed(RecalculateUserStats::class);
 });
 
-test('update returns 403 for other user workout', function (): void {
+test('update refuses another user\'s workout without admitting it exists', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -148,7 +148,7 @@ test('update returns 403 for other user workout', function (): void {
 
     $response = $this->putJson(route('api.v1.workouts.update', $workout), ['name' => 'Updated Workout Name']);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('update validates input', function (): void {
@@ -180,7 +180,7 @@ test('destroy deletes workout and dispatches job', function (): void {
     Queue::assertPushed(RecalculateUserStats::class);
 });
 
-test('destroy returns 403 for other user workout', function (): void {
+test('destroy refuses another user\'s workout without admitting it exists', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -188,5 +188,5 @@ test('destroy returns 403 for other user workout', function (): void {
 
     $response = $this->deleteJson(route('api.v1.workouts.destroy', $workout));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });

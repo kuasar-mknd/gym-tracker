@@ -97,7 +97,7 @@ test('cannot view another users plate', function (): void {
 
     $response = $this->getJson(route('api.v1.plates.show', $plate));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('cannot update another users plate', function (): void {
@@ -108,7 +108,7 @@ test('cannot update another users plate', function (): void {
 
     $response = $this->putJson(route('api.v1.plates.update', $plate), $data);
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
 
 test('cannot delete another users plate', function (): void {
@@ -117,5 +117,5 @@ test('cannot delete another users plate', function (): void {
 
     $response = $this->deleteJson(route('api.v1.plates.destroy', $plate));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
 });
