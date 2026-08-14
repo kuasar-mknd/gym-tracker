@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
@@ -17,12 +18,14 @@ describe('WorkoutLineController', function (): void {
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
             $exercise = Exercise::factory()->create();
 
-            $response = $this->actingAs($user)
-                ->post(route('workout-lines.store', $workout), [
-                    'exercise_id' => $exercise->id,
-                ]);
+            Sanctum::actingAs($user);
 
-            $response->assertRedirect(route('workouts.show', $workout));
+            $response = $this->postJson(route('api.v1.workout-lines.store'), [
+                'workout_id' => $workout->id,
+                'exercise_id' => $exercise->id,
+            ]);
+
+            $response->assertCreated();
 
             $this->assertDatabaseHas('workout_lines', [
                 'workout_id' => $workout->id,
@@ -40,14 +43,17 @@ describe('WorkoutLineController', function (): void {
             WorkoutLine::factory()->create([
                 'workout_id' => $workout->id,
                 'exercise_id' => $exercise1->id,
+                'order' => 0,
             ]);
 
-            $response = $this->actingAs($user)
-                ->post(route('workout-lines.store', $workout), [
-                    'exercise_id' => $exercise2->id,
-                ]);
+            Sanctum::actingAs($user);
 
-            $response->assertRedirect(route('workouts.show', $workout));
+            $response = $this->postJson(route('api.v1.workout-lines.store'), [
+                'workout_id' => $workout->id,
+                'exercise_id' => $exercise2->id,
+            ]);
+
+            $response->assertCreated();
 
             $this->assertDatabaseHas('workout_lines', [
                 'workout_id' => $workout->id,
@@ -60,10 +66,13 @@ describe('WorkoutLineController', function (): void {
             $user = User::factory()->create();
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
-            $response = $this->actingAs($user)
-                ->post(route('workout-lines.store', $workout), []);
+            Sanctum::actingAs($user);
 
-            $response->assertSessionHasErrors(['exercise_id']);
+            $response = $this->postJson(route('api.v1.workout-lines.store'), [
+                'workout_id' => $workout->id,
+            ]);
+
+            $response->assertJsonValidationErrors(['exercise_id']);
             $this->assertDatabaseCount('workout_lines', 0);
         });
 
@@ -72,10 +81,12 @@ describe('WorkoutLineController', function (): void {
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
             $exercise = Exercise::factory()->create();
 
-            $response = $this->actingAs($user)
-                ->post(route('workout-lines.store', $workout), [
-                    'exercise_id' => $exercise->id,
-                ]);
+            Sanctum::actingAs($user);
+
+            $response = $this->postJson(route('api.v1.workout-lines.store'), [
+                'workout_id' => $workout->id,
+                'exercise_id' => $exercise->id,
+            ]);
 
             $response->assertForbidden();
             $this->assertDatabaseCount('workout_lines', 0);
@@ -87,12 +98,14 @@ describe('WorkoutLineController', function (): void {
             $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'ended_at' => null]);
             $exercise = Exercise::factory()->create();
 
-            $response = $this->actingAs($user)
-                ->post(route('workout-lines.store', $workout), [
-                    'exercise_id' => $exercise->id,
-                ]);
+            Sanctum::actingAs($user);
 
-            $response->assertForbidden();
+            $response = $this->postJson(route('api.v1.workout-lines.store'), [
+                'workout_id' => $workout->id,
+                'exercise_id' => $exercise->id,
+            ]);
+
+            $response->assertJsonValidationErrors(['workout_id']);
             $this->assertDatabaseCount('workout_lines', 0);
         });
 
@@ -103,12 +116,14 @@ describe('WorkoutLineController', function (): void {
             $otherUser = User::factory()->create();
             $exercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
 
-            $response = $this->actingAs($user)
-                ->post(route('workout-lines.store', $workout), [
-                    'exercise_id' => $exercise->id,
-                ]);
+            Sanctum::actingAs($user);
 
-            $response->assertSessionHasErrors(['exercise_id']);
+            $response = $this->postJson(route('api.v1.workout-lines.store'), [
+                'workout_id' => $workout->id,
+                'exercise_id' => $exercise->id,
+            ]);
+
+            $response->assertJsonValidationErrors(['exercise_id']);
             $this->assertDatabaseCount('workout_lines', 0);
         });
     });
@@ -119,10 +134,11 @@ describe('WorkoutLineController', function (): void {
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
             $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-            $response = $this->actingAs($user)
-                ->delete(route('workout-lines.destroy', $workoutLine));
+            Sanctum::actingAs($user);
 
-            $response->assertRedirect();
+            $response = $this->deleteJson(route('api.v1.workout-lines.destroy', $workoutLine));
+
+            $response->assertNoContent();
             $this->assertDatabaseMissing('workout_lines', [
                 'id' => $workoutLine->id,
             ]);
@@ -133,8 +149,9 @@ describe('WorkoutLineController', function (): void {
             $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
             $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-            $response = $this->actingAs($user)
-                ->delete(route('workout-lines.destroy', $workoutLine));
+            Sanctum::actingAs($user);
+
+            $response = $this->deleteJson(route('api.v1.workout-lines.destroy', $workoutLine));
 
             $response->assertForbidden();
             $this->assertDatabaseHas('workout_lines', [
@@ -148,8 +165,9 @@ describe('WorkoutLineController', function (): void {
             $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'ended_at' => null]);
             $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-            $response = $this->actingAs($user)
-                ->delete(route('workout-lines.destroy', $workoutLine));
+            Sanctum::actingAs($user);
+
+            $response = $this->deleteJson(route('api.v1.workout-lines.destroy', $workoutLine));
 
             $response->assertForbidden();
             $this->assertDatabaseHas('workout_lines', [

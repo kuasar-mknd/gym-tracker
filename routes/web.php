@@ -71,13 +71,6 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/templates/{template}/execute', [\App\Http\Controllers\WorkoutTemplateController::class, 'execute'])->name('templates.execute');
         Route::post('/workouts/{workout}/save-as-template', [\App\Http\Controllers\WorkoutTemplateController::class, 'saveFromWorkout'])->name('templates.save-from-workout');
 
-        Route::post('/workouts/{workout}/lines', [\App\Http\Controllers\WorkoutLineController::class, 'store'])->name('workout-lines.store');
-        Route::delete('/workout-lines/{workoutLine}', [\App\Http\Controllers\WorkoutLineController::class, 'destroy'])->name('workout-lines.destroy');
-
-        Route::post('/workout-lines/{workoutLine}/sets', [\App\Http\Controllers\SetController::class, 'store'])->name('sets.store');
-        Route::patch('/sets/{set}', [\App\Http\Controllers\SetController::class, 'update'])->name('sets.update');
-        Route::delete('/sets/{set}', [\App\Http\Controllers\SetController::class, 'destroy'])->name('sets.destroy');
-
         // Habit routes
         Route::post('/habits/{habit}/toggle', [\App\Http\Controllers\HabitController::class, 'toggle'])->name('habits.toggle');
         Route::resource('habits', \App\Http\Controllers\HabitController::class)->only(['store', 'update', 'destroy']);

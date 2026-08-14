@@ -31,11 +31,14 @@ class WorkoutLoggingTest extends TestCase
         $workout = Workout::factory()->create(['user_id' => $user->id]);
         $exercise = \App\Models\Exercise::factory()->create();
 
-        $response = $this->actingAs($user)->post(route('workout-lines.store', $workout), [
+        \Laravel\Sanctum\Sanctum::actingAs($user);
+
+        $response = $this->postJson(route('api.v1.workout-lines.store'), [
+            'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
         ]);
 
-        $response->assertRedirect();
+        $response->assertCreated();
         $this->assertDatabaseHas('workout_lines', [
             'workout_id' => $workout->id,
             'exercise_id' => $exercise->id,
@@ -52,12 +55,15 @@ class WorkoutLoggingTest extends TestCase
             'exercise_id' => $exercise->id,
         ]);
 
-        $response = $this->actingAs($user)->post(route('sets.store', $line), [
+        \Laravel\Sanctum\Sanctum::actingAs($user);
+
+        $response = $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $line->id,
             'weight' => 50,
             'reps' => 10,
         ]);
 
-        $response->assertRedirect();
+        $response->assertCreated();
         $this->assertDatabaseHas('sets', [
             'workout_line_id' => $line->id,
             'weight' => 50,

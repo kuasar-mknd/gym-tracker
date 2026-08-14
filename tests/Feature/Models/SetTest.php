@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class SetTest extends TestCase
@@ -26,13 +27,14 @@ class SetTest extends TestCase
             'exercise_id' => $exercise->id,
         ]);
 
-        $this->actingAs($user)
-            ->post(route('sets.store', $workoutLine), [
-                'weight' => 50.5,
-                'reps' => 10,
-                'is_warmup' => true,
-            ])
-            ->assertRedirect();
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 50.5,
+            'reps' => 10,
+            'is_warmup' => true,
+        ])->assertCreated();
 
         $this->assertDatabaseHas('sets', [
             'workout_line_id' => $workoutLine->id,
@@ -52,14 +54,20 @@ class SetTest extends TestCase
             'exercise_id' => $exercise->id,
         ]);
 
-        $this->actingAs($user)
-            ->post(route('sets.store', $workoutLine), [
-                'weight' => 'not-a-number',
-                'reps' => -5,
-            ])
-            ->assertSessionHasErrors(['weight', 'reps']);
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 'not-a-number',
+            'reps' => -5,
+        ])->assertJsonValidationErrors(['weight', 'reps']);
     }
 
+    /**
+     * The web route answered 403 here, from the policy. The API rejects the same
+     * attempt one layer earlier: `workout_line_id` only accepts lines belonging
+     * to the caller, so an outsider's line is simply not a valid value.
+     */
     public function test_prevents_user_from_adding_a_set_to_another_users_workout_line(): void
     {
         $user = User::factory()->create();
@@ -71,12 +79,15 @@ class SetTest extends TestCase
             'exercise_id' => $exercise->id,
         ]);
 
-        $this->actingAs($user)
-            ->post(route('sets.store', $workoutLine), [
-                'weight' => 50,
-                'reps' => 10,
-            ])
-            ->assertForbidden();
+        Sanctum::actingAs($user);
+
+        $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 50,
+            'reps' => 10,
+        ])->assertJsonValidationErrors('workout_line_id');
+
+        $this->assertDatabaseCount('sets', 0);
     }
 
     public function test_allows_authenticated_user_to_update_their_set(): void
@@ -94,13 +105,13 @@ class SetTest extends TestCase
             'reps' => 10,
         ]);
 
-        $this->actingAs($user)
-            ->patch(route('sets.update', $set), [
-                'weight' => 60,
-                'reps' => 8,
-                'is_warmup' => false,
-            ])
-            ->assertRedirect();
+        Sanctum::actingAs($user);
+
+        $this->patchJson(route('api.v1.sets.update', $set), [
+            'weight' => 60,
+            'reps' => 8,
+            'is_warmup' => false,
+        ])->assertOk();
 
         $this->assertDatabaseHas('sets', [
             'id' => $set->id,
@@ -122,12 +133,12 @@ class SetTest extends TestCase
             'workout_line_id' => $workoutLine->id,
         ]);
 
-        $this->actingAs($user)
-            ->patch(route('sets.update', $set), [
-                'weight' => 'invalid',
-                'reps' => -1,
-            ])
-            ->assertSessionHasErrors(['weight', 'reps']);
+        Sanctum::actingAs($user);
+
+        $this->patchJson(route('api.v1.sets.update', $set), [
+            'weight' => 'invalid',
+            'reps' => -1,
+        ])->assertJsonValidationErrors(['weight', 'reps']);
     }
 
     public function test_prevents_user_from_updating_another_users_set(): void
@@ -144,12 +155,12 @@ class SetTest extends TestCase
             'workout_line_id' => $workoutLine->id,
         ]);
 
-        $this->actingAs($user)
-            ->patch(route('sets.update', $set), [
-                'weight' => 60,
-                'reps' => 8,
-            ])
-            ->assertForbidden();
+        Sanctum::actingAs($user);
+
+        $this->patchJson(route('api.v1.sets.update', $set), [
+            'weight' => 60,
+            'reps' => 8,
+        ])->assertForbidden();
     }
 
     public function test_allows_authenticated_user_to_delete_their_set(): void
@@ -165,9 +176,9 @@ class SetTest extends TestCase
             'workout_line_id' => $workoutLine->id,
         ]);
 
-        $this->actingAs($user)
-            ->delete(route('sets.destroy', $set))
-            ->assertRedirect();
+        Sanctum::actingAs($user);
+
+        $this->deleteJson(route('api.v1.sets.destroy', $set))->assertNoContent();
 
         $this->assertDatabaseMissing('sets', [
             'id' => $set->id,
@@ -188,9 +199,9 @@ class SetTest extends TestCase
             'workout_line_id' => $workoutLine->id,
         ]);
 
-        $this->actingAs($user)
-            ->delete(route('sets.destroy', $set))
-            ->assertForbidden();
+        Sanctum::actingAs($user);
+
+        $this->deleteJson(route('api.v1.sets.destroy', $set))->assertForbidden();
     }
 
     public function test_it_increments_volumes_on_set_creation(): void

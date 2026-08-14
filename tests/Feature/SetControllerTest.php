@@ -6,23 +6,27 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 describe('SetController@store', function (): void {
-    it('creates a set and redirects (Happy Path)', function (): void {
+    it('creates a set and returns it (Happy Path)', function (): void {
         $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-        $response = $this->actingAs($user)
-            ->post(route('sets.store', $workoutLine), [
-                'weight' => 100,
-                'reps' => 10,
-                'is_warmup' => false,
-            ]);
+        Sanctum::actingAs($user);
 
-        $response->assertStatus(302);
+        $response = $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 100,
+            'reps' => 10,
+            'is_warmup' => false,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.weight', 100);
         $this->assertDatabaseHas('sets', [
             'workout_line_id' => $workoutLine->id,
             'weight' => 100,
@@ -36,28 +40,39 @@ describe('SetController@store', function (): void {
         $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-        $response = $this->actingAs($user)
-            ->post(route('sets.store', $workoutLine), [
-                'weight' => -10,
-            ]);
+        Sanctum::actingAs($user);
 
-        $response->assertStatus(302);
-        $response->assertSessionHasErrors(['weight']);
+        $response = $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $workoutLine->id,
+            'weight' => -10,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['weight']);
     });
 
-    it('returns 403 if user is not authorized', function (): void {
+    /**
+     * The web route answered 403 here, from the policy. The API rejects the same
+     * attempt one layer earlier: `workout_line_id` only accepts lines belonging
+     * to the caller, so an outsider's line is simply not a valid value.
+     */
+    it('returns 422 if the workout line belongs to another user', function (): void {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'ended_at' => null]);
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-        $response = $this->actingAs($user)
-            ->post(route('sets.store', $workoutLine), [
-                'weight' => 100,
-                'reps' => 10,
-            ]);
+        Sanctum::actingAs($user);
 
-        $response->assertForbidden();
+        $response = $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 100,
+            'reps' => 10,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['workout_line_id']);
+        $this->assertDatabaseCount('sets', 0);
     });
 
     it('returns 403 if workout is completed', function (): void {
@@ -65,30 +80,33 @@ describe('SetController@store', function (): void {
         $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-        $response = $this->actingAs($user)
-            ->post(route('sets.store', $workoutLine), [
-                'weight' => 100,
-                'reps' => 10,
-            ]);
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $workoutLine->id,
+            'weight' => 100,
+            'reps' => 10,
+        ]);
 
         $response->assertForbidden();
     });
 });
 
 describe('SetController@update', function (): void {
-    it('updates a set and redirects (Happy Path)', function (): void {
+    it('updates a set and returns it (Happy Path)', function (): void {
         $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $workoutLine->id, 'weight' => 50, 'reps' => 5]);
 
-        $response = $this->actingAs($user)
-            ->patch(route('sets.update', $set), [
-                'weight' => 60,
-                'reps' => 8,
-            ]);
+        Sanctum::actingAs($user);
 
-        $response->assertStatus(302);
+        $response = $this->patchJson(route('api.v1.sets.update', $set), [
+            'weight' => 60,
+            'reps' => 8,
+        ]);
+
+        $response->assertOk();
         $this->assertDatabaseHas('sets', [
             'id' => $set->id,
             'weight' => 60,
@@ -102,13 +120,14 @@ describe('SetController@update', function (): void {
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $workoutLine->id, 'weight' => 50, 'reps' => 5]);
 
-        $response = $this->actingAs($user)
-            ->patch(route('sets.update', $set), [
-                'weight' => -60,
-            ]);
+        Sanctum::actingAs($user);
 
-        $response->assertStatus(302);
-        $response->assertSessionHasErrors(['weight']);
+        $response = $this->patchJson(route('api.v1.sets.update', $set), [
+            'weight' => -60,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['weight']);
     });
 
     it('returns 403 if user is not authorized', function (): void {
@@ -118,10 +137,11 @@ describe('SetController@update', function (): void {
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $workoutLine->id]);
 
-        $response = $this->actingAs($user)
-            ->patch(route('sets.update', $set), [
-                'weight' => 60,
-            ]);
+        Sanctum::actingAs($user);
+
+        $response = $this->patchJson(route('api.v1.sets.update', $set), [
+            'weight' => 60,
+        ]);
 
         $response->assertForbidden();
     });
@@ -132,26 +152,28 @@ describe('SetController@update', function (): void {
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $workoutLine->id]);
 
-        $response = $this->actingAs($user)
-            ->patch(route('sets.update', $set), [
-                'weight' => 60,
-            ]);
+        Sanctum::actingAs($user);
+
+        $response = $this->patchJson(route('api.v1.sets.update', $set), [
+            'weight' => 60,
+        ]);
 
         $response->assertForbidden();
     });
 });
 
 describe('SetController@destroy', function (): void {
-    it('deletes a set and redirects (Happy Path)', function (): void {
+    it('deletes a set and returns no content (Happy Path)', function (): void {
         $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $workoutLine->id]);
 
-        $response = $this->actingAs($user)
-            ->delete(route('sets.destroy', $set));
+        Sanctum::actingAs($user);
 
-        $response->assertStatus(302);
+        $response = $this->deleteJson(route('api.v1.sets.destroy', $set));
+
+        $response->assertNoContent();
         $this->assertDatabaseMissing('sets', ['id' => $set->id]);
     });
 
@@ -162,8 +184,9 @@ describe('SetController@destroy', function (): void {
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $workoutLine->id]);
 
-        $response = $this->actingAs($user)
-            ->delete(route('sets.destroy', $set));
+        Sanctum::actingAs($user);
+
+        $response = $this->deleteJson(route('api.v1.sets.destroy', $set));
 
         $response->assertForbidden();
         $this->assertDatabaseHas('sets', ['id' => $set->id]);
@@ -175,8 +198,9 @@ describe('SetController@destroy', function (): void {
         $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         $set = Set::factory()->create(['workout_line_id' => $workoutLine->id]);
 
-        $response = $this->actingAs($user)
-            ->delete(route('sets.destroy', $set));
+        Sanctum::actingAs($user);
+
+        $response = $this->deleteJson(route('api.v1.sets.destroy', $set));
 
         $response->assertForbidden();
         $this->assertDatabaseHas('sets', ['id' => $set->id]);

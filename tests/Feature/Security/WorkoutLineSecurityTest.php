@@ -5,10 +5,11 @@ declare(strict_types=1);
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use Laravel\Sanctum\Sanctum;
 
-use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseCount;
 use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\postJson;
 
 test('security: user cannot add another users private exercise to their workout', function (): void {
     $user = User::factory()->create();
@@ -22,11 +23,12 @@ test('security: user cannot add another users private exercise to their workout'
         'name' => 'Secret Exercise',
     ]);
 
-    actingAs($user)
-        ->post(route('workout-lines.store', $workout), [
-            'exercise_id' => $privateExercise->id,
-        ])
-        ->assertSessionHasErrors(['exercise_id']);
+    Sanctum::actingAs($user);
+
+    postJson(route('api.v1.workout-lines.store'), [
+        'workout_id' => $workout->id,
+        'exercise_id' => $privateExercise->id,
+    ])->assertJsonValidationErrors(['exercise_id']);
 
     assertDatabaseCount('workout_lines', 0);
 });
@@ -41,11 +43,12 @@ test('security: user can add their own private exercise', function (): void {
         'name' => 'My Special Exercise',
     ]);
 
-    actingAs($user)
-        ->post(route('workout-lines.store', $workout), [
-            'exercise_id' => $privateExercise->id,
-        ])
-        ->assertRedirect();
+    Sanctum::actingAs($user);
+
+    postJson(route('api.v1.workout-lines.store'), [
+        'workout_id' => $workout->id,
+        'exercise_id' => $privateExercise->id,
+    ])->assertCreated();
 
     assertDatabaseHas('workout_lines', [
         'workout_id' => $workout->id,
@@ -63,11 +66,12 @@ test('security: user can add system exercise', function (): void {
         'name' => 'Push Ups',
     ]);
 
-    actingAs($user)
-        ->post(route('workout-lines.store', $workout), [
-            'exercise_id' => $systemExercise->id,
-        ])
-        ->assertRedirect();
+    Sanctum::actingAs($user);
+
+    postJson(route('api.v1.workout-lines.store'), [
+        'workout_id' => $workout->id,
+        'exercise_id' => $systemExercise->id,
+    ])->assertCreated();
 
     assertDatabaseHas('workout_lines', [
         'workout_id' => $workout->id,

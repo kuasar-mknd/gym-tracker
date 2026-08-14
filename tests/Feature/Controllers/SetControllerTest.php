@@ -6,10 +6,13 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Laravel\Sanctum\Sanctum;
 
-use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\deleteJson;
+use function Pest\Laravel\patchJson;
+use function Pest\Laravel\postJson;
 
 // Happy Path Tests
 
@@ -18,16 +21,14 @@ test('user can add a set to their workout line', function (): void {
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-    $data = [
+    Sanctum::actingAs($user);
+
+    postJson(route('api.v1.sets.store'), [
+        'workout_line_id' => $workoutLine->id,
         'weight' => 100,
         'reps' => 10,
         'is_warmup' => false,
-    ];
-
-    actingAs($user)
-        ->from(route('workouts.show', $workout))
-        ->post(route('sets.store', $workoutLine), $data)
-        ->assertRedirect(route('workouts.show', $workout));
+    ])->assertCreated();
 
     assertDatabaseHas('sets', [
         'workout_line_id' => $workoutLine->id,
@@ -48,14 +49,13 @@ test('user can update their set', function (): void {
         'is_completed' => false,
     ]);
 
-    actingAs($user)
-        ->from(route('workouts.show', $workout))
-        ->patch(route('sets.update', $set), [
-            'weight' => 60,
-            'reps' => 8,
-            'is_completed' => true,
-        ])
-        ->assertRedirect(route('workouts.show', $workout));
+    Sanctum::actingAs($user);
+
+    patchJson(route('api.v1.sets.update', $set), [
+        'weight' => 60,
+        'reps' => 8,
+        'is_completed' => true,
+    ])->assertOk();
 
     assertDatabaseHas('sets', [
         'id' => $set->id,
@@ -73,30 +73,32 @@ test('user can delete their set', function (): void {
         'workout_line_id' => $workoutLine->id,
     ]);
 
-    actingAs($user)
-        ->from(route('workouts.show', $workout))
-        ->delete(route('sets.destroy', $set))
-        ->assertRedirect(route('workouts.show', $workout));
+    Sanctum::actingAs($user);
+
+    deleteJson(route('api.v1.sets.destroy', $set))->assertNoContent();
 
     assertDatabaseMissing('sets', ['id' => $set->id]);
 });
 
 // Authorization Tests
 
+/**
+ * Store scopes `workout_line_id` to the caller's own lines, so an outsider's
+ * line is rejected as an invalid value (422) rather than by the policy (403).
+ */
 test('user cannot add set to another users workout line', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $otherWorkout = Workout::factory()->create(['user_id' => $otherUser->id]);
     $otherWorkoutLine = WorkoutLine::factory()->create(['workout_id' => $otherWorkout->id]);
 
-    $data = [
+    Sanctum::actingAs($user);
+
+    postJson(route('api.v1.sets.store'), [
+        'workout_line_id' => $otherWorkoutLine->id,
         'weight' => 100,
         'reps' => 10,
-    ];
-
-    actingAs($user)
-        ->post(route('sets.store', $otherWorkoutLine), $data)
-        ->assertForbidden();
+    ])->assertStatus(422)->assertJsonValidationErrors(['workout_line_id']);
 });
 
 test('user cannot update another users set', function (): void {
@@ -106,8 +108,9 @@ test('user cannot update another users set', function (): void {
     $otherWorkoutLine = WorkoutLine::factory()->create(['workout_id' => $otherWorkout->id]);
     $otherSet = Set::factory()->create(['workout_line_id' => $otherWorkoutLine->id]);
 
-    actingAs($user)
-        ->patch(route('sets.update', $otherSet), ['weight' => 100])
+    Sanctum::actingAs($user);
+
+    patchJson(route('api.v1.sets.update', $otherSet), ['weight' => 100])
         ->assertForbidden();
 });
 
@@ -118,9 +121,9 @@ test('user cannot delete another users set', function (): void {
     $otherWorkoutLine = WorkoutLine::factory()->create(['workout_id' => $otherWorkout->id]);
     $otherSet = Set::factory()->create(['workout_line_id' => $otherWorkoutLine->id]);
 
-    actingAs($user)
-        ->delete(route('sets.destroy', $otherSet))
-        ->assertForbidden();
+    Sanctum::actingAs($user);
+
+    deleteJson(route('api.v1.sets.destroy', $otherSet))->assertForbidden();
 });
 
 // Validation Tests
@@ -130,14 +133,15 @@ test('store validates numeric constraints', function (): void {
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
-    actingAs($user)
-        ->post(route('sets.store', $workoutLine), [
-            'weight' => 'not-a-number',
-            'reps' => 'not-an-integer',
-            'duration_seconds' => -5,
-            'distance_km' => -1,
-        ])
-        ->assertInvalid(['weight', 'reps', 'duration_seconds', 'distance_km']);
+    Sanctum::actingAs($user);
+
+    postJson(route('api.v1.sets.store'), [
+        'workout_line_id' => $workoutLine->id,
+        'weight' => 'not-a-number',
+        'reps' => 'not-an-integer',
+        'duration_seconds' => -5,
+        'distance_km' => -1,
+    ])->assertInvalid(['weight', 'reps', 'duration_seconds', 'distance_km']);
 });
 
 test('update validates numeric constraints', function (): void {
@@ -146,10 +150,10 @@ test('update validates numeric constraints', function (): void {
     $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
     $set = Set::factory()->create(['workout_line_id' => $workoutLine->id]);
 
-    actingAs($user)
-        ->patch(route('sets.update', $set), [
-            'weight' => -10,
-            'reps' => 1.5, // should be integer
-        ])
-        ->assertInvalid(['weight', 'reps']);
+    Sanctum::actingAs($user);
+
+    patchJson(route('api.v1.sets.update', $set), [
+        'weight' => -10,
+        'reps' => 1.5, // should be integer
+    ])->assertInvalid(['weight', 'reps']);
 });
