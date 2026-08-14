@@ -138,6 +138,22 @@ function onTouchMove(e) {
     }
 }
 
+/**
+ * A gesture the system takes away has to leave the row where it found it.
+ *
+ * `touchcancel` fires when the browser or the OS claims the touch — a call
+ * arriving, the notification shade pulled down, the back gesture from the edge.
+ * Nothing listened for it, so the row stayed frozen mid-swipe: translated
+ * sideways, `isDragging` still true and therefore no transition to carry it
+ * back, and the actions half-revealed under content the user never meant to
+ * move.
+ */
+function onTouchCancel() {
+    isDragging.value = false
+    offset.value = 0
+    lockDirection.value = null
+}
+
 function onTouchEnd() {
     isDragging.value = false
     const threshold = props.actionThreshold
@@ -250,6 +266,7 @@ defineExpose({ close })
             @touchstart="onTouchStart"
             @touchmove="onTouchMove"
             @touchend="onTouchEnd"
+            @touchcancel="onTouchCancel"
             @click="$emit('click')"
         >
             <slot />

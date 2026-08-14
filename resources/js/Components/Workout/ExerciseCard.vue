@@ -177,6 +177,7 @@ const emit = defineEmits([
                         dusk="edit-exercise-type"
                         :options="types"
                         size="sm"
+                        label="Type d'exercice"
                         hide-label
                     />
                     <GlassSelect
@@ -187,6 +188,7 @@ const emit = defineEmits([
                             ...categories.map((c) => ({ value: c, label: c })),
                         ]"
                         size="sm"
+                        label="Catégorie"
                         hide-label
                         placeholder=""
                     />
