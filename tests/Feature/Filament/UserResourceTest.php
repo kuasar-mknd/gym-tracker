@@ -174,3 +174,82 @@ it('refuse la création sans temps de repos par défaut', function (): void {
 
     expect(User::query()->where('email', 'sans-repos@example.com')->exists())->toBeFalse();
 });
+
+/**
+ * Enregistrer une édition ne doit pas effacer le mot de passe de la cible.
+ *
+ * Le champ mot de passe n'avait aucun garde de déshydratation. Filament remplit
+ * le formulaire depuis `attributesToArray()`, qui exclut `$hidden` — et
+ * `password` y est. La clé étant absente des données de remplissage, le champ
+ * est reposé à `null`, puis déshydraté, puis écrit : `password` est dans
+ * `$fillable`, le cast `hashed` rend `null` pour `null`, et la colonne est
+ * nullable. `UPDATE users SET password = NULL`, avec une notification de succès
+ * et un compte qui ne peut plus se connecter (#1438).
+ *
+ * Le mode strict est coupé ici parce que c'est la production qu'il faut
+ * reproduire. Hors production, `Model::shouldBeStrict()` fait lever sur les
+ * autres champs du même formulaire — `email_verified_at`, `provider`,
+ * `provider_id`, absents de `$fillable` — donc l'écriture échoue bruyamment
+ * AVANT d'atteindre le mot de passe. C'est ce qui masquait le défaut partout où
+ * on l'aurait regardé, et pourquoi il ne se voit qu'en production (#1352).
+ */
+it('laisse le mot de passe intact quand on enregistre une édition', function (): void {
+    Illuminate\Database\Eloquent\Model::preventSilentlyDiscardingAttributes(false);
+
+    $user = User::factory()->create(['name' => 'Ancien Nom']);
+    $hash = $user->password;
+
+    expect($hash)->not->toBeNull();
+
+    Livewire::test(EditUser::class, ['record' => $user->getKey()])
+        ->fillForm(['name' => 'Nouveau Nom'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $user->refresh();
+
+    expect($user->name)->toBe('Nouveau Nom');
+    expect($user->password)->toBe($hash);
+});
+
+/**
+ * Et un mot de passe réellement saisi doit, lui, être écrit — sans quoi le
+ * garde ci-dessus se contenterait de rendre le champ inerte.
+ */
+it('écrit le mot de passe quand on en saisit un', function (): void {
+    Illuminate\Database\Eloquent\Model::preventSilentlyDiscardingAttributes(false);
+
+    $user = User::factory()->create();
+    $ancien = $user->password;
+
+    Livewire::test(EditUser::class, ['record' => $user->getKey()])
+        ->fillForm(['password' => 'un-nouveau-mot-de-passe'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $user->refresh();
+
+    $nouveau = $user->password;
+
+    expect($nouveau)->not->toBe($ancien);
+    expect($nouveau)->not->toBeNull();
+    expect(Illuminate\Support\Facades\Hash::check('un-nouveau-mot-de-passe', (string) $nouveau))->toBeTrue();
+});
+
+/**
+ * Un compte cree sans mot de passe ne peut pas se connecter, et rien ne le
+ * signalait : le champ n'etait pas requis, et `users.password` est nullable.
+ * C'est le pendant a la creation du defaut d'edition ci-dessus (#1438).
+ */
+it('refuse la création d’un compte sans mot de passe', function (): void {
+    Livewire::test(CreateUser::class)
+        ->fillForm([
+            'name' => 'Sans Mot De Passe',
+            'email' => 'sans-mdp@example.com',
+            'default_rest_time' => 90,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['password' => 'required']);
+
+    expect(User::query()->where('email', 'sans-mdp@example.com')->exists())->toBeFalse();
+});
