@@ -140,3 +140,68 @@ describe('JournalChart', () => {
         expect(line(wrapper).props('data').datasets[0].data).toEqual([5])
     })
 })
+
+/**
+ * Le libellé du filtre actif doit se lire sur sa propre couleur.
+ *
+ * Le bouton sélectionné prend la couleur de sa courbe en fond, et prenait aussi
+ * `text-white`. Les sept teintes sont les `-400` de Tailwind, choisies pour être
+ * lisibles comme *courbes sur fond sombre* et jamais comme *fond sous du texte
+ * blanc* : les sept échouaient au seuil AA, « Énergie » à 1,53:1 — du blanc sur
+ * jaune, le mot disparaissait. Le seul libellé illisible des sept était celui du
+ * bouton chargé de dire quelle métrique on regarde (#1400).
+ *
+ * Le rapport est calculé ici plutôt que la classe comparée à une valeur
+ * attendue : une assertion sur `text-slate-900` passerait encore si quelqu'un
+ * ajoutait une huitième métrique dans une teinte trop sombre, ce qui est
+ * exactement le cas que ce test existe pour attraper.
+ *
+ * Le texte fait 12 px en gras, ce qui n'est pas du « grand texte » au sens WCAG
+ * 2.1 : le seuil est 4,5:1, pas 3:1.
+ */
+describe('lisibilité du filtre actif', () => {
+    const CHANNEL = (value) => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+
+    const luminance = (hex) => {
+        const [r, g, b] = [1, 3, 5].map((i) => CHANNEL(parseInt(hex.slice(i, i + 2), 16) / 255))
+
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+
+    const contrast = (a, b) => {
+        const [x, y] = [luminance(a), luminance(b)]
+
+        return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+    }
+
+    /** Les classes Tailwind ne sont pas résolues sous jsdom ; la teinte est lue ici. */
+    const TEXT_COLOURS = { 'text-slate-900': '#0f172a', 'text-white': '#ffffff' }
+
+    it('tient le seuil AA pour chacune des sept métriques', async () => {
+        const wrapper = mount(JournalChart, { props: { data: entries } })
+        const measured = []
+
+        for (const button of wrapper.findAll('button')) {
+            await button.trigger('click')
+
+            const active = wrapper.findAll('button').find((b) => b.attributes('aria-pressed') === 'true')
+            const background = active
+                .attributes('style')
+                .match(/background-color:\s*([^;]+)/)[1]
+                .trim()
+            const named = Object.keys(TEXT_COLOURS).find((name) => active.classes().includes(name))
+
+            // Une couleur de fond posée en style inline arrive en rgb() sous jsdom.
+            const [r, g, b] = background.match(/\d+/g).map(Number)
+            const hex = '#' + [r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')
+
+            measured.push({ label: active.text(), ratio: contrast(hex, TEXT_COLOURS[named]) })
+        }
+
+        expect(measured).toHaveLength(7)
+
+        const failing = measured.filter(({ ratio }) => ratio < 4.5)
+
+        expect(failing.map(({ label, ratio }) => `${label} : ${ratio.toFixed(2)}:1`)).toEqual([])
+    })
+})
