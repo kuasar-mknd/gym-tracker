@@ -8,6 +8,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Acces au tableau de bord
+    |--------------------------------------------------------------------------
+    |
+    | Adresses autorisees a consulter Horizon hors environnement local, separees
+    | par des virgules. Vide par defaut : une installation qui ne configure rien
+    | reste fermee. Voir HorizonServiceProvider::gate().
+    |
+    */
+
+    'allowed_emails' => env('HORIZON_ALLOWED_EMAILS', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Horizon Name
     |--------------------------------------------------------------------------
     |

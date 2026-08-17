@@ -46,18 +46,52 @@
 
 ---
 
-## 🏆 Qualité & Performance
+## 🏆 Qualité
 
-Le projet respecte des standards d'ingénierie très élevés :
-- **PHP Insights** : Score de **100%** en Architecture et Complexité.
-- **PHPStan** : Analyse statique de **Niveau 9** (Strict Typing complet).
-- **Tests** : Suite de +750 tests automatisés (Pest & Dusk).
-- **Optimisation** : Surgical Cache Invalidation pour des performances maximales.
+Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont posés au niveau mesuré et montent par cliquets — un seuil qu'on n'atteint pas finit désactivé.
 
-Voir la documentation détaillée :
-- [🚀 Plan d'Attaque Performance](docs/performance/attack_plan.md)
-- [🛡️ Plan de Sécurité](docs/security/plan.md)
-- [📅 Roadmap du projet](docs/roadmap.md)
+| Contrôle | Seuil | Où |
+| --- | --- | --- |
+| **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
+| **Tests backend** | 1 898 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests frontend** | 1 733 tests, ≥ **95 %** statements / 91 branches / 92 functions | bloquant par PR |
+| **Tests navigateur** | 83 parcours Dusk sous Chrome headless | bloquant par PR |
+| **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
+| **Rector / Pint** | aucun changement en attente | bloquant par PR |
+| **Mutation testing** | ≥ 56 % `App\Services`, 62 % `App\Actions`, 92 % `App\Policies` | nocturne, **bloque la release** |
+
+S'y ajoutent une vingtaine de **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : fraîcheur de la spec OpenAPI, sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur.
+
+Voir aussi le [📅 Roadmap](docs/roadmap.md), le [plan de performance](docs/performance/gym_tracker_performance_master_plan.md) et les [décisions d'architecture](docs/adr/).
+
+---
+
+## 📦 Mise en production
+
+La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé.
+
+**Ce tag ne publie rien tant que tout n'est pas vert.** La publication exige, sur le commit exact du tag :
+
+1. une **CI verte** — les 16 contrôles ;
+2. une **passe nocturne verte** — chacune de ses parts, seuils de mutation compris.
+
+La nuit tourne sur la pointe de `main` à 03h17 UTC : un tag posé après elle n'est pas encore couvert. Pour le débloquer :
+
+```bash
+gh workflow run mutation.yml --ref v1.2.3
+```
+
+Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow.
+
+### Variables d'environnement propres au déploiement
+
+| Variable | Rôle |
+| --- | --- |
+| `SENTRY_DSN` | Erreurs côté serveur. |
+| `SENTRY_DSN_PUBLIC` | Erreurs côté navigateur. Lue **à l'exécution**, jamais au build : une variable `VITE_` serait cuite dans l'image publique, et chaque installation tierce enverrait ses erreurs au même projet. Vide = pas de Sentry navigateur. |
+| `HORIZON_ALLOWED_EMAILS` | Adresses autorisées à consulter Horizon, séparées par des virgules. Vide = fermé à tout le monde. |
+
+`docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, elles ne tournent pas, et rien ne le signale : une tâche qui ne s'exécute pas ne lève aucune erreur.
 
 ---
 
@@ -109,12 +143,25 @@ cp .env.example .env
 ### Commandes courantes
 | Commande | Description |
 | --- | --- |
-| `./vendor/bin/sail up -d` | Lance les conteneurs (App, MySQL, Redis, Mailpit) |
+| `./vendor/bin/sail up -d` | Lance les conteneurs (App, MySQL, Redis, Mailpit, Selenium) |
 | `./vendor/bin/sail npm run dev` | Lance Vite avec Hot Reload |
-| `./vendor/bin/sail artisan test` | Exécute la suite de tests Pest |
-| `./vendor/bin/sail bin pint` | Formate le code (PSR-12) |
-| `./vendor/bin/sail bin phpstan analyze` | Vérifie le typage strict |
-| `./vendor/bin/sail artisan insights` | Analyse la qualité du code |
+| `./vendor/bin/sail artisan test -p` | Suite backend en parallèle (~25 s) |
+| `./vendor/bin/sail npx vitest run` | Suite frontend |
+| `./vendor/bin/sail artisan dusk` | Parcours navigateur |
+| `./vendor/bin/sail bin pint` | Formate le code |
+| `./vendor/bin/sail php vendor/bin/phpstan analyse` | Analyse statique, `level: max` |
+| `./vendor/bin/sail php vendor/bin/rector process --dry-run` | Modernisation en attente |
+
+### Mutation testing
+
+Le seuil n'est appliqué que par `vendor/bin/pest` : `artisan test --mutate --min` accepte l'option et l'ignore — c'est le `--min` de la **couverture**, silencieusement absorbé.
+
+```bash
+./vendor/bin/sail php vendor/bin/pest --mutate --parallel --covered-only \
+  --class='App\Policies' --min=92
+```
+
+`--parallel` suppose que les bases par processus existent ; `artisan test -p` les crée au passage, un `artisan test -p` préalable suffit donc.
 
 ---
 
