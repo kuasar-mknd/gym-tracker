@@ -5,7 +5,10 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 covers(StreakService::class);
 
@@ -180,4 +183,142 @@ it('repousse l’heure de la dernière séance quand une seconde arrive le même
 
     expect(Carbon::parse($enBase->last_workout_at)->equalTo($soir))->toBeTrue()
         ->and($enBase->current_streak)->toBe(1);
+});
+
+/**
+ * `last_workout_at` ne recule pas quand on saisit une séance oubliée.
+ *
+ * La branche « même jour » protège déjà l'heure : elle n'écrit que si la nouvelle
+ * séance est postérieure. La branche « autre jour », elle, écrasait sans
+ * condition — une séance vieille de trois jours, saisie après coup, remplaçait la
+ * date de la plus récente.
+ *
+ * La conséquence n'est pas cosmétique : `last_workout_at` est la seule mémoire
+ * du service. Une fois reculé, l'écart calculé à la séance suivante part de la
+ * mauvaise date, et une série pourtant continue se retrouve cassée.
+ */
+it('ne fait pas reculer la date de dernière séance quand une séance ancienne est saisie', function (): void {
+    $user = User::factory()->create([
+        'current_streak' => 1,
+        'longest_streak' => 1,
+        'last_workout_at' => null,
+    ]);
+
+    $recente = Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => Carbon::now()->startOfDay()->addHours(18),
+    ]);
+
+    // La séance oubliée, saisie après coup.
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => Carbon::now()->subDays(3)->startOfDay()->addHours(9),
+    ]);
+
+    $enBase = User::findOrFail($user->id);
+
+    expect($enBase->last_workout_at)->not->toBeNull()
+        ->and($enBase->last_workout_at->toDateTimeString())->toBe($recente->started_at->toDateTimeString());
+});
+
+/**
+ * Une seconde séance du même jour, mais plus ancienne, ne fait rien reculer.
+ *
+ * C'est le pendant du test qui repousse l'heure : `! $user->last_workout_at`
+ * garde l'écriture pour le seul cas où il n'y a rien à conserver. Retirer la
+ * négation rendait la condition toujours vraie — l'heure reculait à chaque
+ * séance saisie plus tôt dans la journée.
+ */
+it('ne fait pas reculer l’heure quand une séance plus ancienne du jour est saisie', function (): void {
+    $soir = Carbon::now()->startOfDay()->addHours(20);
+    $matin = Carbon::now()->startOfDay()->addHours(7);
+
+    $user = User::factory()->create([
+        'current_streak' => 1,
+        'longest_streak' => 1,
+        'last_workout_at' => $soir,
+    ]);
+
+    $matinale = Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => $matin,
+    ]);
+
+    // La branche appelle `save()` sans garde, en s'appuyant sur le fait qu'un
+    // modele inchange n'emet aucune requete. C'est une premisse, pas une
+    // evidence : elle est verifiee ici plutot que laissee implicite.
+    $ecritures = [];
+
+    DB::listen(function (QueryExecuted $requete) use (&$ecritures): void {
+        if (str_starts_with(Str::lower($requete->sql), 'update `users`')) {
+            $ecritures[] = $requete->sql;
+        }
+    });
+
+    $this->streakService->updateStreak($user, $matinale);
+
+    $enBase = User::findOrFail($user->id);
+
+    expect($enBase->last_workout_at)->not->toBeNull()
+        ->and($enBase->last_workout_at->toDateTimeString())->toBe($soir->toDateTimeString())
+        ->and($ecritures)->toBe([]);
+});
+
+/**
+ * Un recalcul sans séance, le même jour, ne touche à rien.
+ *
+ * Le `&&` de cette condition est ce qui empêche de lire `$workout->started_at`
+ * quand il n'y a pas de séance. Le transformer en `||` faisait entrer dans la
+ * branche avec `$workout` à null, et la lecture échouait — sur un chemin que
+ * seul un appel sans séance emprunte, et qu'aucun test ne prenait le même jour.
+ */
+it('ne touche à rien quand on recalcule sans séance le même jour', function (): void {
+    $user = User::factory()->create([
+        'current_streak' => 1,
+        'longest_streak' => 1,
+        'last_workout_at' => null,
+    ]);
+
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => Carbon::now()->startOfDay()->addHours(12),
+    ]);
+
+    $avant = User::findOrFail($user->id);
+
+    $this->streakService->updateStreak($user->refresh());
+
+    $apres = User::findOrFail($user->id);
+
+    expect($apres->last_workout_at)->not->toBeNull()
+        ->and($apres->last_workout_at->toDateTimeString())->toBe($avant->last_workout_at?->toDateTimeString())
+        ->and($apres->current_streak)->toBe($avant->current_streak);
+});
+
+/**
+ * Une séance antérieure ne casse pas la série en cours.
+ *
+ * L'écart de jours est calculé signé — `diffInDays($date, false)` — et c'est ce
+ * qui distingue « je saisis une séance oubliée » de « j'ai arrêté trois jours ».
+ * Le mutant qui passe `true` rend l'écart absolu : une séance vieille de trois
+ * jours devient une interruption de trois jours, et remet la série à 1.
+ */
+it('ne casse pas la série en cours quand une séance antérieure est saisie', function (): void {
+    $user = User::factory()->create([
+        'current_streak' => 4,
+        'longest_streak' => 4,
+        'last_workout_at' => Carbon::now(),
+    ]);
+
+    $ancienne = Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => Carbon::now()->subDays(3),
+    ]);
+
+    $this->streakService->updateStreak($user->refresh(), $ancienne);
+
+    $enBase = User::findOrFail($user->id);
+
+    expect($enBase->current_streak)->toBe(4)
+        ->and($enBase->longest_streak)->toBe(4);
 });
