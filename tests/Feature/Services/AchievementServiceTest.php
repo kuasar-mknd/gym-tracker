@@ -11,8 +11,11 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Notifications\AchievementUnlocked;
 use App\Services\AchievementService;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
@@ -298,6 +301,74 @@ test('it does not award achievement if threshold not met', function (): void {
     ]);
 });
 
+/**
+ * Sans record personnel, le poids maximal vaut exactement zero.
+ *
+ * `calculateMaxWeight` replie sur 0.0 quand l'utilisateur n'a aucun record. Les
+ * deux seuils encadrent ce repli des deux cotes : un repli a 1 debloquerait le
+ * second succes, un repli a -1 refuserait le premier. Un seul des deux seuils ne
+ * separerait rien, ce qui est precisement pourquoi les deux mutants survivaient.
+ */
+test('sans record personnel, le poids maximal vaut zéro', function (): void {
+    $user = User::factory()->create();
+
+    $sansExigence = Achievement::factory()->create([
+        'type' => 'weight_record',
+        'threshold' => 0,
+        'slug' => 'poids-zero',
+    ]);
+
+    $unKilo = Achievement::factory()->create([
+        'type' => 'weight_record',
+        'threshold' => 1,
+        'slug' => 'poids-un-kilo',
+    ]);
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseHas('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $sansExigence->id,
+    ]);
+
+    assertDatabaseMissing('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $unKilo->id,
+    ]);
+});
+
+/**
+ * Une synchronisation qui ne debloque rien n'ecrit rien.
+ *
+ * C'est la premisse de la suppression du garde `if (count($toUnlockIds) > 0)` :
+ * `attach([])` ne produit aucune requete de lui-meme, Laravel court-circuitant
+ * l'insertion d'un lot vide. Ce test ne tue aucun mutant — il verifie l'hypothese
+ * sur laquelle repose la suppression, et tombera si une version de Laravel cesse
+ * de court-circuiter.
+ */
+test('une synchronisation sans rien à débloquer n’écrit pas', function (): void {
+    $user = User::factory()->create();
+    Achievement::factory()->create([
+        'type' => 'count',
+        'threshold' => 99,
+        'slug' => 'cent-seances',
+    ]);
+
+    Workout::factory()->create(['user_id' => $user->id]);
+
+    $ecritures = [];
+
+    DB::listen(function (QueryExecuted $requete) use (&$ecritures): void {
+        if (str_contains(Str::lower($requete->sql), 'insert into `user_achievements`')) {
+            $ecritures[] = $requete->sql;
+        }
+    });
+
+    $this->service->syncAchievements($user);
+
+    expect($ecritures)->toBe([]);
+});
+
 test('it does not award achievement based on other users data', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
@@ -400,23 +471,25 @@ test('it awards multiple achievements at once', function (): void {
 });
 
 /**
- * Un type de succes inconnu ne debloque rien.
+ * Un type de succes inconnu ne debloque rien, seuil zero compris.
  *
- * `isUnlocked()` est un `match` sur le type, dont le bras par defaut rend
- * `false`. C'est lui qui decide du sort d'un type que le code ne connait pas —
- * et le cas se produit des qu'on ajoute un type en base sans ajouter son bras,
- * ce que rien n'empeche : `Achievement::type` est une simple colonne texte.
+ * C'est ce chemin qui decide du sort d'un type que le code ne sait pas evaluer,
+ * et le cas se produit des qu'on ajoute un type en base sans ajouter son calcul —
+ * ce que rien n'empeche : `achievements.type` est une colonne texte libre.
  *
- * Le bras par defaut n'etait couvert par aucun test : la mutation `false` en
- * `true` survivait. Avec elle, un succes au type inconnu se debloque pour TOUS
- * les utilisateurs, immediatement, avec notification — quel que soit son seuil.
+ * Le seuil vaut zero, et ce n'est pas un detail. Avec un seuil de 1, le mutant
+ * qui supprime le retour anticipe lirait une cle absente, obtiendrait `null`, et
+ * `null >= 1` reste faux : le test passerait sans rien verifier. Avec un seuil de
+ * zero, `null >= 0` est VRAI en PHP, et le succes se debloquerait — le mutant
+ * tombe. Un seuil de zero est aussi la forme la plus forte de l'affirmation :
+ * meme sans rien exiger, un type inconnu ne donne rien.
  */
 test('un succès au type inconnu ne se débloque pour personne', function (): void {
     $user = User::factory()->create();
 
     $inconnu = Achievement::factory()->create([
         'type' => 'type_qui_nexiste_pas',
-        'threshold' => 1,
+        'threshold' => 0,
         'slug' => 'type-inconnu',
     ]);
 
