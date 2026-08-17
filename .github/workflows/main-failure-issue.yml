@@ -1,0 +1,102 @@
+name: Signaler un workflow rouge sur main
+
+# Un rouge sur main qui n'interpelle personne finit par devenir le decor.
+#
+# Deux workflows sont surveilles, et pas seulement la CI :
+#
+#   CI               — ce qui casse sur main casse pour tout le monde.
+#   Mutation testing — depuis qu'elle garde la porte de promotion, une nuit
+#                      rouge BLOQUE la publication de l'image, donc le
+#                      deploiement. Un blocage que personne ne voit se decouvre
+#                      le jour ou l'on veut livrer, dans l'urgence.
+#
+# Une issue est ouverte, ou completee d'un commentaire si une issue est deja
+# ouverte pour le meme workflow — sans quoi une semaine de rouge produirait sept
+# issues identiques et on cesserait de les lire.
+#
+# LIMITE CONNUE, ecrite ici pour qu'elle ne se redecouvre pas : une fusion faite
+# avec le GITHUB_TOKEN — c'est le cas des PR Dependabot passees par auto-merge —
+# ne declenche AUCUN run sur main. GitHub ne reveille pas les workflows pour un
+# push effectue avec ce jeton. Il n'y a donc rien a signaler pour ces
+# fusions-la, non parce qu'elles sont vertes mais parce qu'elles ne sont pas
+# testees sur main du tout. Voir #1373, ou le meme mecanisme rendait la release
+# automatique inoperante.
+on:
+    workflow_run:
+        workflows: ['CI', 'Mutation testing']
+        types: [completed]
+        branches: [main]
+
+permissions:
+    contents: read
+    issues: write
+    # Necessaire pour lire la liste des jobs du run en echec.
+    actions: read
+
+jobs:
+    signaler:
+        if: github.event.workflow_run.conclusion == 'failure'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Ouvrir ou completer l'issue
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  REPO: ${{ github.repository }}
+                  RUN_ID: ${{ github.event.workflow_run.id }}
+                  RUN_URL: ${{ github.event.workflow_run.html_url }}
+                  SHA: ${{ github.event.workflow_run.head_sha }}
+                  WORKFLOW: ${{ github.event.workflow_run.name }}
+              run: |
+                  set -euo pipefail
+
+                  # Les jobs en echec, pas seulement le fait qu'il y en ait un :
+                  # « laravel-tests » et « browser-tests » n'appellent pas la
+                  # meme reaction, et le titre doit le dire sans avoir a ouvrir
+                  # le run.
+                  JOBS=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" \
+                    --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
+                  [ -n "$JOBS" ] || JOBS="cause inconnue"
+
+                  BODY=$(cat <<EOF
+                  **$WORKFLOW** a echoue sur \`main\`.
+
+                  | | |
+                  |---|---|
+                  | jobs en echec | **$JOBS** |
+                  | commit | \`$SHA\` |
+                  | run | $RUN_URL |
+
+                  Ouvert automatiquement parce que ce rouge **bloque la mise en
+                  production**. La publication de l'image exige, sur le commit
+                  exact du tag, une CI verte et une passe nocturne dont chaque
+                  part est verte — et la production suit l'image.
+
+                  Refermer en disant **pourquoi** c'etait rouge : un echec dont
+                  personne n'a etabli la cause revient.
+                  EOF
+                  )
+
+                  # Deduplique par label plutot que par titre : deux echecs de
+                  # jobs differents restent le meme probleme tant que main est
+                  # rouge, et sept issues identiques ne se lisent plus.
+                  # Un label par workflow : une CI rouge et une nuit rouge sont
+                  # deux problemes distincts, avec deux causes et deux
+                  # responsables possibles. Les fondre dans une seule issue
+                  # ferait perdre l'un des deux.
+                  LABEL="ci-rouge-$(echo "$WORKFLOW" | tr '[:upper:] ' '[:lower:]-')"
+
+                  EXISTANTE=$(gh issue list --repo "$REPO" --state open \
+                    --label "$LABEL" --limit 1 --json number --jq '.[0].number // empty')
+
+                  if [ -n "$EXISTANTE" ]; then
+                      gh issue comment "$EXISTANTE" --repo "$REPO" --body "$BODY"
+                      echo "Commente sur l'issue #$EXISTANTE."
+                  else
+                      gh label create "$LABEL" --repo "$REPO" \
+                        --color B60205 --description "$WORKFLOW rouge sur main" 2>/dev/null || true
+
+                      gh issue create --repo "$REPO" \
+                        --title "ci: $WORKFLOW est rouge sur main — $JOBS" \
+                        --label "$LABEL" \
+                        --body "$BODY"
+                  fi

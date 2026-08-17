@@ -480,9 +480,88 @@ jobs:
                   if-no-files-found: error
                   retention-days: 1
 
-    merge:
+    # La porte de promotion, posee sur ce qui compte vraiment.
+    #
+    # `release.yml` est garde par le meme controle, mais garder la release seule
+    # ne protegeait rien : pousser un tag `v*` declenche DEUX workflows
+    # independants — celui-ci, qui publie l'image, et release.yml, qui cree
+    # l'objet release. La production tire `ghcr.io/.../gym-tracker:v1`
+    # (docker-compose.prod.yml:43 et :130), c'est-a-dire un tag produit ICI.
+    # L'image serait donc partie meme avec la release bloquee.
+    #
+    # Ne s'applique qu'aux tags : sur `main`, `merge` publie `latest` et
+    # `sha-*`, que la production ne tire pas.
+    promotion:
+        if: startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
         needs: build
+        steps:
+            - name: Exiger une passe nocturne verte sur ce commit
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  REPO: ${{ github.repository }}
+                  SHA: ${{ github.sha }}
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  # L'API des runs est la source de verite : un marqueur
+                  # maintenu a la main aurait sa propre facon de mentir. La CI,
+                  # elle, n'est pas interrogee — ce job en fait partie et ne
+                  # tourne que si `build` a reussi.
+                  RUN=$(gh api \
+                    "repos/$REPO/actions/workflows/mutation.yml/runs?head_sha=$SHA" \
+                    --jq '[.workflow_runs[] | select(.status == "completed")] | first | .id // empty')
+
+                  if [ -z "$RUN" ]; then
+                      echo "::error::Aucune passe nocturne terminee sur ce commit : l'image ne sera pas publiee sous ce tag."
+                      echo ""
+                      echo "Pour debloquer :  gh workflow run mutation.yml --ref $TAG"
+                      echo ""
+                      echo "La nuit tourne sur la pointe de main a 03h17 UTC. Un tag pose"
+                      echo "apres elle n'est pas encore couvert : c'est voulu."
+                      exit 1
+                  fi
+
+                  # Chaque part est verifiee individuellement, et non la
+                  # conclusion du run.
+                  #
+                  # Un job portant `continue-on-error: true` echoue sans faire
+                  # echouer son run : interroger `status=success` aurait donc
+                  # laisse passer une nuit entierement rouge. Le reglage a ete
+                  # retire du workflow nocturne, mais le controle ne doit pas
+                  # dependre d'un reglage qui vit ailleurs et qu'un futur
+                  # `continue-on-error` remettrait en silence.
+                  ECHECS=$(gh api "repos/$REPO/actions/runs/$RUN/jobs" \
+                    --jq '[.jobs[] | select(.conclusion != "success") | "\(.name) [\(.conclusion)]"] | join(", ")')
+
+                  TOTAL=$(gh api "repos/$REPO/actions/runs/$RUN/jobs" --jq '.jobs | length')
+
+                  echo "commit $SHA (tag $TAG) — passe nocturne $RUN : $TOTAL part(s)"
+
+                  if [ "$TOTAL" -eq 0 ]; then
+                      echo "::error::La passe nocturne $RUN ne declare aucune part. Un run vide n'est pas un run vert."
+                      exit 1
+                  fi
+
+                  if [ -n "$ECHECS" ]; then
+                      echo "::error::La passe nocturne n'est pas entierement verte : $ECHECS"
+                      echo ""
+                      echo "L'image ne sera pas publiee sous ce tag. Corriger, puis relancer :"
+                      echo "  gh workflow run mutation.yml --ref $TAG"
+                      exit 1
+                  fi
+
+                  echo "Les $TOTAL parts sont vertes."
+
+    merge:
+        runs-on: ubuntu-latest
+        needs: [build, promotion]
+        # `promotion` est saute hors des tags, et un `needs` saute sauterait
+        # `merge` avec lui — donc `latest` ne serait plus publie sur main. La
+        # condition accepte explicitement les deux etats acceptables, et rien
+        # d'autre.
+        if: always() && needs.build.result == 'success' && (needs.promotion.result == 'success' || needs.promotion.result == 'skipped')
         permissions:
             contents: read
             packages: write
