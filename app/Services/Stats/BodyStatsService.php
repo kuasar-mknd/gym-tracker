@@ -19,7 +19,10 @@ final class BodyStatsService
             now()->addMinutes(30),
             function () use ($user): LatestBodyMetrics {
                 $measurements = $user->bodyMeasurements()
-                    ->select(['id', 'user_id', 'weight', 'body_fat', 'measured_at'])
+                    // `id` et `user_id` etaient selectionnes sans jamais etre
+                    // lus : la closure ne rend que le poids et la masse grasse.
+                    // `measured_at` reste, il sert de cle de tri juste dessous.
+                    ->select(['weight', 'body_fat', 'measured_at'])
                     ->latest('measured_at')
                     ->take(2)
                     ->get();

@@ -92,14 +92,22 @@ final class GoalService
         $totalDiff = abs($goal->target_value - $goal->start_value);
         $currentDiff = abs($goal->current_value - $goal->start_value);
 
-        if ($totalDiff === 0.0) {
-            $goal->progress_pct = 0.0;
-
-            return;
-        }
-
+        /*
+         * Deux branches mortes retirees ici, toutes deux signalees par des
+         * mutants survivants (#1446).
+         *
+         * Une garde `$totalDiff === 0.0` protegeait la division. Elle etait
+         * inatteignable : la seule facon d'obtenir zero est `target === start`,
+         * et la ligne 86 retourne deja dans ce cas. La division par zero, si le
+         * garde du dessus changeait un jour, leve un DivisionByZeroError depuis
+         * PHP 8 — bruyamment, ce qui vaut mieux qu'un 0 % silencieux.
+         *
+         * Et un `max($progress, 0)` ne pouvait rien plancher : `$currentDiff`
+         * est un `abs()`, `$totalDiff` est strictement positif, donc le quotient
+         * l'est aussi.
+         */
         $progress = $currentDiff / $totalDiff * 100;
-        $goal->progress_pct = min(max($progress, 0), 100);
+        $goal->progress_pct = min($progress, 100);
     }
 
     /**
