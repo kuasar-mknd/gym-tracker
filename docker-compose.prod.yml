@@ -150,6 +150,38 @@ services:
             redis:
                 condition: service_healthy
 
+    # Rien n'executait les taches planifiees.
+    #
+    # `routes/console.php` planifie `app:remind-training` en `->daily()`, et ce
+    # fichier ne declarait que app, db, redis et worker — aucun service ne
+    # lancait le planificateur. La commande n'a donc jamais tourne en
+    # production, et le rappel quotidien n'a jamais ete envoye a personne.
+    #
+    # Rien ne pouvait le signaler : c'est un NON-EVENEMENT. Aucun test ne voit
+    # qu'une tache planifiee ne s'execute pas — la suite verifie que la commande
+    # marche quand on l'appelle, pas que quelque chose l'appelle. Et il n'y a
+    # aucune erreur a remonter, seulement une absence (#1443).
+    #
+    # `schedule:work` plutot qu'un cron appelant `schedule:run` : il reste dans
+    # le conteneur, se redemarre avec lui, et n'ajoute pas de crontab a tenir.
+    scheduler:
+        image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        restart: always
+        command: php artisan schedule:work
+        environment:
+            <<: *app-env
+        deploy:
+            resources:
+                limits:
+                    memory: 256M
+        networks:
+            - backend
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
 networks:
     frontend:
     backend:
