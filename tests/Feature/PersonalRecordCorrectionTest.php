@@ -111,3 +111,49 @@ describe('personal records follow the sets they came from', function (): void {
         Notification::assertNothingSent();
     });
 });
+
+/**
+ * A tie credits the session that got there first.
+ *
+ * `recompute()` walks the sets and keeps the best with `$value > $bestValue`.
+ * Two sets at the same weight therefore leave the record on the **earlier**
+ * one — which is the honest answer to "when did you set this record?". The
+ * later set did not beat anything.
+ *
+ * Nothing asserted it, so `>` and `>=` were interchangeable: mutating the
+ * comparison moved the record onto the last set and every test stayed green.
+ * The figure on screen would have been identical; only the date and the session
+ * it links to would have changed, which is exactly the kind of difference
+ * nobody notices until they click through.
+ */
+it('credits the first set when two tie for the record', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['type' => 'strength']);
+
+    $sets = collect([1, 2])->map(function (int $rang) use ($user, $exercise): Set {
+        $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
+        $line = WorkoutLine::factory()->create([
+            'workout_id' => $workout->id,
+            'exercise_id' => $exercise->id,
+        ]);
+
+        return Set::factory()->create([
+            'workout_line_id' => $line->id,
+            'weight' => 100,
+            'reps' => 5,
+            'is_warmup' => false,
+        ]);
+    });
+
+    app(App\Services\PersonalRecordService::class)->recompute($user, $exercise->id, ['max_weight']);
+
+    $record = PersonalRecord::where('user_id', $user->id)
+        ->where('exercise_id', $exercise->id)
+        ->where('type', 'max_weight')
+        ->firstOrFail();
+
+    $premiere = $sets->firstOrFail();
+
+    expect((float) $record->value)->toBe(100.0)
+        ->and($record->set_id)->toBe($premiere->id);
+});

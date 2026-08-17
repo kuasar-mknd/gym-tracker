@@ -143,3 +143,41 @@ it('updates streak correctly without passing workout parameter', function (): vo
         ->and($user->longest_streak)->toBe(2)
         ->and(Carbon::parse($user->last_workout_at)->startOfDay()->equalTo(Carbon::parse($workout->started_at)->startOfDay()))->toBeTrue();
 });
+
+/**
+ * Une seconde séance le même jour repousse l'heure, et l'écrit.
+ *
+ * Le test voisin compare `last_workout_at` au jour près (`startOfDay`) : il ne
+ * peut donc pas voir si l'heure a bougé, ni même si quoi que ce soit a été
+ * enregistré. Retirer purement et simplement le `$user->save()` de cette
+ * branche le laissait vert — l'ancienne valeur, du même jour, satisfaisait
+ * l'assertion.
+ *
+ * Ce que la branche fait vraiment : garder la séance la PLUS RÉCENTE de la
+ * journée. C'est ce que lit la bannière « séance en cours » et ce qui décide du
+ * rappel quotidien, donc l'heure compte, pas seulement la date.
+ */
+it('repousse l’heure de la dernière séance quand une seconde arrive le même jour', function (): void {
+    $matin = Carbon::now()->startOfDay()->addHours(9);
+    $soir = Carbon::now()->startOfDay()->addHours(19);
+
+    $user = User::factory()->create([
+        'current_streak' => 1,
+        'longest_streak' => 1,
+        'last_workout_at' => $matin,
+    ]);
+
+    $seconde = Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => $soir,
+    ]);
+
+    $this->streakService->updateStreak($user, $seconde);
+
+    // Relu depuis la base : c'est l'écriture qui est en cause, pas la valeur
+    // portée par l'objet en mémoire.
+    $enBase = User::findOrFail($user->id);
+
+    expect(Carbon::parse($enBase->last_workout_at)->equalTo($soir))->toBeTrue()
+        ->and($enBase->current_streak)->toBe(1);
+});

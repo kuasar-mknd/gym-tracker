@@ -294,3 +294,82 @@ test('guard clauses for missing exercise_id and measurement_type', function (): 
     $this->service->updateGoalProgress($goalMeasurement);
     expect($goalMeasurement->current_value)->toBe(0.0);
 });
+
+/**
+ * Un objectif de perte de poids sans mesure n'est pas un objectif atteint.
+ *
+ * `current_value` vaut 0 par defaut en base. Pour un objectif « descendre a
+ * 80 kg », le critere est `current_value <= target_value` — et 0 <= 80. Le
+ * garde `&& $goal->current_value > 0` est la seule chose qui empeche un
+ * objectif tout juste cree d'etre annonce comme atteint avant meme la premiere
+ * pesee.
+ *
+ * Rien ne l'assurait : la mutation `> 0` en `>= 0` survivait, et l'utilisateur
+ * aurait vu « objectif atteint ! » le jour de sa creation.
+ */
+test('un objectif de perte de poids sans mesure n’est pas atteint', function (): void {
+    $user = User::factory()->create();
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'weight',
+        'start_value' => 90,
+        'current_value' => 0,
+        'target_value' => 80,
+        'completed_at' => null,
+    ]);
+
+    $this->service->updateGoalProgress($goal);
+
+    expect($goal->current_value)->toBe(0.0)
+        ->and($goal->completed_at)->toBeNull();
+});
+
+/**
+ * Et le sens de l'objectif se lit sur les valeurs, pas sur son type.
+ *
+ * « Descendre a 80 » et « monter a 100 » sont tous deux des objectifs de type
+ * Measurement : c'est `target_value < start_value` qui les distingue, et les
+ * deux conditions sont liees par un ET.
+ *
+ * Remplacer ce ET par un OU faisait basculer TOUT objectif de mesure dans la
+ * branche « plus bas est mieux ». Un objectif de prise de poids aurait alors
+ * ete annonce atteint tant que l'utilisateur restait EN DESSOUS de sa cible —
+ * exactement l'inverse de ce qu'il demande. La mutation survivait.
+ */
+test('un objectif de prise de poids n’est pas atteint tant qu’on est en dessous', function (): void {
+    $user = User::factory()->create();
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'weight',
+        'start_value' => 70,
+        'current_value' => 70,
+        'target_value' => 80,
+        'completed_at' => null,
+    ]);
+
+    BodyMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'weight' => 75,
+        'measured_at' => Carbon::now(),
+    ]);
+
+    $this->service->updateGoalProgress($goal);
+
+    expect($goal->current_value)->toBe(75.0)
+        ->and($goal->completed_at)->toBeNull();
+
+    BodyMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'weight' => 81,
+        'measured_at' => Carbon::now()->addHour(),
+    ]);
+
+    $this->service->updateGoalProgress($goal);
+
+    expect($goal->current_value)->toBe(81.0)
+        ->and($goal->completed_at)->not->toBeNull();
+});

@@ -252,3 +252,37 @@ test('it awards multiple achievements at once', function (): void {
 
     Notification::assertSentTimes(\App\Notifications\AchievementUnlocked::class, 2);
 });
+
+/**
+ * Un type de succes inconnu ne debloque rien.
+ *
+ * `isUnlocked()` est un `match` sur le type, dont le bras par defaut rend
+ * `false`. C'est lui qui decide du sort d'un type que le code ne connait pas —
+ * et le cas se produit des qu'on ajoute un type en base sans ajouter son bras,
+ * ce que rien n'empeche : `Achievement::type` est une simple colonne texte.
+ *
+ * Le bras par defaut n'etait couvert par aucun test : la mutation `false` en
+ * `true` survivait. Avec elle, un succes au type inconnu se debloque pour TOUS
+ * les utilisateurs, immediatement, avec notification — quel que soit son seuil.
+ */
+test('un succès au type inconnu ne se débloque pour personne', function (): void {
+    $user = User::factory()->create();
+
+    $inconnu = Achievement::factory()->create([
+        'type' => 'type_qui_nexiste_pas',
+        'threshold' => 1,
+        'slug' => 'type-inconnu',
+    ]);
+
+    // Une seance, pour que la synchronisation ait bien de quoi travailler : le
+    // test doit echouer parce que le bras par defaut a change, pas parce que
+    // rien ne s'est passe.
+    Workout::factory()->create(['user_id' => $user->id]);
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseMissing('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $inconnu->id,
+    ]);
+});

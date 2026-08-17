@@ -278,4 +278,33 @@ class StatsServiceTest extends TestCase
         $this->assertEquals(90, $history[1]->duration);
         $this->assertEquals(45, $history[2]->duration); // Should be absolute difference
     }
+
+    /**
+     * Une seance qui ne tombe pas sur la minute est tronquee, pas arrondie.
+     *
+     * Le test voisin n'emploie que des durees en minutes entieres : `floor`,
+     * `round` et `ceil` y donnent le meme resultat, donc rien ne distinguait
+     * les trois. Une minute et demie les separe — 1 par troncature, 2 par
+     * arrondi ou par exces.
+     *
+     * Ce n'est pas un detail d'affichage indifferent : c'est la duree que
+     * l'utilisateur lit sur son historique, et deux implementations
+     * raisonnables donnent deux chiffres differents. Le choix doit etre fixe
+     * quelque part, sans quoi il se reinvente au premier remaniement.
+     */
+    public function test_duration_history_truncates_partial_minutes(): void
+    {
+        $user = User::factory()->create();
+
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDay()->hour(10)->minute(0)->second(0),
+            'ended_at' => now()->subDay()->hour(10)->minute(1)->second(30),
+        ]);
+
+        $history = $this->statsService->getDurationHistory($user);
+
+        $this->assertCount(1, $history);
+        $this->assertSame(1, $history[0]->duration);
+    }
 }
