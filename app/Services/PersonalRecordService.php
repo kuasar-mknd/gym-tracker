@@ -78,6 +78,21 @@ final class PersonalRecordService
         }
 
         $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
+        /*
+         * `secondary_value` et `workout_id` sont ecrases juste apres.
+         *
+         * `refreshRecordsHeldBy()` s'execute dans la meme sauvegarde de serie
+         * (AppServiceProvider::registerSetEvents) et passe par `recompute()`,
+         * qui remplit les memes cinq champs ligne 179. Les retirer d'ici ne
+         * change donc rien d'observable, ce qui rend leurs mutants equivalents
+         * plutot que non couverts — un test qui pretendrait les tuer verifierait
+         * en realite l'ecriture de l'autre chemin.
+         *
+         * Ils restent la parce que `update()` doit se tenir seul : rien ne
+         * garantit que le second chemin l'accompagnera toujours.
+         *
+         * @pest-mutate-ignore RemoveArrayItem
+         */
         $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
 
         if ($user->isNotificationEnabled('personal_record')) {
