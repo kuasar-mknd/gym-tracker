@@ -128,6 +128,152 @@ test('it awards streak achievement', function (): void {
     ]);
 });
 
+/*
+ * Ce qui suit couvre le calcul de serie, ou 15 mutants survivaient. Le premier
+ * test echouait avant la suppression de la fenetre `seuil + 30 jours` : c'est
+ * lui qui a mis le defaut en evidence.
+ */
+
+/**
+ * Une serie ancienne compte encore.
+ *
+ * La requete ne regardait que les `seuil + 30` derniers jours. Cinq jours
+ * consecutifs il y a sept mois, puis plus rien, et `streak-3` — le seul succes
+ * de serie qui existe en base — restait verrouille pour toujours.
+ *
+ * Personne ne pouvait le voir : un succes qui ne se debloque pas ne leve aucune
+ * erreur, et le seul test de serie qui existait posait ses seances la veille.
+ */
+test('un enchaînement ancien débloque encore le succès de série', function (): void {
+    $user = User::factory()->create();
+    $achievement = Achievement::factory()->create([
+        'type' => 'streak',
+        'threshold' => 3,
+        'slug' => 'streak-3',
+    ]);
+
+    // Cinq jours consecutifs il y a sept mois, et rien depuis.
+    foreach ([204, 203, 202, 201, 200] as $joursEnArriere) {
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => now()->subDays($joursEnArriere)->setTime(12, 0),
+        ]);
+    }
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseHas('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $achievement->id,
+    ]);
+});
+
+/**
+ * Deux jours isoles ne font pas une serie de deux.
+ *
+ * `$runs[] = 1` ouvre chaque nouvelle serie a 1. Le mutant qui l'ouvre a 2
+ * transformait n'importe quelle seance isolee en serie de deux jours, ce qui
+ * debloquait un succes de serie sans qu'aucun jour ne se suive.
+ */
+test('deux jours non consécutifs ne font pas une série de deux', function (): void {
+    $user = User::factory()->create();
+    $achievement = Achievement::factory()->create([
+        'type' => 'streak',
+        'threshold' => 2,
+        'slug' => 'streak-2',
+    ]);
+
+    Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->setTime(12, 0)]);
+    Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays(5)->setTime(12, 0)]);
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseMissing('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $achievement->id,
+    ]);
+});
+
+/**
+ * Une serie a cheval sur un changement d'heure reste une serie.
+ *
+ * L'application vit en Europe/Paris : la nuit du passage a l'heure d'ete dure
+ * 23 h, celle du retour a l'heure d'hiver 25 h. L'ancien calcul divisait un
+ * ecart de secondes par 86400 et arrondissait pour rattraper ces deux nuits —
+ * un arrondi que rien ne testait, d'ou quatre mutants survivants (`floor`,
+ * `ceil`, 86399, 86401).
+ *
+ * La comparaison porte desormais sur des jours calendaires, donc ce test passe
+ * sans arrondi. Il reste parce que la propriete, elle, doit tenir — et le couple
+ * de cas a ete verifie en reposant l'arithmetique de timestamps par-dessus :
+ * `floor` fait tomber le passage a l'heure d'ete, `ceil` le retour a l'heure
+ * d'hiver, `round` passe les deux. Chacun des deux cas garde donc un mutant
+ * distinct, et un seul des deux ne suffirait pas.
+ */
+test('une série à cheval sur un changement d’heure reste une série', function (string $veille, string $transition, string $lendemain): void {
+    $user = User::factory()->create();
+    $achievement = Achievement::factory()->create([
+        'type' => 'streak',
+        'threshold' => 3,
+        'slug' => 'streak-3-'.$transition,
+    ]);
+
+    foreach ([$veille, $transition, $lendemain] as $jour) {
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => $jour.' 12:00:00',
+        ]);
+    }
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseHas('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $achievement->id,
+    ]);
+})->with([
+    // Passage a l'heure d'ete : la nuit du 28 au 29 mars 2026 ne dure que 23 h.
+    'heure d’été' => ['2026-03-28', '2026-03-29', '2026-03-30'],
+    // Retour a l'heure d'hiver : la nuit du 25 au 26 octobre 2025 dure 25 h.
+    'heure d’hiver' => ['2025-10-25', '2025-10-26', '2025-10-27'],
+]);
+
+/**
+ * Sans aucune seance, la serie vaut exactement zero.
+ *
+ * Les deux seuils encadrent la valeur de repli des deux cotes : un seuil de 0
+ * doit passer (0 >= 0) et un seuil de 1 doit echouer. Un repli a 1 debloquerait
+ * le second, un repli a -1 refuserait le premier — un seul des deux seuils ne
+ * separerait donc rien.
+ */
+test('sans séance, la plus longue série vaut zéro', function (): void {
+    $user = User::factory()->create();
+
+    $sansExigence = Achievement::factory()->create([
+        'type' => 'streak',
+        'threshold' => 0,
+        'slug' => 'streak-0',
+    ]);
+
+    $unJour = Achievement::factory()->create([
+        'type' => 'streak',
+        'threshold' => 1,
+        'slug' => 'streak-1',
+    ]);
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseHas('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $sansExigence->id,
+    ]);
+
+    assertDatabaseMissing('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $unJour->id,
+    ]);
+});
+
 test('it does not award achievement if threshold not met', function (): void {
     $user = User::factory()->create();
     $achievement = Achievement::factory()->create([
