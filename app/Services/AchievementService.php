@@ -6,6 +6,9 @@ namespace App\Services;
 
 use App\Models\Achievement;
 use App\Models\User;
+use DateInterval;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -101,7 +104,7 @@ final class AchievementService
         }
 
         if ($types->contains('streak')) {
-            $metrics['max_streak'] = $this->calculateStreakMetric($user, $achievements);
+            $metrics['max_streak'] = $this->calculateMaxStreak($this->getUniqueWorkoutDates($user));
         }
 
         return $metrics;
@@ -138,62 +141,32 @@ final class AchievementService
     }
 
     /**
-     * Calculate the relevant streak metric based on the highest streak threshold in the achievements collection.
+     * Toutes les dates distinctes auxquelles l'utilisateur s'est entraine, de la
+     * plus recente a la plus ancienne.
      *
-     * @param  User  $user  The user to calculate the streak for.
-     * @param  Collection<int, Achievement>  $achievements  The achievements to determine the maximum threshold from.
-     * @return int The max streak up to the required threshold, or 0 if none exist.
-     */
-    private function calculateStreakMetric(User $user, Collection $achievements): int
-    {
-        /** @var float|int|null $maxStreakThreshold */
-        $maxStreakThreshold = $achievements->where('type', 'streak')->max('threshold');
-
-        if ($maxStreakThreshold === null) {
-            return 0;
-        }
-
-        return $this->calculateStreakForThreshold($user, (int) $maxStreakThreshold);
-    }
-
-    /**
-     * Calculate the user's max streak over a given threshold of days.
+     * Sans borne temporelle, et c'est le point : la requete cherchait dans les
+     * `seuil + 30` derniers jours, si bien qu'une serie plus ancienne ne
+     * debloquait plus rien. Trois jours consecutifs il y a deux mois, puis plus
+     * rien : `streak-3` restait verrouille pour toujours, sans que rien ne le
+     * dise. Un succes se merite une fois — la question posee est « as-tu deja
+     * enchaine N jours », pas « les as-tu enchaines recemment ».
      *
-     * @param  User  $user  The user to calculate the streak for.
-     * @param  int  $threshold  The threshold of days to evaluate the streak over.
-     * @return int The max streak for the threshold.
-     */
-    private function calculateStreakForThreshold(User $user, int $threshold): int
-    {
-        $workoutDates = $this->getUniqueWorkoutDates($user, $threshold);
-
-        if ($workoutDates === []) {
-            return 0;
-        }
-
-        return $this->calculateMaxStreak($workoutDates);
-    }
-
-    /**
-     * Get an array of unique dates the user worked out within a specific timeframe.
+     * La requete ne coute rien de plus en pratique : elle ne tourne que tant
+     * qu'un succes de serie est encore verrouille, et s'arrete d'elle-meme des
+     * qu'il est acquis, puisque les succes deja obtenus sortent de `$locked`.
      *
-     * @param  User  $user  The user to get the dates for.
-     * @param  int  $days  The number of days to look back for workouts.
-     * @return array<int, string> An array of unique 'Y-m-d' date strings.
+     * @return list<string> Dates au format 'Y-m-d'.
      */
-    private function getUniqueWorkoutDates(User $user, int $days): array
+    private function getUniqueWorkoutDates(User $user): array
     {
-        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-        // Offload date extraction and uniqueness to SQL layer using DISTINCT DATE().
-        // This eliminates O(N) mapping, filtering, and unique operations in PHP.
-        // Using toBase() avoids hydrating Eloquent models.
+        // L'extraction et le dedoublonnage sont laisses a SQL, et `toBase()`
+        // evite d'hydrater des modeles pour lire une colonne.
         $driver = DB::getDriverName();
         $dateFormat = $driver === 'sqlite' ? "strftime('%Y-%m-%d', started_at)" : 'DATE(started_at)';
 
-        /** @var array<int, string> $dates */
+        /** @var list<string> $dates */
         $dates = $user->workouts()
             ->toBase()
-            ->where('started_at', '>=', now()->subDays($days + 30))
             ->selectRaw("DISTINCT {$dateFormat} as date")
             ->orderByDesc('date')
             ->pluck('date')
@@ -203,46 +176,59 @@ final class AchievementService
     }
 
     /**
-     * Calculate the maximum consecutive streak from an array of consecutive dates.
+     * Le plus long enchainement de jours consecutifs dans une liste de dates.
      *
-     * @param  array<int, string>  $dates  The dates to calculate the streak from.
-     * @return int The max consecutive streak found in the dates array.
+     * Une date qui est la veille de la precedente prolonge la serie en cours ;
+     * toute autre en ouvre une nouvelle. Partir de 0 fait repondre 0 sur une
+     * liste vide, sans garde separe — l'ancienne version en avait un
+     * (`if ($count <= 1) { return $count; }`) qui ne changeait rien : pour une
+     * seule date le chemin general rendait deja 1, et zero date n'y arrivait
+     * jamais. Ses six mutants survivaient tous pour cette raison.
+     *
+     * La comparaison porte sur des chaines 'Y-m-d', pas sur des timestamps.
+     * L'ancienne version divisait un ecart de secondes par 86400 et arrondissait
+     * pour rattraper les nuits de 23 h et de 25 h — l'application vit en
+     * Europe/Paris, le cas se produit deux fois par an. Comparer des jours
+     * calendaires supprime le probleme au lieu de le compenser : quatre mutants
+     * y survivaient (`floor`, `ceil`, 86399, 86401) parce qu'aucun test ne
+     * passait un changement d'heure, et il n'y a plus rien a y arrondir.
+     *
+     * @param  list<string>  $dates  Dates 'Y-m-d' distinctes, de la plus recente a la plus ancienne.
      */
     private function calculateMaxStreak(array $dates): int
     {
-        $currentStreak = 1;
-        $maxStreak = 1;
-        $count = count($dates);
+        $maxStreak = 0;
 
-        if ($count <= 1) {
-            return $count;
+        /*
+         * Cette valeur initiale n'est jamais lue : `$expectedPreviousDay` vaut
+         * null au premier tour, la condition est donc fausse et le compteur part
+         * a 1. Aucun test ne peut distinguer 0 de 1 ou de -1 ici, et un test qui
+         * pretendrait le faire verifierait en realite autre chose.
+         *
+         * @pest-mutate-ignore
+         */
+        $currentStreak = 0;
+        $expectedPreviousDay = null;
+
+        foreach ($dates as $date) {
+            $currentStreak = $date === $expectedPreviousDay ? $currentStreak + 1 : 1;
+            $maxStreak = max($maxStreak, $currentStreak);
+            $expectedPreviousDay = $this->dayBefore($date);
         }
 
-        // ⚡ Bolt Optimization: Use native PHP timestamp math instead of Carbon objects
-        // to eliminate O(N) object instantiation overhead inside the loop.
-        $current = strtotime($dates[0]);
+        return $maxStreak;
+    }
 
-        if ($current === false) {
-            return 1;
-        }
+    /**
+     * La veille d'une date 'Y-m-d', au meme format.
+     *
+     * Ancre en UTC a dessein : le calcul porte sur des jours calendaires, et un
+     * fuseau a heure d'ete rendrait « la veille » ambigue.
+     */
+    private function dayBefore(string $date): string
+    {
+        $day = new DateTimeImmutable($date, new DateTimeZone('UTC'));
 
-        for ($i = 0; $i < $count - 1; $i++) {
-            $next = strtotime($dates[$i + 1]);
-
-            if ($next === false) {
-                continue;
-            }
-
-            // 86400 seconds in a day. Round to avoid timezone shift issues during daylight saving.
-            if (abs((int) round(($next - $current) / 86400)) === 1) {
-                $currentStreak++;
-            } else {
-                $maxStreak = max($maxStreak, $currentStreak);
-                $currentStreak = 1;
-            }
-            $current = $next;
-        }
-
-        return max($maxStreak, $currentStreak);
+        return $day->sub(new DateInterval('P1D'))->format('Y-m-d');
     }
 }
