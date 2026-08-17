@@ -26,19 +26,61 @@ class RestTimerTest extends DuskTestCase
     }
 
     /**
-     * Uncheck the set, then check it again to raise a fresh rest timer.
+     * L'etat du bouton, tel que l'utilisateur l'entend.
      *
-     * Both clicks target the same toggle, so the second one must not fire until
-     * the first has been applied. Waiting on the button's own aria-label is what
-     * makes that deterministic: a fixed pause used to lose the race whenever the
-     * CI runner was slower than the delay, which is where this test flaked.
+     * Sert a dire ce qu'on a trouve quand l'attente echoue, plutot que de
+     * laisser un « Waited 10 seconds for [selector] » qui ne distingue pas un
+     * clic perdu d'une bascule dans le mauvais sens.
+     */
+    private function toggleLabel(Browser $browser): string
+    {
+        return (string) $browser->attribute('[dusk="complete-set-0-0"]', 'aria-label');
+    }
+
+    /**
+     * Attend que le bouton porte le libelle voulu, et dit ce qu'il porte sinon.
+     */
+    private function waitForToggle(Browser $browser, string $label): Browser
+    {
+        return $browser->waitUsing(
+            10,
+            100,
+            fn (): bool => $this->toggleLabel($browser) === $label,
+            "Le bouton de la serie devait porter « {$label} », il porte « {$this->toggleLabel($browser)} »",
+        );
+    }
+
+    /**
+     * Decoche la serie, puis la recoche pour relancer un minuteur de repos.
+     *
+     * Les deux clics visent la meme bascule, donc le second ne doit pas partir
+     * avant que le premier ait ete applique. Attendre l'aria-label du bouton
+     * rend cela deterministe : une pause fixe perdait la course des que le
+     * runner etait plus lent que le delai.
+     *
+     * Reste que ce test a flake en CI sur cette meme attente, sans que la cause
+     * ait pu etre reproduite en local — huit executions de suite, toutes vertes.
+     * Deux choses ont donc ete faites plutot qu'une hypothese :
+     *
+     * 1. `clickWhenSettled` au lieu de `click`. La macro attend que la boite du
+     *    bouton soit stable et que `document.elementFromPoint` en son centre
+     *    rende bien ce bouton — c'est-a-dire que rien ne le recouvre. Le
+     *    minuteur est `fixed … z-[9999]` et s'etend sur toute la largeur en
+     *    mobile : il peut passer par-dessus la ligne de serie. C'est le mode de
+     *    defaillance le plus plausible, et la macro le supprime, qu'il soit ou
+     *    non la cause.
+     *
+     * 2. Une attente qui DIT ce qu'elle a trouve. Le message d'echec en CI
+     *    etait « Waited 10 seconds for selector [...] », qui ne distingue pas un
+     *    clic perdu d'une bascule partie dans le mauvais sens. La prochaine
+     *    occurrence nommera le libelle reellement porte, et tranchera.
      */
     private function retriggerRestTimer(Browser $browser): Browser
     {
-        return $browser->click('[dusk="complete-set-0-0"]')
-            ->waitFor('[dusk="complete-set-0-0"][aria-label="Valider la série"]', 10)
-            ->click('[dusk="complete-set-0-0"]')
-            ->waitFor('[dusk="complete-set-0-0"][aria-label="Annuler la série"]', 10)
+        return $browser->clickWhenSettled('[dusk="complete-set-0-0"]')
+            ->tap(fn (Browser $b) => $this->waitForToggle($b, 'Valider la série'))
+            ->clickWhenSettled('[dusk="complete-set-0-0"]')
+            ->tap(fn (Browser $b) => $this->waitForToggle($b, 'Annuler la série'))
             ->waitFor('[dusk="skip-rest-timer"]', 15);
     }
 
