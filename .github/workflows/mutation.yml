@@ -1,12 +1,21 @@
 name: Mutation testing
 
-# Nocturne et jamais bloquant.
+# Nocturne, et bloquant pour la mise en production.
 #
 # Le mutation testing rejoue les tests qui couvrent chaque ligne mutee : le cout
-# se compte en dizaines de minutes, pas en secondes. Par PR ce n'est pas tenable,
-# et un job rouge toutes les nuits serait pire que pas de job — d'ou
-# continue-on-error, et aucun --min tant que plusieurs executions n'ont pas
-# etabli un score de reference stable (#1366).
+# se compte en dizaines de minutes, pas en secondes. Par PR ce n'est pas tenable
+# — d'ou la nuit.
+#
+# Cette passe n'est plus informative. `ci.yml` refuse de publier l'image sous un
+# tag `v*` si l'une de ses parts n'est pas verte, et la production suit l'image.
+# Une nuit rouge bloque donc une livraison, et ouvre une issue
+# (main-failure-issue.yml). C'est voulu : « tout doit etre vert » n'a de sens
+# que si quelque chose peut etre rouge.
+#
+# Les seuils partent du niveau MESURE, pas d'un objectif. Un seuil qu'on
+# n'atteint pas se desactive dans la semaine, et il reste une porte de plus qui
+# ne garde rien. Ils doivent monter — c'est #1446, et c'est la meme methode qui
+# a porte la couverture front de 23 % a 95 % par cliquets successifs.
 on:
     schedule:
         # 03h17 UTC : decale de l'heure ronde, ou la file des runners planifies
@@ -20,7 +29,6 @@ permissions:
 jobs:
     mutation:
         runs-on: ubuntu-latest
-        continue-on-error: true
         # Mesure locale du perimetre entier en une seule passe : 5 776 s, soit
         # 96 minutes — et les runners GitHub sont plus lents que la machine qui
         # a servi a mesurer. Un job unique aurait ete un pari sur la marge.
@@ -53,14 +61,33 @@ jobs:
             fail-fast: false
             matrix:
                 include:
+                    # Le seuil est le score mesure moins environ deux points.
+                    # La marge n'est pas du confort : le nombre de mutants en
+                    # timeout varie d'une execution a l'autre (1 sur Services,
+                    # 4 sur Actions), et les runners GitHub sont plus lents que
+                    # la machine qui a mesure — un timeout de plus est un
+                    # mutant non tue. Sans cette marge, la porte bloquerait des
+                    # livraisons pour du bruit, et une porte qui bloque a tort
+                    # est une porte qu'on desactive.
+                    #
+                    # Mesure en parallele, --covered-only :
+                    #   App\Services  58,12 %  (493 tues, 356 survivants)
+                    #   App\Actions   64,49 %  (568 tues, 315 survivants)
+                    #   App\Policies  94,28 %  (313 tues,  19 survivants)
+                    #
+                    # App\DTOs ne figure pas ici : la mesure rend ZERO mutation.
+                    # Ce sont des classes readonly a proprietes promues, il n'y
+                    # a rien a muter. Une part qui ne genere aucun mutant ne dit
+                    # rien et coute une passe de reference complete.
                     - scope: 'App\Services'
                       timeout: 60
-                    - scope: 'App\Policies'
-                      timeout: 30
+                      min: 56
                     - scope: 'App\Actions'
                       timeout: 30
-                    - scope: 'App\DTOs'
+                      min: 62
+                    - scope: 'App\Policies'
                       timeout: 30
+                      min: 92
         services:
             mysql:
                 image: mysql:8.4
@@ -106,6 +133,31 @@ jobs:
                   cp .env.example .env
                   php artisan key:generate
 
+            # `pest --parallel` s'attend a trouver une base par processus, la ou
+            # `artisan test -p` les cree au passage. Les creer vides suffit :
+            # Laravel les migre lui-meme au premier usage — verifie en les
+            # vidant puis en relancant, 1885 tests passes.
+            #
+            # Le conteneur de service n'accorde a `sail` que gym_tracker_testing,
+            # d'ou le GRANT sur le motif. Les tirets bas sont des jokers dans un
+            # GRANT, d'ou l'echappement.
+            #
+            # Seize plutot que le nombre de coeurs du runner : en creer de trop
+            # ne coute rien, en manquer une fait echouer la passe.
+            - name: Provisionner les bases par processus
+              env:
+                  DB_HOST: 127.0.0.1
+                  DB_PORT: 3306
+              run: |
+                  # shellcheck disable=SC2016 # les accents graves sont des guillemets d'identifiant MySQL
+                  php -r '
+                      $pdo = new PDO("mysql:host=127.0.0.1;port=3306", "root", "password");
+                      for ($i = 1; $i <= 16; $i++) {
+                          $pdo->exec("CREATE DATABASE IF NOT EXISTS `gym_tracker_testing_test_$i`");
+                      }
+                      $pdo->exec("GRANT ALL PRIVILEGES ON `gym\_tracker\_testing\_test\_%`.* TO \"sail\"@\"%\"");
+                  '
+
             - name: Execute mutation testing
               env:
                   DB_CONNECTION: mysql
@@ -115,10 +167,23 @@ jobs:
                   DB_USERNAME: sail
                   DB_PASSWORD: password
                   TELESCOPE_ENABLED: false
-              # `php artisan test`, jamais `vendor/bin/pest` : le wrapper artisan
-              # installe les hooks de Laravel que l'appel direct saute. C'est ce
-              # qui rend `--parallel` utilisable ici — appele directement, il
-              # ferait tourner les dix processus sur la meme base.
+              # `vendor/bin/pest`, et non `php artisan test`.
+              #
+              # #1366 concluait « artisan test, jamais vendor/bin/pest », parce
+              # que `pest --parallel` avait produit 1317 echecs. La conclusion
+              # etait trop large : ce n'est pas `pest` qui casse, c'est
+              # `pest --parallel` quand les bases par processus n'existent pas
+              # encore. `artisan test -p` les cree au passage, pest les attend.
+              # L'etape de provisionnement ci-dessus les cree, et Laravel les
+              # migre lui-meme — verifie contre des bases vides : 1885 tests
+              # passes.
+              #
+              # Le choix est force par --min : `artisan test --mutate --min=101`
+              # rend exit 0 sur un score de 100 %, parce que son `--min` est
+              # celui de la COUVERTURE et qu'il est silencieusement ignore ici.
+              # `vendor/bin/pest --mutate --min=101` rend exit 1 avec le message
+              # attendu. Sans ce binaire, le seuil ne serait qu'un ornement —
+              # et cette passe garde la porte de mise en production.
               #
               # --covered-only : muter une ligne qu'aucun test ne couvre produit
               # un survivant qui ne dit rien de la qualite des tests, seulement
@@ -134,8 +199,9 @@ jobs:
                   # donc toujours vert : le job ne bloque pas, mais il doit dire
                   # la verite dans l'interface.
                   set -o pipefail
-                  php artisan test --mutate --parallel --covered-only \
+                  vendor/bin/pest --mutate --parallel --covered-only \
                     --class='${{ matrix.scope }}' \
+                    --min=${{ matrix.min }} \
                     | tee mutation-report.txt
 
             - name: Upload report
