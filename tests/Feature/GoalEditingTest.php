@@ -37,7 +37,11 @@ it('renders the edit page filled with the goal it was asked for', function (): v
                 ->where('goal.target_value', 100)
                 ->where('goal.exercise_id', $exercise->id)
                 ->has('exercises')
-                ->has('measurementTypes', 5)
+                // Deux, et non cinq : trois mensurations etaient proposees sans
+                // exister comme colonnes de body_measurements, et provoquaient
+                // une erreur 500 des que la progression etait calculee. Ce test
+                // figeait l'etat casse (#1454).
+                ->has('measurementTypes', 2)
         );
 });
 

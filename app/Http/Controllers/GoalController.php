@@ -27,13 +27,35 @@ class GoalController extends Controller
      * No @var here: PHP Insights rejects any @var on a class constant outright,
      * and PHPStan reads the shape off the literal anyway.
      */
-    private const array MEASUREMENT_TYPES = [
+    /**
+     * Les mensurations sur lesquelles un objectif peut reellement porter.
+     *
+     * Trois de plus etaient proposees — tour de taille, de poitrine, de bras —
+     * et chacune provoquait une erreur 500 des que la progression etait
+     * calculee : `GoalService::updateMeasurementGoal` lit une COLONNE de
+     * `body_measurements`, qui n'a que `weight` et `body_fat`. Mesure :
+     * « SQLSTATE[42S22]: Column not found: 1054 Unknown column 'waist' ».
+     *
+     * Le calcul se declenche a chaque pesee enregistree (SyncUserGoals) et a
+     * l'ouverture de la page des objectifs, donc l'objectif etait casse des sa
+     * creation.
+     *
+     * Ces trois mesures existent bien, mais dans `body_part_measurements`,
+     * indexees par nom de partie en texte libre. Les y raccorder est une
+     * fonctionnalite a part entiere, pas un correctif : voir #1454.
+     */
+    public const array MEASUREMENT_TYPES = [
         ['value' => 'weight', 'label' => 'Poids de corps'],
-        ['value' => 'waist', 'label' => 'Tour de taille'],
         ['value' => 'body_fat', 'label' => 'Masse grasse (%)'],
-        ['value' => 'chest', 'label' => 'Tour de poitrine'],
-        ['value' => 'arms', 'label' => 'Tour de bras'],
     ];
+
+    /**
+     * @return list<string>
+     */
+    public static function measurementTypeValues(): array
+    {
+        return array_column(self::MEASUREMENT_TYPES, 'value');
+    }
 
     /**
      * Create a new GoalController instance.
