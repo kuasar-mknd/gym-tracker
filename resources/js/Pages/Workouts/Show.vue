@@ -1538,7 +1538,7 @@ onUnmounted(() => {
                                 </svg>
                                 <!-- PR Trophy Badge -->
                                 <div
-                                    v-if="set.personal_record || set.personalRecord"
+                                    v-if="set.personal_record"
                                     class="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-sm"
                                     :dusk="`pr-trophy-${lineIndex}-${index}`"
                                 >

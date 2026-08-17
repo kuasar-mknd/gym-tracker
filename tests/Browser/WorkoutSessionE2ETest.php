@@ -220,9 +220,45 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // On attend le fait métier — le record écrit en base — puis on EXIGE le
             // badge : si la ligne existe et que le badge manque, c'est un vrai défaut
             // d'affichage, et le test doit échouer.
+            //
+            // L'attente porte sur la COMPLÉTION de la série, pas sur l'existence
+            // d'un record.
+            //
+            // Attendre un record ne gardait rien, et les deux assertions
+            // ci-dessous le prouvent plutôt que de le raconter : il en existe déjà
+            // pour cet utilisateur — les séances passées semées en tête de test ont
+            // des sets à 100, 110 et 120 kg — et il en existe déjà un pour cette
+            // séance, parce que `Set::saved` calcule les records dès qu'un poids et
+            // des répétitions sont présents, sans attendre la validation. Taper
+            // « 80 » à l'étape 4 a donc suffi.
+            //
+            // Une attente déjà satisfaite rend la main immédiatement, si bien que
+            // les deux temporisations que ce bloc croyait enchaîner — d'abord
+            // l'écriture, ensuite le rendu — se réduisaient à une seule course de
+            // 15 s contre l'aller-retour réseau. C'est ce qui a fait échouer le
+            // viewport iphone mini sur une passe froide : « Waited 15 seconds for
+            // selector [@pr-trophy-0-0] ».
+            //
+            // La complétion de CETTE série, elle, ne peut venir que du clic
+            // ci-dessus : c'est la seule de cet exercice, l'autre ayant été
+            // supprimée à l'étape 6c.
+            $this->assertTrue(
+                PersonalRecord::query()->where('user_id', $user->id)->exists(),
+                'des records existent déjà pour cet utilisateur : les attendre ne garderait rien'
+            );
+            $this->assertTrue(
+                PersonalRecord::query()->where('workout_id', $workout->id)->exists(),
+                'un record existe déjà pour cette séance : l\'attendre ne garderait rien non plus'
+            );
+
             $this->waitForDatabase(
-                fn (): bool => PersonalRecord::query()->where('user_id', $user->id)->exists(),
-                message: 'le record personnel n\'a jamais été enregistré'
+                fn (): bool => Set::query()
+                    ->whereHas('workoutLine', fn ($ligne) => $ligne
+                        ->where('workout_id', $workout->id)
+                        ->where('exercise_id', $strengthEx->id))
+                    ->where('is_completed', true)
+                    ->exists(),
+                message: 'la validation de la série n\'a jamais atteint la base'
             );
 
             $browser->waitFor('@pr-trophy-0-0', 15);
