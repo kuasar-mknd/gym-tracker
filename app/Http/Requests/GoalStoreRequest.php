@@ -38,7 +38,18 @@ class GoalStoreRequest extends FormRequest
                     });
                 }),
             ],
-            'measurement_type' => ['required_if:type,measurement', 'nullable', 'string', 'max:255'],
+            /*
+             * Borne a ce qui existe reellement. La regle acceptait n'importe
+             * quelle chaine, donc l'API laissait creer un objectif sur une
+             * mensuration inexistante — et le calcul de progression rendait
+             * alors une erreur 500 (#1454).
+             */
+            'measurement_type' => [
+                'required_if:type,measurement',
+                'nullable',
+                'string',
+                Rule::in(\App\Http\Controllers\GoalController::measurementTypeValues()),
+            ],
             'deadline' => $this->deadlineIsUnchanged()
                 ? ['nullable', 'date']
                 : ['nullable', 'date', 'after:today'],

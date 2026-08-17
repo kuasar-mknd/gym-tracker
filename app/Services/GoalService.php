@@ -220,6 +220,23 @@ final class GoalService
             return;
         }
 
+        /*
+         * Une mensuration que `body_measurements` ne porte pas ne fait plus
+         * planter le calcul.
+         *
+         * L'interface a longtemps propose tour de taille, de poitrine et de
+         * bras : lire ces colonnes rendait « Unknown column 'waist' », donc une
+         * erreur 500 a chaque pesee enregistree. Les options sont retirees, mais
+         * les objectifs deja crees restent en base — sans ce garde, ils
+         * continueraient de casser la page (#1454).
+         *
+         * L'objectif est simplement laisse sans progression, ce qui est la
+         * verite : rien ne mesure cette valeur aujourd'hui.
+         */
+        if (! in_array($goal->measurement_type, ['weight', 'body_fat'], true)) {
+            return;
+        }
+
         if (isset($metrics['latest_measurement']) && $metrics['latest_measurement'] instanceof \App\Models\BodyMeasurement) {
             $m = $metrics['latest_measurement'];
             $latestValue = $m->{$goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type};

@@ -781,12 +781,6 @@ parameters:
 			path: app/Services/GoalService.php
 
 		-
-			message: '#^Variable property access on App\\Models\\BodyMeasurement\.$#'
-			identifier: property.dynamicName
-			count: 1
-			path: app/Services/GoalService.php
-
-		-
 			message: '#^Only booleans are allowed in &&, App\\Models\\PersonalRecord\|null given on the left side\.$#'
 			identifier: booleanAnd.leftNotBoolean
 			count: 1

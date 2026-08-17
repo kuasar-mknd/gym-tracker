@@ -23,7 +23,11 @@ it('displays the goals index page for an authenticated user', function (): void 
                 ->component('Goals/Index')
                 ->has('goals', 3)
                 ->has('exercises', 2)
-                ->has('measurementTypes', 5)
+                // Deux, et non cinq : trois mensurations etaient proposees sans
+                // exister comme colonnes de body_measurements, et provoquaient
+                // une erreur 500 des que la progression etait calculee. Ce test
+                // figeait l'etat casse (#1454).
+                ->has('measurementTypes', 2)
         );
 });
 
