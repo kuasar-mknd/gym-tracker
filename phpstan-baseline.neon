@@ -930,35 +930,10 @@ parameters:
 			count: 1
 			path: app/Services/Stats/WorkoutStatsService.php
 
-		-
-			message: '#^Only booleans are allowed in &&, App\\Models\\Workout\|null given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 1
-			path: app/Services/StreakService.php
 
-		-
-			message: '#^Only booleans are allowed in &&, mixed given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 2
-			path: app/Services/StreakService.php
 
-		-
-			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 3
-			path: app/Services/StreakService.php
 
-		-
-			message: '#^Only booleans are allowed in a ternary operator condition, null given\.$#'
-			identifier: ternary.condNotBoolean
-			count: 1
-			path: app/Services/StreakService.php
 
-		-
-			message: '#^Only booleans are allowed in an if condition, bool\|null given\.$#'
-			identifier: if.condNotBoolean
-			count: 1
-			path: app/Services/StreakService.php
 
 		-
 			message: '#^Cannot call method random\(\) on mixed\.$#'
