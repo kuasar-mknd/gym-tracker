@@ -462,11 +462,6 @@ jobs:
                   context: .
                   platforms: ${{ matrix.platform }}
                   labels: ${{ steps.meta.outputs.labels }}
-                  # Vite substitue au build : sans cet argument, l'image publiee
-                  # part avec un Sentry front inerte. Le Dockerfile echoue si la
-                  # valeur est fournie mais n'atteint pas le bundle (#1444).
-                  build-args: |
-                      VITE_SENTRY_DSN_PUBLIC=${{ secrets.VITE_SENTRY_DSN_PUBLIC }}
                   outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
                   cache-from: type=gha,scope=build-${{ matrix.platform }}
                   cache-to: type=gha,mode=max,scope=build-${{ matrix.platform }}

@@ -20,13 +20,23 @@
          to fonts.googleapis.com, which left the installed PWA with no fonts
          offline and sent every visitor's IP to a third party on page load. --}}
 
-    <!-- Sentry Runtime Config -->
-    <script nonce="{{ Vite::cspNonce() }}">
-        window.SENTRY_CONFIG = {
-            dsn: '{{ config('sentry.dsn') }}',
-            environment: '{{ app()->environment() }}'
-        };
-    </script>
+    {{-- Le DSN du navigateur arrive ici, a l'execution, et non par une variable
+         de build : Vite substituerait `import.meta.env.VITE_*` au moment du
+         `npm run build`, donc le DSN partirait dans l'image publiee. Le depot
+         est public et l'image aussi — chaque installation enverrait ses erreurs
+         au meme projet Sentry. Ici, chaque deploiement fournit le sien.
+
+         Le bloc n'est rendu que s'il y a une valeur : une installation qui ne
+         configure rien n'expose aucun objet global vide, et main.js n'initialise
+         simplement pas Sentry. --}}
+    @if (config('sentry.dsn_public'))
+        <script nonce="{{ Vite::cspNonce() }}">
+            window.SENTRY_CONFIG = {
+                dsn: @json(config('sentry.dsn_public')),
+                environment: @json(app()->environment())
+            };
+        </script>
+    @endif
 
     {{--
         This is the only copy of the route table.

@@ -30,30 +30,7 @@ RUN npm ci --legacy-peer-deps
 
 COPY vite.config.js ./
 COPY resources/ ./resources/
-
-# Vite substitue `import.meta.env.*` AU MOMENT DU BUILD, et le build a lieu ici.
-#
-# La variable etait lue par resources/js/main.js mais fournie nulle part : ni le
-# Dockerfile ni la CI ne la mentionnaient. Dans chaque image publiee, la
-# condition etait donc fausse, `Sentry.init` n'etait jamais appele, et
-# @sentry/vue voyageait dans le bundle sans jamais s'executer. Aucune erreur
-# front n'a jamais ete remontee, et un tableau de bord vide se lit comme « tout
-# va bien » (#1444).
-ARG VITE_SENTRY_DSN_PUBLIC=""
-ENV VITE_SENTRY_DSN_PUBLIC=$VITE_SENTRY_DSN_PUBLIC
-
-# Le build, puis la verification que la variable est bien ARRIVEE dedans.
-#
-# Sans ce controle, un futur remaniement du Dockerfile peut la debrancher sans
-# que rien ne le dise — c'est exactement comme cela qu'on en est arrive la. Le
-# controle ne s'applique que si un DSN a ete fourni : une construction locale
-# sans secret reste possible, elle produit simplement une image sans Sentry.
-RUN npm run build \
-    && if [ -n "$VITE_SENTRY_DSN_PUBLIC" ]; then \
-        grep -rql "$VITE_SENTRY_DSN_PUBLIC" public/build/assets/ \
-            || (echo "ERREUR : VITE_SENTRY_DSN_PUBLIC a ete fourni mais n'apparait pas dans le bundle." \
-                && echo "Sentry front resterait muet dans cette image." && exit 1); \
-    fi
+RUN npm run build
 
 # 3. Builder stage for Composer dependencies
 FROM --platform=$BUILDPLATFORM composer:2 AS composer-builder

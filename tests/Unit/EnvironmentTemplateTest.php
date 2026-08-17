@@ -29,7 +29,21 @@ it('declares every VITE_ variable the frontend reads in .env.example', function 
     $referenced = [];
 
     foreach ($files as $file) {
-        preg_match_all('/import\.meta\.env\.(VITE_[A-Z0-9_]*)/', $file->getContents(), $matches);
+        /*
+         * Les lignes de commentaire sont ecartees.
+         *
+         * main.js explique pourquoi il ne lit PAS de variable VITE_ pour le DSN
+         * Sentry — Vite les substitue au build, donc la valeur partirait dans
+         * l'image publique. Sans cette exclusion, ce garde exigeait de declarer
+         * dans .env.example une variable que le code se refuse a lire, et un
+         * garde qui punit sa propre documentation finit par etre affaibli.
+         */
+        $code = implode("\n", array_filter(
+            explode("\n", $file->getContents()),
+            static fn (string $ligne): bool => preg_match('/^\s*(\*|\/\/|\/\*)/', $ligne) !== 1,
+        ));
+
+        preg_match_all('/import\.meta\.env\.(VITE_[A-Z0-9_]*)/', $code, $matches);
 
         foreach ($matches[1] as $variable) {
             $referenced[$variable][] = $file->getRelativePathname();

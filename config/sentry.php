@@ -10,6 +10,16 @@ return [
     // @see https://docs.sentry.io/product/sentry-basics/dsn-explainer/
     'dsn' => env('SENTRY_LARAVEL_DSN', env('SENTRY_DSN')),
 
+    /*
+     * Le DSN du navigateur, distinct de celui du serveur, et lu A L'EXECUTION.
+     *
+     * Surtout PAS une variable `VITE_` : Vite les substitue au build, donc le
+     * DSN serait cuit dans l'image publiee. Ce depot est public et son image
+     * aussi — n'importe qui l'installant enverrait ses erreurs ici, et
+     * consommerait le quota. Chaque deploiement fournit le sien, ou aucun.
+     */
+    'dsn_public' => env('SENTRY_DSN_PUBLIC'),
+
     // @see https://spotlightjs.com/
     // 'spotlight' => env('SENTRY_SPOTLIGHT', false),
 
