@@ -57,7 +57,13 @@ final class VolumeStatsService
                     $trend[] = new VolumeTrendPoint(
                         date('d/m', $timestamp),
                         date('Y-m-d', $timestamp),
-                        (string) $row->name,
+                        // Le meme repli que WorkoutStatsService:45. Sans lui,
+                        // une seance sans nom sortait sous une etiquette VIDE
+                        // ici, et sous « Séance » la — memes donnees, deux
+                        // reponses. Le cast, lui, reste porteur : `name` est
+                        // nullable en base et le DTO exige une chaine, donc le
+                        // retirer leve un TypeError (#1446).
+                        (string) ($row->name ?? __('Workout')),
                         is_numeric($row->volume) ? (float) $row->volume : 0.0,
                     );
                 }
@@ -148,7 +154,13 @@ final class VolumeStatsService
                     $history[] = new VolumeHistoryPoint(
                         date('d/m', $timestamp),
                         is_numeric($row->volume) ? (float) $row->volume : 0.0,
-                        (string) $row->name,
+                        // Le meme repli que WorkoutStatsService:45. Sans lui,
+                        // une seance sans nom sortait sous une etiquette VIDE
+                        // ici, et sous « Séance » la — memes donnees, deux
+                        // reponses. Le cast, lui, reste porteur : `name` est
+                        // nullable en base et le DTO exige une chaine, donc le
+                        // retirer leve un TypeError (#1446).
+                        (string) ($row->name ?? __('Workout')),
                     );
                 }
 
