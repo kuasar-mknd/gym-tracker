@@ -40,9 +40,9 @@ class RestTimerTest extends DuskTestCase
     /**
      * Attend que le bouton porte le libelle voulu, et dit ce qu'il porte sinon.
      */
-    private function waitForToggle(Browser $browser, string $label): Browser
+    private function waitForToggle(Browser $browser, string $label): void
     {
-        return $browser->waitUsing(
+        $browser->waitUsing(
             10,
             100,
             fn (): bool => $this->toggleLabel($browser) === $label,
@@ -77,11 +77,15 @@ class RestTimerTest extends DuskTestCase
      */
     private function retriggerRestTimer(Browser $browser): Browser
     {
-        return $browser->clickWhenSettled('[dusk="complete-set-0-0"]')
-            ->tap(fn (Browser $b) => $this->waitForToggle($b, 'Valider la série'))
-            ->clickWhenSettled('[dusk="complete-set-0-0"]')
-            ->tap(fn (Browser $b) => $this->waitForToggle($b, 'Annuler la série'))
-            ->waitFor('[dusk="skip-rest-timer"]', 15);
+        // En instructions plutot qu'en chaine fluide : `tap()` ne declare pas
+        // son type de retour, et l'enchainer rendait la methode `mixed`.
+        $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
+        $this->waitForToggle($browser, 'Valider la série');
+
+        $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
+        $this->waitForToggle($browser, 'Annuler la série');
+
+        return $browser->waitFor('[dusk="skip-rest-timer"]', 15);
     }
 
     private function performTimerLifecycle(Browser $browser, string $sizeMacro): void
