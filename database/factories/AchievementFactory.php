@@ -33,7 +33,17 @@ class AchievementFactory extends Factory
             'name' => fake()->words(3, true),
             'description' => fake()->sentence(),
             'icon' => '🏆',
-            'type' => fake()->randomElement(['workout_count', 'streak', 'volume', 'personal_record']),
+            /*
+             * Les quatre types que le service sait evaluer, et eux seuls.
+             *
+             * La fabrique tirait 'workout_count', 'volume' et 'personal_record',
+             * qu'AchievementService ne connait pas : trois fois sur quatre, un
+             * `Achievement::factory()->create()` produisait un succes que rien
+             * ne pouvait debloquer. Aucun test n'en dependait, mais le premier
+             * qui aurait attendu un deblocage sans preciser le type l'aurait
+             * attendu en vain, sans aucun message pour le dire.
+             */
+            'type' => fake()->randomElement(['count', 'weight_record', 'volume_total', 'streak']),
             'threshold' => fake()->numberBetween(1, 100),
             'category' => fake()->randomElement(['beginner', 'intermediate', 'advanced']),
         ];

@@ -49,40 +49,55 @@ final class AchievementService
             }
         }
 
-        if (count($toUnlockIds) > 0) {
-            // ⚡ Bolt Optimization: Batch multiple many-to-many attach operations into a single query.
-            // Impact: Reduces database writes from O(N) to O(1) when multiple achievements are unlocked at once.
-            $user->achievements()->attach($toUnlockIds, ['achieved_at' => now()]);
+        /*
+         * Un seul `attach` pour tout le lot, plutot qu'un par succes. Il n'y a
+         * pas de garde sur le tableau vide : `attach([])` n'ecrit rien de
+         * lui-meme, Laravel court-circuitant l'insertion, et la boucle de
+         * notification ne tourne pas non plus. Le garde qui etait la ne
+         * changeait donc rien d'observable, et ses deux mutants survivaient pour
+         * cette seule raison. Un test verifie qu'aucune ecriture n'a lieu.
+         */
+        $user->achievements()->attach($toUnlockIds, ['achieved_at' => now()]);
 
-            foreach ($unlockedAchievements as $achievement) {
-                $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
-            }
+        foreach ($unlockedAchievements as $achievement) {
+            $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
         }
     }
 
     /**
-     * Check if an achievement should be unlocked based on calculated metrics.
+     * Un succes est debloque quand la metrique de son type atteint son seuil.
      *
-     * @param  Achievement  $achievement  The achievement to check.
-     * @param  array<string, int|float>  $metrics  The pre-calculated metrics.
+     * Les metriques sont indexees par type de succes, il n'y a donc plus de
+     * table de correspondance a tenir a jour. L'ancienne version ecrivait la
+     * meme comparaison quatre fois, chacune avec un repli `?? 0` — huit mutants
+     * y survivaient, tous pour la meme raison : le repli est inatteignable.
+     * `preCalculateMetrics` recoit exactement les succes verrouilles et calcule
+     * la metrique de chaque type qui s'y trouve, donc la cle du succes examine
+     * existe toujours.
+     *
+     * Une cle absente designe un type que le service ne sait pas evaluer. Rien
+     * n'empeche d'en mettre un en base — `achievements.type` est une colonne
+     * texte libre — et il ne doit alors rien debloquer, seuil zero compris.
+     *
+     * @param  array<string, int|float>  $metrics  Metriques pre-calculees, indexees par type de succes.
      */
     private function isUnlocked(Achievement $achievement, array $metrics): bool
     {
-        return match ($achievement->type) {
-            'count' => ($metrics['count'] ?? 0) >= $achievement->threshold,
-            'weight_record' => ($metrics['max_weight'] ?? 0) >= $achievement->threshold,
-            'volume_total' => ($metrics['total_volume'] ?? 0) >= $achievement->threshold,
-            'streak' => ($metrics['max_streak'] ?? 0) >= $achievement->threshold,
-            default => false,
-        };
+        if (! array_key_exists($achievement->type, $metrics)) {
+            return false;
+        }
+
+        return $metrics[$achievement->type] >= $achievement->threshold;
     }
 
     /**
-     * Pre-calculate metrics required for checking multiple achievements efficiently.
+     * Calcule, une seule fois, les metriques dont les succes verrouilles ont besoin.
      *
-     * @param  User  $user  The user to calculate metrics for.
-     * @param  Collection<int, Achievement>  $achievements  The achievements that need metrics.
-     * @return array<string, int|float> A dictionary of pre-calculated metrics.
+     * Seuls les types presents dans le lot sont calcules : une fois le dernier
+     * succes de serie acquis, plus personne ne paie sa requete.
+     *
+     * @param  Collection<int, Achievement>  $achievements  Les succes encore verrouilles.
+     * @return array<string, int|float> Metriques indexees par type de succes.
      */
     private function preCalculateMetrics(User $user, Collection $achievements): array
     {
@@ -90,21 +105,20 @@ final class AchievementService
         $metrics = [];
 
         if ($types->contains('count')) {
-            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-            // Use toBase() to avoid hydrating Eloquent models just for a count.
+            // `toBase()` evite d'hydrater des modeles pour lire un compte.
             $metrics['count'] = $user->workouts()->toBase()->count();
         }
 
         if ($types->contains('weight_record')) {
-            $metrics['max_weight'] = $this->calculateMaxWeight($user);
+            $metrics['weight_record'] = $this->calculateMaxWeight($user);
         }
 
         if ($types->contains('volume_total')) {
-            $metrics['total_volume'] = $this->calculateTotalVolume($user);
+            $metrics['volume_total'] = $this->calculateTotalVolume($user);
         }
 
         if ($types->contains('streak')) {
-            $metrics['max_streak'] = $this->calculateMaxStreak($this->getUniqueWorkoutDates($user));
+            $metrics['streak'] = $this->calculateMaxStreak($this->getUniqueWorkoutDates($user));
         }
 
         return $metrics;
