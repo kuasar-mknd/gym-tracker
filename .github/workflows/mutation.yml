@@ -71,7 +71,11 @@ jobs:
                     # est une porte qu'on desactive.
                     #
                     # Mesure en parallele, --covered-only :
-                    #   App\Services  58,12 %  (493 tues, 356 survivants)
+                    #   App\Services  61,47 %  (488 tues, 324 survivants)
+                    #                 — 58,12 % avant les tests de #1446 ; la
+                    #                   hausse depasse les cinq mutants vises,
+                    #                   un test qui exerce un vrai chemin en
+                    #                   tuant une grappe et non un seul.
                     #   App\Actions   64,49 %  (568 tues, 315 survivants)
                     #   App\Policies  94,28 %  (313 tues,  19 survivants)
                     #
@@ -81,7 +85,7 @@ jobs:
                     # rien et coute une passe de reference complete.
                     - scope: 'App\Services'
                       timeout: 60
-                      min: 56
+                      min: 58
                     - scope: 'App\Actions'
                       timeout: 30
                       min: 62

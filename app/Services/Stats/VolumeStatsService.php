@@ -42,7 +42,7 @@ final class VolumeStatsService
                 $workouts = $user->workouts()
                     ->toBase()
                     ->where('started_at', '>=', now()->subDays($days))
-                    ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
+                    ->select(['started_at', 'name', 'workout_volume as volume'])
                     ->orderBy('started_at')
                     ->get();
 
@@ -132,7 +132,7 @@ final class VolumeStatsService
                 $workouts = $user->workouts()
                     ->toBase()
                     ->whereNotNull('ended_at')
-                    ->select(['id', 'started_at', 'name', 'workout_volume as volume'])
+                    ->select(['started_at', 'name', 'workout_volume as volume'])
                     ->orderBy('started_at')
                     ->limit($limit)
                     ->get();
