@@ -163,6 +163,23 @@ Le seuil n'est appliqué que par `vendor/bin/pest` : `artisan test --mutate --mi
 
 `--parallel` suppose que les bases par processus existent ; `artisan test -p` les crée au passage, un `artisan test -p` préalable suffit donc.
 
+**En local, `--parallel` sert à itérer, pas à conclure.** Pest accorde à chaque mutant la durée de la passe de référence plus 20 % (au moins 5 s), et compte un dépassement comme un mutant tué. Cette référence est mesurée hors contention : une machine de dev qui lance dix processus la dépasse d'elle-même dès que l'ensemble couvrant est gros — le cas de tout service branché sur un observateur, couvert par des centaines de tests.
+
+Mesuré sur `App\Services\StreakService`, même code, mêmes mutations :
+
+| mode | verdicts | score |
+| --- | --- | --- |
+| `--parallel` (10 processus) | 19 timeout, 21 tués, **0 survivant** | 100,00 % |
+| séquentiel | 0 timeout, 37 tués, **3 survivants** | 92,50 % |
+
+L'erreur ne va que dans un sens : le parallèle **cache** des survivants, il n'en invente pas. Il reste donc bon pour trouver du travail — mais « cette classe est propre » demande une mesure séquentielle :
+
+```bash
+./vendor/bin/sail php vendor/bin/pest --mutate --covered-only --class='App\Services\StreakService'
+```
+
+Le nocturne n'est pas concerné : un runner GitHub à quatre cœurs ne lance que deux processus, et sa passe de référence est deux fois plus lente, ce qui élargit d'autant le délai. Mesure sur trois nuits consécutives — 1 timeout sur les 841 mutations de `App\Services`, 4 sur les 887 de `App\Actions`, 0 sur `App\Policies`.
+
 ---
 
 ## 🤝 Contribution
