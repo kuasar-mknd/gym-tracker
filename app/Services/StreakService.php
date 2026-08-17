@@ -166,10 +166,14 @@ final class StreakService
             }
         }
 
-        // Update longest streak if necessary
-        if ($user->current_streak > $user->longest_streak) {
-            $user->longest_streak = $user->current_streak;
-        }
+        /*
+         * `max()` plutot qu'une comparaison : a egalite, l'ancien `if` reassignait
+         * la meme valeur, si bien que le mutant `>=` ne changeait rien
+         * d'observable et survivait sans qu'aucun test ne puisse le tuer. Ecrit
+         * ainsi, il n'y a plus de comparaison a muter, et l'intention se lit
+         * mieux — le record est le maximum des deux, pas une branche.
+         */
+        $user->longest_streak = max($user->longest_streak, $user->current_streak);
     }
 
     /**

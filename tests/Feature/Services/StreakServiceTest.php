@@ -322,3 +322,69 @@ it('ne casse pas la série en cours quand une séance antérieure est saisie', f
     expect($enBase->current_streak)->toBe(4)
         ->and($enBase->longest_streak)->toBe(4);
 });
+
+/**
+ * La séance traitée est celle qu'on passe, pas la plus récente en base.
+ *
+ * `resolveWorkoutDate` part de `$workout->started_at` et ne va chercher la plus
+ * récente que faute de séance fournie. Le mutant qui supprime la partie gauche du
+ * `??` interroge toujours la base — et la différence ne se voit que si la séance
+ * traitée n'est PAS la plus récente, c'est-à-dire au moment précis où l'on saisit
+ * une séance oubliée.
+ *
+ * Ici la séance comblante tombe la veille de la dernière enregistrée : elle
+ * allonge la série. En prenant la plus récente à la place, l'écart devient trois
+ * jours et la série est remise à 1.
+ *
+ * Les deux séances sont créées sans événement, sinon l'observateur appliquerait
+ * lui-même la logique et le test ne contrôlerait plus l'état de départ.
+ */
+it('traite la séance fournie et non la plus récente en base', function (): void {
+    $user = User::factory()->create([
+        'current_streak' => 1,
+        'longest_streak' => 1,
+        'last_workout_at' => Carbon::now()->subDays(3),
+    ]);
+
+    Workout::withoutEvents(function () use ($user): void {
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => Carbon::now(),
+        ]);
+    });
+
+    $comblante = Workout::withoutEvents(fn (): Workout => Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => Carbon::now()->subDays(2),
+    ]));
+
+    $this->streakService->updateStreak($user, $comblante);
+
+    // Trois jours en arrière puis deux : un jour d'écart, la série s'allonge.
+    expect(User::findOrFail($user->id)->current_streak)->toBe(2);
+});
+
+/**
+ * Un compte sans aucune séance ne fait rien planter.
+ *
+ * C'est le seul cas où `resolveWorkoutDate` rend null : aucune séance fournie, et
+ * `value()` qui ne trouve rien. Le `?->` qui suit était le dernier point non
+ * couvert de la classe — le retirer transforme ce cas en erreur fatale, sur un
+ * chemin qu'un recalcul déclenché avant la première séance emprunte tout à fait
+ * normalement.
+ */
+it('ne fait rien pour un compte sans aucune séance', function (): void {
+    $user = User::factory()->create([
+        'current_streak' => 0,
+        'longest_streak' => 0,
+        'last_workout_at' => null,
+    ]);
+
+    $this->streakService->updateStreak($user);
+
+    $enBase = User::findOrFail($user->id);
+
+    expect($enBase->current_streak)->toBe(0)
+        ->and($enBase->longest_streak)->toBe(0)
+        ->and($enBase->last_workout_at)->toBeNull();
+});
