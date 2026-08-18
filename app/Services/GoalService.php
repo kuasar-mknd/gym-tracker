@@ -125,8 +125,11 @@ final class GoalService
         }
 
         if (isset($metrics['max_weights'][$goal->exercise_id])) {
-            $val = $metrics['max_weights'][$goal->exercise_id];
-            $goal->current_value = is_numeric($val) ? (float) $val : 0.0;
+            // Pas de repli : `preCalculateMaxWeights` declare un retour `float`
+            // natif sur chaque valeur, donc `is_numeric()` y etait toujours vrai
+            // et le `0.0` inatteignable — d'ou trois mutants qu'aucun test ne
+            // pouvait tuer.
+            $goal->current_value = $metrics['max_weights'][$goal->exercise_id];
 
             return;
         }
@@ -182,8 +185,9 @@ final class GoalService
         }
 
         if (isset($metrics['max_volumes'][$goal->exercise_id])) {
-            $val = $metrics['max_volumes'][$goal->exercise_id];
-            $goal->current_value = is_numeric($val) ? (float) $val : 0.0;
+            // Meme raison qu'au-dessus : `preCalculateMaxVolumes` garantit le
+            // float, le repli ne pouvait pas s'executer.
+            $goal->current_value = $metrics['max_volumes'][$goal->exercise_id];
 
             return;
         }

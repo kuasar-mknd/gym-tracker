@@ -1111,11 +1111,6 @@ parameters:
 			count: 3
 			path: tests/Browser/KeyboardNavigationTest.php
 
-		-
-			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true and ''Escape closed the…'' will always evaluate to true\.$#'
-			identifier: method.alreadyNarrowedType
-			count: 1
-			path: tests/Browser/ModalSemanticsTest.php
 
 		-
 			message: '#^Cannot access offset ''focusInside'' on mixed\.$#'
@@ -1825,11 +1820,6 @@ parameters:
 			count: 1
 			path: tests/Feature/Filament/WorkoutResourceTest.php
 
-		-
-			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
-			identifier: method.alreadyNarrowedType
-			count: 1
-			path: tests/Feature/GoalServicePerformanceTest.php
 
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'

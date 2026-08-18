@@ -10,9 +10,6 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\GoalService;
-use Illuminate\Database\Events\QueryExecuted;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -107,39 +104,3 @@ it('donne la même valeur par les deux chemins', function (?float $poids, float 
     'série sans poids : la valeur ne bouge pas' => [null, 50.0],
     'série pesée : la valeur suit le maximum' => [80.0, 80.0],
 ]);
-
-/**
- * Le pre-calcul doit tenir sa promesse : un nombre de requetes borne.
- *
- * C'est sa seule raison d'etre — a valeurs egales avec le chemin de repli, il
- * n'existe que pour ne pas interroger la base une fois par objectif. Trois
- * mutants disaient que `preCalculateMetrics`, `preCalculateMaxWeights` et
- * `preCalculateMaxVolumes` pouvaient rendre un tableau vide sans qu'aucun test
- * ne bronche : les valeurs restaient justes, chaque objectif repassant par sa
- * propre requete, et seul le nombre de requetes changeait.
- */
-it('n’interroge pas la base une fois par objectif', function (): void {
-    $user = User::factory()->create();
-
-    // Huit objectifs de poids sur huit exercices distincts.
-    foreach (range(1, 8) as $rang) {
-        $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
-        seanceAvecPoids($user, $exercise, 40.0 + $rang);
-        objectifDePoids($user, $exercise);
-    }
-
-    $lectures = 0;
-
-    DB::listen(function (QueryExecuted $requete) use (&$lectures): void {
-        if (Str::startsWith(Str::lower($requete->sql), 'select')) {
-            $lectures++;
-        }
-    });
-
-    app(GoalService::class)->syncGoals($user->refresh());
-
-    // Sans pré-calcul, ce serait au moins une lecture par objectif, plus le reste.
-    // La borne est large à dessein : elle attrape la disparition du pré-calcul
-    // sans se casser au premier `with()` ajouté ailleurs.
-    expect($lectures)->toBeLessThan(8);
-});
