@@ -176,9 +176,11 @@ class ModalSemanticsTest extends DuskTestCase
             // element that stopped being interactable mid-gesture.
             $browser->driver->action()->sendKeys(null, WebDriverKeys::ESCAPE)->perform();
 
-            $browser->waitUntilMissing('dialog[open]', 15);
-
-            $this->assertTrue(true, 'Escape closed the picker.');
+            // `waitUntilMissing` leve deja si le dialogue reste ouvert, mais un
+            // `assertTrue(true)` derriere ne disait rien a personne. L'assertion
+            // porte desormais le fait verifie.
+            $browser->waitUntilMissing('dialog[open]', 15)
+                ->assertMissing('dialog[open]');
         });
     }
 
