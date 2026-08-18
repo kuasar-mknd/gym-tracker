@@ -1236,6 +1236,57 @@ const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pect
  * entry travel as-is. An empty field is a cleared value, which the column is
  * nullable for; anything unparseable is not a value at all and is dropped.
  */
+/**
+ * Une frappe, par opposition a une saisie terminee.
+ *
+ * Les quatre champs numeriques sont lies a sens unique (`:value="set.weight"`)
+ * et n'ecrivaient le modele qu'au `@change`, c'est-a-dire AU BLUR. Tant que le
+ * champ n'etait pas quitte, la valeur tapee n'existait que dans le DOM — et le
+ * rattrapage qui suit la creation de la serie la manquait, puisqu'il compare le
+ * modele a ce qui a ete envoye :
+ *
+ *     Object.keys(sent).filter((field) => tempSet[field] !== sent[field])
+ *
+ * C'est le defaut de #1489 : ajouter une serie, taper un poids, et le laisser
+ * disparaitre parce qu'on n'avait pas quitte le champ avant que la reponse
+ * n'arrive. Reproduit dans `workoutSetEntry.test.js`.
+ *
+ * La chaine vide est ignoree ici, et elle seule. Un `input[type=number]` rend
+ * `''` pour toute saisie incomplete — « 12. » en cours de frappe en est une —
+ * et l'ecrire dans le modele ferait reecrire `:value` par Vue, donc effacerait
+ * le point sous les doigts de l'utilisateur. Vider reellement un champ reste
+ * traite, mais au blur, par `updateSet` via `@change`.
+ */
+const saisieEnCours = (set, field, rawValue) => {
+    if (rawValue === '') {
+        return
+    }
+
+    updateSet(set, field, rawValue)
+}
+
+/**
+ * Ce que le blur apporte de neuf, et rien d'autre.
+ *
+ * `@change` ne doit surtout pas rejouer `updateSet` pour une valeur que
+ * `@input` a deja ecrite. Le faire appelait la mise a jour deux fois pour une
+ * meme saisie, et le second appel prenait pour valeur de reference celle que le
+ * premier venait d'ecrire : un refus du serveur restaurait alors la valeur
+ * refusee au lieu de la derniere valeur acceptee — le defaut meme que
+ * `workoutOptimisticWrites.test.js` tient depuis #1319.
+ *
+ * La comparaison au modele plutot qu'un test sur la chaine vide : elle couvre le
+ * champ reellement vide, que `saisieEnCours` ecarte, mais aussi tout `change`
+ * qui n'aurait pas ete precede d'un `input`.
+ */
+const saisieTerminee = (set, field, rawValue) => {
+    if (toNumberOrNull(rawValue) === set[field]) {
+        return
+    }
+
+    updateSet(set, field, rawValue)
+}
+
 const toNumberOrNull = (value) => {
     if (value === '' || value === null || value === undefined) {
         return null
@@ -1568,7 +1619,8 @@ onUnmounted(() => {
                                     inputmode="decimal"
                                     :value="set.weight"
                                     @focus="$event.target.select()"
-                                    @change="(e) => updateSet(set, 'weight', e.target.value)"
+                                    @input="(e) => saisieEnCours(set, 'weight', e.target.value)"
+                                    @change="(e) => saisieTerminee(set, 'weight', e.target.value)"
                                     :disabled="isFinished"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
                                     :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
@@ -1580,7 +1632,8 @@ onUnmounted(() => {
                                     inputmode="numeric"
                                     :value="set.reps"
                                     @focus="$event.target.select()"
-                                    @change="(e) => updateSet(set, 'reps', e.target.value)"
+                                    @input="(e) => saisieEnCours(set, 'reps', e.target.value)"
+                                    @change="(e) => saisieTerminee(set, 'reps', e.target.value)"
                                     :disabled="isFinished"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
                                     :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
@@ -1596,7 +1649,8 @@ onUnmounted(() => {
                                     inputmode="decimal"
                                     :value="set.distance_km"
                                     @focus="$event.target.select()"
-                                    @change="(e) => updateSet(set, 'distance_km', e.target.value)"
+                                    @input="(e) => saisieEnCours(set, 'distance_km', e.target.value)"
+                                    @change="(e) => saisieTerminee(set, 'distance_km', e.target.value)"
                                     :disabled="isFinished"
                                     :dusk="`distance-input-${lineIndex}-${index}`"
                                     :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"

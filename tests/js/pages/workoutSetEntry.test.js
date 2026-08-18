@@ -556,3 +556,102 @@ describe('Workouts/Show — two sets added in quick succession', () => {
         expect(wrapper.vm.localWorkout.workout_lines[0].sets.map((s) => s.id)).toEqual([42, 100, 101])
     })
 })
+
+/**
+ * Le contrat que #1489 attendait : une valeur tapée pendant la creation de la
+ * serie doit atteindre le serveur.
+ *
+ * `Show.vue` calcule le rattrapage en comparant le MODELE a ce qui a ete envoye :
+ *
+ *     Object.keys(sent).filter((field) => tempSet[field] !== sent[field])
+ *
+ * Or les quatre champs numeriques sont lies a sens unique — `:value="set.weight"`
+ * — et le modele n'est ecrit que sur `@change`, c'est-a-dire au blur. Une valeur
+ * tapee et pas encore quittee n'existe donc que dans le DOM : le diff la croit
+ * inchangee, `edited` est vide, et le serveur n'en entend jamais parler.
+ *
+ * Le commentaire de ce chemin dit « Typed after the payload left, so the server
+ * has never heard it » — il ne peut voir que ce qui a franchi le blur.
+ */
+describe('une valeur tapée pendant la création de la série', () => {
+    it('parvient au serveur même sans avoir quitté le champ', async () => {
+        const serieCreee = deferred()
+        post.mockImplementation((url) =>
+            url.includes('workout-lines')
+                ? Promise.resolve({ data: { data: { id: 10, order: 0, exercise: STRENGTH, sets: [] } } })
+                : serieCreee.promise,
+        )
+        patch.mockResolvedValue({ data: { data: {} } })
+
+        const wrapper = await mountPage({
+            id: 1,
+            name: 'Séance',
+            started_at: '2026-07-29T08:00:00.000000Z',
+            ended_at: null,
+            workout_lines: [{ id: 10, order: 0, exercise: STRENGTH, sets: [] }],
+        })
+
+        await wrapper.find('[dusk="add-set-0"]').trigger('click')
+        await flushPromises()
+
+        /*
+         * L'utilisateur tape, et NE QUITTE PAS le champ : c'est exactement la
+         * façon normale de se servir de cet écran.
+         *
+         * `setValue()` ne convient pas ici — il valide le champ, donc il simule
+         * une saisie déjà quittée et le test passerait pour la mauvaise raison.
+         * Ce qu'on veut, c'est le DOM en avance sur le modèle.
+         */
+        const champ = wrapper.find('[dusk="weight-input-0-0"]')
+        champ.element.value = '50'
+        await champ.trigger('input')
+
+        // La réponse de création arrive pendant ce temps, avec les valeurs que la
+        // requête portait au départ.
+        serieCreee.resolve({
+            data: { data: { id: 77, weight: 0, reps: 10, created_at: 'x', updated_at: 'y', personal_record: null } },
+        })
+        await flushPromises()
+
+        const rattrapage = patch.mock.calls.find(([url]) => url === '/api/v1/sets/77')
+
+        expect(rattrapage, 'aucun rattrapage envoyé : la frappe est restée dans le DOM').toBeTruthy()
+        expect(Number(rattrapage[1].weight)).toBe(50)
+    })
+})
+
+/*
+ * La contrepartie du correctif ci-dessus, qui doit être tenue.
+ *
+ * Écrire le modèle à chaque frappe rapproche le DOM du modèle, mais rapproche
+ * aussi Vue du champ : `:value` est réécrit dès que la valeur rendue diffère du
+ * texte saisi. Un `input[type=number]` rend `''` pour toute saisie incomplète —
+ * « 12. » en cours de frappe en est une — et écrire ce `''` dans le modèle
+ * ferait effacer le point sous les doigts de l'utilisateur.
+ *
+ * D'où la seule exception de `saisieEnCours`. Vider réellement un champ reste
+ * traité, mais au blur, par `@change`.
+ *
+ * Le rendu qui suit ne se teste pas ici : jsdom assainit lui-même la valeur
+ * d'un champ numérique, donc « 12. » n'y est pas représentable et un test qui
+ * prétendrait l'observer échouerait pareillement sans le correctif. Ce qui se
+ * vérifie, et qui suffit, c'est que la frappe incomplète n'atteint pas le modèle.
+ */
+describe('une frappe incomplète', () => {
+    it('ne vide pas le modèle avant que le champ soit quitté', async () => {
+        const wrapper = await mountPage(strengthWorkout)
+
+        const serie = () => wrapper.vm.localWorkout.workout_lines[0].sets[0]
+        expect(serie().weight).toBe(80)
+
+        const champ = wrapper.find('[dusk="weight-input-0-0"]')
+        champ.element.value = ''
+        await champ.trigger('input')
+
+        expect(serie().weight, 'une frappe incomplète a effacé la valeur').toBe(80)
+
+        // Vider pour de bon reste possible : c'est le blur qui en décide.
+        await champ.trigger('change')
+        expect(serie().weight).toBeNull()
+    })
+})
