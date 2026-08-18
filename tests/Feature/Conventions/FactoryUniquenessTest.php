@@ -99,3 +99,29 @@ it('n’emploie pas fake()->unique() dans les fabriques', function (): void {
 it('regarde bien un dossier de fabriques peuplé', function (): void {
     expect(fichiersDeFabrique())->not->toBeEmpty();
 });
+
+/**
+ * Une date de journal par appel, jamais deux fois la même.
+ *
+ * `daily_journals` porte une contrainte `UNIQUE (user_id, date)`. La fabrique
+ * tirait `faker->date()`, c'est-à-dire au hasard dans un vivier d'environ 20 000
+ * jours : trois journaux pour le même utilisateur suffisaient à faire échouer une
+ * exécution de temps en temps, dans un test sans rapport avec celui qu'on lisait.
+ *
+ * Le garde est statistique contre l'ancienne implémentation et déterministe pour
+ * la nouvelle : sur 300 tirages aléatoires dans 20 000 jours, la probabilité
+ * d'au moins une collision est d'environ 89 %. Une suite de dates distinctes,
+ * elle, passe toujours.
+ */
+it('donne une date distincte à chaque journal du même utilisateur', function (): void {
+    $user = \App\Models\User::factory()->create();
+
+    \App\Models\DailyJournal::factory()->count(300)->create(['user_id' => $user->id]);
+
+    $distinctes = \App\Models\DailyJournal::query()
+        ->where('user_id', $user->id)
+        ->distinct()
+        ->count('date');
+
+    expect($distinctes)->toBe(300);
+});
