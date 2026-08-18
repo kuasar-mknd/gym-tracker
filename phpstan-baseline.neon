@@ -229,30 +229,6 @@ parameters:
 			path: app/Http/Requests/ToggleHabitRequest.php
 
 		-
-			message: '#^Parameter \#1 \$array of function array_keys expects array, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Requests/UpdateNotificationPreferencesRequest.php
-
-		-
-			message: '#^Trying to invoke mixed but it''s not a callable\.$#'
-			identifier: callable.nonCallable
-			count: 1
-			path: app/Http/Requests/UpdateNotificationPreferencesRequest.php
-
-		-
-			message: '#^Parameter \#1 \$array of function array_keys expects array, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Requests/UpdateProfilePreferencesRequest.php
-
-		-
-			message: '#^Trying to invoke mixed but it''s not a callable\.$#'
-			identifier: callable.nonCallable
-			count: 1
-			path: app/Http/Requests/UpdateProfilePreferencesRequest.php
-
-		-
 			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Admin\|App\\Models\\User\|null given\.$#'
 			identifier: booleanNot.exprNotBoolean
 			count: 1

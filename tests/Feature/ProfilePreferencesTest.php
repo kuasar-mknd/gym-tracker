@@ -172,3 +172,41 @@ test('unauthenticated user cannot update preferences', function (): void {
         'preferences' => ['daily_reminder' => true],
     ])->assertRedirect(route('login'));
 });
+
+/*
+ * Les clés acceptées par la requête étaient contraintes par une fermeture
+ * maison dont le chemin d'échec n'était couvert par rien : ni test, ni
+ * traduction, ni interface ne lisait son message. Elle est remplacée par
+ * `Rule::array()`, mais la règle qu'elle portait, elle, mérite d'être tenue.
+ */
+test('rejette une clé de préférence que le domaine ne connaît pas', function (): void {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->patch(route('profile.preferences.update'), [
+            'preferences' => ['daily_reminder' => true, 'inconnue_au_bataillon' => true],
+            'push_preferences' => ['daily_reminder' => true],
+        ])
+        ->assertSessionHasErrors('preferences');
+
+    // La clé inventée ne doit avoir créé aucune ligne, pas même la valide qui
+    // l'accompagnait : la requête est refusée en bloc.
+    expect(NotificationPreference::query()->where('user_id', $user->id)->count())->toBe(0);
+});
+
+test('accepte les clés que le domaine connaît', function (): void {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->patch(route('profile.preferences.update'), [
+            'preferences' => ['daily_reminder' => true, 'personal_record' => false],
+            'push_preferences' => ['daily_reminder' => true, 'personal_record' => false],
+        ])
+        ->assertSessionHasNoErrors();
+
+    assertDatabaseHas(NotificationPreference::class, [
+        'user_id' => $user->id,
+        'type' => 'daily_reminder',
+        'is_enabled' => true,
+    ]);
+});

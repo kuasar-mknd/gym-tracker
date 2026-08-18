@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateNotificationPreferencesRequest extends FormRequest
 {
@@ -24,12 +25,16 @@ class UpdateNotificationPreferencesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'preferences' => [
-                'required',
-                'array',
-                'bail',
-                $this->getPreferenceTypesValidationRule(),
-            ],
+            /*
+             * `Rule::array()` remplace la fermeture maison qui etait ici.
+             *
+             * Elle appelait `array_keys()` sur une valeur non typee — sans
+             * danger, le `bail` l'empechait de s'executer sur autre chose qu'un
+             * tableau, mais c'etait deux entrees de baseline PHPStan pour une
+             * regle que le cadre sait exprimer. Son message d'echec sur mesure
+             * n'etait lu par personne : ni test, ni traduction, ni interface.
+             */
+            'preferences' => ['required', Rule::array($this->typesAutorises())],
             'preferences.*' => ['boolean'],
             'push_preferences' => ['required', 'array'],
             'push_preferences.*' => ['boolean'],
@@ -38,9 +43,14 @@ class UpdateNotificationPreferencesRequest extends FormRequest
         ];
     }
 
-    private function getPreferenceTypesValidationRule(): \Closure
+    /**
+     * Les types de preference qu'une requete a le droit de nommer.
+     *
+     * @return array<int, string>
+     */
+    private function typesAutorises(): array
     {
-        $allowedTypes = [
+        return [
             'daily_reminder',
             'workout_streak_reminder',
             'no_activity_reminder',
@@ -50,13 +60,5 @@ class UpdateNotificationPreferencesRequest extends FormRequest
             'personal_record',
             'training_reminder',
         ];
-
-        return function ($attribute, $value, $fail) use ($allowedTypes): void {
-            $keys = array_keys($value);
-            $diff = array_diff($keys, $allowedTypes);
-            if ($diff !== []) {
-                $fail('Invalid preference types: '.implode(', ', $diff));
-            }
-        };
     }
 }
