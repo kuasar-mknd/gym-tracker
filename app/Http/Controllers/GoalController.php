@@ -146,9 +146,22 @@ class GoalController extends Controller
         $goal = new Goal();
         $goal->fill($data);
         $goal->user_id = $this->user()->id;
-        $goal->save();
 
+        /*
+         * La progression est calculee AVANT l'enregistrement, et non apres.
+         *
+         * `updateGoalProgress()` ne persiste rien — c'est `syncGoals()` qui
+         * ecrit, par un upsert groupe. L'appel qui suivait le `save()` calculait
+         * donc `current_value` et `progress_pct` pour les jeter aussitot : un
+         * objectif « developpe 100 kg » cree par quelqu'un qui souleve deja 80 kg
+         * s'affichait a 0 %, jusqu'a ce qu'un enregistrement de seance declenche
+         * le job et remette les compteurs d'aplomb.
+         *
+         * Calculer d'abord evite en prime la seconde ecriture.
+         */
         $this->goalService->updateGoalProgress($goal);
+
+        $goal->save();
 
         return redirect()->route('goals.index')->with('success', 'Objectif créé avec succès.');
     }
@@ -169,8 +182,15 @@ class GoalController extends Controller
     {
         $this->authorize('update', $goal);
 
-        $goal->update($request->validated());
+        // Meme raison qu'a la creation : `updateGoalProgress()` ne persiste pas.
+        // Un `update()` suivi de l'appel enregistrait les champs soumis et jetait
+        // la progression recalculee — changer la cible d'un objectif laissait donc
+        // le pourcentage d'avant.
+        $goal->fill($request->validated());
+
         $this->goalService->updateGoalProgress($goal);
+
+        $goal->save();
 
         return redirect()->route('goals.index')->with('success', 'Objectif mis à jour.');
     }

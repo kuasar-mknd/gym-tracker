@@ -349,7 +349,10 @@ final class GoalService
             ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
             ->groupBy('workout_lines.exercise_id')
             ->pluck('max_weight', 'exercise_id')
-            ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
+            // Un exercice sans aucune serie pesee est ECARTE, pas ramene a zero.
+            // Voir la note de `preCalculateMaxVolumes` : c'est le meme piege.
+            ->filter(fn (mixed $val): bool => is_numeric($val))
+            ->map(fn (mixed $val): float => (float) $val)
             ->toArray();
 
         return $maxWeights;
@@ -379,7 +382,27 @@ final class GoalService
             ->selectRaw('exercise_id, MAX(total_volume) as max_volume')
             ->groupBy('exercise_id')
             ->pluck('max_volume', 'exercise_id')
-            ->map(fn (mixed $val): float => is_numeric($val) ? (float) $val : 0.0)
+            /*
+             * Ecarte plutot que ramene a zero, et ce n'est pas un detail.
+             *
+             * `sets.weight` est nullable. Un exercice dont toutes les series sont
+             * sans poids — des repetitions au poids du corps, ou un poids oublie —
+             * forme bien un groupe, mais son MAX vaut NULL. Le repli a 0.0 en
+             * faisait une entree du tableau, donc un `isset()` vrai en aval, donc
+             * un `current_value` ECRASE a zero.
+             *
+             * Le chemin individuel, lui, ne touchait a rien dans ce cas. Les deux
+             * repondaient donc differemment sur les memes donnees : mesure faite,
+             * `syncGoals` rendait 0 la ou `updateGoalProgress` gardait 50. Le
+             * premier tourne a chaque enregistrement de seance, via le job ; le
+             * second quand on modifie l'objectif depuis son ecran.
+             *
+             * En ecartant l'entree, `isset()` est faux et les deux chemins se
+             * rejoignent sur le comportement du second : la valeur ne bouge pas
+             * tant qu'aucun poids n'a ete souleve.
+             */
+            ->filter(fn (mixed $val): bool => is_numeric($val))
+            ->map(fn (mixed $val): float => (float) $val)
             ->toArray();
 
         return $maxVolumes;
