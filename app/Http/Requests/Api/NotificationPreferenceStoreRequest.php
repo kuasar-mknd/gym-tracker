@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,7 @@ class NotificationPreferenceStoreRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('notification_preferences')->where(fn ($query) => $query->where('user_id', $this->user()?->id)),
+                Rule::unique('notification_preferences')->where(fn (Builder $query) => $query->where('user_id', $this->user()?->id)),
             ],
             'value' => ['nullable', 'integer'],
             'is_enabled' => ['boolean'],

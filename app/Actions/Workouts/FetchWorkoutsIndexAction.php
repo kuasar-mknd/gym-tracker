@@ -8,6 +8,7 @@ use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StatsService;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -124,7 +125,7 @@ final class FetchWorkoutsIndexAction
 
             return [
                 'month' => $date->translatedFormat('M'),
-                'count' => $data && is_numeric($data->count) ? (int) $data->count : 0,
+                'count' => $data !== null && is_numeric($data->count) ? (int) $data->count : 0,
             ];
         });
     }
@@ -157,7 +158,7 @@ final class FetchWorkoutsIndexAction
 
             return [
                 'day' => $dayName,
-                'count' => $data && is_numeric($data->count) ? (int) $data->count : 0,
+                'count' => $data !== null && is_numeric($data->count) ? (int) $data->count : 0,
             ];
         })->values();
     }
@@ -167,7 +168,12 @@ final class FetchWorkoutsIndexAction
         User $user
     ): \Illuminate\Pagination\LengthAwarePaginator {
         return Workout::with([
-            'workoutLines' => function ($query): void {
+            'workoutLines' => function (Relation $query): void {
+                /*
+                 * `with()` declare `Closure(Relation<*, *, *>)` : la fermeture
+                 * doit accepter le type le plus large, un `HasMany` n'est pas
+                 * contravariant avec lui. Ici c'est un WorkoutLine de Workout.
+                 */
                 $query->with('exercise')->withCount('sets');
             },
         ])

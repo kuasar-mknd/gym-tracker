@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Models\BodyMeasurement;
 use App\Models\Set;
+use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
 use Illuminate\Database\Eloquent\Model;
@@ -97,7 +98,15 @@ final class AppServiceProvider extends ServiceProvider
         Set::saved(function (Set $set): void {
             $user = $set->workoutLine->workout->user;
 
-            if ($set->weight && $set->reps) {
+            /*
+             * Le test disait « renseigne » et signifiait « ni nul ni zero ».
+             * Les deux cas doivent bien etre ecartes — une serie a zero kilo ou
+             * zero repetition ne produit que des records nuls — mais il faut
+             * l'ecrire, d'autant que `PersonalRecordService::shouldSkipSync()`
+             * refait le meme controle a l'arrivee : cette garde-ci n'evite que
+             * la mise en file d'un travail sans objet.
+             */
+            if ($set->weight !== null && $set->weight > 0.0 && $set->reps !== null && $set->reps > 0) {
                 if (config('app.env') === 'testing' || config('database.connections.mysql.database') === 'gym_tracker_testing') {
                     \App\Jobs\SyncPersonalRecord::dispatchSync($set, $user);
                 } else {
@@ -133,8 +142,15 @@ final class AppServiceProvider extends ServiceProvider
              */
             $user = $line->workout?->user;
 
-            if ($user && $line->exercise_id) {
-                app(\App\Services\PersonalRecordService::class)->recompute($user, (int) $line->exercise_id);
+            /*
+             * Le `?->` ci-dessus n'est pas decoratif : pendant la suppression en
+             * cascade d'une seance, la ligne parente peut avoir disparu — c'est
+             * le defaut corrige en #1476. Le docblock du modele declare pourtant
+             * `workout` non nul, ce qui faisait de ce test une entree de
+             * baseline : c'est le docblock qui est optimiste, pas la garde.
+             */
+            if ($user instanceof User) {
+                app(\App\Services\PersonalRecordService::class)->recompute($user, $line->exercise_id);
             }
         });
     }

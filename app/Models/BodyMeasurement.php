@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 /**
  * @property int $id
  * @property int $user_id
- * @property float $weight
- * @property float|null $body_fat
+ * @property numeric-string $weight
+ * @property numeric-string|null $body_fat
  * @property \Illuminate\Support\Carbon $measured_at
  * @property string|null $notes
  * @property-read \App\Models\User $user

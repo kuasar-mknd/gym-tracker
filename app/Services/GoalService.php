@@ -126,7 +126,7 @@ final class GoalService
      */
     protected function updateWeightGoal(Goal $goal, array $metrics = []): void
     {
-        if (! $goal->exercise_id) {
+        if ($goal->exercise_id === null) {
             return;
         }
 
@@ -186,7 +186,7 @@ final class GoalService
      */
     protected function updateVolumeGoal(Goal $goal, array $metrics = []): void
     {
-        if (! $goal->exercise_id) {
+        if ($goal->exercise_id === null) {
             return;
         }
 
@@ -226,7 +226,7 @@ final class GoalService
      */
     protected function updateMeasurementGoal(Goal $goal, array $metrics = []): void
     {
-        if (! $goal->measurement_type) {
+        if ($goal->measurement_type === null || $goal->measurement_type === '') {
             return;
         }
 
@@ -275,13 +275,13 @@ final class GoalService
     {
         $isCompleted = $this->isGoalCriteriaMet($goal);
 
-        if ($isCompleted && ! $goal->completed_at) {
+        if ($isCompleted && $goal->completed_at === null) {
             $goal->completed_at = now();
 
             return;
         }
 
-        if (! $isCompleted && $goal->completed_at) {
+        if (! $isCompleted && $goal->completed_at !== null) {
             $goal->completed_at = null;
         }
     }

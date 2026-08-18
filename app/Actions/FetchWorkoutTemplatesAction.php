@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Models\User;
 use App\Models\WorkoutTemplate;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class FetchWorkoutTemplatesAction
 {
@@ -20,7 +21,12 @@ class FetchWorkoutTemplatesAction
         // ⚡ Bolt Optimization: Only load the line counts and the first few exercises for preview
         return WorkoutTemplate::withCount('workoutTemplateLines')
             ->with([
-                'workoutTemplateLines' => function ($query): void {
+                'workoutTemplateLines' => function (Relation $query): void {
+                    /*
+                     * `with()` declare `Closure(Relation<*, *, *>)` : la fermeture
+                     * doit accepter le type le plus large, un `HasMany` n'est pas
+                     * contravariant avec lui. Ici c'est un WorkoutTemplateLine de WorkoutTemplate.
+                     */
                     $query->select('id', 'workout_template_id', 'exercise_id')
                         ->orderBy('order')
                         ->limit(3)

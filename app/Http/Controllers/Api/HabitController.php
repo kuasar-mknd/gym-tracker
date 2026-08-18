@@ -11,6 +11,7 @@ use App\Http\Requests\Api\UpdateHabitRequest;
 use App\Http\Resources\HabitResource;
 use App\Models\Habit;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -112,7 +113,7 @@ class HabitController extends Controller
         $this->authorize('view', $habit);
 
         $habit->load([
-            'logs' => function ($query): void {
+            'logs' => function (Relation $query): void {
                 $query->latest('date')->limit(10);
             },
         ]);

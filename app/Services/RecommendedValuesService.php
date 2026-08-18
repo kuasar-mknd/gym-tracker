@@ -34,7 +34,7 @@ final class RecommendedValuesService
         $line->loadMissing('workout');
         $workout = $line->workout;
 
-        if (! $workout) {
+        if ($workout === null) {
             return $this->getDefaultValues();
         }
 
@@ -88,7 +88,7 @@ final class RecommendedValuesService
         $exerciseIds = $lines->pluck('exercise_id')->unique()->map(fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)->values()->all();
 
         $workout = $this->resolveWorkout($workoutId, $exerciseIds);
-        if (! $workout) {
+        if ($workout === null) {
             return [];
         }
 
@@ -162,7 +162,7 @@ final class RecommendedValuesService
      */
     private function calculateFromLine(?WorkoutLine $lastLine): array
     {
-        if (! $lastLine || $lastLine->sets->isEmpty()) {
+        if ($lastLine === null || $lastLine->sets->isEmpty()) {
             return $this->getDefaultValues();
         }
 

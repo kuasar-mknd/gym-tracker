@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -31,8 +32,8 @@ class StoreWorkoutTemplateRequest extends FormRequest
             'exercises.*.id' => [
                 'required',
                 'integer',
-                Rule::exists('exercises', 'id')->where(function ($query): void {
-                    $query->where(function ($q): void {
+                Rule::exists('exercises', 'id')->where(function (Builder $query): void {
+                    $query->where(function (Builder $q): void {
                         $q->where('user_id', $this->user()?->id)
                             ->orWhereNull('user_id');
                     });

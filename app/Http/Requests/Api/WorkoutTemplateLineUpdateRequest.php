@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,8 +29,8 @@ class WorkoutTemplateLineUpdateRequest extends FormRequest
             'exercise_id' => [
                 'sometimes',
                 'required',
-                Rule::exists('exercises', 'id')->where(function ($query): void {
-                    $query->where(function ($q): void {
+                Rule::exists('exercises', 'id')->where(function (Builder $query): void {
+                    $query->where(function (Builder $q): void {
                         $q->whereNull('user_id')
                             ->orWhere('user_id', $this->user()?->id);
                     });

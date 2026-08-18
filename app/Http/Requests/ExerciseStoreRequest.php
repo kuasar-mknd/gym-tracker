@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,7 @@ class ExerciseStoreRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('exercises')->where(fn ($query) => $query->where(function ($q): void {
+                Rule::unique('exercises')->where(fn (Builder $query) => $query->where(function (Builder $q): void {
                     $q->whereNull('user_id')
                         ->orWhere('user_id', $this->user()?->id);
                 })),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -31,7 +32,7 @@ class StoreSupplementLogRequest extends FormRequest
             'supplement_id' => [
                 'required',
                 'integer',
-                Rule::exists('supplements', 'id')->where(fn ($query) => $query->where('user_id', $user?->id)),
+                Rule::exists('supplements', 'id')->where(fn (Builder $query) => $query->where('user_id', $user?->id)),
             ],
             'quantity' => ['required', 'integer', 'min:1'],
             'consumed_at' => ['required', 'date'],

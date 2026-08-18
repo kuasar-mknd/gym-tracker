@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\TrainingReminder;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Illuminate\Database\Query\JoinClause;
 
 class TrainingReminderCommand extends Command
 {
@@ -47,7 +48,7 @@ class TrainingReminderCommand extends Command
                 'notification_preferences.value as pref_value',
                 'notification_preferences.is_push_enabled as pref_push',
             ])
-            ->join('notification_preferences', function ($join): void {
+            ->join('notification_preferences', function (JoinClause $join): void {
                 $join->on('users.id', '=', 'notification_preferences.user_id')
                     ->where('notification_preferences.type', '=', 'training_reminder')
                     ->where('notification_preferences.is_enabled', '=', true);

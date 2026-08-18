@@ -39,21 +39,27 @@ final class PersonalRecordService
 
         $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
 
-        $workout = $set->workoutLine->workout;
-
-        if (! $workout) {
-            return;
-        }
-
-        $user ??= $workout->user;
+        /*
+         * Trois gardes sont parties d'ici : `! $workout`, `! $user` et
+         * `! $exerciseId`. Aucune ne pouvait se declencher.
+         *
+         * `sets.workout_line_id`, `workout_lines.workout_id`,
+         * `workout_lines.exercise_id` et `workouts.user_id` sont toutes NOT NULL
+         * et porteuses d'une contrainte de cle etrangere : la chaine ne peut pas
+         * rendre null, et un `exercise_id` a 0 ne reference rien.
+         *
+         * Le `! $user` se refutait tout seul : `loadMissing()` etait appele sur
+         * `$user` a la ligne precedente. Si la valeur avait pu etre nulle, on
+         * aurait plante avant d'arriver au test cense l'empecher.
+         *
+         * Les gardes homologues de `refreshFor()` restent, elles : cette
+         * methode-la s'execute sur `deleted`, ou la ligne parente peut avoir
+         * disparu malgre la contrainte — c'est le defaut corrige en #1476.
+         */
+        $user ??= $set->workoutLine->workout->user;
         $user->loadMissing('notificationPreferences');
-        $exerciseId = $set->workoutLine->exercise_id;
 
-        if (! $user || ! $exerciseId) {
-            return;
-        }
-
-        $this->processUpdates($user, (int) $exerciseId, $set);
+        $this->processUpdates($user, $set->workoutLine->exercise_id, $set);
     }
 
     /**
@@ -73,7 +79,7 @@ final class PersonalRecordService
      */
     protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
     {
-        if ($pr && $value <= $pr->value) {
+        if ($pr !== null && $value <= $pr->value) {
             return;
         }
 
@@ -111,7 +117,15 @@ final class PersonalRecordService
      */
     private function shouldSkipSync(Set $set): bool
     {
-        return $set->is_warmup || ! $set->weight || ! $set->reps;
+        /*
+         * `! $set->weight` etait vrai pour null comme pour zero. Les deux cas
+         * doivent bien etre ignores — une serie a zero kilo ou zero repetition
+         * ne produit que des records nuls — mais le code disait « non renseigne »
+         * en pensant « nul ou zero ». Un poids negatif, lui, passait.
+         */
+        return $set->is_warmup
+            || $set->weight === null || $set->weight <= 0.0
+            || $set->reps === null || $set->reps <= 0;
     }
 
     /**
@@ -259,7 +273,7 @@ final class PersonalRecordService
         $exerciseId = $set->workoutLine?->exercise_id;
         $user ??= $set->workoutLine?->workout?->user;
 
-        if (! $user instanceof User || ! $exerciseId) {
+        if (! $user instanceof User || $exerciseId === null) {
             return;
         }
 
@@ -285,6 +299,6 @@ final class PersonalRecordService
 
         $this->update($user, $exerciseId, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
         $this->update($user, $exerciseId, 'max_1rm', $this->calculate1RM((float) $set->weight, (int) $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm'));
-        $this->update($user, $exerciseId, 'max_volume_set', (float) ($set->weight * $set->reps), null, $set, $existingPRs->get('max_volume_set'));
+        $this->update($user, $exerciseId, 'max_volume_set', (float) $set->weight * (int) $set->reps, null, $set, $existingPRs->get('max_volume_set'));
     }
 }
