@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -27,9 +28,9 @@ class SetStoreRequest extends FormRequest
         return [
             'workout_line_id' => [
                 'required',
-                Rule::exists('workout_lines', 'id')->where(function ($query): void {
+                Rule::exists('workout_lines', 'id')->where(function (Builder $query): void {
                     /** @var \Illuminate\Database\Query\Builder $query */
-                    $query->whereIn('workout_id', function ($q): void {
+                    $query->whereIn('workout_id', function (Builder $q): void {
                         /** @var \Illuminate\Database\Query\Builder $q */
                         $q->select('id')
                             ->from('workouts')

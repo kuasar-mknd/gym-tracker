@@ -1,10 +1,5 @@
 parameters:
 	ignoreErrors:
-
-
-
-
-
 		-
 			message: '#^Foreach overwrites \$line with its value variable\.$#'
 			identifier: foreach.valueOverwrite
@@ -22,36 +17,6 @@ parameters:
 			identifier: booleanNot.exprNotBoolean
 			count: 1
 			path: app/Actions/Exercises/FetchExerciseHistoryAction.php
-
-		-
-			message: '#^Cannot call method limit\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/FetchWorkoutTemplatesAction.php
-
-		-
-			message: '#^Cannot call method orderBy\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/FetchWorkoutTemplatesAction.php
-
-		-
-			message: '#^Cannot call method select\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/FetchWorkoutTemplatesAction.php
-
-		-
-			message: '#^Cannot call method with\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/FetchWorkoutTemplatesAction.php
-
-		-
-			message: '#^Cannot call method withCount\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/FetchWorkoutTemplatesAction.php
 
 		-
 			message: '#^Parameter \#1 \$input \(array\<string, string\>\) of method App\\Actions\\Fortify\\CreateNewUser\:\:create\(\) should be contravariant with parameter \$input \(array\) of method Laravel\\Fortify\\Contracts\\CreatesNewUsers\:\:create\(\)$#'
@@ -150,24 +115,6 @@ parameters:
 			path: app/Actions/Workouts/CreateWorkoutLineAction.php
 
 		-
-			message: '#^Cannot call method with\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/Workouts/FetchWorkoutsIndexAction.php
-
-		-
-			message: '#^Cannot call method withCount\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/Workouts/FetchWorkoutsIndexAction.php
-
-		-
-			message: '#^Only booleans are allowed in &&, stdClass\|null given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 2
-			path: app/Actions/Workouts/FetchWorkoutsIndexAction.php
-
-		-
 			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Model\:\:fill\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
 			identifier: argument.type
 			count: 1
@@ -184,7 +131,6 @@ parameters:
 			identifier: method.nonObject
 			count: 2
 			path: app/Console/Commands/TrainingReminderCommand.php
-
 
 		-
 			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'
@@ -319,244 +265,10 @@ parameters:
 			path: app/Http/Middleware/PulseNonceMiddleware.php
 
 		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/DailyJournalStoreRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/NotificationPreferenceStoreRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/NotificationPreferenceUpdateRequest.php
-
-		-
 			message: '#^Only booleans are allowed in &&, App\\Models\\User\|null given on the left side\.$#'
 			identifier: booleanAnd.leftNotBoolean
 			count: 1
 			path: app/Http/Requests/Api/StoreFastRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/StoreHabitLogRequest.php
-
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutLineStoreRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/Api/WorkoutLineStoreRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutLineStoreRequest.php
-
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutLineUpdateRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutLineUpdateRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutLineUpdateRequest.php
-
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutTemplateLineStoreRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/Api/WorkoutTemplateLineStoreRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutTemplateLineStoreRequest.php
-
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutTemplateLineUpdateRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutTemplateLineUpdateRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutTemplateLineUpdateRequest.php
-
-		-
-			message: '#^Cannot call method orWhereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutTemplateStoreRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/Api/WorkoutTemplateStoreRequest.php
-
-		-
-			message: '#^Cannot call method orWhereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/Api/WorkoutTemplateUpdateRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/Api/WorkoutTemplateUpdateRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/DailyJournalUpdateRequest.php
-
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/ExerciseStoreRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/ExerciseStoreRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/ExerciseStoreRequest.php
-
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/ExerciseUpdateRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/ExerciseUpdateRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/ExerciseUpdateRequest.php
-
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/GoalStoreRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/GoalStoreRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/GoalStoreRequest.php
-
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/GoalUpdateRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/GoalUpdateRequest.php
-
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/GoalUpdateRequest.php
-
-
-
-
-
-
-
-
-
-
-
-
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/StoreHabitLogRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/StoreSupplementLogRequest.php
-
-		-
-			message: '#^Cannot call method orWhereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/StoreWorkoutTemplateRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/StoreWorkoutTemplateRequest.php
 
 		-
 			message: '#^Only booleans are allowed in &&, App\\Models\\Habit\|null given on the left side\.$#'
@@ -587,12 +299,6 @@ parameters:
 			identifier: callable.nonCallable
 			count: 1
 			path: app/Http/Requests/UpdateProfilePreferencesRequest.php
-
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/UpdateSupplementLogRequest.php
 
 		-
 			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Admin\|App\\Models\\User\|null given\.$#'
@@ -667,79 +373,6 @@ parameters:
 			path: app/Rules/PublicPushEndpoint.php
 
 		-
-			message: '#^Only booleans are allowed in &&, Illuminate\\Support\\Carbon\|null given on the right side\.$#'
-			identifier: booleanAnd.rightNotBoolean
-			count: 1
-			path: app/Services/GoalService.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Services/GoalService.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, int\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 2
-			path: app/Services/GoalService.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, string\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Services/GoalService.php
-
-		-
-			message: '#^Only booleans are allowed in &&, App\\Models\\PersonalRecord\|null given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 1
-			path: app/Services/PersonalRecordService.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\User given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Services/PersonalRecordService.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Services/PersonalRecordService.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, float\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Services/PersonalRecordService.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, int given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 2
-			path: app/Services/PersonalRecordService.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, int\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Services/PersonalRecordService.php
-
-		-
-			message: '#^Only numeric types are allowed in \*, float\|null given on the left side\.$#'
-			identifier: mul.leftNonNumeric
-			count: 1
-			path: app/Services/PersonalRecordService.php
-
-		-
-			message: '#^Only numeric types are allowed in \*, int\|null given on the right side\.$#'
-			identifier: mul.rightNonNumeric
-			count: 1
-			path: app/Services/PersonalRecordService.php
-
-
-		-
 			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
 			identifier: booleanNot.exprNotBoolean
 			count: 1
@@ -758,50 +391,8 @@ parameters:
 			path: app/Services/RecommendedValuesService.php
 
 		-
-			message: '#^Cannot cast mixed to float\.$#'
-			identifier: cast.double
-			count: 2
-			path: app/Services/Stats/BodyStatsService.php
-
-		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
-			count: 1
-			path: app/Services/Stats/BodyStatsService.php
-
-		-
-			message: '#^Only booleans are allowed in &&, App\\Models\\BodyMeasurement\|null given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 1
-			path: app/Services/Stats/BodyStatsService.php
-
-		-
-			message: '#^Only booleans are allowed in &&, App\\Models\\BodyMeasurement\|null given on the right side\.$#'
-			identifier: booleanAnd.rightNotBoolean
-			count: 1
-			path: app/Services/Stats/BodyStatsService.php
-
-		-
-			message: '#^Cannot cast mixed to float\.$#'
-			identifier: cast.double
-			count: 2
-			path: app/Services/Stats/ExerciseStatsService.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 2
-			path: app/Services/Stats/ExerciseStatsService.php
-
-		-
-			message: '#^Method App\\Services\\Stats\\ExerciseStatsService\:\:getExercise1RMProgress\(\) should return array\<int, App\\DTOs\\Stats\\Exercise1RMProgressPoint\> but returns array\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/Stats/ExerciseStatsService.php
-
-		-
-			message: '#^Method App\\Services\\Stats\\ExerciseStatsService\:\:getMuscleDistribution\(\) should return array\<int, App\\DTOs\\Stats\\MuscleDistributionStat\> but returns array\.$#'
-			identifier: return.type
 			count: 1
 			path: app/Services/Stats/ExerciseStatsService.php
 
@@ -810,25 +401,6 @@ parameters:
 			identifier: cast.string
 			count: 4
 			path: app/Services/Stats/VolumeStatsService.php
-
-		-
-			message: '#^Method App\\Services\\Stats\\VolumeStatsService\:\:getMonthlyVolumeHistory\(\) should return array\<int, App\\DTOs\\Stats\\MonthlyVolumePoint\> but returns array\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/Stats/VolumeStatsService.php
-
-		-
-			message: '#^Only booleans are allowed in &&, stdClass\|null given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 1
-			path: app/Services/Stats/VolumeStatsService.php
-
-
-
-
-
-
-
 
 		-
 			message: '#^Cannot call method random\(\) on mixed\.$#'
@@ -1015,7 +587,6 @@ parameters:
 			identifier: argument.type
 			count: 3
 			path: tests/Browser/KeyboardNavigationTest.php
-
 
 		-
 			message: '#^Cannot access offset ''focusInside'' on mixed\.$#'
@@ -1725,7 +1296,6 @@ parameters:
 			count: 1
 			path: tests/Feature/Filament/WorkoutResourceTest.php
 
-
 		-
 			message: '#^Cannot access property \$id on mixed\.$#'
 			identifier: property.nonObject
@@ -2421,7 +1991,6 @@ parameters:
 			identifier: cast.double
 			count: 1
 			path: tests/Unit/Actions/Tools/CreateMacroCalculationActionTest.php
-
 
 		-
 			message: '#^Only booleans are allowed in a negated boolean, int\|false given\.$#'

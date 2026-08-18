@@ -113,7 +113,7 @@ final class VolumeStatsService
                     $trend[] = new WeeklyVolumeTrendPoint(
                         $date,
                         ucfirst($dateObj->translatedFormat('D')),
-                        $workoutData && is_numeric($workoutData->total_volume) ? (float) $workoutData->total_volume : 0.0,
+                        $workoutData !== null && is_numeric($workoutData->total_volume) ? (float) $workoutData->total_volume : 0.0,
                     );
                 }
 
@@ -279,7 +279,7 @@ final class VolumeStatsService
                             is_numeric($sum) ? (float) $sum : 0.0,
                         );
                     })
-                    ->toArray();
+                    ->all();
             }
         );
     }

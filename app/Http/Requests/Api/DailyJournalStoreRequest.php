@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Api;
 
 use App\Http\Requests\DailyJournalStoreRequest as BaseDailyJournalStoreRequest;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Validation\Rule;
 
 class DailyJournalStoreRequest extends BaseDailyJournalStoreRequest
@@ -22,7 +23,7 @@ class DailyJournalStoreRequest extends BaseDailyJournalStoreRequest
         $rules['date'] = [
             'required',
             'date',
-            Rule::unique('daily_journals')->where(fn ($query) => $query->where('user_id', $this->user()?->id)),
+            Rule::unique('daily_journals')->where(fn (Builder $query) => $query->where('user_id', $this->user()?->id)),
         ];
 
         return $rules;

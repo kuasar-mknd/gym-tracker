@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,7 +29,7 @@ class StoreHabitLogRequest extends FormRequest
             'habit_id' => [
                 'required',
                 'integer',
-                Rule::exists('habits', 'id')->where(function ($query): void {
+                Rule::exists('habits', 'id')->where(function (Builder $query): void {
                     $query->where('user_id', $this->user()?->getAuthIdentifier());
                 }),
             ],

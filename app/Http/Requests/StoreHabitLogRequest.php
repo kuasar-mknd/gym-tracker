@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,7 +29,7 @@ class StoreHabitLogRequest extends FormRequest
             'habit_id' => [
                 'required',
                 'integer',
-                Rule::exists('habits', 'id')->where(fn ($query) => $query->where('user_id', $this->user()?->id)),
+                Rule::exists('habits', 'id')->where(fn (Builder $query) => $query->where('user_id', $this->user()?->id)),
             ],
             'date' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],

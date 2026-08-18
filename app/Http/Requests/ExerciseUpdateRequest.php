@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -32,7 +33,7 @@ class ExerciseUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique('exercises')
                     ->ignore($this->exercise)
-                    ->where(fn ($query) => $query->where(function ($q): void {
+                    ->where(fn (Builder $query) => $query->where(function (Builder $q): void {
                         $q->whereNull('user_id')
                             ->orWhere('user_id', $this->user()?->id);
                     })),

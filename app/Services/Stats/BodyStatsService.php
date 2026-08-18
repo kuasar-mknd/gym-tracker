@@ -8,7 +8,6 @@ use App\DTOs\Stats\BodyFatHistoryPoint;
 use App\DTOs\Stats\LatestBodyMetrics;
 use App\DTOs\Stats\WeightHistoryPoint;
 use App\Models\User;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 
 final class BodyStatsService
@@ -31,11 +30,13 @@ final class BodyStatsService
                 $latest = $measurements->first();
                 $previous = $measurements->skip(1)->first();
 
-                $weightChange = $latest && $previous ? round($latest->weight - $previous->weight, 1) : 0;
+                $weightChange = $latest !== null && $previous !== null
+                    ? round((float) $latest->weight - (float) $previous->weight, 1)
+                    : 0.0;
 
                 return new LatestBodyMetrics(
                     $latest?->weight,
-                    (float) $weightChange,
+                    $weightChange,
                     $latest?->body_fat,
                 );
             }
@@ -56,11 +57,17 @@ final class BodyStatsService
             "stats.body_progress.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days): array {
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // This significantly reduces memory usage and execution time for large datasets.
+                /*
+                 * Le `toBase()` qui etait ici se reclamait d'une economie de
+                 * memoire « pour de gros volumes » — sans `select()`, donc en
+                 * ramenant toutes les colonnes, sur une requete deja bornee a
+                 * `$days` jours. Il ne faisait economiser que l'hydratation, et
+                 * il coutait trois entrees de baseline PHPStan : les valeurs
+                 * revenaient non typees, d'ou deux casts vers `float` et un vers
+                 * `string` pour reparser une date que le modele caste deja.
+                 */
                 $measurements = $user->bodyMeasurements()
-                    ->toBase()
+                    ->select(['weight', 'body_fat', 'measured_at'])
                     ->where('measured_at', '>=', now()->subDays($days))
                     ->orderBy('measured_at', 'asc')
                     ->get();
@@ -75,18 +82,22 @@ final class BodyStatsService
                      * emprunte. Cinquieme fois que ce motif est retire (#1459,
                      * #1474, #1493, #1494).
                      */
-                    $jour = CarbonImmutable::parse((string) $m->measured_at);
+                    $date = $m->measured_at->format('d/m');
+                    $fullDate = $m->measured_at->format('Y-m-d');
 
-                    $date = $jour->format('d/m');
-                    $fullDate = $jour->format('Y-m-d');
-
+                    /*
+                     * `weight` et `body_fat` sont castes `decimal:2`, ce qui rend
+                     * une chaine et non un flottant — le cast reste donc requis,
+                     * mais il porte desormais sur un `numeric-string` declare et
+                     * non sur du `mixed`.
+                     */
                     $weightHistory[] = new WeightHistoryPoint(
                         $date,
                         $fullDate,
                         (float) $m->weight,
                     );
 
-                    if (isset($m->body_fat)) {
+                    if ($m->body_fat !== null) {
                         $bodyFatHistory[] = new BodyFatHistoryPoint(
                             $date,
                             $fullDate,

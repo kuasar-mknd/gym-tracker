@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,7 @@ class DailyJournalUpdateRequest extends FormRequest
                 'sometimes',
                 'required',
                 'date',
-                Rule::unique('daily_journals')->where(fn ($query) => $query->where('user_id', $this->user()?->id))->ignore($this->route('daily_journal')),
+                Rule::unique('daily_journals')->where(fn (Builder $query) => $query->where('user_id', $this->user()?->id))->ignore($this->route('daily_journal')),
             ],
             'content' => ['nullable', 'string', 'max:5000'],
             'mood_score' => ['nullable', 'integer', 'min:1', 'max:5'],

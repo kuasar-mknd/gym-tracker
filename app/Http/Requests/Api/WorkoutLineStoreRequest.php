@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 
 class WorkoutLineStoreRequest extends FormRequest
@@ -26,14 +27,14 @@ class WorkoutLineStoreRequest extends FormRequest
         return [
             'workout_id' => [
                 'required',
-                \Illuminate\Validation\Rule::exists('workouts', 'id')->where(function ($query): void {
+                \Illuminate\Validation\Rule::exists('workouts', 'id')->where(function (Builder $query): void {
                     $query->where('user_id', $this->user()?->id);
                 }),
             ],
             'exercise_id' => [
                 'required',
-                \Illuminate\Validation\Rule::exists('exercises', 'id')->where(function ($query): void {
-                    $query->where(function ($q): void {
+                \Illuminate\Validation\Rule::exists('exercises', 'id')->where(function (Builder $query): void {
+                    $query->where(function (Builder $q): void {
                         $q->whereNull('user_id')
                             ->orWhere('user_id', $this->user()?->id);
                     });

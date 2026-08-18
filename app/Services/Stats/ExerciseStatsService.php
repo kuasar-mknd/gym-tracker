@@ -31,11 +31,21 @@ final class ExerciseStatsService
                 ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
                 ->groupBy('exercises.category')
                 ->get()
+                /*
+                 * Les deux replis sont atteignables, contrairement a ceux qui
+                 * viennent d'etre retires plus bas : `exercises.category` est
+                 * nullable, et `SUM()` rend NULL quand tout le groupe l'est —
+                 * `sets.weight` et `sets.reps` le sont aussi.
+                 *
+                 * Ils sont ecrits en garde plutot qu'en cast : un cast sur du
+                 * `mixed` ne dit pas ce qu'il accepte, et c'etait deux entrees
+                 * de baseline PHPStan. La garde dit la meme chose et se verifie.
+                 */
                 ->map(fn (\stdClass $row): MuscleDistributionStat => new MuscleDistributionStat(
-                    (string) ($row->category ?? 'Unknown'),
-                    (float) ($row->volume ?? 0.0),
+                    is_string($row->category) ? $row->category : 'Unknown',
+                    is_numeric($row->volume) ? (float) $row->volume : 0.0,
                 ))
-                ->toArray()
+                ->all()
         );
     }
 
@@ -89,10 +99,10 @@ final class ExerciseStatsService
                     return new Exercise1RMProgressPoint(
                         $jour->format('d/m'),
                         $jour->format('Y-m-d'),
-                        (float) $set->epley_1rm,
+                        is_numeric($set->epley_1rm) ? (float) $set->epley_1rm : 0.0,
                     );
                 })
-                ->toArray()
+                ->all()
         );
     }
 }
