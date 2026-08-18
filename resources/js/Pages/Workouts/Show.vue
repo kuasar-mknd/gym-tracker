@@ -16,6 +16,7 @@
  * @prop {Array} categories - Distinct list of exercise categories (e.g., Chest, Back, Legs) for filtering.
  * @prop {Array} types - Distinct list of exercise types (e.g., Barbell, Dumbbell, Machine) for filtering.
  */
+import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
@@ -392,11 +393,7 @@ const toggleSetCompletion = async (set, exerciseRestTime) => {
                 reportSyncFailure('La série n’a pas pu être validée. Réessaie.')
             })
 
-    const inOrder = (completionWriteChains.get(writeKey) ?? Promise.resolve()).catch(() => {}).then(send)
-
-    completionWriteChains.set(writeKey, inOrder)
-
-    return inOrder
+    return completionWrites.queue(writeKey, send)
 }
 
 const savingTemplate = ref(false)
@@ -997,9 +994,7 @@ const markQueuedFailuresOnMount = () => {
  * overwrote what the user had just typed. That is the value "revenant tout
  * seul" the report describes, and the request it belongs to had succeeded.
  */
-const writeSeq = {}
-const nextWrite = (key) => (writeSeq[key] = (writeSeq[key] ?? 0) + 1)
-const isLatestWrite = (key, seq) => writeSeq[key] === seq
+const { next: nextWrite, isLatest: isLatestWrite } = createWriteSequencer()
 
 /**
  * The write currently in flight for each set and field, so the next one can
@@ -1007,17 +1002,17 @@ const isLatestWrite = (key, seq) => writeSeq[key] === seq
  *
  * @type {Map<string, Promise>}
  */
-const fieldWriteChains = new Map()
+const fieldWrites = createWriteQueue()
 
 /**
- * The same, for completion. Kept apart from `fieldWriteChains` on purpose:
+ * The same, for completion. Kept apart from `fieldWrites` on purpose:
  * marking a set done and typing into it are independent, and queueing one
  * behind the other would make the tick wait on a debounce it has nothing to do
  * with. Only completion against completion needs ordering.
  *
  * @type {Map<string, Promise>}
  */
-const completionWriteChains = new Map()
+const completionWrites = createWriteQueue()
 
 /**
  * The value the server last confirmed for a field, which is the only value a
@@ -1167,9 +1162,7 @@ const updateSet = (set, field, rawValue) => {
      * Settled rather than resolved: a refused write must not wedge the field.
      */
     const execute = () => {
-        const inOrder = (fieldWriteChains.get(timerKey) ?? Promise.resolve()).catch(() => {}).then(send)
-
-        fieldWriteChains.set(timerKey, inOrder)
+        const inOrder = fieldWrites.queue(timerKey, send)
 
         return inOrder
     }
@@ -1197,7 +1190,7 @@ const removeSet = (setId) => {
 
         // Nothing may queue behind a row that no longer exists, and the entries
         // would otherwise outlive every set the page ever showed.
-        fieldWriteChains.delete(timerKey)
+        fieldWrites.forget(timerKey)
         confirmedValues.delete(timerKey)
     })
 
