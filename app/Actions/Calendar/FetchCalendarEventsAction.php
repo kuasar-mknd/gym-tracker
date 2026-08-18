@@ -7,6 +7,7 @@ namespace App\Actions\Calendar;
 use App\Models\DailyJournal;
 use App\Models\User;
 use App\Models\Workout;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 
 final class FetchCalendarEventsAction
@@ -80,13 +81,21 @@ final class FetchCalendarEventsAction
 
         return $workouts->map(function (object $workout) use ($previews): array {
             $startedAt = (string) $workout->started_at;
-            $timestamp = strtotime($startedAt);
+
+            /*
+             * `workouts.started_at` est NOT NULL : `strtotime()` ne pouvait pas
+             * rendre false, et le repli qui renvoyait la chaine brute a la place
+             * d'une date ISO n'etait jamais emprunte. Sixieme occurrence du meme
+             * motif (#1459, #1474, #1493, #1494, #1495) — un garde de convention
+             * ferme desormais la famille.
+             */
+            $debut = CarbonImmutable::parse($startedAt);
 
             return [
                 'id' => (int) $workout->id,
                 'name' => (string) ($workout->name ?? 'Séance'),
-                'date' => substr($startedAt, 0, 10),
-                'started_at' => $timestamp !== false ? date('c', $timestamp) : $startedAt,
+                'date' => $debut->format('Y-m-d'),
+                'started_at' => $debut->toIso8601String(),
                 'exercises_count' => (int) ($workout->exercises_count ?? 0),
                 'preview_exercises' => $previews[$workout->id] ?? [],
             ];

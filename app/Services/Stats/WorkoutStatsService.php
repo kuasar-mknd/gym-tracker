@@ -8,6 +8,7 @@ use App\DTOs\Stats\DistributionStat;
 use App\DTOs\Stats\DurationHistoryPoint;
 use App\Models\User;
 use App\Models\Workout;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 
 final class WorkoutStatsService
@@ -120,10 +121,7 @@ final class WorkoutStatsService
                     $timeBuckets[$timeLabel]++;
 
                     if (is_string($workout->ended_at)) {
-                        $durationLabel = $this->resolveDurationLabel($workout->started_at, $workout->ended_at);
-                        if ($durationLabel !== null) {
-                            $durationBuckets[$durationLabel]++;
-                        }
+                        $durationBuckets[$this->resolveDurationLabel($workout->started_at, $workout->ended_at)]++;
                     }
                 }
 
@@ -153,7 +151,7 @@ final class WorkoutStatsService
         };
     }
 
-    private function resolveDurationLabel(string $startedAt, string $endedAt): ?string
+    private function resolveDurationLabel(string $startedAt, string $endedAt): string
     {
         // Fast path: If the workout starts and ends on the same day, compute duration directly
         // bypassing strtotime overhead.
@@ -164,14 +162,21 @@ final class WorkoutStatsService
             $m2 = (int) substr($endedAt, 14, 2);
             $minutes = abs(($h2 * 60 + $m2) - ($h1 * 60 + $m1));
         } else {
-            // Fallback to strtotime for workouts spanning multiple days
-            $startedAtTimestamp = strtotime($startedAt);
-            $endedAtTimestamp = strtotime($endedAt);
-            if ($startedAtTimestamp !== false && $endedAtTimestamp !== false) {
-                $minutes = (int) floor(abs($endedAtTimestamp - $startedAtTimestamp) / 60);
-            } else {
-                return null;
-            }
+            /*
+             * Repli pour une seance a cheval sur plusieurs jours.
+             *
+             * `parse()` plutot que `strtotime()`, et donc plus de garde
+             * `=== false` : les deux colonnes sont des DATETIME valides, le faux
+             * n'arrivait jamais, et le `return null` qui l'accompagnait faisait
+             * disparaitre la seance du graphique sans rien dire.
+             *
+             * Le type de retour cesse d'etre nullable dans la foulee, et le garde
+             * de l'appelant avec : PHPStan a signale la chaine entiere des que la
+             * branche morte est partie. Une seule branche morte en soutenait
+             * trois.
+             */
+            $debut = CarbonImmutable::parse($startedAt);
+            $minutes = (int) $debut->diffInMinutes(CarbonImmutable::parse($endedAt), true);
         }
 
         return match (true) {
