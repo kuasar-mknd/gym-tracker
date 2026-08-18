@@ -215,16 +215,26 @@ final class PersonalRecordService
          * set affects — a set that beats the 1RM but not the max weight would
          * drag the max weight down with it.
          */
-        // Backing values, not enum instances: `type` is cast, so a strict
-        // comparison against the string keys below would never match and the
-        // rebuild would quietly select nothing.
-        /** @var list<string> $types */
-        $types = PersonalRecord::where('set_id', $set->id)
-            ->pluck('type')
-            ->map(fn (mixed $type): string => $type instanceof \BackedEnum ? (string) $type->value : (is_string($type) ? $type : ''))
-            ->filter()
-            ->values()
-            ->all();
+        /*
+         * Les valeurs de l'enumeration, pas ses instances : `type` est cast, donc
+         * une comparaison stricte contre les cles textuelles plus bas ne
+         * correspondrait jamais et la reconstruction ne selectionnerait
+         * silencieusement rien.
+         *
+         * Le detour defensif qui etait ici — `instanceof BackedEnum`, sinon
+         * `is_string`, sinon chaine vide — supposait que `pluck()` puisse rendre
+         * autre chose qu'une instance. Mesure faite : il applique le cast et rend
+         * toujours un `PersonalRecordType`. La moitie de l'aiguillage etait donc
+         * morte, avec ses quatre mutants, et le `filter()` qui ecartait la chaine
+         * vide n'avait rien a ecarter.
+         */
+        $types = array_values(
+            PersonalRecord::query()
+                ->where('set_id', $set->id)
+                ->get(['type'])
+                ->map(fn (PersonalRecord $record): string => $record->type->value)
+                ->all()
+        );
 
         if ($types === []) {
             return;
