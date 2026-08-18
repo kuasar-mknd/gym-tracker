@@ -282,7 +282,21 @@ class WorkoutSessionE2ETest extends DuskTestCase
                     ->where('weight', 80)
                     ->where('reps', 5)
                     ->exists(),
-                message: 'la série validée n\'a pas atteint la base avec son poids et ses répétitions'
+                message: 'la série validée n\'a pas atteint la base avec son poids et ses répétitions',
+                etatAuMomentDeLEchec: fn (): string => Set::query()
+                    ->whereHas('workoutLine', fn ($ligne) => $ligne
+                        ->where('workout_id', $workout->id)
+                        ->where('exercise_id', $strengthEx->id))
+                    ->get(['id', 'weight', 'reps', 'is_completed'])
+                    ->map(fn (Set $serie): string => sprintf(
+                        'série %d : poids=%s reps=%s validée=%s',
+                        $serie->id,
+                        $serie->weight ?? 'null',
+                        $serie->reps ?? 'null',
+                        $serie->is_completed ? 'oui' : 'non',
+                    ))
+                    ->whenEmpty(fn () => collect(['aucune série pour cet exercice']))
+                    ->implode(' | '),
             );
 
             $browser->waitFor('@pr-trophy-0-0', 15);
