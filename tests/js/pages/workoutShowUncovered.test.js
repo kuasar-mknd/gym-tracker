@@ -1607,3 +1607,37 @@ describe('validating and unvalidating a set in quick succession', () => {
         expect(set.is_completed).toBe(false)
     })
 })
+
+/**
+ * Reproduction : les deux valeurs tapees pendant la creation doivent partir.
+ *
+ * Le test voisin n'en tape qu'une. La seance reelle en tape deux — le poids puis
+ * les repetitions — et c'est ce cas que la CI voit echouer (#1489).
+ *
+ * Les valeurs sont choisies loin de tout pre-remplissage : une valeur egale a
+ * celle deja partie dans la charge de creation ne produit aucun ecart, donc
+ * aucune requete, et le test ne separerait rien.
+ */
+describe('Workouts/Show — deux valeurs tapées pendant la création', () => {
+    it('envoie le poids ET les répétitions saisis avant la réponse', async () => {
+        const setCreated = deferred()
+        post.mockReturnValue(setCreated.promise)
+
+        const wrapper = await mountPage()
+
+        await click(wrapper, 'add-set-0')
+
+        const tempSet = lines(wrapper)[0].sets[1]
+
+        wrapper.vm.updateSet(tempSet, 'weight', 123)
+        wrapper.vm.updateSet(tempSet, 'reps', 7)
+
+        setCreated.resolve({ data: { data: { id: 77, weight: 60, reps: 5 } } })
+        await flushPromises()
+        await wrapper.vm.$nextTick()
+
+        const corps = patch.mock.calls.map((appel) => appel[1])
+
+        expect(Object.assign({}, ...corps)).toEqual({ weight: 123, reps: 7 })
+    })
+})
