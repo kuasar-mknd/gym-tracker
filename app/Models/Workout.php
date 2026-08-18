@@ -25,6 +25,21 @@ class Workout extends Model
     /** @use HasFactory<\Database\Factories\WorkoutFactory> */
     use HasFactory, LogsActivity;
 
+    /**
+     * Les exercices dont les records devront etre recalcules apres la cascade.
+     *
+     * Releves pendant `deleting`, consommes pendant `deleted` : entre les deux,
+     * la base a efface les lignes et les series, et c'est seulement a ce
+     * moment-la qu'un recalcul rend le bon resultat.
+     *
+     * Une propriete d'instance, et non un tableau capture par une fermeture de
+     * service provider : sous Octane, l'application est amorcee une fois pour
+     * de nombreuses requetes, et un tel tableau fuirait de l'une a l'autre.
+     *
+     * @var list<int>
+     */
+    private array $exerciseIdsToRecompute = [];
+
     #[\Override]
     protected $fillable = [
         'name',
@@ -138,6 +153,57 @@ class Workout extends Model
 
             if ($volume !== 0.0) {
                 $workout->user?->decrement('total_volume', $volume);
+            }
+
+            /*
+             * Meme cascade, meme angle mort — et cette fois ce sont les records
+             * personnels qui restaient debout.
+             *
+             * `recompute()` est branche sur `Set::deleted` et
+             * `WorkoutLine::deleted`, mais la suppression d'une seance efface
+             * lignes et series EN BASE, sans qu'aucun de ces evenements ne parte.
+             * Or `personal_records.set_id` et `.workout_id` sont en
+             * `ON DELETE SET NULL` : la ligne de record survit, simplement
+             * detachee.
+             *
+             * Consequence mesuree : 500 kg saisis par erreur, la seance
+             * supprimee pour corriger, et le record reste a 500 kg. Il ne se
+             * repare jamais tout seul — la serie suivante a 100 kg voit
+             * 100 <= 500 et sort, et rien ne pointe plus vers elle. Le chiffre
+             * fantome remonte aussi dans les succes, dont le seuil de poids lit
+             * un `max('value')` sur ces memes lignes.
+             */
+            $exerciseIds = [];
+
+            foreach ($workout->workoutLines()->whereNotNull('exercise_id')->pluck('exercise_id') as $exerciseId) {
+                // Le pilote peut rendre l'identifiant en entier ou en chaine
+                // selon la configuration PDO ; les deux sont acceptes plutot que
+                // de parier sur l'un et de sauter silencieusement l'autre.
+                if (! is_int($exerciseId) && ! is_string($exerciseId)) {
+                    continue;
+                }
+
+                $exerciseId = (int) $exerciseId;
+
+                if (! in_array($exerciseId, $exerciseIds, true)) {
+                    $exerciseIds[] = $exerciseId;
+                }
+            }
+
+            $workout->exerciseIdsToRecompute = $exerciseIds;
+        });
+
+        static::deleted(function (self $workout): void {
+            $user = $workout->user;
+
+            if (! $user instanceof User) {
+                return;
+            }
+
+            $records = app(\App\Services\PersonalRecordService::class);
+
+            foreach ($workout->exerciseIdsToRecompute as $exerciseId) {
+                $records->recompute($user, $exerciseId);
             }
         });
     }
