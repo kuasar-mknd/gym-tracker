@@ -210,11 +210,6 @@ parameters:
 			count: 2
 			path: app/Console/Commands/TrainingReminderCommand.php
 
-		-
-			message: '#^Only booleans are allowed in a negated boolean, int\|false\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Console/Commands/TrainingReminderCommand.php
 
 		-
 			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'

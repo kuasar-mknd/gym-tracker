@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\NotificationPreference;
 use App\Models\User;
 use App\Notifications\TrainingReminder;
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 
 class TrainingReminderCommand extends Command
@@ -72,10 +73,15 @@ class TrainingReminderCommand extends Command
                     $days = $preference->value ?? 3;
                     $threshold = $now - ($days * 86400);
 
+                    // Le garde de nullite reste vivant, lui : un compte sans
+                    // aucune seance n'a pas de date. C'est `strtotime()` qui part,
+                    // avec le faux qu'il ne pouvait pas rendre sur une date valide.
                     $lastWorkoutStartedAtStr = $user->getAttribute('last_workout_started_at');
-                    $lastWorkoutTimestamp = is_string($lastWorkoutStartedAtStr) ? strtotime($lastWorkoutStartedAtStr) : null;
+                    $derniereSeance = is_string($lastWorkoutStartedAtStr)
+                        ? CarbonImmutable::parse($lastWorkoutStartedAtStr)
+                        : null;
 
-                    if (! $lastWorkoutTimestamp || $lastWorkoutTimestamp < $threshold) {
+                    if ($derniereSeance === null || $derniereSeance->getTimestamp() < $threshold) {
                         $user->notify(new TrainingReminder());
                         $count++;
                     }
