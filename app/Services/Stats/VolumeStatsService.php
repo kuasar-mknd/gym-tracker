@@ -11,6 +11,7 @@ use App\DTOs\Stats\VolumeTrendPoint;
 use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\User;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -48,15 +49,19 @@ final class VolumeStatsService
 
                 $trend = [];
                 foreach ($workouts as $row) {
-                    $timestamp = strtotime((string) $row->started_at);
-
-                    if ($timestamp === false) {
-                        continue;
-                    }
+                    /*
+                     * `parse()` plutot que `strtotime()`, et donc plus de garde.
+                     *
+                     * `workouts.started_at` est NOT NULL : `strtotime()` ne
+                     * pouvait pas rendre false, et le `continue` qui suivait
+                     * n'etait jamais emprunte — d'ou son mutant survivant. Le
+                     * meme nettoyage qu'en #1474 sur WorkoutStatsService.
+                     */
+                    $debut = CarbonImmutable::parse((string) $row->started_at);
 
                     $trend[] = new VolumeTrendPoint(
-                        date('d/m', $timestamp),
-                        date('Y-m-d', $timestamp),
+                        $debut->format('d/m'),
+                        $debut->format('Y-m-d'),
                         // Le meme repli que WorkoutStatsService:45. Sans lui,
                         // une seance sans nom sortait sous une etiquette VIDE
                         // ici, et sous « Séance » la — memes donnees, deux
@@ -145,14 +150,18 @@ final class VolumeStatsService
 
                 $history = [];
                 foreach ($workouts as $row) {
-                    $timestamp = strtotime((string) $row->started_at);
-
-                    if ($timestamp === false) {
-                        continue;
-                    }
+                    /*
+                     * `parse()` plutot que `strtotime()`, et donc plus de garde.
+                     *
+                     * `workouts.started_at` est NOT NULL : `strtotime()` ne
+                     * pouvait pas rendre false, et le `continue` qui suivait
+                     * n'etait jamais emprunte — d'ou son mutant survivant. Le
+                     * meme nettoyage qu'en #1474 sur WorkoutStatsService.
+                     */
+                    $debut = CarbonImmutable::parse((string) $row->started_at);
 
                     $history[] = new VolumeHistoryPoint(
-                        date('d/m', $timestamp),
+                        $debut->format('d/m'),
                         is_numeric($row->volume) ? (float) $row->volume : 0.0,
                         // Le meme repli que WorkoutStatsService:45. Sans lui,
                         // une seance sans nom sortait sous une etiquette VIDE
@@ -255,6 +264,16 @@ final class VolumeStatsService
                         $monthKey = $date->format('Y-m');
                         $sum = $results->get($monthKey) ?? 0.0;
 
+                        /*
+                         * Le second repli ne peut pas s'executer : le `??`
+                         * ci-dessus garantit deja une valeur numerique. Il reste
+                         * parce que `pluck()` rend du non type et que PHPStan
+                         * refuse — a raison — un cast pose pour le faire taire.
+                         * Ses deux mutants sont donc equivalents, pas non
+                         * couverts.
+                         *
+                         * @pest-mutate-ignore
+                         */
                         return new MonthlyVolumePoint(
                             $date->translatedFormat('M'),
                             is_numeric($sum) ? (float) $sum : 0.0,
