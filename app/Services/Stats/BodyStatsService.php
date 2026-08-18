@@ -8,6 +8,7 @@ use App\DTOs\Stats\BodyFatHistoryPoint;
 use App\DTOs\Stats\LatestBodyMetrics;
 use App\DTOs\Stats\WeightHistoryPoint;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 
 final class BodyStatsService
@@ -68,14 +69,16 @@ final class BodyStatsService
                 $bodyFatHistory = [];
 
                 foreach ($measurements as $m) {
-                    $timestamp = strtotime((string) $m->measured_at);
+                    /*
+                     * `body_measurements.measured_at` est NOT NULL : `strtotime()`
+                     * ne pouvait pas rendre false et le `continue` n'etait jamais
+                     * emprunte. Cinquieme fois que ce motif est retire (#1459,
+                     * #1474, #1493, #1494).
+                     */
+                    $jour = CarbonImmutable::parse((string) $m->measured_at);
 
-                    if ($timestamp === false) {
-                        continue;
-                    }
-
-                    $date = date('d/m', $timestamp);
-                    $fullDate = date('Y-m-d', $timestamp);
+                    $date = $jour->format('d/m');
+                    $fullDate = $jour->format('Y-m-d');
 
                     $weightHistory[] = new WeightHistoryPoint(
                         $date,
