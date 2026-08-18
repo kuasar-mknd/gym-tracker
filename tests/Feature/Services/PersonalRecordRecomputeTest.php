@@ -161,3 +161,29 @@ it('rattache le record reconstruit à la série qui le détient', function (): v
         ->and($record?->set_id)->toBe($legere->id)
         ->and($record?->workout_id)->toBe($line->workout_id);
 });
+
+/**
+ * Corriger une série ne recalcule que les records qu'elle détenait.
+ *
+ * `refreshRecordsHeldBy` relève les types portés par la série puis ne reconstruit
+ * que ceux-là. Ce relevé passait par un aiguillage défensif — instance
+ * d'énumération, sinon chaîne, sinon chaîne vide — dont la moitié était morte :
+ * `pluck()` applique le cast et rend toujours l'énumération. Mesuré avant de
+ * supprimer.
+ *
+ * Si le relevé rendait une liste vide, la méthode sortirait sans rien
+ * reconstruire et une valeur corrigée resterait gonflée pour toujours — c'est
+ * exactement ce que ce chemin existe pour empêcher.
+ */
+it('rebâtit le record quand la série qui le détenait est corrigée', function (): void {
+    [$user, , $line] = contexteDeRecords();
+
+    $serie = serie($line, 200, 3);
+
+    expect((float) recordDeType($user, 'max_weight')?->value)->toBe(200.0);
+
+    // La correction d'une faute de frappe : 200 devient 100.
+    $serie->update(['weight' => 100]);
+
+    expect((float) recordDeType($user, 'max_weight')?->value)->toBe(100.0);
+});

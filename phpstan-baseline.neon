@@ -828,11 +828,6 @@ parameters:
 			count: 1
 			path: app/Services/PersonalRecordService.php
 
-		-
-			message: '#^PHPDoc tag @var with type list\<string\> is not subtype of type array\<int, non\-falsy\-string\>\.$#'
-			identifier: varTag.type
-			count: 1
-			path: app/Services/PersonalRecordService.php
 
 		-
 			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
