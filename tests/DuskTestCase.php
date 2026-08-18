@@ -246,7 +246,7 @@ abstract class DuskTestCase extends BaseTestCase
          * se corrigent pas au meme endroit, et une capture d'ecran ne tranche
          * pas entre les deux.
          */
-        $etat = $etatAuMomentDeLEchec === null ? '' : "\nEtat en base : ".(string) $etatAuMomentDeLEchec();
+        $etat = $etatAuMomentDeLEchec === null ? '' : "\nEtat en base : ".$etatAuMomentDeLEchec();
 
         $this->fail(sprintf('Waited %d seconds: %s%s', $seconds, $message, $etat));
     }

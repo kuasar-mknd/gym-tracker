@@ -295,7 +295,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                         $serie->reps ?? 'null',
                         $serie->is_completed ? 'oui' : 'non',
                     ))
-                    ->whenEmpty(fn () => collect(['aucune série pour cet exercice']))
+                    ->whenEmpty(fn (): \Illuminate\Support\Collection => collect(['aucune série pour cet exercice']))
                     ->implode(' | '),
             );
 
