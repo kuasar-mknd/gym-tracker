@@ -8,6 +8,7 @@ use App\DTOs\Stats\Exercise1RMProgressPoint;
 use App\DTOs\Stats\MuscleDistributionStat;
 use App\Models\Set;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 
 final class ExerciseStatsService
@@ -43,8 +44,18 @@ final class ExerciseStatsService
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
-        $version = Cache::get("stats.1rm_version.{$user->id}", '1');
-        $version = is_scalar($version) ? (string) $version : '1';
+        /*
+         * La version n'est ecrite qu'a un seul endroit, `StatsCacheManager:53`,
+         * sous la forme `(string) time()`. Le repli `is_scalar()` qui etait ici
+         * ne pouvait donc pas se declencher — deux mutants y survivaient.
+         *
+         * Ce qui EST atteignable, c'est l'absence de cle : un compte dont les
+         * statistiques n'ont jamais ete invalidees n'a pas de version, et le
+         * repli textuel sert alors vraiment. Ecrit ainsi, la branche est vivante
+         * et un test peut la tenir.
+         */
+        $version = Cache::get("stats.1rm_version.{$user->id}");
+        $version = is_string($version) ? $version : '1';
 
         return Cache::remember(
             "stats.1rm.{$user->id}.{$exerciseId}.{$days}.v{$version}",
@@ -61,15 +72,23 @@ final class ExerciseStatsService
                 ->orderBy('workouts.started_at')
                 ->get()
                 ->map(function (\stdClass $set): Exercise1RMProgressPoint {
-                    // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                    // Replace Carbon::parse() with native strtotime() and date() to eliminate O(N) object
-                    // instantiation overhead in this analytical loop. For large datasets, this
-                    // reduces execution time by 80-90% and significantly lowers memory pressure.
-                    $timestamp = strtotime((string) $set->started_at);
+                    /*
+                     * `workouts.started_at` est NOT NULL : `strtotime()` ne
+                     * pouvait pas rendre false, et les deux replis sur « ?? »
+                     * n'etaient jamais atteints — six mutants y survivaient.
+                     *
+                     * Ils meritaient d'autant moins de rester qu'ils produisaient
+                     * une etiquette « ?? » sur la courbe plutot que d'echouer :
+                     * un point de graphique nomme « ?? » n'aide personne, et
+                     * n'arrivait de toute facon jamais.
+                     *
+                     * Quatrieme fois que ce motif est retire (#1459, #1474, #1493).
+                     */
+                    $jour = CarbonImmutable::parse((string) $set->started_at);
 
                     return new Exercise1RMProgressPoint(
-                        $timestamp !== false ? date('d/m', $timestamp) : '??',
-                        $timestamp !== false ? date('Y-m-d', $timestamp) : '??',
+                        $jour->format('d/m'),
+                        $jour->format('Y-m-d'),
                         (float) $set->epley_1rm,
                     );
                 })
