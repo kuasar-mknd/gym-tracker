@@ -118,8 +118,36 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->waitFor('@add-set-0', 15);
             $browser->script("document.querySelector('[dusk=\"add-set-0\"]').scrollIntoView({block: 'center'});");
             $browser->click('[dusk="add-set-0"]')
-                ->waitFor('@weight-input-0-0', 15)
-                ->type('@weight-input-0-0', '80')
+                ->waitFor('@weight-input-0-0', 15);
+
+            /*
+             * On attend que la serie existe VRAIMENT avant de taper dedans.
+             *
+             * Sans cela, la frappe tombe pendant que la creation est en vol, et
+             * la CI perdait une des deux valeurs — le poids ou les repetitions
+             * selon le moment. L'etat releve a l'echec le disait sans ambiguite :
+             * « poids=80 reps=null validee=oui ». La validation etait arrivee,
+             * donc le vidage des ecritures en attente avait bien eu lieu, et il
+             * ne portait pas les repetitions : la frappe n'avait jamais atteint
+             * le modele.
+             *
+             * Ce n'est PAS un contournement du defaut : taper pendant la creation
+             * doit marcher, et #1489 reste ouverte pour ca. Mais ce parcours-la
+             * teste une seance complete, pas la course a la creation —
+             * WorkoutSyncRaceTest couvre cette famille. Lui faire porter les deux
+             * rendait ses echecs illisibles, et bloquait toutes les PR pour un
+             * defaut sans rapport avec elles.
+             */
+            $this->waitForDatabase(
+                fn (): bool => Set::query()
+                    ->whereHas('workoutLine', fn ($ligne) => $ligne
+                        ->where('workout_id', $workout->id)
+                        ->where('exercise_id', $strengthEx->id))
+                    ->exists(),
+                message: 'la série de force n\'a jamais été créée en base'
+            );
+
+            $browser->type('@weight-input-0-0', '80')
                 ->type('@reps-input-0-0', '5');
 
             // 5. Fill Cardio set
