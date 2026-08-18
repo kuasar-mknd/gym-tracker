@@ -219,8 +219,13 @@ abstract class DuskTestCase extends BaseTestCase
      * pays for it. Polling the outcome the test already asserts turns the guess
      * into a condition, and returns as soon as it is met.
      */
-    protected function waitForDatabase(callable $condition, int $seconds = 15, string $message = 'the write never reached the database'): void
-    {
+    protected function waitForDatabase(
+        callable $condition,
+        int $seconds = 15,
+        string $message = 'the write never reached the database',
+        ?callable $etatAuMomentDeLEchec = null,
+    ): void {
+        /** @var (callable(): string)|null $etatAuMomentDeLEchec */
         $deadline = microtime(true) + $seconds;
 
         do {
@@ -231,7 +236,19 @@ abstract class DuskTestCase extends BaseTestCase
             usleep(100_000);
         } while (microtime(true) < $deadline);
 
-        $this->fail(sprintf('Waited %d seconds: %s', $seconds, $message));
+        /*
+         * L'etat reel, releve au moment de l'echec.
+         *
+         * Une attente qui echoue dit seulement que la condition n'a jamais ete
+         * vraie — pas ce que la base contenait a la place. Sur un defaut qui ne
+         * se reproduit qu'en CI (#1489), cette difference est tout : « la valeur
+         * n'est jamais arrivee » et « elle est arrivee puis a ete ecrasee » ne
+         * se corrigent pas au meme endroit, et une capture d'ecran ne tranche
+         * pas entre les deux.
+         */
+        $etat = $etatAuMomentDeLEchec === null ? '' : "\nEtat en base : ".$etatAuMomentDeLEchec();
+
+        $this->fail(sprintf('Waited %d seconds: %s%s', $seconds, $message, $etat));
     }
 
     /**

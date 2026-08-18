@@ -253,14 +253,50 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 'des records existent déjà pour cet utilisateur : les attendre ne garderait rien'
             );
 
+            /*
+             * Les valeurs font partie de l'attente, et pas seulement la coche.
+             *
+             * `toggleSetCompletion` vide les ecritures en attente AVANT d'envoyer
+             * la validation : a ce point, le poids et les repetitions saisis a
+             * l'etape 4 doivent donc etre en base. Les exiger ici sert de
+             * diagnostic — sans eux, le trophee ne peut pas apparaitre, puisque
+             * `shouldSkipSync()` ecarte toute serie sans poids OU sans
+             * repetitions, et l'echec se lisait alors comme un probleme
+             * d'affichage.
+             *
+             * Les captures d'echec de la CI l'ont montre : sur un viewport le
+             * poids etait la et les repetitions vides, sur l'autre l'inverse.
+             * Une des deux valeurs se perdait. Le trophee manquant n'etait que le
+             * symptome — voir l'issue ouverte a ce sujet.
+             *
+             * Ne pas remonter cette attente a l'etape 4 : les valeurs y sont
+             * encore des brouillons cote client, et rien ne promet qu'elles
+             * soient ecrites avant la validation.
+             */
             $this->waitForDatabase(
                 fn (): bool => Set::query()
                     ->whereHas('workoutLine', fn ($ligne) => $ligne
                         ->where('workout_id', $workout->id)
                         ->where('exercise_id', $strengthEx->id))
                     ->where('is_completed', true)
+                    ->where('weight', 80)
+                    ->where('reps', 5)
                     ->exists(),
-                message: 'la validation de la série n\'a jamais atteint la base'
+                message: 'la série validée n\'a pas atteint la base avec son poids et ses répétitions',
+                etatAuMomentDeLEchec: fn (): string => Set::query()
+                    ->whereHas('workoutLine', fn ($ligne) => $ligne
+                        ->where('workout_id', $workout->id)
+                        ->where('exercise_id', $strengthEx->id))
+                    ->get(['id', 'weight', 'reps', 'is_completed'])
+                    ->map(fn (Set $serie): string => sprintf(
+                        'série %d : poids=%s reps=%s validée=%s',
+                        $serie->id,
+                        $serie->weight ?? 'null',
+                        $serie->reps ?? 'null',
+                        $serie->is_completed ? 'oui' : 'non',
+                    ))
+                    ->whenEmpty(fn (): \Illuminate\Support\Collection => collect(['aucune série pour cet exercice']))
+                    ->implode(' | '),
             );
 
             $browser->waitFor('@pr-trophy-0-0', 15);
