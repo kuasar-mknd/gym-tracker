@@ -20,33 +20,43 @@ final class WorkoutStatsService
         return Cache::remember(
             "stats.duration_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
+            /**
+             * Sans `toBase()`, contrairement a la methode voisine.
+             *
+             * Le `toBase()` qui etait ici evitait d'hydrater des modeles « pour
+             * de gros volumes » — sauf que la requete est bornee par `take(20)`.
+             * Il ne faisait donc economiser l'hydratation d'au plus vingt lignes,
+             * et il coutait cher : les valeurs revenaient non typees, ce qui
+             * imposait trois casts vers `string` (trois entrees de baseline
+             * PHPStan) et un decoupage de chaines a la main.
+             *
+             * Eloquent caste `started_at` et `ended_at` en Carbon, et `name` en
+             * `?string`. Il ne reste ni cast, ni `strtotime()`, ni le garde
+             * `=== false` qui l'accompagnait — lequel ne pouvait pas s'executer,
+             * les deux colonnes etant garanties non nulles ici, et faisait donc
+             * survivre trois mutants.
+             *
+             * `all()` plutot que `toArray()` a la fin : le second est declare
+             * `array<TKey, mixed>` et perd le type des elements, ce qui faisait
+             * que la methode ne tenait plus sa propre signature — une entree de
+             * baseline PHPStan de plus. Le resultat est le meme, les DTO n'etant
+             * pas `Arrayable`, mais celui-ci se laisse verifier.
+             *
+             * @return array<int, DurationHistoryPoint>
+             */
             fn (): array => Workout::query()
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // This significantly reduces memory usage and execution time for large datasets.
-                ->toBase()
                 ->select(['name', 'started_at', 'ended_at'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
                 ->take($limit)
                 ->get()
-                ->map(function (object $workout): ?DurationHistoryPoint {
-                    $start = strtotime((string) $workout->started_at);
-                    $end = strtotime((string) $workout->ended_at);
-
-                    if ($start === false || $end === false) {
-                        return null;
-                    }
-
-                    return new DurationHistoryPoint(
-                        date('d/m', $start),
-                        (int) floor(abs($end - $start) / 60),
-                        (string) ($workout->name ?? __('Workout')),
-                    );
-                })
-                ->filter()
-                ->reverse()->values()->toArray()
+                ->map(fn (Workout $workout): DurationHistoryPoint => new DurationHistoryPoint(
+                    $workout->started_at->format('d/m'),
+                    (int) $workout->started_at->diffInMinutes($workout->ended_at, true),
+                    $workout->name ?? __('Workout'),
+                ))
+                ->reverse()->values()->all()
         );
     }
 
@@ -64,12 +74,17 @@ final class WorkoutStatsService
             "stats.workout_distributions.{$user->id}.{$days}",
             now()->addMinutes(30),
             function () use ($user, $days): array {
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // This significantly reduces memory usage and execution time for large datasets.
+                /*
+                 * `toBase()` se justifie ici, contrairement a la methode voisine :
+                 * cette requete balaie 90 jours et n'est bornee par rien.
+                 *
+                 * `id` en revanche n'etait jamais lu dans la boucle. La colonne
+                 * partait en base et revenait pour rien, et le mutant qui la
+                 * retirait survivait parce qu'il n'y avait rien a voir.
+                 */
                 $workouts = $user->workouts()
                     ->toBase()
-                    ->select(['id', 'started_at', 'ended_at'])
+                    ->select(['started_at', 'ended_at'])
                     ->where('started_at', '>=', now()->subDays($days))
                     ->get();
 
@@ -88,14 +103,23 @@ final class WorkoutStatsService
                 ];
 
                 foreach ($workouts as $workout) {
-                    if (! is_string($workout->started_at) || strlen($workout->started_at) < 19) {
+                    /*
+                     * Le `is_string` reste : `toBase()` rend des valeurs non
+                     * typees, et `ended_at` est nullable tant que la seance n'est
+                     * pas terminee. Les controles de longueur qui l'accompagnaient
+                     * sont partis : MySQL rend un DATETIME sur exactement 19
+                     * caracteres, donc `strlen(...) < 19` ne se declenchait
+                     * jamais — d'ou deux mutants survivants, dont un qui abaissait
+                     * le seuil a 18 sans que rien ne bouge.
+                     */
+                    if (! is_string($workout->started_at)) {
                         continue;
                     }
 
                     $timeLabel = $this->resolveTimeOfDayLabel($workout->started_at);
                     $timeBuckets[$timeLabel]++;
 
-                    if (is_string($workout->ended_at) && strlen($workout->ended_at) >= 19) {
+                    if (is_string($workout->ended_at)) {
                         $durationLabel = $this->resolveDurationLabel($workout->started_at, $workout->ended_at);
                         if ($durationLabel !== null) {
                             $durationBuckets[$durationLabel]++;

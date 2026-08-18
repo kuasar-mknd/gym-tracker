@@ -918,17 +918,7 @@ parameters:
 			count: 1
 			path: app/Services/Stats/VolumeStatsService.php
 
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 3
-			path: app/Services/Stats/WorkoutStatsService.php
 
-		-
-			message: '#^Method App\\Services\\Stats\\WorkoutStatsService\:\:getDurationHistory\(\) should return array\<int, App\\DTOs\\Stats\\DurationHistoryPoint\> but returns array\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/Stats/WorkoutStatsService.php
 
 
 
