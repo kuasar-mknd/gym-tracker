@@ -224,13 +224,10 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // L'attente porte sur la COMPLÉTION de la série, pas sur l'existence
             // d'un record.
             //
-            // Attendre un record ne gardait rien, et les deux assertions
-            // ci-dessous le prouvent plutôt que de le raconter : il en existe déjà
-            // pour cet utilisateur — les séances passées semées en tête de test ont
-            // des sets à 100, 110 et 120 kg — et il en existe déjà un pour cette
-            // séance, parce que `Set::saved` calcule les records dès qu'un poids et
-            // des répétitions sont présents, sans attendre la validation. Taper
-            // « 80 » à l'étape 4 a donc suffi.
+            // Attendre un record ne gardait rien, et l'assertion ci-dessous le
+            // prouve plutôt que de le raconter : il en existe déjà pour cet
+            // utilisateur avant même que le navigateur s'ouvre, les séances
+            // passées semées en tête de test ayant des sets à 100, 110 et 120 kg.
             //
             // Une attente déjà satisfaite rend la main immédiatement, si bien que
             // les deux temporisations que ce bloc croyait enchaîner — d'abord
@@ -239,16 +236,21 @@ class WorkoutSessionE2ETest extends DuskTestCase
             // viewport iphone mini sur une passe froide : « Waited 15 seconds for
             // selector [@pr-trophy-0-0] ».
             //
-            // La complétion de CETTE série, elle, ne peut venir que du clic
+            // Restreindre l'attente à CETTE séance n'aurait pas suffi non plus,
+            // et c'était mon premier correctif : `Set::saved` calcule les records
+            // dès qu'un poids et des répétitions sont présents, sans attendre la
+            // validation, donc taper « 80 » à l'étape 4 en crée déjà un. Ce fait
+            // n'est PAS asséré : le moment où l'écriture débouncée atterrit n'est
+            // pas déterministe, et l'assertion a fait rougir main une fois — poser
+            // une condition de course pour documenter une condition de course
+            // était une mauvaise idée.
+            //
+            // La complétion de CETTE série, en revanche, ne peut venir que du clic
             // ci-dessus : c'est la seule de cet exercice, l'autre ayant été
-            // supprimée à l'étape 6c.
+            // supprimée à l'étape 6c. C'est donc elle qu'on attend.
             $this->assertTrue(
                 PersonalRecord::query()->where('user_id', $user->id)->exists(),
                 'des records existent déjà pour cet utilisateur : les attendre ne garderait rien'
-            );
-            $this->assertTrue(
-                PersonalRecord::query()->where('workout_id', $workout->id)->exists(),
-                'un record existe déjà pour cette séance : l\'attendre ne garderait rien non plus'
             );
 
             $this->waitForDatabase(
