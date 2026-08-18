@@ -21,3 +21,18 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('app:remind-training')
     ->daily()
     ->sentryMonitor();
+
+/*
+ * Le controle de coherence tourne sur les donnees reelles, pas sur un scenario.
+ *
+ * Les quatre defauts trouves le 18/08 avaient la meme forme — une valeur derivee
+ * qui ne correspondait plus a sa source — et aucun n'avait ete vu en lisant le
+ * code. Tous auraient ete visibles ici des la nuit suivante.
+ *
+ * Sans `--repair` : il signale, il ne repare pas. Reparer masquerait la cause, et
+ * c'est la cause qui interesse. La sortie en erreur remonte au moniteur, qui sait
+ * aussi dire que le controle n'a PAS tourne.
+ */
+\Illuminate\Support\Facades\Schedule::command('app:verify-data-coherence')
+    ->dailyAt('04:30')
+    ->sentryMonitor();
