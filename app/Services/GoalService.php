@@ -48,10 +48,16 @@ final class GoalService
                 return $attrs;
             })->toArray();
 
+            /*
+             * `updated_at` n'est pas dans la liste : Eloquent l'y ajoute de
+             * lui-meme (`addUpdatedAtToUpsertColumns`) des lors que le modele
+             * porte des horodatages. L'y citer ne changeait rien — verifie en
+             * retirant la colonne et en constatant que la date monte quand meme.
+             */
             Goal::upsert(
                 $data,
                 ['id'],
-                ['current_value', 'progress_pct', 'completed_at', 'updated_at']
+                ['current_value', 'progress_pct', 'completed_at']
             );
         }
     }

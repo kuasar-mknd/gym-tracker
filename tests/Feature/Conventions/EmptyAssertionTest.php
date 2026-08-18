@@ -88,18 +88,6 @@ function lignesFautives(string $motif): array
 it('n’affirme pas que vrai est vrai', function (): void {
     $fautives = lignesFautives('/assert(True|Equals)\s*\(\s*true\s*[,)]/i');
 
-    /*
-     * `tests/Unit/ExampleTest.php` est l'echafaudage livre par Laravel. Il
-     * n'apporte aucune couverture, mais CLAUDE.md interdit de supprimer un test
-     * sans accord : il est donc ecarte nommement, en attendant que la question
-     * soit tranchee, plutot que dilue dans un motif plus large qui affaiblirait
-     * le garde.
-     */
-    $fautives = array_values(array_filter(
-        $fautives,
-        static fn (string $ligne): bool => ! str_starts_with($ligne, 'ExampleTest.php:'),
-    ));
-
     expect($fautives)->toBe([], sprintf(
         '%d assertion(s) qui ne verifient rien. Un test qui affirme `true` coche une case sans '
         ."rien garder — asserez ce que le test vient de mesurer :\n- %s",
