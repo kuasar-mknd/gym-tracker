@@ -123,3 +123,95 @@ it('place les durées et les heures limites du bon côté', function (): void {
     expect(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $distributions['duration']))->toBe([0, 1, 0, 1])
         ->and(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $distributions['time_of_day']))->toBe([1, 0, 0, 1]);
 });
+
+/**
+ * Chaque heure limite, des deux côtés.
+ *
+ * Le test voisin ne posait que 06h et 00h : les bornes 12h, 17h et 22h n'étaient
+ * vérifiées d'aucun côté, et l'heure elle-même est lue par un `substr($date, 11, 2)`
+ * dont aucun décalage n'était couvert. Vingt-six mutants survivaient là-dessus.
+ *
+ * Chaque borne est donnée deux fois — la dernière minute d'avant et l'heure pile —
+ * parce qu'un seul des deux côtés laisserait passer le décalage d'une unité.
+ */
+it('range chaque heure limite du bon côté', function (int $heure, int $seau): void {
+    $user = User::factory()->create();
+
+    seanceDe($user, 10, $heure);
+
+    $moments = app(WorkoutStatsService::class)->getWorkoutDistributions($user)['time_of_day'];
+
+    $comptes = array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $moments);
+
+    $attendu = [0, 0, 0, 0];
+    $attendu[$seau] = 1;
+
+    expect($comptes)->toBe($attendu);
+})->with([
+    '05h, encore la nuit' => [5, 3],
+    '06h, le matin commence' => [6, 0],
+    '11h, encore le matin' => [11, 0],
+    '12h, l’après-midi commence' => [12, 1],
+    '16h, encore l’après-midi' => [16, 1],
+    '17h, le soir commence' => [17, 2],
+    '21h, encore le soir' => [21, 2],
+    '22h, la nuit commence' => [22, 3],
+    '00h, toujours la nuit' => [0, 3],
+]);
+
+/**
+ * Chaque durée limite, des deux côtés.
+ *
+ * Même raison : le test voisin ne posait que 30 et 90 minutes pile. Une minute de
+ * moins et une minute de plus encadrent chaque seuil, sinon un `<` devenu `<=`
+ * passe inaperçu.
+ */
+it('range chaque durée limite du bon côté', function (int $minutes, int $seau): void {
+    $user = User::factory()->create();
+
+    seanceDe($user, $minutes, 10);
+
+    $durees = app(WorkoutStatsService::class)->getWorkoutDistributions($user)['duration'];
+
+    $comptes = array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $durees);
+
+    $attendu = [0, 0, 0, 0];
+    $attendu[$seau] = 1;
+
+    expect($comptes)->toBe($attendu);
+})->with([
+    '29 min' => [29, 0],
+    '30 min pile' => [30, 1],
+    '59 min' => [59, 1],
+    '60 min pile' => [60, 2],
+    '89 min' => [89, 2],
+    '90 min pile' => [90, 3],
+]);
+
+/**
+ * Une séance à cheval sur minuit se mesure quand même.
+ *
+ * Le calcul rapide compare les dix premiers caractères des deux dates ; quand
+ * elles diffèrent, il retombe sur un calcul par horodatage. Aucun test ne
+ * franchissait minuit, donc ce repli n'était jamais emprunté — et le mutant qui
+ * inversait la comparaison de dates ne cassait rien.
+ *
+ * Sans le repli, le calcul rapide donnerait ici |0h30 - 23h30| = 1380 minutes au
+ * lieu de 60, soit la tranche « 90+ » au lieu de « 60-90 ».
+ */
+it('mesure une séance qui franchit minuit', function (): void {
+    $user = User::factory()->create();
+
+    $debut = now()->subDays(2)->setTime(23, 30);
+
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => $debut,
+        'ended_at' => $debut->copy()->addMinutes(60),
+    ]);
+
+    $durees = app(WorkoutStatsService::class)->getWorkoutDistributions($user)['duration'];
+
+    expect(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $durees))
+        ->toBe([0, 0, 1, 0]);
+});
