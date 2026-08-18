@@ -1,34 +1,9 @@
 parameters:
 	ignoreErrors:
-		-
-			message: '#^Cannot cast mixed to int\.$#'
-			identifier: cast.int
-			count: 4
-			path: app/Actions/Calendar/FetchCalendarEventsAction.php
 
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 3
-			path: app/Actions/Calendar/FetchCalendarEventsAction.php
 
-		-
-			message: '#^Method App\\Actions\\Calendar\\FetchCalendarEventsAction\:\:getWorkouts\(\) should return Illuminate\\Support\\Collection\<int, array\{id\: int, name\: string, date\: string, started_at\: string, exercises_count\: int, preview_exercises\: array\<int, string\>\}\> but returns Illuminate\\Support\\Collection\<\(int\|string\), mixed\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Actions/Calendar/FetchCalendarEventsAction.php
 
-		-
-			message: '#^Parameter \#1 \$workoutIds of method App\\Actions\\Calendar\\FetchCalendarEventsAction\:\:getWorkoutPreviews\(\) expects array\<int, mixed\>, array\<mixed\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Calendar/FetchCalendarEventsAction.php
 
-		-
-			message: '#^Possibly invalid array key type mixed\.$#'
-			identifier: offsetAccess.invalidOffset
-			count: 1
-			path: app/Actions/Calendar/FetchCalendarEventsAction.php
 
 		-
 			message: '#^Foreach overwrites \$line with its value variable\.$#'
@@ -547,77 +522,17 @@ parameters:
 			count: 1
 			path: app/Http/Requests/GoalUpdateRequest.php
 
-		-
-			message: '#^Cannot call method from\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/PersonalRecordStoreRequest.php
 
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/PersonalRecordStoreRequest.php
 
-		-
-			message: '#^Cannot call method select\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/PersonalRecordStoreRequest.php
 
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 3
-			path: app/Http/Requests/PersonalRecordStoreRequest.php
 
-		-
-			message: '#^Cannot call method whereIn\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/PersonalRecordStoreRequest.php
 
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/PersonalRecordStoreRequest.php
 
-		-
-			message: '#^Cannot call method from\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/PersonalRecordUpdateRequest.php
 
-		-
-			message: '#^Cannot call method orWhere\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/PersonalRecordUpdateRequest.php
 
-		-
-			message: '#^Cannot call method select\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/PersonalRecordUpdateRequest.php
 
-		-
-			message: '#^Cannot call method where\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 3
-			path: app/Http/Requests/PersonalRecordUpdateRequest.php
 
-		-
-			message: '#^Cannot call method whereIn\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Requests/PersonalRecordUpdateRequest.php
 
-		-
-			message: '#^Cannot call method whereNull\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Requests/PersonalRecordUpdateRequest.php
 
 		-
 			message: '#^Cannot call method where\(\) on mixed\.$#'

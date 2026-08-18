@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -35,10 +36,10 @@ class PersonalRecordStoreRequest extends FormRequest
     {
         return [
             'required',
-            Rule::exists('exercises', 'id')->where(function ($query): void {
+            Rule::exists('exercises', 'id')->where(function (Builder $query): void {
                 /** @var \App\Models\User|null $user */
                 $user = $this->user();
-                $query->where(function ($q) use ($user): void {
+                $query->where(function (Builder $q) use ($user): void {
                     $q->whereNull('user_id')->orWhere('user_id', $user?->id);
                 });
             }),
@@ -50,7 +51,7 @@ class PersonalRecordStoreRequest extends FormRequest
     {
         return [
             'nullable',
-            Rule::exists('workouts', 'id')->where(function ($query) {
+            Rule::exists('workouts', 'id')->where(function (Builder $query) {
                 /** @var \App\Models\User $user */
                 $user = $this->user();
 
@@ -64,12 +65,12 @@ class PersonalRecordStoreRequest extends FormRequest
     {
         return [
             'nullable',
-            Rule::exists('sets', 'id')->where(function ($query) {
+            Rule::exists('sets', 'id')->where(function (Builder $query) {
                 /** @var \App\Models\User $user */
                 $user = $this->user();
 
-                return $query->whereIn('workout_line_id', function ($q) use ($user): void {
-                    $q->select('id')->from('workout_lines')->whereIn('workout_id', function ($q2) use ($user): void {
+                return $query->whereIn('workout_line_id', function (Builder $q) use ($user): void {
+                    $q->select('id')->from('workout_lines')->whereIn('workout_id', function (Builder $q2) use ($user): void {
                         $q2->select('id')->from('workouts')->where('user_id', $user->id);
                     });
                 });
