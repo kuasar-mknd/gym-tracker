@@ -23,7 +23,18 @@ class ConditionalCspHeaders extends AddCspHeaders
         // CSP middleware registered in config/pulse.php with a custom preset.
         // We only want to skip the GLOBAL instance (which has no custom preset).
         if ($request->is($path.'*') && $customPreset === null) {
-            return $next($request);
+            /*
+             * `$next` est un `Closure` sans type de retour declare, donc son
+             * resultat est `mixed` — ce que la signature de `handle()` ne
+             * promet pas. Le contrat du pipeline Laravel, lui, garantit une
+             * `Response` : c'est ce que dit l'annotation, plutot que de laisser
+             * l'ecart au baseline.
+             *
+             * @var Response $reponse
+             */
+            $reponse = $next($request);
+
+            return $reponse;
         }
 
         return parent::handle($request, $next, $customPreset);

@@ -20,7 +20,16 @@ class PulseNonceMiddleware
         $response = $next($request);
 
         if (app()->bound('csp-nonce')) {
+            /*
+             * Le conteneur rend `mixed` : concatener directement produisait
+             * deux erreurs masquees, et un nonce non textuel aurait ecrit un
+             * attribut invalide dans la page plutot que d'echouer.
+             */
             $nonce = app('csp-nonce');
+
+            if (! is_string($nonce)) {
+                return $response;
+            }
             $content = $response->getContent();
             if (is_string($content)) {
                 $content = str_replace('<script>', '<script nonce="'.$nonce.'">', $content);
