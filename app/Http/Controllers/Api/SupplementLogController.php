@@ -23,6 +23,18 @@ class SupplementLogController extends Controller
     {
         $this->authorize('viewAny', SupplementLog::class);
 
+        /**
+         * La forme est declaree, pas supposee : `validate()` rend un `array`
+         * non type, donc lire une cle dessus etait un acces sur du `mixed`. La
+         * regle juste en dessous garantit exactement cette forme.
+         *
+         * `int|numeric-string` et non `int` : la regle `integer` de Laravel
+         * VALIDE sans convertir, donc une valeur passee en parametre d'URL
+         * arrive en chaine. Declarer `int` seul etait un docblock qui ment, et
+         * retirer le cast qu'il rendait « inutile » faisait repondre 500.
+         *
+         * @var array{per_page?: int|numeric-string} $validated
+         */
         $validated = $request->validate([
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);

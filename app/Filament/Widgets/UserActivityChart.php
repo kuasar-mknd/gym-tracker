@@ -58,7 +58,16 @@ class UserActivityChart extends ChartWidget
         $labels = [];
         for ($i = 1; $i <= 12; $i++) {
             $data[] = $usersPerMonth[$i] ?? 0;
-            $labels[] = ($date = Carbon::create(null, $i, 1)) ? $date->format('M') : '';
+            /*
+             * `parse()` plutot que `create()`, et donc plus de ternaire.
+             *
+             * Le ternaire qui etait ici ne pouvait pas prendre sa branche
+             * fausse — Carbon 3 rend une instance ou leve, la ou Carbon 2
+             * rendait false — mais `create()` reste declare nullable, donc le
+             * retirer seul ne faisait que deplacer le probleme. `parse()` ne
+             * l'est pas : l'annee est arbitraire, seul le mois est lu.
+             */
+            $labels[] = Carbon::parse(sprintf('2000-%02d-01', $i))->format('M');
         }
 
         return ['data' => $data, 'labels' => $labels];

@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Foreach overwrites \$line with its value variable\.$#'
-			identifier: foreach.valueOverwrite
-			count: 1
-			path: app/Actions/CreateWorkoutTemplateFromWorkoutAction.php
-
-		-
 			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
 			identifier: booleanNot.exprNotBoolean
 			count: 1
@@ -41,12 +35,6 @@ parameters:
 			identifier: if.condNotBoolean
 			count: 1
 			path: app/Actions/Habits/ToggleHabitAction.php
-
-		-
-			message: '#^Only booleans are allowed in a ternary operator condition, App\\Models\\BodyPartMeasurement\|null given\.$#'
-			identifier: ternary.condNotBoolean
-			count: 1
-			path: app/Actions/Measurements/FetchBodyPartMeasurementsIndexAction.php
 
 		-
 			message: '#^Only booleans are allowed in a negated boolean, string\|null given\.$#'
@@ -97,18 +85,6 @@ parameters:
 			path: app/Actions/Workouts/UpdateWorkoutAction.php
 
 		-
-			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'
-			identifier: ternary.condNotBoolean
-			count: 1
-			path: app/Filament/Widgets/UserActivityChart.php
-
-		-
-			message: '#^Cannot access offset ''per_page'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: app/Http/Controllers/Api/DailyJournalController.php
-
-		-
 			message: '#^Parameter \#2 \$requestData of method App\\Actions\\Habits\\FetchHabitsIndexApiAction\:\:execute\(\) expects array\<string, mixed\>, mixed given\.$#'
 			identifier: argument.type
 			count: 1
@@ -125,18 +101,6 @@ parameters:
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
 			path: app/Http/Controllers/Api/PersonalRecordController.php
-
-		-
-			message: '#^Cannot access offset ''per_page'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: app/Http/Controllers/Api/SupplementLogController.php
-
-		-
-			message: '#^Cannot cast mixed to int\.$#'
-			identifier: cast.int
-			count: 1
-			path: app/Http/Controllers/Api/SupplementLogController.php
 
 		-
 			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\WorkoutTemplate\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\WorkoutTemplate\>\.$#'
@@ -233,12 +197,6 @@ parameters:
 			identifier: booleanNot.exprNotBoolean
 			count: 1
 			path: app/Http/Requests/UpdateSupplementLogRequest.php
-
-		-
-			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Support\\Carbon\|null given\.$#'
-			identifier: ternary.condNotBoolean
-			count: 1
-			path: app/Http/Resources/DailyJournalResource.php
 
 		-
 			message: '#^Only booleans are allowed in an if condition, int\|null given\.$#'

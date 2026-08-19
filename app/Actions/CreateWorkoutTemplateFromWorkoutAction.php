@@ -62,13 +62,19 @@ final class CreateWorkoutTemplateFromWorkoutAction
 
         $setsData = [];
 
-        foreach ($workoutLines as $index => $line) {
+        /*
+         * `$sourceLine` et non `$line` : la boucle precedente laisse son `$line`
+         * en portee, et reprendre le nom cachait laquelle des deux on lisait.
+         * Les deux parcourent la meme collection pour deux raisons distinctes —
+         * batir les lignes du modele, puis leurs series.
+         */
+        foreach ($workoutLines as $index => $sourceLine) {
             if (! isset($templateLines[$index])) {
                 continue;
             }
             $templateLine = $templateLines[$index];
 
-            foreach ($line->sets as $set) {
+            foreach ($sourceLine->sets as $set) {
                 $setsData[] = [
                     'workout_template_line_id' => $templateLine->id,
                     'reps' => $set->reps,
