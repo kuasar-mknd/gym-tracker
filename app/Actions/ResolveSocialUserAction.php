@@ -19,7 +19,7 @@ final class ResolveSocialUserAction
         // Check if user already exists with this email
         $existingUser = User::where('email', $socialUser->getEmail())->first();
 
-        if ($existingUser) {
+        if ($existingUser !== null) {
             // Security: Prevent account linking if the existing account is not verified.
             // Linking an unverified account via social login poses an account takeover risk.
             if (! $existingUser->hasVerifiedEmail()) {
@@ -27,7 +27,9 @@ final class ResolveSocialUserAction
             }
 
             // Update provider info if not set (linking account)
-            if (! $existingUser->provider_id) {
+            // Non renseigne, et non « vide ou zero » : c'est un identifiant
+            // rendu par le fournisseur, la chaine vide n'en est pas un.
+            if ($existingUser->provider_id === null || $existingUser->provider_id === '') {
                 $existingUser->forceFill([
                     'provider' => $provider,
                     'provider_id' => $socialUser->getId(),

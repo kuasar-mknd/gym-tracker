@@ -1,28 +1,10 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Workout given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Actions/Exercises/FetchExerciseHistoryAction.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, Illuminate\\Support\\Carbon given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Actions/Exercises/FetchExerciseHistoryAction.php
-
-		-
 			message: '#^Parameter \#1 \$input \(array\<string, string\>\) of method App\\Actions\\Fortify\\CreateNewUser\:\:create\(\) should be contravariant with parameter \$input \(array\) of method Laravel\\Fortify\\Contracts\\CreatesNewUsers\:\:create\(\)$#'
 			identifier: method.childParameterType
 			count: 1
 			path: app/Actions/Fortify/CreateNewUser.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 2
-			path: app/Actions/Habits/CreateHabitAction.php
 
 		-
 			message: '#^Cannot call method whereBetween\(\) on mixed\.$#'
@@ -35,18 +17,6 @@ parameters:
 			identifier: if.condNotBoolean
 			count: 1
 			path: app/Actions/Habits/ToggleHabitAction.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, string\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Actions/ResolveSocialUserAction.php
-
-		-
-			message: '#^Only booleans are allowed in an if condition, App\\Models\\User\|null given\.$#'
-			identifier: if.condNotBoolean
-			count: 1
-			path: app/Actions/ResolveSocialUserAction.php
 
 		-
 			message: '#^PHPDoc tag @var with type Carbon\\Carbon is not subtype of type string\.$#'
@@ -215,12 +185,6 @@ parameters:
 			identifier: cast.string
 			count: 1
 			path: app/Services/Stats/ExerciseStatsService.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 4
-			path: app/Services/Stats/VolumeStatsService.php
 
 		-
 			message: '#^Cannot call method random\(\) on mixed\.$#'
