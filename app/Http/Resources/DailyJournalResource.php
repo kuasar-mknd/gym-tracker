@@ -9,7 +9,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * @property int $id
- * @property \Illuminate\Support\Carbon|null $date
+ * @property \Illuminate\Support\Carbon $date
  * @property string $content
  * @property int|null $mood_score
  * @property int|null $sleep_quality
@@ -33,7 +33,9 @@ class DailyJournalResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'date' => $this->date ? $this->date->format('Y-m-d') : null,
+            // `daily_journals.date` est NOT NULL, et porte meme la moitie d'un
+            // index unique : le repli `null` du ternaire etait inatteignable.
+            'date' => $this->date->format('Y-m-d'),
             'content' => $this->content,
             'mood_score' => $this->mood_score,
             'sleep_quality' => $this->sleep_quality,

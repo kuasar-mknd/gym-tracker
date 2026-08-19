@@ -57,12 +57,22 @@ class DailyJournalController extends Controller
     {
         $this->authorize('viewAny', DailyJournal::class);
 
+        /**
+         * La forme est declaree, pas supposee : `validate()` rend un `array`
+         * non type, donc lire une cle dessus etait un acces sur du `mixed`. La
+         * regle juste au-dessus garantit exactement cette forme.
+         *
+         * `int|numeric-string` et non `int` : la regle `integer` de Laravel
+         * VALIDE sans convertir, donc une valeur passee en parametre d'URL
+         * arrive en chaine.
+         *
+         * @var array{per_page?: int|numeric-string} $validated
+         */
         $validated = $request->validate([
             'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
-        /** @var int $perPage */
-        $perPage = $validated['per_page'] ?? 15;
+        $perPage = (int) ($validated['per_page'] ?? 15);
 
         $journals = $this->user()->dailyJournals()
             ->orderBy('date', 'desc')
