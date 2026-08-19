@@ -153,7 +153,7 @@ class HandleInertiaRequests extends Middleware
                 'data' => $latestAchievement->data,
                 'created_at' => $latestAchievement->created_at,
             ] : null,
-            'current_streak' => $user->last_workout_at && $user->last_workout_at->startOfDay()->diffInDays(now()->startOfDay()) > 1 ? 0 : $user->current_streak,
+            'current_streak' => app(\App\Services\StreakService::class)->currentStreakFor($user),
             'longest_streak' => $user->longest_streak,
             'active_workout' => $activeWorkout,
         ];

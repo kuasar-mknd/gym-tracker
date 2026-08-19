@@ -157,28 +157,10 @@ parameters:
 			path: app/Http/Middleware/ConditionalCspHeaders.php
 
 		-
-			message: '#^Only booleans are allowed in &&, Illuminate\\Support\\Carbon\|null given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 1
-			path: app/Http/Middleware/HandleInertiaRequests.php
-
-		-
 			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Notifications\\DatabaseNotification\|null given\.$#'
 			identifier: ternary.condNotBoolean
 			count: 1
 			path: app/Http/Middleware/HandleInertiaRequests.php
-
-		-
-			message: '#^Binary operation "\." between ''\<script nonce\="'' and mixed results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: app/Http/Middleware/PulseNonceMiddleware.php
-
-		-
-			message: '#^Binary operation "\." between ''\<style nonce\="'' and mixed results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: app/Http/Middleware/PulseNonceMiddleware.php
 
 		-
 			message: '#^Only booleans are allowed in &&, App\\Models\\User\|null given on the left side\.$#'
@@ -209,12 +191,6 @@ parameters:
 			identifier: if.condNotBoolean
 			count: 1
 			path: app/Models/WorkoutLine.php
-
-		-
-			message: '#^Call to function in_array\(\) with arguments mixed, array\{\} and true will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Providers/TelescopeServiceProvider.php
 
 		-
 			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'

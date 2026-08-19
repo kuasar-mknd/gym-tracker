@@ -15,19 +15,22 @@ class UserResource extends JsonResource
      *
      * @return array<string, mixed>
      */
-    /**
-     * @return array<string, mixed>
-     */
     #[\Override]
     public function toArray(Request $request): array
     {
+        /** @var \App\Models\User $utilisateur */
+        $utilisateur = $this->resource;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
             'avatar' => $this->avatar,
             'stats' => [
-                'current_streak' => $this->current_streak,
+                // Par le service, comme `HandleInertiaRequests` : la valeur
+                // stockee se perime sans que personne l'ecrive.
+                'current_streak' => app(\App\Services\StreakService::class)
+                    ->currentStreakFor($utilisateur),
                 'longest_streak' => $this->longest_streak,
                 'last_workout_at' => $this->last_workout_at,
             ],

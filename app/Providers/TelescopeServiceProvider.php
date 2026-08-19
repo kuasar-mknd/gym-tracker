@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
@@ -63,7 +62,20 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     #[\Override]
     protected function gate(): void
     {
-        Gate::define('viewTelescope', fn (User $user): bool => in_array($user->email, [], true));
+        /*
+         * Personne, et c'est dit.
+         *
+         * La porte etait ecrite `in_array($user->email, [], true)`, sur une
+         * liste vide : elle rendait toujours faux, mais avait l'air de chercher
+         * quelque chose. Ce depot est public et n'a pas a porter d'adresse
+         * personnelle — la reponse est donc « non », qu'on l'ecrive ainsi.
+         *
+         * En local, Telescope ne consulte pas cette porte ; en production, elle
+         * ferme. Un auto-hebergeur qui veut y acceder change cette ligne, ce
+         * qui est plus honnete qu'une liste vide qu'il croirait pouvoir remplir
+         * sans rien changer d'autre.
+         */
+        Gate::define('viewTelescope', fn (): bool => false);
     }
 
     /**

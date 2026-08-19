@@ -28,6 +28,35 @@ final class StreakService
      * @param  User  $user  The user whose streak is being updated.
      * @param  Workout|null  $workout  The newly completed or updated workout (optional).
      */
+    /**
+     * La serie en cours, telle qu'elle doit etre AFFICHEE.
+     *
+     * `users.current_streak` est un compteur incremental : il n'est touche que
+     * lorsqu'une seance est enregistree. Passe un jour sans rien faire, il
+     * continue d'annoncer la valeur d'hier — la peremption n'est visible qu'a
+     * la lecture.
+     *
+     * `HandleInertiaRequests` faisait deja cette correction, en ligne ;
+     * `UserResource` rendait la valeur brute. Le meme utilisateur avait donc
+     * deux series differentes selon que la page etait rendue par Inertia ou lue
+     * par l'API — et c'est le meme client qui emprunte les deux. Une seule
+     * definition, appelee par les deux.
+     *
+     * Premier pas de la trajectoire decrite dans la note de modelisation :
+     * la grandeur derivee cesse d'etre lue directement, sans que la colonne
+     * disparaisse encore.
+     */
+    public function currentStreakFor(User $user): int
+    {
+        if ($user->last_workout_at === null) {
+            return 0;
+        }
+
+        $joursDepuis = $user->last_workout_at->startOfDay()->diffInDays(now()->startOfDay());
+
+        return $joursDepuis > 1 ? 0 : $user->current_streak;
+    }
+
     public function updateStreak(User $user, ?Workout $workout = null): void
     {
         $workoutDate = $this->resolveWorkoutDate($user, $workout);
