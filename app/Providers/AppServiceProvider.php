@@ -167,6 +167,31 @@ final class AppServiceProvider extends ServiceProvider
             \App\Jobs\SyncUserAchievements::dispatch($workout->user);
             \App\Jobs\SyncUserGoals::dispatch($workout->user);
         });
+
+        /**
+         * Supprimer une seance recalcule la serie depuis ce qui reste.
+         *
+         * Rien ne le faisait : `Workout::deleting` relachait le volume,
+         * `Workout::deleted` reconstruisait les records, et la serie restait
+         * telle quelle. `last_workout_at` continuait de pointer une seance
+         * disparue — or c'est la seule memoire du service, donc l'ecart
+         * calcule a la seance SUIVANTE partait d'une date fantome et cassait
+         * une serie pourtant continue. `longest_streak` n'etait jamais revu a
+         * la baisse non plus. C'est #1460.
+         *
+         * Reconstruction complete et non ajustement : c'est la seule facon
+         * d'etre juste apres une suppression, qui peut retirer un jour au
+         * milieu d'une suite aussi bien qu'a son extremite.
+         */
+        Workout::deleted(function (Workout $workout): void {
+            $user = $workout->user;
+
+            if ($user === null) {
+                return;
+            }
+
+            app(StreakService::class)->recalculerDepuisLesFaits($user);
+        });
     }
 
     private function registerMeasurementEvents(): void

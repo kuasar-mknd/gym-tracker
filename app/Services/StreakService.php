@@ -57,6 +57,84 @@ final class StreakService
         return $joursDepuis > 1 ? 0 : $user->current_streak;
     }
 
+    /**
+     * Reconstruit la serie depuis les seances qui existent.
+     *
+     * `updateStreak()` est incremental : il ne sait qu'avancer d'un cran a
+     * partir de `last_workout_at`. Il n'existait donc AUCUN chemin qui refasse
+     * le calcul depuis les faits — et supprimer une seance ne recalculait rien.
+     * `last_workout_at` continuait de pointer une seance disparue, ce qui est
+     * la seule memoire du service : l'ecart calcule a la seance suivante
+     * partait d'une date fantome, et une serie pourtant continue se retrouvait
+     * cassee. `longest_streak`, lui, n'etait jamais revu a la baisse. C'est
+     * #1460.
+     *
+     * Le calcul part des dates de calendrier distinctes, du plus recent au plus
+     * ancien : la serie en cours est la suite consecutive qui se termine a la
+     * derniere seance, la plus longue est la plus longue suite trouvee.
+     *
+     * Le tri se fait en PHP plutot qu'en SQL : `DATE(started_at)` s'ecrit
+     * differemment selon le pilote — `AchievementService` porte deja cette
+     * double ecriture — et une seance par jour reste un volume qu'on ordonne
+     * sans y penser.
+     */
+    public function recalculerDepuisLesFaits(User $user): void
+    {
+        $seances = $user->workouts()
+            ->orderByDesc('started_at')
+            ->get(['id', 'user_id', 'started_at']);
+
+        $dates = $seances
+            ->map(fn (Workout $seance): string => $seance->started_at->toDateString())
+            ->unique()
+            ->values();
+
+        if ($dates->isEmpty()) {
+            $user->forceFill([
+                'last_workout_at' => null,
+                'current_streak' => 0,
+                'longest_streak' => 0,
+            ])->save();
+
+            return;
+        }
+
+        $derniere = $seances->first()?->started_at;
+
+        $enCours = 1;
+        $plusLongue = 1;
+        $suite = 1;
+
+        foreach ($dates->sliding(2) as $paire) {
+            /** @var string $recente */
+            $recente = $paire->first();
+            /** @var string $precedente */
+            $precedente = $paire->last();
+
+            $consecutives = Carbon::parse($precedente)->addDay()->toDateString() === $recente;
+
+            if ($consecutives) {
+                $suite++;
+            } else {
+                $suite = 1;
+            }
+
+            $plusLongue = max($plusLongue, $suite);
+
+            // La serie « en cours » ne compte que tant qu'on n'a pas rencontre
+            // de rupture depuis la derniere seance.
+            if ($consecutives && $enCours === $suite - 1) {
+                $enCours = $suite;
+            }
+        }
+
+        $user->forceFill([
+            'last_workout_at' => $derniere,
+            'current_streak' => $enCours,
+            'longest_streak' => $plusLongue,
+        ])->save();
+    }
+
     public function updateStreak(User $user, ?Workout $workout = null): void
     {
         $workoutDate = $this->resolveWorkoutDate($user, $workout);
