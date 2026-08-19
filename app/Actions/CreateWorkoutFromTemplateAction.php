@@ -39,7 +39,6 @@ final class CreateWorkoutFromTemplateAction
         $workout->setRelation('user', $user);
 
         $allSets = [];
-        $totalWorkoutVolume = 0.0;
         $now = now()->toDateTimeString();
 
         foreach ($template->workoutTemplateLines as $templateLine) {
@@ -60,20 +59,23 @@ final class CreateWorkoutFromTemplateAction
                     'updated_at' => $now,
                 ];
 
-                $volume = (float) ($templateSet->weight ?? 0) * (int) ($templateSet->reps ?? 0);
-                $totalWorkoutVolume += $volume;
             }
         }
 
         if ($allSets !== []) {
-            // Use insert() for bulk insertion to prevent N+1 queries during creation
-            // We manually calculate and apply the volume since Set::saved events won't fire
+            /*
+             * `insert()` en masse pour eviter une requete par serie. Aucun
+             * evenement `Set::saved` ne part, ce qui est desormais sans
+             * consequence sur le volume : les series d'un modele arrivent non
+             * validees, donc elles ne comptent pas encore.
+             *
+             * L'increment qui suivait cet appel creditait le volume complet du
+             * modele au moment ou la seance s'ouvrait — le defaut de #1499. Il
+             * est parti : `Workout::recomputeVolume()` s'en charge a la
+             * premiere serie cochee, et sur les faits plutot que sur un total
+             * calcule en PHP.
+             */
             \App\Models\Set::insert($allSets);
-
-            if ($totalWorkoutVolume > 0) {
-                $user->increment('total_volume', $totalWorkoutVolume);
-                $workout->increment('workout_volume', $totalWorkoutVolume);
-            }
         }
     }
 }

@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\PersonalRecord;
 use App\Services\PersonalRecordService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -49,6 +50,7 @@ class VerifyDataCoherence extends Command
 
         if ($this->option('repair')) {
             $this->reconstruireLesRecords();
+            $this->recalculerLesVolumes();
         }
 
         $total = 0;
@@ -96,6 +98,62 @@ class VerifyDataCoherence extends Command
      * records sont reconstruits depuis les series qui restent, ou supprimes s'il
      * n'en reste aucune.
      */
+    /**
+     * Recale les compteurs de volume sur les series reellement faites.
+     *
+     * Le volume ne compte plus que les series cochees (#1499). Les compteurs
+     * accumules avant ce changement incluent le travail seulement prevu — dont
+     * la seance entiere qu'un modele creditait a l'ouverture. Sans chemin de
+     * reparation, ils resteraient faux et le controle nocturne les signalerait
+     * chaque nuit sans recours.
+     *
+     * Le recalcul part des faits : la somme des series validees par seance,
+     * puis la somme des seances par utilisateur. Rien n'est invente, et
+     * l'ecart total est affiche pour qu'il soit vu plutot que subi.
+     */
+    private function recalculerLesVolumes(): void
+    {
+        $avant = (float) DB::table('users')->sum('total_volume');
+
+        /*
+         * Par le constructeur de requetes plutot qu'en SQL brut : la syntaxe
+         * `UPDATE ... JOIN` n'est pas portable, et ce projet tourne aussi sur
+         * SQLite — `AchievementService` adapte deja son format de date au
+         * pilote. Une commande de reparation qui echoue sur la moitie des
+         * installations ne repare rien.
+         */
+        DB::table('workouts')->orderBy('id')->chunkById(500, function (Collection $seances): void {
+            foreach ($seances as $seance) {
+                $reel = (float) DB::table('workout_lines')
+                    ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
+                    ->where('workout_lines.workout_id', $seance->id)
+                    ->where('sets.is_completed', true)
+                    ->sum(DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
+
+                DB::table('workouts')->where('id', $seance->id)->update(['workout_volume' => $reel]);
+            }
+        });
+
+        DB::table('users')->orderBy('id')->chunkById(500, function (Collection $utilisateurs): void {
+            foreach ($utilisateurs as $utilisateur) {
+                $reel = (float) DB::table('workouts')->where('user_id', $utilisateur->id)->sum('workout_volume');
+
+                DB::table('users')->where('id', $utilisateur->id)->update(['total_volume' => $reel]);
+            }
+        });
+
+        $apres = (float) DB::table('users')->sum('total_volume');
+        $ecart = $apres - $avant;
+
+        $this->line(sprintf(
+            '  <fg=yellow>%s</> kg de volume recale (%s -> %s)',
+            number_format($ecart, 2, ',', ' '),
+            number_format($avant, 2, ',', ' '),
+            number_format($apres, 2, ',', ' '),
+        ));
+        $this->newLine();
+    }
+
     private function reconstruireLesRecords(): void
     {
         $detaches = PersonalRecord::query()
@@ -163,6 +221,11 @@ class VerifyDataCoherence extends Command
                 DB::table('workouts')
                     ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
                     ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                    // Meme filtre que `Workout::recomputeVolume()` : le volume
+                    // compte les series faites, pas celles qui attendent (#1499).
+                    // Sans lui, une seance dont une serie n'est pas cochee
+                    // serait signalee divergente alors qu'elle est juste.
+                    ->where('sets.is_completed', true)
                     ->selectRaw('workouts.user_id, SUM(COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)) as reel')
                     ->groupBy('workouts.user_id'),
                 'calcul',
@@ -196,6 +259,11 @@ class VerifyDataCoherence extends Command
             ->leftJoinSub(
                 DB::table('workout_lines')
                     ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
+                    // Meme filtre que `Workout::recomputeVolume()` : le volume
+                    // compte les series faites, pas celles qui attendent (#1499).
+                    // Sans lui, une seance dont une serie n'est pas cochee
+                    // serait signalee divergente alors qu'elle est juste.
+                    ->where('sets.is_completed', true)
                     ->selectRaw('workout_lines.workout_id, SUM(COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)) as reel')
                     ->groupBy('workout_lines.workout_id'),
                 'calcul',

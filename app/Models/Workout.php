@@ -105,8 +105,24 @@ class Workout extends Model
      */
     public function recomputeVolume(): void
     {
+        /*
+         * Seules les series validees comptent.
+         *
+         * La somme portait sur TOUTES les series de la seance, validees ou non.
+         * Demarrer une seance depuis un modele inserait ses series pre-remplies
+         * et creditait aussitot le volume complet : 4 000 kg avant le premier
+         * kilo souleve, et ils restaient acquis si la seance etait abandonnee.
+         *
+         * Le volume affiche a cote de « Total seances » se lit comme du travail
+         * accompli — c'est ce qu'il compte desormais. Une serie cochee est la
+         * seule preuve dont on dispose : les valeurs seules ne distinguent pas
+         * une serie faite d'une serie proposee par le modele.
+         *
+         * Voir #1499.
+         */
         $total = (float) $this->workoutLines()
             ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->where('sets.is_completed', true)
             ->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
 
         // Read back from the table: increment() writes straight to the database
