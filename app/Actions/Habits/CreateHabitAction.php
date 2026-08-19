@@ -16,10 +16,18 @@ final class CreateHabitAction
      */
     public function execute(User $user, array $data): Habit
     {
-        if (! ($data['color'] ?? null)) {
+        /*
+         * `$data` vient d'une requete validee, donc non type. Les tests de
+         * verite qui etaient ici acceptaient aussi bien l'absence, la valeur
+         * nulle, la chaine vide et le zero — ce qui est le comportement voulu
+         * pour un defaut, mais ne se lisait pas. Ce qu'on veut dire : « une
+         * couleur, c'est une chaine non vide ; sinon prends celle-ci ».
+         */
+        if (! is_string($data['color'] ?? null) || $data['color'] === '') {
             $data['color'] = 'bg-slate-500';
         }
-        if (! ($data['icon'] ?? null)) {
+
+        if (! is_string($data['icon'] ?? null) || $data['icon'] === '') {
             $data['icon'] = 'check_circle';
         }
 

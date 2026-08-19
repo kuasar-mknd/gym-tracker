@@ -11,7 +11,6 @@ use App\DTOs\Stats\VolumeTrendPoint;
 use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\User;
 use Carbon\Carbon;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -40,36 +39,33 @@ final class VolumeStatsService
                 // ⚡ Bolt: PERFORMANCE OPTIMIZATION
                 // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
                 // Consolidate map/filter/values chains into a single foreach loop to prevent multiple O(N) iterations.
+                /*
+                 * Le `toBase()` qui etait ici est parti.
+                 *
+                 * Il se reclamait d'une economie « pour de gros volumes », sur
+                 * une requete bornee a `$days` jours et limitee a trois
+                 * colonnes : il n'evitait que l'hydratation de quelques
+                 * dizaines de lignes, et il coutait deux entrees de baseline
+                 * PHPStan. Eloquent caste `started_at` en Carbon et `name` en
+                 * `?string`, ce qui supprime le reparsage a la main.
+                 */
                 $workouts = $user->workouts()
-                    ->toBase()
                     ->where('started_at', '>=', now()->subDays($days))
-                    ->select(['started_at', 'name', 'workout_volume as volume'])
+                    ->select(['id', 'started_at', 'name', 'workout_volume'])
                     ->orderBy('started_at')
                     ->get();
 
                 $trend = [];
                 foreach ($workouts as $row) {
-                    /*
-                     * `parse()` plutot que `strtotime()`, et donc plus de garde.
-                     *
-                     * `workouts.started_at` est NOT NULL : `strtotime()` ne
-                     * pouvait pas rendre false, et le `continue` qui suivait
-                     * n'etait jamais emprunte — d'ou son mutant survivant. Le
-                     * meme nettoyage qu'en #1474 sur WorkoutStatsService.
-                     */
-                    $debut = CarbonImmutable::parse((string) $row->started_at);
-
                     $trend[] = new VolumeTrendPoint(
-                        $debut->format('d/m'),
-                        $debut->format('Y-m-d'),
+                        $row->started_at->format('d/m'),
+                        $row->started_at->format('Y-m-d'),
                         // Le meme repli que WorkoutStatsService:45. Sans lui,
                         // une seance sans nom sortait sous une etiquette VIDE
                         // ici, et sous « Séance » la — memes donnees, deux
-                        // reponses. Le cast, lui, reste porteur : `name` est
-                        // nullable en base et le DTO exige une chaine, donc le
-                        // retirer leve un TypeError (#1446).
-                        (string) ($row->name ?? __('Workout')),
-                        is_numeric($row->volume) ? (float) $row->volume : 0.0,
+                        // reponses.
+                        $row->name ?? __('Workout'),
+                        $row->workout_volume,
                     );
                 }
 
@@ -137,39 +133,29 @@ final class VolumeStatsService
             "stats.volume_history.{$user->id}.{$limit}",
             now()->addMinutes(30),
             function () use ($user, $limit): array {
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // Consolidate map/filter/values chains into a single foreach loop to prevent multiple O(N) iterations.
+                /*
+                 * Meme raison que dans `getVolumeTrend` : le `toBase()` qui
+                 * etait ici portait sur une requete bornee par `limit($limit)`,
+                 * donc il n'evitait l'hydratation que de `$limit` lignes, pour
+                 * deux entrees de baseline PHPStan.
+                 */
                 $workouts = $user->workouts()
-                    ->toBase()
                     ->whereNotNull('ended_at')
-                    ->select(['started_at', 'name', 'workout_volume as volume'])
+                    ->select(['id', 'started_at', 'name', 'workout_volume'])
                     ->orderBy('started_at')
                     ->limit($limit)
                     ->get();
 
                 $history = [];
                 foreach ($workouts as $row) {
-                    /*
-                     * `parse()` plutot que `strtotime()`, et donc plus de garde.
-                     *
-                     * `workouts.started_at` est NOT NULL : `strtotime()` ne
-                     * pouvait pas rendre false, et le `continue` qui suivait
-                     * n'etait jamais emprunte — d'ou son mutant survivant. Le
-                     * meme nettoyage qu'en #1474 sur WorkoutStatsService.
-                     */
-                    $debut = CarbonImmutable::parse((string) $row->started_at);
-
                     $history[] = new VolumeHistoryPoint(
-                        $debut->format('d/m'),
-                        is_numeric($row->volume) ? (float) $row->volume : 0.0,
+                        $row->started_at->format('d/m'),
+                        $row->workout_volume,
                         // Le meme repli que WorkoutStatsService:45. Sans lui,
                         // une seance sans nom sortait sous une etiquette VIDE
                         // ici, et sous « Séance » la — memes donnees, deux
-                        // reponses. Le cast, lui, reste porteur : `name` est
-                        // nullable en base et le DTO exige une chaine, donc le
-                        // retirer leve un TypeError (#1446).
-                        (string) ($row->name ?? __('Workout')),
+                        // reponses.
+                        $row->name ?? __('Workout'),
                     );
                 }
 

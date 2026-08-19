@@ -38,11 +38,15 @@ class FetchExerciseHistoryAction
             ->whereNotNull('workouts.started_at')
             ->with(['workout', 'sets'])
             ->get()
-            ->map(function (WorkoutLine $line): ?array {
+            /*
+             * La garde qui etait ici — `! $workout || ! $workout->started_at` —
+             * ne pouvait pas se declencher : la requete fait une jointure
+             * INTERNE sur `workouts` et ecarte deja les dates nulles. Elle en
+             * soutenait une seconde, le `->filter()` qui suivait le map et ne
+             * retirait jamais rien.
+             */
+            ->map(function (WorkoutLine $line): array {
                 $workout = $line->workout;
-                if (! $workout || ! $workout->started_at) {
-                    return null;
-                }
 
                 $sets = $line->sets->map(fn ($set): array => [
                     'weight' => (float) $set->weight,
@@ -63,7 +67,6 @@ class FetchExerciseHistoryAction
                     'started_at' => $workout->started_at, // For sorting
                 ];
             })
-            ->filter()
             ->sortByDesc('started_at')
             ->values()
             ->map(function (array $item): array {
