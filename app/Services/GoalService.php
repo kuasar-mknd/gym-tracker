@@ -27,7 +27,21 @@ final class GoalService
      */
     public function syncGoals(User $user): void
     {
-        $goals = $user->goals()->whereNull('completed_at')->get();
+        /*
+         * TOUS les objectifs, y compris ceux deja marques atteints.
+         *
+         * Le filtre `whereNull('completed_at')` qui etait ici rendait
+         * inatteignable la moitie de `checkCompletion()` : celle qui DE-marque
+         * un objectif dont le critere n'est plus rempli. Un objectif atteint le
+         * restait donc definitivement, meme apres suppression de la seance ou
+         * de la mesure qui l'avait declenche. La branche existait, elle etait
+         * testable, et aucun chemin n'y menait (#1501).
+         *
+         * Le cout est borne : un pratiquant a quelques objectifs, pas quelques
+         * milliers, et les metriques sont deja pre-calculees en lot juste
+         * dessous.
+         */
+        $goals = $user->goals()->get();
 
         // ⚡ Bolt Optimization: Pre-calculate metrics for all active goals in batch to avoid N+1 queries.
         // This reduces database queries from O(N) to a small constant number.
@@ -95,25 +109,37 @@ final class GoalService
             return;
         }
 
-        $totalDiff = abs($goal->target_value - $goal->start_value);
-        $currentDiff = abs($goal->current_value - $goal->start_value);
+        /*
+         * Le chemin parcouru se compte DANS LE SENS de la cible.
+         *
+         * Il etait compte en valeur absolue des deux cotes, ce qui rendait le
+         * calcul aveugle au sens : sur une perte de poids — je pese 80, je vise
+         * 75 — monter a 85 donnait `|85-80| / |75-80|`, soit 100 %. La barre
+         * annoncait le but atteint pendant que `isGoalCriteriaMet()` repondait,
+         * a raison, « non atteint ». Mesure, puis corrige (#1501).
+         *
+         * Le sens se lit sur la cible et le depart, exactement comme dans
+         * `isGoalCriteriaMet()` : une cible sous le depart est une cible qu'on
+         * atteint en descendant.
+         */
+        $descendant = $goal->target_value < $goal->start_value;
+
+        $parcouru = $descendant
+            ? $goal->start_value - $goal->current_value
+            : $goal->current_value - $goal->start_value;
+
+        $aParcourir = abs($goal->target_value - $goal->start_value);
 
         /*
-         * Deux branches mortes retirees ici, toutes deux signalees par des
-         * mutants survivants (#1446).
+         * Le plancher a zero n'est plus decoratif, contrairement au `max()` qui
+         * avait ete retire ici : s'eloigner du depart rend desormais un chemin
+         * NEGATIF, et c'est precisement le cas qu'on veut afficher a 0 %.
          *
-         * Une garde `$totalDiff === 0.0` protegeait la division. Elle etait
-         * inatteignable : la seule facon d'obtenir zero est `target === start`,
-         * et la ligne 86 retourne deja dans ce cas. La division par zero, si le
-         * garde du dessus changeait un jour, leve un DivisionByZeroError depuis
-         * PHP 8 — bruyamment, ce qui vaut mieux qu'un 0 % silencieux.
-         *
-         * Et un `max($progress, 0)` ne pouvait rien plancher : `$currentDiff`
-         * est un `abs()`, `$totalDiff` est strictement positif, donc le quotient
-         * l'est aussi.
+         * La division reste sans garde : la seule facon d'obtenir zero au
+         * denominateur est `target === start`, et la methode a deja retourne
+         * dans ce cas.
          */
-        $progress = $currentDiff / $totalDiff * 100;
-        $goal->progress_pct = min($progress, 100);
+        $goal->progress_pct = max(0.0, min($parcouru / $aParcourir * 100, 100.0));
     }
 
     /**
