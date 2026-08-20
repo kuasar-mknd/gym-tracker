@@ -57,7 +57,7 @@ class WarmupController extends Controller
     {
         $preference = $this->user()->warmupPreference;
 
-        if ($preference) {
+        if ($preference instanceof WarmupPreference) {
             $this->authorize('update', $preference);
         } else {
             $this->authorize('create', WarmupPreference::class);

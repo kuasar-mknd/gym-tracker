@@ -123,9 +123,22 @@ class WorkoutLine extends Model
     protected static function booted(): void
     {
         $clearCache = function (self $line): void {
-            if ($line->workout_id) {
-                \Illuminate\Support\Facades\Cache::forget("user_active_workout_{$line->workout->user_id}");
+            /*
+             * On teste la RELATION, pas la cle etrangere.
+             *
+             * `workout_lines.workout_id` est NOT NULL et les identifiants
+             * commencent a 1 : `if ($line->workout_id)` etait donc toujours
+             * vrai. Le garde avait l'air de proteger la ligne suivante, qui
+             * dereference `$line->workout` — et c'est ce dereferencement, lui,
+             * qui peut echouer si la seance a disparu entre-temps.
+             */
+            $workout = $line->workout;
+
+            if ($workout === null) {
+                return;
             }
+
+            \Illuminate\Support\Facades\Cache::forget("user_active_workout_{$workout->user_id}");
         };
 
         static::saved($clearCache);

@@ -19,7 +19,7 @@ class ToggleHabitAction
         /** @var \App\Models\HabitLog|null $log */
         $log = $habit->logs()->whereDate('date', $date)->first();
 
-        if ($log) {
+        if ($log instanceof \App\Models\HabitLog) {
             $log->delete();
         } else {
             $habit->logs()->create(['date' => $date]);

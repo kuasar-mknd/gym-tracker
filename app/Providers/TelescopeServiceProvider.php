@@ -17,7 +17,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     #[\Override]
     public function register(): void
     {
-        if (! config('telescope.enabled')) {
+        if (config('telescope.enabled') !== true) {
             return;
         }
 
