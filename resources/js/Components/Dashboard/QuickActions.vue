@@ -69,7 +69,7 @@ const emit = defineEmits(['startWorkout'])
                 <div
                     class="from-vivid-violet to-hot-pink flex size-16 items-center justify-center rounded-2xl bg-linear-to-br shadow-lg shadow-purple-500/30 transition-transform duration-300 group-hover:scale-110"
                 >
-                    <span class="material-symbols-outlined text-4xl text-white">assignment_add</span>
+                    <span class="material-symbols-outlined text-4xl text-white" aria-hidden="true">assignment_add</span>
                 </div>
                 <span
                     class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic dark:text-white"

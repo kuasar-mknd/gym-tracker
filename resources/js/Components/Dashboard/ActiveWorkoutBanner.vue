@@ -56,7 +56,10 @@ onUnmounted(() => {
             <div
                 class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
             >
-                <span class="material-symbols-outlined text-3xl text-white" style="font-variation-settings: 'FILL' 1"
+                <span
+                    class="material-symbols-outlined text-3xl text-white"
+                    style="font-variation-settings: 'FILL' 1"
+                    aria-hidden="true"
                     >fitness_center</span
                 >
             </div>
@@ -69,14 +72,14 @@ onUnmounted(() => {
                 </h3>
                 <div class="mt-1 flex items-center gap-3">
                     <span class="flex items-center gap-1 text-sm font-bold text-white/80">
-                        <span class="material-symbols-outlined text-[16px]">timer</span>
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">timer</span>
                         {{ elapsed }}
                     </span>
                     <span
                         v-if="workout.workout_lines_count"
                         class="flex items-center gap-1 text-sm font-bold text-white/80"
                     >
-                        <span class="material-symbols-outlined text-[16px]">exercise</span>
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">exercise</span>
                         {{ workout.workout_lines_count }} exos
                     </span>
                 </div>
@@ -86,6 +89,7 @@ onUnmounted(() => {
             <div class="flex shrink-0 items-center">
                 <span
                     class="material-symbols-outlined text-2xl text-white/60 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-white"
+                    aria-hidden="true"
                     >arrow_forward_ios</span
                 >
             </div>

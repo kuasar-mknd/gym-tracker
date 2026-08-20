@@ -134,6 +134,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     v-else
                     class="material-symbols-outlined text-electric-orange transition-transform duration-200"
                     :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
+                    aria-hidden="true"
                 >
                     arrow_downward
                 </span>
@@ -157,7 +158,9 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 <div class="flex gap-2">
                     <Link :href="route('calendar.index')">
                         <GlassButton>
-                            <span class="material-symbols-outlined mr-2 text-[18px]">calendar_month</span>
+                            <span class="material-symbols-outlined mr-2 text-[18px]" aria-hidden="true"
+                                >calendar_month</span
+                            >
                             Calendrier
                         </GlassButton>
                     </Link>
@@ -364,7 +367,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                 "
                             >
                                 <div class="flex flex-col items-center drop-shadow-md" aria-hidden="true">
-                                    <span class="material-symbols-outlined text-2xl">delete</span>
+                                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
                                     <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
                                 </div>
                             </button>

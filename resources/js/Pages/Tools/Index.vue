@@ -8,7 +8,7 @@
                     aria-label="Retour au profil"
                     v-press
                 >
-                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
                 <h2 class="text-text-main text-xl font-semibold">Outils</h2>
             </div>

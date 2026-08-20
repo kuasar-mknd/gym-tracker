@@ -55,7 +55,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
                         comparison > 0 ? 'text-emerald-600' : comparison < 0 ? 'text-red-500' : 'text-text-muted',
                     ]"
                 >
-                    <span class="material-symbols-outlined text-sm font-bold">
+                    <span class="material-symbols-outlined text-sm font-bold" aria-hidden="true">
                         {{ comparison > 0 ? 'trending_up' : comparison < 0 ? 'trending_down' : 'trending_flat' }}
                     </span>
                     <template v-if="comparison === 0">Stable vs sem. passée</template>

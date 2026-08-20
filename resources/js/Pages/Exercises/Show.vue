@@ -189,7 +189,9 @@ const scatterData = computed(() => {
                     <OneRepMaxChart :data="progress" />
                 </div>
                 <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">show_chart</span>
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
+                        >show_chart</span
+                    >
                     <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                 </div>
             </GlassCard>
@@ -304,7 +306,9 @@ const scatterData = computed(() => {
             </div>
             <GlassCard v-else class="animate-slide-up" style="animation-delay: 0.05s">
                 <div class="flex h-64 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
+                        >bar_chart</span
+                    >
                     <p class="text-text-muted text-sm">Pas assez de données pour afficher les statistiques</p>
                 </div>
             </GlassCard>
@@ -322,7 +326,9 @@ const scatterData = computed(() => {
                         <SessionPerformanceChart :data="history" />
                     </div>
                     <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
+                            >bar_chart</span
+                        >
                         <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                     </div>
                 </GlassCard>
@@ -341,7 +347,9 @@ const scatterData = computed(() => {
                         <SessionVolumeLineChart :data="volumeData" />
                     </div>
                     <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">show_chart</span>
+                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
+                            >show_chart</span
+                        >
                         <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                     </div>
                 </GlassCard>
@@ -360,7 +368,9 @@ const scatterData = computed(() => {
                         <HistoryChart :data="history" />
                     </div>
                     <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">show_chart</span>
+                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
+                            >show_chart</span
+                        >
                         <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                     </div>
                 </GlassCard>

@@ -87,7 +87,7 @@ const emit = defineEmits(['startWorkout'])
                                   : 'text-hot-pink border-pink-100 bg-pink-50',
                         ]"
                     >
-                        <span class="material-symbols-outlined">
+                        <span class="material-symbols-outlined" aria-hidden="true">
                             {{ (workout.workout_lines_count || 0) > 3 ? 'timer' : 'fitness_center' }}
                         </span>
                     </div>

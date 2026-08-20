@@ -28,7 +28,7 @@ defineProps({
                     </p>
                 </div>
                 <div class="bg-magenta-pure/10 flex size-12 items-center justify-center rounded-xl">
-                    <span class="material-symbols-outlined text-2xl text-pink-600">water_drop</span>
+                    <span class="material-symbols-outlined text-2xl text-pink-600" aria-hidden="true">water_drop</span>
                 </div>
             </div>
 
@@ -74,7 +74,7 @@ defineProps({
                                 : 'bg-red-50 text-red-600',
                         ]"
                     >
-                        <span class="material-symbols-outlined text-sm">
+                        <span class="material-symbols-outlined text-sm" aria-hidden="true">
                             {{ (monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down' }}
                         </span>
                         {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''

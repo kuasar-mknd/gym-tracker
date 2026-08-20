@@ -78,7 +78,9 @@
                             aria-label="Ajouter 250ml"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                         >
-                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">local_drink</span>
+                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
+                                >local_drink</span
+                            >
                             <span class="text-text-main text-xs font-bold">250ml</span>
                         </button>
                         <button
@@ -88,7 +90,9 @@
                             aria-label="Ajouter 500ml"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                         >
-                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_drop</span>
+                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
+                                >water_drop</span
+                            >
                             <span class="text-text-main text-xs font-bold">500ml</span>
                         </button>
                         <button
@@ -98,7 +102,9 @@
                             aria-label="Ajouter 1L"
                             class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
                         >
-                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500">water_bottle</span>
+                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
+                                >water_bottle</span
+                            >
                             <span class="text-text-main text-xs font-bold">1L</span>
                         </button>
                     </div>
@@ -123,7 +129,7 @@
                             class="h-12 !px-4"
                             variant="primary"
                         >
-                            <span class="material-symbols-outlined">add</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">add</span>
                         </GlassButton>
                     </div>
                 </div>
@@ -138,7 +144,9 @@
                     </h2>
 
                     <div v-if="logs.length === 0" class="py-8 text-center">
-                        <span class="material-symbols-outlined mb-2 text-4xl text-slate-200">water_drop</span>
+                        <span class="material-symbols-outlined mb-2 text-4xl text-slate-200" aria-hidden="true"
+                            >water_drop</span
+                        >
                         <p class="text-text-muted text-sm font-medium">Aucune consommation aujourd'hui.</p>
                     </div>
 
@@ -152,7 +160,7 @@
                                 <div
                                     class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-500"
                                 >
-                                    <span class="material-symbols-outlined text-xl">water_drop</span>
+                                    <span class="material-symbols-outlined text-xl" aria-hidden="true">water_drop</span>
                                 </div>
                                 <div>
                                     <p class="text-text-main font-bold">{{ log.amount }} ml</p>
@@ -171,7 +179,7 @@
                                 :aria-label="'Supprimer l\'entrée de ' + log.amount + ' ml'"
                                 class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                             >
-                                <span class="material-symbols-outlined text-lg">delete</span>
+                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>
                         </div>
                     </div>

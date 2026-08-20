@@ -264,6 +264,7 @@ const typeLabel = (type) => {
                     v-else
                     class="material-symbols-outlined text-electric-orange transition-transform duration-200"
                     :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
+                    aria-hidden="true"
                 >
                     arrow_downward
                 </span>
@@ -299,7 +300,7 @@ const typeLabel = (type) => {
                     data-testid="create-exercise-desktop"
                     dusk="create-exercise-btn-desktop"
                 >
-                    <span class="material-symbols-outlined mr-2">add</span>
+                    <span class="material-symbols-outlined mr-2" aria-hidden="true">add</span>
                     Nouvel Exercice
                 </GlassButton>
             </div>
@@ -339,7 +340,7 @@ const typeLabel = (type) => {
                             class="text-text-muted/40 hidden items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
                             aria-hidden="true"
                         >
-                            <span class="material-symbols-outlined text-sm">keyboard</span>
+                            <span class="material-symbols-outlined text-sm" aria-hidden="true">keyboard</span>
                             ⌘K
                         </div>
                     </template>
@@ -360,7 +361,7 @@ const typeLabel = (type) => {
                     ]"
                     :aria-pressed="activeCategory === 'all'"
                 >
-                    <span class="material-symbols-outlined text-lg">apps</span>
+                    <span class="material-symbols-outlined text-lg" aria-hidden="true">apps</span>
                     Tous
                 </button>
                 <button
