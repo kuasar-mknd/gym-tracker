@@ -75,8 +75,8 @@ function comptesDuBaseline(): array
  * booleennes laches — soit exactement la matiere ou les defauts de cette campagne
  * se cachaient.
  */
-const BASELINE_BLOCS_MAX = 274;
-const BASELINE_ERREURS_MAX = 594;
+const BASELINE_BLOCS_MAX = 272;
+const BASELINE_ERREURS_MAX = 592;
 
 it('ne laisse pas grossir le nombre d’entrées du baseline', function (): void {
     $comptes = comptesDuBaseline();
