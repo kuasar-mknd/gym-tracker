@@ -19,7 +19,7 @@ class ToggleHabitRequest extends FormRequest
         /** @var \App\Models\User $user */
         $user = $this->user();
 
-        return $habit && $habit->user_id === $user->id;
+        return $habit !== null && $habit->user_id === $user->id;
     }
 
     /**
