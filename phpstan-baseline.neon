@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Parameter \#1 \$input \(array\<string, string\>\) of method App\\Actions\\Fortify\\CreateNewUser\:\:create\(\) should be contravariant with parameter \$input \(array\) of method Laravel\\Fortify\\Contracts\\CreatesNewUsers\:\:create\(\)$#'
-			identifier: method.childParameterType
-			count: 1
-			path: app/Actions/Fortify/CreateNewUser.php
-
-		-
 			message: '#^Cannot call method whereBetween\(\) on mixed\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -671,66 +665,6 @@ parameters:
 			identifier: offsetAccess.notFound
 			count: 3
 			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
-
-		-
-			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
-			identifier: argument.type
-			count: 6
-			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
-
-		-
-			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Feature/Actions/Fortify/CreateNewUserTest.php
-
-		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
-
-		-
-			message: '#^Cannot access property \$password on mixed\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
-
-		-
-			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
-			identifier: argument.type
-			count: 3
-			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
-
-		-
-			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 5
-			path: tests/Feature/Actions/Fortify/ResetUserPasswordTest.php
-
-		-
-			message: '#^Cannot access offset 0 on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
-
-		-
-			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
-			identifier: argument.type
-			count: 4
-			path: tests/Feature/Actions/Fortify/UpdateUserPasswordTest.php
-
-		-
-			message: '#^Parameter \#1 \$exception of method Pest\\Mixins\\Expectation\<\(Closure\)\|null\>\:\:toThrow\(\) expects \(Closure\(Throwable\)\: mixed\)\|string\|Throwable, Closure\(Illuminate\\Validation\\ValidationException\)\: void given\.$#'
-			identifier: argument.type
-			count: 3
-			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
-
-		-
-			message: '#^Unable to resolve the template type TAndValue in call to method Pest\\Expectation\<mixed\>\:\:and\(\)$#'
-			identifier: argument.templateType
-			count: 1
-			path: tests/Feature/Actions/Fortify/UpdateUserProfileInformationTest.php
 
 		-
 			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andThrow\(\)\.$#'
@@ -1763,12 +1697,6 @@ parameters:
 			identifier: booleanNot.exprNotBoolean
 			count: 1
 			path: tests/Unit/FeatureTestIsolationTest.php
-
-		-
-			message: '#^Call to function method_exists\(\) with ''App\\\\Models\\\\User'' and ''hasEnabledTwoFactor…'' will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 1
-			path: tests/Unit/Models/UserSerializationTest.php
 
 		-
 			message: '#^Argument of an invalid type Illuminate\\Routing\\RouteCollectionInterface supplied for foreach, only iterables are supported\.$#'
