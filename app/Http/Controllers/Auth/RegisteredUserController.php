@@ -6,11 +6,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Actions\CreateUserAction;
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Requests\Auth\RegisterRequest;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,15 +27,21 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request, CreateUserAction $createUser): RedirectResponse
+    public function store(RegisterRequest $request, CreateUserAction $createUser): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        /*
+         * Le tableau est construit champ par champ plutot que passe tel quel.
+         *
+         * `CreateUserAction::execute()` attend un `array<string, string>`, et
+         * `validated()` rend un `array<string, mixed>`. Elargir la signature de
+         * l'action pour que les deux s'accordent la ferait taire sans rien
+         * garantir ; la remplir explicitement lui donne bien trois chaines.
+         */
+        $user = $createUser->execute([
+            'name' => $request->string('name')->toString(),
+            'email' => $request->string('email')->toString(),
+            'password' => $request->string('password')->toString(),
         ]);
-
-        $user = $createUser->execute($validated);
 
         Auth::login($user);
 
