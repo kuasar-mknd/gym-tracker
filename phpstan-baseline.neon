@@ -13,46 +13,16 @@ parameters:
 			path: app/Actions/Tools/FetchWaterHistoryAction.php
 
 		-
-			message: '#^Parameter \#2 \$requestData of method App\\Actions\\Habits\\FetchHabitsIndexApiAction\:\:execute\(\) expects array\<string, mixed\>, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Api/HabitController.php
-
-		-
 			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\NotificationPreference\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\NotificationPreference\>\.$#'
 			identifier: varTag.type
 			count: 1
 			path: app/Http/Controllers/Api/NotificationPreferenceController.php
 
 		-
-			message: '#^Cannot access offset ''exercise_id'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: app/Http/Controllers/Api/PersonalRecordController.php
-
-		-
 			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\WorkoutTemplate\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\WorkoutTemplate\>\.$#'
 			identifier: varTag.type
 			count: 1
 			path: app/Http/Controllers/Api/WorkoutTemplateController.php
-
-		-
-			message: '#^Parameter \#1 \$credentials of method App\\Http\\Controllers\\Auth\\NewPasswordController\:\:resetPassword\(\) expects array\<string, mixed\>, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Auth/NewPasswordController.php
-
-		-
-			message: '#^Parameter \#1 \$data of method App\\Actions\\Auth\\SendPasswordResetLinkAction\:\:execute\(\) expects array\<string, mixed\>, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Auth/PasswordResetLinkController.php
-
-		-
-			message: '#^Parameter \#1 \$input of method App\\Actions\\CreateUserAction\:\:execute\(\) expects array\<string, string\>, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Auth/RegisteredUserController.php
 
 		-
 			message: '#^Method App\\Http\\Middleware\\ConditionalCspHeaders\:\:handle\(\) should return Symfony\\Component\\HttpFoundation\\Response but returns mixed\.$#'

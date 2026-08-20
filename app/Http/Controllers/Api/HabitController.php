@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Actions\Habits\CreateHabitAction;
 use App\Actions\Habits\FetchHabitsIndexApiAction;
+use App\Http\Requests\Api\IndexHabitsRequest;
 use App\Http\Requests\Api\StoreHabitRequest;
 use App\Http\Requests\Api\UpdateHabitRequest;
 use App\Http\Resources\HabitResource;
@@ -13,7 +14,6 @@ use App\Models\Habit;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
@@ -33,7 +33,7 @@ class HabitController extends Controller
      * Retrieves all active habits for the authenticated user, supporting
      * optional pagination.
      *
-     * @param  Request  $request  The incoming HTTP request containing optional query parameters.
+     * @param  IndexHabitsRequest  $request  The validated request carrying the optional page size.
      * @param  FetchHabitsIndexApiAction  $fetchHabitsIndexApiAction  The action to fetch habits.
      * @return AnonymousResourceCollection A collection of habit resources.
      *
@@ -46,15 +46,11 @@ class HabitController extends Controller
     )]
     #[OA\Response(response: 200, description: 'Successful operation')]
     #[OA\Response(response: 401, description: 'Unauthenticated')]
-    public function index(Request $request, FetchHabitsIndexApiAction $fetchHabitsIndexApiAction): AnonymousResourceCollection
+    public function index(IndexHabitsRequest $request, FetchHabitsIndexApiAction $fetchHabitsIndexApiAction): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Habit::class);
 
-        $validated = $request->validate([
-            'per_page' => 'sometimes|integer|min:1|max:100',
-        ]);
-
-        $habits = $fetchHabitsIndexApiAction->execute($this->user(), $validated);
+        $habits = $fetchHabitsIndexApiAction->execute($this->user(), $request->validated());
 
         return HabitResource::collection($habits);
     }

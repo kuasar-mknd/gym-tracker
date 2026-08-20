@@ -21,6 +21,16 @@ class PersonalRecordController extends Controller
     {
         $this->authorize('viewAny', PersonalRecord::class);
 
+        /**
+         * `int|numeric-string` et non `int` : la regle `integer` de Laravel
+         * VALIDE sans convertir, donc une valeur passee en parametre d'URL
+         * arrive en chaine. Meme forme que dans `Api\DailyJournalController`
+         * et `Api\SupplementLogController`, qui la portaient deja — celui-ci
+         * ne l'avait pas, et l'acces a l'index se faisait donc sur `mixed`
+         * (#1482).
+         *
+         * @var array{exercise_id?: int|numeric-string|null} $validated
+         */
         $validated = $request->validate([
             'exercise_id' => 'nullable|integer|exists:exercises,id',
         ]);
