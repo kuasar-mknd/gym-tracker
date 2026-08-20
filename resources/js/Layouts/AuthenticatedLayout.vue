@@ -221,7 +221,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                         type="button"
                                         aria-haspopup="true"
                                         :aria-expanded="open"
-                                        class="text-text-main focus-visible:ring-electric-orange inline-flex items-center gap-2 rounded-xl border border-white bg-white/60 px-4 py-2 text-sm font-bold transition-all hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:hover:bg-slate-700"
+                                        class="text-text-main focus-visible:ring-electric-orange inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold shadow-sm transition-all hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:hover:bg-slate-700"
                                     >
                                         <div
                                             class="bg-gradient-main flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white"
@@ -238,9 +238,13 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                 </template>
 
                                 <template #content>
-                                    <DropdownLink :href="route('profile.edit')">
+                                    <DropdownLink :href="route('profile.index')">
                                         <span class="material-symbols-outlined mr-2 text-lg">person</span>
                                         Profil
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('profile.edit')">
+                                        <span class="material-symbols-outlined mr-2 text-lg">settings</span>
+                                        Paramètres
                                     </DropdownLink>
                                     <DropdownLink :href="route('achievements.index')">
                                         <span class="material-symbols-outlined mr-2 text-lg">emoji_events</span>

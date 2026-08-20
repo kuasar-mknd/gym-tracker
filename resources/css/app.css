@@ -217,6 +217,32 @@
     }
 }
 
+/*
+ * Une surface flottante qui doit rester lisible.
+ *
+ * `--glass-bg-strong` existait dans les deux themes depuis toujours et
+ * n'avait aucun consommateur. C'est pourtant le jeton exact pour ce cas :
+ * un panneau pose PAR-DESSUS du contenu, ou la transparence de
+ * `glass-panel-light` ne joue plus le role de profondeur mais efface le
+ * texte. Le menu utilisateur etait a 10 % de blanc — un fantome sur le
+ * fond clair de l'application (#1314).
+ *
+ * L'ombre est plus marquee que celle de `glass-panel-light` : c'est elle
+ * qui detache le panneau de ce qu'il recouvre, la ou une carte posee dans
+ * le flux n'a rien a detacher.
+ */
+@utility glass-panel-strong {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.14);
+
+    .dark & {
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+}
+
 @utility glass-card {
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur));

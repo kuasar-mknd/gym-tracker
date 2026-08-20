@@ -322,6 +322,22 @@ describe('AuthenticatedLayout — the frame around the page', () => {
         expect(wrapper.find(`#${target}`).exists()).toBe(true)
     })
 
+    /*
+     * Le hub de profil se rejoint depuis le menu.
+     *
+     * « Profil » pointait sur `profile.edit`, la page de modification.
+     * `profile.index`, qui liste toutes les sections, n'etait atteignable sur
+     * ordinateur qu'en tapant l'adresse — la barre du bas y menait deja sur
+     * mobile, mais elle n'existe pas ici (#1314).
+     */
+    it('mène au hub de profil, et garde les réglages à un clic', () => {
+        const wrapper = mountLayout()
+        const parHref = wrapper.findAll('a').map((a) => [a.text(), a.attributes('href')])
+
+        expect(parHref).toContainEqual(['person Profil', '/resolved/profile.index'])
+        expect(parHref).toContainEqual(['settings Paramètres', '/resolved/profile.edit'])
+    })
+
     it('lights the desktop tab of the section being viewed', () => {
         const wrapper = mountLayout({ onPage: 'workouts.show' })
         const byLabel = Object.fromEntries(wrapper.findAll('a[data-active]').map((a) => [a.text(), a]))

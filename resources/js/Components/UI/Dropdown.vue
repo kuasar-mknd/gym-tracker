@@ -10,9 +10,15 @@ const props = defineProps({
         type: String,
         default: '48',
     },
+    /*
+     * `bg-white/10` par defaut jusqu'ici : le panneau etait blanc a 10 %,
+     * donc illisible sur le fond clair de l'application (#1314).
+     * `glass-panel-strong` porte le jeton prevu pour une surface flottante,
+     * et il suit deja le theme — pas de variante `dark:` a tenir a jour.
+     */
     contentClasses: {
         type: String,
-        default: 'py-1 bg-white/10 backdrop-blur-md',
+        default: 'py-1 glass-panel-strong',
     },
 })
 
@@ -63,12 +69,18 @@ const open = ref(false)
         >
             <div
                 v-show="open"
-                class="absolute z-50 mt-2 rounded-2xl shadow-lg"
+                class="absolute z-50 mt-2 rounded-2xl"
                 :class="[widthClass, alignmentClasses]"
-                style="display: none"
                 @click="open = false"
             >
-                <div class="rounded-2xl border border-white/20" :class="contentClasses">
+                <!--
+                    Ni `style="display: none"` ni `shadow-lg` ici : `v-show`
+                    pilote deja l'affichage, et l'ombre vient de
+                    `glass-panel-strong`, avec la bordure qui suit le theme.
+                    La bordure `border-white/20` codee en dur disparaissait
+                    en mode sombre.
+                -->
+                <div class="rounded-2xl" :class="contentClasses">
                     <slot name="content" />
                 </div>
             </div>
