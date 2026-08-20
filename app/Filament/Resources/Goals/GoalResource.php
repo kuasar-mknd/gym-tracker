@@ -17,6 +17,19 @@ use Filament\Tables\Table;
 
 class GoalResource extends Resource
 {
+    /**
+     * Les champs que les pages ecrivent elles-memes, hors assignation en masse.
+     *
+     * `user_id` a un sens en creation — l'exploitant choisit a qui la ligne
+     * appartient — mais il n'a rien a faire dans le `$fillable` du modele :
+     * celui-ci vaut pour TOUS les chemins d'assignation en masse, et rien ne
+     * doit pouvoir changer le proprietaire d'une ligne depuis une requete
+     * utilisateur. La page l'affecte donc explicitement (#1352).
+     *
+     * @var list<string>
+     */
+    public const CHAMPS_ASSIGNES_EXPLICITEMENT = ['user_id'];
+
     #[\Override]
     protected static ?string $modelLabel = 'Objectif';
 
