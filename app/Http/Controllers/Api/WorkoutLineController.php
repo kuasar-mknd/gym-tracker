@@ -140,7 +140,19 @@ class WorkoutLineController extends Controller
     {
         $this->authorize('delete', $workoutLine);
 
+        $user = $workoutLine->workout?->user;
+
         $workoutLine->delete();
+
+        /*
+         * Retirer un exercice change le volume de la seance, et rien ne le
+         * disait au cache : les chiffres affiches restaient faux jusqu'a une
+         * demi-heure. Supprimer une SERIE l'invalidait bien, supprimer une
+         * SEANCE aussi — la ligne, entre les deux, avait ete oubliee (#1502).
+         */
+        if ($user !== null) {
+            app(\App\Services\StatsService::class)->clearWorkoutRelatedStats($user);
+        }
 
         return response()->noContent();
     }

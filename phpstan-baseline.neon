@@ -699,7 +699,7 @@ parameters:
 		-
 			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
 			identifier: staticMethod.notFound
-			count: 2
+			count: 1
 			path: tests/Feature/Actions/Workouts/CreateSetActionTest.php
 
 		-
