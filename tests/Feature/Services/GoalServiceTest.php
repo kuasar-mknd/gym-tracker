@@ -59,9 +59,19 @@ test('syncGoals updates multiple dirty goals and ignores completed ones', functi
         ->and($goal1->progress_pct)->toBe(60.0)
         ->and($goal1->completed_at)->toBeNull();
 
-    // Goal 2 should be untouched
-    expect($goal2->current_value)->toBe(10.0)
-        ->and($goal2->completed_at)->not->toBeNull();
+    /*
+     * L'objectif 2 est REVU, et de-marque.
+     *
+     * Ce test affirmait « Goal 2 should be untouched » : la synchronisation ne
+     * chargeait que les objectifs non termines, donc un objectif atteint le
+     * restait quoi qu'il arrive. C'etait la limitation, pas la regle — la
+     * moitie de `checkCompletion()` qui de-marque etait inatteignable (#1501).
+     *
+     * Trois seances en base, une cible a dix : le critere n'est plus rempli, et
+     * l'objectif cesse d'etre marque atteint.
+     */
+    expect($goal2->current_value)->toBe(3.0)
+        ->and($goal2->completed_at)->toBeNull();
 });
 
 test('updateGoalProgress correctly updates weight goal', function (): void {
@@ -251,14 +261,19 @@ test('updateProgressPercentage handles edge cases', function (): void {
     ]);
 
     $this->service->updateGoalProgress($goal3);
-    // current_diff = abs(85 - 80) = 5
-    // total_diff = abs(70 - 80) = 10
-    // progress_pct is calculated based on currentDiff / totalDiff
-    // wait, for measurement if it goes wrong direction it would normally calculate 50%
-    // Let's actually check what GoalService does:
-    // $currentDiff = abs(85 - 80) = 5. $totalDiff = abs(70 - 80) = 10. $progress = 5/10 * 100 = 50.
-    // Progress calculation in GoalService doesn't check direction, just absolute diff from start.
-    expect($goal3->progress_pct)->toBe(50.0);
+
+    /*
+     * Zero, comme le nom du cas l'annonce depuis le debut.
+     *
+     * Il affirmait 50 %, et son commentaire se raisonnait jusqu'a l'accepter :
+     * « abs(85-80) / abs(70-80) = 50 %, la progression ne regarde pas le sens ».
+     * C'etait vrai, et c'etait le defaut : je pese 80, je vise 75, je monte a
+     * 85, et la barre annonce que j'ai fait la moitie du chemin (#1501).
+     *
+     * Le chemin se compte desormais dans le sens de la cible. S'eloigner du
+     * depart donne un chemin negatif, donc zero apres plancher.
+     */
+    expect($goal3->progress_pct)->toBe(0.0);
 });
 
 test('guard clauses for missing exercise_id and measurement_type', function (): void {
