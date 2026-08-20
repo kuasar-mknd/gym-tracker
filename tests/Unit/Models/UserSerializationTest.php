@@ -3,8 +3,17 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use Laravel\Fortify\TwoFactorAuthenticatable;
 
+/*
+ * Le second test de ce fichier verifiait que `User` porte le trait
+ * `TwoFactorAuthenticatable` de Fortify. Il est parti avec Fortify (#1355) :
+ * la 2FA cote application utilisateur etait activee en configuration sans
+ * qu'aucune route ne l'expose, et celle du back-office, qui fonctionne, est
+ * celle de Filament et ne doit rien a Fortify.
+ *
+ * Ce qui reste vaut pour soi : un mot de passe et un jeton de session n'ont
+ * rien a faire dans une reponse serialisee.
+ */
 it('declares sensitive attributes as hidden', function (): void {
     /** @var array<string, mixed> $defaults */
     $defaults = new ReflectionClass(User::class)->getDefaultProperties();
@@ -12,14 +21,5 @@ it('declares sensitive attributes as hidden', function (): void {
 
     expect($hidden)
         ->toContain('password')
-        ->toContain('remember_token')
-        ->toContain('two_factor_secret')
-        ->toContain('two_factor_recovery_codes');
-});
-
-it('uses the Fortify two-factor authentication trait', function (): void {
-    expect(class_uses_recursive(User::class))
-        ->toContain(TwoFactorAuthenticatable::class);
-
-    expect(method_exists(User::class, 'hasEnabledTwoFactorAuthentication'))->toBeTrue();
+        ->toContain('remember_token');
 });
