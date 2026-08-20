@@ -16,7 +16,6 @@
         "firebase/php-jwt": "^7.0",
         "inertiajs/inertia-laravel": "^3.3",
         "laravel-notification-channels/webpush": "^11.0",
-        "laravel/fortify": "^1.33",
         "laravel/framework": "^13.0",
         "laravel/horizon": "^5.42",
         "laravel/octane": "^2.13",

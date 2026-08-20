@@ -15,7 +15,6 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -46,7 +45,6 @@ final class User extends Authenticatable implements MustVerifyEmail
     use HasToolsData;
     use LogsActivity;
     use Notifiable;
-    use TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -69,8 +67,6 @@ final class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
     ];
 
     /**
