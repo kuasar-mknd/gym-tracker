@@ -1,42 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Cannot call method whereBetween\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/Habits/FetchHabitsIndexAction.php
-
-		-
-			message: '#^PHPDoc tag @var with type Carbon\\Carbon is not subtype of type string\.$#'
-			identifier: varTag.type
-			count: 1
-			path: app/Actions/Tools/FetchWaterHistoryAction.php
-
-		-
-			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\NotificationPreference\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\NotificationPreference\>\.$#'
-			identifier: varTag.type
-			count: 1
-			path: app/Http/Controllers/Api/NotificationPreferenceController.php
-
-		-
-			message: '#^PHPDoc tag @var with type Spatie\\QueryBuilder\\QueryBuilder\<App\\Models\\WorkoutTemplate\> is not subtype of type Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\WorkoutTemplate\>\.$#'
-			identifier: varTag.type
-			count: 1
-			path: app/Http/Controllers/Api/WorkoutTemplateController.php
-
-		-
-			message: '#^Method App\\Http\\Middleware\\ConditionalCspHeaders\:\:handle\(\) should return Symfony\\Component\\HttpFoundation\\Response but returns mixed\.$#'
-			identifier: return.type
-			count: 2
-			path: app/Http/Middleware/ConditionalCspHeaders.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
-			path: app/Services/Stats/ExerciseStatsService.php
-
-		-
 			message: '#^Cannot call method random\(\) on mixed\.$#'
 			identifier: method.nonObject
 			count: 1
