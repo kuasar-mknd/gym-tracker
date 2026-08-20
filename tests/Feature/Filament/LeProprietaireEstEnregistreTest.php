@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Filament\Resources\Exercises\Pages\CreateExercise;
 use App\Filament\Resources\Exercises\Pages\EditExercise;
 use App\Filament\Resources\Goals\Pages\CreateGoal;
+use App\Filament\Resources\Goals\Pages\EditGoal;
 use App\Filament\Resources\Workouts\Pages\CreateWorkout;
+use App\Filament\Resources\Workouts\Pages\EditWorkout;
 use App\Models\Exercise;
 use App\Models\User;
 use Livewire\Livewire;
@@ -104,4 +106,42 @@ it('enregistre le propriétaire choisi à la création d’une séance', functio
         'name' => 'Séance du matin',
         'user_id' => $proprietaire->getKey(),
     ]);
+});
+
+/*
+ * L'edition des deux autres ressources, laissee de cote au premier passage.
+ *
+ * `handleRecordUpdate` est ecrit trois fois — une par ressource — et n'etait
+ * couvert que pour les exercices : la mesure de couverture donnait 33 % sur
+ * `EditWorkout`, exactement les lignes ajoutees. Trois copies d'une meme regle
+ * dont une seule est tenue, c'est deux qui derivent.
+ */
+it('enregistre le changement de propriétaire d’un objectif', function (): void {
+    $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Goal')), 'admin');
+
+    $avant = User::factory()->create();
+    $apres = User::factory()->create();
+    $goal = \App\Models\Goal::factory()->create(['user_id' => $avant->getKey()]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->fillForm(['user_id' => $apres->getKey()])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($goal->refresh()->user_id)->toBe($apres->getKey());
+});
+
+it('enregistre le changement de propriétaire d’une séance', function (): void {
+    $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Workout')), 'admin');
+
+    $avant = User::factory()->create();
+    $apres = User::factory()->create();
+    $workout = \App\Models\Workout::factory()->create(['user_id' => $avant->getKey()]);
+
+    Livewire::test(EditWorkout::class, ['record' => $workout->getKey()])
+        ->fillForm(['user_id' => $apres->getKey()])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($workout->refresh()->user_id)->toBe($apres->getKey());
 });
