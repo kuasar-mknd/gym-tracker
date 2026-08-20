@@ -51,12 +51,16 @@ test('user cannot view another users wilks score', function (): void {
 test('user can create a wilks score', function (): void {
     $user = User::factory()->create();
 
+    /*
+     * Le score n'est plus une entrée : il est calculé par la même action que le
+     * chemin web, conversion d'unités comprise. Ce test posait `150.55` et
+     * vérifiait qu'on le retrouvait tel quel — c'était le défaut (#1378).
+     */
     $payload = [
         'body_weight' => 80.5,
         'lifted_weight' => 200,
         'gender' => 'male',
         'unit' => 'kg',
-        'score' => 150.55,
     ];
 
     $response = actingAs($user)->postJson('/api/v1/wilks-scores', $payload);
@@ -65,8 +69,7 @@ test('user can create a wilks score', function (): void {
         ->assertJsonPath('data.body_weight', 80.5)
         ->assertJsonPath('data.lifted_weight', 200)
         ->assertJsonPath('data.gender', 'male')
-        ->assertJsonPath('data.unit', 'kg')
-        ->assertJsonPath('data.score', 150.55);
+        ->assertJsonPath('data.unit', 'kg');
 
     $this->assertDatabaseHas('wilks_scores', [
         'user_id' => $user->id,
@@ -74,8 +77,16 @@ test('user can create a wilks score', function (): void {
         'lifted_weight' => 200.0,
         'gender' => 'male',
         'unit' => 'kg',
-        'score' => 150.55,
     ]);
+
+    /* `value()` rend `mixed` : la forme est declaree plutot que castee a l'aveugle. */
+    /** @var float|string|null $brut */
+    $brut = \Illuminate\Support\Facades\DB::table('wilks_scores')
+        ->where('user_id', $user->id)->value('score');
+    $calcule = (float) $brut;
+
+    expect($calcule)->toBeGreaterThan(0.0)
+        ->and($calcule)->not->toBe(150.55, 'le score envoyé par le client ne doit plus être retenu');
 });
 
 test('store requires valid payload', function (): void {
@@ -88,8 +99,9 @@ test('store requires valid payload', function (): void {
         'unit' => 'invalid',
     ]);
 
+    // `score` ne figure plus : il n'est plus une entrée.
     $response->assertUnprocessable()
-        ->assertJsonValidationErrors(['body_weight', 'lifted_weight', 'gender', 'unit', 'score']);
+        ->assertJsonValidationErrors(['body_weight', 'lifted_weight', 'gender', 'unit']);
 });
 
 test('user can update their wilks score', function (): void {

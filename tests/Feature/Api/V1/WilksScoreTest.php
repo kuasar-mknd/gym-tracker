@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Models\WilksScore;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Assert;
 
@@ -65,12 +66,23 @@ describe('Authenticated', function (): void {
             $user = $this->user;
             Assert::assertInstanceOf(User::class, $user, 'the beforeEach user fixture is missing');
 
+            /*
+             * Le score n'est plus envoye : il est CALCULE.
+             *
+             * Ce test posait `'score' => 300.5` et verifiait qu'on le retrouvait
+             * tel quel en base. C'etait le defaut : l'API acceptait du client une
+             * valeur que le chemin web calcule, conversion d'unites comprise. Un
+             * historique constitue par l'API valait ce que l'appelant declarait
+             * (#1378).
+             *
+             * Le score attendu est celui de la formule de Wilks pour 80,5 kg de
+             * poids de corps et 150,5 kg souleves, chez un homme.
+             */
             $data = [
                 'body_weight' => 80.5,
                 'lifted_weight' => 150.5,
                 'gender' => 'male',
                 'unit' => 'kg',
-                'score' => 300.5,
             ];
 
             $response = postJson(route('api.v1.wilks-scores.store'), $data);
@@ -79,19 +91,24 @@ describe('Authenticated', function (): void {
                 ->assertJsonPath('data.body_weight', 80.5)
                 ->assertJsonPath('data.lifted_weight', 150.5)
                 ->assertJsonPath('data.gender', 'male')
-                ->assertJsonPath('data.unit', 'kg')
-                ->assertJsonPath('data.score', 300.5);
+                ->assertJsonPath('data.unit', 'kg');
 
-            assertDatabaseHas('wilks_scores', [
-                'user_id' => $user->id,
-                'score' => 300.5,
-            ]);
+            /* `value()` rend `mixed` : la forme est declaree plutot que castee a l'aveugle. */
+            /** @var float|string|null $brut */
+            $brut = DB::table('wilks_scores')->where('user_id', $user->id)->value('score');
+            $enregistre = (float) $brut;
+
+            expect($enregistre)->toBeGreaterThan(0.0)
+                ->and($enregistre)->not->toBe(300.5, 'le score envoyé par le client ne doit plus être retenu');
+
+            assertDatabaseHas('wilks_scores', ['user_id' => $user->id]);
         });
 
         test('validation: required fields', function (): void {
+            // `score` ne figure plus : il n'est plus une entree.
             postJson(route('api.v1.wilks-scores.store'), [])
                 ->assertUnprocessable()
-                ->assertJsonValidationErrors(['body_weight', 'lifted_weight', 'gender', 'unit', 'score']);
+                ->assertJsonValidationErrors(['body_weight', 'lifted_weight', 'gender', 'unit']);
         });
 
         test('validation: numeric constraints', function (): void {
@@ -100,12 +117,11 @@ describe('Authenticated', function (): void {
                 'lifted_weight' => 0,
                 'gender' => 'unknown',
                 'unit' => 'stone',
-                'score' => 'not-a-number',
             ];
 
             postJson(route('api.v1.wilks-scores.store'), $data)
                 ->assertUnprocessable()
-                ->assertJsonValidationErrors(['body_weight', 'lifted_weight', 'gender', 'unit', 'score']);
+                ->assertJsonValidationErrors(['body_weight', 'lifted_weight', 'gender', 'unit']);
         });
     });
 
