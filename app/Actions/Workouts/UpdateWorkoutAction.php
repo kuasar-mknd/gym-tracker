@@ -6,6 +6,7 @@ namespace App\Actions\Workouts;
 
 use App\Models\Workout;
 use App\Services\StatsService;
+use Illuminate\Support\Arr;
 
 final class UpdateWorkoutAction
 {
@@ -20,7 +21,13 @@ final class UpdateWorkoutAction
      */
     public function execute(Workout $workout, array $data): Workout
     {
-        $workout->fill(collect($data)->only(['started_at', 'name', 'notes'])->toArray());
+        // Meme raison que dans les quatre actions de creation : le stub de
+        // `Arr::only` rend un `array` nu, la forme du parametre garantit des
+        // cles textuelles, et `fill()` les exige.
+        /** @var array<string, mixed> $attributs */
+        $attributs = Arr::only($data, ['started_at', 'name', 'notes']);
+
+        $workout->fill($attributs);
 
         // Check what changed to determine cache invalidation strategy
         $needsFullClear = $workout->isDirty(['started_at', 'ended_at']);

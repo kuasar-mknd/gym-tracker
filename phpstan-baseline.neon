@@ -19,36 +19,6 @@ parameters:
 			path: app/Actions/Tools/FetchWaterHistoryAction.php
 
 		-
-			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany\<App\\Models\\WorkoutTemplateLine,App\\Models\\WorkoutTemplate,Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WorkoutTemplateLine\>\>\:\:create\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/WorkoutTemplates/CreateWorkoutTemplateLineAction.php
-
-		-
-			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany\<App\\Models\\WorkoutTemplateSet,App\\Models\\WorkoutTemplateLine,Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WorkoutTemplateSet\>\>\:\:create\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/WorkoutTemplates/CreateWorkoutTemplateSetAction.php
-
-		-
-			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany\<App\\Models\\Set,App\\Models\\WorkoutLine,Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\Set\>\>\:\:make\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Workouts/CreateSetAction.php
-
-		-
-			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Relations\\HasOneOrMany\<App\\Models\\WorkoutLine,App\\Models\\Workout,Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\WorkoutLine\>\>\:\:make\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Workouts/CreateWorkoutLineAction.php
-
-		-
-			message: '#^Parameter \#1 \$attributes of method Illuminate\\Database\\Eloquent\\Model\:\:fill\(\) expects array\<string, mixed\>, array\<mixed\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Workouts/UpdateWorkoutAction.php
-
-		-
 			message: '#^Parameter \#2 \$requestData of method App\\Actions\\Habits\\FetchHabitsIndexApiAction\:\:execute\(\) expects array\<string, mixed\>, mixed given\.$#'
 			identifier: argument.type
 			count: 1
