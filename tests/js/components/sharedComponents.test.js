@@ -49,6 +49,7 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 import Dropdown from '@/Components/UI/Dropdown.vue'
+import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import GoalForm from '@/Components/Goals/GoalForm.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
@@ -115,6 +116,24 @@ describe('Dropdown', () => {
 
         await wrapper.get('[data-testid="trigger"]').trigger('click')
         expect(panel(wrapper).isVisible()).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    /*
+     * Le panneau flotte AU-DESSUS de la page : il lui faut une surface a lui.
+     *
+     * Sa valeur par defaut etait `bg-white/10` — du blanc a 10 % sur le fond
+     * clair de l'application, c'est-a-dire un fantome (#1314). Le test vise la
+     * classe de surface plutot qu'une couleur precise : c'est
+     * `glass-panel-strong` qui porte le jeton, et lui seul suit le theme.
+     */
+    it('pose une surface opaque sous le menu, pas un voile', () => {
+        const wrapper = mountDropdown()
+        const classes = panel(wrapper).find('div').classes()
+
+        expect(classes).toContain('glass-panel-strong')
+        expect(classes.join(' ')).not.toMatch(/bg-white\/(?:5|10|20|30|40)\b/)
 
         wrapper.unmount()
     })
@@ -236,11 +255,40 @@ describe('Dropdown', () => {
     it('paints the panel with the content classes it was given', () => {
         const wrapper = mountDropdown({ contentClasses: 'py-2 bg-slate-900' })
 
-        expect(panel(wrapper).get('.rounded-2xl.border').classes()).toEqual(
-            expect.arrayContaining(['py-2', 'bg-slate-900']),
-        )
+        // Par la structure — la surface interne est le seul enfant du panneau —
+        // et non par `.rounded-2xl.border` : la bordure vient maintenant de la
+        // classe de surface, qui la fait suivre le theme.
+        expect(panel(wrapper).get('div').classes()).toEqual(expect.arrayContaining(['py-2', 'bg-slate-900']))
 
         wrapper.unmount()
+    })
+})
+
+/*
+ * Le defaut que le panneau opaque ne suffisait pas a corriger.
+ *
+ * Les entrees etaient ecrites `text-white/80` sur `bg-white/10` : pensees pour
+ * une surface sombre et translucide, alors que le menu flotte au-dessus du
+ * fond clair de l'application. Rendre le panneau opaque a donc d'abord donne
+ * du blanc sur du blanc — mesure a 17:1 apres correction, contre un rapport
+ * de 1 avant (#1314).
+ *
+ * Le test interdit la couleur fautive plutot que d'imposer la bonne : c'est le
+ * defaut qui doit rester impossible, pas la palette qui doit se figer.
+ */
+describe('DropdownLink', () => {
+    const classes = () =>
+        mount(DropdownLink, { props: { href: '/profile' }, global })
+            .classes()
+            .join(' ')
+
+    it('n’écrit pas en blanc sur une surface claire', () => {
+        expect(classes()).not.toMatch(/(?:^|\s)text-white(?:\/\d+)?(?:\s|$)/)
+    })
+
+    it('prend une couleur de texte qui suit le thème', () => {
+        expect(classes()).toContain('text-text-main')
+        expect(classes()).toContain('dark:text-slate-100')
     })
 })
 
