@@ -25,49 +25,6 @@ parameters:
 			path: app/Http/Controllers/Api/WorkoutTemplateController.php
 
 		-
-<<<<<<< HEAD
-			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\User\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Http/Controllers/Controller.php
-
-		-
-			message: '#^Only booleans are allowed in \|\|, string\|null given on the right side\.$#'
-			identifier: booleanOr.rightNotBoolean
-			count: 1
-			path: app/Http/Controllers/ExerciseController.php
-
-		-
-			message: '#^Only booleans are allowed in an if condition, App\\Models\\WarmupPreference\|null given\.$#'
-			identifier: if.condNotBoolean
-			count: 1
-			path: app/Http/Controllers/WarmupController.php
-
-		-
-			message: '#^Only booleans are allowed in an if condition, App\\Models\\Workout\|null given\.$#'
-			identifier: if.condNotBoolean
-			count: 1
-			path: app/Http/Controllers/WorkoutController.php
-=======
-			message: '#^Parameter \#1 \$credentials of method App\\Http\\Controllers\\Auth\\NewPasswordController\:\:resetPassword\(\) expects array\<string, mixed\>, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Auth/NewPasswordController.php
-
-		-
-			message: '#^Parameter \#1 \$data of method App\\Actions\\Auth\\SendPasswordResetLinkAction\:\:execute\(\) expects array\<string, mixed\>, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Auth/PasswordResetLinkController.php
-
-		-
-			message: '#^Parameter \#1 \$input of method App\\Actions\\CreateUserAction\:\:execute\(\) expects array\<string, string\>, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Auth/RegisteredUserController.php
->>>>>>> origin/main
-
-		-
 			message: '#^Method App\\Http\\Middleware\\ConditionalCspHeaders\:\:handle\(\) should return Symfony\\Component\\HttpFoundation\\Response but returns mixed\.$#'
 			identifier: return.type
 			count: 2
