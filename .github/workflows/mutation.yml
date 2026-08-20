@@ -83,15 +83,35 @@ jobs:
                     # Ce sont des classes readonly a proprietes promues, il n'y
                     # a rien a muter. Une part qui ne genere aucun mutant ne dit
                     # rien et coute une passe de reference complete.
+                    #
+                    # SEUILS RELEVES le 2026-08-20, sur quatre nocturnes reels.
+                    #
+                    #                 16/08    17/08    19/08    20/08
+                    #   Services      58,74    58,74    79,17    80,05
+                    #   Actions       64,49    64,49    66,47    67,88
+                    #   Policies      94,28    94,28    94,28    94,28
+                    #
+                    # Le point qui autorise a serrer : le score est DETERMINISTE
+                    # en CI. Code identique, score identique au centieme — les
+                    # 16 et 17 aout le montrent sur les trois parts a la fois. La
+                    # variance qu'on redoutait en local, et qui venait de la
+                    # contention entre processus, n'existe pas ici : le runner
+                    # n'a que deux processus et la duree de reference est mesuree
+                    # dans les memes conditions que les mutants.
+                    #
+                    # D'ou une marge courte et non prudente : deux points sous la
+                    # plus BASSE des mesures recentes, pas sous la derniere. Un
+                    # seuil qui ne serre pas ne sert a rien — c'est la raison
+                    # d'etre de #1446.
                     - scope: 'App\Services'
                       timeout: 60
-                      min: 58
+                      min: 78
                     - scope: 'App\Actions'
                       timeout: 30
-                      min: 62
+                      min: 66
                     - scope: 'App\Policies'
                       timeout: 30
-                      min: 92
+                      min: 94
         services:
             mysql:
                 image: mysql:8.4
