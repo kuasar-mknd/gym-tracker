@@ -861,9 +861,13 @@
         --cyan-pure: #00e5ff;
         --magenta-pure: #f5009b;
 
-        /* Text Colors (Light Theme) */
-        --text-main: #0f172a;
-        --text-muted: #64748b;
+        /*
+         * Une seule source par couleur : ces deux-la referencent les jetons du
+         * bloc `@theme`, au lieu de repeter leur valeur. C'est en les repetant
+         * que le mode sombre n'en avait renverse qu'une moitie.
+         */
+        --text-main: var(--color-text-main);
+        --text-muted: var(--color-text-muted);
         --pearl-white: #f8faff;
 
         /* Spacing for mobile touch */
@@ -873,12 +877,32 @@
     }
 
     /* Dark Mode Variables */
+    /*
+     * Le mode sombre, et les DEUX familles de variables qu'il doit renverser.
+     *
+     * `--text-muted` et `--color-text-muted` ne sont pas la meme chose. La
+     * seconde vient du bloc `@theme` : c'est elle que Tailwind lit pour
+     * produire `.text-text-muted { color: var(--color-text-muted) }`. Seule la
+     * premiere etait renversee ici, donc les **363** usages de
+     * `text-text-muted` gardaient leur gris clair sur un fond sombre.
+     *
+     * Mesure au navigateur, sur le tableau de bord : 1,96:1. La norme AA
+     * demande 4,5:1 pour du texte courant. Ce n'etait pas « un peu juste »,
+     * c'etait illisible, et ca expliquait a soi seul l'essentiel du grief
+     * (#1317).
+     *
+     * `#cbd5e1` (slate-300) et non `#94a3b8` (slate-400) : slate-400 remonte a
+     * 3,64:1, ce qui echoue encore. Les deux valeurs ont ete mesurees, pas
+     * choisies — sur les surfaces reelles, verre translucide compris.
+     */
     .dark {
         --glass-bg: rgba(30, 41, 59, 0.65);
         --glass-bg-strong: rgba(30, 41, 59, 0.85);
         --glass-border: rgba(51, 65, 85, 0.8);
-        --text-main: #f1f5f9;
-        --text-muted: #94a3b8;
+        --color-text-main: #f1f5f9;
+        --color-text-muted: #cbd5e1;
+        --text-main: var(--color-text-main);
+        --text-muted: var(--color-text-muted);
         --pearl-white: #0f172a;
     }
 
