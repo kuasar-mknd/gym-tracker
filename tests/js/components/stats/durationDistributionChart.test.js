@@ -90,4 +90,23 @@ describe('DurationDistributionChart', () => {
             expect(tooltip()(arc(undefined, undefined, 4))).toBe(': 0 (0%)')
         })
     })
+
+    /*
+     * Les deux anneaux sont empilés dans la même colonne du tableau de bord.
+     * L'un portait une icône centrale, l'autre non, et leurs options avaient
+     * dérivé au point de donner deux cercles de tailles différentes — 172 px
+     * contre 151 px de diamètre extérieur, mesurés sur un écran de 375 px
+     * (#1316).
+     */
+    it('porte une icône centrale, comme l’anneau qu’il accompagne', () => {
+        const icone = mount(DurationDistributionChart, { props: { data: buckets } }).find('.material-symbols-outlined')
+
+        expect(icone.exists()).toBe(true)
+        expect(icone.attributes('aria-hidden')).toBe('true')
+        expect(icone.element.parentElement.className).toContain('pointer-events-none')
+    })
+
+    it('prend les mêmes options communes que TimeOfDayChart', () => {
+        expect(chartOf(buckets).props('options').plugins.legend.position).toBe('bottom')
+    })
 })

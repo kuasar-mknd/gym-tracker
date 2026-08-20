@@ -83,4 +83,35 @@ describe('TimeOfDayChart', () => {
         expect(icon.attributes('aria-hidden')).toBe('true')
         expect(icon.element.parentElement.className).toContain('pointer-events-none')
     })
+
+    /*
+     * L'icône était posée en `absolute inset-0` avec un `-ml-[120px]` codé en
+     * dur, pour compenser une légende de droite dont la largeur dépendait des
+     * étiquettes. Mesuré dans le navigateur, elle tombait à 41 px du vrai
+     * centre ; elle y est maintenant à 3 px près (#1316).
+     */
+    it('ne compense plus la légende avec une marge codée en dur', () => {
+        const overlay = mountChart(slots).find('.material-symbols-outlined').element.parentElement
+
+        expect(overlay.className).not.toMatch(/-?ml-\[/)
+        expect(overlay.className).not.toContain('inset-0')
+    })
+
+    /*
+     * Tant que Chart.js n'a pas tracé, il n'y a pas de centre à demander. Le
+     * repli au milieu du conteneur evite que l'icone n'existe pas du tout —
+     * ce qui serait pire que legerement decalee.
+     */
+    it('retombe au centre du conteneur tant que le graphique n’a pas tracé', () => {
+        const overlay = mountChart(slots).find('.material-symbols-outlined').element.parentElement
+
+        expect(overlay.style.left).toBe('50%')
+        expect(overlay.style.top).toBe('50%')
+        expect(overlay.className).toContain('-translate-x-1/2')
+    })
+
+    it('prend les options communes aux anneaux du tableau de bord', () => {
+        // La légende à droite était la cause de l'inégalité des deux cercles.
+        expect(chartOf(slots).props('options').plugins.legend.position).toBe('bottom')
+    })
 })

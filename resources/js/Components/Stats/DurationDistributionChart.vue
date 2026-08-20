@@ -1,7 +1,8 @@
 <script setup>
 import { Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { optionsDAnneau, pluginCentreDAnneau } from '@/Utils/donut'
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement)
 
@@ -40,63 +41,36 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '65%',
-    plugins: {
-        legend: {
-            position: 'right',
-            labels: {
-                color: '#64748B', // text-muted
-                font: {
-                    family: "'Space Grotesk', sans-serif",
-                    size: 11,
-                    weight: 'bold',
-                },
-                padding: 15,
-                usePointStyle: true,
-                pointStyle: 'circle',
-            },
-        },
-        tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#0F172A', // text-main
-            titleFont: {
-                family: "'Archivo', sans-serif",
-                size: 13,
-                weight: 'bold',
-            },
-            bodyColor: '#64748B', // text-muted
-            bodyFont: {
-                family: "'Inter', sans-serif",
-                size: 12,
-            },
-            padding: 12,
-            cornerRadius: 12,
-            boxPadding: 6,
-            borderColor: 'rgba(255, 255, 255, 0.5)',
-            borderWidth: 1,
-            displayColors: true,
-            callbacks: {
-                label: function (context) {
-                    const label = context.label || ''
-                    const value = context.raw || 0
-                    const total = context.chart._metasets[context.datasetIndex].total
-                    const percentage = Math.round((value / total) * 100) + '%'
-                    return `${label}: ${value} (${percentage})`
-                },
-            },
-        },
-    },
-    layout: {
-        padding: 10,
-    },
-}
+/** Le centre réel de l'anneau, rapporté par Chart.js après chaque tracé. */
+const centre = ref(null)
+
+const chartOptions = optionsDAnneau((context) => {
+    const label = context.label || ''
+    const value = context.raw || 0
+    const total = context.chart._metasets[context.datasetIndex].total
+    const percentage = Math.round((value / total) * 100) + '%'
+
+    return `${label}: ${value} (${percentage})`
+})
+
+const plugins = [pluginCentreDAnneau((position) => (centre.value = position))]
 </script>
 
 <template>
-    <div class="h-48 w-full">
-        <Doughnut :data="chartData" :options="chartOptions" />
+    <div class="relative h-48 w-full">
+        <Doughnut :data="chartData" :options="chartOptions" :plugins="plugins" />
+        <!--
+            Une icône centrale ici aussi : les deux anneaux sont empilés dans la
+            même colonne, et l'un l'avait quand l'autre non (#1316). Même
+            mécanisme, donc même justesse — la position vient du centre que
+            Chart.js rapporte, avec un repli au centre du conteneur tant qu'il
+            n'a pas tracé.
+        -->
+        <div
+            class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+            :style="centre ? { left: `${centre.x}px`, top: `${centre.y}px` } : { left: '50%', top: '50%' }"
+        >
+            <span class="material-symbols-outlined text-text-muted/20 text-4xl" aria-hidden="true">timelapse</span>
+        </div>
     </div>
 </template>
