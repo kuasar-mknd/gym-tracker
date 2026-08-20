@@ -23,12 +23,20 @@ class NotificationPreferenceController extends Controller
     {
         $this->authorize('viewAny', NotificationPreference::class);
 
-        /** @var QueryBuilder<NotificationPreference> $preferences */
-        $preferences = clone QueryBuilder::for(NotificationPreference::class)->where('user_id', $this->user()->id);
-
-        $preferences->allowedSorts('type', 'created_at');
-
-        $preferences = $preferences->get();
+        /*
+         * Les methodes propres a Spatie d'abord, `where()` ensuite.
+         *
+         * `where()` est declaree par `Eloquent\Builder` et rend un `Builder`,
+         * pas un `QueryBuilder` : l'appeler en premier perdait le type, et le
+         * `@var QueryBuilder<...>` pose ensuite le CONTREDISAIT au lieu de le
+         * preciser — d'ou l'entree au baseline (#1482). Dans cet ordre, plus
+         * rien a annoter. Le `clone` partait avec : `for()` rend deja une
+         * instance neuve.
+         */
+        $preferences = QueryBuilder::for(NotificationPreference::class)
+            ->allowedSorts('type', 'created_at')
+            ->where('user_id', $this->user()->id)
+            ->get();
 
         return NotificationPreferenceResource::collection($preferences);
     }

@@ -26,7 +26,13 @@ final class FetchHabitsIndexAction
         $habits = $user->habits()
             ->where('archived', false)
             ->with([
-                'logs' => function ($query) use ($startOfWeek, $endOfWeek): void {
+                /*
+                 * `$query` type, sinon il est `mixed` et l'appel qui suit ne
+                 * verifie plus rien : c'est un `Relation`, pas un `Builder`,
+                 * parce qu'Eloquent passe la relation elle-meme aux fermetures
+                 * de chargement anticipe.
+                 */
+                'logs' => function (\Illuminate\Database\Eloquent\Relations\Relation $query) use ($startOfWeek, $endOfWeek): void {
                     $query->whereBetween('date', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')]);
                 },
             ])

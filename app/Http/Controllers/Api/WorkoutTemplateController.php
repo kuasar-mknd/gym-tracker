@@ -46,13 +46,16 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
-        /** @var QueryBuilder<WorkoutTemplate> $templates */
-        $templates = clone QueryBuilder::for(WorkoutTemplate::class)->where('user_id', $this->user()->id);
-
-        $templates->allowedSorts('created_at', 'name')
-            ->allowedIncludes('workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets');
-
-        $templates = $templates->paginate();
+        /*
+         * Meme ordre que dans `Api\NotificationPreferenceController` et pour
+         * la meme raison : `where()` rend un `Builder`, donc l'appeler avant
+         * `allowedSorts()` perdait le type de Spatie (#1482).
+         */
+        $templates = QueryBuilder::for(WorkoutTemplate::class)
+            ->allowedSorts('created_at', 'name')
+            ->allowedIncludes('workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets')
+            ->where('user_id', $this->user()->id)
+            ->paginate();
 
         return WorkoutTemplateResource::collection($templates);
     }

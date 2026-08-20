@@ -24,12 +24,9 @@ class FetchWaterHistoryAction
             ->get();
 
         // ⚡ Bolt: Group by date string to change O(n*7) collection filtering into O(n) + O(1) lookups
-        $groupedLogs = $historyLogs->groupBy(function (WaterLog $log): string {
-            /** @var \Carbon\Carbon $consumedAt */
-            $consumedAt = $log->consumed_at;
-
-            return $consumedAt->format('Y-m-d');
-        });
+        $groupedLogs = $historyLogs->groupBy(
+            static fn (WaterLog $log): string => $log->consumed_at->format('Y-m-d')
+        );
 
         $history = [];
         for ($i = 6; $i >= 0; $i--) {

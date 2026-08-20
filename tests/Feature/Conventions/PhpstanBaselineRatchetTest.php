@@ -75,8 +75,8 @@ function comptesDuBaseline(): array
  * booleennes laches — soit exactement la matiere ou les defauts de cette campagne
  * se cachaient.
  */
-const BASELINE_BLOCS_MAX = 267;
-const BASELINE_ERREURS_MAX = 587;
+const BASELINE_BLOCS_MAX = 261;
+const BASELINE_ERREURS_MAX = 580;
 
 it('ne laisse pas grossir le nombre d’entrées du baseline', function (): void {
     $comptes = comptesDuBaseline();
@@ -118,5 +118,36 @@ it('garde le plafond collé au compte réel', function (): void {
         BASELINE_ERREURS_MAX,
         BASELINE_ERREURS_MAX - $comptes['erreurs'],
         $comptes['erreurs'],
+    ));
+});
+
+/*
+ * Et `app/` n'y revient pas.
+ *
+ * Le baseline en masquait 187 erreurs a la pose (#1482) : 78 methodes appelees
+ * sur `mixed`, 46 conditions booleennes laches, des casts sur l'inconnu. C'est
+ * la matiere ou les defauts se cachaient — quatre d'entre eux ont ete trouves
+ * en la drainant, du score Wilks dicte par le client au champ de formulaire
+ * perdu en silence.
+ *
+ * Elle est vide. Un plafond chiffre autoriserait d'y remettre une erreur tant
+ * qu'il reste de la marge ; cette regle-ci ne laisse aucune marge du tout, et
+ * c'est ce qui la rend utile.
+ *
+ * Les tests, eux, gardent leur baseline : leur typage tient a Mockery et aux
+ * attentes de Pest, c'est du frottement d'outillage et non un defaut. La
+ * distinction est le fond de #1482.
+ */
+it('ne laisse plus rentrer app/ dans le baseline', function (): void {
+    $contenu = (string) file_get_contents(base_path('phpstan-baseline.neon'));
+
+    preg_match_all('/^\t\t\tpath: (app\/\S+)$/m', $contenu, $trouves);
+
+    expect($trouves[1])->toBe([], sprintf(
+        "Ces chemins d'app/ sont revenus dans le baseline :\n  %s\n\n"
+        .'app/ en est sorti entierement (187 → 0). Une erreur nouvelle dans le code applicatif '
+        .'se corrige : elle designe presque toujours une valeur dont personne ne connait le type, '
+        .'et c’est exactement la que les defauts se logeaient.',
+        implode("\n  ", $trouves[1])
     ));
 });

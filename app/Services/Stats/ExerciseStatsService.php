@@ -94,7 +94,18 @@ final class ExerciseStatsService
                      *
                      * Quatrieme fois que ce motif est retire (#1459, #1474, #1493).
                      */
-                    $jour = CarbonImmutable::parse((string) $set->started_at);
+                    /*
+                     * `toBase()` court-circuite Eloquent : `get()` rend des
+                     * `stdClass` dont chaque propriete est `mixed`, et le cast
+                     * portait donc sur `mixed` (#1482). Dire le type de la
+                     * colonne vaut mieux que caster ce qu'on ne connait pas —
+                     * MySQL rend un `timestamp` en chaine, et aucun cast de
+                     * modele ne s'applique hors d'Eloquent.
+                     */
+                    /** @var string $demarreLe */
+                    $demarreLe = $set->started_at;
+
+                    $jour = CarbonImmutable::parse($demarreLe);
 
                     return new Exercise1RMProgressPoint(
                         $jour->format('d/m'),
