@@ -95,7 +95,14 @@ it('n’expose aucun champ que le modèle refuserait d’écrire', function (): 
             continue;
         }
 
-        $fillable = (new $modele())->getFillable();
+        /*
+         * Par une variable, et non `(new $modele())->getFillable()` : Rector
+         * veut retirer les parentheses — syntaxe PHP 8.4 — et Pint veut les
+         * remettre. Les deux tournent dans l'audit, la CI n'est donc jamais
+         * verte tant que la construction existe.
+         */
+        $instance = new $modele();
+        $fillable = $instance->getFillable();
         /** @var list<string> $explicites */
         $explicites = defined($classeRessource.'::CHAMPS_ASSIGNES_EXPLICITEMENT')
             ? constant($classeRessource.'::CHAMPS_ASSIGNES_EXPLICITEMENT')
