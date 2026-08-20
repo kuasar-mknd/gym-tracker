@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\WorkoutLine;
 use App\Services\StatsService;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Arr;
 
 final class CreateSetAction
 {
@@ -39,8 +40,26 @@ final class CreateSetAction
             }
         }
 
+        /**
+         * La forme est declaree parce que rien ne la porte jusqu'ici.
+         *
+         * `collect($data)->except(...)->toArray()` — ce qui etait ecrit — rend
+         * un `array<int|string, mixed>` : la traversee par une collection perd
+         * la garantie que les cles sont textuelles, que la forme du parametre
+         * donne pourtant. `Arr::except` ne la perd pas moins : son stub Laravel
+         * rend un `array` nu. `create()` et `make()` exigent
+         * `array<string, mixed>`, d'ou une entree de baseline par appel — cinq
+         * en tout.
+         *
+         * L'annotation dit ce que la signature garantit deja, elle n'affirme
+         * rien de neuf.
+         *
+         * @var array<string, mixed> $attributs
+         */
+        $attributs = Arr::except($data, ['workout_line_id', 'idempotency_key']);
+
         $set = $workoutLine->sets()->make(
-            collect($data)->except(['workout_line_id', 'idempotency_key'])->toArray()
+            $attributs
         );
         $set->idempotency_key = $key;
 

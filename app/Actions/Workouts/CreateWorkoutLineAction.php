@@ -7,6 +7,7 @@ namespace App\Actions\Workouts;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Arr;
 
 class CreateWorkoutLineAction
 {
@@ -35,11 +36,11 @@ class CreateWorkoutLineAction
         $maxOrder = $workout->workoutLines()->max('order');
         $order = $data['order'] ?? (is_null($maxOrder) ? 0 : (int) $maxOrder + 1); // @phpstan-ignore cast.int
 
+        /** @var array<string, mixed> $attributs */
+        $attributs = array_merge(Arr::except($data, ['workout_id', 'idempotency_key']), ['order' => $order]);
+
         /** @var WorkoutLine $line */
-        $line = $workout->workoutLines()->make(array_merge(
-            collect($data)->except(['workout_id', 'idempotency_key'])->toArray(),
-            ['order' => $order]
-        ));
+        $line = $workout->workoutLines()->make($attributs);
         $line->idempotency_key = $key;
 
         try {
