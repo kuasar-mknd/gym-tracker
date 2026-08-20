@@ -271,7 +271,7 @@ const getProgressPercent = (habit) => {
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Habitudes</h2>
                 <GlassButton @click="openAddForm">
-                    <span class="material-symbols-outlined mr-2 text-sm">add</span>
+                    <span class="material-symbols-outlined mr-2 text-sm" aria-hidden="true">add</span>
                     Ajouter
                 </GlassButton>
             </div>
@@ -367,7 +367,7 @@ const getProgressPercent = (habit) => {
                                     class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white sm:flex"
                                     :class="habit.color"
                                 >
-                                    <span class="material-symbols-outlined">{{ habit.icon }}</span>
+                                    <span class="material-symbols-outlined" aria-hidden="true">{{ habit.icon }}</span>
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <h3 class="text-text-main truncate font-bold">{{ habit.name }}</h3>
@@ -397,14 +397,14 @@ const getProgressPercent = (habit) => {
                                     class="text-text-muted hover:text-text-main min-h-touch min-w-touch flex items-center justify-center rounded-lg"
                                     aria-label="Modifier l'habitude"
                                 >
-                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">edit</span>
                                 </button>
                                 <button
                                     @click="deleteHabit(habit)"
                                     class="text-text-muted min-h-touch min-w-touch flex items-center justify-center rounded-lg hover:text-red-500"
                                     aria-label="Supprimer l'habitude"
                                 >
-                                    <span class="material-symbols-outlined text-sm">delete</span>
+                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">delete</span>
                                 </button>
                             </div>
                         </div>
@@ -457,7 +457,7 @@ const getProgressPercent = (habit) => {
                         class="text-text-muted hover:text-text-main relative before:absolute before:-inset-2.5 before:content-['']"
                         aria-label="Fermer le formulaire"
                     >
-                        <span class="material-symbols-outlined">close</span>
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
                     </button>
                 </div>
 

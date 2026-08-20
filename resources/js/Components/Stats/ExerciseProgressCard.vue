@@ -112,11 +112,15 @@ watch(selectedExercise, (newVal) => {
             <OneRepMaxChart :data="exerciseProgressData" />
         </div>
         <div v-else-if="selectedExercise" class="flex h-48 flex-col items-center justify-center text-center">
-            <span class="material-symbols-outlined text-text-muted/30 mb-2 text-4xl">trending_up</span>
+            <span class="material-symbols-outlined text-text-muted/30 mb-2 text-4xl" aria-hidden="true"
+                >trending_up</span
+            >
             <p class="text-text-muted text-sm">Pas assez de données pour cet exercice</p>
         </div>
         <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-            <span class="material-symbols-outlined text-text-muted/30 mb-2 text-4xl">fitness_center</span>
+            <span class="material-symbols-outlined text-text-muted/30 mb-2 text-4xl" aria-hidden="true"
+                >fitness_center</span
+            >
             <p class="text-text-muted text-sm">Choisis un exercice pour voir ton évolution</p>
         </div>
     </GlassCard>

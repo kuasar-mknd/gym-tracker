@@ -32,7 +32,7 @@ defineProps({
                     weightChange > 0 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600',
                 ]"
             >
-                <span class="material-symbols-outlined text-sm">
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">
                     {{ weightChange > 0 ? 'trending_up' : 'trending_down' }}
                 </span>
                 {{ weightChange > 0 ? '+' : '' }}{{ weightChange }} kg
@@ -59,7 +59,7 @@ defineProps({
             class="mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider text-sky-600 uppercase transition-all hover:gap-3"
         >
             Voir tout l'historique
-            <span class="material-symbols-outlined text-base">arrow_forward</span>
+            <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_forward</span>
         </Link>
     </GlassCard>
 </template>

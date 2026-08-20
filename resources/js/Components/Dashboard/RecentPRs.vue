@@ -35,7 +35,7 @@ defineProps({
                         <div
                             class="flex size-12 items-center justify-center rounded-xl bg-linear-to-br from-yellow-400 to-orange-500 shadow-lg"
                         >
-                            <span class="material-symbols-outlined text-2xl text-white">star</span>
+                            <span class="material-symbols-outlined text-2xl text-white" aria-hidden="true">star</span>
                         </div>
                         <div>
                             <div class="text-text-main font-bold dark:text-white">{{ pr.exercise?.name }}</div>

@@ -177,7 +177,9 @@
                     <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
 
                     <div v-if="history.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">history</span>
+                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200" aria-hidden="true"
+                            >history</span
+                        >
                         <p class="text-text-muted font-medium">Aucun historique.</p>
                     </div>
 
@@ -217,7 +219,7 @@
                                 title="Supprimer l'entrée"
                                 class="text-text-muted absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-red-500/20 hover:text-red-500 sm:static"
                             >
-                                <span class="material-symbols-outlined text-lg">delete</span>
+                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>
                         </div>
                     </div>

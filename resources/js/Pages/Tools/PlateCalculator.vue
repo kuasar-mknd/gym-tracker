@@ -138,7 +138,9 @@
                         v-else-if="targetWeight > barWeight"
                         class="mt-8 rounded-3xl border border-slate-100 bg-slate-50 py-8 text-center"
                     >
-                        <span class="material-symbols-outlined mb-3 text-5xl text-slate-300">error</span>
+                        <span class="material-symbols-outlined mb-3 text-5xl text-slate-300" aria-hidden="true"
+                            >error</span
+                        >
                         <p class="text-text-muted font-medium">
                             Impossible de charger ce poids avec les plaques disponibles.
                         </p>
@@ -164,7 +166,9 @@
                     </div>
 
                     <div v-if="plates.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">inventory_2</span>
+                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200" aria-hidden="true"
+                            >inventory_2</span
+                        >
                         <p class="text-text-muted font-medium">Aucune plaque dans l'inventaire.</p>
                         <p class="text-text-muted/70 mt-1 text-sm">Ajoute tes plaques pour commencer.</p>
                     </div>
@@ -207,7 +211,7 @@
                                     title="Supprimer la plaque"
                                     class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-100 shadow-md transition-all hover:bg-red-600 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                                 >
-                                    <span class="material-symbols-outlined text-sm">close</span>
+                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">close</span>
                                 </button>
                             </div>
                         </div>

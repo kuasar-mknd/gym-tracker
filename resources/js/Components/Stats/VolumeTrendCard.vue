@@ -53,7 +53,9 @@ const totalVolume = computed(() => {
                     <VolumeTrendChart :data="volumeTrend" />
                 </div>
                 <div v-else class="flex h-full flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">bar_chart</span>
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
+                        >bar_chart</span
+                    >
                     <p class="text-text-muted text-sm">Pas encore de données de volume</p>
                 </div>
             </Deferred>

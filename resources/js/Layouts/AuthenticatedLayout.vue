@@ -134,7 +134,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                 type === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500',
                             ]"
                         >
-                            <span class="material-symbols-outlined">{{ cfg.icon }}</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">{{ cfg.icon }}</span>
                         </div>
                         <p class="flex-1 text-sm font-bold text-slate-900 dark:text-white">
                             {{ $page.props.flash[type] }}
@@ -145,7 +145,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                             class="min-h-touch min-w-touch flex items-center justify-center text-slate-400 hover:text-slate-600"
                             aria-label="Fermer"
                         >
-                            <span class="material-symbols-outlined text-base">close</span>
+                            <span class="material-symbols-outlined text-base" aria-hidden="true">close</span>
                         </button>
                     </div>
                 </div>
@@ -239,19 +239,27 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 
                                 <template #content>
                                     <DropdownLink :href="route('profile.index')">
-                                        <span class="material-symbols-outlined mr-2 text-lg">person</span>
+                                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
+                                            >person</span
+                                        >
                                         Profil
                                     </DropdownLink>
                                     <DropdownLink :href="route('profile.edit')">
-                                        <span class="material-symbols-outlined mr-2 text-lg">settings</span>
+                                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
+                                            >settings</span
+                                        >
                                         Paramètres
                                     </DropdownLink>
                                     <DropdownLink :href="route('achievements.index')">
-                                        <span class="material-symbols-outlined mr-2 text-lg">emoji_events</span>
+                                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
+                                            >emoji_events</span
+                                        >
                                         Trophées
                                     </DropdownLink>
                                     <DropdownLink :href="route('logout')" method="post" as="button">
-                                        <span class="material-symbols-outlined mr-2 text-lg">logout</span>
+                                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
+                                            >logout</span
+                                        >
                                         Déconnexion
                                     </DropdownLink>
                                 </template>

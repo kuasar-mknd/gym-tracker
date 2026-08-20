@@ -190,7 +190,7 @@ const formatHistoryDuration = (start, end) => {
                     :href="route('tools.index')"
                     class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
                 >
-                    <span class="material-symbols-outlined">arrow_back</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
                 <h2 class="text-text-main text-xl font-semibold">Suivi de Jeûne</h2>
             </div>
@@ -297,7 +297,9 @@ const formatHistoryDuration = (start, end) => {
                 </div>
 
                 <div v-if="history.data.filter((f) => f.end_time).length === 0" class="py-8 text-center">
-                    <span class="material-symbols-outlined mb-2 text-4xl text-slate-200">show_chart</span>
+                    <span class="material-symbols-outlined mb-2 text-4xl text-slate-200" aria-hidden="true"
+                        >show_chart</span
+                    >
                     <p class="text-text-muted text-sm font-medium">Pas assez de données pour afficher le graphique.</p>
                 </div>
                 <div v-else>

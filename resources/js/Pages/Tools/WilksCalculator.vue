@@ -181,7 +181,9 @@
                     </div>
 
                     <div v-if="history.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200">history</span>
+                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200" aria-hidden="true"
+                            >history</span
+                        >
                         <p class="text-text-muted font-medium">Aucun historique.</p>
                         <p class="text-text-muted/70 mt-1 text-sm">
                             Calcule ton score pour commencer à suivre tes progrès.
@@ -218,7 +220,7 @@
                                 title="Supprimer l'entrée"
                                 class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
                             >
-                                <span class="material-symbols-outlined text-lg">delete</span>
+                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>
                         </div>
                     </div>

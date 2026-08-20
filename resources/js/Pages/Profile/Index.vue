@@ -186,7 +186,9 @@ const menuGroups = [
                                         item.color,
                                     ]"
                                 >
-                                    <span class="material-symbols-outlined text-2xl">{{ item.icon }}</span>
+                                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">{{
+                                        item.icon
+                                    }}</span>
                                 </div>
                                 <div class="flex-1">
                                     <h4 class="text-text-main font-bold dark:text-white">{{ item.name }}</h4>
@@ -194,6 +196,7 @@ const menuGroups = [
                                 </div>
                                 <span
                                     class="material-symbols-outlined text-text-muted/30 group-hover:text-text-main transition-all group-hover:translate-x-1"
+                                    aria-hidden="true"
                                 >
                                     chevron_right
                                 </span>

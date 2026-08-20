@@ -1545,7 +1545,7 @@ onUnmounted(() => {
                                 class="flex h-full w-full items-center justify-center bg-red-500 text-white"
                             >
                                 <span class="flex flex-col items-center" aria-hidden="true">
-                                    <span class="material-symbols-outlined text-2xl">delete</span>
+                                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
                                     <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
                                 </span>
                             </button>
@@ -1794,7 +1794,7 @@ onUnmounted(() => {
                             class="text-text-muted hover:text-text-main relative before:absolute before:-inset-2.5 before:content-['']"
                             aria-label="Retour"
                         >
-                            <span class="material-symbols-outlined">arrow_back</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                         </button>
                         <h3 class="font-display text-text-main text-xl font-black uppercase italic">Nouvel Exercice</h3>
                     </div>

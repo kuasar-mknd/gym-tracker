@@ -188,7 +188,7 @@ defineExpose({
                 class="text-text-muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
                 aria-hidden="true"
             >
-                <span class="material-symbols-outlined text-[24px]">search</span>
+                <span class="material-symbols-outlined text-[24px]" aria-hidden="true">search</span>
             </div>
 
             <input

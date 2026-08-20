@@ -66,7 +66,7 @@ const emit = defineEmits([
                 data-testid="edit-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
-                    <span class="material-symbols-outlined text-2xl">edit</span>
+                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">edit</span>
                     <span class="text-[10px] font-bold tracking-wider uppercase">Modifier</span>
                 </div>
             </button>
@@ -79,7 +79,7 @@ const emit = defineEmits([
                 data-testid="delete-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
-                    <span class="material-symbols-outlined text-2xl">delete</span>
+                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
                     <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
                 </div>
             </button>
@@ -116,7 +116,7 @@ const emit = defineEmits([
                                   : 'bg-cyan-pure/10 text-cyan-pure',
                         ]"
                     >
-                        <span class="material-symbols-outlined text-3xl">
+                        <span class="material-symbols-outlined text-3xl" aria-hidden="true">
                             {{ typeIcons[exercise.type] || 'fitness_center' }}
                         </span>
                     </div>
@@ -138,7 +138,7 @@ const emit = defineEmits([
                         class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange focus-visible:ring-electric-orange flex size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:hidden"
                         :aria-label="`Modifier ${exercise.name}`"
                     >
-                        <span class="material-symbols-outlined text-sm opacity-50">edit</span>
+                        <span class="material-symbols-outlined text-sm opacity-50" aria-hidden="true">edit</span>
                     </button>
 
                     <!-- Desktop Buttons -->

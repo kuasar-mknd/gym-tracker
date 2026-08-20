@@ -28,7 +28,9 @@ defineProps({
                     <MuscleDistributionChart :data="muscleDistribution" />
                 </div>
                 <div v-else class="flex h-full flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl">pie_chart</span>
+                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
+                        >pie_chart</span
+                    >
                     <p class="text-text-muted text-sm">Données de répartition indisponibles</p>
                 </div>
             </Deferred>

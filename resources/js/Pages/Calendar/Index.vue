@@ -329,7 +329,7 @@ const formatDateFull = (dateStr) => {
                                     <div
                                         class="bg-vivid-violet/20 text-vivid-violet flex h-10 w-10 items-center justify-center rounded-xl"
                                     >
-                                        <span class="material-symbols-outlined">fitness_center</span>
+                                        <span class="material-symbols-outlined" aria-hidden="true">fitness_center</span>
                                     </div>
                                     <div>
                                         <div class="text-text-main font-bold">{{ workout.name }}</div>
@@ -341,7 +341,9 @@ const formatDateFull = (dateStr) => {
                                         </div>
                                     </div>
                                 </div>
-                                <span class="material-symbols-outlined text-white/30">chevron_right</span>
+                                <span class="material-symbols-outlined text-white/30" aria-hidden="true"
+                                    >chevron_right</span
+                                >
                             </div>
                         </GlassCard>
                     </Link>
@@ -355,7 +357,7 @@ const formatDateFull = (dateStr) => {
                             <div
                                 class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400"
                             >
-                                <span class="material-symbols-outlined">menu_book</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
@@ -381,13 +383,15 @@ const formatDateFull = (dateStr) => {
                     v-if="!selectedDayDetails.workouts.length && !selectedDayDetails.journal"
                     class="text-text-muted/60 py-8 text-center"
                 >
-                    <span class="material-symbols-outlined mb-2 text-4xl opacity-50">event_busy</span>
+                    <span class="material-symbols-outlined mb-2 text-4xl opacity-50" aria-hidden="true"
+                        >event_busy</span
+                    >
                     <p>Aucune activité ce jour-là.</p>
                 </div>
             </div>
 
             <div v-else class="text-text-muted/40 py-12 text-center">
-                <span class="material-symbols-outlined mb-2 animate-pulse text-4xl">touch_app</span>
+                <span class="material-symbols-outlined mb-2 animate-pulse text-4xl" aria-hidden="true">touch_app</span>
                 <p>Sélectionne une date pour voir les détails</p>
             </div>
         </div>

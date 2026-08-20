@@ -376,7 +376,7 @@ onUnmounted(() => {
                     </div>
 
                     <div class="text-text-muted mt-8 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm">repeat</span>
+                        <span class="material-symbols-outlined text-sm" aria-hidden="true">repeat</span>
                         <span class="font-bold">{{ currentRound }}</span>
                         <span class="text-xs">/ {{ timerConfig.rounds }}</span>
                     </div>
@@ -392,7 +392,7 @@ onUnmounted(() => {
                             class="text-text-main flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg transition-transform hover:scale-110 active:scale-95"
                             :aria-label="status === 'running' ? 'Mettre en pause' : 'Démarrer'"
                         >
-                            <span class="material-symbols-outlined text-3xl">
+                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">
                                 {{ status === 'running' ? 'pause' : 'play_arrow' }}
                             </span>
                         </button>
@@ -402,7 +402,7 @@ onUnmounted(() => {
                             class="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-white/50 text-slate-600 shadow-lg transition-transform hover:scale-110 active:scale-95 dark:border-slate-700 dark:bg-slate-800/50 dark:text-white"
                             aria-label="Réinitialiser"
                         >
-                            <span class="material-symbols-outlined text-3xl">restart_alt</span>
+                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">restart_alt</span>
                         </button>
                     </div>
                 </GlassCard>
@@ -511,21 +511,21 @@ onUnmounted(() => {
                                 title="Charger & Lancer"
                                 aria-label="Charger et lancer"
                             >
-                                <span class="material-symbols-outlined">play_circle</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">play_circle</span>
                             </button>
                             <button
                                 @click="editTimer(timer)"
                                 class="text-text-muted relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-[''] hover:text-blue-500"
                                 aria-label="Modifier"
                             >
-                                <span class="material-symbols-outlined">edit</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                             </button>
                             <button
                                 @click="deleteTimer(timer)"
                                 class="text-text-muted relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-[''] hover:text-red-500"
                                 aria-label="Supprimer"
                             >
-                                <span class="material-symbols-outlined">delete</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
                             </button>
                         </div>
                     </GlassCard>

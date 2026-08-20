@@ -123,7 +123,7 @@ const formatDate = (dateString) => {
                     variant="primary"
                     class="flex hidden size-11 shrink-0 items-center justify-center sm:flex"
                 >
-                    <span class="material-symbols-outlined mr-2">add</span>
+                    <span class="material-symbols-outlined mr-2" aria-hidden="true">add</span>
                     Ajouter
                 </GlassButton>
                 <!-- Mobile Add Button -->
@@ -133,7 +133,7 @@ const formatDate = (dateString) => {
                     aria-label="Ajouter un complément"
                     class="bg-gradient-main flex size-12 items-center justify-center rounded-xl text-white shadow-lg sm:hidden"
                 >
-                    <span class="material-symbols-outlined">add</span>
+                    <span class="material-symbols-outlined" aria-hidden="true">add</span>
                 </button>
             </div>
 
@@ -252,7 +252,7 @@ const formatDate = (dateString) => {
                                     <div
                                         class="flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-blue-400 to-cyan-300 text-white shadow-md"
                                     >
-                                        <span class="material-symbols-outlined">medication</span>
+                                        <span class="material-symbols-outlined" aria-hidden="true">medication</span>
                                     </div>
                                     <div>
                                         <h3 class="text-text-main leading-tight font-bold">{{ supplement.name }}</h3>
@@ -268,7 +268,7 @@ const formatDate = (dateString) => {
                                         aria-label="Modifier le complément"
                                         class="text-text-muted hover:text-electric-orange min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors"
                                     >
-                                        <span class="material-symbols-outlined text-lg">edit</span>
+                                        <span class="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
                                     </button>
                                     <button
                                         v-press
@@ -276,7 +276,7 @@ const formatDate = (dateString) => {
                                         aria-label="Supprimer le complément"
                                         class="text-text-muted min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors hover:text-red-500"
                                     >
-                                        <span class="material-symbols-outlined text-lg">delete</span>
+                                        <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                                     </button>
                                 </div>
                             </div>

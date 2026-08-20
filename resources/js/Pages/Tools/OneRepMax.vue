@@ -136,7 +136,9 @@
                     </GlassCard>
                 </div>
                 <GlassCard v-else class="animate-slide-up mt-8 py-12 text-center shadow-2xl">
-                    <span class="material-symbols-outlined mb-3 text-5xl text-slate-300">calculate</span>
+                    <span class="material-symbols-outlined mb-3 text-5xl text-slate-300" aria-hidden="true"
+                        >calculate</span
+                    >
                     <p class="text-text-muted font-medium">Entre un poids et des répétitions pour voir les résultats</p>
                 </GlassCard>
             </div>
