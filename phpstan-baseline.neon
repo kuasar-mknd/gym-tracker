@@ -133,18 +133,6 @@ parameters:
 			path: app/Providers/TelescopeServiceProvider.php
 
 		-
-			message: '#^Anonymous function should return string\|null but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Rules/PublicPushEndpoint.php
-
-		-
-			message: '#^Call to function array_filter\(\) requires parameter \#2 to be passed to avoid loose comparison semantics\.$#'
-			identifier: arrayFilter.strict
-			count: 1
-			path: app/Rules/PublicPushEndpoint.php
-
-		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
 			count: 1

@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 use App\Models\User;
-use App\Rules\PublicPushEndpoint;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * The push endpoint is client-supplied, stored verbatim, and POSTed to by the
@@ -43,18 +41,10 @@ it('refuses a plaintext endpoint even on a public host', function (): void {
 
 it('still accepts a real push service endpoint', function (): void {
     /*
-     * La resolution est pre-remplie, pour que ce test ne depende plus
-     * d'Internet.
-     *
-     * Il resolvait `fcm.googleapis.com` POUR DE VRAI : la suite echouait environ
-     * une fois sur trois selon ce que rendait le resolveur (#1519). Un test de
-     * securite qui flake finit ignore, et c'est ainsi que les gardes meurent.
-     *
-     * L'adresse posee est publique et arbitraire : ce que ce test verifie, c'est
-     * que la regle n'ecarte pas un hote public, pas que Google a telle adresse.
+     * Plus de pre-remplissage ici : `TestCase` remplace le resolveur pour toute
+     * la suite, donc aucun test ne resout un nom sur Internet. Ce test verifie
+     * qu'un hote public n'est pas ecarte, pas que Google a telle adresse.
      */
-    Cache::put(PublicPushEndpoint::cle('fcm.googleapis.com'), ['142.250.75.196'], now()->addHour());
-
     $this->postJson(route('push-subscriptions.update'), [
         'endpoint' => 'https://fcm.googleapis.com/fcm/send/c2VjcmV0LXRva2Vu',
         'keys' => ['auth' => 'a-token', 'p256dh' => 'a-key'],
