@@ -153,6 +153,16 @@ class HandleInertiaRequests extends Middleware
                 'data' => $latestAchievement->data,
                 'created_at' => $latestAchievement->created_at,
             ] : null,
+            /*
+             * `Show.vue` lit `auth.user.default_rest_time` pour decider de la
+             * duree du repos, avec un repli a 90 secondes. Ce champ n'etait pas
+             * envoye : la lecture rendait `undefined`, le repli s'appliquait
+             * toujours, et le reglage stocke n'avait aucun effet.
+             *
+             * Invisible tant qu'on ne l'a pas change, la colonne valant 90 par
+             * defaut en base — donc exactement la valeur du repli.
+             */
+            'default_rest_time' => $user->default_rest_time,
             'current_streak' => app(\App\Services\StreakService::class)->currentStreakFor($user),
             'longest_streak' => $user->longest_streak,
             'active_workout' => $activeWorkout,
