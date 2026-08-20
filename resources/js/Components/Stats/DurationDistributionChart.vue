@@ -70,7 +70,7 @@ const plugins = [pluginCentreDAnneau((position) => (centre.value = position))]
             class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
             :style="centre ? { left: `${centre.x}px`, top: `${centre.y}px` } : { left: '50%', top: '50%' }"
         >
-            <span class="material-symbols-outlined text-text-muted/20 text-4xl" aria-hidden="true">timelapse</span>
+            <span class="material-symbols-outlined text-text-muted/20 text-4xl" aria-hidden="true">timer</span>
         </div>
     </div>
 </template>
