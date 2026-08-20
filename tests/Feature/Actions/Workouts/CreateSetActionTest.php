@@ -46,7 +46,6 @@ it('creates a set and clears volume stats', function (): void {
     Cache::shouldHaveReceived('forget')
         ->with("stats.weekly_volume.{$user->id}")
         ->once();
-    Cache::shouldHaveReceived('forget')
-        ->with("stats.monthly_volume_comparison.{$user->id}")
-        ->once();
+    // L'assertion sur `stats.monthly_volume_comparison` est partie : cette
+    // entree n'est jamais ecrite, donc l'oublier ne prouvait rien (#1502).
 });

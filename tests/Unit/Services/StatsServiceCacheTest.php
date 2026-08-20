@@ -29,20 +29,22 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
         Cache::shouldReceive('forget')->once()->with("stats.dashboard_analytical.{$user->id}");
         Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key): bool => str_starts_with((string) $key, "stats.weekly_volume_comparison.{$user->id}")));
-        Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_comparison.{$user->id}");
+        /*
+         * L'assertion sur `stats.monthly_volume_comparison` est partie : elle
+         * verifiait qu'on oublie une entree que personne n'ecrit jamais (#1502).
+         */
         Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_history.{$user->id}.6");
 
         foreach ([7, 30, 90, 365] as $days) {
             Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
             Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");
+            Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.{$days}");
         }
 
         Cache::shouldReceive('put')->once()->with("stats.1rm_version.{$user->id}", Mockery::any(), Mockery::any());
 
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
-        Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.30");
-        Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.7");
 
         $this->statsService->clearVolumeStats($user);
     }
@@ -56,7 +58,10 @@ class StatsServiceCacheTest extends TestCase
         $user = User::factory()->make(['id' => 123]);
 
         // Expectation: Duration related keys are cleared
+        // Les deux bornes, pas seulement 20 : `getPerformanceOverview()` ecrit
+        // aussi l'entree a 30, qui n'etait jamais invalidee (#1502).
         Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
+        Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.30");
         Cache::shouldReceive('forget')->once()->with("stats.workout_distributions.{$user->id}.90");
         Cache::shouldReceive('forget')->once()->with("stats.dashboard_analytical.{$user->id}");
 
