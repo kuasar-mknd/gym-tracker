@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Rules\PublicPushEndpoint;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * The push endpoint is client-supplied, stored verbatim, and POSTed to by the
@@ -40,6 +42,19 @@ it('refuses a plaintext endpoint even on a public host', function (): void {
 });
 
 it('still accepts a real push service endpoint', function (): void {
+    /*
+     * La resolution est pre-remplie, pour que ce test ne depende plus
+     * d'Internet.
+     *
+     * Il resolvait `fcm.googleapis.com` POUR DE VRAI : la suite echouait environ
+     * une fois sur trois selon ce que rendait le resolveur (#1519). Un test de
+     * securite qui flake finit ignore, et c'est ainsi que les gardes meurent.
+     *
+     * L'adresse posee est publique et arbitraire : ce que ce test verifie, c'est
+     * que la regle n'ecarte pas un hote public, pas que Google a telle adresse.
+     */
+    Cache::put(PublicPushEndpoint::cle('fcm.googleapis.com'), ['142.250.75.196'], now()->addHour());
+
     $this->postJson(route('push-subscriptions.update'), [
         'endpoint' => 'https://fcm.googleapis.com/fcm/send/c2VjcmV0LXRva2Vu',
         'keys' => ['auth' => 'a-token', 'p256dh' => 'a-key'],
@@ -48,4 +63,23 @@ it('still accepts a real push service endpoint', function (): void {
     $this->assertDatabaseHas('push_subscriptions', [
         'endpoint' => 'https://fcm.googleapis.com/fcm/send/c2VjcmV0LXRva2Vu',
     ]);
+});
+
+/*
+ * Le comportement qui a change : un hote qu'on ne sait pas resoudre etait
+ * ACCEPTE, au motif qu'il ne peut pas etre joint non plus.
+ *
+ * Le raisonnement se retournait contre lui-meme : la protection s'effaçait
+ * exactement quand le reseau allait mal, et un resolveur lent ou empoisonne
+ * suffisait a la faire taire. On accepte desormais ce qu'on sait resoudre, et
+ * dont tout ce qu'on resout est public (#1519).
+ */
+it('refuses a host it cannot resolve', function (): void {
+    // `.invalid` est reserve par la RFC 2606 : aucun resolveur ne le sert.
+    $this->postJson(route('push-subscriptions.update'), [
+        'endpoint' => 'https://rien-du-tout.invalid/fcm/send/jeton',
+        'keys' => ['auth' => 'a-token', 'p256dh' => 'a-key'],
+    ])->assertJsonValidationErrorFor('endpoint');
+
+    $this->assertDatabaseCount('push_subscriptions', 0);
 });
