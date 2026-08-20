@@ -7,12 +7,6 @@ parameters:
 			path: app/Actions/Habits/FetchHabitsIndexAction.php
 
 		-
-			message: '#^Only booleans are allowed in an if condition, App\\Models\\HabitLog\|null given\.$#'
-			identifier: if.condNotBoolean
-			count: 1
-			path: app/Actions/Habits/ToggleHabitAction.php
-
-		-
 			message: '#^PHPDoc tag @var with type Carbon\\Carbon is not subtype of type string\.$#'
 			identifier: varTag.type
 			count: 1
@@ -31,6 +25,7 @@ parameters:
 			path: app/Http/Controllers/Api/WorkoutTemplateController.php
 
 		-
+<<<<<<< HEAD
 			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\User\|null given\.$#'
 			identifier: booleanNot.exprNotBoolean
 			count: 1
@@ -53,54 +48,30 @@ parameters:
 			identifier: if.condNotBoolean
 			count: 1
 			path: app/Http/Controllers/WorkoutController.php
+=======
+			message: '#^Parameter \#1 \$credentials of method App\\Http\\Controllers\\Auth\\NewPasswordController\:\:resetPassword\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/NewPasswordController.php
+
+		-
+			message: '#^Parameter \#1 \$data of method App\\Actions\\Auth\\SendPasswordResetLinkAction\:\:execute\(\) expects array\<string, mixed\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/PasswordResetLinkController.php
+
+		-
+			message: '#^Parameter \#1 \$input of method App\\Actions\\CreateUserAction\:\:execute\(\) expects array\<string, string\>, mixed given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/RegisteredUserController.php
+>>>>>>> origin/main
 
 		-
 			message: '#^Method App\\Http\\Middleware\\ConditionalCspHeaders\:\:handle\(\) should return Symfony\\Component\\HttpFoundation\\Response but returns mixed\.$#'
 			identifier: return.type
 			count: 2
 			path: app/Http/Middleware/ConditionalCspHeaders.php
-
-		-
-			message: '#^Only booleans are allowed in a ternary operator condition, Illuminate\\Notifications\\DatabaseNotification\|null given\.$#'
-			identifier: ternary.condNotBoolean
-			count: 1
-			path: app/Http/Middleware/HandleInertiaRequests.php
-
-		-
-			message: '#^Only booleans are allowed in &&, App\\Models\\User\|null given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 1
-			path: app/Http/Requests/Api/StoreFastRequest.php
-
-		-
-			message: '#^Only booleans are allowed in &&, App\\Models\\Habit\|null given on the left side\.$#'
-			identifier: booleanAnd.leftNotBoolean
-			count: 1
-			path: app/Http/Requests/ToggleHabitRequest.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, App\\Models\\Admin\|App\\Models\\User\|null given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Http/Requests/UpdateSupplementLogRequest.php
-
-		-
-			message: '#^Only booleans are allowed in an if condition, int\|null given\.$#'
-			identifier: if.condNotBoolean
-			count: 1
-			path: app/Models/Exercise.php
-
-		-
-			message: '#^Only booleans are allowed in an if condition, int given\.$#'
-			identifier: if.condNotBoolean
-			count: 1
-			path: app/Models/WorkoutLine.php
-
-		-
-			message: '#^Only booleans are allowed in a negated boolean, mixed given\.$#'
-			identifier: booleanNot.exprNotBoolean
-			count: 1
-			path: app/Providers/TelescopeServiceProvider.php
 
 		-
 			message: '#^Cannot cast mixed to string\.$#'

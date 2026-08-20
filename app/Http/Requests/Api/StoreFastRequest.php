@@ -36,7 +36,7 @@ class StoreFastRequest extends FormRequest
             /** @var \App\Models\User|null $user */
             $user = $this->user();
 
-            if ($user && $user->fasts()->where('status', 'active')->exists()) {
+            if ($user !== null && $user->fasts()->where('status', 'active')->exists()) {
                 $validator->errors()->add('base', 'Un jeûne est déjà en cours.');
             }
         });

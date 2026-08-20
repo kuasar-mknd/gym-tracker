@@ -83,7 +83,7 @@ class WorkoutController extends Controller
 
         // ⚡ Bolt: Prevent creating multiple active sessions
         $activeWorkout = $this->user()->workouts()->whereNull('ended_at')->first();
-        if ($activeWorkout) {
+        if ($activeWorkout instanceof Workout) {
             return redirect()->route('workouts.show', $activeWorkout);
         }
 

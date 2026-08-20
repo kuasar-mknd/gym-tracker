@@ -17,7 +17,7 @@ class UpdateSupplementLogRequest extends FormRequest
     {
         $user = $this->user();
 
-        if (! $user) {
+        if ($user === null) {
             return false;
         }
 

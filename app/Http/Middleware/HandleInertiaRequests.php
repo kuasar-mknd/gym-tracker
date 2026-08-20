@@ -148,7 +148,7 @@ class HandleInertiaRequests extends Middleware
             'email' => $user->email,
             'avatar' => $user->avatar,
             'unread_notifications_count' => $notificationService->getUnreadCount($user),
-            'latest_achievement' => $latestAchievement ? [
+            'latest_achievement' => $latestAchievement instanceof \Illuminate\Notifications\DatabaseNotification ? [
                 'id' => $latestAchievement->id,
                 'data' => $latestAchievement->data,
                 'created_at' => $latestAchievement->created_at,

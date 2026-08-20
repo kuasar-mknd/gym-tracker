@@ -18,7 +18,7 @@ abstract class Controller
         /** @var \App\Models\User|null $user */
         $user = \Illuminate\Support\Facades\Auth::user();
 
-        if (! $user) {
+        if ($user === null) {
             throw new \RuntimeException('User not authenticated');
         }
 
