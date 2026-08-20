@@ -11,6 +11,7 @@ use Facebook\WebDriver\WebDriverKeys;
 use Illuminate\Support\Collection;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
+use RuntimeException;
 
 abstract class DuskTestCase extends BaseTestCase
 {
@@ -43,6 +44,13 @@ abstract class DuskTestCase extends BaseTestCase
          * element's box has to be in the same place twice running, and the
          * point at its centre has to resolve back to it. Waiting for that is
          * not a retry — the click only ever happens once, when it can land.
+         *
+         * Et un temoin verifie ensuite que le clic a bien atterri sur la cible.
+         * Les deux conditions ci-dessus sont necessaires, pas suffisantes : en
+         * CI, un clic a deja ete perdu sans qu'aucune exception ne soit levee
+         * (#1503). Le test echouait alors dix secondes plus loin, sur une
+         * attente d'etat, ce qui ne disait ni ou ni quand. Il echoue desormais
+         * au clic, en nommant l'element reellement touche.
          */
         Browser::macro('clickWhenSettled', function (string $selector, int $seconds = 15): object {
             /** @var Browser $this */
@@ -65,6 +73,43 @@ abstract class DuskTestCase extends BaseTestCase
             $script = str_replace('SELECTOR', json_encode($selector, JSON_THROW_ON_ERROR), $probe);
             $previous = null;
 
+            /*
+             * Un temoin, pose AVANT la boucle d'attente.
+             *
+             * Un clic perdu ne leve rien : ni exception WebDriver, ni erreur
+             * console. Le test echouait donc bien plus loin, sur une attente
+             * d'etat, et l'enquete repartait de la scene dix secondes apres les
+             * faits (#1503).
+             *
+             * Ce recepteur en phase de capture note ce que le navigateur a
+             * REELLEMENT reçu : la cible, et si elle est bien le bouton vise.
+             * Il est pose sur `document` en capture, donc rien ne peut
+             * l'empecher de voir un clic qui atteint la page — meme un
+             * gestionnaire qui appelle `stopPropagation()`.
+             *
+             * Avant la boucle, et non juste avant le clic : l'installer entre
+             * la derniere sonde et le clic ajouterait un aller-retour WebDriver
+             * dans l'intervalle meme qu'on soupconne. Personne d'autre que le
+             * test ne clique pendant ce temps, donc le dernier clic vu est le
+             * notre.
+             */
+            $temoin = <<<'JS'
+                window.__dernierClic = null;
+                if (window.__espionDeClic) {
+                    document.removeEventListener('click', window.__espionDeClic, true);
+                }
+                window.__espionDeClic = (evenement) => {
+                    const cible = evenement.target;
+                    window.__dernierClic = {
+                        balise: cible instanceof Element ? cible.tagName.toLowerCase() : String(cible),
+                        dusk: cible instanceof Element ? (cible.closest('[dusk]')?.getAttribute('dusk') ?? null) : null,
+                    };
+                };
+                document.addEventListener('click', window.__espionDeClic, true);
+            JS;
+
+            $this->script($temoin);
+
             $this->waitUsing($seconds, 100, function () use ($script, &$previous): bool {
                 /** @var Browser $this */
                 $now = $this->script($script)[0] ?? null;
@@ -84,7 +129,31 @@ abstract class DuskTestCase extends BaseTestCase
                 return $settled;
             }, "[{$selector}] never stopped moving long enough to be clicked");
 
-            return $this->click($selector);
+            $this->click($selector);
+
+            /** @var array{balise: string, dusk: string|null}|null $recu */
+            $recu = $this->script('return window.__dernierClic;')[0] ?? null;
+
+            $vise = trim($selector, '[]');
+            $vise = str_starts_with($vise, 'dusk=') ? trim(substr($vise, 5), '"\'') : null;
+
+            if ($vise !== null && ($recu === null || $recu['dusk'] !== $vise)) {
+                throw new RuntimeException(sprintf(
+                    'Le clic sur [%s] n’a pas atteint sa cible : %s. La boite etait stable et '
+                    .'`elementFromPoint` rendait bien ce bouton — c’est donc entre la sonde et le '
+                    .'clic natif que le point a change de main. Voir #1503.',
+                    $selector,
+                    $recu === null
+                        ? 'aucun evenement `click` n’a atteint le document'
+                        : sprintf(
+                            'il a atterri sur <%s>%s',
+                            $recu['balise'],
+                            $recu['dusk'] === null ? ', hors de tout element marque' : ", marque [dusk=\"{$recu['dusk']}\"]"
+                        )
+                ));
+            }
+
+            return $this;
         });
 
         Browser::macro('disableAnimations', function (): object {
