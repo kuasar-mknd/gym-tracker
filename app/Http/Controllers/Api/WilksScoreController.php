@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Tools\CreateWilksScoreAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreWilksScoreRequest;
 use App\Http\Requests\Api\UpdateWilksScoreRequest;
@@ -31,14 +32,21 @@ class WilksScoreController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreWilksScoreRequest $request): WilksScoreResource
+    public function store(StoreWilksScoreRequest $request, CreateWilksScoreAction $createWilksScore): WilksScoreResource
     {
         $this->authorize('create', WilksScore::class);
 
+        /*
+         * Par la meme action que le chemin web.
+         *
+         * Le controleur enregistrait `$validated` tel quel, `score` compris :
+         * la valeur venait du client au lieu d'etre calculee, et les unites
+         * n'etaient pas converties (#1378).
+         */
+        /** @var array{body_weight: float, lifted_weight: float, gender: 'male'|'female', unit: 'kg'|'lbs'} $validated */
         $validated = $request->validated();
 
-        /** @var WilksScore $score */
-        $score = $this->user()->wilksScores()->create($validated);
+        $score = $createWilksScore->execute($this->user(), $validated);
 
         return new WilksScoreResource($score);
     }
