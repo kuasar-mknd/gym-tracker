@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { config, mount } from '@vue/test-utils'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const mountState = (props = {}, slots = {}) =>
@@ -80,13 +80,26 @@ describe('GlassEmptyState', () => {
 
         expect(rejected.length).toBeGreaterThan(0)
 
-        for (const color of rejected) {
-            const classes = glowOf(mountState({ color })).classes()
+        /*
+         * Ce test monte EXPRES des couleurs que le validateur refuse : c'est
+         * tout son objet. L'avertissement de Vue est donc attendu, et il ne
+         * doit pas partir dans la console — un journal ecrit apres la fin du
+         * fichier fait sortir Vitest en erreur (voir vitest.setup.js).
+         */
+        const precedent = config.global.config.warnHandler
+        config.global.config.warnHandler = () => {}
 
-            expect(
-                classes.some((klass) => klass.startsWith('bg-')),
-                `"${color}" is refused by the validator but has a glow`,
-            ).toBe(false)
+        try {
+            for (const color of rejected) {
+                const classes = glowOf(mountState({ color })).classes()
+
+                expect(
+                    classes.some((klass) => klass.startsWith('bg-')),
+                    `"${color}" is refused by the validator but has a glow`,
+                ).toBe(false)
+            }
+        } finally {
+            config.global.config.warnHandler = precedent
         }
     })
 
