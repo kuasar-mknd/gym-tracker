@@ -83,6 +83,25 @@ const mergeServerWorkout = (server, local) => {
 
         if (!localLine) return
 
+        /*
+         * L'identite de la rangee survit au rafraichissement.
+         *
+         * Le serveur ne connait pas `_rowKey` : il est frappe ici, a la
+         * creation. La copie JSON ci-dessus le perdait donc a chaque
+         * rafraichissement de props — un renommage de seance, une correction
+         * d'heure, un « enregistrer comme modele ».
+         *
+         * Deux consequences, et la seconde ne se voit pas. `rowKey()` sert de
+         * `:key` au `v-for` : sans `_rowKey` il retombe sur l'id, donc la cle
+         * de CHAQUE rangee change et Vue detruit puis reconstruit des lignes
+         * qui n'ont pas bouge — etat de glissement perdu, champs recrees, focus
+         * qui saute en pleine frappe. Et l'ordonnancement des ecritures est
+         * indexe sur cette meme identite : deux appuis encadrant le
+         * rafraichissement reprenaient deux cles, et les deux garde-fous
+         * sautaient ensemble.
+         */
+        if (localLine._rowKey) line._rowKey = localLine._rowKey
+
         const localSets = Array.isArray(localLine.sets) ? localLine.sets : []
 
         // Still being created, or waiting in the offline queue.
@@ -93,9 +112,15 @@ const mergeServerWorkout = (server, local) => {
         line.sets.forEach((set, index) => {
             const localSet = localSets.find((candidate) => candidate.id === set.id)
 
-            if (localSet && unsyncedSetIds.value.has(String(set.id))) {
+            if (!localSet) return
+
+            if (unsyncedSetIds.value.has(String(set.id))) {
                 line.sets[index] = localSet
+
+                return
             }
+
+            if (localSet._rowKey) set._rowKey = localSet._rowKey
         })
     })
 

@@ -676,3 +676,99 @@ describe('Workouts/Show — l’ordonnancement des validations de série', () =>
         expect(completions.map(([, corps]) => corps.is_completed)).toEqual([true, false])
     })
 })
+
+/*
+ * Une série créée sur cette page garde son identité à travers un
+ * rafraîchissement de props.
+ *
+ * `mergeServerWorkout` reconstruit chaque série connue du serveur par
+ * `JSON.parse(JSON.stringify(...))`, et ne réinjecte l'objet local que s'il est
+ * marqué non synchronisé (l.96). Une série normalement enregistrée perdait donc
+ * son `_rowKey` au premier renommage de séance, à la première correction
+ * d'heure, au premier « enregistrer comme modèle ».
+ *
+ * Deux conséquences, et la seconde ne se voit pas :
+ *
+ *  - `rowKey()` sert de `:key` au `v-for`. Sans `_rowKey` il retombe sur l'id,
+ *    donc la clé de CHAQUE ligne change et Vue détruit puis reconstruit des
+ *    rangées qui n'ont pas bougé — l'état de glissement perdu, les champs
+ *    recréés, le focus qui saute en pleine frappe. C'est exactement ce que le
+ *    test « leaves the rows below a deletion alone » interdit ailleurs.
+ *  - l'ordonnancement des validations est indexé sur cette même identité. Deux
+ *    appuis encadrant le rafraîchissement reprenaient deux clés, et les deux
+ *    garde-fous sautaient ensemble.
+ */
+describe('Workouts/Show — l’identité d’une série survit à un rafraîchissement', () => {
+    it('garde l’ordre des validations de part et d’autre d’un rafraîchissement de props', async () => {
+        post.mockImplementation((url) =>
+            url.includes('workout-lines')
+                ? Promise.resolve({ data: { data: { id: 10, order: 0, exercise: EXERCISE, sets: [] } } })
+                : Promise.resolve({ data: { data: { id: 77, weight: 0, reps: 10, is_completed: false } } }),
+        )
+
+        const wrapper = await mountPage(emptyWorkout)
+        await addExercise(wrapper)
+        await flushPromises()
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        const serie = () => lines(wrapper)[0].sets[0]
+
+        expect(String(serie().id)).toBe('77')
+
+        patch.mockReset()
+
+        const premiere = deferred()
+        let requetes = 0
+        patch.mockImplementation(() => {
+            requetes += 1
+
+            return requetes === 1 ? premiere.promise : Promise.resolve({ data: {} })
+        })
+
+        const cleAvant = serie()._rowKey
+
+        await click(wrapper, 'complete-set-0-0')
+
+        // Le serveur renvoie la séance — un renommage, une correction d'heure,
+        // n'importe quoi qui rafraîchisse les props.
+        await wrapper.setProps({
+            workout: {
+                ...JSON.parse(JSON.stringify(emptyWorkout)),
+                name: 'Renommée',
+                workout_lines: [
+                    {
+                        id: 10,
+                        order: 0,
+                        exercise: EXERCISE,
+                        sets: [{ id: 77, weight: 0, reps: 10, is_completed: false }],
+                    },
+                ],
+            },
+        })
+        await flushPromises()
+
+        // L'identité doit avoir survécu : c'est elle qui indexe l'ordonnancement,
+        // et c'est aussi la `:key` du `v-for`.
+        expect(serie()._rowKey).toBe(cleAvant)
+
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        const completions = () => patch.mock.calls.filter(([, corps]) => 'is_completed' in (corps ?? {}))
+
+        /*
+         * Ce que la clé stable achète : la file. Le second appui attend que le
+         * premier ait répondu, au lieu de partir en parallèle sur une file
+         * neuve. Deux PATCH de complétion en vol sur la même ligne, c'est le
+         * serveur qui arbitre — et il arbitre par ordre d'arrivée, pas par
+         * ordre d'appui.
+         */
+        expect(completions()).toHaveLength(1)
+
+        premiere.resolve({ data: { data: { is_completed: true } } })
+        await flushPromises()
+
+        expect(completions()).toHaveLength(2)
+    })
+})
