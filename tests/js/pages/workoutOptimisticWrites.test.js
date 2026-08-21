@@ -583,7 +583,6 @@ describe('Workouts/Show — l’ordonnancement des validations de série', () =>
      */
     it('ne recoche pas une série décochée, quand la validation a précédé la création', async () => {
         const setCreated = deferred()
-        const premiereValidation = deferred()
 
         post.mockImplementation((url) =>
             url.includes('workout-lines')
@@ -603,16 +602,27 @@ describe('Workouts/Show — l’ordonnancement des validations de série', () =>
         expect(String(serie().id)).toMatch(/^temp-/)
 
         /*
-         * La validation elle-même est retenue en vol — et c'est la DEUXIÈME
-         * requête, pas la première : la réconciliation de la création envoie
-         * elle aussi un `is_completed`, sans séquenceur ni file. Viser la
-         * première aurait retenu celle-là et le test n'aurait rien prouvé.
+         * Toutes les réponses sont retenues, puis relâchées dans le PIRE ordre
+         * que le réseau autorise : la plus récemment partie d'abord, la plus
+         * ancienne en dernier.
+         *
+         * C'est l'ordre d'ARRIVÉE qu'on pilote, jamais le rang d'appel. La
+         * réconciliation de la création envoie elle aussi un `is_completed`, et
+         * avec le même corps : ni le rang ni la charge utile ne les
+         * distinguent, et le nombre de requêtes est précisément ce qu'un
+         * correctif voisin fera bouger. Un oracle bâti là-dessus se met à
+         * retenir la mauvaise requête et le test échoue pour une raison qui
+         * n'est pas la sienne.
+         *
+         * Un serveur renvoie ce qu'il a reçu : chaque réponse fait donc écho à
+         * sa propre charge utile.
          */
-        let requetes = 0
-        patch.mockImplementation(() => {
-            requetes += 1
+        const enVol = []
+        patch.mockImplementation((url, corps) => {
+            const attente = deferred()
+            enVol.push({ corps, resolve: attente.resolve })
 
-            return requetes === 2 ? premiereValidation.promise : Promise.resolve({ data: {} })
+            return attente.promise
         })
 
         await click(wrapper, 'complete-set-0-0')
@@ -630,11 +640,18 @@ describe('Workouts/Show — l’ordonnancement des validations de série', () =>
         await click(wrapper, 'complete-set-0-0')
         await flushPromises()
 
-        expect(serie().is_completed).toBe(false)
+        // Les plus récentes d'abord. Une file bien tenue n'en libère qu'une à
+        // la fois, d'où la reprise tant qu'il en reste.
+        let relachees = 0
+        while (relachees < enVol.length) {
+            const restantes = enVol.slice(relachees)
+            relachees = enVol.length
 
-        // La réponse de la PREMIÈRE validation arrive enfin, en dernier.
-        premiereValidation.resolve({ data: { data: { is_completed: true } } })
-        await flushPromises()
+            for (const requete of restantes.reverse()) {
+                requete.resolve({ data: { data: { is_completed: requete.corps.is_completed } } })
+                await flushPromises()
+            }
+        }
 
         expect(serie().is_completed).toBe(false)
     })
