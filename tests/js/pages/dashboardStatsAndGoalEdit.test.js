@@ -1,5 +1,42 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
+import { mount as monterVraiment, flushPromises } from '@vue/test-utils'
+
+/*
+ * Chaque page montée ici est démontée à la fin du test qui l'a montée.
+ *
+ * Ce fichier monte trois pages entières — Dashboard, Goals/Edit, Stats/Index —
+ * et n'en démontait aucune. Leurs minuteurs et leurs promesses continuaient
+ * donc de courir après la dernière assertion, et le journal qu'ils écrivaient
+ * arrivait alors que le worker Vitest se fermait déjà :
+ * `EnvironmentTeardownError: Closing rpc while "onUserConsoleLog" was pending`.
+ * Les 1763 tests passent, la couverture tient son seuil, et la commande sort
+ * quand même en erreur — ce qui a rendu `main` rouge et bloqué la publication
+ * de l'image.
+ *
+ * `vitest.setup.js` documente déjà trois sources de ces journaux tardifs, tarie
+ * chacune à son tour. Celle-ci est la quatrième, et c'est la seule qu'on ferme
+ * par la racine plutôt qu'en faisant taire un émetteur : rien ne tourne plus
+ * après la fin du test.
+ *
+ * Même remède que `authenticatedLayout.test.js`, qui tient déjà la liste de ce
+ * qu'il a monté pour la même raison.
+ */
+const montees = []
+
+const mount = (...args) => {
+    const wrapper = monterVraiment(...args)
+    montees.push(wrapper)
+
+    return wrapper
+}
+
+afterEach(async () => {
+    while (montees.length > 0) {
+        montees.pop().unmount()
+    }
+
+    await flushPromises()
+})
 import { nextTick } from 'vue'
 
 const formPost = vi.fn()
