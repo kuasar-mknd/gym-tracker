@@ -46,7 +46,15 @@ describe('the 1RM progress card', () => {
                 mocks: { route: globalThis.route },
                 stubs: {
                     GlassCard: { template: '<div><slot /></div>' },
-                    GlassSelect: { props: ['modelValue'], template: '<select />' },
+                    /*
+                     * `options` est declare, sinon il retombe en ATTRIBUT sur le
+                     * `<select>` natif — ou `options` est une collection en
+                     * lecture seule. Vue avertit alors « Failed setting prop
+                     * "options" », et cet avertissement, emis apres la fin du
+                     * fichier de test, fait sortir Vitest en erreur (voir
+                     * vitest.setup.js).
+                     */
+                    GlassSelect: { props: ['modelValue', 'options'], template: '<select />' },
                 },
             },
         })
