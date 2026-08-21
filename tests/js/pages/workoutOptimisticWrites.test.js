@@ -559,3 +559,233 @@ describe('Workouts/Show — a refused create', () => {
         expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(false)
     })
 })
+
+/*
+ * Les deux gardes qui ordonnent les écritures de complétion — le séquenceur et
+ * la file — sont indexées par une clé. Chacun des deux cas ci-dessous les met
+ * en échec, et par la même faille : la clé, ou le rang, sont pris trop tard.
+ *
+ * Trouvés en cherchant la cause du flake #1503. Ce ne sont pas des défauts de
+ * test : ils se produisent à la salle, sur une connexion lente.
+ */
+describe('Workouts/Show — l’ordonnancement des validations de série', () => {
+    /*
+     * `writeKey` vaut `completion:${set.id}`, et `set.id` est REMPLACÉ en place
+     * quand la création de la série répond. Une validation faite pendant que la
+     * création est encore en vol prend donc la clé `completion:temp-N`, et le
+     * geste suivant prend `completion:12` — deux clés, donc deux séquenceurs et
+     * deux files.
+     *
+     * La réponse tardive de la première interroge alors une clé que plus rien
+     * n'écrit, s'entend répondre qu'elle est la plus récente, et réapplique
+     * `is_completed: true` sur une série que l'utilisateur vient de décocher.
+     * La case se recoche toute seule.
+     */
+    it('ne recoche pas une série décochée, quand la validation a précédé la création', async () => {
+        const setCreated = deferred()
+
+        post.mockImplementation((url) =>
+            url.includes('workout-lines')
+                ? Promise.resolve({ data: { data: { id: 10, order: 0, exercise: EXERCISE, sets: [] } } })
+                : setCreated.promise,
+        )
+
+        const wrapper = await mountPage(emptyWorkout)
+        await addExercise(wrapper)
+        await flushPromises()
+
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        const serie = () => lines(wrapper)[0].sets[0]
+
+        expect(String(serie().id)).toMatch(/^temp-/)
+
+        /*
+         * Toutes les réponses sont retenues, puis relâchées dans le PIRE ordre
+         * que le réseau autorise : la plus récemment partie d'abord, la plus
+         * ancienne en dernier.
+         *
+         * C'est l'ordre d'ARRIVÉE qu'on pilote, jamais le rang d'appel. La
+         * réconciliation de la création envoie elle aussi un `is_completed`, et
+         * avec le même corps : ni le rang ni la charge utile ne les
+         * distinguent, et le nombre de requêtes est précisément ce qu'un
+         * correctif voisin fera bouger. Un oracle bâti là-dessus se met à
+         * retenir la mauvaise requête et le test échoue pour une raison qui
+         * n'est pas la sienne.
+         *
+         * Un serveur renvoie ce qu'il a reçu : chaque réponse fait donc écho à
+         * sa propre charge utile.
+         */
+        const enVol = []
+        patch.mockImplementation((url, corps) => {
+            const attente = deferred()
+            enVol.push({ corps, resolve: attente.resolve })
+
+            return attente.promise
+        })
+
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        expect(serie().is_completed).toBe(true)
+
+        // La création répond : `set.id` est remplacé en place.
+        setCreated.resolve({ data: { data: { id: 12, weight: 0, reps: 10, is_completed: true } } })
+        await flushPromises()
+
+        expect(String(serie().id)).toBe('12')
+
+        // L'utilisateur décoche.
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        // Les plus récentes d'abord. Une file bien tenue n'en libère qu'une à
+        // la fois, d'où la reprise tant qu'il en reste.
+        let relachees = 0
+        while (relachees < enVol.length) {
+            const restantes = enVol.slice(relachees)
+            relachees = enVol.length
+
+            for (const requete of restantes.reverse()) {
+                requete.resolve({ data: { data: { is_completed: requete.corps.is_completed } } })
+                await flushPromises()
+            }
+        }
+
+        expect(serie().is_completed).toBe(false)
+    })
+
+    /*
+     * `nextWrite` est appelé APRÈS `await flushPendingUpdates(set.id)`. Cette
+     * attente est longue pour le premier appui — elle vide le debounce et
+     * attend l'écriture de valeur — et vide pour le second, que le premier a
+     * déjà purgé.
+     *
+     * Le second appui double donc le premier et prend le rang 1 ; le premier
+     * prend le rang 2. Le plus ANCIEN devient « le plus récent », et c'est lui
+     * que le serveur entend en dernier. L'écran peut avoir raison pendant que
+     * la base a tort — ce qui est pire qu'un écran faux, parce que rien ne le
+     * montre.
+     *
+     * Aucun identifiant provisoire ici : la série vient du serveur.
+     */
+    it('envoie au serveur les validations dans l’ordre où elles ont été faites', async () => {
+        const valeurEcrite = deferred()
+        const wrapper = await mountPage(workoutWithSet)
+
+        // Une écriture de valeur en attente, que le premier appui devra vider.
+        const champ = wrapper.find('[dusk="weight-input-0-0"]')
+        champ.element.value = '105'
+        await champ.trigger('input')
+
+        patch.mockImplementationOnce(() => valeurEcrite.promise)
+
+        await click(wrapper, 'complete-set-0-0')
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        valeurEcrite.resolve({ data: { data: { weight: 105 } } })
+        await flushPromises()
+
+        const completions = patch.mock.calls.filter(([, corps]) => 'is_completed' in (corps ?? {}))
+
+        expect(completions.map(([, corps]) => corps.is_completed)).toEqual([true, false])
+    })
+})
+
+/*
+ * Une série créée sur cette page garde son identité à travers un
+ * rafraîchissement de props.
+ *
+ * `mergeServerWorkout` reconstruit chaque série connue du serveur par
+ * `JSON.parse(JSON.stringify(...))`, et ne réinjecte l'objet local que s'il est
+ * marqué non synchronisé (l.96). Une série normalement enregistrée perdait donc
+ * son `_rowKey` au premier renommage de séance, à la première correction
+ * d'heure, au premier « enregistrer comme modèle ».
+ *
+ * Deux conséquences, et la seconde ne se voit pas :
+ *
+ *  - `rowKey()` sert de `:key` au `v-for`. Sans `_rowKey` il retombe sur l'id,
+ *    donc la clé de CHAQUE ligne change et Vue détruit puis reconstruit des
+ *    rangées qui n'ont pas bougé — l'état de glissement perdu, les champs
+ *    recréés, le focus qui saute en pleine frappe. C'est exactement ce que le
+ *    test « leaves the rows below a deletion alone » interdit ailleurs.
+ *  - l'ordonnancement des validations est indexé sur cette même identité. Deux
+ *    appuis encadrant le rafraîchissement reprenaient deux clés, et les deux
+ *    garde-fous sautaient ensemble.
+ */
+describe('Workouts/Show — l’identité d’une série survit à un rafraîchissement', () => {
+    it('garde l’ordre des validations de part et d’autre d’un rafraîchissement de props', async () => {
+        post.mockImplementation((url) =>
+            url.includes('workout-lines')
+                ? Promise.resolve({ data: { data: { id: 10, order: 0, exercise: EXERCISE, sets: [] } } })
+                : Promise.resolve({ data: { data: { id: 77, weight: 0, reps: 10, is_completed: false } } }),
+        )
+
+        const wrapper = await mountPage(emptyWorkout)
+        await addExercise(wrapper)
+        await flushPromises()
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        const serie = () => lines(wrapper)[0].sets[0]
+
+        expect(String(serie().id)).toBe('77')
+
+        patch.mockReset()
+
+        const premiere = deferred()
+        let requetes = 0
+        patch.mockImplementation(() => {
+            requetes += 1
+
+            return requetes === 1 ? premiere.promise : Promise.resolve({ data: {} })
+        })
+
+        const cleAvant = serie()._rowKey
+
+        await click(wrapper, 'complete-set-0-0')
+
+        // Le serveur renvoie la séance — un renommage, une correction d'heure,
+        // n'importe quoi qui rafraîchisse les props.
+        await wrapper.setProps({
+            workout: {
+                ...JSON.parse(JSON.stringify(emptyWorkout)),
+                name: 'Renommée',
+                workout_lines: [
+                    {
+                        id: 10,
+                        order: 0,
+                        exercise: EXERCISE,
+                        sets: [{ id: 77, weight: 0, reps: 10, is_completed: false }],
+                    },
+                ],
+            },
+        })
+        await flushPromises()
+
+        // L'identité doit avoir survécu : c'est elle qui indexe l'ordonnancement,
+        // et c'est aussi la `:key` du `v-for`.
+        expect(serie()._rowKey).toBe(cleAvant)
+
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        const completions = () => patch.mock.calls.filter(([, corps]) => 'is_completed' in (corps ?? {}))
+
+        /*
+         * Ce que la clé stable achète : la file. Le second appui attend que le
+         * premier ait répondu, au lieu de partir en parallèle sur une file
+         * neuve. Deux PATCH de complétion en vol sur la même ligne, c'est le
+         * serveur qui arbitre — et il arbitre par ordre d'arrivée, pas par
+         * ordre d'appui.
+         */
+        expect(completions()).toHaveLength(1)
+
+        premiere.resolve({ data: { data: { is_completed: true } } })
+        await flushPromises()
+
+        expect(completions()).toHaveLength(2)
+    })
+})
