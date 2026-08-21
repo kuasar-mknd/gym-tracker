@@ -83,6 +83,25 @@ const mergeServerWorkout = (server, local) => {
 
         if (!localLine) return
 
+        /*
+         * L'identite de la rangee survit au rafraichissement.
+         *
+         * Le serveur ne connait pas `_rowKey` : il est frappe ici, a la
+         * creation. La copie JSON ci-dessus le perdait donc a chaque
+         * rafraichissement de props — un renommage de seance, une correction
+         * d'heure, un « enregistrer comme modele ».
+         *
+         * Deux consequences, et la seconde ne se voit pas. `rowKey()` sert de
+         * `:key` au `v-for` : sans `_rowKey` il retombe sur l'id, donc la cle
+         * de CHAQUE rangee change et Vue detruit puis reconstruit des lignes
+         * qui n'ont pas bouge — etat de glissement perdu, champs recrees, focus
+         * qui saute en pleine frappe. Et l'ordonnancement des ecritures est
+         * indexe sur cette meme identite : deux appuis encadrant le
+         * rafraichissement reprenaient deux cles, et les deux garde-fous
+         * sautaient ensemble.
+         */
+        if (localLine._rowKey) line._rowKey = localLine._rowKey
+
         const localSets = Array.isArray(localLine.sets) ? localLine.sets : []
 
         // Still being created, or waiting in the offline queue.
@@ -93,9 +112,15 @@ const mergeServerWorkout = (server, local) => {
         line.sets.forEach((set, index) => {
             const localSet = localSets.find((candidate) => candidate.id === set.id)
 
-            if (localSet && unsyncedSetIds.value.has(String(set.id))) {
+            if (!localSet) return
+
+            if (unsyncedSetIds.value.has(String(set.id))) {
                 line.sets[index] = localSet
+
+                return
             }
+
+            if (localSet._rowKey) set._rowKey = localSet._rowKey
         })
     })
 
@@ -325,29 +350,9 @@ const flushPendingUpdates = (setId) => {
     return Promise.allSettled(inFlight.filter(Boolean))
 }
 
-const toggleSetCompletion = async (set, exerciseRestTime) => {
+const toggleSetCompletion = (set, exerciseRestTime) => {
     const newState = !set.is_completed
     const previousState = set.is_completed
-
-    // ⚡ Perf: Optimistic update — no router.reload
-    set.is_completed = newState
-    if (newState) {
-        timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
-        timerRun.value += 1
-        showTimer.value = true
-    }
-
-    /**
-     * Awaited, not merely started.
-     *
-     * The pending value writes were flushed and the completion PATCH sent in the
-     * same tick, so both were in flight at once against the same row with no
-     * ordering between them. Whichever answer came back second was applied over
-     * the first, which is how validating a set right after typing into it could
-     * put the old weight back on screen. The set's numbers are settled first;
-     * only then does it get marked done.
-     */
-    await flushPendingUpdates(set.id)
 
     /**
      * Sequenced and queued, exactly as the value writes are.
@@ -363,12 +368,60 @@ const toggleSetCompletion = async (set, exerciseRestTime) => {
      * `completion:` keys it separately from the numeric fields so that marking a
      * set done still overlaps freely with typing into it; only completion
      * against completion is serialised.
+     *
+     * La cle et le rang sont pris ICI, avant le moindre `await`, et sur une
+     * identite qui ne bouge pas. Les deux garde-fous ci-dessus se laissaient
+     * contourner chacun par une faille distincte, trouvees en cherchant la
+     * cause de #1503 :
+     *
+     * `set.id` est REMPLACE en place quand la creation de la serie repond
+     * (`tempSet.id = realSetId`). Une validation faite pendant que la creation
+     * etait en vol prenait donc la cle `completion:temp-3`, et le geste suivant
+     * `completion:12` — deux cles, donc deux sequenceurs et deux files. La
+     * reponse tardive de la premiere interrogeait une cle que plus rien
+     * n'ecrivait, s'entendait repondre qu'elle etait la plus recente, et
+     * recochait une serie que l'utilisateur venait de decocher. `_rowKey` est
+     * frappe a la creation de la ligne et ne change jamais ; les series venues
+     * du serveur n'en ont pas, mais leur identifiant est deja immuable.
+     *
+     * Et le rang etait pris APRES le vidage ci-dessous. Cette attente est
+     * longue pour le premier appui — elle vide le debounce et attend l'ecriture
+     * de valeur — et vide pour le second, que le premier a deja purge. Le
+     * second doublait donc le premier et prenait le rang 1 ; le plus ANCIEN
+     * devenait « le plus recent », et c'est lui que le serveur entendait en
+     * dernier. L'ecran pouvait avoir raison pendant que la base avait tort, ce
+     * qui est pire qu'un ecran faux : rien ne le montre.
      */
-    const writeKey = `completion:${set.id}`
+    const writeKey = `completion:${set._rowKey ?? set.id}`
     const seq = nextWrite(writeKey)
 
-    const send = () =>
-        patchSet(set, { is_completed: newState })
+    // ⚡ Perf: Optimistic update — no router.reload
+    set.is_completed = newState
+    if (newState) {
+        timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
+        timerRun.value += 1
+        showTimer.value = true
+    }
+
+    const send = async () => {
+        /**
+         * Awaited, not merely started.
+         *
+         * The pending value writes were flushed and the completion PATCH sent in the
+         * same tick, so both were in flight at once against the same row with no
+         * ordering between them. Whichever answer came back second was applied over
+         * the first, which is how validating a set right after typing into it could
+         * put the old weight back on screen. The set's numbers are settled first;
+         * only then does it get marked done.
+         *
+         * Dans le maillon de la file, et non avant elle : attendre dehors
+         * laissait le second appui atteindre la file avant le premier, donc
+         * partir avant lui. Ici, l'ordre d'entree dans la file est celui des
+         * appuis, et le vidage garde sa garantie.
+         */
+        await flushPendingUpdates(set.id)
+
+        return patchSet(set, { is_completed: newState })
             .then((response) => {
                 // A reply that is no longer the latest word on this set is read
                 // for nothing: applying it would undo the tap that overtook it.
@@ -392,6 +445,7 @@ const toggleSetCompletion = async (set, exerciseRestTime) => {
                 set.is_completed = previousState
                 reportSyncFailure('La série n’a pas pu être validée. Réessaie.')
             })
+    }
 
     return completionWrites.queue(writeKey, send)
 }

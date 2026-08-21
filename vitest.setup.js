@@ -89,3 +89,26 @@ Object.defineProperty(window, 'matchMedia', {
  * directive et voir ses appels.
  */
 config.global.directives = { ...config.global.directives, press: {} }
+
+/*
+ * `Head` est enregistre pour tous les montages, troisieme source de journaux
+ * tardifs apres le canvas et `v-press`.
+ *
+ * Meme mecanique que les deux precedentes, et meme signature en CI :
+ * « [Vue warn]: Failed to resolve component: Head » emis par un composant
+ * charge en `defineAsyncComponent`, donc resolu APRES la fin du fichier de
+ * test. L'avertissement arrive alors que le worker se ferme, et Vitest rend
+ * `EnvironmentTeardownError: Closing rpc while "onUserConsoleLog" was pending`.
+ * Tous les tests passent, la couverture tient son seuil, et la commande sort
+ * quand meme en erreur.
+ *
+ * 162 fichiers de test le simulent deja a la main ; ceux qui ne le font pas
+ * sont precisement ceux qui montent une page sans savoir qu'elle en rendra un.
+ * Une declaration locale garde le dernier mot — Test Utils fusionne
+ * `config.global` avec le `global` du montage, et le second l'emporte.
+ *
+ * Il ne rend rien, comme le vrai : `Head` pose des balises dans le document,
+ * pas dans l'arbre du composant. Un stub qui rendrait un element fausserait
+ * les assertions de structure.
+ */
+config.global.components = { ...config.global.components, Head: { render: () => null } }
