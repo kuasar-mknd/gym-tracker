@@ -233,6 +233,45 @@ describe('Workouts/Show — a refused edit reverts', () => {
         expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: 999 })
         expect(lines(wrapper)[0].sets[0].weight).toBe(80)
     })
+
+    /*
+     * Le même refus, mais après une frappe caractère par caractère — ce que
+     * fait un vrai clavier, et ce que fait WebDriver.
+     *
+     * `previousValue` vient de `lastConfirmed(set, field, set[field])`, et
+     * `confirmedValues` n'est alimenté que par une réponse ACCEPTÉE. Tant que
+     * le champ n'a jamais été enregistré, le repli est donc `set[field]` —
+     * déjà écrasé par la frappe précédente.
+     *
+     * Au second caractère, « la valeur d'avant » vaut donc « 9 » : ce que
+     * l'utilisateur venait de taper, que le serveur n'a jamais entendu. Un
+     * refus restaure alors une valeur qui n'a jamais existé nulle part, et la
+     * liaison à sens unique la réécrit dans le champ. L'utilisateur voit sa
+     * saisie amputée de son dernier caractère, sans comprendre pourquoi.
+     */
+    it('restaure la valeur du serveur, même si la frappe s’est faite caractère par caractère', async () => {
+        patch.mockRejectedValue({ response: { status: 422 }, request: {} })
+
+        const wrapper = await mountPage(workoutWithSet)
+        const input = wrapper.find('[dusk="weight-input-0-0"]')
+
+        expect(lines(wrapper)[0].sets[0].weight).toBe(80)
+
+        // Deux évènements `input`, comme deux touches.
+        input.element.value = '9'
+        await input.trigger('input')
+        input.element.value = '99'
+        await input.trigger('input')
+        await input.trigger('change')
+
+        await new Promise((resolve) => setTimeout(resolve, 1100))
+        await flushPromises()
+
+        // Le debounce fond les deux touches : une seule écriture, celle qui
+        // porte la saisie complète.
+        expect(patch).toHaveBeenCalledWith('/api/v1/sets/42', { weight: 99 })
+        expect(lines(wrapper)[0].sets[0].weight).toBe(80)
+    })
 })
 
 /**
