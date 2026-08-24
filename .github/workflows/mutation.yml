@@ -61,23 +61,37 @@ jobs:
             fail-fast: false
             matrix:
                 include:
-                    # Le seuil est le score mesure moins environ deux points.
-                    # La marge n'est pas du confort : le nombre de mutants en
-                    # timeout varie d'une execution a l'autre (1 sur Services,
-                    # 4 sur Actions), et les runners GitHub sont plus lents que
-                    # la machine qui a mesure — un timeout de plus est un
-                    # mutant non tue. Sans cette marge, la porte bloquerait des
-                    # livraisons pour du bruit, et une porte qui bloque a tort
-                    # est une porte qu'on desactive.
+                    # Le seuil est le score mesure moins une marge, et cette
+                    # marge n'est pas du confort : un mutant qui part en timeout
+                    # compte comme non tue, et les runners GitHub sont plus lents
+                    # que la machine qui mesure. Une porte qui bloque a tort est
+                    # une porte qu'on desactive.
                     #
-                    # Mesure en parallele, --covered-only :
-                    #   App\Services  61,47 %  (488 tues, 324 survivants)
-                    #                 — 58,12 % avant les tests de #1446 ; la
-                    #                   hausse depasse les cinq mutants vises,
-                    #                   un test qui exerce un vrai chemin en
-                    #                   tuant une grappe et non un seul.
-                    #   App\Actions   64,49 %  (568 tues, 315 survivants)
-                    #   App\Policies  94,28 %  (313 tues,  19 survivants)
+                    # Elle etait de deux points, posee au juge. Trois nocturnes
+                    # VERTES consecutives disent qu'elle peut etre plus serree —
+                    # c'est la mesure qui le dit, pas une intuition :
+                    #
+                    #                  21/08    22/08    23/08     min
+                    #   App\Services   80,70    80,82    81,18    80,70
+                    #   App\Actions    66,83    66,83    66,83    66,83
+                    #   App\Policies   94,28    94,35    94,35    94,28
+                    #
+                    # `App\Actions` rend le MEME score au centieme trois fois de
+                    # suite, et `App\Policies` varie de sept centiemes. L'ecart
+                    # de Services tient en un demi-point. La variance que la
+                    # marge de deux points anticipait ne se voit pas.
+                    #
+                    # Services passe donc de 78 a 80 : il gardait plus de deux
+                    # points d'avance sur son propre plancher mesure, ce qui est
+                    # exactement le « pour le moment » que #1446 existe pour
+                    # empecher de devenir « pour toujours ».
+                    #
+                    # Actions et Policies ne bougent pas : leurs seuils sont deja
+                    # a moins d'un point de leur plancher (0,83 et 0,28). Les
+                    # remonter demanderait de rogner une marge que ces trois
+                    # mesures ne suffisent pas a declarer inutile — et #1542 vient
+                    # de toucher trois politiques, donc leur score n'a pas encore
+                    # ete mesure sur le code d'aujourd'hui.
                     #
                     # App\DTOs ne figure pas ici : la mesure rend ZERO mutation.
                     # Ce sont des classes readonly a proprietes promues, il n'y
@@ -105,7 +119,7 @@ jobs:
                     # d'etre de #1446.
                     - scope: 'App\Services'
                       timeout: 60
-                      min: 78
+                      min: 80
                     - scope: 'App\Actions'
                       timeout: 30
                       min: 66
