@@ -106,7 +106,9 @@ test('user cannot update other users habits', function (): void {
             'name' => 'Updated Habit Name',
             'goal_times_per_week' => 5,
         ])
-        ->assertForbidden();
+        ->assertNotFound();
+
+    expect($habit->refresh()->name)->not->toBe('Updated Habit Name');
 });
 
 test('user cannot toggle other users habits', function (): void {
@@ -116,5 +118,7 @@ test('user cannot toggle other users habits', function (): void {
 
     $this->actingAs($user)
         ->post(route('habits.toggle', $habit), ['date' => now()->toDateString()])
-        ->assertForbidden();
+        ->assertNotFound();
+
+    expect(\App\Models\HabitLog::where('habit_id', $habit->id)->exists())->toBeFalse();
 });

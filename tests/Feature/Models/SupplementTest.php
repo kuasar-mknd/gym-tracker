@@ -81,7 +81,7 @@ class SupplementTest extends TestCase
 
         $response = $this->actingAs($user2)->post(route('supplements.consume', $supplement));
 
-        $response->assertStatus(403);
+        $response->assertNotFound();
     }
 
     public function test_scope_for_user_filters_correctly(): void

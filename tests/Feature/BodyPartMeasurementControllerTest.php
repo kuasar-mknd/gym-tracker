@@ -114,7 +114,7 @@ test('user cannot delete another users body part measurement', function (): void
 
     actingAs($user)
         ->delete(route('body-parts.destroy', $measurement))
-        ->assertForbidden();
+        ->assertNotFound();
 
     assertDatabaseHas('body_part_measurements', [
         'id' => $measurement->id,

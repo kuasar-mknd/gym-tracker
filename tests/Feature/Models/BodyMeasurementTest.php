@@ -65,7 +65,7 @@ class BodyMeasurementTest extends TestCase
 
         $response = $this->actingAs($user)->delete("/body-measurements/{$measurement->id}");
 
-        $response->assertForbidden();
+        $response->assertNotFound();
         $this->assertDatabaseHas('body_measurements', [
             'id' => $measurement->id,
         ]);

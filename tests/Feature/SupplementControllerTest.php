@@ -123,7 +123,7 @@ test('user cannot update another users supplement', function (): void {
             'servings_remaining' => 10,
             'low_stock_threshold' => 5,
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseMissing('supplements', [
         'id' => $supplement->id,
@@ -154,7 +154,7 @@ test('user cannot delete another users supplement', function (): void {
 
     actingAs($user2)
         ->delete(route('supplements.destroy', $supplement))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertModelExists($supplement);
 });
@@ -193,7 +193,7 @@ test('user cannot consume another users supplement', function (): void {
 
     actingAs($user2)
         ->post(route('supplements.consume', $supplement))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('supplements', [
         'id' => $supplement->id,

@@ -121,7 +121,9 @@ describe('WorkoutTemplateController', function (): void {
             $response = $this->actingAs($user)
                 ->post(route('templates.execute', $template));
 
-            $response->assertForbidden();
+            $response->assertNotFound();
+
+            $this->assertDatabaseMissing('workouts', ['user_id' => $user->id]);
         });
     });
 
@@ -150,7 +152,9 @@ describe('WorkoutTemplateController', function (): void {
             $response = $this->actingAs($user)
                 ->post(route('templates.save-from-workout', $workout));
 
-            $response->assertForbidden();
+            $response->assertNotFound();
+
+            $this->assertDatabaseMissing('workout_templates', ['user_id' => $user->id]);
         });
     });
 
@@ -178,7 +182,9 @@ describe('WorkoutTemplateController', function (): void {
             $response = $this->actingAs($user)
                 ->delete(route('templates.destroy', $template));
 
-            $response->assertForbidden();
+            $response->assertNotFound();
+
+            $this->assertDatabaseHas('workout_templates', ['id' => $template->id]);
         });
     });
 

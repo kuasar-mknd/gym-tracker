@@ -144,7 +144,7 @@ describe('PlateController Update', function (): void {
 
         $response = $this->actingAs($this->user)->put(route('plates.update', $plate), $updateData);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
 
         $this->assertDatabaseMissing('plates', [
             'id' => $plate->id,
@@ -176,7 +176,7 @@ describe('PlateController Destroy', function (): void {
 
         $response = $this->actingAs($this->user)->delete(route('plates.destroy', $plate));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
 
         $this->assertDatabaseHas('plates', [
             'id' => $plate->id,

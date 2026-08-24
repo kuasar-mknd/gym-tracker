@@ -84,7 +84,7 @@ class WilksScoreTest extends TestCase
 
         $response = $this->actingAs($user2)->delete(route('tools.wilks.destroy', $score));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
         $this->assertDatabaseHas('wilks_scores', ['id' => $score->id]);
     }
 }

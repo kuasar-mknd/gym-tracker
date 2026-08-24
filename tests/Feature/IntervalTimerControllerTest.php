@@ -112,7 +112,7 @@ describe('IntervalTimerController Update', function (): void {
         $response->assertSessionHasErrors(['name', 'work_seconds']);
     });
 
-    it('returns 403 forbidden when a user tries to update another users interval timer', function (): void {
+    it('answers 404 when a user tries to update another users interval timer', function (): void {
         $user = User::factory()->create();
 
         $otherUser = User::factory()->create();
@@ -128,7 +128,7 @@ describe('IntervalTimerController Update', function (): void {
 
         $response = $this->actingAs($user)->patch(route('tools.interval-timer.update', $timer), $data);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
 
         $this->assertDatabaseMissing('interval_timers', [
             'id' => $timer->id,
@@ -153,7 +153,7 @@ describe('IntervalTimerController Destroy', function (): void {
         ]);
     });
 
-    it('returns 403 forbidden when a user tries to delete another users interval timer', function (): void {
+    it('answers 404 when a user tries to delete another users interval timer', function (): void {
         $user = User::factory()->create();
 
         $otherUser = User::factory()->create();
@@ -161,7 +161,7 @@ describe('IntervalTimerController Destroy', function (): void {
 
         $response = $this->actingAs($user)->delete(route('tools.interval-timer.destroy', $timer));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
 
         $this->assertDatabaseHas('interval_timers', [
             'id' => $timer->id,

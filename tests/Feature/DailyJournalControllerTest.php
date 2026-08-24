@@ -116,7 +116,7 @@ it('prevents a user from deleting another user\'s journal entry', function (): v
 
     $this->actingAs($user2)
         ->delete('/daily-journals/'.$journal->id)
-        ->assertStatus(403);
+        ->assertNotFound();
 
     $this->assertDatabaseHas('daily_journals', ['id' => $journal->id]);
 });

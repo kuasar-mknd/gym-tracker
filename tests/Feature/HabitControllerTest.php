@@ -126,7 +126,7 @@ describe('HabitController Update', function (): void {
 
         $response = $this->actingAs($this->user)->put(route('habits.update', $habit), $updateData);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
 
         $this->assertDatabaseMissing('habits', [
             'id' => $habit->id,
@@ -155,7 +155,7 @@ describe('HabitController Destroy', function (): void {
 
         $response = $this->actingAs($this->user)->delete(route('habits.destroy', $habit));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
 
         $this->assertDatabaseHas('habits', [
             'id' => $habit->id,
@@ -220,6 +220,8 @@ describe('HabitController Toggle', function (): void {
             'date' => $date,
         ]);
 
-        $response->assertForbidden();
+        $response->assertNotFound();
+
+        expect(\App\Models\HabitLog::where('habit_id', $habit->id)->exists())->toBeFalse();
     });
 });

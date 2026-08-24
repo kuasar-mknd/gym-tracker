@@ -140,7 +140,7 @@ describe('IntervalTimerController', function (): void {
 
             $this->actingAs($user)
                 ->patch(route('tools.interval-timer.update', $timer), $data)
-                ->assertForbidden();
+                ->assertNotFound();
 
             $this->assertDatabaseHas('interval_timers', [
                 'id' => $timer->id,
@@ -182,7 +182,7 @@ describe('IntervalTimerController', function (): void {
 
             $this->actingAs($user)
                 ->delete(route('tools.interval-timer.destroy', $timer))
-                ->assertForbidden();
+                ->assertNotFound();
 
             $this->assertDatabaseHas('interval_timers', [
                 'id' => $timer->id,

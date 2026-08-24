@@ -35,11 +35,18 @@ test('authenticated user can view an exercise they own', function (): void {
 test('user cannot view an exercise owned by another user', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    $exercise = Exercise::factory()->create(['user_id' => $otherUser->id]);
+    // Le nom est pose et non tire au sort : la fabrique produit des mots latins
+    // courts, et `unde` figure dans la page 404 — l'assertion tombait le jour ou
+    // le tirage sortait un mot que la page contient deja.
+    $exercise = Exercise::factory()->create([
+        'user_id' => $otherUser->id,
+        'name' => 'Rowing barre prise supination',
+    ]);
 
     actingAs($user)
         ->get(route('exercises.show', $exercise))
-        ->assertForbidden();
+        ->assertNotFound()
+        ->assertDontSee($exercise->name);
 });
 
 test('authenticated user can store a new exercise with valid data', function (): void {
@@ -157,7 +164,7 @@ test('user cannot update an exercise owned by another user', function (): void {
             'type' => 'strength',
             'category' => 'Dos',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 
     assertDatabaseHas('exercises', [
         'id' => $exercise->id,
@@ -222,7 +229,7 @@ test('user cannot destroy an exercise owned by another user', function (): void 
 
     actingAs($user)
         ->delete(route('exercises.destroy', $exercise))
-        ->assertForbidden();
+        ->assertNotFound();
 
     assertDatabaseHas('exercises', [
         'id' => $exercise->id,

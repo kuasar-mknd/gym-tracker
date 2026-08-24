@@ -72,7 +72,7 @@ it('cannot delete another users water log entry', function (): void {
 
     $response = $this->actingAs($this->user)->delete(route('tools.water.destroy', $waterLog));
 
-    $response->assertForbidden();
+    $response->assertNotFound();
     $this->assertDatabaseHas('water_logs', [
         'id' => $waterLog->id,
     ]);

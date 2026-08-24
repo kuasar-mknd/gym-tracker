@@ -66,11 +66,16 @@ it('hands the deadline to the form in the only format a date input accepts', fun
 });
 
 it('refuses to open someone else edit form', function (): void {
-    $goal = Goal::factory()->create(['user_id' => User::factory()->create()->id]);
+    // Pose, non tire au sort : voir ExerciseControllerTest, meme piege.
+    $goal = Goal::factory()->create([
+        'user_id' => User::factory()->create()->id,
+        'title' => 'Objectif souleve de terre 180 kg',
+    ]);
 
     actingAs(User::factory()->create())
         ->get(route('goals.edit', ['goal' => $goal->id]))
-        ->assertForbidden();
+        ->assertNotFound()
+        ->assertDontSee($goal->title);
 });
 
 /**
