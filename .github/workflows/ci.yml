@@ -371,8 +371,27 @@ jobs:
                   path: vendor
                   key: ${{ runner.os }}-vendor-${{ hashFiles('**/composer.lock') }}
 
+            # Une panne du service d'avis ne bloque plus la livraison, et la
+            # garantie ne s'en trouve pas affaiblie — parce qu'elle ne reposait
+            # deja pas sur lui seul.
+            #
+            # Le 20/08, packagist a rendu un 502 et `composer audit` est sorti en
+            # erreur 100 : le job `audit` est tombe, donc la CI, donc la
+            # publication de l'image, sur un commit sans le moindre defaut. Une
+            # porte de securite qui cede quand le reseau tousse n'est pas une
+            # porte, c'est un alea — et une porte qui bloque a tort est une porte
+            # qu'on finit par desactiver.
+            #
+            # `--ignore-unreachable` ne fait taire QUE l'injoignable : un avis
+            # reellement recu continue de faire echouer le job.
+            #
+            # Et la seconde ligne, elle, ne parle a personne : `composer.lock`
+            # porte `roave/security-advisories` avec **1072 conflits** declares,
+            # appliques a chaque `composer install` (que la CI lance sans
+            # `--no-dev`). Un paquet vulnerable ne s'installe donc pas, reseau ou
+            # pas. `composer audit` est le second regard, pas le seul.
             - name: Composer Audit
-              run: composer audit
+              run: composer audit --ignore-unreachable
 
             # Bloquant : ce gate n'est vert que parce qu'un composer-unused.php
             # documente les deux seuls faux positifs. Il echoue aussi sur une
