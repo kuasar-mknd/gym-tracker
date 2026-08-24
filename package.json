@@ -55,7 +55,7 @@
     "dependencies": {
         "@sentry/vue": "^10.70.0",
         "chart.js": "^4.5.1",
-        "dayjs": "^1.11.21",
+        "dayjs": "^1.11.23",
         "serialize-javascript": "^7.1.0",
         "vue-chartjs": "^5.3.4",
         "ziggy-js": "^2.6.3"
