@@ -828,3 +828,161 @@ describe('Workouts/Show — l’identité d’une série survit à un rafraîchi
         expect(completions()).toHaveLength(2)
     })
 })
+
+/*
+ * La réconciliation de la création ne double pas l'écriture de validation.
+ *
+ * `addSet` envoie la série avec `is_completed: false`, puis compare ce qui a
+ * changé depuis et rattrape l'écart par un PATCH. Ce diff est calculé sur les
+ * clés de la charge utile envoyée, `is_completed` comprise : cocher pendant que
+ * la création est en vol y ajoutait donc la validation.
+ *
+ * Ce PATCH-là part **sans séquenceur ni file**. Il court contre la chaîne de
+ * complétion, qui, elle, est ordonnée — et rien n'arbitre entre les deux
+ * sinon l'ordre d'arrivée au serveur. L'écran pouvait avoir raison pendant que
+ * la base gardait la valeur du perdant.
+ *
+ * Il est de toute façon redondant : `toggleSetCompletion` est garée sur
+ * `pendingIds.resolve(set.id)`, qui se résout sur cette même promesse de
+ * création. Son écriture ordonnée part donc à l'instant exact où la création
+ * retombe, et elle porte déjà la validation.
+ */
+describe('Workouts/Show — la réconciliation d’une série créée', () => {
+    it('laisse la file porter la validation, au lieu d’en envoyer une seconde', async () => {
+        const setCreated = deferred()
+
+        post.mockImplementation((url) =>
+            url.includes('workout-lines')
+                ? Promise.resolve({ data: { data: { id: 10, order: 0, exercise: EXERCISE, sets: [] } } })
+                : setCreated.promise,
+        )
+
+        const wrapper = await mountPage(emptyWorkout)
+        await addExercise(wrapper)
+        await flushPromises()
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        expect(String(lines(wrapper)[0].sets[0].id)).toMatch(/^temp-/)
+
+        // Coché pendant que la création est encore en vol.
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        setCreated.resolve({ data: { data: { id: 77, weight: 0, reps: 10, is_completed: false } } })
+        await flushPromises()
+
+        // Un appui, une écriture de validation. La seconde était celle qui
+        // échappait à l'ordonnancement.
+        const completions = patch.mock.calls.filter(([, corps]) => 'is_completed' in (corps ?? {}))
+
+        expect(completions).toHaveLength(1)
+    })
+})
+
+/*
+ * Un rafraîchissement de props ne décoche pas une série dont la validation est
+ * encore en vol.
+ *
+ * `mergeServerWorkout` reprend la copie du serveur pour toute série qui n'est
+ * pas marquée « non synchronisée » — un marquage réservé aux écritures de
+ * VALEUR refusées. Une validation partie mais sans réponse n'est donc protégée
+ * par rien : le serveur, qui ne l'a pas encore enregistrée, renvoie
+ * légitimement `is_completed: false`, et la coche disparaît de l'écran.
+ *
+ * Elle revient à l'arrivée de la réponse, ce qui en fait un clignotement plutôt
+ * qu'une perte — mais un clignotement au milieu d'une série, pendant que
+ * l'utilisateur enchaîne, c'est exactement ce qui fait douter de ce qu'on vient
+ * de valider.
+ */
+describe('Workouts/Show — un rafraîchissement pendant une validation en vol', () => {
+    it('ne décoche pas la série que le serveur ne connaît pas encore', async () => {
+        const wrapper = await mountPage(workoutWithSet)
+
+        const validation = deferred()
+        patch.mockImplementation(() => validation.promise)
+
+        await click(wrapper, 'complete-set-0-0')
+        await flushPromises()
+
+        expect(lines(wrapper)[0].sets[0].is_completed).toBe(true)
+
+        // Le serveur renvoie la séance — et il ignore encore la validation.
+        await wrapper.setProps({
+            workout: { ...JSON.parse(JSON.stringify(workoutWithSet)), name: 'Renommée' },
+        })
+        await flushPromises()
+
+        expect(wrapper.vm.localWorkout.name).toBe('Renommée')
+        expect(lines(wrapper)[0].sets[0].is_completed).toBe(true)
+
+        validation.resolve({ data: { data: { is_completed: true } } })
+        await flushPromises()
+
+        expect(lines(wrapper)[0].sets[0].is_completed).toBe(true)
+    })
+})
+
+/*
+ * Deux séries ajoutées de part et d'autre d'un rafraîchissement partagent la
+ * même chaîne de création.
+ *
+ * `setCreateChains` sérialise les créations d'une même ligne, pour qu'une série
+ * n'aille jamais chercher un `workout_line_id` encore provisoire. Il est indexé
+ * sur l'OBJET ligne, et son commentaire justifie ce choix ainsi : « l'identité
+ * de l'objet est stable — addExercise mute la ligne en place et ne la remplace
+ * jamais ».
+ *
+ * C'était vrai d'`addExercise`. Ça ne l'est pas de `mergeServerWorkout`, qui
+ * reconstruit chaque ligne par `JSON.parse(JSON.stringify(...))`. Après un
+ * rafraîchissement, la seconde série ouvre donc une chaîne neuve et sa création
+ * part sans attendre la première.
+ */
+describe('Workouts/Show — deux séries de part et d’autre d’un rafraîchissement', () => {
+    it('garde une seule chaîne de création pour la même ligne', async () => {
+        const premiereCreation = deferred()
+        const creations = []
+
+        post.mockImplementation((url) => {
+            if (url.includes('workout-lines')) {
+                return Promise.resolve({ data: { data: { id: 10, order: 0, exercise: EXERCISE, sets: [] } } })
+            }
+
+            creations.push(url)
+
+            return creations.length === 1
+                ? premiereCreation.promise
+                : Promise.resolve({ data: { data: { id: 78, weight: 0, reps: 10, is_completed: false } } })
+        })
+
+        const wrapper = await mountPage(emptyWorkout)
+        await addExercise(wrapper)
+        await flushPromises()
+
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        expect(creations).toHaveLength(1)
+
+        // Le serveur renvoie la séance — la ligne est reconstruite.
+        await wrapper.setProps({
+            workout: {
+                ...JSON.parse(JSON.stringify(emptyWorkout)),
+                name: 'Renommée',
+                workout_lines: [{ id: 10, order: 0, exercise: EXERCISE, sets: [] }],
+            },
+        })
+        await flushPromises()
+
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        // La seconde attend : la première n'a pas répondu.
+        expect(creations).toHaveLength(1)
+
+        premiereCreation.resolve({ data: { data: { id: 77, weight: 0, reps: 10, is_completed: false } } })
+        await flushPromises()
+
+        expect(creations).toHaveLength(2)
+    })
+})

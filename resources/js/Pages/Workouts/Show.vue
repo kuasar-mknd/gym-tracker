@@ -121,6 +121,12 @@ const mergeServerWorkout = (server, local) => {
             }
 
             if (localSet._rowKey) set._rowKey = localSet._rowKey
+
+            // La validation est partie, le serveur ne l'a pas encore : sa copie
+            // est la perimee des deux.
+            if (completionsEnVol.has(`completion:${rowKey(localSet)}`)) {
+                set.is_completed = localSet.is_completed
+            }
         })
     })
 
@@ -447,7 +453,9 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
             })
     }
 
-    return completionWrites.queue(writeKey, send)
+    completionsEnVol.add(writeKey)
+
+    return completionWrites.queue(writeKey, send).finally(() => completionsEnVol.delete(writeKey))
 }
 
 const savingTemplate = ref(false)
@@ -683,6 +691,15 @@ const removeLine = (lineId) => {
             })
         })
 
+        /*
+         * La chaine de creation de cette ligne n'a plus rien a serialiser.
+         *
+         * Elle etait indexee sur l'objet ligne, dans une `WeakMap` qui la
+         * ramassait toute seule ; la cle est desormais une chaine, donc
+         * l'entree survivrait a la ligne pour toute la duree de la page.
+         */
+        setCreateChains.delete(rowKey(line))
+
         // ⚡ Perf: Optimistic removal
         const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === lineId)
         const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
@@ -722,14 +739,26 @@ const removeLine = (lineId) => {
  * Sets appearing in an order the user did not create them in, specifically when
  * going fast, is exactly the reported symptom.
  *
- * Keyed on the line object rather than its id: a line's id changes from
- * placeholder to real one when its create lands, and sets added on either side
- * of that moment still have to share one chain. The object identity is stable —
- * addExercise mutates the line in place and never replaces it.
+ * Indexee sur l'identite stable de la ligne, pas sur son identifiant : celui-ci
+ * passe de provisoire a reel quand sa creation retombe, et deux series ajoutees
+ * de part et d'autre de cet instant doivent partager une seule chaine.
  *
- * @type {WeakMap<object, Promise>}
+ * Elle l'etait sur l'OBJET ligne, au motif que « addExercise mute la ligne en
+ * place et ne la remplace jamais ». C'etait vrai d'`addExercise` ; ca ne l'est
+ * pas de `mergeServerWorkout`, qui reconstruit chaque ligne par
+ * `JSON.parse(JSON.stringify(...))`. Apres un rafraichissement de props, la
+ * serie suivante ouvrait donc une chaine neuve et sa creation partait sans
+ * attendre la precedente — avec un `workout_line_id` qui pouvait encore etre
+ * provisoire.
+ *
+ * `rowKey()` est la meme identite que celle qui indexe les ecritures de
+ * validation, et elle survit desormais a la fusion. Une `Map` plutot qu'une
+ * `WeakMap` : la cle est une chaine, donc elle ne se ramasse pas toute seule.
+ * L'entree est oubliee au retrait de la ligne.
+ *
+ * @type {Map<string|number, Promise>}
  */
-const setCreateChains = new WeakMap()
+const setCreateChains = new Map()
 
 // ⚡ Perf: Optimistic addSet — no router.reload
 const addSet = (lineId) => {
@@ -803,7 +832,8 @@ const addSet = (lineId) => {
         markUnsynced(tempSet.id)
     }
 
-    const previousCreate = setCreateChains.get(line) ?? Promise.resolve()
+    const chaineDeLigne = rowKey(line)
+    const previousCreate = setCreateChains.get(chaineDeLigne) ?? Promise.resolve()
 
     const creation = previousCreate
         .then(() => pendingIds.resolve(lineId))
@@ -843,9 +873,26 @@ const addSet = (lineId) => {
                  * Mutating in place also keeps the row identity that v-model and
                  * the per-set debounce timers are bound to.
                  */
+                /*
+                 * Les valeurs, et elles seules : `is_completed` est exclue.
+                 *
+                 * La charge utile envoyee la porte — a `false` — donc cocher
+                 * pendant que la creation etait en vol la faisait entrer dans
+                 * ce diff. Ce PATCH-ci part SANS sequenceur ni file : il
+                 * courait contre la chaine de completion, qui elle est
+                 * ordonnee, et rien n'arbitrait entre les deux sinon l'ordre
+                 * d'arrivee au serveur. L'ecran pouvait avoir raison pendant
+                 * que la base gardait la valeur du perdant.
+                 *
+                 * Il etait de toute facon redondant : `toggleSetCompletion` est
+                 * garee sur `pendingIds.resolve(set.id)`, qui se resout sur
+                 * cette meme promesse de creation. Son ecriture ordonnee part
+                 * donc a l'instant ou la creation retombe, et elle porte deja
+                 * la validation.
+                 */
                 const edited = Object.fromEntries(
                     Object.keys(sent)
-                        .filter((field) => tempSet[field] !== sent[field])
+                        .filter((field) => field !== 'is_completed' && tempSet[field] !== sent[field])
                         .map((field) => [field, tempSet[field]]),
                 )
 
@@ -890,7 +937,7 @@ const addSet = (lineId) => {
             return null
         })
 
-    setCreateChains.set(line, creation)
+    setCreateChains.set(chaineDeLigne, creation)
     pendingIds.track(tempSet.id, creation)
 }
 
@@ -1067,6 +1114,22 @@ const fieldWrites = createWriteQueue()
  * @type {Map<string, Promise>}
  */
 const completionWrites = createWriteQueue()
+
+/*
+ * Les series dont la validation est partie sans avoir encore de reponse.
+ *
+ * `mergeServerWorkout` reprend la copie du serveur pour toute serie qui n'est
+ * pas marquee « non synchronisee » — un marquage reserve aux ecritures de
+ * VALEUR refusees. Une validation en vol n'etait donc protegee par rien : le
+ * serveur, qui ne l'a pas encore enregistree, renvoie legitimement
+ * `is_completed: false`, et la coche disparaissait de l'ecran le temps de
+ * l'aller-retour.
+ *
+ * Un `Set` simple et non reactif : il n'est lu que par la fusion, qui tourne
+ * dans un observateur, et le rendre reactif ferait boucler cet observateur sur
+ * ses propres ecritures.
+ */
+const completionsEnVol = new Set()
 
 /**
  * The value the server last confirmed for a field, which is the only value a
