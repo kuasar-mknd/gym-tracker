@@ -1143,10 +1143,30 @@ const updateSet = (set, field, rawValue) => {
         return
     }
 
-    const previousValue = lastConfirmed(set, field, set[field])
-    set[field] = value
     const timerKey = `${set.id}_${field}`
-    if (updateTimers[timerKey]?.timerId) clearTimeout(updateTimers[timerKey].timerId)
+    const rafaleEnCours = updateTimers[timerKey]
+
+    /*
+     * La valeur d'avant la RAFALE, pas d'avant la touche.
+     *
+     * `confirmedValues` n'est alimente que par une reponse ACCEPTEE. Tant que
+     * le champ n'a jamais ete enregistre, `lastConfirmed` retombe donc sur son
+     * repli — `set[field]`, deja ecrase par la touche precedente. Au second
+     * caractere de « 99 », « la valeur d'avant » valait ainsi 9 : ce que
+     * l'utilisateur venait de taper, que le serveur n'a jamais entendu.
+     *
+     * Un refus restaurait alors une valeur qui n'a existe nulle part, et la
+     * liaison a sens unique la reecrivait dans le champ. L'utilisateur voyait
+     * sa saisie amputee de son dernier caractere, sans rien pour l'expliquer.
+     *
+     * Le debounce fond les touches d'une meme rafale en une seule ecriture ;
+     * la valeur a restaurer si elle est refusee est celle d'avant la premiere
+     * d'entre elles. On la garde donc sur la rafale.
+     */
+    const previousValue = rafaleEnCours ? rafaleEnCours.previousValue : lastConfirmed(set, field, set[field])
+
+    set[field] = value
+    if (rafaleEnCours?.timerId) clearTimeout(rafaleEnCours.timerId)
 
     const seq = nextWrite(timerKey)
 
@@ -1229,6 +1249,7 @@ const updateSet = (set, field, rawValue) => {
             delete updateTimers[timerKey]
         }, 1000),
         execute,
+        previousValue,
     }
 }
 
