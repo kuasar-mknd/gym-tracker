@@ -88,11 +88,17 @@ const mountPage = async (workout = emptyWorkout) => {
 /** A promise whose settling this test controls, so the in-flight window is real. */
 const deferred = () => {
     let resolve
-    const promise = new Promise((res) => {
+    let reject
+    const promise = new Promise((res, rej) => {
         resolve = res
+        reject = rej
     })
 
-    return { promise, resolve }
+    // La promesse est souvent gardee en vol un long moment avant d'etre
+    // reglee ; sans ce puits, un rejet tardif remonte en « unhandled ».
+    promise.catch(() => {})
+
+    return { promise, resolve, reject }
 }
 
 const click = async (wrapper, dusk) => {
@@ -984,5 +990,56 @@ describe('Workouts/Show — deux séries de part et d’autre d’un rafraîchis
         await flushPromises()
 
         expect(creations).toHaveLength(2)
+    })
+})
+
+/*
+ * Un refus restaure ce que le SERVEUR a envoyé, même quand une écriture
+ * précédente est encore en vol.
+ *
+ * `confirmedValues` n'est alimenté que par une réponse acceptée. #1540 a fermé
+ * le cas de la rafale — les touches d'une même salve partagent la valeur
+ * d'avant la première — mais pas celui-ci : dès qu'une salve est partie, son
+ * minuteur est oublié, et la salve suivante retombe sur `set[field]`, déjà
+ * optimiste. Deux corrections coup sur coup, toutes deux refusées, laissaient
+ * donc à l'écran la première des deux au lieu de la valeur du serveur.
+ *
+ * Le repli est désormais amorcé avec ce que le serveur envoie au chargement :
+ * il y a toujours une valeur confirmée à restaurer.
+ */
+describe('Workouts/Show — deux corrections refusées coup sur coup', () => {
+    it('revient à la valeur du serveur, pas à la correction intermédiaire', async () => {
+        const premierRefus = deferred()
+        let envois = 0
+
+        patch.mockImplementation(() => {
+            envois += 1
+
+            // La première reste en vol : c'est la fenêtre qu'on éprouve.
+            return envois === 1 ? premierRefus.promise : Promise.reject({ response: { status: 422 }, request: {} })
+        })
+
+        const wrapper = await mountPage(workoutWithSet)
+        const input = wrapper.find('[dusk="weight-input-0-0"]')
+
+        expect(lines(wrapper)[0].sets[0].weight).toBe(80)
+
+        // Première salve, laissée partir — sa réponse n'arrivera qu'à la fin.
+        input.element.value = '9'
+        await input.trigger('input')
+        await new Promise((resolve) => setTimeout(resolve, 1100))
+
+        expect(envois).toBe(1)
+
+        // Seconde salve, alors que la première n'a toujours pas répondu.
+        input.element.value = '99'
+        await input.trigger('input')
+        await new Promise((resolve) => setTimeout(resolve, 1100))
+        await flushPromises()
+
+        premierRefus.reject({ response: { status: 422 }, request: {} })
+        await flushPromises()
+
+        expect(lines(wrapper)[0].sets[0].weight).toBe(80)
     })
 })

@@ -140,6 +140,7 @@ const mergeServerWorkout = (server, local) => {
 watch(
     () => props.workout,
     (newVal) => {
+        releverLesValeursDuServeur(newVal)
         localWorkout.value = mergeServerWorkout(newVal, localWorkout.value)
     },
 )
@@ -1143,6 +1144,44 @@ const completionsEnVol = new Set()
 const confirmedValues = new Map()
 const confirmedKey = (setId, field) => `${setId}_${field}`
 
+/**
+ * Ce que le serveur nous a dit, releve a chaque fois qu'il nous le dit.
+ *
+ * `confirmedValues` n'etait alimente que par une reponse ACCEPTEE. Tant qu'un
+ * champ n'avait jamais ete enregistre depuis cette page, `lastConfirmed`
+ * retombait donc sur son repli — la valeur a l'ecran, deja optimiste — et un
+ * refus restaurait quelque chose que le serveur n'avait jamais eu.
+ *
+ * #1540 a ferme le cas de la rafale, en gardant la valeur d'avant la premiere
+ * touche. Mais des qu'une salve est partie son minuteur est oublie, et la
+ * salve suivante retombait sur l'ecran. Deux corrections coup sur coup, toutes
+ * deux refusees, laissaient la premiere des deux a l'ecran.
+ *
+ * La charge utile du serveur EST ce que le serveur detient : la relever ici
+ * donne toujours une valeur a restaurer. Les series encore provisoires n'en
+ * ont pas — le serveur ne les connait pas.
+ */
+const releverLesValeursDuServeur = (workout) => {
+    // Le serveur envoie parfois les lignes en objet plutot qu'en tableau, et la
+    // fusion s'en accommode deja ; ce releve doit en faire autant.
+    const lignes = workout?.workout_lines
+    const enTableau = Array.isArray(lignes) ? lignes : Object.values(lignes ?? {})
+
+    enTableau.forEach((line) =>
+        (Array.isArray(line?.sets) ? line.sets : []).forEach((set) => {
+            if (set === null || isTemporaryId(set.id)) {
+                return
+            }
+
+            NUMERIC_SET_FIELDS.forEach((field) => {
+                if (set[field] !== undefined) {
+                    rememberConfirmed(set.id, field, set[field])
+                }
+            })
+        }),
+    )
+}
+
 const rememberConfirmed = (setId, field, value) => {
     confirmedValues.set(confirmedKey(setId, field), value)
 }
@@ -1445,6 +1484,10 @@ const handleFabAddExercise = () => {
 }
 
 onMounted(() => {
+    // Le premier relevé : la séance telle qu'elle est arrivée. Les suivants se
+    // font dans l'observateur des props.
+    releverLesValeursDuServeur(props.workout)
+
     window.addEventListener('open-add-exercise', handleFabAddExercise)
     window.addEventListener('sync:failed', handleSyncFailure)
     markQueuedFailuresOnMount()
