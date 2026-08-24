@@ -40,11 +40,14 @@ use Laravel\Sanctum\Sanctum;
  * la serie orpheline au lieu de la faire disparaitre avec elle — exactement la
  * fenetre pendant laquelle la requete lente tient encore son modele.
  */
-function serieOrpheline(User $user): Set
+/**
+ * @param  array<string, mixed>  $attributs  ce que la serie doit porter, plutot que le tirage de la fabrique
+ */
+function serieOrpheline(User $user, array $attributs = []): Set
 {
     $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
     $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
-    $set = Set::factory()->create(['workout_line_id' => $workoutLine->id]);
+    $set = Set::factory()->create(['workout_line_id' => $workoutLine->id, ...$attributs]);
 
     Schema::withoutForeignKeyConstraints(
         fn () => WorkoutLine::query()->whereKey($workoutLine->id)->delete()
@@ -72,13 +75,23 @@ it('rend 404 et non 500 en modifiant une serie dont la ligne a disparu', functio
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
-    $set = serieOrpheline($user);
+    /*
+     * La valeur de depart est POSEE, pas tiree.
+     *
+     * L'assertion « la serie n'a pas bouge » etait ecrite « reps != 12 », la
+     * valeur envoyee. Elle tombait donc le jour ou la fabrique tirait 12 — ce
+     * qui est arrive sur la passe nocturne de mutation, et a bloque la
+     * publication de l'image. Une assertion qui depend d'un tirage n'est pas un
+     * garde : elle echoue sans defaut, et le jour ou elle a raison personne ne
+     * la croit.
+     */
+    $set = serieOrpheline($user, ['reps' => 8]);
 
     $response = $this->patchJson(route('api.v1.sets.update', $set), ['reps' => 12]);
 
     $response->assertNotFound();
     $response->assertExactJson(['message' => 'Resource not found.']);
-    expect(Set::query()->whereKey($set->id)->value('reps'))->not->toBe(12);
+    $this->assertDatabaseHas('sets', ['id' => $set->id, 'reps' => 8]);
 });
 
 it('rend 404 et non 500 en supprimant une serie dont la ligne a disparu', function (): void {
