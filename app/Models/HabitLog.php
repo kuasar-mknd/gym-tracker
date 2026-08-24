@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\ResolvesOwnerAtRouteBinding;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,12 +22,20 @@ class HabitLog extends Model
     /** @use HasFactory<\Database\Factories\HabitLogFactory> */
     use HasFactory;
 
+    use ResolvesOwnerAtRouteBinding;
+
     #[\Override]
     protected $fillable = [
         'habit_id',
         'date',
         'notes',
     ];
+
+    #[\Override]
+    protected function ownershipPath(): string
+    {
+        return 'habit';
+    }
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Habit, $this>

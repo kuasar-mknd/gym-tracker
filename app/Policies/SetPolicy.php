@@ -6,7 +6,6 @@ namespace App\Policies;
 
 use App\Models\Set;
 use App\Models\User;
-use App\Models\Workout;
 use App\Models\WorkoutLine;
 
 final class SetPolicy
@@ -21,10 +20,29 @@ final class SetPolicy
 
     /**
      * Determine whether the user can view the model.
+     *
+     * L'appartenance est lue sur le modele plutot que traversee ici.
+     *
+     * Deux raisons, et la premiere est de securite. `$set->workoutLine->workout`
+     * demandait deux requetes de plus que la liaison du modele, et seulement
+     * quand la serie existe : un identifiant inconnu sortait a la premiere. La
+     * ressource d'autrui repondait donc mesurablement plus lentement que la
+     * ressource absente, ce qui redonne par le chronometre l'existence que
+     * #1418 avait retiree du statut et du corps. Voir #1433 et
+     * `ResolvesOwnerAtRouteBinding`.
+     *
+     * La seconde est la robustesse. Le premier maillon peut manquer : la cle
+     * etrangere est en `ON DELETE CASCADE`, donc supprimer la ligne emporte la
+     * serie, et une requete lente qui a deja resolu son modele lit ensuite une
+     * relation qui ne renvoie plus rien. Deferencee sans garde, elle rendait
+     * 500. `ownerUserId()` rend `null`, ce qui refuse — et la reponse due est
+     * bien 404 : le gardien de `bootstrap/app.php` interroge `view` pour savoir
+     * si le refus porte sur une ressource invisible, et une serie sans ligne n'a
+     * plus de proprietaire etablissable.
      */
     public function view(User $user, Set $set): bool
     {
-        return $this->owns($user, $this->workoutOf($set));
+        return $set->ownerUserId() === $user->id;
     }
 
     /**
@@ -36,15 +54,18 @@ final class SetPolicy
             return true;
         }
 
-        return $this->ownsAndIsOngoing($user, $workoutLine->workout);
+        return $workoutLine->ownerUserId() === $user->id && $workoutLine->ownerWorkoutIsOngoing();
     }
 
     /**
      * Determine whether the user can update the model.
+     *
+     * L'appartenance d'abord, la seance ouverte ensuite : `ownerWorkoutIsOngoing()`
+     * lit un `ended_at` nul, ce qu'une chaine rompue rend aussi.
      */
     public function update(User $user, Set $set): bool
     {
-        return $this->ownsAndIsOngoing($user, $this->workoutOf($set));
+        return $this->view($user, $set) && $set->ownerWorkoutIsOngoing();
     }
 
     /**
@@ -52,53 +73,6 @@ final class SetPolicy
      */
     public function delete(User $user, Set $set): bool
     {
-        return $this->ownsAndIsOngoing($user, $this->workoutOf($set));
-    }
-
-    /**
-     * La seance a laquelle la serie appartient, si elle en a encore une.
-     *
-     * Le maillon est facultatif par chronologie, non par modelisation :
-     * `workout_line_id` est NOT NULL et la contrainte est en ON DELETE CASCADE,
-     * donc la base ne garde jamais d'orpheline durablement. Mais la liaison de
-     * modele resout la serie d'abord et la politique lit la relation ensuite,
-     * et une suppression de la ligne qui se glisse entre les deux laisse la
-     * requete avec une instance dont la relation ne renvoie plus rien.
-     *
-     * Deferencee sans garde, elle rendait 500. La reponse due est 404 : le
-     * gardien de `bootstrap/app.php` (#1418) interroge `view` pour savoir si le
-     * refus porte sur une ressource invisible, et une serie sans ligne n'a plus
-     * de proprietaire etablissable. Ce qui vaut aussi pour le gardien lui-meme —
-     * il appelle `view`, donc garder `update` seule n'aurait deplace la panne
-     * que d'un cran.
-     *
-     * Le type nullable est signale inutile par l'analyse : `workout_line_id`
-     * etant NOT NULL, elle deduit la relation non nullable. C'est la deduction
-     * qui est fausse ici — la colonne dit ce que la base accepte a l'ecriture,
-     * pas ce qu'une instance deja resolue lit apres coup. Le modele lui-meme en
-     * convient : `Set::recomputeVolume()` deferences la meme relation en `?->`.
-     */
-    private function workoutOf(Set $set): ?Workout // @phpstan-ignore return.unusedType
-    {
-        return $set->workoutLine?->workout;
-    }
-
-    /**
-     * La seance existe encore et elle est a cet utilisateur.
-     */
-    private function owns(User $user, ?Workout $workout): bool
-    {
-        return $workout instanceof Workout && $user->id === $workout->user_id;
-    }
-
-    /**
-     * La meme chose, et la seance n'est pas terminee : on n'ecrit pas dans une
-     * seance close.
-     */
-    private function ownsAndIsOngoing(User $user, ?Workout $workout): bool
-    {
-        return $workout instanceof Workout
-            && $user->id === $workout->user_id
-            && is_null($workout->ended_at);
+        return $this->view($user, $set) && $set->ownerWorkoutIsOngoing();
     }
 }

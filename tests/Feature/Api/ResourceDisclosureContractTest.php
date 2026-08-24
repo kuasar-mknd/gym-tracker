@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -417,6 +419,141 @@ it('does not confirm a parent resource exists when refusing to create against it
 
     expect($discloses)->toBe([], sprintf(
         "%d of %d creation parameters confirm that a resource exists:\n- %s",
+        count($discloses),
+        $checked,
+        implode("\n- ", $discloses),
+    ));
+});
+
+/**
+ * Les deux refus doivent aussi se ressembler par le travail qu'ils coutent.
+ *
+ * #1418 a rendu les deux reponses identiques en statut, en corps et en
+ * en-tetes. Il restait un canal : la ressource d'autrui payait la liaison du
+ * modele puis la traversee de la chaine de propriete par la policy, quand un
+ * identifiant inconnu sortait des la premiere requete. Trois requetes contre
+ * une sur `sets`, releve en #1433 — donc une reponse mesurablement plus lente,
+ * qui repond « ca existe » a qui sait chronometrer.
+ *
+ * Le canal se compte en requetes SQL plutot qu'en millisecondes : la duree
+ * depend de la machine et rendrait le test instable, alors que le nombre de
+ * requetes est ce qui la cause et se compare exactement. Un test sur le temps
+ * mesurerait le bruit ; celui-ci mesure la difference qui produit le bruit.
+ *
+ * Comme le balayage precedent, il enumere plutot que de reciter : #1433 ne
+ * nommait que `sets`, l'enumeration en a trouve quinze paires route/verbe sur
+ * cinq modeles — toutes celles dont la policy remonte a son proprietaire par
+ * une relation.
+ */
+it('does the same amount of database work for a resource owned by someone else as for one that does not exist', function (): void {
+    $routes = boundApiRoutes();
+
+    expect($routes)->not->toBeEmpty();
+
+    $intruder = User::factory()->create();
+    $discloses = [];
+    $checked = 0;
+
+    /*
+     * Un seul ecouteur, pose une fois, qui accumule tout ; chaque mesure prend
+     * la tranche que sa requete a ajoutee.
+     *
+     * Poser puis retirer un ecouteur par mesure serait plus direct, mais
+     * `DB::listen` n'a pas de retrait cible : on ne peut oublier que tous les
+     * abonnes de `QueryExecuted` a la fois, y compris ceux que l'application
+     * pose elle-meme.
+     */
+    $journal = new class()
+    {
+        /** @var list<string> */
+        public array $sql = [];
+    };
+
+    DB::listen(function (QueryExecuted $query) use ($journal): void {
+        $journal->sql[] = $query->sql;
+    });
+
+    /**
+     * @param  array<string, mixed>  $body
+     * @return array{queries: list<string>, status: int}
+     */
+    $measure = function (string $method, string $url, array $body) use ($journal): array {
+        $deja = count($journal->sql);
+
+        /** @var \Illuminate\Testing\TestResponse<\Illuminate\Http\JsonResponse> $response */
+        $response = $this->json($method, $url, $body);
+
+        return [
+            'queries' => array_values(array_slice($journal->sql, $deja)),
+            'status' => $response->getStatusCode(),
+        ];
+    };
+
+    foreach ($routes as $route) {
+        $foreign = \Illuminate\Database\Eloquent\Factories\Factory::factoryForModel($route['model'])->createOne();
+
+        /** @var int|string $key */
+        $key = $foreign->getKey();
+
+        $path = fn (string $id): string => '/'.(preg_replace('/\{[^}]+\}/', $id, $route['uri']));
+
+        $this->actingAs($intruder, 'sanctum');
+
+        // Meme exemption que le balayage precedent : une ressource que
+        // l'appelant peut simplement lire n'est pas cachee, donc son cout ne
+        // revele rien qu'un GET ne rende deja.
+        /** @var \Illuminate\Testing\TestResponse<\Illuminate\Http\JsonResponse> $readable */
+        $readable = $this->json('GET', $path((string) $key));
+
+        if ($readable->getStatusCode() < 300) {
+            continue;
+        }
+
+        $bodies = ['sans corps' => [], 'charge invalide' => hostilePayloadFor($route['route'])];
+
+        foreach ($bodies as $description => $body) {
+            /*
+             * Les deux chemins sont parcourus une fois pour rien avant d'etre
+             * mesures. Le premier passage d'une route amorce ce que le
+             * framework ne resout qu'une fois — resolution du controleur,
+             * compilation des regles — et ce cout initial tomberait sur celui
+             * des deux qu'on mesure en premier, ce qui inventerait un ecart
+             * la ou il n'y en a pas, ou en masquerait un.
+             */
+            $this->json($route['method'], $path('999999999'), $body);
+            $this->json($route['method'], $path((string) $key), $body);
+
+            $absent = $measure($route['method'], $path('999999999'), $body);
+            $present = $measure($route['method'], $path((string) $key), $body);
+
+            // Certains verbes reussissent sur une ressource etrangere par
+            // conception : il n'y a pas de refus a deguiser.
+            if ($present['status'] < 300) {
+                continue;
+            }
+
+            $checked++;
+
+            if (count($present['queries']) !== count($absent['queries'])) {
+                $discloses[] = sprintf(
+                    "%s (%s, %s): %d requete(s) pour un %s appartenant a autrui, %d pour un identifiant inconnu\n    autrui : %s\n    inconnu: %s",
+                    $route['name'],
+                    $route['method'],
+                    $description,
+                    count($present['queries']),
+                    class_basename($route['model']),
+                    count($absent['queries']),
+                    implode(' | ', $present['queries']),
+                    implode(' | ', $absent['queries']),
+                );
+            }
+        }
+    }
+
+    expect($checked)->toBeGreaterThan(0);
+
+    expect($discloses)->toBe([], sprintf(
+        "%d des %d routes protegees travaillent plus pour une ressource qui existe :\n- %s",
         count($discloses),
         $checked,
         implode("\n- ", $discloses),

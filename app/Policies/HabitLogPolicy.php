@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
 
@@ -20,22 +19,27 @@ final class HabitLogPolicy
 
     /**
      * Determine whether the user can view the model.
+     *
+     * L'appartenance est lue sur le modele plutot que traversee ici : la
+     * traversee coutait des requetes que seul le chemin « la ressource existe »
+     * payait, ce qui rendait par le chronometre l'existence que #1418 avait
+     * retiree du statut et du corps. Voir #1433 et `ResolvesOwnerAtRouteBinding`.
      */
     public function view(User $user, HabitLog $habitLog): bool
     {
-        return $this->owns($user, $this->parentDe($habitLog));
+        return $habitLog->ownerUserId() === $user->id;
     }
 
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user, ?Habit $habit = null): bool
+    public function create(User $user, ?\App\Models\Habit $habit = null): bool
     {
         if ($habit === null) {
             return true;
         }
 
-        return $this->owns($user, $habit);
+        return $user->id === $habit->user_id;
     }
 
     /**
@@ -43,7 +47,7 @@ final class HabitLogPolicy
      */
     public function update(User $user, HabitLog $habitLog): bool
     {
-        return $this->owns($user, $this->parentDe($habitLog));
+        return $this->view($user, $habitLog);
     }
 
     /**
@@ -51,36 +55,6 @@ final class HabitLogPolicy
      */
     public function delete(User $user, HabitLog $habitLog): bool
     {
-        return $this->owns($user, $this->parentDe($habitLog));
-    }
-
-    /**
-     * L'habitude auquel l'enregistrement appartient, s'il en a encore un.
-     *
-     * Le maillon est facultatif par chronologie, non par modelisation :
-     * `habit_id` est NOT NULL et la contrainte est en ON DELETE CASCADE, donc la
-     * base ne garde jamais d'orphelin durablement. Mais la liaison de modele
-     * resout l'enfant d'abord et la politique lit la relation ensuite, et une
-     * suppression du parent qui se glisse entre les deux laisse la requete avec
-     * une instance dont la relation ne renvoie plus rien.
-     *
-     * Deferencee sans garde, elle rendait 500. La reponse due est 404 : le
-     * gardien de `bootstrap/app.php` (#1418) interroge `view` pour savoir si le
-     * refus porte sur une ressource invisible, et un enfant sans parent n'a
-     * plus de proprietaire etablissable. Ce qui vaut aussi pour le gardien
-     * lui-meme — il appelle `view`, donc garder `update` seule n'aurait
-     * deplace la panne que d'un cran.
-     */
-    private function parentDe(HabitLog $habitLog): ?Habit // @phpstan-ignore return.unusedType
-    {
-        return $habitLog->habit;
-    }
-
-    /**
-     * Le parent existe encore et il est a cet utilisateur.
-     */
-    private function owns(User $user, ?Habit $habit): bool
-    {
-        return $habit instanceof Habit && $user->id === $habit->user_id;
+        return $this->view($user, $habitLog);
     }
 }
