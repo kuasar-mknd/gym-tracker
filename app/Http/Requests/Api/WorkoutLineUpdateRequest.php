@@ -11,6 +11,11 @@ class WorkoutLineUpdateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * L'appartenance est lue sur le modele, pas traversee par la relation : la
+     * traversee coutait une requete que seule une ligne existante payait, ce
+     * qui distinguait « pas a toi » de « pas la » au chronometre. Voir #1433
+     * et `ResolvesOwnerAtRouteBinding`.
      */
     public function authorize(): bool
     {
@@ -20,14 +25,13 @@ class WorkoutLineUpdateRequest extends FormRequest
             $workoutLine = \App\Models\WorkoutLine::find($this->route('workout_line'));
         }
 
-        if (! $workoutLine instanceof \App\Models\WorkoutLine) {
+        $user = $this->user();
+
+        if (! $workoutLine instanceof \App\Models\WorkoutLine || ! $user instanceof \App\Models\User) {
             return false;
         }
 
-        /** @var \App\Models\User $user */
-        $user = $this->user();
-
-        return $workoutLine->workout->user_id === $user->id;
+        return $workoutLine->ownerUserId() === $user->id;
     }
 
     /**

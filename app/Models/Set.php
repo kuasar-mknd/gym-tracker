@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\ResolvesOwnerAtRouteBinding;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -27,6 +28,8 @@ class Set extends Model
     /** @use HasFactory<\Database\Factories\SetFactory> */
     use HasFactory;
 
+    use ResolvesOwnerAtRouteBinding;
+
     #[\Override]
     protected $fillable = [
         'workout_line_id',
@@ -37,6 +40,32 @@ class Set extends Model
         'is_warmup',
         'is_completed',
     ];
+
+    /**
+     * La seance porteuse n'est pas terminee.
+     *
+     * Repose sur `ownerUserId()` ayant deja etabli un proprietaire : une chaine
+     * rompue rend `ended_at` nul, ce qui se lirait ici comme « en cours ». Les
+     * policies posent les deux questions ensemble, dans cet ordre.
+     */
+    public function ownerWorkoutIsOngoing(): bool
+    {
+        return $this->ownershipValue('owner_ended_at') === null;
+    }
+
+    #[\Override]
+    protected function ownershipPath(): string
+    {
+        return 'workoutLine.workout';
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function ownershipColumns(): array
+    {
+        return ['owner_user_id' => 'user_id', 'owner_ended_at' => 'ended_at'];
+    }
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\WorkoutLine, $this>

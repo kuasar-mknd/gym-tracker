@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\ResolvesOwnerAtRouteBinding;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 /**
  * @property int $id
@@ -21,6 +22,8 @@ class WorkoutTemplateSet extends Model
     /** @use HasFactory<\Database\Factories\WorkoutTemplateSetFactory> */
     use HasFactory;
 
+    use ResolvesOwnerAtRouteBinding;
+
     #[\Override]
     protected $fillable = [
         'workout_template_line_id',
@@ -29,6 +32,12 @@ class WorkoutTemplateSet extends Model
         'is_warmup',
         'order',
     ];
+
+    #[\Override]
+    protected function ownershipPath(): string
+    {
+        return 'workoutTemplateLine.workoutTemplate';
+    }
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\WorkoutTemplateLine, $this>
