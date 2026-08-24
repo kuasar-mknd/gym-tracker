@@ -58,7 +58,7 @@
         "dayjs": "^1.11.21",
         "serialize-javascript": "^7.1.0",
         "vue-chartjs": "^5.3.4",
-        "ziggy-js": "^2.6.3"
+        "ziggy-js": "^2.6.4"
     },
     "overrides": {
         "serialize-javascript": "^7.1.0",
