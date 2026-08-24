@@ -91,7 +91,7 @@ it('rend 404 et non 500 en modifiant une serie dont la ligne a disparu', functio
 
     $response->assertNotFound();
     $response->assertExactJson(['message' => 'Resource not found.']);
-    expect((int) Set::query()->whereKey($set->id)->value('reps'))->toBe(8);
+    $this->assertDatabaseHas('sets', ['id' => $set->id, 'reps' => 8]);
 });
 
 it('rend 404 et non 500 en supprimant une serie dont la ligne a disparu', function (): void {
