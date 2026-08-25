@@ -390,6 +390,14 @@ jobs:
             # appliques a chaque `composer install` (que la CI lance sans
             # `--no-dev`). Un paquet vulnerable ne s'installe donc pas, reseau ou
             # pas. `composer audit` est le second regard, pas le seul.
+            #
+            # Cette garantie a une date, et elle etait affirmee sans etre
+            # verifiee : mesuree le 24/08, la reference verrouillee datait du
+            # 07/08 et la rafraichir a ajoute 4 conflits. La contrainte est
+            # `dev-latest`, que Dependabot ne propose pas — entre le 21/01 et le
+            # 11/08, l'ensemble d'avis est reste fige sept mois. Elle est
+            # desormais tenue par `LaGarantieHorsLigneNeVieillitPasTest` (qui
+            # bloque a 30 jours) et par `avis-hors-ligne.yml` (qui previent a 14).
             - name: Composer Audit
               run: composer audit --ignore-unreachable
 
