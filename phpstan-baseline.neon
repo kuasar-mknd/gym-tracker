@@ -486,11 +486,6 @@ parameters:
 			count: 3
 			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
 
-		-
-			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andThrow\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Actions/HandleSocialCallbackActionTest.php
 
 		-
 			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<array\<int, string\>\>\:\:\$not\.$#'
@@ -972,11 +967,6 @@ parameters:
 			count: 2
 			path: tests/Feature/Notifications/WebPushPayloadTest.php
 
-		-
-			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andReturnUsing\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Notifications/WebPushPayloadTest.php
 
 		-
 			message: '#^Cannot access offset ''action'' on mixed\.$#'
@@ -1482,11 +1472,6 @@ parameters:
 			count: 6
 			path: tests/Feature/WorkoutManagementTest.php
 
-		-
-			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:once\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: tests/Unit/Actions/HandleSocialCallbackActionTest.php
 
 		-
 			message: '#^Method class@anonymous/tests/Unit/Actions/Tools/Concerns/CalculatesMacrosTest\.php\:7\:\:testCalculation\(\) has parameter \$data with no value type specified in iterable type array\.$#'
@@ -1548,17 +1533,7 @@ parameters:
 			count: 1
 			path: tests/Unit/Services/StatsServiceCacheTest.php
 
-		-
-			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:andReturnSelf\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: tests/Unit/Support/Csp/Policies/PulsePolicyTest.php
 
-		-
-			message: '#^Call to an undefined method Mockery\\ExpectationInterface\|Mockery\\HigherOrderMessage\:\:with\(\)\.$#'
-			identifier: method.notFound
-			count: 6
-			path: tests/Unit/Support/Csp/Policies/PulsePolicyTest.php
 
 		-
 			message: '#^Parameter \#1 \$policy of method App\\Support\\Csp\\Policies\\PulsePolicy\:\:configure\(\) expects Spatie\\Csp\\Policy, Mockery\\MockInterface given\.$#'
