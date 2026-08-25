@@ -1,0 +1,160 @@
+name: Avis hors-ligne
+
+# Tenir fraiche la seule protection qui ne demande pas le reseau.
+#
+# Depuis #1546, `composer audit` tourne avec `--ignore-unreachable` : une panne
+# de packagist ne bloque plus une livraison. Ce choix repose entierement sur le
+# fait que la garantie ne vient pas de ce service seul — `composer.lock` porte
+# `roave/security-advisories`, dont les conflits refusent un paquet vulnerable
+# sans jamais rien demander au reseau.
+#
+# Cette garantie a une date, et personne ne la regardait. Mesure le 24/08 : la
+# reference verrouillee datait du 07/08, et la rafraichir a fait passer les
+# conflits de 1072 a 1076. Quatre avis n'etaient bloques par rien hors ligne, au
+# moment precis ou l'on venait de rendre le regard en ligne non bloquant.
+#
+# La cause est mecanique. La contrainte est `dev-latest`, une version de
+# developpement que Dependabot ne propose jamais : verifie sur l'historique du
+# depot, ou toutes les mises a jour depuis l'installation du paquet le 20/01
+# sont des effets de bord de `composer update` lances pour autre chose. Entre le
+# 21/01 et le 11/08, l'ensemble d'avis est reste fige SEPT MOIS.
+#
+# Ce workflow detecte, il ne corrige pas. Un `composer update` pousse par un
+# workflow n'est pas une bonne idee ici : une PR ouverte avec `GITHUB_TOKEN`
+# ne declenche pas `ci.yml` — GitHub supprime les evenements causes par son
+# propre jeton — donc elle arriverait sans une seule porte verte, ce qui est
+# exactement ce qu'un changement de `composer.lock` ne doit jamais etre.
+#
+# La repartition est donc : ce workflow previent, et
+# `LaGarantieHorsLigneNeVieillitPasTest` bloque. Deux seuils etages, pour que
+# l'alarme arrive avant le mur : quatorze jours ici, trente la-bas.
+
+on:
+    schedule:
+        # Lundi 05h41 UTC. Decale de l'heure ronde, comme la passe de mutation :
+        # la file des runners planifies de GitHub y est la plus chargee. Lundi
+        # parce qu'un avertissement recu en debut de semaine laisse la semaine
+        # pour agir.
+        - cron: '41 5 * * 1'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    fraicheur:
+        name: Fraicheur de l'ensemble d'avis
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.5'
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
+                  coverage: none
+                  tools: composer:v2
+
+            # Ce que le verrou promet aujourd'hui, avant d'aller demander mieux.
+            - name: Lire la garantie verrouillee
+              id: verrou
+              run: |
+                  set -euo pipefail
+
+                  lire() {
+                      jq -r '
+                          [(.packages + .["packages-dev"])[]
+                              | select(.name == "roave/security-advisories")]
+                          | .[0] // empty
+                          | "\(.time)\t\(.conflict | length)"
+                      ' composer.lock
+                  }
+
+                  ligne="$(lire)"
+
+                  if [ -z "$ligne" ]; then
+                      echo "::error::\`roave/security-advisories\` a disparu de composer.lock."
+                      echo "C'est la seule protection qui ne demande pas le reseau, et le job" \
+                           "\`audit\` de ci.yml compte dessus pour se permettre --ignore-unreachable."
+                      exit 1
+                  fi
+
+                  date_avis="${ligne%%$'\t'*}"
+                  conflits="${ligne##*$'\t'}"
+                  jours=$(( ( $(date -u +%s) - $(date -u -d "$date_avis" +%s) ) / 86400 ))
+
+                  {
+                      echo "date=$date_avis"
+                      echo "conflits=$conflits"
+                      echo "jours=$jours"
+                  } >>"$GITHUB_OUTPUT"
+
+                  echo "Verrouille au $date_avis ($jours jours), $conflits conflits."
+
+            # Le vrai audit hors-ligne : on demande a packagist si un avis PLUS
+            # RECENT touche un paquet reellement installe. Si c'est le cas, la
+            # resolution echoue — et c'est la toute la valeur de cette passe.
+            # `composer audit` repond a la meme question, mais seulement quand il
+            # est joignable, et seulement au moment d'une livraison.
+            - name: Rafraichir l'ensemble d'avis
+              run: |
+                  set -euo pipefail
+
+                  if ! composer update roave/security-advisories \
+                          --no-interaction --no-scripts --no-audit 2>&1 | tee /tmp/refresh.log; then
+                      echo "::error::La resolution a echoue en rafraichissant l'ensemble d'avis."
+                      echo "Un avis publie depuis le ${{ steps.verrou.outputs.date }} entre en" \
+                           "conflit avec une version installee : c'est une vulnerabilite qui" \
+                           "touche ce depot, pas une panne d'outillage."
+                      exit 1
+                  fi
+
+            - name: Comparer et decider
+              run: |
+                  set -euo pipefail
+
+                  apres="$(jq -r '
+                      [(.packages + .["packages-dev"])[]
+                          | select(.name == "roave/security-advisories")]
+                      | .[0] | "\(.time)\t\(.conflict | length)"
+                  ' composer.lock)"
+
+                  date_apres="${apres%%$'\t'*}"
+                  conflits_apres="${apres##*$'\t'}"
+                  avant='${{ steps.verrou.outputs.conflits }}'
+                  jours='${{ steps.verrou.outputs.jours }}'
+
+                  {
+                      echo "### Garantie hors-ligne"
+                      echo
+                      echo "| | verrouille | disponible |"
+                      echo "|---|---|---|"
+                      echo "| date | ${{ steps.verrou.outputs.date }} | $date_apres |"
+                      echo "| conflits | $avant | $conflits_apres |"
+                      echo
+                      echo "Age de la garantie verrouillee : **$jours jours**."
+                  } >>"$GITHUB_STEP_SUMMARY"
+
+                  if [ "$conflits_apres" -gt "$avant" ]; then
+                      manquants=$(( conflits_apres - avant ))
+                      echo "$manquants avis ne sont bloques par rien hors ligne." >>"$GITHUB_STEP_SUMMARY"
+                  fi
+
+                  # Quatorze jours : l'avertissement, pas le mur. Le mur est dans
+                  # `LaGarantieHorsLigneNeVieillitPasTest`, a trente jours, et il
+                  # bloque la CI. Avertir sur la moindre derive rendrait ce job
+                  # rouge chaque semaine — roave publie presque tous les jours —
+                  # et une porte qui bloque a tort est une porte qu'on desactive.
+                  if [ "$jours" -gt 14 ]; then
+                      {
+                          echo
+                          echo "> **A rafraichir.** \`composer update roave/security-advisories\`"
+                          echo "> puis ouvrir une PR : le test de convention passera au rouge a 30 jours."
+                      } >>"$GITHUB_STEP_SUMMARY"
+
+                      echo "::error::La garantie hors-ligne a $jours jours. Rafraichir : composer update roave/security-advisories"
+                      exit 1
+                  fi
