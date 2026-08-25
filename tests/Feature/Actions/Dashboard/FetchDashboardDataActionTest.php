@@ -23,7 +23,6 @@ declare(strict_types=1);
  */
 
 use App\Actions\Dashboard\FetchDashboardDataAction;
-use App\DTOs\Stats\DistributionStat;
 use App\Models\Goal;
 use App\Models\PersonalRecord;
 use App\Models\User;
@@ -91,9 +90,14 @@ it('designe comme seance en cours la plus recente de celles qui ne sont pas term
 
     // Non nulle : un `return null` a la place de la requete rendait la barre
     // « reprendre la seance » invisible pour tout le monde, et rien ne le disait.
-    expect($stats['activeWorkout'])->not->toBeNull()
-        ->and($stats['activeWorkout']->id)->toBe($enCours->id)
-        ->and($stats['activeWorkout']->workout_lines_count)->toBe(0);
+    // `?->` parce que la valeur est typee `Workout|null` : la premiere
+    // assertion attrape deja le cas nul, mais l'analyse statique ne la lit pas
+    // comme un retrecissement de type.
+    $enCoursRendue = $stats['activeWorkout'];
+
+    expect($enCoursRendue)->not->toBeNull()
+        ->and($enCoursRendue?->id)->toBe($enCours->id)
+        ->and($enCoursRendue?->workout_lines_count)->toBe(0);
 });
 
 it('rend exactement les deux records les plus recents, du plus recent au plus ancien', function (): void {
@@ -257,10 +261,10 @@ it('regarde exactement quatre-vingt-dix jours de seances', function (): void {
 
     $distributions = app(FetchDashboardDataAction::class)->getWorkoutDistributions($user);
 
-    $compte = fn (array $stats): array => array_map(
-        fn (DistributionStat $stat): int => $stat->count,
-        $stats
-    );
+    // `array_column` plutot qu'un `array_map` a fermeture typee : il lit la
+    // propriete publique du DTO, et l'analyse statique n'a pas a deduire le
+    // type des elements d'un `array` nu.
+    $compte = fn (array $stats): array => array_column($stats, 'count');
 
     /*
      * Les durees et les heures des deux seances sont volontairement
