@@ -118,18 +118,22 @@ it('vide les historiques en plus des agregats quand elle vide tout', function ()
     ]);
 
     /*
-     * Ce test ne tue pas la suppression de l'appel a
-     * `clearWorkoutMetadataStats()` ligne 46, et aucun test fonde sur l'etat du
-     * cache ne le peut : les quatre familles de cles qu'il oublie
-     * (`volume_history.20`, `volume_history.30`, `duration_history.20`,
-     * `volume_trend.{7,30,90,365}`) sont TOUTES deja oubliees par
-     * `clearWorkoutRelatedStats()` appele juste avant. Le mutant est
-     * equivalent : la seule trace du second appel est que ces cles sont
-     * oubliees deux fois.
+     * Ce test est ce qui rend sure la suppression de l'appel redondant a
+     * `clearWorkoutMetadataStats()` qui suivait `clearWorkoutRelatedStats()`.
      *
-     * Ce que ce test fixe quand meme : apres un vidage complet, ces entrees
-     * sont bien parties. Les deux listes ont deja derive l'une de l'autre
-     * (#1502) ; si l'inclusion cesse d'etre vraie, l'assertion le dira.
+     * Les quatre familles de cles que le premier oubliait
+     * (`volume_history.20`, `volume_history.30`, `duration_history.20`,
+     * `volume_trend.{7,30,90,365}`) sont TOUTES deja oubliees par le second :
+     * `clearVolumeStats` boucle sur `BORNES = [20, 30]` et sur `PERIODES`,
+     * `clearDurationStats` sur les memes bornes. Sous-ensemble strict, donc le
+     * second appel n'oubliait rien de neuf — d'ou un mutant qu'aucun test
+     * fonde sur l'etat du cache ne pouvait tuer, et une ligne retiree plutot
+     * qu'une assertion ajoutee.
+     *
+     * Ce que ce test tient : apres un vidage complet, ces entrees sont bien
+     * parties. L'inclusion est verifiee aujourd'hui, pas garantie demain — les
+     * deux listes ont deja derive l'une de l'autre (#1502). Si elle cesse
+     * d'etre vraie, c'est ici que ca se verra.
      */
     Cache::put("stats.volume_history.{$user->id}.20", ['some_data'], 600);
     Cache::put("stats.volume_history.{$user->id}.30", ['some_data'], 600);

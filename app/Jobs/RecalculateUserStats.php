@@ -26,7 +26,6 @@ final class RecalculateUserStats implements ShouldQueue
         // Invalidation ciblée : on ne touche pas au cache des mesures corporelles,
         // qu'un changement de données de séance ne périme pas.
         $statsService->clearWorkoutRelatedStats($this->user);
-        $statsService->clearWorkoutMetadataStats($this->user);
 
         // Warm up critical stats
         $statsService->getVolumeTrend($this->user, 30);

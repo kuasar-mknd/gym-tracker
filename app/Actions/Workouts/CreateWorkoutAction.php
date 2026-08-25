@@ -33,7 +33,6 @@ class CreateWorkoutAction
         $workout->save();
 
         $this->statsService->clearWorkoutRelatedStats($user);
-        $this->statsService->clearWorkoutMetadataStats($user);
 
         return $workout;
     }
