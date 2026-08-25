@@ -102,3 +102,72 @@ it('throws AuthorizationException and logs error if workout is ended', function 
     expect(fn () => $action->execute($user, $data))
         ->toThrow(AuthorizationException::class);
 });
+
+/*
+ * Le contenu du journal d'erreur etait execute sans jamais etre lu.
+ *
+ * Les trois tests ci-dessus se contentent de `Log::shouldReceive('error')->once()`,
+ * qui accepte n'importe quel contexte : les quatre entrees du tableau — le
+ * message de l'exception, la pile, l'utilisateur, la charge utile — pouvaient
+ * disparaitre une par une sans qu'une seule assertion bronche. C'est exactement
+ * ce que la mutation rapportait : quatre `RemoveArrayItem` survivants sur les
+ * lignes 36 a 39.
+ *
+ * Ce que chacune laissait passer, concretement : un incident se serait
+ * diagnostique sans savoir ce que l'exception disait, sans la pile pour situer
+ * l'appel, sans l'identifiant de l'utilisateur touche, ou sans la charge utile
+ * qui a declenche l'echec. Le journal aurait dit qu'il y a eu un probleme, et
+ * rien de plus.
+ */
+it('journalise le message, la pile, l utilisateur et la charge utile, et rien d autre', function (): void {
+    $proprietaire = User::factory()->create();
+    $intrus = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $proprietaire->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+
+    // Valeurs posees et non tirees : la charge utile est comparee a l'identique
+    // plus bas, donc elle ne peut pas dependre de ce que la fabrique a produit.
+    $donnees = [
+        'workout_line_id' => $workoutLine->id,
+        'weight' => 100.5,
+        'reps' => 10,
+    ];
+
+    $intitule = '';
+    /** @var array<string, mixed> $contexte */
+    $contexte = [];
+
+    Log::shouldReceive('error')
+        ->once()
+        ->withArgs(
+            /**
+             * @param  array<string, mixed>  $context
+             */
+            function (string $message, array $context) use (&$intitule, &$contexte): bool {
+                $intitule = $message;
+                $contexte = $context;
+
+                return true;
+            }
+        );
+
+    expect(fn () => app(StoreSetAction::class)->execute($intrus, $donnees))
+        ->toThrow(AuthorizationException::class);
+
+    expect($intitule)->toBe('Failed to create set in API:');
+
+    // La liste exacte des cles, et dans l'ordre : c'est la seule assertion qui
+    // tienne les quatre entrees a la fois. Verifier `array_key_exists` quatre
+    // fois couterait autant et laisserait en plus passer une cinquieme entree
+    // ajoutee par megarde — un journal qui grossit sans qu'on le decide.
+    expect(array_keys($contexte))->toBe(['error', 'trace', 'user_id', 'data']);
+
+    // Et leur contenu, parce qu'une cle presente mais vide ne diagnostique rien.
+    expect($contexte['error'])->toBe('This action is unauthorized.');
+    expect($contexte['trace'])->toBeString();
+    // La pile situe l'appel : sans elle, on saurait qu'une autorisation a
+    // echoue quelque part, pas depuis ou.
+    expect($contexte['trace'])->toContain(StoreSetAction::class);
+    expect($contexte['user_id'])->toBe($intrus->id);
+    expect($contexte['data'])->toBe($donnees);
+});
