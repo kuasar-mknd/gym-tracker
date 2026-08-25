@@ -86,9 +86,11 @@ jobs:
                   conflits="${ligne##*$'\t'}"
                   jours=$(( ( $(date -u +%s) - $(date -u -d "$date_avis" +%s) ) / 86400 ))
 
-                  echo "date=$date_avis" >>"$GITHUB_OUTPUT"
-                  echo "conflits=$conflits" >>"$GITHUB_OUTPUT"
-                  echo "jours=$jours" >>"$GITHUB_OUTPUT"
+                  {
+                      echo "date=$date_avis"
+                      echo "conflits=$conflits"
+                      echo "jours=$jours"
+                  } >>"$GITHUB_OUTPUT"
 
                   echo "Verrouille au $date_avis ($jours jours), $conflits conflits."
 
@@ -98,7 +100,6 @@ jobs:
             # `composer audit` repond a la meme question, mais seulement quand il
             # est joignable, et seulement au moment d'une livraison.
             - name: Rafraichir l'ensemble d'avis
-              id: refresh
               run: |
                   set -euo pipefail
 
