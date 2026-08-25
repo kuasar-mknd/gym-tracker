@@ -103,7 +103,11 @@ it('forbids updating another users habit', function (): void {
             'name' => 'Hacked Name',
             'goal_times_per_week' => 5,
         ])
-        ->assertForbidden();
+        ->assertNotFound();
+
+    // La reponse discrete doit rester un refus : sans cette ligne, un correctif
+    // qui repondrait 404 en laissant passer l'ecriture tiendrait le test.
+    expect($habit->refresh()->name)->not->toBe('Hacked Name');
 });
 
 it('deletes a habit', function (): void {
@@ -125,7 +129,7 @@ it('forbids deleting another users habit', function (): void {
 
     actingAs($user2)
         ->delete(route('habits.destroy', $habit))
-        ->assertForbidden();
+        ->assertNotFound();
 
     assertDatabaseHas('habits', ['id' => $habit->id]);
 });
@@ -181,5 +185,7 @@ it('forbids toggling another users habit', function (): void {
 
     actingAs($user2)
         ->post(route('habits.toggle', $habit), ['date' => '2023-10-25'])
-        ->assertForbidden();
+        ->assertNotFound();
+
+    expect(\App\Models\HabitLog::where('habit_id', $habit->id)->exists())->toBeFalse();
 });

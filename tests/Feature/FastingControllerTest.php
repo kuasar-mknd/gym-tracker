@@ -115,7 +115,9 @@ describe('FastingController', function (): void {
 
             actingAs($user1)
                 ->patch(route('tools.fasting.update', $fast), ['status' => 'completed'])
-                ->assertForbidden();
+                ->assertNotFound();
+
+            expect($fast->refresh()->status)->toBe('active');
         });
 
         it('validates update fields', function (): void {
@@ -154,7 +156,7 @@ describe('FastingController', function (): void {
 
             actingAs($user1)
                 ->delete(route('tools.fasting.destroy', $fast))
-                ->assertForbidden();
+                ->assertNotFound();
 
             $this->assertDatabaseHas('fasts', ['id' => $fast->id]);
         });

@@ -92,6 +92,6 @@ class PlateControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($user2)->delete(route('plates.destroy', $plate));
-        $response->assertStatus(403);
+        $response->assertNotFound();
     }
 }

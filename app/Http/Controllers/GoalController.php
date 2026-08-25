@@ -180,7 +180,10 @@ class GoalController extends Controller
      */
     public function update(GoalStoreRequest $request, Goal $goal): \Illuminate\Http\RedirectResponse
     {
-        $this->authorize('update', $goal);
+        // L'autorisation est faite par `GoalStoreRequest::authorize()`, qui
+        // s'execute avant les regles. La redemander ici evaluait la policy deux
+        // fois pour le proprietaire legitime sans jamais pouvoir refuser : quand
+        // ce corps s'execute, la requete a deja ete autorisee.
 
         // Meme raison qu'a la creation : `updateGoalProgress()` ne persiste pas.
         // Un `update()` suivi de l'appel enregistrait les champs soumis et jetait

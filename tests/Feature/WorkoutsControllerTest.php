@@ -36,14 +36,16 @@ it('renders the show page for a specific workout (Happy Path)', function (): voi
         );
 });
 
-it('forbids viewing another users workout (403 Forbidden)', function (): void {
+it('forbids viewing another users workout (404, indiscernable)', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
+    $workout = Workout::factory()->create(['user_id' => $otherUser->id, 'name' => 'Séance privée']);
 
     actingAs($user)
         ->get(route('workouts.show', $workout))
-        ->assertForbidden();
+        ->assertNotFound()
+        // Le 404 doit etre la page 404, pas la seance rendue sous un autre statut.
+        ->assertDontSee('Séance privée');
 });
 
 it('creates a new workout (Happy Path)', function (): void {
@@ -95,7 +97,7 @@ it('fails to update an existing workout with invalid data (422 Unprocessable)', 
         ->assertSessionHasErrors(['name', 'started_at', 'notes', 'is_finished']);
 });
 
-it('forbids updating another users workout (403 Forbidden)', function (): void {
+it('forbids updating another users workout (404, indiscernable)', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
@@ -104,7 +106,9 @@ it('forbids updating another users workout (403 Forbidden)', function (): void {
         ->patch(route('workouts.update', $workout), [
             'name' => 'Sneaky Update',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
+
+    expect($workout->refresh()->name)->not->toBe('Sneaky Update');
 });
 
 it('deletes a workout (Happy Path)', function (): void {
@@ -116,12 +120,14 @@ it('deletes a workout (Happy Path)', function (): void {
         ->assertRedirect(route('workouts.index'));
 });
 
-it('forbids deleting another users workout (403 Forbidden)', function (): void {
+it('forbids deleting another users workout (404, indiscernable)', function (): void {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
 
     actingAs($user)
         ->delete(route('workouts.destroy', $workout))
-        ->assertForbidden();
+        ->assertNotFound();
+
+    expect($workout->fresh())->not->toBeNull();
 });

@@ -32,7 +32,7 @@ it('cannot delete someone else\'s workout', function (): void {
 
     actingAs($this->user)
         ->delete(route('workouts.destroy', $workout))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('workouts', ['id' => $workout->id]);
 });
@@ -65,7 +65,7 @@ it('cannot update someone else\'s workout', function (): void {
         ->patch(route('workouts.update', $workout), [
             'name' => 'Trying to steal and rename',
         ])
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('workouts', [
         'id' => $workout->id,

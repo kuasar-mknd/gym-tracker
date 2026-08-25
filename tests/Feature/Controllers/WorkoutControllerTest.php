@@ -44,12 +44,18 @@ describe('WorkoutController', function (): void {
         it('prevents a user from viewing another users workout', function (): void {
             $user = User::factory()->create();
             $otherUser = User::factory()->create();
-            $workout = Workout::factory()->create(['user_id' => $otherUser->id]);
+            // Pose, non tire au sort : un nom de fabrique assez court finit par
+            // apparaitre dans la page 404 et fait tomber l'assertion au hasard.
+            $workout = Workout::factory()->create([
+                'user_id' => $otherUser->id,
+                'name' => 'Seance developpe couche 5x5',
+            ]);
 
             $response = $this->actingAs($user)
                 ->get(route('workouts.show', $workout));
 
-            $response->assertForbidden();
+            $response->assertNotFound()
+                ->assertDontSee($workout->name);
         });
     });
 
@@ -144,7 +150,7 @@ describe('WorkoutController', function (): void {
                     'name' => 'Should Not Update',
                 ]);
 
-            $response->assertForbidden();
+            $response->assertNotFound();
             $this->assertDatabaseMissing('workouts', [
                 'id' => $workout->id,
                 'name' => 'Should Not Update',
@@ -174,7 +180,7 @@ describe('WorkoutController', function (): void {
             $response = $this->actingAs($user)
                 ->delete(route('workouts.destroy', $workout));
 
-            $response->assertForbidden();
+            $response->assertNotFound();
             $this->assertDatabaseHas('workouts', [
                 'id' => $workout->id,
             ]);

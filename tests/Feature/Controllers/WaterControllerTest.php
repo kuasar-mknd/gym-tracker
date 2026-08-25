@@ -89,7 +89,7 @@ test('user cannot delete other users water log', function (): void {
 
     actingAs($user)
         ->delete(route('tools.water.destroy', $log))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('water_logs', [
         'id' => $log->id,

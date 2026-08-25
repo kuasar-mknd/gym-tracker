@@ -92,5 +92,7 @@ test('user cannot fetch progress for another users exercise', function (): void 
 
     actingAs($user)
         ->get(route('stats.exercise', $exercise))
-        ->assertStatus(403);
+        ->assertNotFound()
+        // Un 404 qui rendrait quand meme la progression serait pire qu'un 403.
+        ->assertDontSee('progress');
 });

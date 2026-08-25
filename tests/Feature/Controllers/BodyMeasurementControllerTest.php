@@ -125,7 +125,7 @@ describe('BodyMeasurementController', function (): void {
 
             $this->actingAs($user)
                 ->delete(route('body-measurements.destroy', $measurement))
-                ->assertForbidden();
+                ->assertNotFound();
 
             $this->assertDatabaseHas('body_measurements', [
                 'id' => $measurement->id,

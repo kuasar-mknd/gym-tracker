@@ -78,14 +78,16 @@ it('executes a workout template', function (): void {
     $response->assertRedirect(route('workouts.show', $workout));
 });
 
-it('forbids executing another users template (403)', function (): void {
+it('forbids executing another users template (404, indiscernable)', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $user1->id]);
 
     $response = $this->actingAs($user2)->post(route('templates.execute', $template));
 
-    $response->assertStatus(403);
+    $response->assertNotFound();
+
+    $this->assertDatabaseMissing('workouts', ['user_id' => $user2->id]);
 });
 
 it('saves a workout as a new template', function (): void {
@@ -106,14 +108,16 @@ it('saves a workout as a new template', function (): void {
     ]);
 });
 
-it('forbids saving another users workout as template (403)', function (): void {
+it('forbids saving another users workout as template (404, indiscernable)', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user1->id]);
 
     $response = $this->actingAs($user2)->post(route('templates.save-from-workout', $workout));
 
-    $response->assertStatus(403);
+    $response->assertNotFound();
+
+    $this->assertDatabaseMissing('workout_templates', ['user_id' => $user2->id]);
 });
 
 it('deletes a workout template', function (): void {
@@ -126,14 +130,14 @@ it('deletes a workout template', function (): void {
     $this->assertDatabaseMissing('workout_templates', ['id' => $template->id]);
 });
 
-it('forbids deleting another users template (403)', function (): void {
+it('forbids deleting another users template (404, indiscernable)', function (): void {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $user1->id]);
 
     $response = $this->actingAs($user2)->delete(route('templates.destroy', $template));
 
-    $response->assertStatus(403);
+    $response->assertNotFound();
     $this->assertDatabaseHas('workout_templates', ['id' => $template->id]);
 });
 
@@ -252,8 +256,8 @@ it('will not let one user edit or update another user\'s template', function ():
     $intruder = User::factory()->create();
     $template = WorkoutTemplate::factory()->create(['user_id' => $owner->id, 'name' => 'Privé']);
 
-    $this->actingAs($intruder)->get(route('templates.edit', $template))->assertForbidden();
-    $this->actingAs($intruder)->put(route('templates.update', $template), ['name' => 'Volé'])->assertForbidden();
+    $this->actingAs($intruder)->get(route('templates.edit', $template))->assertNotFound();
+    $this->actingAs($intruder)->put(route('templates.update', $template), ['name' => 'Volé'])->assertNotFound();
 
     expect($template->refresh()->name)->toBe('Privé');
 });

@@ -90,7 +90,7 @@ class WorkoutTemplateTest extends TestCase
 
         $this->actingAs($user2);
 
-        $this->post(route('templates.execute', $template))->assertStatus(403);
-        $this->delete(route('templates.destroy', $template))->assertStatus(403);
+        $this->post(route('templates.execute', $template))->assertNotFound();
+        $this->delete(route('templates.destroy', $template))->assertNotFound();
     }
 }

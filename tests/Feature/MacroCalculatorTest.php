@@ -102,7 +102,7 @@ class MacroCalculatorTest extends TestCase
 
         $response = $this->actingAs($user2)->delete(route('tools.macro-calculator.destroy', $calculation));
 
-        $response->assertForbidden();
+        $response->assertNotFound();
         $this->assertDatabaseHas('macro_calculations', ['id' => $calculation->id]);
     }
 }

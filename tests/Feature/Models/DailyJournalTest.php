@@ -202,7 +202,7 @@ test('user cannot delete another users journal entry', function (): void {
 
     actingAs($user)
         ->delete(route('daily-journals.destroy', $otherJournal))
-        ->assertForbidden();
+        ->assertNotFound();
 
     assertDatabaseHas('daily_journals', ['id' => $otherJournal->id]);
 });

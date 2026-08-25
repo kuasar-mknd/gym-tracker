@@ -7,16 +7,37 @@ namespace App\Http\Requests;
 use App\Models\Goal;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class GoalStoreRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * La mise a jour est autorisee ici, et non seulement dans le controleur.
+     *
+     * Laravel valide une requete de formulaire avant d'entrer dans la methode,
+     * donc un `authorize()` laisse a `true` faisait tourner les regles avant le
+     * refus. Or l'une d'elles interroge la base — `Rule::exists('exercises')` —
+     * et ne s'execute que si la ressource a ete liee. Un objectif appartenant a
+     * autrui coutait donc 4 requetes la ou un identifiant inconnu en coutait 3,
+     * ce qui redonne au chronometre l'existence que #1418 et #1432 retirent du
+     * statut, du corps et des en-tetes. Voir #1433, meme canal sur l'API.
+     *
+     * A la creation il n'y a pas de ressource liee, donc rien a cacher : la
+     * capacite `create` reste verifiee par le controleur, qui est aussi le seul
+     * a savoir pour quel utilisateur l'objectif est cree.
      */
     public function authorize(): bool
     {
-        return true;
+        $goal = $this->route('goal');
+
+        if (! $goal instanceof Goal) {
+            return true;
+        }
+
+        return Gate::allows('update', $goal);
     }
 
     /**

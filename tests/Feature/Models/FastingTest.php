@@ -100,9 +100,13 @@ test('user cannot access others fasts', function (): void {
         ->patch(route('tools.fasting.update', $fast), [
             'status' => 'completed',
         ])
-        ->assertStatus(403);
+        ->assertNotFound();
 
     actingAs($user)
         ->delete(route('tools.fasting.destroy', $fast))
-        ->assertStatus(403);
+        ->assertNotFound();
+
+    // La reponse est discrete, le refus reste entier.
+    expect($fast->fresh())->not->toBeNull()
+        ->and($fast->refresh()->status)->not->toBe('completed');
 });

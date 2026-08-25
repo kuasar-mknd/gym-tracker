@@ -141,7 +141,7 @@ it('cannot update another users goal', function (): void {
 
     actingAs($user2)
         ->put("/goals/{$goal->id}", $data)
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('goals', [
         'id' => $goal->id,
@@ -171,7 +171,7 @@ it('cannot delete another users goal', function (): void {
 
     actingAs($user2)
         ->delete("/goals/{$goal->id}")
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->assertDatabaseHas('goals', [
         'id' => $goal->id,
