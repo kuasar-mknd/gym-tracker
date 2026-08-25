@@ -119,7 +119,6 @@ it('creates a workout from a template with lines and sets', function (): void {
  */
 
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Un modele a deux lignes, trois series en tout, et l'horloge arretee.
@@ -178,33 +177,4 @@ it('horodate chaque serie recopiee, a la creation et a la modification', functio
         expect($serie->updated_at)->not->toBeNull();
         expect($serie->updated_at->toDateTimeString())->toBe('2026-06-15 12:00:00');
     }
-});
-
-it('rend la seance avec son utilisateur deja rattache', function (): void {
-    [$user, $template] = modeleAHorlogeArretee();
-
-    $workout = app(CreateWorkoutFromTemplateAction::class)->execute($user, $template);
-
-    expect($workout->relationLoaded('user'))->toBeTrue();
-
-    /*
-     * L'instance MEME qui a ete passee a l'action, et pas une seconde copie
-     * portant le meme identifiant.
-     *
-     * `relationLoaded()` seul ne dit rien ici : l'ecouteur `Workout::saved`
-     * lit deja `$workout->user` au moment de l'enregistrement, donc la
-     * relation est peuplee de toute facon — par une lecture en base. C'est
-     * l'identite, et elle seule, qui separe « rattachee par l'action » de
-     * « rechargee derriere ».
-     */
-    expect($workout->getRelation('user'))->toBe($user);
-
-    // Et la lire ne redescend pas en base.
-    $requetes = 0;
-    DB::listen(function () use (&$requetes): void {
-        $requetes++;
-    });
-
-    expect($workout->user->id)->toBe($user->id);
-    expect($requetes)->toBe(0);
 });

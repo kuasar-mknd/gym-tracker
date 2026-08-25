@@ -27,17 +27,14 @@ final class CreateWorkoutFromTemplateAction
             $workout->user_id = $user->id;
             $workout->save();
 
-            $this->createLinesAndSets($workout, $template, $user);
+            $this->createLinesAndSets($workout, $template);
 
             return $workout;
         });
     }
 
-    private function createLinesAndSets(Workout $workout, WorkoutTemplate $template, User $user): void
+    private function createLinesAndSets(Workout $workout, WorkoutTemplate $template): void
     {
-        // Optimization: Prime the relationship to prevent N+1 queries in observers
-        $workout->setRelation('user', $user);
-
         $allSets = [];
         $now = now()->toDateTimeString();
 
@@ -47,7 +44,6 @@ final class CreateWorkoutFromTemplateAction
                 'exercise_id' => $templateLine->exercise_id,
                 'order' => $templateLine->order,
             ]);
-            $workoutLine->setRelation('workout', $workout);
 
             foreach ($templateLine->workoutTemplateSets as $templateSet) {
                 $allSets[] = [
