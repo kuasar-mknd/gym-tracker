@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
