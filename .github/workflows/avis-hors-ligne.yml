@@ -19,15 +19,21 @@ name: Avis hors-ligne
 # sont des effets de bord de `composer update` lances pour autre chose. Entre le
 # 21/01 et le 11/08, l'ensemble d'avis est reste fige SEPT MOIS.
 #
-# Ce workflow detecte, il ne corrige pas. Un `composer update` pousse par un
-# workflow n'est pas une bonne idee ici : une PR ouverte avec `GITHUB_TOKEN`
-# ne declenche pas `ci.yml` — GitHub supprime les evenements causes par son
-# propre jeton — donc elle arriverait sans une seule porte verte, ce qui est
-# exactement ce qu'un changement de `composer.lock` ne doit jamais etre.
+# Ce workflow ouvre la PR de rafraichissement lui-meme, mais SEULEMENT avec un
+# jeton personnel (`AVIS_HORS_LIGNE_TOKEN`). Ce n'est pas un detail de confort :
+# une PR ouverte avec `GITHUB_TOKEN` ne declenche pas `ci.yml` — GitHub supprime
+# les evenements causes par son propre jeton — donc elle arriverait sans une
+# seule porte verte, ce qu'un changement de `composer.lock` ne doit jamais etre.
 #
-# La repartition est donc : ce workflow previent, et
-# `LaGarantieHorsLigneNeVieillitPasTest` bloque. Deux seuils etages, pour que
-# l'alarme arrive avant le mur : quatorze jours ici, trente la-bas.
+# Sans le secret, le workflow retombe sur l'avertissement : il dit la commande a
+# lancer et echoue passe quatorze jours. `LaGarantieHorsLigneNeVieillitPasTest`
+# bloque la CI a trente. Deux seuils etages, pour que l'alarme arrive avant le
+# mur — et le rafraichissement automatique, quand il tourne, fait qu'aucun des
+# deux ne se declenche jamais.
+#
+# Le jeton demande deux droits sur ce depot seul : Contents (lecture/ecriture)
+# pour pousser la branche, Pull requests (lecture/ecriture) pour ouvrir la PR.
+# Rien d'autre — surtout pas Workflows.
 
 on:
     schedule:
@@ -46,9 +52,19 @@ jobs:
         name: Fraicheur de l'ensemble d'avis
         runs-on: ubuntu-latest
         timeout-minutes: 10
+        # Le secret passe par `env` parce que le contexte `secrets` n'est pas
+        # lisible dans le `if` d'une etape. Vide quand il n'existe pas, ce qui
+        # desactive proprement l'ouverture de la PR.
+        env:
+            JETON: ${{ secrets.AVIS_HORS_LIGNE_TOKEN }}
         steps:
             - name: Checkout code
               uses: actions/checkout@v7
+              with:
+                  # Le jeton sert au push : c'est lui qui decide si `ci.yml` se
+                  # declenchera sur la PR. Absent, on retombe sur le jeton par
+                  # defaut et l'etape d'ouverture se desactive d'elle-meme.
+                  token: ${{ secrets.AVIS_HORS_LIGNE_TOKEN || github.token }}
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
@@ -112,6 +128,71 @@ jobs:
                       exit 1
                   fi
 
+            # Une seule branche, reutilisee et poussee en force : au plus une
+            # PR de rafraichissement a la fois, portant toujours l'etat le plus
+            # recent. Une PR par semaine en laisserait cinq derriere soi le
+            # premier mois, et personne ne les relirait.
+            - name: Ouvrir la PR de rafraichissement
+              id: pr
+              if: ${{ env.JETON != '' }}
+              env:
+                  GH_TOKEN: ${{ env.JETON }}
+                  BRANCHE: avis-hors-ligne/rafraichissement
+                  DATE_AVANT: ${{ steps.verrou.outputs.date }}
+                  JOURS_AVANT: ${{ steps.verrou.outputs.jours }}
+                  CONFLITS_AVANT: ${{ steps.verrou.outputs.conflits }}
+              run: |
+                  set -euo pipefail
+
+                  if git diff --quiet -- composer.lock; then
+                      echo "Le verrou n'a pas bouge : rien a proposer."
+                      echo 'ouverte=non' >>"$GITHUB_OUTPUT"
+                      exit 0
+                  fi
+
+                  git config user.name 'github-actions[bot]'
+                  git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+                  git checkout -B "$BRANCHE"
+                  git add composer.lock
+
+                  printf '%s\n' \
+                      "chore(securite): rafraichir l'ensemble d'avis hors-ligne" \
+                      "" \
+                      "Rafraichissement automatique de roave/security-advisories, la seule" \
+                      "protection qui ne demande pas le reseau. La contrainte etant dev-latest," \
+                      "Dependabot ne la propose jamais et elle vieillit en silence : sept mois" \
+                      "de gel entre janvier et aout 2026." \
+                      "" \
+                      "Verrou precedent : $DATE_AVANT ($JOURS_AVANT jours, $CONFLITS_AVANT conflits)." \
+                      "" \
+                      "Ouvert par .github/workflows/avis-hors-ligne.yml." \
+                      >/tmp/message.txt
+
+                  git commit -F /tmp/message.txt
+                  git push --force-with-lease origin "$BRANCHE"
+
+                  # `gh pr create` echoue si une PR existe deja sur cette
+                  # branche ; le push l'aura simplement mise a jour.
+                  existante="$(gh pr list --head "$BRANCHE" --state open --json number --jq '.[0].number // empty')"
+
+                  if [ -z "$existante" ]; then
+                      printf '%s\n' \
+                          "Rafraichissement automatique hebdomadaire de \`roave/security-advisories\`." \
+                          "" \
+                          "Le verrou portait un ensemble d'avis date du **$DATE_AVANT** ($JOURS_AVANT jours, $CONFLITS_AVANT conflits). Tout avis publie depuis n'etait bloque par rien hors ligne — ce qui compte, puisque \`composer audit\` tourne avec \`--ignore-unreachable\` depuis #1546 et peut donc etre muet." \
+                          "" \
+                          "La contrainte est \`dev-latest\`, que Dependabot ne propose jamais : sans ce workflow, l'ensemble reste fige." \
+                          "" \
+                          "Ouverte par \`.github/workflows/avis-hors-ligne.yml\`. La CI tourne dessus normalement — c'est tout l'interet du jeton personnel." \
+                          >/tmp/corps.md
+
+                      gh pr create --base main --head "$BRANCHE" \
+                          --title "chore(securite): rafraichir l'ensemble d'avis hors-ligne" \
+                          --body-file /tmp/corps.md
+                  fi
+
+                  echo 'ouverte=oui' >>"$GITHUB_OUTPUT"
+
             - name: Comparer et decider
               run: |
                   set -euo pipefail
@@ -148,6 +229,14 @@ jobs:
                   # bloque la CI. Avertir sur la moindre derive rendrait ce job
                   # rouge chaque semaine — roave publie presque tous les jours —
                   # et une porte qui bloque a tort est une porte qu'on desactive.
+                  # Une PR ouverte rend l'avertissement inutile : le
+                  # rafraichissement est deja propose, il ne reste qu'a le
+                  # fusionner. On n'alerte que quand personne ne s'en occupe.
+                  if [ '${{ steps.pr.outputs.ouverte }}' = 'oui' ]; then
+                      echo 'PR de rafraichissement ouverte ou mise a jour.' >>"$GITHUB_STEP_SUMMARY"
+                      exit 0
+                  fi
+
                   if [ "$jours" -gt 14 ]; then
                       {
                           echo
