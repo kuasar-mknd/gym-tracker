@@ -113,10 +113,24 @@ jobs:
                     # n'a que deux processus et la duree de reference est mesuree
                     # dans les memes conditions que les mutants.
                     #
-                    # D'ou une marge courte et non prudente : deux points sous la
-                    # plus BASSE des mesures recentes, pas sous la derniere. Un
-                    # seuil qui ne serre pas ne sert a rien — c'est la raison
-                    # d'etre de #1446.
+                    # D'ou une marge d'un point au plus, et souvent moins : le
+                    # seuil se pose JUSTE SOUS la derniere mesure. 80 sous 80,05,
+                    # 94 sous 94,28. Ce n'est pas de l'imprudence, c'est la
+                    # consequence directe du determinisme : une marge n'assure
+                    # que contre du bruit, et il n'y en a pas.
+                    #
+                    # Une phrase disait ici « deux points sous la plus basse des
+                    # mesures recentes ». Elle ne decrivait aucune des trois
+                    # valeurs — la plus basse mesure de Services etait 58,74 pour
+                    # un seuil a 80 — et elle invitait a desserrer des portes qui
+                    # serrent volontairement. Corrigee le 25/08 : ce fichier doit
+                    # dire ce qu'il fait, sinon c'est le commentaire qu'on croit.
+                    #
+                    # Ce que cela implique, et qui est voulu : un PR qui fait
+                    # descendre le score d'un dixieme bloque une livraison. La
+                    # reponse est de tuer le mutant, pas de baisser le seuil —
+                    # sans quoi il reste une porte de plus qui ne garde rien.
+                    # C'est la raison d'etre de #1446.
                     - scope: 'App\Services'
                       timeout: 60
                       min: 80
