@@ -12,10 +12,9 @@
     ],
     "sail": true,
     "skills": [
-        "fortify-development",
+        "infer-conventions",
         "laravel-best-practices",
         "configuring-horizon",
-        "mcp-development",
         "octane-development",
         "pulse-development",
         "socialite-development",
