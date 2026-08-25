@@ -120,7 +120,6 @@ class WorkoutController extends Controller
         $workout->delete();
 
         $this->statsService->clearWorkoutRelatedStats($this->user());
-        $this->statsService->clearWorkoutMetadataStats($this->user());
 
         return redirect()->route('workouts.index');
     }
