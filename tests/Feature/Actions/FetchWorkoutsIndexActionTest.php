@@ -281,7 +281,10 @@ it('pagine par vingt et precharge les lignes, leur exercice et leur compte de se
     // seule assertion qui distingue `with([...])` de `with([])`.
     expect($premiere->relationLoaded('workoutLines'))->toBeTrue();
 
-    $ligneChargee = $premiere->workoutLines->first();
+    // `firstOrFail()` et non `first()` : la ligne DOIT etre la. Avec `first()`
+    // une collection vide rendrait `null` et les deux assertions suivantes
+    // planteraient sur une erreur de type au lieu de dire ce qui manque.
+    $ligneChargee = $premiere->workoutLines->firstOrFail();
     expect($ligneChargee->relationLoaded('exercise'))->toBeTrue();
 
     // `withCount('sets')` : trois series posees, pas une quantite tiree.
