@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Actions\Tools\FetchWaterHistoryAction;
 use App\Models\User;
 use App\Models\WaterLog;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 it('fetches water history for the last 7 days including today', function (): void {
     Carbon::setTestNow(Carbon::parse('2024-01-08 12:00:00'));
@@ -81,4 +83,43 @@ it('returns zero for days without water logs', function (): void {
     foreach ($history as $day) {
         expect($day['total'])->toBe(0.0);
     }
+});
+
+/*
+ * Le dernier mutant vivant de cette action reculait la borne basse de la
+ * requete d'un jour : `subDays(6)` devenait `subDays(7)`.
+ *
+ * Aucune assertion sur le tableau rendu ne pouvait le voir, et ce n'est pas un
+ * oubli : la boucle ne consulte que les sept dates qu'elle affiche, donc les
+ * prises du huitieme jour sont chargees puis ignorees. La sortie est
+ * rigoureusement identique. Ce qui change est ce que la base a du lire — et
+ * c'est precisement ce que le regroupement en O(n) installe au-dessus etait
+ * cense servir.
+ *
+ * On pose donc la borne la ou elle est observable : dans la requete.
+ */
+it('ne demande a la base que la fenetre de sept jours affichee', function (): void {
+    Carbon::setTestNow(Carbon::parse('2024-01-08 12:00:00'));
+
+    $user = User::factory()->create();
+
+    $bornes = [];
+    DB::listen(function (QueryExecuted $requete) use (&$bornes): void {
+        if (! str_contains($requete->sql, 'water_logs')) {
+            return;
+        }
+
+        foreach ($requete->bindings as $valeur) {
+            if ($valeur instanceof DateTimeInterface) {
+                $bornes[] = $valeur->format('Y-m-d H:i:s');
+            }
+        }
+    });
+
+    app(FetchWaterHistoryAction::class)->execute($user);
+
+    // Le 2 janvier a minuit : le premier des sept jours rendus, pas le
+    // huitieme. Une seule borne, aussi — la requete n'a pas de borne haute a
+    // poser, `now()` etant deja la fin de la fenetre.
+    expect($bornes)->toBe(['2024-01-02 00:00:00']);
 });
