@@ -83,8 +83,10 @@ final class Charte
          * importance.
          */
         try {
-            /** @var array<string, string> */
-            return Cache::rememberForever('charte.jetons', static fn (): array => self::lire());
+            /** @var array<string, string> $depuisLeCache */
+            $depuisLeCache = Cache::rememberForever('charte.jetons', static fn (): array => self::lire());
+
+            return $depuisLeCache;
         } catch (Throwable) {
             return self::lire();
         }
@@ -175,10 +177,15 @@ final class Charte
     public static function feuille(): string
     {
         $chemin = resource_path('css/app.css');
-        $css = @file_get_contents($chemin);
+
+        if (! is_readable($chemin)) {
+            throw new RuntimeException("La charte est introuvable ou illisible : {$chemin}");
+        }
+
+        $css = file_get_contents($chemin);
 
         if ($css === false) {
-            throw new RuntimeException("La charte est introuvable : {$chemin}");
+            throw new RuntimeException("La charte n'a pas pu etre lue : {$chemin}");
         }
 
         return $css;

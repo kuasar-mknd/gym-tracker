@@ -95,7 +95,14 @@ it('publie une page qui montre reellement les jetons', function (): void {
         $jetons
     ));
 
-    $rangs = substr_count($page, '<tr><td><code>');
+    /*
+     * On compte les `<td class="num` — une cellule de mesure par surface — et
+     * non une chaine collee comme `<tr><td><code>`. Le gabarit est passe d'une
+     * concatenation PHP a une vue Blade, qui indente : l'assertion precedente
+     * comptait zero sur une page parfaitement correcte, ce qui est le pire
+     * genre d'echec, celui qui fait douter du code plutot que du test.
+     */
+    $rangs = substr_count($page, '<td class="num');
     $apparies = count(App\Support\Charte::surfacesAppariees());
 
     expect($rangs)->toBe($apparies, sprintf(
