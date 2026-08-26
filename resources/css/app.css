@@ -98,6 +98,18 @@
     --color-accent-warning: #eab308;
 
     /*
+     * --- Tendance ------------------------------------------------------
+     *
+     * Une direction, pas un jugement. `comparison > 0 ? trend-up : trend-down`
+     * dit qu'un volume monte ou descend ; ce n'est ni une reussite ni un
+     * danger, et c'est pourquoi ces deux-la ne sont pas `accent-state` et
+     * `accent-danger` malgre des valeurs voisines. Les confondre empecherait de
+     * changer l'un sans changer l'autre.
+     */
+    --color-trend-up: #10b981;
+    --color-trend-down: #ef4444;
+
+    /*
      * --- Categories d'exercice ------------------------------------------
      *
      * Huit groupes musculaires, huit couleurs distinguables. Ce n'est PAS la
