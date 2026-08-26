@@ -213,7 +213,7 @@
                             </div>
 
                             <button
-                                @click="deleteEntry(entry)"
+                                @click="demanderSuppression(entry)"
                                 type="button"
                                 aria-label="Supprimer l'entrée"
                                 title="Supprimer l'entrée"
@@ -226,6 +226,17 @@
                 </div>
             </GlassCard>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer ce calcul ?"
+            :description="
+                calculASupprimer
+                    ? `Le calcul du ${new Date(calculASupprimer.created_at).toLocaleDateString('fr-FR')} sera effacé.`
+                    : ''
+            "
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>
 
@@ -239,6 +250,8 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { macroTargets } from '@/Utils/formulas'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 
@@ -293,11 +306,16 @@ const saveCalculation = () => {
     })
 }
 
-const deleteEntry = (entry) => {
-    if (confirm('Voulez-vous supprimer ce calcul ?')) {
-        router.delete(route('tools.macro-calculator.destroy', { macroCalculation: entry.id }), {
-            preserveScroll: true,
-        })
-    }
-}
+const {
+    cible: calculASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((entry, termine) => {
+    router.delete(route('tools.macro-calculator.destroy', { macroCalculation: entry.id }), {
+        preserveScroll: true,
+        onFinish: termine,
+    })
+})
 </script>

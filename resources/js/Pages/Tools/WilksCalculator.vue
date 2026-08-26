@@ -212,7 +212,7 @@
                             </div>
 
                             <button
-                                @click="deleteEntry(entry)"
+                                @click="demanderSuppression(entry)"
                                 type="button"
                                 aria-label="Supprimer l'entrée"
                                 title="Supprimer l'entrée"
@@ -225,6 +225,17 @@
                 </div>
             </GlassCard>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer ce score ?"
+            :description="
+                scoreASupprimer
+                    ? `Le score du ${new Date(scoreASupprimer.created_at).toLocaleDateString('fr-FR')} sera effacé.`
+                    : ''
+            "
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>
 
@@ -235,6 +246,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 // Aliased: this file also uses `wilksScore` as a route parameter name.
 import { wilksScore as calculateWilks } from '@/Utils/formulas'
 
@@ -286,11 +299,16 @@ const saveScore = () => {
     })
 }
 
-const deleteEntry = (entry) => {
-    if (confirm('Voulez-vous supprimer ce score ?')) {
-        router.delete(route('tools.wilks.destroy', { wilksScore: entry.id }), {
-            preserveScroll: true,
-        })
-    }
-}
+const {
+    cible: scoreASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((entry, termine) => {
+    router.delete(route('tools.wilks.destroy', { wilksScore: entry.id }), {
+        preserveScroll: true,
+        onFinish: termine,
+    })
+})
 </script>

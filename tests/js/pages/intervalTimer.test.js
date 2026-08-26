@@ -11,6 +11,19 @@ vi.mock('@inertiajs/vue3', () => ({
 
 import IntervalTimer from '@/Pages/Tools/IntervalTimer.vue'
 
+/**
+ * La question est posée par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Ce n'était pas qu'une affaire d'apparence : sur mobile, plusieurs navigateurs
+ * suppriment la boîte native après quelques appels, et le geste s'exécute alors
+ * SANS question. Une confirmation qui peut disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
 beforeAll(() => {
     globalThis.route = (name, param) => `/${name}/${param ?? ''}`
 })
@@ -66,7 +79,16 @@ const shortPreset = {
     warmup_seconds: 2,
 }
 
-beforeEach(() => vi.useFakeTimers())
+beforeEach(() => {
+    vi.useFakeTimers()
+
+    /*
+     * Le mock de suppression ne se réinitialisait pas : tant qu'un seul test
+     * l'appelait, personne ne s'en apercevait. Deux tests plus tard, le second
+     * voit l'appel du premier et échoue sur un code correct.
+     */
+    routerDelete.mockClear()
+})
 afterEach(() => vi.useRealTimers())
 
 /**
@@ -255,26 +277,28 @@ describe('IntervalTimer presets', () => {
         expect(stocked.text()).not.toContain('Aucun minuteur enregistré.')
     })
 
-    it('deletes a preset only once the confirmation is accepted', async () => {
+    it('ne supprime un minuteur qu’une fois la confirmation donnée', async () => {
         const wrapper = mountTimer([shortPreset])
         await openPresets(wrapper)
 
-        const deleteButton = byLabel(wrapper, 'Supprimer')
+        await byLabel(wrapper, 'Supprimer').trigger('click')
 
-        vi.stubGlobal(
-            'confirm',
-            vi.fn(() => false),
-        )
-        await deleteButton.trigger('click')
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
         expect(routerDelete).not.toHaveBeenCalled()
 
-        vi.stubGlobal(
-            'confirm',
-            vi.fn(() => true),
-        )
-        await deleteButton.trigger('click')
-        expect(routerDelete).toHaveBeenCalledWith('/tools.interval-timer.destroy/7')
+        await confirmer(wrapper)
 
-        vi.unstubAllGlobals()
+        expect(routerDelete.mock.calls[0][0]).toBe('/tools.interval-timer.destroy/7')
+    })
+
+    it('laisse le minuteur tranquille quand on annule', async () => {
+        const wrapper = mountTimer([shortPreset])
+        await openPresets(wrapper)
+
+        await byLabel(wrapper, 'Supprimer').trigger('click')
+        await dialogue(wrapper).vm.$emit('annuler')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(false)
+        expect(routerDelete).not.toHaveBeenCalled()
     })
 })

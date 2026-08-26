@@ -146,21 +146,30 @@ describe('the macro page', () => {
         expect(post).toHaveBeenCalledTimes(1)
     })
 
-    it('asks before deleting a saved calculation', () => {
+    it('demande avant de supprimer un calcul enregistré', async () => {
         const wrapper = mountPage(MacroCalculator, props)
 
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+        wrapper.vm.demanderSuppression({ id: 7, created_at: '2026-08-01T10:00:00Z' })
+        await wrapper.vm.$nextTick()
 
-        wrapper.vm.deleteEntry({ id: 7 })
-
-        expect(confirmSpy).toHaveBeenCalled()
         expect(routerDelete).not.toHaveBeenCalled()
 
-        confirmSpy.mockReturnValue(true)
-        wrapper.vm.deleteEntry({ id: 7 })
+        wrapper.vm.confirmerSuppression()
 
         expect(routerDelete).toHaveBeenCalledTimes(1)
+    })
 
-        confirmSpy.mockRestore()
+    it('ne supprime rien quand on annule', async () => {
+        const wrapper = mountPage(MacroCalculator, props)
+
+        wrapper.vm.demanderSuppression({ id: 7, created_at: '2026-08-01T10:00:00Z' })
+        await wrapper.vm.$nextTick()
+
+        wrapper.vm.annulerSuppression()
+        wrapper.vm.confirmerSuppression()
+
+        // `confirmerSuppression` sort tôt quand plus rien n'est en attente : un
+        // appui sur « Supprimer » après une annulation ne doit rien relancer.
+        expect(routerDelete).not.toHaveBeenCalled()
     })
 })

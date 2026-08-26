@@ -4,6 +4,8 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
 import { computed, ref, defineAsyncComponent } from 'vue'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
@@ -41,11 +43,40 @@ const submit = () => {
     })
 }
 
-const deleteMeasurement = (id) => {
-    if (confirm('Supprimer cette entrée ?')) {
-        router.delete(route('body-measurements.destroy', { body_measurement: id }))
+const {
+    cible: mesureASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((mesure, termine) => {
+    router.delete(route('body-measurements.destroy', { body_measurement: mesure.id }), { onFinish: termine })
+})
+
+/**
+ * Ce que `confirm()` ne pouvait pas dire : LAQUELLE.
+ *
+ * « Supprimer cette entrée ? » laisse l'utilisateur fermer la boîte pour aller
+ * vérifier de quelle ligne il s'agissait.
+ */
+const descriptionSuppression = computed(() => {
+    const mesure = mesureASupprimer.value
+
+    if (mesure === null) {
+        return ''
     }
-}
+
+    // `parseCalendarDate` et non `new Date` : `measured_at` est un JOUR, et
+    // `new Date('2026-08-05')` se lit minuit UTC — donc la veille pour tout
+    // fuseau derrière. Le dialogue aurait nommé le mauvais jour.
+    const jour = parseCalendarDate(mesure.measured_at).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    })
+
+    return `La mesure du ${jour} sera définitivement effacée.`
+})
 
 const latestWeight = computed(() => {
     if (props.measurements.length === 0) return null
@@ -284,7 +315,7 @@ const latestBodyFat = computed(() => {
                             </div>
                             <button
                                 type="button"
-                                @click="deleteMeasurement(measurement.id)"
+                                @click="demanderSuppression(measurement)"
                                 :aria-label="`Supprimer la mesure du ${measurement.measured_at.substring(0, 10)}`"
                                 class="text-text-muted/30 hover:text-accent-danger-deep rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                             >
@@ -309,5 +340,12 @@ const latestBodyFat = computed(() => {
                 </div>
             </div>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer cette mesure ?"
+            :description="descriptionSuppression"
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>

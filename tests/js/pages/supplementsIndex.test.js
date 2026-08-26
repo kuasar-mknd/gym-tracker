@@ -3,6 +3,19 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { nextTick } from 'vue'
 
 /**
+ * La question est posée par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Ce n'était pas qu'une affaire d'apparence : sur mobile, plusieurs navigateurs
+ * suppriment la boîte native après quelques appels, et le geste s'exécute alors
+ * SANS question. Une confirmation qui peut disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
+/**
  * The supplements page is a stock cupboard. It decides on its own what counts
  * as running low, what can still be taken, and how long ago each product was
  * last used — none of that comes from a util — so the boundaries are asserted
@@ -353,21 +366,38 @@ describe('taking a dose', () => {
 })
 
 describe('deleting a supplement', () => {
-    it('asks first, and drops it only on a yes', async () => {
+    it('demande avant, et ne supprime que sur confirmation', async () => {
         const wrapper = await mountPage({ supplements: [supplement({ id: 42 })] })
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
 
         await wrapper.get('[aria-label="Supprimer le complément"]').trigger('click')
 
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
         expect(routerDelete).not.toHaveBeenCalled()
 
-        confirmSpy.mockReturnValue(true)
-        await wrapper.get('[aria-label="Supprimer le complément"]').trigger('click')
+        await confirmer(wrapper)
 
         expect(routerDelete).toHaveBeenCalledTimes(1)
         expect(routerDelete.mock.calls[0][0]).toContain('42')
+    })
 
-        confirmSpy.mockRestore()
+    it('nomme le complément qu’on s’apprête à perdre', async () => {
+        // Ce que la boîte native ne pouvait pas faire : « Supprimer ce
+        // complément ? » ne dit pas lequel.
+        const wrapper = await mountPage({ supplements: [supplement({ id: 42, name: 'Créatine' })] })
+
+        await wrapper.get('[aria-label="Supprimer le complément"]').trigger('click')
+
+        expect(dialogue(wrapper).props('description')).toContain('Créatine')
+    })
+
+    it('laisse le complément tranquille quand on annule', async () => {
+        const wrapper = await mountPage({ supplements: [supplement({ id: 42 })] })
+
+        await wrapper.get('[aria-label="Supprimer le complément"]').trigger('click')
+        await dialogue(wrapper).vm.$emit('annuler')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(false)
+        expect(routerDelete).not.toHaveBeenCalled()
     })
 })
 

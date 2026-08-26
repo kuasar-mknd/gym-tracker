@@ -74,6 +74,37 @@ HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
     createRadialGradient: () => ({ addColorStop: noop }),
 }))
 
+/*
+ * jsdom n'implémente pas `<dialog>`.
+ *
+ * `showModal()` et `close()` y sont absents : tout composant qui ouvre une
+ * modale lève « showModal is not a function » et le test échoue sur un
+ * composant parfaitement correct. Deux fichiers de test le simulaient déjà
+ * chacun de son côté.
+ *
+ * La confirmation de suppression passant d'une boîte native à une modale de
+ * l'application, ce besoin devient général : la simulation monte ici, à côté du
+ * contexte de canvas, qui y est pour exactement la même raison — une lacune de
+ * l'environnement, pas une affaire de test particulier.
+ *
+ * `close()` n'émet son événement que si le dialogue était ouvert : c'est le
+ * comportement du navigateur, et le composant s'en sert pour ne pas boucler.
+ */
+if (typeof HTMLDialogElement !== 'undefined') {
+    HTMLDialogElement.prototype.showModal = function showModal() {
+        this.open = true
+    }
+
+    HTMLDialogElement.prototype.close = function close() {
+        if (!this.open) {
+            return
+        }
+
+        this.open = false
+        this.dispatchEvent(new Event('close'))
+    }
+}
+
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
