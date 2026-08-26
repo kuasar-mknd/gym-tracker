@@ -259,7 +259,7 @@ const typeLabel = (type) => {
 <template>
     <Head title="Bibliothèque" />
 
-    <AuthenticatedLayout liquid-variant="subtle">
+    <AuthenticatedLayout liquid-variant="subtle" page-title="La Bibliothèque">
         <!-- Pull to Refresh Indicator -->
         <div
             class="pointer-events-none fixed top-0 left-0 z-50 flex w-full justify-center transition-transform duration-200 ease-out"
@@ -298,7 +298,7 @@ const typeLabel = (type) => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1
-                        class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-5xl"
+                        class="font-display text-text-main hidden text-3xl leading-none font-black tracking-tighter uppercase italic sm:block sm:text-5xl"
                     >
                         La<br />
                         <span class="text-gradient">Bibliothèque</span>
@@ -307,16 +307,6 @@ const typeLabel = (type) => {
                         {{ exercises.length }} exercices disponibles
                     </p>
                 </div>
-                <GlassButton
-                    @click="showAddForm = true"
-                    variant="primary"
-                    class="flex size-14 items-center justify-center p-0! sm:hidden"
-                    data-testid="create-exercise-mobile-header"
-                    dusk="create-exercise-btn"
-                    aria-label="Nouvel exercice"
-                >
-                    <span class="material-symbols-outlined text-4xl" aria-hidden="true">add</span>
-                </GlassButton>
                 <GlassButton
                     @click="showAddForm = true"
                     variant="primary"
@@ -559,5 +549,24 @@ const typeLabel = (type) => {
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"
         />
+
+        <!--
+            Le « + » de la barre collante. Il vivait dans le corps de la page,
+            en `sm:hidden`, à côté de son jumeau de bureau — donc sous
+            l'en-tête plutôt que dedans, et pas au même endroit que celui de
+            « Mes Séances » ou de « Mes Modèles ».
+        -->
+        <template #header-actions>
+            <GlassButton
+                @click="showAddForm = true"
+                variant="primary"
+                class="min-h-touch! flex h-11! w-11! items-center justify-center p-0!"
+                data-testid="create-exercise-mobile-header"
+                dusk="create-exercise-btn"
+                aria-label="Nouvel exercice"
+            >
+                <span class="material-symbols-outlined text-xl leading-none" aria-hidden="true">add</span>
+            </GlassButton>
+        </template>
     </AuthenticatedLayout>
 </template>

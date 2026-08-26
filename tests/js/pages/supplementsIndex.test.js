@@ -70,7 +70,7 @@ await import('@/Components/Stats/SupplementUsageChart.vue')
 
 const SupplementsIndex = (await import('@/Pages/Supplements/Index.vue')).default
 
-const { passesSlot } = await import('./pageStubs')
+const { passesSlot, layoutStub } = await import('./pageStubs')
 
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
@@ -107,7 +107,7 @@ const mountPage = async (props = {}) => {
         global: {
             mocks: { route: globalThis.route },
             directives: { press: {} },
-            stubs: { AuthenticatedLayout: passesSlot, GlassCard: passesSlot },
+            stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
         },
     })
 

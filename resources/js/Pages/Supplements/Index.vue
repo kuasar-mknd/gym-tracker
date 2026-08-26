@@ -112,13 +112,13 @@ const formatDate = (dateString) => {
 <template>
     <Head title="Compléments" />
 
-    <AuthenticatedLayout liquid-variant="subtle">
+    <AuthenticatedLayout liquid-variant="subtle" page-title="Mes Compléments">
         <div class="space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
                     <h1
-                        class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
+                        class="font-display text-text-main hidden text-4xl leading-none font-black tracking-tighter uppercase italic sm:block"
                     >
                         Mes <span class="text-gradient">Compléments</span>
                     </h1>
@@ -133,15 +133,6 @@ const formatDate = (dateString) => {
                 >
                     <span class="material-symbols-outlined mr-2" aria-hidden="true">add</span>
                     Ajouter
-                </GlassButton>
-                <!-- Mobile Add Button -->
-                <GlassButton
-                    @click="showAddForm = true"
-                    variant="primary"
-                    aria-label="Ajouter un complément"
-                    class="flex size-12 items-center justify-center p-0! sm:hidden"
-                >
-                    <span class="material-symbols-outlined" aria-hidden="true">add</span>
                 </GlassButton>
             </div>
 
@@ -350,5 +341,16 @@ const formatDate = (dateString) => {
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"
         />
+
+        <template #header-actions>
+            <GlassButton
+                @click="showAddForm = true"
+                variant="primary"
+                class="min-h-touch! flex h-11! w-11! items-center justify-center p-0!"
+                aria-label="Ajouter un complément"
+            >
+                <span class="material-symbols-outlined text-xl leading-none" aria-hidden="true">add</span>
+            </GlassButton>
+        </template>
     </AuthenticatedLayout>
 </template>

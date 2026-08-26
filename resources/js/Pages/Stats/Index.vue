@@ -44,11 +44,17 @@ const handlePeriodChange = (period) => {
 <template>
     <Head title="Statistiques" />
 
-    <AuthenticatedLayout liquid-variant="cyan-magenta">
+    <AuthenticatedLayout liquid-variant="cyan-magenta" page-title="Mon Évolution">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
+                <!--
+                    Le titre du bureau. Sur téléphone, c'est la barre collante de
+                    la mise en page qui le porte, et l'afficher ici aussi le
+                    dirait deux fois — en plus de mettre deux `<h1>` dans une
+                    même page.
+                -->
+                <div class="hidden sm:block">
                     <h1
                         class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-4xl"
                     >
