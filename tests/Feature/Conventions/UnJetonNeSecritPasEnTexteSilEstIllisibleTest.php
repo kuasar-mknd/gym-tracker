@@ -27,6 +27,7 @@ declare(strict_types=1);
  */
 
 use Symfony\Component\Finder\Finder;
+use Tests\Support\Contraste;
 
 /**
  * Le seuil AA de WCAG 2.1 pour du texte courant.
@@ -104,14 +105,14 @@ it('n ecrit aucun texte dans une couleur qui ne se lit pas', function (): void {
         }
 
         try {
-            $devant = valeurDuJeton($nom);
+            $devant = Contraste::jeton($nom);
         } catch (RuntimeException) {
             // Ni un jeton de couleur ni une taille : `text-xs`, `text-center`.
             continue;
         }
 
         $pire = min(array_map(
-            static fn (string $fond): float => contraste($devant, valeurDuJeton($fond)),
+            static fn (string $fond): float => Contraste::entre($devant, Contraste::jeton($fond)),
             surfacesDeLApplication()
         ));
 
@@ -141,7 +142,7 @@ it('garde une variante lisible pour chacun des trois accents clairs', function (
 
     foreach (['accent-state', 'accent-info', 'accent-warning'] as $vif) {
         try {
-            $mesure = contraste(valeurDuJeton($vif.'-deep'), valeurDuJeton('surface-card'));
+            $mesure = Contraste::entre(Contraste::jeton($vif.'-deep'), Contraste::jeton('surface-card'));
         } catch (RuntimeException) {
             $manquants[] = "{$vif}-deep n'est pas declare";
 

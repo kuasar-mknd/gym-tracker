@@ -1229,19 +1229,38 @@
     border-radius: 0.5rem;
 }
 
+/*
+ * Les badges d'etat : un fond FRANC et son texte, pas un lavis.
+ *
+ * `success` a porte pendant un moment `background` et `color` sur le MEME
+ * jeton — un rectangle vert fonce uni, dans lequel le mot « Fait » etait
+ * invisible. L'original etait un lavis vert pale sous un texte vert fonce, et
+ * une table de conversion mecanique a envoye les deux valeurs sur le meme role.
+ *
+ * Il aurait de toute facon fallu y revenir : `trend-up` est un vert ASSOMBRI
+ * pour se lire en texte, et l'employer en fond donnait une pastille terne au
+ * milieu d'une interface neon. Une seance terminee, dans cette charte, c'est le
+ * vert d'etat — le vif — avec de l'encre par-dessus, a 15,19:1.
+ */
 @utility glass-badge-success {
-    background: var(--color-trend-up);
-    color: var(--color-trend-up);
+    background: var(--color-accent-state);
+    color: var(--color-text-on-accent);
+}
+
+/*
+ * `warning` etait UTILISE par le badge « En cours » et n'existait nulle part :
+ * une classe sans declaration ne produit rien, et le badge s'affichait sans
+ * couleur du tout. Rien ne pouvait le signaler — un nom de classe inconnu n'est
+ * pas une erreur pour un navigateur.
+ */
+@utility glass-badge-warning {
+    background: var(--color-accent-warning);
+    color: var(--color-text-on-accent);
 }
 
 @utility glass-badge-primary {
     background: rgb(from var(--color-accent-primary) r g b / 0.1);
     color: var(--color-accent-primary);
-}
-
-@utility glass-badge-violet {
-    background: rgb(from var(--color-accent-tertiary) r g b / 0.1);
-    color: var(--color-accent-tertiary);
 }
 
 @utility text-gradient {

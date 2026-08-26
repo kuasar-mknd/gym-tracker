@@ -29,6 +29,22 @@ onUnmounted(() => {
 })
 </script>
 
+<!--
+    Le bandeau porte de l'ENCRE, pas du blanc.
+
+    Son degrade va du vert d'etat au cyan — deux accents CLAIRS, choisis pour
+    leur vivacite. Du blanc par-dessus rend 1,18:1 sur le vert et 1,54:1 sur le
+    cyan : le bandeau s'affichait, et pas un mot ne s'y lisait.
+
+    Il portait autrefois `from-emerald-500 via-teal-500 to-cyan-500`, des tons
+    MOYENS sur lesquels le blanc tenait mal mais tenait. La conversion vers la
+    charte les a envoyes sur les jetons vifs, et le texte est passe de mediocre a
+    invisible — un rappel que remplacer une nuance par un role change la
+    LUMINOSITE, pas seulement le nom.
+
+    L'encre rend 15,19:1 sur le vert et 11,61:1 sur le cyan, et le degrade garde
+    sa vivacite.
+-->
 <template>
     <Link
         v-press
@@ -50,7 +66,7 @@ onUnmounted(() => {
                 ></span>
                 <span class="bg-surface-card relative inline-flex size-3 rounded-full"></span>
             </span>
-            <span class="text-text-on-dark-accent/90 text-xs font-black tracking-widest uppercase">En cours</span>
+            <span class="text-text-on-accent/90 text-xs font-black tracking-widest uppercase">En cours</span>
         </div>
 
         <div class="relative z-10 flex items-center gap-4 p-5">
@@ -59,7 +75,7 @@ onUnmounted(() => {
                 class="bg-surface-card/20 flex size-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
             >
                 <span
-                    class="material-symbols-outlined text-text-on-dark-accent text-3xl"
+                    class="material-symbols-outlined text-text-on-accent text-3xl"
                     style="font-variation-settings: 'FILL' 1"
                     aria-hidden="true"
                     >fitness_center</span
@@ -68,20 +84,18 @@ onUnmounted(() => {
 
             <!-- Content -->
             <div class="min-w-0 flex-1">
-                <p class="text-text-on-dark-accent/70 text-[10px] font-black tracking-[0.2em] uppercase">
-                    Séance active
-                </p>
-                <h3 class="font-display text-text-on-dark-accent truncate text-xl font-black uppercase italic">
+                <p class="text-text-on-accent/70 text-[10px] font-black tracking-[0.2em] uppercase">Séance active</p>
+                <h3 class="font-display text-text-on-accent truncate text-xl font-black uppercase italic">
                     {{ workout.name || 'Séance' }}
                 </h3>
                 <div class="mt-1 flex items-center gap-3">
-                    <span class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold">
+                    <span class="text-text-on-accent/80 flex items-center gap-1 text-sm font-bold">
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">timer</span>
                         {{ elapsed }}
                     </span>
                     <span
                         v-if="workout.workout_lines_count"
-                        class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold"
+                        class="text-text-on-accent/80 flex items-center gap-1 text-sm font-bold"
                     >
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">exercise</span>
                         {{ workout.workout_lines_count }} exos
@@ -92,7 +106,7 @@ onUnmounted(() => {
             <!-- Arrow -->
             <div class="flex shrink-0 items-center">
                 <span
-                    class="material-symbols-outlined text-text-on-dark-accent/60 group-hover:text-text-on-dark-accent text-2xl transition-transform duration-300 group-hover:translate-x-1"
+                    class="material-symbols-outlined text-text-on-accent/60 group-hover:text-text-on-accent text-2xl transition-transform duration-300 group-hover:translate-x-1"
                     aria-hidden="true"
                     >arrow_forward_ios</span
                 >
