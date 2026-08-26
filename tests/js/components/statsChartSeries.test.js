@@ -215,7 +215,13 @@ describe('ExerciseCategoryChart series', () => {
 
         // Fourth entry is 'Mobilité', a category with no colour of its own: it
         // keeps its name and borrows the neutral Autres grey.
-        expect(series.datasets[0].backgroundColor).toEqual(['#FF5500', '#8800FF', '#64748B', '#64748B'])
+        //
+        // Les valeurs sont écrites en minuscules depuis que le composant lit la
+        // charte au lieu de recopier des littéraux : `getComputedStyle` rend la
+        // valeur telle qu'elle est déclarée dans `app.css`. Elles restent
+        // écrites ici plutôt que lues par `couleurDeCategorie()` — un test qui
+        // importe l'utilitaire que la source utilise se compare à lui-même.
+        expect(series.datasets[0].backgroundColor).toEqual(['#ff5500', '#8800ff', '#64748b', '#64748b'])
     })
 
     it('draws no slice when there is no exercise', () => {

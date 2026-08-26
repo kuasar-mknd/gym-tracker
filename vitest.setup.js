@@ -112,3 +112,30 @@ config.global.directives = { ...config.global.directives, press: {} }
  * les assertions de structure.
  */
 config.global.components = { ...config.global.components, Head: { render: () => null } }
+
+/*
+ * La charte, sous jsdom.
+ *
+ * `Utils/couleurs.js` lit les jetons par `getComputedStyle` sur la racine. Une
+ * feuille Tailwind n'est pas chargee ici, donc sans ces declarations tout
+ * graphique dessinerait avec une couleur vide.
+ *
+ * Ces valeurs ne sont PAS une copie de la charte : elles n'ont pas a coincider
+ * avec elle, elles ont seulement a exister pour que le mecanisme de lecture
+ * soit exerce. `LaCharteEstLueParLeJsTest` verifie la correspondance des NOMS
+ * cote depot ; c'est la que la charte est tenue.
+ */
+const JETONS_DE_TEST = {
+    'category-chest': '#ff5500',
+    'category-back': '#8800ff',
+    'category-shoulders': '#ff0080',
+    'category-arms': '#00e5ff',
+    'category-legs': '#ccff00',
+    'category-core': '#f5009b',
+    'category-cardio': '#c0eb00',
+    'category-other': '#64748b',
+}
+
+for (const [nom, valeur] of Object.entries(JETONS_DE_TEST)) {
+    document.documentElement.style.setProperty(`--color-${nom}`, valeur)
+}

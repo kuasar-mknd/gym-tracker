@@ -1,0 +1,97 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * Le JavaScript porte les NOMS, le CSS porte les VALEURS.
+ *
+ * Les graphiques dessinent sur canvas : ils ne peuvent pas porter de classes,
+ * donc il leur faut des valeurs. Ils en ecrivaient 230 en dur, et la
+ * correspondance des categories d'exercice etait recopiee deux fois — en
+ * classes dans `Utils/constants.js`, en hexadecimal dans
+ * `ExerciseCategoryChart.vue`, sous un commentaire avouant le rapprochement a
+ * la main : « Color mapping matching the @theme block ».
+ *
+ * Ce que ca a produit : deux fichiers ecrivaient `#00FF66` en le commentant
+ * `// neon-green`, alors que le jeton vaut `#CCFF00`. Deux verts differents
+ * portaient le meme nom, personne ne pouvait s'en apercevoir, et aucun test ne
+ * pouvait le voir puisque les deux etaient des litteraux valides.
+ *
+ * `Utils/couleurs.js` lit desormais les jetons par `getComputedStyle`. Il ne
+ * recopie aucune valeur — il ne cite que des noms. Ce controle verifie que
+ * chaque nom cite existe reellement dans la charte : c'est la seule jointure
+ * qui reste entre les deux mondes, et elle doit tenir.
+ */
+
+use Symfony\Component\Finder\Finder;
+
+/**
+ * Les noms de jetons cites par `Utils/couleurs.js`.
+ *
+ * @return list<string>
+ */
+function jetonsCitesParLeJs(): array
+{
+    $source = (string) file_get_contents(resource_path('js/Utils/couleurs.js'));
+
+    // Les valeurs de la table de correspondance, en chaines simples.
+    preg_match_all("/:\s*'([a-z][a-z0-9-]*)'/", $source, $trouves);
+
+    return array_values(array_unique($trouves[1]));
+}
+
+it('ne cite aucun jeton que la charte ne declare pas', function (): void {
+    $css = (string) file_get_contents(resource_path('css/app.css'));
+    $cites = jetonsCitesParLeJs();
+
+    expect($cites)->not->toBeEmpty('aucun nom de jeton trouve : le controle ne prouverait rien');
+
+    $absents = array_values(array_filter(
+        $cites,
+        static fn (string $nom): bool => ! str_contains($css, "--color-{$nom}:")
+    ));
+
+    expect($absents)->toBe([], sprintf(
+        "Ces noms sont cites par le JavaScript et ne sont declares nulle part :\n  %s\n\n"
+        .'Un jeton absent rend une chaine vide, donc un graphique dessine sans couleur — ce qui ne '
+        .'casse rien et ne se voit que sur la page.',
+        implode("\n  ", $absents)
+    ));
+});
+
+it('ne laisse pas revenir une couleur ecrite en dur dans un graphique', function (): void {
+    $fichiers = Finder::create()
+        ->files()
+        ->in(resource_path('js/Components/Stats'))
+        ->name(['*.vue', '*.js']);
+
+    $coupables = [];
+
+    foreach ($fichiers as $fichier) {
+        // Les degrades de Chart.js portent des couleurs de rendu qui ne sont pas
+        // des jetons de charte — on ne regarde que les litteraux a six chiffres,
+        // ceux qui recopient une couleur nommee.
+        preg_match_all('/#[0-9A-Fa-f]{6}\b/', $fichier->getContents(), $trouves);
+
+        if ($trouves[0] !== []) {
+            $coupables[$fichier->getRelativePathname()] = count($trouves[0]);
+        }
+    }
+
+    $total = array_sum($coupables);
+
+    /*
+     * Un cliquet, comme le baseline PHPStan : le plafond ne descend jamais tout
+     * seul, et il ne remonte que par une decision visible en revue.
+     *
+     * Releve le 2026-08-26, avant la conversion des graphiques restants.
+     */
+    expect($total)->toBeLessThanOrEqual(326, sprintf(
+        "Il y a %d couleurs ecrites en dur dans les graphiques, contre 326 au dernier releve.\n\n"
+        .'Les valeurs se lisent par `Utils/couleurs.js`, qui interroge la charte. Une couleur ecrite '
+        ."ici est un litteral que rien ne relie a `app.css` — c'est ainsi que `#00FF66` a pu se faire "
+        ."appeler `neon-green` pendant que le jeton valait `#CCFF00`.\n\nFichiers : %s",
+        $total,
+        json_encode($coupables, JSON_UNESCAPED_SLASHES) === false ? '?' : json_encode($coupables, JSON_UNESCAPED_SLASHES)
+    ));
+});
