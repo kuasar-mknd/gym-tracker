@@ -34,7 +34,7 @@
                                             placeholder="100"
                                             min="0"
                                             step="0.5"
-                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:bg-white/80 focus:ring-2"
+                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 border-border bg-surface-card/50 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:ring-2"
                                         />
                                         <span
                                             class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
@@ -55,7 +55,7 @@
                                             min="1"
                                             max="100"
                                             step="1"
-                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:bg-white/80 focus:ring-2"
+                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-electric-orange focus:ring-electric-orange/20 border-border bg-surface-card/50 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:ring-2"
                                         />
                                         <span
                                             class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
@@ -106,10 +106,12 @@
                                 <OneRepMaxPercentagesChart :data="percentages" />
                             </div>
 
-                            <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white/50 shadow-inner">
+                            <div
+                                class="border-border bg-surface-card/50 overflow-hidden rounded-3xl border shadow-inner"
+                            >
                                 <table class="text-text-muted w-full text-left text-sm">
                                     <thead
-                                        class="text-text-main border-b border-slate-200 bg-slate-50/80 text-xs uppercase"
+                                        class="text-text-main border-border bg-surface-sunken/80 border-b text-xs uppercase"
                                     >
                                         <tr>
                                             <th class="px-6 py-3 font-medium">Pourcentage</th>
@@ -117,11 +119,11 @@
                                             <th class="px-6 py-3 font-medium">Reps Est.</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-slate-100 bg-transparent">
+                                    <tbody class="divide-border divide-y bg-transparent">
                                         <tr
                                             v-for="p in percentages"
                                             :key="p.percent"
-                                            class="transition-colors duration-200 hover:bg-slate-50"
+                                            class="hover:bg-surface-sunken transition-colors duration-200"
                                         >
                                             <td class="text-text-main px-6 py-4 font-medium">{{ p.percent }}%</td>
                                             <td class="text-text-main px-6 py-4">{{ formatWeight(p.value) }} kg</td>

@@ -281,7 +281,7 @@ const latestBodyFat = computed(() => {
                                 type="button"
                                 @click="deleteMeasurement(measurement.id)"
                                 :aria-label="`Supprimer la mesure du ${measurement.measured_at.substring(0, 10)}`"
-                                class="text-text-muted/30 rounded-lg p-2 opacity-100 transition hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                                class="text-text-muted/30 hover:text-accent-danger rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                             >
                                 <svg
                                     aria-hidden="true"

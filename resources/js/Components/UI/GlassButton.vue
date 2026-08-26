@@ -53,8 +53,9 @@ const sizeClasses = {
                 'glass-button-primary shadow-glow-orange': variant === 'primary',
                 'glass-button-neon shadow-neon': variant === 'neon',
                 'glass-button-gradient-border': variant === 'gradient-border',
-                'border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20': variant === 'danger',
-                'border-transparent bg-transparent shadow-none hover:bg-white/50': variant === 'ghost',
+                'border-accent-danger/30 bg-accent-danger/10 text-accent-danger hover:bg-accent-danger/20':
+                    variant === 'danger',
+                'hover:bg-surface-card/50 border-transparent bg-transparent shadow-none': variant === 'ghost',
                 'cursor-not-allowed opacity-50': disabled,
                 'cursor-wait': loading,
             },

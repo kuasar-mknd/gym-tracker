@@ -85,7 +85,7 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
         <div class="relative z-10 flex flex-col items-center">
             <!-- Icon Wrapper -->
             <div
-                class="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border border-white/50 bg-white/30 shadow-lg backdrop-blur-md"
+                class="border-surface-card/50 bg-surface-card/30 mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border shadow-lg backdrop-blur-md"
             >
                 <!-- Emoji -->
                 <span v-if="icon && !isLigatureName(icon)" class="text-5xl drop-shadow-sm">{{ icon }}</span>

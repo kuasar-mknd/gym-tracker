@@ -350,8 +350,8 @@ onUnmounted(() => {
                     class="w-full rounded-lg py-2.5 text-sm leading-5 font-medium transition-all duration-200"
                     :class="[
                         activeTab === tab
-                            ? 'text-text-main bg-white shadow'
-                            : 'text-text-muted hover:bg-white/[0.12] hover:text-slate-700',
+                            ? 'text-text-main bg-surface-card shadow'
+                            : 'text-text-muted hover:bg-surface-card/[0.12] hover:text-text-main',
                     ]"
                 >
                     {{ tab === 'timer' ? 'Minuteur' : 'Préréglages' }}
@@ -389,7 +389,7 @@ onUnmounted(() => {
                     <div class="mt-12 flex gap-4">
                         <button
                             @click="toggleTimer"
-                            class="text-text-main flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg transition-transform hover:scale-110 active:scale-95"
+                            class="text-text-main bg-surface-card flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 active:scale-95"
                             :aria-label="status === 'running' ? 'Mettre en pause' : 'Démarrer'"
                         >
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">
@@ -399,7 +399,7 @@ onUnmounted(() => {
 
                         <button
                             @click="resetRunner"
-                            class="flex h-16 w-16 items-center justify-center rounded-full border border-slate-200 bg-white/50 text-slate-600 shadow-lg transition-transform hover:scale-110 active:scale-95"
+                            class="border-border bg-surface-card/50 text-text-muted flex h-16 w-16 items-center justify-center rounded-full border shadow-lg transition-transform hover:scale-110 active:scale-95"
                             aria-label="Réinitialiser"
                         >
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">restart_alt</span>
@@ -522,7 +522,7 @@ onUnmounted(() => {
                             </button>
                             <button
                                 @click="deleteTimer(timer)"
-                                class="text-text-muted relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-[''] hover:text-red-500"
+                                class="text-text-muted hover:text-accent-danger relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
                                 aria-label="Supprimer"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">delete</span>

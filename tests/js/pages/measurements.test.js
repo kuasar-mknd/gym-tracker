@@ -513,15 +513,15 @@ describe('Measurements/Parts/Index cards', () => {
 
         // Green up, red down: on a waist and on a biceps those mean opposite
         // things, so the colour only claims direction, never progress.
-        expect(wrapper.find('.text-green-400').text()).toBe('+0.75')
-        expect(wrapper.find('.text-red-400').text()).toBe('-1.5')
+        expect(wrapper.find('.text-trend-up').text()).toBe('+0.75')
+        expect(wrapper.find('.text-trend-down').text()).toBe('-1.5')
     })
 
     it('says nothing at all about a part that has not moved', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
 
         // A bare "0" beside a figure reads as a measurement, not as an absence.
-        expect(wrapper.findAll('.text-green-400, .text-red-400')).toHaveLength(2)
+        expect(wrapper.findAll('.text-trend-up, .text-trend-down')).toHaveLength(2)
     })
 })
 

@@ -91,13 +91,13 @@ const submit = () => {
 
             <!-- Social Login -->
             <div class="my-6 flex items-center justify-center gap-4 text-sm">
-                <div class="h-px flex-1 bg-slate-200"></div>
+                <div class="bg-border h-px flex-1"></div>
                 <span
-                    class="text-text-muted rounded-full border border-white/50 bg-white/60 px-4 py-1 font-medium backdrop-blur-md"
+                    class="text-text-muted border-surface-card/50 bg-surface-card/60 rounded-full border px-4 py-1 font-medium backdrop-blur-md"
                 >
                     Ou s'inscrire avec
                 </span>
-                <div class="h-px flex-1 bg-slate-200"></div>
+                <div class="bg-border h-px flex-1"></div>
             </div>
 
             <div class="flex justify-center gap-4">

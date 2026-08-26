@@ -79,8 +79,8 @@ const selectCommonPart = (part) => {
                                 :class="[
                                     'rounded-full px-3 py-1 text-xs transition',
                                     form.part === part
-                                        ? 'bg-electric-orange text-white'
-                                        : 'text-text-muted bg-slate-100 hover:bg-slate-200',
+                                        ? 'bg-electric-orange text-text-on-accent'
+                                        : 'text-text-muted bg-surface-sunken hover:bg-slate-200',
                                 ]"
                             >
                                 {{ part }}
@@ -155,7 +155,7 @@ const selectCommonPart = (part) => {
                             <div>
                                 <h3 class="text-text-main font-bold">{{ item.part }}</h3>
                                 <div
-                                    class="mt-1 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-2xl font-bold text-transparent"
+                                    class="from-accent-tertiary to-accent-secondary mt-1 bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent"
                                 >
                                     {{ item.current }} <span class="text-text-muted text-sm">{{ item.unit }}</span>
                                 </div>
@@ -167,7 +167,7 @@ const selectCommonPart = (part) => {
                                 v-if="item.diff !== 0"
                                 :class="[
                                     'flex items-center text-sm font-bold',
-                                    item.diff > 0 ? 'text-green-400' : 'text-red-400',
+                                    item.diff > 0 ? 'text-trend-up' : 'text-trend-down',
                                 ]"
                             >
                                 {{ item.diff > 0 ? '+' : '' }}{{ item.diff }}

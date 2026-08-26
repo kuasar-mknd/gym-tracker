@@ -31,7 +31,7 @@
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 border-border bg-surface-card h-16 w-full rounded-2xl border-2 px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -48,7 +48,7 @@
                                     type="number"
                                     v-model="barWeight"
                                     placeholder="20"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border-2 border-slate-200 bg-white px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 border-border bg-surface-card h-16 w-full rounded-2xl border-2 px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -60,7 +60,7 @@
                     <!-- Barbell Visualization -->
                     <div
                         v-if="calculatedPlates.length > 0"
-                        class="mt-8 overflow-x-auto rounded-3xl border border-slate-100 bg-slate-50 p-6"
+                        class="border-border bg-surface-sunken mt-8 overflow-x-auto rounded-3xl border p-6"
                     >
                         <div class="relative flex h-[200px] min-w-[300px] items-center justify-center">
                             <!-- Bar -->
@@ -78,7 +78,7 @@
                                 <div
                                     v-for="(plate, index) in calculatedPlates"
                                     :key="`left-${index}`"
-                                    class="flex items-center justify-center rounded-md border-2 border-white/30 text-xs font-black shadow-lg"
+                                    class="border-surface-card/30 flex items-center justify-center rounded-md border-2 text-xs font-black shadow-lg"
                                     :class="[
                                         getPlateColor(plate.weight),
                                         parseFloat(plate.weight) === 15 || parseFloat(plate.weight) < 5
@@ -99,7 +99,7 @@
                                 <div
                                     v-for="(plate, index) in calculatedPlates"
                                     :key="`right-${index}`"
-                                    class="flex items-center justify-center rounded-md border-2 border-white/30 text-xs font-black shadow-lg"
+                                    class="border-surface-card/30 flex items-center justify-center rounded-md border-2 text-xs font-black shadow-lg"
                                     :class="[
                                         getPlateColor(plate.weight),
                                         parseFloat(plate.weight) === 15 || parseFloat(plate.weight) < 5
@@ -136,7 +136,7 @@
                     <!-- Cannot load message -->
                     <div
                         v-else-if="targetWeight > barWeight"
-                        class="mt-8 rounded-3xl border border-slate-100 bg-slate-50 py-8 text-center"
+                        class="border-border bg-surface-sunken mt-8 rounded-3xl border py-8 text-center"
                     >
                         <span class="material-symbols-outlined mb-3 text-5xl text-slate-300" aria-hidden="true"
                             >error</span
@@ -180,7 +180,7 @@
                                 :class="[
                                     getPlateColor(parseFloat(plate.weight)),
                                     parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
-                                        ? 'border-slate-200'
+                                        ? 'border-border'
                                         : 'border-transparent',
                                 ]"
                             >
@@ -209,7 +209,7 @@
                                     type="button"
                                     aria-label="Supprimer la plaque"
                                     title="Supprimer la plaque"
-                                    class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white opacity-100 shadow-md transition-all hover:bg-red-600 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                                    class="bg-accent-danger text-text-on-accent absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full opacity-100 shadow-md transition-all hover:bg-red-600 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                                 >
                                     <span class="material-symbols-outlined text-sm" aria-hidden="true">close</span>
                                 </button>
@@ -250,7 +250,7 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+                <div class="border-border flex justify-end gap-3 border-t pt-4">
                     <GlassButton @click="addingPlate = false" variant="ghost">Annuler</GlassButton>
                     <!-- Was :disabled="form.processing", where `form` was an empty
                          useForm({}) that never submits — so it read false forever

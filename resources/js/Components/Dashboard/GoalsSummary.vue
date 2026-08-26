@@ -35,7 +35,7 @@ defineProps({
                         >
                     </div>
                     <div
-                        class="h-2 w-full overflow-hidden rounded-full bg-slate-100"
+                        class="bg-surface-sunken h-2 w-full overflow-hidden rounded-full"
                         role="progressbar"
                         :aria-valuenow="goal.progress_pct"
                         aria-valuemin="0"
