@@ -22,7 +22,7 @@ const emit = defineEmits(['startWorkout'])
             class="hover:shadow-glow-orange/70 group shadow-glow-orange focus-visible:ring-electric-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             :class="{ 'cursor-wait': processing }"
         >
-            <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md"></div>
+            <div class="bg-surface-card/60 absolute inset-0 z-0 backdrop-blur-md"></div>
             <div
                 class="from-electric-orange/10 absolute inset-0 z-0 bg-linear-to-br to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             ></div>
@@ -31,15 +31,15 @@ const emit = defineEmits(['startWorkout'])
             ></div>
             <div class="relative z-20 flex h-full flex-col items-center justify-center gap-3 p-4">
                 <div
-                    class="from-electric-orange to-hot-pink flex size-16 items-center justify-center rounded-2xl bg-linear-to-br shadow-lg shadow-orange-500/30 transition-transform duration-300 group-hover:scale-110"
+                    class="from-electric-orange to-hot-pink shadow-accent-primary/30 flex size-16 items-center justify-center rounded-2xl bg-linear-to-br shadow-lg transition-transform duration-300 group-hover:scale-110"
                 >
                     <span
                         v-if="processing"
-                        class="material-symbols-outlined animate-spin text-4xl text-white"
+                        class="material-symbols-outlined text-text-on-accent animate-spin text-4xl"
                         aria-hidden="true"
                         >autorenew</span
                     >
-                    <span v-else class="material-symbols-outlined text-4xl text-white" aria-hidden="true"
+                    <span v-else class="material-symbols-outlined text-text-on-accent text-4xl" aria-hidden="true"
                         >fitness_center</span
                     >
                 </div>
@@ -58,7 +58,7 @@ const emit = defineEmits(['startWorkout'])
             aria-label="Voir mes programmes d'entraînement"
             class="hover:shadow-glow-violet/70 group shadow-glow-violet focus-visible:ring-electric-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-            <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md"></div>
+            <div class="bg-surface-card/60 absolute inset-0 z-0 backdrop-blur-md"></div>
             <div
                 class="from-vivid-violet/10 absolute inset-0 z-0 bg-linear-to-br to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             ></div>
@@ -67,7 +67,7 @@ const emit = defineEmits(['startWorkout'])
             ></div>
             <div class="relative z-20 flex h-full flex-col items-center justify-center gap-3 p-4">
                 <div
-                    class="from-vivid-violet to-hot-pink flex size-16 items-center justify-center rounded-2xl bg-linear-to-br shadow-lg shadow-purple-500/30 transition-transform duration-300 group-hover:scale-110"
+                    class="from-vivid-violet to-hot-pink shadow-accent-tertiary/30 flex size-16 items-center justify-center rounded-2xl bg-linear-to-br shadow-lg transition-transform duration-300 group-hover:scale-110"
                 >
                     <span class="material-symbols-outlined text-4xl text-white" aria-hidden="true">assignment_add</span>
                 </div>

@@ -14,7 +14,7 @@ const emit = defineEmits(['edit', 'delete'])
     <div class="space-y-8">
         <div v-for="(group, month) in journalsByMonth" :key="month">
             <h3
-                class="text-text-main sticky top-0 z-10 mb-4 rounded-2xl border border-white/20 bg-white/10 p-2 text-lg font-medium capitalize shadow-lg backdrop-blur-md"
+                class="text-text-main border-surface-card/20 bg-surface-card/10 sticky top-0 z-10 mb-4 rounded-2xl border p-2 text-lg font-medium capitalize shadow-lg backdrop-blur-md"
             >
                 {{ month }}
             </h3>
@@ -22,13 +22,13 @@ const emit = defineEmits(['edit', 'delete'])
                 <GlassCard
                     v-for="journal in group"
                     :key="journal.id"
-                    class="group relative overflow-hidden rounded-3xl border border-white/20 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-[0.98]"
+                    class="group border-surface-card/20 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.98]"
                     padding="p-0"
                 >
                     <div class="flex flex-col sm:flex-row">
                         <!-- Date Column -->
                         <div
-                            class="flex w-full shrink-0 flex-row items-center justify-between bg-white/5 p-4 sm:w-24 sm:flex-col sm:justify-center sm:border-r sm:border-white/10"
+                            class="bg-surface-card/5 sm:border-surface-card/10 flex w-full shrink-0 flex-row items-center justify-between p-4 sm:w-24 sm:flex-col sm:justify-center sm:border-r"
                         >
                             <div class="text-center">
                                 <div class="text-text-muted text-xs uppercase">
@@ -102,7 +102,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <button
                                         v-press
                                         @click="emit('edit', journal)"
-                                        class="text-text-muted/50 hover:text-text-main focus-visible:ring-electric-orange rounded-xl p-1 transition-all hover:bg-white/20 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                        class="text-text-muted/50 hover:text-text-main focus-visible:ring-electric-orange hover:bg-surface-card/20 rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                         aria-label="Modifier l'entrée"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -117,7 +117,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <button
                                         v-press
                                         @click="emit('delete', journal.id)"
-                                        class="text-text-muted/50 focus-visible:ring-electric-orange rounded-xl p-1 transition-all hover:bg-white/20 hover:text-red-400 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                        class="text-text-muted/50 focus-visible:ring-electric-orange hover:bg-surface-card/20 hover:text-accent-danger rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                         aria-label="Supprimer l'entrée"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

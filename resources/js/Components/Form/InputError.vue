@@ -28,10 +28,10 @@ defineProps({
         v-show="message"
         :id="id"
         role="alert"
-        class="animate-fade-in mt-2 flex w-full cursor-default items-start gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:bg-red-500/20"
+        class="animate-fade-in border-accent-danger/20 bg-accent-danger/10 hover:bg-accent-danger/20 mt-2 flex w-full cursor-default items-start gap-2 rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300"
     >
-        <span class="material-symbols-outlined mt-0.5 text-lg text-red-500" aria-hidden="true">error</span>
-        <p class="text-sm font-bold text-red-500">
+        <span class="material-symbols-outlined text-accent-danger mt-0.5 text-lg" aria-hidden="true">error</span>
+        <p class="text-accent-danger text-sm font-bold">
             {{ message }}
         </p>
     </div>

@@ -55,8 +55,8 @@ const filteredAchievements = computed(() => {
                     class="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all"
                     :class="
                         currentCategory === cat.value
-                            ? 'bg-accent-primary shadow-accent-primary/20 text-white shadow-lg'
-                            : 'text-text-muted border border-slate-200 bg-white/50 hover:bg-white/80'
+                            ? 'bg-accent-primary shadow-accent-primary/20 text-text-on-accent shadow-lg'
+                            : 'text-text-muted border-border bg-surface-card/50 hover:bg-surface-card/80 border'
                     "
                 >
                     {{ cat.label }}
@@ -78,7 +78,7 @@ const filteredAchievements = computed(() => {
                         <!-- Badge Icon -->
                         <div
                             class="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl text-4xl transition-transform duration-300 group-hover:scale-110"
-                            :class="achievement.is_unlocked ? 'bg-accent-primary/10' : 'bg-white/5'"
+                            :class="achievement.is_unlocked ? 'bg-accent-primary/10' : 'bg-surface-card/5'"
                         >
                             {{ achievement.icon }}
                         </div>
@@ -109,7 +109,12 @@ const filteredAchievements = computed(() => {
                             v-if="achievement.is_unlocked"
                             class="bg-accent-success absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full shadow-lg"
                         >
-                            <svg class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg
+                                class="text-text-on-accent h-3 w-3"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"

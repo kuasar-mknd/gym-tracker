@@ -166,7 +166,7 @@ const selectDate = (day) => {
  * buttons, so the grid keeps one continuous rule whichever element renders.
  */
 const cellBorderClasses = (index) => [
-    'relative flex aspect-square flex-col items-center justify-center border-r border-b border-slate-100',
+    'relative flex aspect-square flex-col items-center justify-center border-r border-b border-border',
     (index + 1) % 7 === 0 ? 'border-r-0' : '', // Remove right border for last column
 ]
 
@@ -238,7 +238,7 @@ const formatDateFull = (dateStr) => {
             <!-- Calendar Grid -->
             <GlassCard class="overflow-hidden" padding="p-0">
                 <!-- Weekday Headers -->
-                <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 py-2">
+                <div class="border-border bg-surface-sunken/80 grid grid-cols-7 border-b py-2">
                     <div
                         v-for="day in weekDays"
                         :key="day"
@@ -268,15 +268,15 @@ const formatDateFull = (dateStr) => {
                             :aria-current="day.isToday ? 'date' : undefined"
                             :class="[
                                 ...cellBorderClasses(index),
-                                'focus-visible:ring-electric-orange cursor-pointer transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
-                                selectedDate?.dateStr === day.dateStr ? 'bg-slate-100 shadow-inner' : '',
+                                'focus-visible:ring-electric-orange hover:bg-surface-sunken cursor-pointer transition-all focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+                                selectedDate?.dateStr === day.dateStr ? 'bg-surface-sunken shadow-inner' : '',
                             ]"
                         >
                             <!-- Date Number -->
                             <span
                                 :class="[
                                     'flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold',
-                                    day.isToday ? 'bg-electric-orange text-white' : 'text-text-main',
+                                    day.isToday ? 'bg-electric-orange text-text-on-accent' : 'text-text-main',
                                 ]"
                                 aria-hidden="true"
                             >
@@ -360,7 +360,7 @@ const formatDateFull = (dateStr) => {
                                     <span class="text-text-main font-bold">Entrée Journal</span>
                                     <span
                                         v-if="selectedDayDetails.journal.mood_score"
-                                        class="text-text-main rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold"
+                                        class="text-text-main bg-surface-sunken rounded px-1.5 py-0.5 text-[10px] font-bold"
                                     >
                                         Humeur: {{ selectedDayDetails.journal.mood_score }}/10
                                     </span>

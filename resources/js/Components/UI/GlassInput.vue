@@ -177,7 +177,7 @@ defineExpose({
             :class="['font-display-label text-text-muted mb-2 block', { 'sr-only': hideLabel }]"
         >
             {{ label }}
-            <span v-if="isRequired" class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+            <span v-if="isRequired" class="text-accent-danger ml-0.5" aria-hidden="true">*</span>
         </label>
 
         <!-- Standard input -->
@@ -205,7 +205,7 @@ defineExpose({
                     'glass-input',
                     sizeClasses[size],
                     {
-                        'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
+                        'border-accent-danger focus:border-accent-danger focus:ring-accent-danger/20': error,
                         'pl-10': type === 'search',
                         'pr-12':
                             (hasClearButton || isPassword || hasSuffix) &&

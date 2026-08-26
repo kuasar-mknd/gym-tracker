@@ -75,7 +75,7 @@ const emit = defineEmits([
         <template #action-right>
             <button
                 @click="emit('delete', exercise.id)"
-                class="flex h-full w-full items-center justify-center bg-red-500 text-white"
+                class="bg-accent-danger text-text-on-accent flex h-full w-full items-center justify-center"
                 data-testid="delete-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
@@ -154,7 +154,7 @@ const emit = defineEmits([
                     <button
                         @click.stop="emit('delete', exercise.id)"
                         :dusk="`delete-exercise-btn-${exercise.id}`"
-                        class="text-text-muted focus-visible:ring-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:outline-none sm:flex"
+                        class="text-text-muted focus-visible:ring-electric-orange hover:bg-accent-danger/10 hover:text-accent-danger hidden size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:flex"
                         data-testid="delete-exercise-button"
                         :aria-label="`Supprimer ${exercise.name}`"
                     >

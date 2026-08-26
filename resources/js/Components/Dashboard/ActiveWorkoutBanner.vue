@@ -45,8 +45,10 @@ onUnmounted(() => {
         <!-- Pulse ring effect -->
         <div class="absolute top-4 right-4 flex items-center gap-2">
             <span class="relative flex size-3">
-                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75"></span>
-                <span class="relative inline-flex size-3 rounded-full bg-white"></span>
+                <span
+                    class="bg-surface-card absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                ></span>
+                <span class="bg-surface-card relative inline-flex size-3 rounded-full"></span>
             </span>
             <span class="text-xs font-black tracking-widest text-white/90 uppercase">En cours</span>
         </div>
@@ -54,7 +56,7 @@ onUnmounted(() => {
         <div class="relative z-10 flex items-center gap-4 p-5">
             <!-- Icon -->
             <div
-                class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
+                class="bg-surface-card/20 flex size-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
             >
                 <span
                     class="material-symbols-outlined text-3xl text-white"

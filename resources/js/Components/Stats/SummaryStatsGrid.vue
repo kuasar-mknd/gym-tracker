@@ -61,7 +61,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
     <div class="animate-slide-up grid grid-cols-4 gap-3" style="animation-delay: 0.25s">
         <!-- Number of Sessions Card -->
         <div
-            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
@@ -76,7 +76,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
         <!-- Number of Muscles Targeted Card -->
         <div
-            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
@@ -91,7 +91,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
         <!-- Number of Exercises Card -->
         <div
-            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Exercices</div>
             <div class="font-display text-text-main mt-1 text-2xl font-black">
@@ -101,7 +101,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
         <!-- Monthly Comparison Volume Change Card -->
         <div
-            class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
             <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
@@ -125,7 +125,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
                     v-else
                     :class="[
                         'font-display mt-1 text-2xl font-black',
-                        monthlyChange >= 0 ? 'text-emerald-500' : 'text-red-500',
+                        monthlyChange >= 0 ? 'text-trend-up' : 'text-trend-down',
                     ]"
                 >
                     {{ monthlyChange >= 0 ? '+' : '' }}{{ monthlyChange }}%

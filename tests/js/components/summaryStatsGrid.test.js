@@ -70,23 +70,23 @@ describe('SummaryStatsGrid monthly comparison', () => {
         const value = comparison(mountGrid({ monthlyComparison: { percentage: 12 } }))
 
         expect(value.text()).toBe('+12%')
-        expect(value.classes()).toContain('text-emerald-500')
-        expect(value.classes()).not.toContain('text-red-500')
+        expect(value.classes()).toContain('text-trend-up')
+        expect(value.classes()).not.toContain('text-trend-down')
     })
 
     it('paints a worse month red and does not add a plus in front of the minus', () => {
         const value = comparison(mountGrid({ monthlyComparison: { percentage: -8 } }))
 
         expect(value.text()).toBe('-8%')
-        expect(value.classes()).toContain('text-red-500')
-        expect(value.classes()).not.toContain('text-emerald-500')
+        expect(value.classes()).toContain('text-trend-down')
+        expect(value.classes()).not.toContain('text-trend-up')
     })
 
     it('treats an unchanged month as not-a-drop', () => {
         const value = comparison(mountGrid({ monthlyComparison: { percentage: 0 } }))
 
         expect(value.text()).toBe('+0%')
-        expect(value.classes()).toContain('text-emerald-500')
+        expect(value.classes()).toContain('text-trend-up')
     })
 
     /**
@@ -102,8 +102,8 @@ describe('SummaryStatsGrid monthly comparison', () => {
         const value = comparison(mountGrid())
 
         expect(value.text()).toBe('—')
-        expect(value.classes()).not.toContain('text-emerald-500')
-        expect(value.classes()).not.toContain('text-red-500')
+        expect(value.classes()).not.toContain('text-trend-up')
+        expect(value.classes()).not.toContain('text-trend-down')
     })
 
     it("en fait autant quand le serveur dit explicitement qu'il n'y a rien a comparer", () => {

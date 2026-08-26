@@ -188,7 +188,7 @@ const formatHistoryDuration = (start, end) => {
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('tools.index')"
-                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
+                    class="text-text-muted hover:text-electric-orange border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
@@ -276,7 +276,7 @@ const formatHistoryDuration = (start, end) => {
                          to a field, so without this the rejection is invisible. -->
                     <p
                         v-if="Object.keys(startForm.errors).length"
-                        class="text-sm font-bold text-red-500"
+                        class="text-accent-danger text-sm font-bold"
                         role="alert"
                         dusk="fasting-error"
                     >
@@ -317,7 +317,7 @@ const formatHistoryDuration = (start, end) => {
                     <div
                         v-for="fast in history.data"
                         :key="fast.id"
-                        class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]"
+                        class="border-border bg-surface-card/50 flex items-center justify-between rounded-2xl border p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]"
                     >
                         <div>
                             <p class="text-text-main font-medium">{{ fast.type }}</p>
@@ -335,7 +335,7 @@ const formatHistoryDuration = (start, end) => {
                                 type="button"
                                 @click="deleteFast(fast.id)"
                                 :aria-label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
-                                class="focus-visible:ring-electric-orange relative rounded-lg p-1 text-red-400 transition-colors before:absolute before:-inset-2.5 before:content-[''] hover:text-red-300 focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-electric-orange text-accent-danger hover:text-accent-danger/70 relative rounded-lg p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>

@@ -82,7 +82,9 @@ const formatMeasuredAt = (measuredAt) =>
         <div class="space-y-6">
             <!-- Chart -->
             <GlassCard class="animate-slide-up">
-                <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-purple-400 uppercase">History</h3>
+                <h3 class="font-display text-accent-tertiary mb-4 text-xs font-black tracking-[0.2em] uppercase">
+                    History
+                </h3>
                 <BodyPartHistoryChart v-if="history.length > 0" :data="history" :label="part" :unit="history[0].unit" />
             </GlassCard>
 
@@ -103,7 +105,9 @@ const formatMeasuredAt = (measuredAt) =>
                         />
                         <div class="space-y-1">
                             <label class="text-text-muted block text-sm font-medium">Unit</label>
-                            <div class="text-text-muted rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                            <div
+                                class="text-text-muted border-surface-card/10 bg-surface-card/5 rounded-xl border px-4 py-3"
+                            >
                                 {{ form.unit }}
                             </div>
                         </div>
@@ -147,7 +151,7 @@ const formatMeasuredAt = (measuredAt) =>
                             @click="deleteMeasurement(item.id)"
                             :aria-label="`Delete the ${formatMeasuredAt(item.measured_at)} entry`"
                             :dusk="`delete-measurement-${item.id}`"
-                            class="text-text-muted/30 rounded-lg p-2 opacity-100 transition hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                            class="text-text-muted/30 hover:text-accent-danger rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                         >
                             <svg
                                 class="h-5 w-5"
