@@ -84,13 +84,7 @@ it('ne laisse aucun utilitaire de la charte sans lecteur', function (): void {
                 return false;
             }
 
-            foreach ($familles as $famille) {
-                if (str_starts_with($utilitaire, $famille)) {
-                    return false;
-                }
-            }
-
-            return true;
+            return array_all($familles, fn (string $famille): bool => ! str_starts_with($utilitaire, $famille));
         }
     ));
 

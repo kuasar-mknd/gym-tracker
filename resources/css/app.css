@@ -215,13 +215,25 @@
      * piege de ce genre de table — remplacer une nuance par un role change la
      * luminosite, pas seulement le nom.
      *
-     * Les trois tons d'origine sont donc rendus, assombris du minimum
-     * necessaire pour que le blanc tienne 4,52:1. A l'oeil, le bandeau est
-     * celui d'avant ; a la mesure, il est lisible, ce qu'il n'a jamais ete.
+     * Ce sont les trois tons d'ORIGINE, a l'identique.
+     *
+     * Ils ont d'abord ete assombris ici pour que le blanc y tienne 4,5:1 —
+     * mesure, le blanc n'y rend que 2,5:1. Sam a demande les couleurs d'avant,
+     * et les a redemandees : c'est donc une decision assumee, pas un oubli.
+     *
+     * Ce qui la rend defendable : ce bandeau ne porte aucune information qu'on
+     * ne retrouve ailleurs. Il annonce une seance ouverte, l'annonce aussi par
+     * sa pastille « En cours », et mene a la page qui porte le detail. Le seuil
+     * AA protege la lecture d'un contenu ; il s'agit ici d'une banniere de
+     * navigation, et personne n'y lit longtemps.
+     *
+     * Si un jour on veut les deux, la reponse n'est pas d'assombrir ces trois
+     * tons : c'est de poser un voile sombre sous le texte, qui laisse le degrade
+     * intact la ou il se voit et donne au mot le fond qu'il lui faut.
      */
-    --color-session-from: #0b875e;
-    --color-session-via: #0e8578;
-    --color-session-to: #048297;
+    --color-session-from: #10b981;
+    --color-session-via: #14b8a6;
+    --color-session-to: #06b6d4;
 
     /*
      * --- Tendance ------------------------------------------------------
@@ -497,11 +509,6 @@
         'opsz' 24;
 }
 
-@utility liquid-bg-container {
-    position: relative;
-    overflow: hidden;
-}
-
 @utility liquid-bg-1 {
     position: absolute;
     width: 600px;
@@ -565,20 +572,6 @@
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.14);
-}
-
-@utility glass-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: 1.5rem;
-    box-shadow: 0 8px 32px rgb(from var(--color-shadow-ambient) r g b / 0.07);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    &:hover {
-        box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.1);
-    }
 }
 
 @utility iridescent-card {
@@ -819,12 +812,6 @@
     color: var(--color-text-on-dark-accent);
 }
 
-/* Rose, 4,59:1 en blanc. Le vif `#ff0080` reste la marque du record. */
-@utility secondary-fill {
-    background: var(--color-accent-secondary-fill);
-    color: var(--color-text-on-dark-accent);
-}
-
 /* Violet, 6,02:1 : assez sombre pour le blanc sans etre retouche. */
 @utility tertiary-fill {
     background: var(--color-accent-tertiary);
@@ -846,12 +833,6 @@
 /* Cyan, 11,61:1 en encre. */
 @utility info-fill {
     background: var(--color-accent-info);
-    color: var(--color-text-on-accent);
-}
-
-/* Jaune, 9,31:1 en encre. */
-@utility warning-fill {
-    background: var(--color-accent-warning);
     color: var(--color-text-on-accent);
 }
 
@@ -1035,19 +1016,6 @@
     }
 }
 
-@utility glass-header {
-    /* ===== PAGE HEADER ===== */
-    position: sticky;
-    top: 0;
-    background: rgb(from var(--color-surface-page) r g b / 0.8);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-bottom: 1px solid rgb(from var(--color-surface-card) r g b / 0.4);
-    padding: 1rem 1.25rem;
-    padding-top: calc(1rem + var(--safe-area-top));
-    z-index: 30;
-}
-
 @utility streak-badge {
     /* ===== STREAK BADGE ===== */
     position: relative;
@@ -1074,25 +1042,6 @@
         opacity: 0.3;
         z-index: -1;
     }
-}
-
-@utility glass-stat {
-    /* ===== STAT CARD ===== */
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: 1.5rem;
-    padding: 1.5rem;
-}
-
-@utility glass-stat-value {
-    font-family: 'Archivo', sans-serif;
-    font-size: 2.5rem;
-    font-weight: 900;
-    font-style: italic;
-    letter-spacing: -0.02em;
-    color: var(--color-text-main);
 }
 
 @utility glass-overlay {
@@ -1138,92 +1087,6 @@
 
     &:active {
         transform: scale(0.95);
-    }
-}
-
-@utility activity-card {
-    /* ===== ACTIVITY CARD ===== */
-    position: relative;
-    background: rgb(from var(--color-surface-card) r g b / 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid white;
-    border-radius: 1rem;
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 10px rgb(from var(--color-shadow-cast) r g b / 0.03);
-    transition: all 0.2s ease;
-
-    &:hover {
-        border-color: rgb(from var(--color-accent-tertiary) r g b / 0.3);
-    }
-
-    &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 6px;
-        height: 2.5rem;
-        border-radius: 0 4px 4px 0;
-    }
-
-    &[data-color='violet']::before {
-        background: var(--color-accent-tertiary);
-    }
-    &[data-color='orange']::before {
-        background: var(--color-accent-primary);
-    }
-    &[data-color='pink']::before {
-        background: var(--color-accent-secondary);
-    }
-    &[data-color='cyan']::before {
-        background: var(--color-accent-info);
-    }
-    &[data-color='green']::before {
-        background: var(--color-accent-state);
-    }
-}
-
-@utility rest-timer-bar {
-    /* ===== REST TIMER BAR ===== */
-    height: 2rem;
-    width: 100%;
-    background: white;
-    border: 1px solid var(--color-border);
-    border-radius: 0.5rem;
-    overflow: hidden;
-    padding: 0.25rem;
-}
-
-@utility rest-timer-bar-fill {
-    height: 100%;
-    background: var(--color-accent-state);
-    border-radius: 0.375rem;
-    box-shadow: 0 0 15px rgb(from var(--color-accent-state) r g b / 0.6);
-    position: relative;
-    transition: width 1s linear;
-
-    &::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-            45deg,
-            rgb(from var(--color-surface-card) r g b / 0.4) 25%,
-            transparent 25%,
-            transparent 50%,
-            rgb(from var(--color-surface-card) r g b / 0.4) 50%,
-            rgb(from var(--color-surface-card) r g b / 0.4) 75%,
-            transparent 75%,
-            transparent
-        );
-        background-size: 20px 20px;
-        opacity: 0.5;
-        animation: stripe-move 1s linear infinite;
     }
 }
 
@@ -1301,16 +1164,6 @@
     background-clip: text;
 }
 
-@utility font-display-title {
-    /* Display typography */
-    font-family: 'Archivo', sans-serif;
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
-    line-height: 0.9;
-}
-
 @utility font-display-label {
     font-family: 'Archivo', sans-serif;
     font-weight: 900;
@@ -1319,36 +1172,13 @@
     letter-spacing: 0.2em;
 }
 
-@utility pb-safe {
-    /* Safe area utilities */
-    padding-bottom: var(--safe-area-bottom);
-}
-
-@utility pt-safe {
-    padding-top: var(--safe-area-top);
-}
-
 @utility pt-main-safe {
     /* Additive utilities for main content areas */
     padding-top: calc(1.5rem + var(--safe-area-top));
 }
 
-@utility pt-main-safe-sm {
-    @media (min-width: 640px) {
-        padding-top: 1.5rem;
-    }
-}
-
-@utility pb-content-safe {
-    padding-bottom: calc(2rem + var(--safe-area-bottom));
-}
-
 @utility pb-main-safe {
     padding-bottom: calc(9rem + var(--safe-area-bottom));
-}
-
-@utility mb-nav {
-    margin-bottom: calc(100px + var(--safe-area-bottom));
 }
 
 @utility hide-scrollbar {
@@ -1361,11 +1191,6 @@
     }
 }
 
-@utility no-tap-highlight {
-    /* Touch highlight disable */
-    -webkit-tap-highlight-color: transparent;
-}
-
 @utility glow-orange {
     /* Glow effects */
     box-shadow: 0 0 20px rgb(from var(--color-accent-primary) r g b / 0.4);
@@ -1373,18 +1198,6 @@
 
 @utility glow-violet {
     box-shadow: 0 0 20px rgb(from var(--color-accent-tertiary) r g b / 0.4);
-}
-
-@utility glow-pink {
-    box-shadow: 0 0 20px rgb(from var(--color-accent-secondary) r g b / 0.4);
-}
-
-@utility glow-cyan {
-    box-shadow: 0 0 20px rgb(from var(--color-accent-info) r g b / 0.4);
-}
-
-@utility glow-neon {
-    box-shadow: 0 0 20px rgb(from var(--color-accent-state) r g b / 0.5);
 }
 
 /* ===================================

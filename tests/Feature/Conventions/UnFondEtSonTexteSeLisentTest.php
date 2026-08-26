@@ -56,7 +56,11 @@ function couplesFondEtTexte(): array
              * branches d'un ternaire ne sont jamais appliquees ensemble : les
              * lire comme un seul lot inventerait des couples qui n'existent pas.
              */
-            foreach (preg_split("/['\"]|\?|:(?![a-z-])|,/", $attribut) as $morceau) {
+            // `preg_split` rend `false` sur motif invalide : le repli vide vaut
+            // mieux qu'un `foreach` sur un booleen.
+            $morceaux = preg_split("/['\"]|\?|:(?![a-z-])|,/", $attribut);
+
+            foreach ($morceaux === false ? [] : $morceaux as $morceau) {
                 preg_match_all('/\bbg-([a-z][a-z0-9-]*)\b(?!\/)/', (string) $morceau, $fonds);
                 preg_match_all('/\btext-([a-z][a-z0-9-]*)\b(?!\/)/', (string) $morceau, $textes);
 

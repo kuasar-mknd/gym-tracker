@@ -47,7 +47,7 @@ onUnmounted(() => {
     <Link
         v-press
         :href="route('workouts.show', { workout: workout.id })"
-        class="animate-fade-in group border-accent-state/40 focus-visible:ring-accent-state relative block overflow-hidden rounded-3xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:outline-none active:scale-[0.98]"
+        class="animate-fade-in group border-session-from/40 focus-visible:ring-session-from relative block overflow-hidden rounded-3xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page focus-visible:outline-none active:scale-[0.98]"
         dusk="active-workout-banner"
     >
         <!-- Animated gradient background -->

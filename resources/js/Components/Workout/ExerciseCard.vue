@@ -91,7 +91,7 @@ const emit = defineEmits([
             :class="[
                 'group relative overflow-hidden transition-all duration-300',
                 'border-l-[6px]',
-                categoryBorderColors[category] || 'border-l-slate-300',
+                categoryBorderColors[category] || 'border-l-border-strong',
             ]"
             data-testid="exercise-card"
         >

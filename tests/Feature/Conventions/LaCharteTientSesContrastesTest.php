@@ -26,6 +26,8 @@ declare(strict_types=1);
  * elles ne portent aucun texte, donc la norme ne les regarde pas.
  */
 
+use Tests\Support\Contraste;
+
 /**
  * Les paires que la charte promet lisibles.
  *
@@ -66,7 +68,7 @@ it('tient les contrastes que la charte annonce', function (): void {
     $manques = [];
 
     foreach (pairesDeLaCharte() as [$devant, $derriere, $intitule]) {
-        $mesure = contraste(valeurDuJeton($devant), valeurDuJeton($derriere));
+        $mesure = Contraste::entre(Contraste::jeton($devant), Contraste::jeton($derriere));
 
         if ($mesure < 4.5) {
             $manques[] = sprintf('%s : %.2f:1 (il en faut 4,5)', $intitule, $mesure);
@@ -103,8 +105,8 @@ it('garde un orange lisible pour les fonds et un autre pour les mots', function 
      *  - `accent-primary-deep`, pour l'interieur des lettres, ou la difference ne
      *    se voit pas et ou elle decide de la lisibilite.
      */
-    $enFond = contraste('#ffffff', valeurDuJeton('accent-primary-fill'));
-    $enTexte = contraste(valeurDuJeton('accent-primary-deep'), valeurDuJeton('surface-sunken'));
+    $enFond = Contraste::entre('#ffffff', Contraste::jeton('accent-primary-fill'));
+    $enTexte = Contraste::entre(Contraste::jeton('accent-primary-deep'), Contraste::jeton('surface-sunken'));
 
     expect($enFond)->toBeGreaterThanOrEqual(4.5, sprintf(
         "L'orange de remplissage rend %.2f:1 avec du blanc, et le blanc est le seul texte que "
@@ -121,7 +123,7 @@ it('garde un orange lisible pour les fonds et un autre pour les mots', function 
 });
 
 it('refuse le vert d etat en couleur de texte', function (): void {
-    $enTexte = contraste(valeurDuJeton('accent-state'), valeurDuJeton('surface-card'));
+    $enTexte = Contraste::entre(Contraste::jeton('accent-state'), Contraste::jeton('surface-card'));
 
     expect($enTexte)->toBeLessThan(4.5, sprintf(
         'Le vert d etat rend %.2f:1 en texte sur une carte : il est fait pour etre un FOND ou une '

@@ -43,8 +43,25 @@ use Symfony\Component\Finder\Finder;
  */
 function couleursBrutesDansLeTexte(string $contenu): int
 {
-    $familles = 'bg|text|border|from|to|via|ring|shadow|divide|placeholder|fill|stroke|accent|caret|outline|decoration';
+    /*
+     * Le prefixe n'est pas enumere, il est quelconque.
+     *
+     * La liste explicite en portait seize et il en manquait : `ring-offset-` et
+     * `border-l-` ont traverse toute la conversion sans etre vus, parce qu'ils
+     * n'y figuraient pas. Une enumeration de prefixes est une liste a tenir a
+     * jour, et Tailwind en ajoute a chaque version.
+     *
+     * Ce qui identifie une couleur brute n'est pas son prefixe : c'est le
+     * couple `<famille-tailwind>-<nombre>` a la fin. On reconnait donc ca, quel
+     * que soit ce qui precede.
+     *
+     * `white` et `black` font exception et gardent une liste de prefixes, parce
+     * qu'ils sont ambigus : `font-black` est un POIDS de police. Sans cette
+     * restriction, le controle comptait 166 couleurs brutes dans un depot qui
+     * n'en a aucune — et un garde qui crie a tort finit desactive.
+     */
     $palette = 'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose';
+    $porteuses = 'bg|text|border|ring|from|via|to|fill|stroke|divide|placeholder|outline|decoration|caret|accent|shadow';
 
     $compte = 0;
 
@@ -52,7 +69,7 @@ function couleursBrutesDansLeTexte(string $contenu): int
 
     foreach ($attributs[1] as $attribut) {
         $compteDeLAttribut = preg_match_all(
-            '/\\b(?:'.$familles.')-(?:(?:'.$palette.')-\\d{2,3}|white|black)\\b/',
+            '/(?:[a-z][a-z-]*-(?:'.$palette.')-\\d{2,3}|(?:'.$porteuses.')-(?:[a-z]+-)?(?:white|black))\\b/',
             $attribut
         );
 

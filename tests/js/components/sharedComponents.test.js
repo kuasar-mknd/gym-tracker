@@ -821,7 +821,7 @@ describe('ExerciseCard', () => {
         known.unmount()
 
         const unknown = mountCard({ exercise: { ...EXERCISE, category: 'Cardio doux' } })
-        expect(unknown.get('[data-testid="exercise-card"]').classes()).toContain('border-l-slate-300')
+        expect(unknown.get('[data-testid="exercise-card"]').classes()).toContain('border-l-border-strong')
         unknown.unmount()
     })
 
