@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/Laravel-13-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13" />
   <img src="https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3" />
   <img src="https://img.shields.io/badge/Tailwind-CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
-  <img src="https://img.shields.io/badge/Inertia.js-2-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js" />
+  <img src="https://img.shields.io/badge/Inertia.js-3-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js" />
   <img src="https://img.shields.io/badge/PHPStan-Level%209-blue?style=for-the-badge" alt="PHPStan Level 9" />
 </p>
 
@@ -100,10 +100,30 @@ Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une is
 | Catégorie | Technologies |
 | --- | --- |
 | **Backend** | Laravel 13, PHP 8.5 (Strict Types), MySQL |
-| **Frontend** | Vue 3, Inertia.js 2, Tailwind CSS 4 |
+| **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4 |
 | **Testing** | Pest 4, PHPUnit 12, Laravel Dusk 8 |
 | **DevOps** | Laravel Sail (Docker), GitHub Actions |
 | **Monitoring** | Laravel Pulse, Sentry, Telescope |
+
+---
+
+## 🎨 Charte graphique
+
+Toutes les couleurs de l'application vivent dans **`resources/css/app.css`**, et nulle part ailleurs.
+Un composant y nomme un **rôle** — un accent, un danger, une catégorie — jamais une couleur.
+
+📄 **[docs/charte.html](docs/charte.html)** — les jetons, les surfaces appariées et leurs contrastes mesurés.
+La page est générée : `php artisan charte:publier`.
+
+Deux règles valent d'être connues avant de toucher au style :
+
+- **ne choisissez pas la couleur du texte posé sur un fond.** Employez un utilitaire apparié
+  (`accent-fill`, `state-fill`, `category-fill-*`…) : il pose les deux, et sa valeur est calculée.
+  Un jeton de texte unique ne peut pas convenir — l'orange porte du blanc à 4,7:1 et de l'encre à
+  3,8:1, le vert d'état exactement l'inverse ;
+- **une nuance Tailwind brute est refusée par les tests.** `bg-slate-800`, `#ff5500`, `rgba(…)` :
+  neuf gardes dans `tests/Feature/Conventions/` les interdisent et vérifient les contrastes à chaque
+  exécution.
 
 ---
 

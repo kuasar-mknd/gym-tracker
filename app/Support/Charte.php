@@ -91,9 +91,88 @@ final class Charte
     }
 
     /**
+     * Les jetons dont la valeur est une couleur PLEINE, triés par nom.
+     *
+     * Quelques-uns n'en sont pas : `surface-glass` vaut un `rgb(from …)`
+     * translucide, dont le contraste dépend de ce qu'il y a dessous. Les
+     * calculs les écartent plutôt que d'inventer un fond.
+     *
      * @return array<string, string>
      */
-    private static function lire(): array
+    public static function couleursPleines(): array
+    {
+        $pleines = array_filter(
+            self::tous(),
+            static fn (string $valeur): bool => preg_match('/^#[0-9a-fA-F]{6}$/', $valeur) === 1
+        );
+
+        ksort($pleines);
+
+        return $pleines;
+    }
+
+    /**
+     * La luminance relative d'une couleur, selon WCAG 2.1.
+     *
+     * Le calcul vivait en double — une fois dans les tests, une fois dans les
+     * scripts de génération. Deux copies d'une formule sont deux copies de trop,
+     * et c'est la lecon que cette charte a coutee : `Tests\Support\Contraste`
+     * délègue désormais ici.
+     */
+    public static function luminance(string $hexa): float
+    {
+        $hexa = ltrim($hexa, '#');
+
+        $canaux = [];
+
+        foreach ([0, 2, 4] as $decalage) {
+            $canal = hexdec(substr($hexa, $decalage, 2)) / 255;
+            $canaux[] = $canal <= 0.03928 ? $canal / 12.92 : (($canal + 0.055) / 1.055) ** 2.4;
+        }
+
+        return 0.2126 * $canaux[0] + 0.7152 * $canaux[1] + 0.0722 * $canaux[2];
+    }
+
+    /**
+     * Le rapport de contraste entre deux couleurs pleines.
+     */
+    public static function contraste(string $premier, string $second): float
+    {
+        $a = self::luminance($premier);
+        $b = self::luminance($second);
+
+        return (max($a, $b) + 0.05) / (min($a, $b) + 0.05);
+    }
+
+    /**
+     * Les utilitaires qui posent un fond ET son texte, avec les jetons qu'ils lisent.
+     *
+     * @return array<string, array{fond: string, texte: string}>
+     */
+    public static function surfacesAppariees(): array
+    {
+        preg_match_all(
+            '/@utility ([a-z][a-z0-9-]*) \{\s*background: var\(--color-([a-z0-9-]+)\);\s*color: var\(--color-([a-z0-9-]+)\);/',
+            self::feuille(),
+            $trouves,
+            PREG_SET_ORDER
+        );
+
+        $apparies = [];
+
+        foreach ($trouves as $trouve) {
+            $apparies[$trouve[1]] = ['fond' => $trouve[2], 'texte' => $trouve[3]];
+        }
+
+        ksort($apparies);
+
+        return $apparies;
+    }
+
+    /**
+     * Le contenu brut de la feuille.
+     */
+    public static function feuille(): string
     {
         $chemin = resource_path('css/app.css');
         $css = @file_get_contents($chemin);
@@ -102,7 +181,15 @@ final class Charte
             throw new RuntimeException("La charte est introuvable : {$chemin}");
         }
 
-        preg_match_all('/--color-([a-z0-9-]+):\s*([^;]+);/', $css, $trouves, PREG_SET_ORDER);
+        return $css;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function lire(): array
+    {
+        preg_match_all('/--color-([a-z0-9-]+):\s*([^;]+);/', self::feuille(), $trouves, PREG_SET_ORDER);
 
         $bruts = [];
 
