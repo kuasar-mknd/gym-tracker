@@ -4,7 +4,7 @@
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('profile.index')"
-                    class="text-text-muted hover:text-electric-orange focus-visible:ring-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-electric-orange focus-visible:ring-electric-orange border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     aria-label="Retour au profil"
                     v-press
                 >
@@ -18,7 +18,7 @@
             <!-- Plate Calculator -->
             <Link :href="route('plates.index')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-primary/20 text-accent-primary rounded-full p-4">
@@ -49,7 +49,7 @@
             <!-- 1RM Calculator -->
             <Link :href="route('tools.1rm')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-secondary/20 text-accent-secondary rounded-full p-4">
@@ -80,7 +80,7 @@
             <!-- Wilks Calculator -->
             <Link :href="route('tools.wilks')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-electric-orange/20 text-electric-orange rounded-full p-4">
@@ -111,7 +111,7 @@
             <!-- Macro Calculator -->
             <Link :href="route('tools.macro-calculator')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-emerald-500/20 p-4 text-emerald-500">
@@ -130,7 +130,7 @@
             <!-- Warmup Calculator -->
             <Link :href="route('tools.warmup')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="rounded-full bg-blue-500/20 p-4 text-blue-500">
@@ -161,10 +161,10 @@
             <!-- Water Tracker -->
             <Link :href="route('tools.water.index')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="rounded-full bg-cyan-500/20 p-4 text-cyan-500">
+                        <div class="bg-accent-info/20 text-accent-info rounded-full p-4">
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">water_drop</span>
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Suivi Hydratation</h3>
@@ -176,10 +176,10 @@
             <!-- Interval Timer -->
             <Link :href="route('tools.interval-timer.index')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="rounded-full bg-purple-500/20 p-4 text-purple-500">
+                        <div class="bg-accent-tertiary/20 text-accent-tertiary rounded-full p-4">
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">timer</span>
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Minuteur d'Intervalle</h3>
@@ -193,10 +193,10 @@
             <!-- Fasting Tracker -->
             <Link :href="route('tools.fasting.index')" class="group block" v-press>
                 <GlassCard
-                    class="relative h-full overflow-hidden rounded-3xl border border-white/20 bg-white/10 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="rounded-full bg-violet-500/20 p-4 text-violet-500">
+                        <div class="bg-accent-tertiary/20 text-accent-tertiary rounded-full p-4">
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">timer</span>
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Suivi de Jeûne</h3>

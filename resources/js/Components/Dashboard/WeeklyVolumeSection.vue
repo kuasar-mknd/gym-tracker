@@ -21,7 +21,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
 
 <template>
     <section
-        class="animate-slide-up relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-95"
+        class="animate-slide-up border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         style="animation-delay: 0.15s"
     >
         <div class="relative z-10 mb-6 flex items-start justify-between">
@@ -50,7 +50,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
                     v-if="comparison !== null"
                     :class="[
                         'mt-1 flex items-center justify-end gap-1 text-xs font-bold tracking-wide uppercase',
-                        comparison > 0 ? 'text-emerald-600' : comparison < 0 ? 'text-red-500' : 'text-text-muted',
+                        comparison > 0 ? 'text-trend-up' : comparison < 0 ? 'text-trend-down' : 'text-text-muted',
                     ]"
                 >
                     <span class="material-symbols-outlined text-sm font-bold" aria-hidden="true">

@@ -165,7 +165,7 @@ const goalDistribution = computed(() => {
 
                     <div
                         v-if="activeGoals.length === 0 && !showCreateForm"
-                        class="rounded-3xl border border-dashed border-slate-200 bg-white/30 p-6 py-12 text-center"
+                        class="border-border bg-surface-card/30 rounded-3xl border border-dashed p-6 py-12 text-center"
                     >
                         <p class="text-text-muted italic">
                             Aucun objectif actif pour le moment. C'est le moment d'en fixer un !

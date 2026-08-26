@@ -120,10 +120,10 @@ const menuGroups = [
             <!-- User Profile Quick View -->
             <div class="animate-fade-in flex items-center gap-4 py-2">
                 <div
-                    class="bg-gradient-main flex h-20 w-20 items-center justify-center rounded-3xl p-[3px] shadow-lg shadow-orange-500/20"
+                    class="bg-gradient-main shadow-accent-primary/20 flex h-20 w-20 items-center justify-center rounded-3xl p-[3px] shadow-lg"
                 >
                     <div
-                        class="flex h-full w-full items-center justify-center rounded-[1.2rem] bg-white text-3xl font-black"
+                        class="bg-surface-card flex h-full w-full items-center justify-center rounded-[1.2rem] text-3xl font-black"
                     >
                         {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                     </div>
@@ -138,7 +138,7 @@ const menuGroups = [
                             :href="route('logout')"
                             method="post"
                             as="button"
-                            class="text-xs font-black tracking-widest text-red-500 uppercase hover:text-red-600"
+                            class="text-accent-danger text-xs font-black tracking-widest uppercase hover:text-red-600"
                             data-testid="logout-button"
                         >
                             Déconnexion
@@ -168,7 +168,11 @@ const menuGroups = [
                         :href="route(item.route)"
                         class="group focus-visible:ring-electric-orange block rounded-2xl transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     >
-                        <GlassCard padding="p-4" :hover="true" class="rounded-2xl! border-white/40 bg-white/60">
+                        <GlassCard
+                            padding="p-4"
+                            :hover="true"
+                            class="border-surface-card/40 bg-surface-card/60 rounded-2xl!"
+                        >
                             <div class="flex items-center gap-4">
                                 <div
                                     :class="[

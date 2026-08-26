@@ -31,7 +31,7 @@
                                 :class="
                                     form.gender === 'male'
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80'
+                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Homme</span>
@@ -44,7 +44,7 @@
                                 :class="
                                     form.gender === 'female'
                                         ? 'border-hot-pink bg-hot-pink/20 text-hot-pink shadow-[0_0_15px_rgba(236,72,153,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80'
+                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -91,7 +91,7 @@
                                 :class="
                                     form.goal === goalOption
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80'
+                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
                                 <span class="font-display font-bold uppercase">{{
@@ -104,7 +104,7 @@
                     <!-- Result -->
                     <div
                         v-if="isValid"
-                        class="mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-200 bg-white/50 p-6 text-center"
+                        class="border-border bg-surface-card/50 mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border p-6 text-center"
                     >
                         <div>
                             <p class="text-text-muted text-sm font-bold tracking-wider uppercase">
@@ -118,7 +118,7 @@
                             <p class="text-text-muted text-xs font-semibold">TDEE: {{ calculatedResults.tdee }} kcal</p>
                         </div>
 
-                        <div class="grid w-full grid-cols-3 gap-4 border-t border-slate-200 pt-4">
+                        <div class="border-border grid w-full grid-cols-3 gap-4 border-t pt-4">
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Protéines</p>
                                 <p class="font-display text-text-main text-2xl font-black">
@@ -151,7 +151,7 @@
 
                             <p
                                 v-if="Object.keys(form.errors).length"
-                                class="mt-3 text-sm font-bold text-red-500"
+                                class="text-accent-danger mt-3 text-sm font-bold"
                                 role="alert"
                                 dusk="macro-error"
                             >
@@ -187,11 +187,11 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/50 p-4 transition-all hover:bg-white/80 hover:shadow-lg sm:flex-row sm:items-center"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 relative flex flex-col justify-between rounded-2xl border p-4 transition-all hover:shadow-lg sm:flex-row sm:items-center"
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="text-text-main flex h-12 w-16 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold"
+                                    class="text-text-main bg-surface-sunken flex h-12 w-16 items-center justify-center rounded-xl text-lg font-bold"
                                 >
                                     {{ entry.target_calories }}
                                 </div>
@@ -217,7 +217,7 @@
                                 type="button"
                                 aria-label="Supprimer l'entrée"
                                 title="Supprimer l'entrée"
-                                class="text-text-muted absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-red-500/20 hover:text-red-500 sm:static"
+                                class="text-text-muted hover:bg-accent-danger/20 hover:text-accent-danger absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full transition-colors sm:static"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>

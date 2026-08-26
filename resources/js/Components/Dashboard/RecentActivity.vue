@@ -32,7 +32,7 @@ const emit = defineEmits(['startWorkout'])
         <!-- Empty State -->
         <div
             v-if="recentWorkouts.length === 0"
-            class="rounded-3xl border border-white/20 bg-white/10 p-8 text-center backdrop-blur-md"
+            class="border-surface-card/20 bg-surface-card/10 rounded-3xl border p-8 text-center backdrop-blur-md"
         >
             <div class="mb-3 text-5xl" aria-hidden="true">🏋️</div>
             <p class="text-text-main font-bold">Aucune séance pour l'instant</p>
@@ -45,7 +45,7 @@ const emit = defineEmits(['startWorkout'])
         <!-- Activity Cards and Chart -->
         <div v-else class="flex flex-col gap-3">
             <div
-                class="relative mb-2 overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md"
+                class="border-surface-card/20 bg-surface-card/10 relative mb-2 overflow-hidden rounded-3xl border p-4 backdrop-blur-md"
             >
                 <div class="text-vivid-violet mb-4 text-[10px] font-black tracking-[0.2em] uppercase">
                     Durée des séances
@@ -58,7 +58,7 @@ const emit = defineEmits(['startWorkout'])
                 :key="workout.id"
                 v-press
                 :href="route('workouts.show', { workout: workout.id })"
-                class="group focus-visible:ring-electric-orange relative flex items-center justify-between rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
+                class="group focus-visible:ring-electric-orange border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative flex items-center justify-between rounded-3xl border p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
             >
                 <!-- Color indicator -->
                 <div
@@ -72,7 +72,7 @@ const emit = defineEmits(['startWorkout'])
                                 ? 'bg-hot-pink'
                                 : index === 3
                                   ? 'bg-cyan-pure'
-                                  : 'bg-green-500',
+                                  : 'bg-accent-state',
                     ]"
                 ></div>
 
@@ -81,10 +81,10 @@ const emit = defineEmits(['startWorkout'])
                         :class="[
                             'flex size-12 items-center justify-center rounded-xl border',
                             index === 0
-                                ? 'text-vivid-violet border-violet-100 bg-violet-50'
+                                ? 'text-vivid-violet border-accent-tertiary/20 bg-accent-tertiary/10'
                                 : index === 1
-                                  ? 'text-electric-orange border-orange-100 bg-orange-50'
-                                  : 'text-hot-pink border-pink-100 bg-pink-50',
+                                  ? 'text-electric-orange border-accent-primary/20 bg-accent-primary/10'
+                                  : 'text-hot-pink border-accent-secondary/20 bg-accent-secondary/10',
                         ]"
                     >
                         <span class="material-symbols-outlined" aria-hidden="true">

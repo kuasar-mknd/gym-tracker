@@ -53,7 +53,7 @@ describe('WeeklyVolumeSection', () => {
 
         expect(comparison.text()).toContain('trending_up')
         expect(comparison.text()).toContain('+12% vs sem. passée')
-        expect(comparison.classes()).toContain('text-emerald-600')
+        expect(comparison.classes()).toContain('text-trend-up')
     })
 
     it('reads a drop as a fall, unsigned by us and pointing down', async () => {
@@ -66,7 +66,7 @@ describe('WeeklyVolumeSection', () => {
         expect(comparison.text()).toContain('trending_down')
         expect(comparison.text()).toContain('-8% vs sem. passée')
         expect(comparison.text()).not.toContain('+')
-        expect(comparison.classes()).toContain('text-red-500')
+        expect(comparison.classes()).toContain('text-trend-down')
     })
 
     /**
@@ -88,8 +88,8 @@ describe('WeeklyVolumeSection', () => {
 
         expect(comparison.text()).toContain('Stable vs sem. passée')
         expect(comparison.text()).toContain('trending_flat')
-        expect(comparison.classes()).not.toContain('text-red-500')
-        expect(comparison.classes()).not.toContain('text-emerald-600')
+        expect(comparison.classes()).not.toContain('text-trend-down')
+        expect(comparison.classes()).not.toContain('text-trend-up')
     })
 
     it("ne compare rien quand il n'y a pas de semaine precedente", async () => {

@@ -74,7 +74,7 @@ const formatDate = (date) => {
                 class="flex flex-col items-center justify-center py-12 text-center"
             >
                 <div
-                    class="text-text-muted/20 mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100"
+                    class="text-text-muted/20 bg-surface-sunken mb-4 flex h-16 w-16 items-center justify-center rounded-full"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -155,7 +155,7 @@ const formatDate = (date) => {
                         <button
                             v-if="!notification.read_at"
                             @click="markAsRead(notification.id)"
-                            class="text-text-muted/20 hover:text-text-main rounded-lg p-1 hover:bg-slate-100/50"
+                            class="text-text-muted/20 hover:text-text-main hover:bg-surface-sunken/50 rounded-lg p-1"
                             title="Marquer comme lu"
                             aria-label="Marquer comme lu"
                         >

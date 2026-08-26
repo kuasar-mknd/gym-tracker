@@ -124,7 +124,7 @@ describe('reading the cupboard', () => {
 
         // Sitting exactly on the threshold already means "buy more"; warning
         // only below it means the warning arrives one dose too late.
-        expect(wrapper.get('p.text-2xl').classes()).toContain('text-red-500')
+        expect(wrapper.get('p.text-2xl').classes()).toContain('text-accent-danger')
     })
 
     it('leaves the stock neutral while there is still margin', async () => {
@@ -132,7 +132,7 @@ describe('reading the cupboard', () => {
             supplements: [supplement({ servings_remaining: 6, low_stock_threshold: 5 })],
         })
 
-        expect(wrapper.get('p.text-2xl').classes()).not.toContain('text-red-500')
+        expect(wrapper.get('p.text-2xl').classes()).not.toContain('text-accent-danger')
     })
 })
 

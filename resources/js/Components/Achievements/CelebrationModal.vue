@@ -101,7 +101,7 @@ const close = () => {
                 <!-- Modal. No role or aria-modal here: the <dialog> above is the
                      dialog, and nesting a second one would announce two. -->
                 <div
-                    class="animate-bounce-in relative w-full max-w-sm rounded-3xl border border-white/20 bg-white/10 p-6 text-center shadow-2xl backdrop-blur-md transition-all duration-300 hover:bg-white/20"
+                    class="animate-bounce-in border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl backdrop-blur-md transition-all duration-300"
                 >
                     <!-- Glow Effect -->
                     <div
@@ -119,7 +119,7 @@ const close = () => {
                         <!-- Icon -->
                         <div class="relative mb-4" aria-hidden="true">
                             <div
-                                class="animate-wobble flex h-24 w-24 items-center justify-center rounded-3xl border border-white/20 bg-white/10 text-6xl shadow-lg backdrop-blur-md"
+                                class="animate-wobble border-surface-card/20 bg-surface-card/10 flex h-24 w-24 items-center justify-center rounded-3xl border text-6xl shadow-lg backdrop-blur-md"
                             >
                                 {{ achievement.icon }}
                             </div>
@@ -143,7 +143,7 @@ const close = () => {
                             type="button"
                             @click="close"
                             dusk="celebration-dismiss"
-                            class="w-full rounded-2xl border border-white/20 bg-white/10 py-3 font-bold text-slate-800 shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
+                            class="border-surface-card/20 bg-surface-card/10 text-text-main hover:bg-surface-card/20 w-full rounded-2xl border py-3 font-bold shadow-lg backdrop-blur-md transition-all active:scale-95"
                         >
                             Génial ! 🤩
                         </button>

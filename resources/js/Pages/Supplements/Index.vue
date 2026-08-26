@@ -274,7 +274,7 @@ const formatDate = (dateString) => {
                                         v-press
                                         @click="deleteSupplement(supplement.id)"
                                         aria-label="Supprimer le complément"
-                                        class="text-text-muted min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors hover:text-red-500"
+                                        class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger flex items-center justify-center p-1 transition-colors"
                                     >
                                         <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                                     </button>
@@ -288,7 +288,7 @@ const formatDate = (dateString) => {
                                         class="font-display text-2xl font-black"
                                         :class="
                                             supplement.servings_remaining <= supplement.low_stock_threshold
-                                                ? 'text-red-500'
+                                                ? 'text-accent-danger'
                                                 : 'text-text-main'
                                         "
                                     >
@@ -306,14 +306,14 @@ const formatDate = (dateString) => {
 
                             <div
                                 v-if="supplement.dosage"
-                                class="text-text-muted mt-3 inline-flex items-center rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs font-medium"
+                                class="text-text-muted border-surface-card/10 bg-surface-card/5 mt-3 inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium"
                             >
                                 {{ supplement.dosage }}
                             </div>
                         </div>
 
                         <!-- Action Footer -->
-                        <div class="border-t border-white/5 bg-white/5 p-3">
+                        <div class="border-surface-card/5 bg-surface-card/5 border-t p-3">
                             <GlassButton
                                 @click="consume(supplement.id)"
                                 variant="primary"
