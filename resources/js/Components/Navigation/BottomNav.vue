@@ -1,6 +1,6 @@
 <script setup>
 import { Link, router } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 const navItems = [
@@ -20,13 +20,47 @@ const fabConfig = computed(() => {
     return { name: 'Séance', icon: 'play_arrow' }
 })
 
+/**
+ * Un verrou pendant la création, comme les trois autres déclencheurs.
+ *
+ * Ce bouton postait `workouts.store` sans rien bloquer : deux appuis rapprochés
+ * créaient deux séances, et le second écran s'ouvrait sur la mauvaise. Les trois
+ * autres chemins vers la même action se gardaient déjà — `QuickActions` par un
+ * `:disabled`, `Workouts/Index` par le `:loading` de GlassButton, et
+ * `Templates/Index` par un identifiant en cours dont le commentaire décrit
+ * exactement ce symptôme.
+ *
+ * Celui-ci était le seul sans garde, et c'est le plus facile à double-cliquer :
+ * il est au centre de la barre, sous le pouce.
+ */
+const creationEnCours = ref(false)
+
 const handleFabClick = () => {
     triggerHaptic('toggle')
+
     if (isWorkoutShow.value) {
         window.dispatchEvent(new CustomEvent('open-add-exercise'))
-    } else {
-        router.post(route('workouts.store'))
+
+        return
     }
+
+    if (creationEnCours.value) {
+        return
+    }
+
+    creationEnCours.value = true
+
+    router.post(
+        route('workouts.store'),
+        {},
+        {
+            // `onFinish` et non `onSuccess` : un échec doit rendre le bouton
+            // aussi, sinon un refus du serveur le condamne jusqu'au rechargement.
+            onFinish: () => {
+                creationEnCours.value = false
+            },
+        },
+    )
 }
 
 const isActiveRoute = (itemRoute) => {
@@ -43,7 +77,14 @@ const isActiveRoute = (itemRoute) => {
         <template v-for="item in navItems" :key="item.name">
             <!-- Center FAB -->
             <div v-if="item.isFab" class="relative">
-                <button v-press @click="handleFabClick" class="glass-nav-fab" :aria-label="fabConfig.name">
+                <button
+                    v-press
+                    @click="handleFabClick"
+                    class="glass-nav-fab"
+                    :aria-label="fabConfig.name"
+                    :disabled="creationEnCours"
+                    :aria-busy="creationEnCours"
+                >
                     <span class="material-symbols-outlined text-4xl font-black" aria-hidden="true">{{
                         fabConfig.icon
                     }}</span>

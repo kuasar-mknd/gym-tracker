@@ -93,6 +93,7 @@ const goalDistribution = computed(() => {
              create action has to be mirrored here or it is unreachable on phones. -->
         <template #header-actions>
             <GlassButton
+                :variant="showCreateForm ? 'secondary' : 'primary'"
                 size="sm"
                 dusk="create-goal-btn"
                 :aria-label="showCreateForm ? 'Annuler la création d\'objectif' : 'Nouvel objectif'"
@@ -110,7 +111,11 @@ const goalDistribution = computed(() => {
                     <h2 class="text-text-main text-2xl font-bold tracking-tight">Mes Objectifs 🎯</h2>
                     <p class="text-text-muted text-sm">Fixe tes cibles et dépasse tes limites.</p>
                 </div>
-                <GlassButton dusk="create-goal-btn-desktop" @click="showCreateForm = !showCreateForm">
+                <GlassButton
+                    :variant="showCreateForm ? 'secondary' : 'primary'"
+                    dusk="create-goal-btn-desktop"
+                    @click="showCreateForm = !showCreateForm"
+                >
                     {{ showCreateForm ? 'Annuler' : 'Nouvel Objectif' }}
                 </GlassButton>
             </div>

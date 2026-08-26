@@ -48,15 +48,7 @@ const deleteTemplate = (templateId) => {
         <template #header-actions>
             <Link :href="route('templates.create')">
                 <GlassButton variant="primary" size="sm" aria-label="Nouveau modèle">
-                    <svg
-                        class="h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
+                    <span class="material-symbols-outlined text-base" aria-hidden="true">add</span>
                 </GlassButton>
             </Link>
         </template>
@@ -66,15 +58,7 @@ const deleteTemplate = (templateId) => {
                 <h2 class="text-text-main text-xl font-semibold">Mes Modèles</h2>
                 <Link :href="route('templates.create')">
                     <GlassButton variant="primary">
-                        <svg
-                            class="mr-2 h-4 w-4"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
+                        <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">add</span>
                         Nouveau Modèle
                     </GlassButton>
                 </Link>

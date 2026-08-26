@@ -140,32 +140,16 @@ const journalsByMonth = computed(() => {
 
     <AuthenticatedLayout page-title="Journal">
         <template #header-actions>
-            <GlassButton size="sm" @click="openAddForm">
-                <svg
-                    class="h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
+            <GlassButton variant="primary" size="sm" @click="openAddForm">
+                <span class="material-symbols-outlined text-base" aria-hidden="true">add</span>
             </GlassButton>
         </template>
 
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Journal</h2>
-                <GlassButton @click="openAddForm" aria-label="Nouvelle entrée">
-                    <svg
-                        class="mr-2 h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
+                <GlassButton variant="primary" @click="openAddForm" aria-label="Nouvelle entrée">
+                    <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">add</span>
                     Ajouter
                 </GlassButton>
             </div>

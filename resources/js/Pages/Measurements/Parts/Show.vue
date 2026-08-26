@@ -37,7 +37,7 @@ const submit = () => {
 }
 
 const deleteMeasurement = (id) => {
-    if (confirm('Delete this entry?')) {
+    if (confirm('Supprimer cette entrée ?')) {
         useForm({}).delete(route('body-parts.destroy', { bodyPartMeasurement: id }))
     }
 }
@@ -63,18 +63,16 @@ const formatMeasuredAt = (measuredAt) =>
     <AuthenticatedLayout :page-title="part">
         <template #header-actions>
             <Link :href="route('body-parts.index')">
-                <GlassButton size="sm" variant="secondary"> Back </GlassButton>
+                <GlassButton size="sm" variant="secondary"> Retour </GlassButton>
             </Link>
         </template>
 
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">{{ part }}</h2>
-                <GlassButton @click="showAddForm = !showAddForm">
-                    <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add
+                <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
+                    <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">add</span>
+                    Ajouter
                 </GlassButton>
             </div>
         </template>
@@ -88,23 +86,23 @@ const formatMeasuredAt = (measuredAt) =>
                 <BodyPartHistoryChart v-if="history.length > 0" :data="history" :label="part" :unit="history[0].unit" />
             </GlassCard>
 
-            <!-- Add Form -->
+            <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold">New Measurement</h3>
+                <h3 class="text-text-main mb-4 font-semibold">Nouvelle mesure</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <GlassInput
                             v-model="form.value"
                             type="number"
                             step="0.1"
-                            label="Value"
+                            label="Valeur"
                             placeholder="0.00"
                             :error="form.errors.value"
                             inputmode="decimal"
                             required
                         />
                         <div class="space-y-1">
-                            <label class="text-text-muted block text-sm font-medium">Unit</label>
+                            <label class="text-text-muted block text-sm font-medium">Unité</label>
                             <div
                                 class="text-text-muted border-surface-card/10 bg-surface-card/5 rounded-xl border px-4 py-3"
                             >
@@ -121,10 +119,10 @@ const formatMeasuredAt = (measuredAt) =>
                         required
                     />
 
-                    <GlassInput v-model="form.notes" label="Notes (optional)" :error="form.errors.notes" />
+                    <GlassInput v-model="form.notes" label="Notes (facultatif)" :error="form.errors.notes" />
 
                     <GlassButton type="submit" variant="primary" class="w-full" :loading="form.processing">
-                        Save
+                        Enregistrer
                     </GlassButton>
                 </form>
             </GlassCard>
@@ -149,7 +147,7 @@ const formatMeasuredAt = (measuredAt) =>
                         <button
                             type="button"
                             @click="deleteMeasurement(item.id)"
-                            :aria-label="`Delete the ${formatMeasuredAt(item.measured_at)} entry`"
+                            :aria-label="`Supprimer la mesure du ${formatMeasuredAt(item.measured_at)}`"
                             :dusk="`delete-measurement-${item.id}`"
                             class="text-text-muted/30 hover:text-accent-danger-deep rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                         >

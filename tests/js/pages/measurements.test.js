@@ -111,8 +111,26 @@ const mountPage = async (page, props) => {
 }
 
 /** Clicks a button by the label the user reads on it. */
+/**
+ * Le texte qu'un humain LIT dans un élément.
+ *
+ * `wrapper.text()` rend tout, y compris les ligatures Material portées par un
+ * `aria-hidden`. Un bouton « Ajouter » précédé de l'icône `add` s'y lit donc
+ * « add Ajouter », et un test qui compare au libellé échoue sur un bouton
+ * parfaitement correct — ce qui fait douter du code plutôt que du test.
+ *
+ * Un lecteur d'écran ignore ces nœuds ; ce comparateur les ignore aussi.
+ */
+const texteVisible = (candidat) => {
+    const copie = candidat.element.cloneNode(true)
+
+    copie.querySelectorAll('[aria-hidden="true"]').forEach((noeud) => noeud.remove())
+
+    return (copie.textContent ?? '').trim()
+}
+
 const click = async (wrapper, label) => {
-    const button = wrapper.findAll('button').find((candidate) => candidate.text().trim() === label)
+    const button = wrapper.findAll('button').find((candidate) => texteVisible(candidate) === label)
 
     expect(button, `no button labelled "${label}"`).toBeTruthy()
 
@@ -402,7 +420,7 @@ describe('Measurements/Parts/Index part picker', () => {
     it('writes the tapped part into the field the form actually sends', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
 
-        await click(wrapper, 'Add')
+        await click(wrapper, 'Ajouter')
         await click(wrapper, 'Waist')
 
         expect(wrapper.vm.form.part).toBe('Waist')
@@ -411,7 +429,7 @@ describe('Measurements/Parts/Index part picker', () => {
     it('highlights the one chip that matches the field, so the choice is visible', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
 
-        await click(wrapper, 'Add')
+        await click(wrapper, 'Ajouter')
         await click(wrapper, 'Chest')
 
         const highlighted = wrapper
@@ -425,7 +443,7 @@ describe('Measurements/Parts/Index part picker', () => {
 
 describe('Measurements/Parts/Index add form', () => {
     const fillAndSubmit = async (wrapper) => {
-        await click(wrapper, 'Add')
+        await click(wrapper, 'Ajouter')
         Object.assign(wrapper.vm.form, {
             part: 'Waist',
             value: '82.5',
@@ -529,9 +547,9 @@ describe('Measurements/Parts/Index empty state', () => {
     it('says the list is empty and offers the way out of it', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: [], commonParts: COMMON_PARTS })
 
-        expect(wrapper.text()).toContain('No measurements recorded.')
+        expect(wrapper.text()).toContain('Aucune mesure enregistrée.')
 
-        await click(wrapper, 'Start')
+        await click(wrapper, 'Commencer')
 
         expect(wrapper.find('form').exists()).toBe(true)
     })
@@ -539,8 +557,8 @@ describe('Measurements/Parts/Index empty state', () => {
     it('stops saying the list is empty while a measurement is being typed into it', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: [], commonParts: COMMON_PARTS })
 
-        await click(wrapper, 'Start')
+        await click(wrapper, 'Commencer')
 
-        expect(wrapper.text()).not.toContain('No measurements recorded.')
+        expect(wrapper.text()).not.toContain('Aucune mesure enregistrée.')
     })
 })

@@ -1,3 +1,27 @@
+<script>
+/**
+ * Les variants et tailles que ce composant sait rendre.
+ *
+ * Ils vivent dans un bloc `<script>` ORDINAIRE et non dans `<script setup>` :
+ * Vue hisse `defineProps()` hors de la fonction de montage, donc un validateur
+ * ne peut pas lire une constante déclarée à côté de lui. Le compilateur le dit
+ * clairement, et c'est la solution qu'il recommande.
+ *
+ * Le `validator` fait crier Vue en développement quand une valeur n'y figure
+ * pas, au lieu de rendre un bouton fade. Sans lui, `variant="accent"` a vécu
+ * dans `Tools/Fasting/Index.vue` sans que rien ne le signale : aucune branche ne
+ * traitait cette valeur, le bouton retombait sur `default`, et « Terminer le
+ * jeûne » s'affichait en verre blanc à côté de son jumeau « Commencer », vert —
+ * les deux branches du même `v-if`, deux apparences pour la même action.
+ *
+ * C'est le mécanisme d'une classe CSS inexistante, transposé aux props : la
+ * valeur est acceptée, rien ne s'applique, et personne n'est prévenu.
+ */
+export const VARIANTS = ['default', 'primary', 'secondary', 'neon', 'gradient-border', 'danger', 'ghost']
+
+export const TAILLES = ['sm', 'md', 'lg', 'xl']
+</script>
+
 <script setup>
 defineProps({
     variant: {
@@ -14,11 +38,13 @@ defineProps({
          * l'objet de classes, donc ses dix boutons — six « Annuler » — rendaient
          * exactement comme `default`. Deux degres declares, un seul visible.
          */
-        default: 'default', // default | primary | secondary | neon | gradient-border | danger | ghost
+        default: 'default',
+        validator: (valeur) => VARIANTS.includes(valeur),
     },
     size: {
         type: String,
-        default: 'md', // sm | md | lg | xl
+        default: 'md',
+        validator: (valeur) => TAILLES.includes(valeur),
     },
     loading: {
         type: Boolean,
