@@ -9,7 +9,7 @@
                     class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                 >
                     Suivi<br />
-                    <span class="text-gradient from-accent-info to-accent-info">Hydratation</span>
+                    <span class="text-gradient from-accent-info to-accent-tertiary">Hydratation</span>
                 </h1>
                 <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">Reste Hydraté</p>
             </header>
@@ -35,7 +35,7 @@
                                 r="45"
                                 fill="transparent"
                                 stroke="currentColor"
-                                class="text-border"
+                                class="text-border-strong"
                                 stroke-width="8"
                                 stroke-linecap="round"
                             />
@@ -54,7 +54,7 @@
                             />
                             <defs>
                                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" style="stop-color: var(--color-accent-info)" />
+                                    <stop offset="0%" style="stop-color: var(--color-accent-info-deep)" />
                                     <stop offset="100%" style="stop-color: var(--color-accent-tertiary)" />
                                 </linearGradient>
                             </defs>

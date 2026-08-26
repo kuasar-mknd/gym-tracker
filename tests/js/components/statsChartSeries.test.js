@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { jeton } from '@/Utils/couleurs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 /**
@@ -96,8 +96,8 @@ describe('BodyPartDiffChart series', () => {
     it('paints a gain green and a loss red', () => {
         const paint = seriesOf(mountChart(), 'Bar').datasets[0].backgroundColor
 
-        expect(stopsFor(paint, 2)).toEqual([jeton('accent-state'), jeton('trend-up')])
-        expect(stopsFor(paint, -1.5)).toEqual([jeton('accent-danger'), jeton('accent-danger-deep')])
+        expect(stopsFor(paint, 2)).toEqual([jeton('trend-up'), jetonTransparent('trend-up', 0.55)])
+        expect(stopsFor(paint, -1.5)).toEqual([jeton('trend-down'), jetonTransparent('trend-down', 0.55)])
     })
 })
 

@@ -14,7 +14,12 @@ import { config } from '@vue/test-utils'
  *
  * Poser ici une liste de variables écrite à la main aurait recréé la panne que
  * toute cette charte existe pour supprimer : une deuxième copie des valeurs,
- * libre de diverger. On lit donc `app.css`, le registre lui-même. Un test qui
+ * libre de diverger. Ce fichier en portait justement une — huit couleurs de
+ * catégorie en dur, posées APRÈS ce chargeur, donc l'écrasant. Elle datait
+ * d'avant la conversion : `category-core` y valait encore un magenta et
+ * `category-cardio` un vert acide, deux valeurs que cette branche venait de
+ * remplacer. Toute la suite JS tournait donc sur des couleurs que le dépôt
+ * n'avait plus, sans qu'un seul test ne tombe. On lit donc `app.css`, le registre lui-même. Un test qui
  * vérifie qu'un graphique emploie l'orange de la charte vérifie alors le vrai
  * orange, et le jour où il change, il change des deux côtés à la fois.
  */
@@ -135,30 +140,3 @@ config.global.directives = { ...config.global.directives, press: {} }
  * les assertions de structure.
  */
 config.global.components = { ...config.global.components, Head: { render: () => null } }
-
-/*
- * La charte, sous jsdom.
- *
- * `Utils/couleurs.js` lit les jetons par `getComputedStyle` sur la racine. Une
- * feuille Tailwind n'est pas chargee ici, donc sans ces declarations tout
- * graphique dessinerait avec une couleur vide.
- *
- * Ces valeurs ne sont PAS une copie de la charte : elles n'ont pas a coincider
- * avec elle, elles ont seulement a exister pour que le mecanisme de lecture
- * soit exerce. `LaCharteEstLueParLeJsTest` verifie la correspondance des NOMS
- * cote depot ; c'est la que la charte est tenue.
- */
-const JETONS_DE_TEST = {
-    'category-chest': '#ff5500',
-    'category-back': '#8800ff',
-    'category-shoulders': '#ff0080',
-    'category-arms': '#00e5ff',
-    'category-legs': '#ccff00',
-    'category-core': '#f5009b',
-    'category-cardio': '#c0eb00',
-    'category-other': '#64748b',
-}
-
-for (const [nom, valeur] of Object.entries(JETONS_DE_TEST)) {
-    document.documentElement.style.setProperty(`--color-${nom}`, valeur)
-}

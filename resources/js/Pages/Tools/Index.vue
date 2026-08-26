@@ -114,7 +114,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-state/20 text-trend-up rounded-full p-4">
+                        <div class="bg-accent-state/20 text-accent-state-deep rounded-full p-4">
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true"
                                 >local_fire_department</span
                             >
@@ -179,7 +179,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-tertiary/20 text-accent-tertiary rounded-full p-4">
+                        <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">timer</span>
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Minuteur d'Intervalle</h3>
@@ -196,7 +196,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-tertiary/20 text-accent-tertiary rounded-full p-4">
+                        <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">timer</span>
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Suivi de Jeûne</h3>

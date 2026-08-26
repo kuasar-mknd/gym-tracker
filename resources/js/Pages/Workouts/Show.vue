@@ -1949,7 +1949,7 @@ onUnmounted(() => {
                             <span class="text-text-muted mb-2 block text-sm italic"
                                 >Aucun résultat pour "{{ searchQuery }}"</span
                             >
-                            <span class="text-trend-up font-bold tracking-wider uppercase"
+                            <span class="text-accent-state-deep font-bold tracking-wider uppercase"
                                 >Créer "{{ searchQuery }}"</span
                             >
                         </button>

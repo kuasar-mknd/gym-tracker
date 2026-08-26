@@ -250,7 +250,7 @@ const formatDate = (dateString) => {
                             <div class="mb-2 flex items-start justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="from-accent-info to-accent-info text-text-on-dark-accent flex size-10 items-center justify-center rounded-lg bg-linear-to-br shadow-md"
+                                        class="info-fill flex size-10 items-center justify-center rounded-lg shadow-md"
                                     >
                                         <span class="material-symbols-outlined" aria-hidden="true">medication</span>
                                     </div>

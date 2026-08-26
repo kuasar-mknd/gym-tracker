@@ -6,6 +6,7 @@ namespace App\Support;
 
 use Illuminate\Support\Facades\Cache;
 use RuntimeException;
+use Throwable;
 
 /**
  * La charte graphique, lue depuis PHP.
@@ -67,8 +68,26 @@ final class Charte
             return self::lire();
         }
 
-        /** @var array<string, string> */
-        return Cache::rememberForever('charte.jetons', static fn (): array => self::lire());
+        /*
+         * Le cache est une COMMODITE, jamais une dependance.
+         *
+         * Le premier lecteur de cette classe est la page d'erreur 500 — donc la
+         * page qui s'affiche precisement quand quelque chose vient de tomber, et
+         * ce quelque chose est souvent la base ou Redis, ou vit le cache. Un
+         * `Cache::rememberForever()` nu y aurait leve une seconde exception
+         * pendant le rendu de la premiere, et l'utilisateur aurait recu une page
+         * blanche a la place du message.
+         *
+         * On relit donc la feuille quand le cache est indisponible. C'est plus
+         * lent, et c'est exactement le moment ou la lenteur n'a aucune
+         * importance.
+         */
+        try {
+            /** @var array<string, string> */
+            return Cache::rememberForever('charte.jetons', static fn (): array => self::lire());
+        } catch (Throwable) {
+            return self::lire();
+        }
     }
 
     /**

@@ -138,7 +138,14 @@
      * Celui-ci n'existe QUE pour l'interieur des lettres, ou la difference ne se
      * remarque pas et ou elle decide de la lisibilite.
      */
-    --color-accent-primary-deep: #c64200;
+    --color-accent-primary-deep: #b63c00;
+
+    /*
+     * Le violet LISIBLE. Le vif tient sur une carte blanche (6,02:1) mais tombe
+     * a 4,15:1 des qu'on l'ecrit sur un lavis de lui-meme a 20 %, ce que font
+     * cinq boutons de la page Outils.
+     */
+    --color-accent-tertiary-deep: #8100f2;
 
     /* Le deuxieme et le troisieme du degrade. Identite, pas information. */
     --color-accent-secondary: #ff0080;
@@ -153,7 +160,7 @@
      * Et le rose LISIBLE, pour les libelles qui s'ecrivent dedans. Le vif rend
      * 3.45:1 sur la surface la moins favorable, celui-ci 4.52:1.
      */
-    --color-accent-secondary-deep: #db006e;
+    --color-accent-secondary-deep: #bd005f;
     --color-accent-tertiary: #8800ff;
 
     /*
@@ -171,6 +178,11 @@
 
     /*
      * Sa version LISIBLE, la seule qui ait le droit de porter du texte.
+     *
+     * Calculee contre le PIRE fond qu'elle rencontre : un lavis de son propre
+     * accent a 20 %, pose sur une carte. Elle l'a d'abord ete contre la surface
+     * creuse, et trente-deux badges tombaient alors entre 3,5 et 4,5:1 — un
+     * ecart qui ne se voit pas et qui rend la lecture penible.
      * Le vif rend 1.18:1 sur une carte ; celui-ci 4.58:1.
      */
     --color-accent-state-deep: #607900;
@@ -198,7 +210,7 @@
      * Sa version LISIBLE, la seule qui ait le droit de porter du texte.
      * Le vif rend 1.92:1 sur une carte ; celui-ci 4.60:1.
      */
-    --color-accent-warning-deep: #8d6b04;
+    --color-accent-warning-deep: #8a6803;
 
     /*
      * --- La seance en cours ---------------------------------------------
@@ -250,8 +262,8 @@
      * 2,54:1 sur une carte et #ef4444 3,76:1 — les deux echouent, et le second
      * echouait deja avant la charte.
      */
-    --color-trend-up: #0a8059;
-    --color-trend-down: #c81111;
+    --color-trend-up: #08724f;
+    --color-trend-down: #bd1010;
 
     /*
      * --- Categories d'exercice ------------------------------------------
@@ -414,10 +426,23 @@
         var(--color-accent-primary) 0%,
         var(--color-accent-tertiary) 100%
     );
+    /*
+     * Il porte « magenta » dans son nom, alors il doit en contenir.
+     *
+     * Il a un temps pointe vers `category-core`, qui valait un magenta au moment
+     * de la conversion — et qui est devenu BLEU dans le meme lot, parce que ce
+     * jeton-la se confondait avec le rose des epaules. Le degrade est alors
+     * passe de cyan-magenta a cyan-bleu, soit presque plus de degrade du tout,
+     * sous un nom devenu faux.
+     *
+     * La lecon : un degrade DECORATIF ne doit pas emprunter un jeton dont le
+     * role est ailleurs. Une couleur de categorie change quand les categories
+     * doivent se distinguer, ce qui n'a rien a voir avec ce titre.
+     */
     --background-image-gradient-cyan-magenta: linear-gradient(
         135deg,
         var(--color-accent-info) 0%,
-        var(--color-category-core) 100%
+        var(--color-accent-secondary) 100%
     );
 
     @keyframes fade-in {
@@ -872,7 +897,7 @@
         inset: 0;
         border-radius: 1rem;
         padding: 2px;
-        background: var(--gradient-main);
+        background: var(--background-image-gradient-main);
 
         /*
          * Les deux `#fff` ci-dessous ne sont PAS des couleurs : c'est un
@@ -1001,7 +1026,7 @@
     top: -1.25rem;
     width: 4.5rem;
     height: 4.5rem;
-    background: var(--gradient-main);
+    background: var(--background-image-gradient-main);
     border: 4px solid white;
     border-radius: 50%;
     display: flex;
@@ -1146,19 +1171,25 @@
 
 @utility glass-badge-primary {
     background: rgb(from var(--color-accent-primary) r g b / 0.1);
-    color: var(--color-accent-primary);
+
+    /*
+     * `-deep` et non le vif : sur son propre lavis a 10 %, l'orange vif rend
+     * 2,86:1. Le lavis est presque blanc, donc le seuil s'y applique comme sur
+     * une carte.
+     */
+    color: var(--color-accent-primary-deep);
 }
 
 @utility text-gradient {
     /* Text gradient utility */
-    background: var(--gradient-main);
+    background: var(--background-image-gradient-main);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
 
 @utility text-gradient-cyan-magenta {
-    background: var(--gradient-cyan-magenta);
+    background: var(--background-image-gradient-cyan-magenta);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1213,20 +1244,6 @@
         --glass-border: rgb(from var(--color-surface-card) r g b / 0.8);
         --glass-blur: 20px;
         --glass-blur-strong: 24px;
-
-        /* Primary Gradient (Orange → Pink → Violet) */
-        --gradient-main: linear-gradient(
-            135deg,
-            var(--color-accent-primary) 0%,
-            var(--color-accent-secondary) 50%,
-            var(--color-accent-tertiary) 100%
-        );
-        --gradient-orange-violet: linear-gradient(
-            135deg,
-            var(--color-accent-primary) 0%,
-            var(--color-accent-tertiary) 100%
-        );
-        --gradient-cyan-magenta: linear-gradient(135deg, var(--color-accent-info) 0%, var(--color-category-core) 100%);
 
         /* Spacing for mobile touch */
         --touch-min: 44px;

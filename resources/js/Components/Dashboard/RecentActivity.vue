@@ -23,7 +23,7 @@ const emit = defineEmits(['startWorkout'])
             <h3 class="text-text-muted text-xs font-black tracking-[0.2em] uppercase">Activité Récente</h3>
             <Link
                 :href="route('workouts.index')"
-                class="text-accent-primary-deep hover:text-accent-tertiary focus-visible:ring-accent-primary rounded-sm text-xs font-bold tracking-wider uppercase transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                class="text-accent-primary-deep hover:text-accent-tertiary-deep focus-visible:ring-accent-primary rounded-sm text-xs font-bold tracking-wider uppercase transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
                 Voir tout
             </Link>
@@ -47,7 +47,7 @@ const emit = defineEmits(['startWorkout'])
             <div
                 class="border-surface-card/20 bg-surface-card/10 relative mb-2 overflow-hidden rounded-3xl border p-4 backdrop-blur-md"
             >
-                <div class="text-accent-tertiary mb-4 text-[10px] font-black tracking-[0.2em] uppercase">
+                <div class="text-accent-tertiary-deep mb-4 text-[10px] font-black tracking-[0.2em] uppercase">
                     Durée des séances
                 </div>
                 <RecentWorkoutsTimelineChart :data="recentWorkouts" />
@@ -81,7 +81,7 @@ const emit = defineEmits(['startWorkout'])
                         :class="[
                             'flex size-12 items-center justify-center rounded-xl border',
                             index === 0
-                                ? 'text-accent-tertiary border-accent-tertiary/20 bg-accent-tertiary/10'
+                                ? 'text-accent-tertiary-deep border-accent-tertiary/20 bg-accent-tertiary/10'
                                 : index === 1
                                   ? 'text-accent-primary-deep border-accent-primary/20 bg-accent-primary/10'
                                   : 'text-accent-secondary-deep border-accent-secondary/20 bg-accent-secondary/10',

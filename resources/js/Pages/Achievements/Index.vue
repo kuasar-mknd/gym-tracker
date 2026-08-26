@@ -97,7 +97,15 @@ const filteredAchievements = computed(() => {
                         <div
                             class="bg-text-main/80 pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[20px] p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
-                            <span class="text-accent-primary-deep mb-1 text-xs font-bold">{{ achievement.name }}</span>
+                            <!--
+                                Le nom s'ecrit en CLAIR : cette infobulle est un
+                                voile sombre (`bg-text-main/80`), pas une carte.
+                                `accent-primary-deep` y rendait 1,91:1 — il est
+                                fait pour ecrire sur les surfaces claires, et le
+                                garde qui verifie ca ne peut pas connaitre un
+                                fond pose par une classe voisine.
+                            -->
+                            <span class="text-text-on-dark-accent mb-1 text-xs font-bold">{{ achievement.name }}</span>
                             <span class="text-text-on-dark-accent/80 text-[10px] leading-tight">{{
                                 achievement.description
                             }}</span>

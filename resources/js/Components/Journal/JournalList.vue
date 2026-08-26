@@ -59,7 +59,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <div class="flex flex-wrap gap-2">
                                         <span
                                             v-if="journal.sleep_quality"
-                                            class="bg-accent-tertiary/10 text-accent-tertiary ring-accent-tertiary/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
+                                            class="bg-accent-tertiary/10 text-accent-tertiary-deep ring-accent-tertiary/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             💤 {{ journal.sleep_quality }}/5
                                         </span>
@@ -83,7 +83,7 @@ const emit = defineEmits(['edit', 'delete'])
                                         </span>
                                         <span
                                             v-if="journal.nutrition_score"
-                                            class="bg-accent-state/10 text-trend-up ring-accent-state/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
+                                            class="bg-accent-state/10 text-accent-state-deep ring-accent-state/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🥗 Diète: {{ journal.nutrition_score }}/5
                                         </span>

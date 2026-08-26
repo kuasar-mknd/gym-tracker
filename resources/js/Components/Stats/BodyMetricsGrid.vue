@@ -62,7 +62,7 @@ defineProps({
                 </template>
                 <div class="flex items-start justify-between">
                     <div>
-                        <h4 class="text-accent-tertiary mb-1 text-[10px] font-black tracking-[0.15em] uppercase">
+                        <h4 class="text-accent-tertiary-deep mb-1 text-[10px] font-black tracking-[0.15em] uppercase">
                             Volume Mois
                         </h4>
                         <p class="font-display text-text-main text-3xl font-black">

@@ -171,7 +171,7 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
      */
     it.each([
         ['orange', 'text-accent-primary-deep'],
-        ['violet', 'text-accent-tertiary'],
+        ['violet', 'text-accent-tertiary-deep'],
         ['pink', 'text-accent-secondary-deep'],
         ['cyan', 'text-accent-info-deep'],
         ['green', 'text-accent-state-deep'],
@@ -191,7 +191,7 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
      * faut regarder le fichier, pas le rendu.
      *
      * Mesuré dans le CSS généré, avant correctif : `text-accent-primary-deep`,
-     * `text-accent-tertiary`, `text-accent-secondary-deep` et `text-accent-info-deep` étaient bien
+     * `text-accent-tertiary-deep`, `text-accent-secondary-deep` et `text-accent-info-deep` étaient bien
      * présents — non pas grâce à ce composant, mais parce que d'autres les
      * écrivent en toutes lettres. `text-accent-state-deep`, que personne d'autre
      * n'emploie, était absent : `color="green"` peignait donc l'icône avec une
@@ -209,7 +209,7 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
 
         for (const expected of [
             'text-accent-primary-deep',
-            'text-accent-tertiary',
+            'text-accent-tertiary-deep',
             'text-accent-secondary-deep',
             'text-accent-info-deep',
             'text-accent-state-deep',

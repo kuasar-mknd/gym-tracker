@@ -200,7 +200,7 @@
                                 class="flex-1 rounded-xl border py-2 text-sm font-bold backdrop-blur-md transition-all active:scale-95"
                                 :class="
                                     form.rounding_increment === inc
-                                        ? 'border-accent-primary bg-accent-primary/20 text-accent-primary-deep shadow-[0_0_15px_rgb(from var(--color-accent-primary) r g b / 0.3)]'
+                                        ? 'border-accent-primary bg-accent-primary/20 text-accent-primary-deep shadow-[0_0_15px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.3)]'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:bg-surface-card/80'
                                 "
                             >

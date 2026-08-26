@@ -130,7 +130,7 @@ const selectCommonPart = (part) => {
 
             <!-- Chart -->
             <GlassCard v-if="latestMeasurements.some((m) => m.diff !== 0)" class="animate-slide-up">
-                <h3 class="font-display text-trend-up mb-4 text-xs font-black tracking-[0.2em] uppercase">
+                <h3 class="font-display text-accent-state-deep mb-4 text-xs font-black tracking-[0.2em] uppercase">
                     Évolution Récente
                 </h3>
                 <BodyPartDiffChart :data="latestMeasurements" />

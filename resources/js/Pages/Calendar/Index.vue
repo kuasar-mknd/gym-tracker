@@ -288,11 +288,11 @@ const formatDateFull = (dateStr) => {
                             <div class="mt-1 flex gap-1" aria-hidden="true">
                                 <span
                                     v-if="day.hasWorkout"
-                                    class="bg-accent-tertiary shadow-[0_0_4px_rgb(from var(--color-accent-tertiary) r g b / 0.8)] h-1.5 w-1.5 rounded-full"
+                                    class="bg-accent-tertiary h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgb(from_var(--color-accent-tertiary)_r_g_b_/_0.8)]"
                                 ></span>
                                 <span
                                     v-if="day.hasJournal"
-                                    class="bg-accent-state shadow-[0_0_4px_rgb(from var(--color-accent-state) r g b / 0.8)] h-1.5 w-1.5 rounded-full"
+                                    class="bg-accent-state h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgb(from_var(--color-accent-state)_r_g_b_/_0.8)]"
                                 ></span>
                             </div>
                         </button>
@@ -323,7 +323,7 @@ const formatDateFull = (dateStr) => {
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="bg-accent-tertiary/20 text-accent-tertiary flex h-10 w-10 items-center justify-center rounded-xl"
+                                        class="bg-accent-tertiary/20 text-accent-tertiary-deep flex h-10 w-10 items-center justify-center rounded-xl"
                                     >
                                         <span class="material-symbols-outlined" aria-hidden="true">fitness_center</span>
                                     </div>
@@ -351,7 +351,7 @@ const formatDateFull = (dateStr) => {
                     <GlassCard padding="p-4">
                         <div class="flex items-start gap-3">
                             <div
-                                class="bg-accent-state/20 text-trend-up flex h-10 w-10 items-center justify-center rounded-xl"
+                                class="bg-accent-state/20 text-accent-state-deep flex h-10 w-10 items-center justify-center rounded-xl"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
                             </div>

@@ -64,7 +64,7 @@ const isActiveRoute = (itemRoute) => {
                 :dusk="'nav-' + item.route.split('.')[0]"
             >
                 <span
-                    class="material-symbols-outlined group-hover:drop-shadow-[0_0_8px_rgb(from var(--color-accent-primary) r g b / 0.5)] text-[28px] transition-all"
+                    class="material-symbols-outlined text-[28px] transition-all group-hover:drop-shadow-[0_0_8px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.5)]"
                     :style="{ fontVariationSettings: isActiveRoute(item.route) ? `'FILL' 1` : `'FILL' 0` }"
                     aria-hidden="true"
                 >

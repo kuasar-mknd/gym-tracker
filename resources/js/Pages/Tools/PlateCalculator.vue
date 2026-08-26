@@ -174,24 +174,22 @@
                                         : 'border-transparent',
                                 ]"
                             >
-                                <div
-                                    class="font-display text-3xl font-black"
-                                    :class="
-                                        parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
-                                            ? 'text-text-main'
-                                            : 'text-text-on-dark-accent'
-                                    "
-                                >
+                                <!--
+                                    Aucune couleur de texte ici : `plate-fill-*`
+                                    la pose deja, et la calcule. Un ternaire
+                                    separe la recollait par-dessus — du blanc sur
+                                    tout ce qui n'est pas entre 5 et 10 kg, donc
+                                    du blanc sur le disque JAUNE de 15 kg, a
+                                    1,65:1, quand l'encre y rend 10,85:1.
+
+                                    Le meme defaut avait ete corrige sur la barre
+                                    et manque ici : deux endroits decidaient de
+                                    la meme chose, et un seul a ete repris.
+                                -->
+                                <div class="font-display text-3xl font-black">
                                     {{ plate.weight }}
                                 </div>
-                                <div
-                                    class="mt-1 text-xs font-bold tracking-wider uppercase"
-                                    :class="
-                                        parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
-                                            ? 'text-text-muted'
-                                            : 'text-text-on-dark-accent/70'
-                                    "
-                                >
+                                <div class="mt-1 text-xs font-bold tracking-wider uppercase opacity-70">
                                     x {{ plate.quantity }}
                                 </div>
                                 <button

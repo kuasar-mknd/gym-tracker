@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest'
-import { jeton } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 vi.mock('vue-chartjs', () => {
@@ -42,17 +41,26 @@ describe('TimeOfDayChart', () => {
     })
 
     /**
-     * The palette is positional — sky, amber, violet, indigo for morning to
-     * night — so it only reads correctly while the four slots arrive in
-     * chronological order, and it must stay long enough to cover all four.
+     * The palette is positional — morning to night — so it only reads correctly
+     * while the four slots arrive in chronological order, and it must stay long
+     * enough to cover all four.
+     *
+     * Ce test épinglait deux jetons précis, et laissait donc passer le cas qui
+     * s'est produit : « Soir » et « Nuit » ont reçu le MÊME jeton pendant la
+     * conversion, et l'anneau a affiché quatre parts dans trois couleurs. Le
+     * premier et le dernier étant toujours corrects, l'assertion ne voyait rien.
+     *
+     * Ce qui compte n'est pas QUELLE couleur chaque créneau porte — c'est
+     * qu'aucun n'en partage une avec un autre.
      */
-    it('garde une couleur par créneau, du matin à la nuit', () => {
+    it('donne à chacun des quatre créneaux une couleur qui n’est qu’à lui', () => {
         const dataset = chartOf(slots).props('data').datasets[0]
 
         expect(dataset.backgroundColor).toHaveLength(4)
-        expect(dataset.backgroundColor[0]).toBe(jeton('accent-info'))
-        expect(dataset.backgroundColor[3]).toBe(jeton('accent-tertiary'))
         expect(dataset.hoverBackgroundColor).toHaveLength(4)
+
+        expect(new Set(dataset.backgroundColor).size).toBe(4)
+        expect(dataset.backgroundColor.filter((c) => c === '')).toEqual([])
     })
 
     describe('survol', () => {

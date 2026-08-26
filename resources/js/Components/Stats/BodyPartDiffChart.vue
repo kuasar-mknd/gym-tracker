@@ -32,12 +32,12 @@ const chartData = computed(() => {
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
                     if (value > 0) {
                         // Green/Cyan for growth
-                        gradient.addColorStop(0, jeton('accent-state'))
-                        gradient.addColorStop(1, jeton('trend-up'))
+                        gradient.addColorStop(0, jeton('trend-up'))
+                        gradient.addColorStop(1, jetonTransparent('trend-up', 0.55))
                     } else {
                         // Red/Orange for decrease
-                        gradient.addColorStop(0, jeton('accent-danger'))
-                        gradient.addColorStop(1, jeton('accent-danger-deep'))
+                        gradient.addColorStop(0, jeton('trend-down'))
+                        gradient.addColorStop(1, jetonTransparent('trend-down', 0.55))
                     }
                     return gradient
                 },

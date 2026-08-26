@@ -30,7 +30,7 @@
                                 class="focus-visible:ring-accent-primary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.gender === 'male'
-                                        ? 'border-accent-primary bg-accent-primary/20 text-accent-primary-deep shadow-[0_0_15px_rgb(from var(--color-accent-primary) r g b / 0.3)]'
+                                        ? 'border-accent-primary accent-fill shadow-[0_0_15px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.3)]'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
@@ -43,7 +43,7 @@
                                 class="focus-visible:ring-accent-secondary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.gender === 'female'
-                                        ? 'border-accent-secondary bg-accent-secondary/20 text-accent-secondary-deep shadow-[0_0_15px_rgb(from var(--color-accent-secondary) r g b / 0.3)]'
+                                        ? 'border-accent-secondary secondary-fill shadow-[0_0_15px_rgb(from_var(--color-accent-secondary)_r_g_b_/_0.3)]'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
@@ -90,7 +90,7 @@
                                 class="focus-visible:ring-accent-primary flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.goal === goalOption
-                                        ? 'border-accent-primary bg-accent-primary/20 text-accent-primary-deep shadow-[0_0_15px_rgb(from var(--color-accent-primary) r g b / 0.3)]'
+                                        ? 'border-accent-primary accent-fill shadow-[0_0_15px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.3)]'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >

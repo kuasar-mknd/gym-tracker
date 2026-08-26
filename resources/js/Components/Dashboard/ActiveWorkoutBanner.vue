@@ -37,6 +37,12 @@ onUnmounted(() => {
     clairs — et le texte blanc est passe de 2,5:1 a 1,2:1 : le bandeau
     s'affichait sans qu'un mot s'y lise.
 
+    Les deux couches ne portent pas le meme degrade : celle du survol inverse
+    l'ordre des trois tons. Elles ont un temps ete identiques — la conversion
+    avait envoye `emerald-500/teal-500/cyan-500` et `emerald-400/teal-400/
+    cyan-400` sur les memes jetons — et le survol ne faisait alors plus rien du
+    tout, en fondant une couche vers une copie d'elle-meme.
+
     La charte porte donc `--color-session-*`, les trois tons d'origine
     assombris du minimum necessaire pour que le blanc tienne 4,52:1. Ils ne
     rejoignent aucune famille existante : une seance ouverte n'est ni un accent

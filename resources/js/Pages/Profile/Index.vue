@@ -28,7 +28,7 @@ const menuGroups = [
                 icon: 'handyman',
                 route: 'tools.index',
                 description: 'Calculatrices & utilitaires',
-                color: 'text-accent-tertiary',
+                color: 'text-accent-tertiary-deep',
                 bgColor: 'bg-accent-tertiary/50',
             },
         ],
@@ -49,7 +49,7 @@ const menuGroups = [
                 icon: 'tour',
                 route: 'goals.index',
                 description: 'Gérer tes targets',
-                color: 'text-trend-up',
+                color: 'text-accent-state-deep',
                 bgColor: 'bg-accent-state/50',
             },
             {
@@ -75,7 +75,7 @@ const menuGroups = [
                 icon: 'task_alt',
                 route: 'habits.index',
                 description: 'Suivi quotidien',
-                color: 'text-accent-tertiary',
+                color: 'text-accent-tertiary-deep',
                 bgColor: 'bg-accent-tertiary/50',
             },
             {

@@ -213,7 +213,7 @@ const submit = () => {
                             rows="2"
                             maxlength="1000"
                             :aria-describedby="'template-description-counter-' + template.id"
-                            class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 focus:shadow-[0_0_15px_rgb(from var(--color-surface-card) r g b / 0.1)] w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:ring-0 focus:outline-none"
+                            class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:shadow-[0_0_15px_rgb(from_var(--color-surface-card)_r_g_b_/_0.1)] focus:ring-0 focus:outline-none"
                             placeholder="Détails de la séance..."
                         ></textarea>
                         <p v-if="form.errors.description" class="text-accent-danger-deep mt-2 text-sm font-medium">

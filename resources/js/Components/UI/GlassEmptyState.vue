@@ -52,7 +52,7 @@ const glowColors = {
  */
 const iconColors = {
     orange: 'text-accent-primary-deep',
-    violet: 'text-accent-tertiary',
+    violet: 'text-accent-tertiary-deep',
     pink: 'text-accent-secondary-deep',
     cyan: 'text-accent-info-deep',
     green: 'text-accent-state-deep',

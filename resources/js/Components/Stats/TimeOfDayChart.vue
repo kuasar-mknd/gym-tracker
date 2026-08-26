@@ -20,17 +20,30 @@ const chartData = computed(() => {
         datasets: [
             {
                 data: props.data.map((item) => item.count),
+                /*
+                 * Quatre moments, quatre couleurs DISTINCTES.
+                 *
+                 * « Soir » et « Nuit » portaient un violet et un indigo, deux
+                 * teintes proches mais séparables ; la conversion les a envoyés
+                 * sur le même `accent-tertiary`, et deux parts de l'anneau sont
+                 * devenues impossibles à distinguer — quatre étiquettes pour
+                 * trois couleurs.
+                 *
+                 * Ces quatre-là ne portent aucune intention : elles doivent
+                 * seulement se séparer. Le bleu de `category-core` fait la nuit,
+                 * puisqu'il est la teinte la plus éloignée des trois autres.
+                 */
                 backgroundColor: [
-                    jeton('accent-info'), // Sky 400 (Matin)
-                    jeton('accent-warning'), // Amber 500 (Après-midi)
-                    jeton('accent-tertiary'), // Violet 500 (Soir)
-                    jeton('accent-tertiary'), // Indigo 900 (Nuit)
+                    jeton('accent-info'), // Matin
+                    jeton('accent-warning'), // Après-midi
+                    jeton('accent-tertiary'), // Soir
+                    jeton('category-core'), // Nuit
                 ],
                 hoverBackgroundColor: [
-                    jeton('accent-info'), // Sky 500
-                    jeton('accent-primary'), // Amber 600
-                    jeton('accent-tertiary'), // Violet 600
-                    jeton('accent-tertiary'), // Indigo 950
+                    jeton('accent-info'),
+                    jeton('accent-primary'),
+                    jeton('accent-tertiary'),
+                    jeton('category-core'),
                 ],
                 borderWidth: 2,
                 borderColor: jeton('surface-card'),

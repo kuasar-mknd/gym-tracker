@@ -282,7 +282,7 @@ const phaseColor = computed(() => {
         case 'work':
             return 'text-accent-primary-deep'
         case 'rest':
-            return 'text-trend-up'
+            return 'text-accent-state-deep'
         case 'finished':
             return 'text-text-main'
         default:
@@ -415,7 +415,7 @@ onUnmounted(() => {
                     </div>
                     <div class="glass-panel p-3">
                         <div class="text-text-muted text-xs tracking-wider uppercase">Repos</div>
-                        <div class="text-trend-up text-xl font-bold">{{ timerConfig.rest }}s</div>
+                        <div class="text-accent-state-deep text-xl font-bold">{{ timerConfig.rest }}s</div>
                     </div>
                     <div class="glass-panel p-3">
                         <div class="text-text-muted text-xs tracking-wider uppercase">Échauff.</div>

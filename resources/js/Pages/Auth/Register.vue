@@ -145,7 +145,7 @@ const submit = () => {
                 Déjà inscrit ?
                 <Link
                     :href="route('login')"
-                    class="text-accent-primary-deep hover:text-accent-tertiary font-bold transition-colors"
+                    class="text-accent-primary-deep hover:text-accent-tertiary-deep font-bold transition-colors"
                     >Se connecter</Link
                 >
             </p>

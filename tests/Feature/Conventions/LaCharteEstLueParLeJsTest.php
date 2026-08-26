@@ -34,10 +34,25 @@ function jetonsCitesParLeJs(): array
 {
     $source = (string) file_get_contents(resource_path('js/Utils/couleurs.js'));
 
-    // Les valeurs de la table de correspondance, en chaines simples.
-    preg_match_all("/:\s*'([a-z][a-z0-9-]*)'/", $source, $trouves);
+    /*
+     * TOUS les noms de jetons cites, pas seulement ceux d'une table.
+     *
+     * Le motif ne lisait que les valeurs suivant un `:` — donc la
+     * correspondance des categories, et rien d'autre. Il capturait 8 noms sur
+     * les 14 que ce fichier cite : la liste `SERIE`, qui alimente les series de
+     * graphiques, et le repli de `couleurDeCategorie()` passaient a cote. Un
+     * garde qui verifie la moitie de ce qu'il annonce est pire qu'aucun garde,
+     * parce qu'on lui fait confiance pour le tout.
+     */
+    preg_match_all("/'([a-z][a-z0-9-]*(?:-[a-z0-9]+)*)'/", $source, $trouves);
 
-    return array_values(array_unique($trouves[1]));
+    // Les noms de jetons portent tous un tiret ; `strength`, `cardio` n'en sont
+    // pas. On ne garde que ce qui ressemble a un jeton, et le controle suivant
+    // verifie que chacun existe.
+    return array_values(array_unique(array_filter(
+        $trouves[1],
+        static fn (string $nom): bool => str_contains($nom, '-')
+    )));
 }
 
 it('ne cite aucun jeton que la charte ne declare pas', function (): void {
