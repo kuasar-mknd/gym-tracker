@@ -137,7 +137,7 @@ class AccessibleNamesTest extends DuskTestCase
             /**
              * Ask for the light theme through the preference the app reads, and
              * reload so it is applied on mount. Stripping the `dark` class from
-             * the root instead does nothing lasting: useTheme puts it straight
+             * the root instead does nothing lasting: the app puts it straight
              * back, and the measurement below then quietly reports the dark
              * theme — which is how the first version of this guard passed on the
              * very markup it was written to catch.

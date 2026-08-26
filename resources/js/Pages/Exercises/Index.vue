@@ -244,7 +244,7 @@ const typeLabel = (type) => {
         >
             <div
                 v-if="pullDistance > 0 || isRefreshing"
-                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90"
+                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md"
             >
                 <svg
                     v-if="isRefreshing"

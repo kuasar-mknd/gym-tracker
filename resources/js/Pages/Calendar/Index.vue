@@ -166,7 +166,7 @@ const selectDate = (day) => {
  * buttons, so the grid keeps one continuous rule whichever element renders.
  */
 const cellBorderClasses = (index) => [
-    'relative flex aspect-square flex-col items-center justify-center border-r border-b border-slate-100 dark:border-slate-800',
+    'relative flex aspect-square flex-col items-center justify-center border-r border-b border-slate-100',
     (index + 1) % 7 === 0 ? 'border-r-0' : '', // Remove right border for last column
 ]
 
@@ -238,9 +238,7 @@ const formatDateFull = (dateStr) => {
             <!-- Calendar Grid -->
             <GlassCard class="overflow-hidden" padding="p-0">
                 <!-- Weekday Headers -->
-                <div
-                    class="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 py-2 dark:border-slate-700 dark:bg-slate-800/50"
-                >
+                <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 py-2">
                     <div
                         v-for="day in weekDays"
                         :key="day"
@@ -270,10 +268,8 @@ const formatDateFull = (dateStr) => {
                             :aria-current="day.isToday ? 'date' : undefined"
                             :class="[
                                 ...cellBorderClasses(index),
-                                'focus-visible:ring-electric-orange cursor-pointer transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset dark:hover:bg-slate-800/50',
-                                selectedDate?.dateStr === day.dateStr
-                                    ? 'bg-slate-100 shadow-inner dark:bg-slate-800/70'
-                                    : '',
+                                'focus-visible:ring-electric-orange cursor-pointer transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+                                selectedDate?.dateStr === day.dateStr ? 'bg-slate-100 shadow-inner' : '',
                             ]"
                         >
                             <!-- Date Number -->

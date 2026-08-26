@@ -101,7 +101,7 @@ const close = () => {
                 <!-- Modal. No role or aria-modal here: the <dialog> above is the
                      dialog, and nesting a second one would announce two. -->
                 <div
-                    class="animate-bounce-in relative w-full max-w-sm rounded-3xl border border-white/20 bg-white/10 p-6 text-center shadow-2xl backdrop-blur-md transition-all duration-300 hover:bg-white/20 dark:bg-black/40"
+                    class="animate-bounce-in relative w-full max-w-sm rounded-3xl border border-white/20 bg-white/10 p-6 text-center shadow-2xl backdrop-blur-md transition-all duration-300 hover:bg-white/20"
                 >
                     <!-- Glow Effect -->
                     <div
@@ -126,11 +126,9 @@ const close = () => {
                         </div>
 
                         <!-- Text -->
-                        <h2 class="text-text-main mb-1 text-xl font-bold dark:text-white" id="achievement-title">
-                            Badge Débloqué !
-                        </h2>
+                        <h2 class="text-text-main mb-1 text-xl font-bold" id="achievement-title">Badge Débloqué !</h2>
                         <h3 class="text-accent-primary mb-3 text-lg font-bold">{{ achievement.name }}</h3>
-                        <p class="text-text-muted mb-6 text-sm dark:text-white/70" id="achievement-description">
+                        <p class="text-text-muted mb-6 text-sm" id="achievement-description">
                             {{
                                 achievement.message?.replace(
                                     'Nouveau badge débloqué : ' + achievement.name + ' !',
@@ -145,7 +143,7 @@ const close = () => {
                             type="button"
                             @click="close"
                             dusk="celebration-dismiss"
-                            class="w-full rounded-2xl border border-white/20 bg-white/10 py-3 font-bold text-slate-800 shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 dark:text-white"
+                            class="w-full rounded-2xl border border-white/20 bg-white/10 py-3 font-bold text-slate-800 shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
                         >
                             Génial ! 🤩
                         </button>

@@ -215,11 +215,11 @@ watch(
     <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-[9999] sm:right-4 sm:left-auto sm:w-80">
         <!-- Liquid Glass Card -->
         <div
-            class="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300 dark:bg-black/40"
+            class="relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md transition-all duration-300"
         >
             <!-- Progress bar -->
             <div
-                class="h-1 w-full bg-slate-200/50 dark:bg-white/10"
+                class="h-1 w-full bg-slate-200/50"
                 role="progressbar"
                 :aria-valuenow="progress"
                 aria-valuemin="0"
@@ -237,7 +237,7 @@ watch(
                 <button
                     @click="close"
                     dusk="close-timer-x"
-                    class="focus-visible:ring-electric-orange absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:outline-none active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                    class="focus-visible:ring-electric-orange absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 text-slate-600 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                     aria-label="Fermer le minuteur"
                     title="Fermer le minuteur"
                 >
@@ -253,14 +253,8 @@ watch(
 
                 <div class="flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold tracking-wider text-slate-900/60 uppercase dark:text-white/60">
-                            Repos en cours
-                        </div>
-                        <div
-                            class="text-3xl font-black text-slate-900 tabular-nums dark:text-white"
-                            role="timer"
-                            aria-atomic="true"
-                        >
+                        <div class="text-xs font-bold tracking-wider text-slate-900/60 uppercase">Repos en cours</div>
+                        <div class="text-3xl font-black text-slate-900 tabular-nums" role="timer" aria-atomic="true">
                             {{ formatTime(timeLeft) }}
                         </div>
                     </div>
@@ -269,7 +263,7 @@ watch(
                         <button
                             @click="addTime(30)"
                             dusk="add-30s"
-                            class="focus-visible:ring-electric-orange flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 focus-visible:ring-2 focus-visible:outline-none active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                            class="focus-visible:ring-electric-orange flex h-10 w-10 items-center justify-center rounded-full bg-white/40 text-slate-900 transition hover:bg-white/60 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             title="Ajouter 30 secondes"
                             aria-label="Ajouter 30 secondes"
                         >
@@ -298,7 +292,7 @@ watch(
                     <button
                         @click="skipTimer"
                         dusk="skip-rest-timer"
-                        class="focus-visible:ring-electric-orange flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 focus-visible:ring-2 focus-visible:outline-none active:scale-95 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                        class="focus-visible:ring-electric-orange flex flex-1 items-center justify-center rounded-xl border border-white/20 bg-white/20 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-white/30 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                         title="Passer le repos"
                         aria-label="Passer le repos"
                     >
@@ -307,7 +301,7 @@ watch(
                     <button
                         @click="close"
                         dusk="close-timer"
-                        class="focus-visible:ring-electric-orange rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:outline-none active:scale-95 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10"
+                        class="focus-visible:ring-electric-orange rounded-xl bg-slate-200/50 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                         title="Fermer le minuteur"
                         aria-label="Fermer le minuteur"
                     >

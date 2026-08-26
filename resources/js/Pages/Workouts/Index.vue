@@ -114,7 +114,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
         >
             <div
                 v-if="pullDistance > 0 || isRefreshing"
-                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md dark:border-slate-700 dark:bg-slate-800/90"
+                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md"
             >
                 <svg
                     v-if="isRefreshing"
@@ -154,7 +154,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold dark:text-white">Mes Séances</h2>
+                <h2 class="text-text-main text-xl font-semibold">Mes Séances</h2>
                 <div class="flex gap-2">
                     <Link :href="route('calendar.index')">
                         <GlassButton>
@@ -224,7 +224,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <!-- Workout Frequency (Day of Week) Chart -->
                         <GlassCard v-if="deferredData?.charts?.day_of_week_frequency?.length > 0">
                             <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence par Jour</h3>
+                                <h3 class="text-text-main text-lg font-bold">Fréquence par Jour</h3>
                                 <p class="text-text-muted text-xs">Séances selon le jour de la semaine</p>
                             </div>
                             <div class="h-48 w-full">
@@ -235,7 +235,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <!-- Frequency Chart -->
                         <GlassCard v-if="deferredData?.charts?.monthly_frequency?.length > 0">
                             <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold dark:text-white">Fréquence Mensuelle</h3>
+                                <h3 class="text-text-main text-lg font-bold">Fréquence Mensuelle</h3>
                                 <p class="text-text-muted text-xs">Séances par mois</p>
                             </div>
                             <WorkoutsPerMonthChart :data="deferredData.charts.monthly_frequency" />
@@ -244,7 +244,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <!-- Monthly Volume Chart -->
                         <GlassCard v-if="deferredData?.charts?.monthly_volume?.length > 0">
                             <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold dark:text-white">Volume Mensuel</h3>
+                                <h3 class="text-text-main text-lg font-bold">Volume Mensuel</h3>
                                 <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
                             </div>
                             <MonthlyVolumeChart :data="deferredData.charts.monthly_volume" />
@@ -253,7 +253,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <!-- Duration Chart -->
                         <GlassCard v-if="deferredData?.charts?.duration_history?.length > 0">
                             <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold dark:text-white">Durée</h3>
+                                <h3 class="text-text-main text-lg font-bold">Durée</h3>
                                 <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
                             </div>
                             <WorkoutDurationChart :data="deferredData.charts.duration_history" />
@@ -262,7 +262,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <!-- Volume per Workout Chart -->
                         <GlassCard v-if="deferredData?.charts?.volume_history?.length > 0">
                             <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold dark:text-white">Volume par Séance</h3>
+                                <h3 class="text-text-main text-lg font-bold">Volume par Séance</h3>
                                 <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
                             </div>
                             <VolumePerWorkoutChart :data="deferredData.charts.volume_history" />
@@ -275,7 +275,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <div class="animate-slide-up" style="animation-delay: 0.08s">
                 <GlassCard v-if="workoutList.length > 0">
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic dark:text-white">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                             Aperçu Historique
                         </h3>
                         <p class="text-text-muted text-xs font-semibold">Volume et Durée des dernières séances</p>
@@ -286,7 +286,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
             <!-- Available Exercises -->
             <div class="animate-slide-up" style="animation-delay: 0.1s">
-                <h3 class="text-text-main mb-3 font-semibold dark:text-white">Exercices disponibles</h3>
+                <h3 class="text-text-main mb-3 font-semibold">Exercices disponibles</h3>
 
                 <Deferred data="deferredData">
                     <template #fallback>
@@ -303,9 +303,9 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <div
                             v-for="exercise in deferredData.exercises"
                             :key="exercise.id"
-                            class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-800/50"
+                            class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm"
                         >
-                            <div class="text-text-main font-medium dark:text-white">{{ exercise.name }}</div>
+                            <div class="text-text-main font-medium">{{ exercise.name }}</div>
                             <div class="text-text-muted text-xs">{{ exercise.category }}</div>
                         </div>
                     </div>
@@ -314,7 +314,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
             <!-- Workouts List -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="text-text-main mb-3 font-semibold dark:text-white">Historique</h3>
+                <h3 class="text-text-main mb-3 font-semibold">Historique</h3>
 
                 <!-- Skeleton Loading -->
                 <div v-if="!workouts" class="space-y-3">
@@ -378,7 +378,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2">
-                                            <h4 class="text-text-main font-semibold dark:text-white">
+                                            <h4 class="text-text-main font-semibold">
                                                 {{ workout.name || 'Séance' }}
                                             </h4>
                                             <span class="glass-badge glass-badge-primary text-xs">
@@ -394,14 +394,14 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                             <span
                                                 v-for="line in workout.workout_lines.slice(0, 3)"
                                                 :key="line.id"
-                                                class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/50"
+                                                class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs"
                                             >
                                                 {{ line.exercise.name }}
                                                 <span class="text-text-muted/50">• {{ line.sets_count }} séries</span>
                                             </span>
                                             <span
                                                 v-if="workout.workout_lines.length > 3"
-                                                class="text-text-muted/50 rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800/50"
+                                                class="text-text-muted/50 rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs"
                                             >
                                                 +{{ workout.workout_lines.length - 3 }}
                                             </span>

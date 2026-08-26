@@ -41,14 +41,25 @@ const flat = (value) => value.replace(/\s+/g, ' ').trim()
 const barLegend = (wrapper) =>
     [...bar(wrapper).element.previousElementSibling.querySelectorAll('span')].map((span) => flat(span.textContent))
 
-/** One of the two figures below the bar, found by the word above it. */
-const statTile = (wrapper, heading) =>
-    flat(
-        wrapper
-            .findAll('.grid > div')
-            .find((tile) => tile.text().startsWith(heading))
-            .text(),
-    )
+/**
+ * One of the two figures below the bar, found by the word above it.
+ *
+ * The label and the figure are joined here rather than read from `.text()`,
+ * which concatenates children with nothing between them. The tile renders
+ * `<p>Actuel</p><p>3 séances</p>`: whether that yields `Actuel 3 séances` or
+ * `Actuel3 séances` depends on whether Prettier kept the tags on separate
+ * lines, which is a formatting accident and not a rendering difference — the
+ * two paragraphs are blocks either way. Joining the children says what this
+ * helper means, and stops a line-length change from failing the test.
+ */
+const statTile = (wrapper, heading) => {
+    const tile = wrapper.findAll('.grid > div').find((candidate) => flat(candidate.text()).startsWith(heading))
+
+    return [...tile.element.children]
+        .map((child) => flat(child.textContent))
+        .filter(Boolean)
+        .join(' ')
+}
 
 /**
  * Runs `body` with the clock sitting behind UTC.

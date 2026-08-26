@@ -14,7 +14,6 @@ const props = defineProps({
      * `bg-white/10` par defaut jusqu'ici : le panneau etait blanc a 10 %,
      * donc illisible sur le fond clair de l'application (#1314).
      * `glass-panel-strong` porte le jeton prevu pour une surface flottante,
-     * et il suit deja le theme — pas de variante `dark:` a tenir a jour.
      */
     contentClasses: {
         type: String,

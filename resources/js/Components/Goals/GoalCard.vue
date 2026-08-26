@@ -48,17 +48,17 @@ const typeLabel = computed(() => {
 const formattedDeadline = computed(() => parseCalendarDate(props.goal.deadline)?.toLocaleDateString() ?? '')
 
 const statusColor = computed(() => {
-    if (isCompleted.value) return 'text-green-500 dark:text-green-400'
-    if (progress.value > 75) return 'text-blue-500 dark:text-blue-400'
-    if (progress.value > 25) return 'text-orange-500 dark:text-orange-400'
-    return 'text-gray-500 dark:text-white/60'
+    if (isCompleted.value) return 'text-green-500'
+    if (progress.value > 75) return 'text-blue-500'
+    if (progress.value > 25) return 'text-orange-500'
+    return 'text-gray-500'
 })
 </script>
 
 <template>
     <div
         v-press
-        class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl dark:bg-black/40"
+        class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl"
     >
         <!-- Liquid Glow Background behind the card (subtle) -->
         <div
@@ -81,9 +81,7 @@ const statusColor = computed(() => {
                     {{ typeIcon }}
                 </div>
                 <div>
-                    <h4
-                        class="font-display text-text-main line-clamp-1 text-lg font-black uppercase italic dark:text-white"
-                    >
+                    <h4 class="font-display text-text-main line-clamp-1 text-lg font-black uppercase italic">
                         {{ goal.title }}
                     </h4>
                     <span class="text-text-muted text-[10px] font-bold tracking-wider uppercase">{{ typeLabel }}</span>
@@ -100,9 +98,7 @@ const statusColor = computed(() => {
         <div class="relative z-10 space-y-4">
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
-                <div
-                    class="flex justify-between text-[10px] font-bold tracking-widest text-slate-500 uppercase dark:text-white/60"
-                >
+                <div class="flex justify-between text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
@@ -132,34 +128,26 @@ const statusColor = computed(() => {
                 <div
                     class="rounded-2xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md transition-colors group-hover:bg-white/20"
                 >
-                    <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-white/60">
-                        Actuel
-                    </p>
-                    <p class="font-display mt-0.5 text-lg font-black text-slate-900 italic dark:text-white">
+                    <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase">Actuel</p>
+                    <p class="font-display mt-0.5 text-lg font-black text-slate-900 italic">
                         {{ goal.current_value }}
-                        <span class="text-[10px] font-bold text-slate-500 not-italic dark:text-white/60">{{
-                            goal.unit
-                        }}</span>
+                        <span class="text-[10px] font-bold text-slate-500 not-italic">{{ goal.unit }}</span>
                     </p>
                 </div>
                 <div
                     class="rounded-2xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md transition-colors group-hover:bg-white/20"
                 >
-                    <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase dark:text-white/60">
-                        Cible
-                    </p>
-                    <p class="font-display mt-0.5 text-lg font-black text-slate-900 italic dark:text-white">
+                    <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase">Cible</p>
+                    <p class="font-display mt-0.5 text-lg font-black text-slate-900 italic">
                         {{ goal.target_value }}
-                        <span class="text-[10px] font-bold text-slate-500 not-italic dark:text-white/60">{{
-                            goal.unit
-                        }}</span>
+                        <span class="text-[10px] font-bold text-slate-500 not-italic">{{ goal.unit }}</span>
                     </p>
                 </div>
             </div>
 
             <div
                 v-if="goal.deadline"
-                class="flex items-center gap-1.5 pt-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase dark:text-white/60"
+                class="flex items-center gap-1.5 pt-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase"
             >
                 <span class="material-symbols-outlined text-[14px]" aria-hidden="true">schedule</span>
                 <span>Échéance : {{ formattedDeadline }}</span>
@@ -184,7 +172,7 @@ const statusColor = computed(() => {
                     type="button"
                     :dusk="`delete-goal-${goal.id}`"
                     :aria-label="`Supprimer l'objectif ${goal.title}`"
-                    class="focus-visible:ring-electric-orange min-h-touch inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-bold text-red-600 uppercase transition-colors hover:bg-red-500/20 focus-visible:ring-2 focus-visible:outline-none dark:text-red-400"
+                    class="focus-visible:ring-electric-orange min-h-touch inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-bold text-red-600 uppercase transition-colors hover:bg-red-500/20 focus-visible:ring-2 focus-visible:outline-none"
                     @click="emit('delete', goal)"
                 >
                     <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span>

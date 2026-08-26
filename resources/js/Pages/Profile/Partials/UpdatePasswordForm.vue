@@ -35,8 +35,8 @@ const updatePassword = () => {
 <template>
     <GlassCard as="section">
         <header>
-            <h2 class="text-text-main text-lg font-semibold dark:text-white">Mot de passe</h2>
-            <p class="text-text-muted mt-1 text-sm dark:text-slate-400">
+            <h2 class="text-text-main text-lg font-semibold">Mot de passe</h2>
+            <p class="text-text-muted mt-1 text-sm">
                 Utilise un mot de passe long et unique pour sécuriser ton compte.
             </p>
         </header>

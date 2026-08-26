@@ -54,7 +54,7 @@ const trackClasses = computed(() => {
 
     const stateClass = props.modelValue
         ? 'bg-electric-orange focus-visible:ring-electric-orange/30'
-        : 'bg-slate-300 dark:bg-slate-600 focus-visible:ring-slate-400/30'
+        : 'bg-slate-300 focus-visible:ring-slate-400/30'
 
     const disabledClass = props.disabled ? 'opacity-50 cursor-not-allowed' : ''
 
@@ -78,11 +78,7 @@ const thumbClasses = computed(() => {
     <div :class="['flex items-center justify-between', { 'gap-4': label || description }]">
         <!-- Label & Description -->
         <div v-if="label || description" class="min-w-0 flex-1">
-            <p
-                v-if="label"
-                class="text-text-main text-sm font-medium dark:text-white"
-                :class="{ 'opacity-50': disabled }"
-            >
+            <p v-if="label" class="text-text-main text-sm font-medium" :class="{ 'opacity-50': disabled }">
                 {{ label }}
             </p>
             <p v-if="description" class="text-text-muted mt-0.5 text-xs" :class="{ 'opacity-50': disabled }">

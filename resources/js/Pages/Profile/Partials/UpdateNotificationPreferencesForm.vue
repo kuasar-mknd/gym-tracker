@@ -208,10 +208,8 @@ const updatePreferences = () => {
                 >
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <h4 class="text-text-main text-sm font-semibold dark:text-white">
-                                Activer les notifications Push
-                            </h4>
-                            <p class="text-text-muted text-xs dark:text-slate-400">
+                            <h4 class="text-text-main text-sm font-semibold">Activer les notifications Push</h4>
+                            <p class="text-text-muted text-xs">
                                 Recevez des alertes en temps réel sur votre appareil, même quand l'application est
                                 fermée.
                             </p>
@@ -240,7 +238,7 @@ const updatePreferences = () => {
 
                     <div v-if="pushRegistered" class="ml-2 flex items-center gap-2">
                         <Checkbox v-model:checked="form.push_preferences.personal_record" />
-                        <label class="text-text-muted text-xs dark:text-slate-400">Envoyer aussi en Push</label>
+                        <label class="text-text-muted text-xs">Envoyer aussi en Push</label>
                     </div>
                 </div>
 
@@ -254,7 +252,7 @@ const updatePreferences = () => {
 
                     <div v-if="pushRegistered" class="ml-2 flex items-center gap-2">
                         <Checkbox v-model:checked="form.push_preferences.training_reminder" />
-                        <label class="text-text-muted text-xs dark:text-slate-400">Envoyer aussi en Push</label>
+                        <label class="text-text-muted text-xs">Envoyer aussi en Push</label>
                     </div>
 
                     <Transition
@@ -265,10 +263,7 @@ const updatePreferences = () => {
                         leave-from-class="translate-y-0 opacity-100"
                         leave-to-class="translate-y-1 opacity-0"
                     >
-                        <div
-                            v-if="form.preferences.training_reminder"
-                            class="ml-2 border-l-2 border-slate-200 pl-4 dark:border-slate-700"
-                        >
+                        <div v-if="form.preferences.training_reminder" class="ml-2 border-l-2 border-slate-200 pl-4">
                             <GlassInput
                                 v-model="form.values.training_reminder"
                                 type="number"

@@ -21,17 +21,15 @@
                 <div class="space-y-6">
                     <!-- Unit Selection -->
                     <div class="flex justify-center">
-                        <div
-                            class="inline-flex rounded-xl border border-slate-200 bg-white/50 p-1 dark:border-slate-700 dark:bg-slate-800/50"
-                        >
+                        <div class="inline-flex rounded-xl border border-slate-200 bg-white/50 p-1">
                             <button
                                 @click="form.unit = 'kg'"
                                 :aria-pressed="form.unit === 'kg'"
                                 class="focus-visible:ring-electric-orange rounded-lg px-4 py-1 text-sm font-bold transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.unit === 'kg'
-                                        ? 'text-text-main bg-white/80 shadow-sm dark:bg-slate-700'
-                                        : 'text-text-muted hover:text-text-main hover:bg-white/30 dark:hover:bg-slate-700/50'
+                                        ? 'text-text-main bg-white/80 shadow-sm'
+                                        : 'text-text-muted hover:text-text-main hover:bg-white/30'
                                 "
                             >
                                 KG
@@ -42,8 +40,8 @@
                                 class="focus-visible:ring-electric-orange rounded-lg px-4 py-1 text-sm font-bold transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.unit === 'lbs'
-                                        ? 'text-text-main bg-white/80 shadow-sm dark:bg-slate-700'
-                                        : 'text-text-muted hover:text-text-main hover:bg-white/30 dark:hover:bg-slate-700/50'
+                                        ? 'text-text-main bg-white/80 shadow-sm'
+                                        : 'text-text-muted hover:text-text-main hover:bg-white/30'
                                 "
                             >
                                 LBS
@@ -66,7 +64,7 @@
                                     :class="
                                         form.gender === 'male'
                                             ? 'border-electric-orange bg-electric-orange/10 text-electric-orange'
-                                            : 'text-text-muted border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800'
+                                            : 'text-text-muted border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80'
                                     "
                                 >
                                     <span class="font-display text-lg font-black uppercase">Homme</span>
@@ -79,7 +77,7 @@
                                     :class="
                                         form.gender === 'female'
                                             ? 'border-hot-pink bg-hot-pink/10 text-hot-pink'
-                                            : 'text-text-muted border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:border-slate-600 dark:hover:bg-slate-800'
+                                            : 'text-text-muted border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80'
                                     "
                                 >
                                     <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -100,7 +98,7 @@
                                         v-model="form.body_weight"
                                         placeholder="80"
                                         step="0.1"
-                                        class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 placeholder-text-muted/50 h-14 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-xl font-bold transition-all outline-none focus:bg-white/80 focus:ring-2 dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-800"
+                                        class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 placeholder-text-muted/50 h-14 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-xl font-bold transition-all outline-none focus:bg-white/80 focus:ring-2"
                                     />
                                     <span
                                         class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold uppercase"
@@ -119,7 +117,7 @@
                                         v-model="form.lifted_weight"
                                         placeholder="400"
                                         step="0.5"
-                                        class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 placeholder-text-muted/50 h-14 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-xl font-bold transition-all outline-none focus:bg-white/80 focus:ring-2 dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-800"
+                                        class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 placeholder-text-muted/50 h-14 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-xl font-bold transition-all outline-none focus:bg-white/80 focus:ring-2"
                                     />
                                     <span
                                         class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold uppercase"
@@ -194,11 +192,11 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group relative flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-4 transition-all hover:bg-white/80 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800/30 dark:hover:bg-slate-800/50"
+                            class="group relative flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-4 transition-all hover:bg-white/80 hover:shadow-sm"
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="text-text-main flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-xl font-bold dark:border-slate-700 dark:bg-slate-700"
+                                    class="text-text-main flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-xl font-bold"
                                 >
                                     {{ parseFloat(entry.score).toFixed(0) }}
                                 </div>

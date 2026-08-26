@@ -202,7 +202,7 @@ defineExpose({
                 :aria-invalid="!!error"
                 :aria-describedby="error ? errorId : undefined"
                 :class="[
-                    'glass-input dark:placeholder:text-text-muted/50 dark:border-slate-700 dark:bg-slate-800/80 dark:text-white',
+                    'glass-input',
                     sizeClasses[size],
                     {
                         'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,

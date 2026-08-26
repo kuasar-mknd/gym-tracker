@@ -202,9 +202,7 @@ const goalDistribution = computed(() => {
             @close="closeDeletion"
         >
             <div class="p-6">
-                <h2 id="delete-goal-title" class="text-text-main text-lg font-semibold dark:text-white">
-                    Supprimer cet objectif ?
-                </h2>
+                <h2 id="delete-goal-title" class="text-text-main text-lg font-semibold">Supprimer cet objectif ?</h2>
                 <p class="text-text-muted mt-2 text-sm">
                     « {{ goalPendingDeletion?.title }} » sera définitivement effacé, avec sa progression.
                 </p>
