@@ -47,7 +47,7 @@ onUnmounted(() => {
     <Link
         v-press
         :href="route('workouts.show', { workout: workout.id })"
-        class="animate-fade-in group border-session-from/40 focus-visible:ring-session-from relative block overflow-hidden rounded-3xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page focus-visible:outline-none active:scale-[0.98]"
+        class="animate-fade-in group border-session-from/40 focus-visible:ring-session-from focus-visible:ring-offset-surface-page relative block overflow-hidden rounded-3xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
         dusk="active-workout-banner"
     >
         <!-- Animated gradient background -->
@@ -82,7 +82,9 @@ onUnmounted(() => {
 
             <!-- Content -->
             <div class="min-w-0 flex-1">
-                <p class="text-text-on-dark-accent/70 text-[10px] font-black tracking-[0.2em] uppercase">Séance active</p>
+                <p class="text-text-on-dark-accent/70 text-[10px] font-black tracking-[0.2em] uppercase">
+                    Séance active
+                </p>
                 <h3 class="font-display text-text-on-dark-accent truncate text-xl font-black uppercase italic">
                     {{ workout.name || 'Séance' }}
                 </h3>

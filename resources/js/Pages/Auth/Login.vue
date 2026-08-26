@@ -37,10 +37,7 @@ const submit = () => {
             <p class="text-text-muted mt-2">Connecte-toi pour continuer</p>
         </div>
 
-        <div
-            v-if="status"
-            class="state-fill border-accent-state mb-4 rounded-xl border p-3 text-sm font-medium"
-        >
+        <div v-if="status" class="state-fill border-accent-state mb-4 rounded-xl border p-3 text-sm font-medium">
             {{ status }}
         </div>
 
