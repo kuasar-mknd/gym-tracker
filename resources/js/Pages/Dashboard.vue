@@ -49,7 +49,7 @@ const startWorkout = () => {
 <template>
     <Head title="Accueil" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout page-title="Accueil">
         <div class="space-y-6">
             <DashboardHeader :user="$page.props.auth.user" :latest-weight="latestWeight" />
 

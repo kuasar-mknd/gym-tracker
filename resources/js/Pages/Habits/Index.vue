@@ -1,7 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import Modal from '@/Components/UI/Modal.vue'
@@ -308,14 +310,14 @@ const getProgressPercent = (habit) => {
                                 <GlassSkeleton width="120px" height="1.5rem" class="mb-2" />
                                 <GlassSkeleton width="80px" height="0.75rem" />
                             </div>
-                            <GlassSkeleton width="100%" height="200px" border-radius="1rem" />
+                            <GlassSkeleton width="100%" height="200px" class="rounded-xl" />
                         </GlassCard>
                         <GlassCard class="animate-pulse">
                             <div class="mb-4">
                                 <GlassSkeleton width="120px" height="1.5rem" class="mb-2" />
                                 <GlassSkeleton width="150px" height="0.75rem" />
                             </div>
-                            <GlassSkeleton width="100%" height="250px" border-radius="1rem" />
+                            <GlassSkeleton width="100%" height="250px" class="rounded-xl" />
                         </GlassCard>
                     </div>
                 </template>
@@ -370,12 +372,16 @@ const getProgressPercent = (habit) => {
             </GlassCard>
 
             <!-- Habits List -->
-            <div v-if="habits.length === 0" class="py-12 text-center">
-                <div class="mb-4 text-5xl">✅</div>
-                <h3 class="text-text-main text-lg font-medium">Aucune habitude</h3>
-                <p class="text-text-muted">Commencez par créer une habitude à suivre.</p>
-                <GlassButton class="mt-4" @click="openAddForm">Créer ma première habitude</GlassButton>
-            </div>
+            <GlassEmptyState
+                v-if="habits.length === 0"
+                icon="✅"
+                color="green"
+                title="Aucune habitude"
+                description="Commencez par créer une habitude à suivre."
+                action-label="Créer ma première habitude"
+                action-id="empty-state-habit"
+                @action="openAddForm"
+            />
 
             <div v-else class="space-y-3">
                 <GlassCard
@@ -416,20 +422,13 @@ const getProgressPercent = (habit) => {
                             <div
                                 class="mt-2 flex gap-1 opacity-100 transition sm:absolute sm:top-2 sm:right-2 sm:mt-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
                             >
-                                <button
-                                    @click="editHabit(habit)"
-                                    class="text-text-muted hover:text-text-main min-h-touch min-w-touch flex items-center justify-center rounded-lg"
-                                    aria-label="Modifier l'habitude"
-                                >
-                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">edit</span>
-                                </button>
-                                <button
+                                <GlassIconButton icon="edit" label="Modifier l'habitude" @click="editHabit(habit)" />
+                                <GlassIconButton
+                                    icon="delete"
+                                    label="Supprimer l'habitude"
+                                    ton="danger"
                                     @click="demanderSuppression(habit)"
-                                    class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger-deep flex items-center justify-center rounded-lg"
-                                    aria-label="Supprimer l'habitude"
-                                >
-                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">delete</span>
-                                </button>
+                                />
                             </div>
                         </div>
 
@@ -476,13 +475,7 @@ const getProgressPercent = (habit) => {
                     <h3 id="habit-form-title" class="text-text-main text-xl font-bold">
                         {{ editingHabit ? 'Modifier' : 'Nouvelle Habitude' }}
                     </h3>
-                    <button
-                        @click="showAddForm = false"
-                        class="text-text-muted hover:text-text-main relative before:absolute before:-inset-2.5 before:content-['']"
-                        aria-label="Fermer le formulaire"
-                    >
-                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                    </button>
+                    <GlassIconButton icon="close" label="Fermer le formulaire" @click="showAddForm = false" />
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-4">
@@ -536,7 +529,7 @@ const getProgressPercent = (habit) => {
                                 :aria-label="iconNames[icon]"
                                 :aria-pressed="form.icon === icon"
                                 :dusk="`habit-icon-${icon}`"
-                                class="focus-visible:ring-accent-primary hover:bg-surface-sunken flex h-10 w-10 items-center justify-center rounded-lg border-2 transition focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary hover:bg-surface-sunken flex size-11 items-center justify-center rounded-lg border-2 transition focus-visible:ring-2 focus-visible:outline-none"
                                 :class="[
                                     form.icon === icon
                                         ? 'border-accent-primary bg-accent-primary/10 text-accent-primary-deep'
@@ -559,7 +552,9 @@ const getProgressPercent = (habit) => {
                     />
 
                     <div class="flex justify-end gap-3 pt-4">
-                        <GlassButton type="button" variant="ghost" @click="showAddForm = false">Annuler</GlassButton>
+                        <GlassButton type="button" variant="secondary" @click="showAddForm = false"
+                            >Annuler</GlassButton
+                        >
                         <GlassButton type="submit" variant="primary" :loading="form.processing"
                             >Enregistrer</GlassButton
                         >

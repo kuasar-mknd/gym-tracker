@@ -253,7 +253,9 @@ const setColumnRef = (key) => (element) => {
             </div>
 
             <div class="mt-5 flex gap-3">
-                <GlassButton type="button" class="flex-1" @click="open = false">Annuler</GlassButton>
+                <GlassButton type="button" variant="secondary" class="flex-1" @click="open = false"
+                    >Annuler</GlassButton
+                >
                 <GlassButton
                     type="button"
                     variant="primary"

@@ -74,7 +74,9 @@ const closeModal = () => {
                 </div>
 
                 <div class="mt-6 flex justify-end gap-3">
-                    <GlassButton @click="closeModal" data-testid="cancel-delete-button"> Annuler </GlassButton>
+                    <GlassButton variant="secondary" @click="closeModal" data-testid="cancel-delete-button">
+                        Annuler
+                    </GlassButton>
 
                     <GlassButton
                         variant="danger"

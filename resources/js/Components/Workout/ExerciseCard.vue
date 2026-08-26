@@ -19,6 +19,7 @@
 
 import { Link } from '@inertiajs/vue3'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
@@ -132,34 +133,34 @@ const emit = defineEmits([
                 <div
                     class="flex shrink-0 items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
                 >
-                    <button
-                        @click.stop="emit('start-edit', exercise)"
+                    <GlassIconButton
+                        icon="edit"
+                        :label="`Modifier ${exercise.name}`"
+                        ton="accent"
+                        class="sm:hidden"
                         :dusk="`edit-exercise-btn-${exercise.id}`"
-                        class="text-text-muted hover:bg-accent-primary/10 hover:text-accent-primary-deep focus-visible:ring-accent-primary flex size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:hidden"
-                        :aria-label="`Modifier ${exercise.name}`"
-                    >
-                        <span class="material-symbols-outlined text-sm opacity-50" aria-hidden="true">edit</span>
-                    </button>
+                        @click.stop="emit('start-edit', exercise)"
+                    />
 
                     <!-- Desktop Buttons -->
-                    <button
-                        @click.stop="emit('start-edit', exercise)"
+                    <GlassIconButton
+                        icon="edit"
+                        :label="`Modifier ${exercise.name}`"
+                        ton="accent"
+                        class="hidden sm:inline-flex"
                         :dusk="`edit-exercise-btn-desktop-${exercise.id}`"
-                        class="text-text-muted hover:bg-accent-primary/10 hover:text-accent-primary-deep focus-visible:ring-accent-primary hidden size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:flex"
                         data-testid="edit-exercise-button"
-                        :aria-label="`Modifier ${exercise.name}`"
-                    >
-                        <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                    </button>
-                    <button
-                        @click.stop="emit('delete', exercise.id)"
+                        @click.stop="emit('start-edit', exercise)"
+                    />
+                    <GlassIconButton
+                        icon="delete"
+                        :label="`Supprimer ${exercise.name}`"
+                        ton="danger"
+                        class="hidden sm:inline-flex"
                         :dusk="`delete-exercise-btn-${exercise.id}`"
-                        class="text-text-muted focus-visible:ring-accent-primary hover:bg-accent-danger/10 hover:text-accent-danger-deep hidden size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:flex"
                         data-testid="delete-exercise-button"
-                        :aria-label="`Supprimer ${exercise.name}`"
-                    >
-                        <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                    </button>
+                        @click.stop="emit('delete', exercise.id)"
+                    />
                 </div>
             </div>
 
@@ -183,10 +184,8 @@ const emit = defineEmits([
                     <GlassSelect
                         v-model="editForm.category"
                         dusk="edit-exercise-category"
-                        :options="[
-                            { value: '', label: '— Aucune —' },
-                            ...categories.map((c) => ({ value: c, label: c })),
-                        ]"
+                        :options="categories.map((c) => ({ value: c, label: c }))"
+                        empty-label="— Aucune —"
                         size="sm"
                         label="Catégorie"
                         hide-label
@@ -202,11 +201,11 @@ const emit = defineEmits([
                         :loading="editForm.processing"
                         data-testid="save-exercise-button"
                     >
-                        Sauvegarder
+                        Enregistrer
                     </GlassButton>
                     <GlassButton
                         type="button"
-                        variant="ghost"
+                        variant="secondary"
                         size="sm"
                         dusk="cancel-edit-btn"
                         @click="emit('cancel-edit')"

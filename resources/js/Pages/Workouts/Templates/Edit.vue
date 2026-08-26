@@ -318,7 +318,7 @@ const submit = () => {
                         </GlassCard>
                     </div>
 
-                    <GlassButton @click="showAddExercise = true" type="button" class="w-full">
+                    <GlassButton @click="showAddExercise = true" type="button" variant="primary" class="w-full">
                         + Ajouter un exercice
                     </GlassButton>
                 </div>
@@ -376,13 +376,12 @@ const submit = () => {
                             autofocus
                         />
                         <div class="grid grid-cols-2 gap-3">
-                            <GlassSelect v-model="createExerciseForm.type" label="Type" :options="types" size="sm" />
+                            <GlassSelect v-model="createExerciseForm.type" label="Type" :options="types" />
                             <GlassSelect
                                 v-model="createExerciseForm.category"
                                 label="Catégorie"
                                 :options="categories"
-                                placeholder="— Aucune —"
-                                size="sm"
+                                empty-label="— Aucune —"
                             />
                         </div>
                         <p
@@ -403,7 +402,7 @@ const submit = () => {
                             >
                                 Créer et ajouter
                             </GlassButton>
-                            <GlassButton type="button" variant="ghost" @click="showCreateForm = false">
+                            <GlassButton type="button" variant="secondary" @click="showCreateForm = false">
                                 Annuler
                             </GlassButton>
                         </div>

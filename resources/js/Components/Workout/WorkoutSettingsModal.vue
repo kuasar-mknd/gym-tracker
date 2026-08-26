@@ -72,7 +72,7 @@ const emit = defineEmits(['close', 'submit'])
                     class="w-full"
                     dusk="save-settings-button"
                 >
-                    Sauvegarder
+                    Enregistrer
                 </GlassButton>
             </form>
         </div>

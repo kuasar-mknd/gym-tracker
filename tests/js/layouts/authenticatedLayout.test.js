@@ -149,7 +149,7 @@ describe('AuthenticatedLayout — flash messages', () => {
     it('lets the user dismiss it', async () => {
         const wrapper = mountLayout({ flash: { success: 'Séance enregistrée' } })
 
-        await wrapper.get('[role="alert"] button[aria-label="Fermer"]').trigger('click')
+        await wrapper.get('[role="alert"] button[aria-label="Fermer le message"]').trigger('click')
 
         expect(toasts(wrapper)).toHaveLength(0)
     })

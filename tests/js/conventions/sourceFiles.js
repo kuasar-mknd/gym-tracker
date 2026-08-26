@@ -49,3 +49,53 @@ export const filesMatching = (pattern, options = {}) =>
     collectSourceFiles(options)
         .filter((path) => pattern.test(readFileSync(path, 'utf8')))
         .map((path) => path.replace(jsRoot, 'resources/js'))
+
+/**
+ * Le texte qu'un fragment de gabarit met réellement sous les yeux.
+ *
+ * Écrite d'abord comme un `replace(/<[^>]*>/g, '')`, cette fonction a fait
+ * tomber CodeQL sur `js/incomplete-multi-character-sanitization` : la requête
+ * reconnaît la forme « je retire les balises avec une expression régulière » et
+ * rappelle, à raison en général, qu'une telle passe peut RECRÉER ce qu'elle
+ * prétend supprimer (`<scr<script>ipt>`).
+ *
+ * L'entrée est ici le source du dépôt, pas une donnée hostile, et rien n'est
+ * réinjecté nulle part. Mais une exception vaut moins qu'un code qui n'a pas
+ * besoin d'être excusé : on découpe le fragment en alternant balises et texte,
+ * puis on ne garde que le texte. Rien n'est retiré, donc rien ne peut
+ * réapparaître.
+ *
+ * Les régions `aria-hidden="true"` sont écartées avec leur contenu : ce sont les
+ * ligatures Material Symbols, qui ajoutaient « add » devant chaque « Ajouter ».
+ *
+ * @param {string} fragment
+ * @returns {string}
+ */
+export const visibleText = (fragment) => {
+    let masquees = 0
+    let texte = ''
+
+    for (const morceau of fragment.split(/(<[^<>]*>)/)) {
+        if (!morceau.startsWith('<')) {
+            if (masquees === 0) {
+                texte += morceau
+            }
+
+            continue
+        }
+
+        if (morceau.startsWith('</')) {
+            masquees = Math.max(0, masquees - 1)
+
+            continue
+        }
+
+        const autoFermante = morceau.endsWith('/>')
+
+        if (!autoFermante && (masquees > 0 || morceau.includes('aria-hidden="true"'))) {
+            masquees += 1
+        }
+    }
+
+    return texte.replace(/\s+/g, ' ').trim()
+}

@@ -214,7 +214,7 @@ describe('editing a saved preset', () => {
         const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 
         await openPresets(wrapper)
-        await byLabel(wrapper, 'Modifier').trigger('click')
+        await byLabel(wrapper, 'Modifier le minuteur').trigger('click')
 
         expect(heading(wrapper)).toBe('Modifier le minuteur')
         expect(form.id).toBe(9)
@@ -231,7 +231,7 @@ describe('editing a saved preset', () => {
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 
         await openPresets(wrapper)
-        await byLabel(wrapper, 'Modifier').trigger('click')
+        await byLabel(wrapper, 'Modifier le minuteur').trigger('click')
         await wrapper.find('form').trigger('submit')
 
         expect(patch).toHaveBeenCalledTimes(1)
@@ -244,7 +244,7 @@ describe('editing a saved preset', () => {
         vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 
         await openPresets(wrapper)
-        await byLabel(wrapper, 'Modifier').trigger('click')
+        await byLabel(wrapper, 'Modifier le minuteur').trigger('click')
         await wrapper.find('form').trigger('submit')
 
         patch.mock.calls[0][1].onSuccess()
@@ -263,7 +263,7 @@ describe('editing a saved preset', () => {
         await openPresets(wrapper)
         expect(byText(wrapper, 'Annuler')).toBeUndefined()
 
-        await byLabel(wrapper, 'Modifier').trigger('click')
+        await byLabel(wrapper, 'Modifier le minuteur').trigger('click')
         await byText(wrapper, 'Annuler').trigger('click')
 
         expect(form.id).toBeNull()
@@ -278,7 +278,7 @@ describe('editing a saved preset', () => {
         await openPresets(wrapper)
         expect(byText(wrapper, 'Lancer')).toBeDefined()
 
-        await byLabel(wrapper, 'Modifier').trigger('click')
+        await byLabel(wrapper, 'Modifier le minuteur').trigger('click')
 
         // "Lancer" throws away the id along with everything else; offered here
         // it would quietly turn an edit into a new preset.

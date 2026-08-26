@@ -67,9 +67,15 @@ const streakLabel = computed(() => {
                 >
                     BON RETOUR
                 </p>
-                <h1 class="font-display text-text-main truncate text-3xl font-black tracking-tighter uppercase italic">
+                <!--
+                    Le prénom n'est pas le titre de la page : c'est une salutation.
+                    Le titre est « Accueil », et la barre collante le porte — deux
+                    `<h1>` dans une même page laissent un lecteur d'écran sans
+                    savoir lequel décrit ce qu'il vient d'ouvrir.
+                -->
+                <p class="font-display text-text-main truncate text-3xl font-black tracking-tighter uppercase italic">
                     {{ user.name?.split(' ')[0] }}
-                </h1>
+                </p>
                 <Link
                     v-if="formattedWeight"
                     :href="route('body-measurements.index')"

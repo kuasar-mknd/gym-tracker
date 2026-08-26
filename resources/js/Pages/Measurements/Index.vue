@@ -227,7 +227,7 @@ const latestBodyFat = computed(() => {
                         <GlassCard v-for="i in 2" :key="i">
                             <GlassSkeleton width="120px" height="1rem" class="mb-4" />
                             <div class="h-64">
-                                <GlassSkeleton height="100%" width="100%" variant="card" />
+                                <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                             </div>
                         </GlassCard>
                     </div>

@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
@@ -178,10 +179,17 @@ const selectCommonPart = (part) => {
                 </Link>
 
                 <!-- Empty State -->
-                <div v-if="latestMeasurements.length === 0 && !showAddForm" class="col-span-full py-12 text-center">
-                    <p class="text-text-muted">Aucune mesure enregistrée.</p>
-                    <GlassButton variant="primary" class="mt-4" @click="showAddForm = true"> Commencer </GlassButton>
-                </div>
+                <GlassEmptyState
+                    v-if="latestMeasurements.length === 0 && !showAddForm"
+                    class="col-span-full"
+                    icon="📏"
+                    color="cyan"
+                    title="Aucune mesure enregistrée"
+                    description="Enregistrez un premier tour de bras, de cuisse ou de taille pour suivre son évolution."
+                    action-label="Commencer"
+                    action-id="empty-state-measurement-part"
+                    @action="showAddForm = true"
+                />
             </div>
         </div>
     </AuthenticatedLayout>

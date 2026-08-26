@@ -162,6 +162,16 @@ const ModalStub = { name: 'ModalStub', template: '<div><slot /></div>' }
 /** A real <button>, so `@click` lands as a native listener and the slot renders. */
 const ButtonStub = { name: 'ButtonStub', template: '<button><slot /></button>' }
 const FieldStub = { name: 'FieldStub', template: '<div />' }
+
+/**
+ * Un bouton-icône rend un vrai `<button>` portant son nom accessible : c'est par
+ * ce nom que les tests le trouvent, et un bouchon muet le leur retirerait.
+ */
+const IconButtonStub = {
+    name: 'IconButtonStub',
+    props: ['icon', 'label'],
+    template: '<button type="button" :aria-label="label" @click="$emit(\'click\')" />',
+}
 const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
 const RestTimerStub = { name: 'RestTimerStub', props: ['duration'], template: '<div />' }
@@ -178,6 +188,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
                 SwipeableRow: SwipeStub,
                 Modal: ModalStub,
                 GlassButton: ButtonStub,
+                GlassIconButton: IconButtonStub,
                 GlassInput: FieldStub,
                 GlassSelect: FieldStub,
                 WorkoutSettingsModal: SettingsModalStub,

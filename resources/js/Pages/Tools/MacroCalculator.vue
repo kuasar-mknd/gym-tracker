@@ -143,7 +143,7 @@
                             <GlassButton
                                 @click="saveCalculation"
                                 variant="primary"
-                                :disabled="form.processing"
+                                :loading="form.processing"
                                 class="w-full"
                             >
                                 Enregistrer
@@ -212,15 +212,14 @@
                                 </div>
                             </div>
 
-                            <button
-                                @click="demanderSuppression(entry)"
-                                type="button"
-                                aria-label="Supprimer l'entrée"
+                            <GlassIconButton
+                                icon="delete"
+                                label="Supprimer l'entrée"
+                                ton="danger"
                                 title="Supprimer l'entrée"
-                                class="text-text-muted hover:bg-accent-danger/20 hover:text-accent-danger-deep absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full transition-colors sm:static"
-                            >
-                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                            </button>
+                                class="absolute top-4 right-4 sm:static"
+                                @click="demanderSuppression(entry)"
+                            />
                         </div>
                     </div>
                 </div>
@@ -245,6 +244,7 @@ import { computed, defineAsyncComponent } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'

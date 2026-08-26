@@ -259,7 +259,7 @@ const typeLabel = (type) => {
 <template>
     <Head title="Bibliothèque" />
 
-    <AuthenticatedLayout liquid-variant="subtle">
+    <AuthenticatedLayout liquid-variant="subtle" page-title="La Bibliothèque">
         <!-- Pull to Refresh Indicator -->
         <div
             class="pointer-events-none fixed top-0 left-0 z-50 flex w-full justify-center transition-transform duration-200 ease-out"
@@ -298,7 +298,7 @@ const typeLabel = (type) => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1
-                        class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-5xl"
+                        class="font-display text-text-main hidden text-3xl leading-none font-black tracking-tighter uppercase italic sm:block sm:text-5xl"
                     >
                         La<br />
                         <span class="text-gradient">Bibliothèque</span>
@@ -307,15 +307,6 @@ const typeLabel = (type) => {
                         {{ exercises.length }} exercices disponibles
                     </p>
                 </div>
-                <button
-                    @click="showAddForm = true"
-                    class="bg-gradient-main shadow-accent-primary/20 text-text-on-dark-accent flex size-14 items-center justify-center rounded-2xl shadow-lg active:scale-95 sm:hidden"
-                    data-testid="create-exercise-mobile-header"
-                    dusk="create-exercise-btn"
-                    aria-label="Nouvel exercice"
-                >
-                    <span class="material-symbols-outlined text-4xl" aria-hidden="true">add</span>
-                </button>
                 <GlassButton
                     @click="showAddForm = true"
                     variant="primary"
@@ -406,9 +397,10 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Add Form Modal -->
-            <Modal :show="showAddForm" @close="showAddForm = false" max-width="sm">
+            <Modal :show="showAddForm" @close="showAddForm = false" max-width="sm" aria-labelledby="new-exercise-title">
                 <div class="p-6">
                     <h3
+                        id="new-exercise-title"
                         class="font-display text-text-main mb-5 text-xl font-black uppercase"
                         dusk="exercise-modal-title"
                     >
@@ -436,11 +428,8 @@ const typeLabel = (type) => {
                                 v-model="form.category"
                                 name="category"
                                 label="Catégorie"
-                                :options="[
-                                    { value: '', label: '— Aucune —' },
-                                    ...EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c })),
-                                ]"
-                                placeholder=""
+                                :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
+                                empty-label="— Aucune —"
                             />
                         </div>
                         <GlassButton
@@ -498,7 +487,7 @@ const typeLabel = (type) => {
             <div v-if="!exercises" class="animate-pulse space-y-4">
                 <GlassCard padding="p-4">
                     <div class="flex gap-4">
-                        <GlassSkeleton width="60px" height="60px" border-radius="16px" />
+                        <GlassSkeleton width="60px" height="60px" class="rounded-2xl" />
                         <div class="flex-1 space-y-3 py-1">
                             <GlassSkeleton width="70%" height="1.2rem" />
                             <GlassSkeleton width="40%" height="0.8rem" />
@@ -507,7 +496,7 @@ const typeLabel = (type) => {
                 </GlassCard>
                 <GlassCard padding="p-4">
                     <div class="flex gap-4">
-                        <GlassSkeleton width="60px" height="60px" border-radius="16px" />
+                        <GlassSkeleton width="60px" height="60px" class="rounded-2xl" />
                         <div class="flex-1 space-y-3 py-1">
                             <GlassSkeleton width="60%" height="1.2rem" />
                             <GlassSkeleton width="50%" height="0.8rem" />
@@ -560,5 +549,24 @@ const typeLabel = (type) => {
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"
         />
+
+        <!--
+            Le « + » de la barre collante. Il vivait dans le corps de la page,
+            en `sm:hidden`, à côté de son jumeau de bureau — donc sous
+            l'en-tête plutôt que dedans, et pas au même endroit que celui de
+            « Mes Séances » ou de « Mes Modèles ».
+        -->
+        <template #header-actions>
+            <GlassButton
+                @click="showAddForm = true"
+                variant="primary"
+                class="min-h-touch! flex h-11! w-11! items-center justify-center p-0!"
+                data-testid="create-exercise-mobile-header"
+                dusk="create-exercise-btn"
+                aria-label="Nouvel exercice"
+            >
+                <span class="material-symbols-outlined text-xl leading-none" aria-hidden="true">add</span>
+            </GlassButton>
+        </template>
     </AuthenticatedLayout>
 </template>

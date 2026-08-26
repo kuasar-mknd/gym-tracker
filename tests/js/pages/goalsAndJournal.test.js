@@ -59,6 +59,7 @@ import GoalForm from '@/Components/Goals/GoalForm.vue'
 import JournalIndex from '@/Pages/Journal/Index.vue'
 import JournalForm from '@/Components/Journal/JournalForm.vue'
 import JournalList from '@/Components/Journal/JournalList.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 /**
  * La question passe par un dialogue de l'application, plus par `confirm()`.
@@ -694,12 +695,12 @@ describe('Journal/Index', () => {
     it("n'invite à commencer que si le journal est vide et le formulaire fermé", async () => {
         const wrapper = await mountJournal([])
 
-        expect(wrapper.text()).toContain('Votre journal est vide')
+        expect(wrapper.findComponent(GlassEmptyState).props('title')).toBe('Votre journal est vide')
         expect(wrapper.findComponent(JournalList).exists()).toBe(false)
 
         await openAdd(wrapper)
 
-        expect(wrapper.text()).not.toContain('Votre journal est vide')
+        expect(wrapper.findComponent(GlassEmptyState).exists()).toBe(false)
         expect(wrapper.findComponent(JournalForm).exists()).toBe(true)
 
         wrapper.unmount()

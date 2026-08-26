@@ -46,6 +46,25 @@ defineProps({
         type: String,
         default: 'Sélectionner...',
     },
+
+    /**
+     * Le libellé du choix VIDE, quand « rien » est une réponse légitime.
+     *
+     * `placeholder` est une invite : elle se rend désactivée, et l'utilisateur
+     * ne peut pas y revenir. Un champ facultatif a besoin de l'inverse — la
+     * catégorie d'un exercice, par exemple, doit pouvoir être retirée après
+     * coup.
+     *
+     * Les deux étaient confondus. Deux écrans passaient `placeholder="— Aucune
+     * —"` et fabriquaient donc un « aucune » que personne ne pouvait choisir ;
+     * deux autres construisaient l'option à la main dans leur tableau
+     * d'`options` pour contourner exactement cela. Quatre écrans, le même
+     * besoin, trois façons de l'écrire — dont une qui ne marchait pas.
+     */
+    emptyLabel: {
+        type: String,
+        default: '',
+    },
     error: {
         type: String,
         default: '',
@@ -117,7 +136,8 @@ const isRequired = computed(() => {
                 ]"
                 v-bind="$attrs"
             >
-                <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
+                <option v-if="emptyLabel" value="">{{ emptyLabel }}</option>
+                <option v-else-if="placeholder" value="" disabled>{{ placeholder }}</option>
                 <option
                     v-for="option in options"
                     :key="typeof option === 'object' ? option.value : option"

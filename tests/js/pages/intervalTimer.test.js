@@ -281,7 +281,7 @@ describe('IntervalTimer presets', () => {
         const wrapper = mountTimer([shortPreset])
         await openPresets(wrapper)
 
-        await byLabel(wrapper, 'Supprimer').trigger('click')
+        await byLabel(wrapper, 'Supprimer le minuteur').trigger('click')
 
         expect(dialogue(wrapper).props('ouvert')).toBe(true)
         expect(routerDelete).not.toHaveBeenCalled()
@@ -295,7 +295,7 @@ describe('IntervalTimer presets', () => {
         const wrapper = mountTimer([shortPreset])
         await openPresets(wrapper)
 
-        await byLabel(wrapper, 'Supprimer').trigger('click')
+        await byLabel(wrapper, 'Supprimer le minuteur').trigger('click')
         await dialogue(wrapper).vm.$emit('annuler')
 
         expect(dialogue(wrapper).props('ouvert')).toBe(false)

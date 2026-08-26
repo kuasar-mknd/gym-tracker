@@ -19,6 +19,7 @@
 import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
@@ -1741,7 +1742,7 @@ onUnmounted(() => {
                                 @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
                                 :disabled="isFinished"
                                 :dusk="`complete-set-${lineIndex}-${index}`"
-                                class="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
+                                class="group relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
                                 :class="
                                     set.is_completed
                                         ? 'bg-accent-state text-text-main'
@@ -1921,9 +1922,12 @@ onUnmounted(() => {
         </div>
 
         <!-- Modals -->
-        <Modal :show="showAddExercise" @close="closeModal" max-width="lg">
+        <Modal :show="showAddExercise" @close="closeModal" max-width="lg" aria-labelledby="add-exercise-title">
             <div class="p-6">
-                <h2 class="font-display text-text-main mb-6 text-2xl font-black uppercase italic">
+                <h2
+                    id="add-exercise-title"
+                    class="font-display text-text-main mb-6 text-2xl font-black uppercase italic"
+                >
                     Ajouter un exercice
                 </h2>
                 <div v-if="!showCreateForm">
@@ -1975,13 +1979,7 @@ onUnmounted(() => {
                 <!-- Create Form -->
                 <div v-else class="space-y-6">
                     <div class="flex items-center gap-4">
-                        <button
-                            @click="showCreateForm = false"
-                            class="text-text-muted hover:text-text-main relative before:absolute before:-inset-2.5 before:content-['']"
-                            aria-label="Retour"
-                        >
-                            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-                        </button>
+                        <GlassIconButton icon="arrow_back" label="Retour" @click="showCreateForm = false" />
                         <h3 class="font-display text-text-main text-xl font-black uppercase italic">Nouvel Exercice</h3>
                     </div>
 
@@ -2005,6 +2003,7 @@ onUnmounted(() => {
                                 v-model="createExerciseForm.category"
                                 label="Catégorie"
                                 :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
+                                empty-label="— Aucune —"
                                 dusk="new-exercise-category"
                             />
                         </div>
@@ -2032,9 +2031,14 @@ onUnmounted(() => {
 
         <WorkoutFinishModal :show="showFinishModal" @close="showFinishModal = false" @confirm="confirmFinishWorkout" />
 
-        <Modal :show="showConfirmModal" @close="showConfirmModal = false" max-width="sm">
+        <Modal
+            :show="showConfirmModal"
+            @close="showConfirmModal = false"
+            max-width="sm"
+            aria-labelledby="confirm-title"
+        >
             <div class="p-6 text-center">
-                <h3 class="text-text-main mb-6 text-xl font-bold">{{ confirmMessage }}</h3>
+                <h3 id="confirm-title" class="text-text-main mb-6 text-xl font-bold">{{ confirmMessage }}</h3>
                 <div class="flex gap-3">
                     <GlassButton variant="secondary" @click="showConfirmModal = false" class="flex-1"
                         >Annuler</GlassButton
