@@ -91,6 +91,19 @@ import ProfileIndex from '@/Pages/Profile/Index.vue'
 import ToolsIndex from '@/Pages/Tools/Index.vue'
 
 /**
+ * La question passe par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Sur mobile, plusieurs navigateurs suppriment la boîte native après quelques
+ * appels : le geste s'exécutait alors SANS question. Une confirmation qui peut
+ * disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
+/**
  * The route names Laravel actually registers, read off the route files.
  *
  * `Profile/Index` and `Tools/Index` are little more than hard-coded lists of
@@ -302,14 +315,15 @@ describe('Measurements/Parts/Show — the history list', () => {
 
 describe('Measurements/Parts/Show — deleting an entry', () => {
     it('deletes the entry whose button was pressed, once confirmed', async () => {
-        const confirm = vi.spyOn(globalThis, 'confirm').mockReturnValue(true)
         const { wrapper } = mountPart()
 
         await wrapper.find('[dusk="delete-measurement-2"]').trigger('click')
 
-        expect(formDelete).toHaveBeenCalledWith('/routes/body-parts.destroy?bodyPartMeasurement=2')
+        expect(formDelete).not.toHaveBeenCalled()
 
-        confirm.mockRestore()
+        await confirmer(wrapper)
+
+        expect(formDelete.mock.calls[0][0]).toBe('/routes/body-parts.destroy?bodyPartMeasurement=2')
     })
 
     it('deletes nothing when the confirmation is refused', async () => {

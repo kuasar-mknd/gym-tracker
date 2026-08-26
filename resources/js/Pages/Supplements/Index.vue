@@ -5,6 +5,8 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 const SupplementUsageChart = defineAsyncComponent(() => import('@/Components/Stats/SupplementUsageChart.vue'))
 
@@ -64,11 +66,15 @@ const updateSupplement = (supplement) => {
     })
 }
 
-const deleteSupplement = (id) => {
-    if (confirm('Supprimer ce complément ?')) {
-        router.delete(route('supplements.destroy', { supplement: id }))
-    }
-}
+const {
+    cible: complementASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((complement, termine) => {
+    router.delete(route('supplements.destroy', { supplement: complement.id }), { onFinish: termine })
+})
 
 const consume = (id) => {
     router.post(
@@ -272,7 +278,7 @@ const formatDate = (dateString) => {
                                     </button>
                                     <button
                                         v-press
-                                        @click="deleteSupplement(supplement.id)"
+                                        @click="demanderSuppression(supplement)"
                                         aria-label="Supprimer le complément"
                                         class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger-deep flex items-center justify-center p-1 transition-colors"
                                     >
@@ -332,5 +338,12 @@ const formatDate = (dateString) => {
             <!-- List Padding for Mobile Bottom Nav -->
             <div class="h-24 sm:hidden"></div>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer ce complément ?"
+            :description="complementASupprimer ? `« ${complementASupprimer.name} » sera retiré de ta liste.` : ''"
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>

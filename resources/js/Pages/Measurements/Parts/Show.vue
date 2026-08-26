@@ -6,6 +6,8 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
 import { todayAsCalendarDate } from '@/Utils/date'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
@@ -36,11 +38,15 @@ const submit = () => {
     })
 }
 
-const deleteMeasurement = (id) => {
-    if (confirm('Supprimer cette entrée ?')) {
-        useForm({}).delete(route('body-parts.destroy', { bodyPartMeasurement: id }))
-    }
-}
+const {
+    cible: mesureASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((mesure, termine) => {
+    useForm({}).delete(route('body-parts.destroy', { bodyPartMeasurement: mesure.id }), { onFinish: termine })
+})
 
 /**
  * BodyMeasurementResource serialises measured_at as a bare 'Y-m-d', which
@@ -146,7 +152,7 @@ const formatMeasuredAt = (measuredAt) =>
                              announces nothing but "button". -->
                         <button
                             type="button"
-                            @click="deleteMeasurement(item.id)"
+                            @click="demanderSuppression(item)"
                             :aria-label="`Supprimer la mesure du ${formatMeasuredAt(item.measured_at)}`"
                             :dusk="`delete-measurement-${item.id}`"
                             class="text-text-muted/30 hover:text-accent-danger-deep rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
@@ -170,5 +176,16 @@ const formatMeasuredAt = (measuredAt) =>
                 </GlassCard>
             </div>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer cette mesure ?"
+            :description="
+                mesureASupprimer
+                    ? `La mesure du ${formatMeasuredAt(mesureASupprimer.measured_at)} — ${mesureASupprimer.value} ${mesureASupprimer.unit} — sera effacée.`
+                    : ''
+            "
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>

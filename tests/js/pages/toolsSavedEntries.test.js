@@ -39,6 +39,19 @@ import MacroCalculator from '@/Pages/Tools/MacroCalculator.vue'
 import WaterTracker from '@/Pages/Tools/WaterTracker.vue'
 import { passesSlot } from './pageStubs'
 
+/**
+ * La question est posée par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Ce n'était pas qu'une affaire d'apparence : sur mobile, plusieurs navigateurs
+ * suppriment la boîte native après quelques appels, et le geste s'exécute alors
+ * SANS question. Une confirmation qui peut disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
 })
@@ -145,14 +158,21 @@ describe('the Wilks history', () => {
 
     it('deletes the row that was clicked, not the first one', async () => {
         const wrapper = await mountPage(WilksCalculator, { history: entries })
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
 
         await deleteButtons(wrapper, "Supprimer l'entrée")[1].trigger('click')
+        await confirmer(wrapper)
 
         expect(routerDelete).toHaveBeenCalledTimes(1)
         expect(routerDelete.mock.calls[0][0]).toContain('"wilksScore":9')
+    })
 
-        confirmSpy.mockRestore()
+    it('ne supprime rien tant que la question n’est pas tranchée', async () => {
+        const wrapper = await mountPage(WilksCalculator, { history: entries })
+
+        await deleteButtons(wrapper, "Supprimer l'entrée")[1].trigger('click')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
+        expect(routerDelete).not.toHaveBeenCalled()
     })
 
     it('leaves the row alone when the confirmation is refused', async () => {
@@ -272,13 +292,11 @@ describe('the macro history', () => {
 
     it('deletes the row that was clicked, not the first one', async () => {
         const wrapper = await mountPage(MacroCalculator, { history: entries })
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
 
         await deleteButtons(wrapper, "Supprimer l'entrée")[2].trigger('click')
+        await confirmer(wrapper)
 
         expect(routerDelete.mock.calls[0][0]).toContain('"macroCalculation":11')
-
-        confirmSpy.mockRestore()
     })
 })
 
@@ -362,14 +380,12 @@ describe('the water log', () => {
 
     it('deletes the entry that was clicked, not the first one', async () => {
         const wrapper = await mountPage(WaterTracker, { logs, todayTotal: 1250, history: [] })
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
 
         await deleteButtons(wrapper, 'Supprimer')[1].trigger('click')
+        await confirmer(wrapper)
 
         expect(routerDelete.mock.calls[0][0]).toContain('"waterLog":5')
         expect(haptic).toHaveBeenCalledWith('warning')
-
-        confirmSpy.mockRestore()
     })
 
     it('keeps the entry when the confirmation is refused, and stays silent', async () => {

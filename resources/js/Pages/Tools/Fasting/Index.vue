@@ -23,6 +23,8 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 const FastingHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/FastingHistoryChart.vue'))
 import dayjs from 'dayjs'
@@ -167,11 +169,14 @@ const goToPage = (url) => {
     }
 }
 
-const deleteFast = (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce jeûne ?')) {
-        router.delete(route('tools.fasting.destroy', id))
-    }
-}
+const {
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((id, termine) => {
+    router.delete(route('tools.fasting.destroy', id), { onFinish: termine })
+})
 
 const formatDate = (date) => dayjs(date).format('DD/MM/YYYY HH:mm')
 const formatHistoryDuration = (start, end) => {
@@ -333,7 +338,7 @@ const formatHistoryDuration = (start, end) => {
                             <!-- Icon-only and destructive: it had no name at all. -->
                             <button
                                 type="button"
-                                @click="deleteFast(fast.id)"
+                                @click="demanderSuppression(fast.id)"
                                 :aria-label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
                                 class="focus-visible:ring-accent-primary text-accent-danger-deep hover:text-accent-danger/70 relative rounded-lg p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                             >
@@ -374,5 +379,12 @@ const formatHistoryDuration = (start, end) => {
                 </nav>
             </GlassCard>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer ce jeûne ?"
+            description="Il disparaîtra de ton historique."
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>

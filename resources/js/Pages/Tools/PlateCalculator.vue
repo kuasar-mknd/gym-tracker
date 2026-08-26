@@ -193,7 +193,7 @@
                                     x {{ plate.quantity }}
                                 </div>
                                 <button
-                                    @click="deletePlate(plate)"
+                                    @click="demanderSuppression(plate)"
                                     type="button"
                                     aria-label="Supprimer la plaque"
                                     title="Supprimer la plaque"
@@ -249,6 +249,13 @@
                 </div>
             </div>
         </Modal>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Retirer ce disque de ton inventaire ?"
+            :description="disqueASupprimer?.weight ? `Le disque de ${disqueASupprimer.weight} kg sera retire.` : ''"
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>
 
@@ -261,6 +268,8 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import Modal from '@/Components/UI/Modal.vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 const props = defineProps({
     plates: {
@@ -287,11 +296,15 @@ const savePlate = () => {
     })
 }
 
-const deletePlate = (plate) => {
-    if (confirm('Supprimer cette plaque ?')) {
-        router.delete(route('plates.destroy', { plate: plate }))
-    }
-}
+const {
+    cible: disqueASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((plate, termine) => {
+    router.delete(route('plates.destroy', { plate: plate.id ?? plate }), { onFinish: termine })
+})
 
 const calculatedPlates = computed(() => calculatePlates(targetWeight.value, barWeight.value, props.plates))
 

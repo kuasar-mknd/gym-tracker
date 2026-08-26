@@ -47,6 +47,13 @@ import TemplateEdit from '@/Pages/Workouts/Templates/Edit.vue'
 import TemplateIndex from '@/Pages/Workouts/Templates/Index.vue'
 import { passesSlot, layoutStub } from './pageStubs'
 
+/** La question passe par un dialogue de l'application, plus par `confirm()`. */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
 })
@@ -237,11 +244,15 @@ describe('the template listing', () => {
         expect(router.post).toHaveBeenCalledTimes(2)
     })
 
-    it('deletes the template once the confirmation is accepted', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
-
+    it('supprime le modèle une fois la confirmation donnée', async () => {
         const wrapper = mountIndex([pushA])
+
         await wrapper.find('[dusk="delete-template-7"]').trigger('click')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
+        expect(router.delete).not.toHaveBeenCalled()
+
+        await confirmer(wrapper)
 
         expect(router.delete).toHaveBeenCalledTimes(1)
         expect(router.delete.mock.calls[0][0]).toBe('/templates.destroy/{"template":7}')

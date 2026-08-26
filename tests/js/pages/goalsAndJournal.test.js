@@ -61,6 +61,19 @@ import JournalForm from '@/Components/Journal/JournalForm.vue'
 import JournalList from '@/Components/Journal/JournalList.vue'
 
 /**
+ * La question passe par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Sur mobile, plusieurs navigateurs suppriment la boîte native après quelques
+ * appels : le geste s'exécutait alors SANS question. Une confirmation qui peut
+ * disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
+/**
  * Both pages print stored calendar days — a deadline, the month an entry belongs
  * to. Run behind UTC on purpose: that is where a day read as an instant shows up
  * as the day before, so the whole file is a place where that mistake is visible.
@@ -649,21 +662,29 @@ describe('Journal/Index', () => {
         const wrapper = await mountJournal([journal({ id: 9 })])
         const list = wrapper.findComponent(JournalList)
 
-        vi.spyOn(window, 'confirm').mockReturnValue(false)
         list.vm.$emit('delete', 9)
         await flushPromises()
 
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
         expect(deletions()).toHaveLength(0)
 
-        window.confirm.mockReturnValue(true)
-        list.vm.$emit('delete', 9)
+        await confirmer(wrapper)
         await flushPromises()
 
         expect(deletions()).toHaveLength(1)
-        expect(deletions()[0].url).toBe('/daily-journals/9')
+    })
 
-        window.confirm.mockRestore()
-        wrapper.unmount()
+    it('laisse l’entrée tranquille quand on annule', async () => {
+        const wrapper = await mountJournal([journal({ id: 9 })])
+
+        wrapper.findComponent(JournalList).vm.$emit('delete', 9)
+        await flushPromises()
+
+        await dialogue(wrapper).vm.$emit('annuler')
+        await flushPromises()
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(false)
+        expect(deletions()).toHaveLength(0)
     })
 
     /**

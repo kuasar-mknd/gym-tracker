@@ -377,13 +377,44 @@ describe('Measurements/Index add form', () => {
 describe('Measurements/Index deletion', () => {
     const deleteButtonFor = (wrapper, day) => wrapper.find(`[aria-label="Supprimer la mesure du ${day}"]`)
 
-    it('asks first, and leaves the entry alone when the answer is no', async () => {
-        window.confirm.mockReturnValue(false)
+    /*
+     * La question est posée par un dialogue de l'application, plus par
+     * `confirm()`. Ce n'était pas qu'une affaire d'apparence : sur mobile,
+     * plusieurs navigateurs suppriment la boîte native après quelques appels, et
+     * le geste s'exécute alors SANS question. Une confirmation qui peut
+     * disparaître n'est pas une confirmation.
+     */
+    const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+    it('demande avant de supprimer, et ne supprime rien tant que rien n’est confirmé', async () => {
+        const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(false)
+
+        await deleteButtonFor(wrapper, '2026-08-05').trigger('click')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
+        expect(routerDelete).not.toHaveBeenCalled()
+    })
+
+    it('nomme la mesure qu’on s’apprête à perdre', async () => {
+        // Ce que `confirm()` ne pouvait pas faire : « Supprimer cette entrée ? »
+        // ne dit pas laquelle, et l'utilisateur qui hésite doit fermer pour
+        // aller vérifier.
         const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })
 
         await deleteButtonFor(wrapper, '2026-08-05').trigger('click')
 
-        expect(window.confirm).toHaveBeenCalled()
+        expect(dialogue(wrapper).props('description')).toContain('5 août 2026')
+    })
+
+    it('laisse l’entrée tranquille quand on annule', async () => {
+        const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })
+
+        await deleteButtonFor(wrapper, '2026-08-05').trigger('click')
+        await dialogue(wrapper).vm.$emit('annuler')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(false)
         expect(routerDelete).not.toHaveBeenCalled()
     })
 
@@ -391,8 +422,9 @@ describe('Measurements/Index deletion', () => {
         const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })
 
         await deleteButtonFor(wrapper, '2026-08-05').trigger('click')
+        await dialogue(wrapper).vm.$emit('confirmer')
 
-        expect(routerDelete).toHaveBeenCalledWith('/body-measurements/2')
+        expect(routerDelete.mock.calls[0][0]).toBe('/body-measurements/2')
     })
 
     it('names the day it would remove, since every row carries the same icon', async () => {

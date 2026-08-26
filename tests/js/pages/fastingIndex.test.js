@@ -2,6 +2,19 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite
 import { mount, flushPromises } from '@vue/test-utils'
 
 /**
+ * La question passe par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Sur mobile, plusieurs navigateurs suppriment la boîte native après quelques
+ * appels : le geste s'exécutait alors SANS question. Une confirmation qui peut
+ * disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
+/**
  * The fasting page is a clock: it turns a start timestamp into an elapsed
  * counter, a remaining counter and a progress arc, and it turns the chosen
  * preset into the payload the server validates. Both are asserted here on
@@ -287,15 +300,16 @@ describe('Fasting — historique', () => {
     })
 
     it('demande confirmation avant de supprimer', async () => {
-        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
         const wrapper = await mountPage({ history: history([completed]) })
 
         await wrapper.find('[aria-label^="Supprimer le jeûne"]').trigger('click')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
         expect(hoisted.destroy).not.toHaveBeenCalled()
 
-        confirm.mockReturnValue(true)
-        await wrapper.find('[aria-label^="Supprimer le jeûne"]').trigger('click')
-        expect(hoisted.destroy).toHaveBeenCalledWith('/tools.fasting.destroy/1')
+        await confirmer(wrapper)
+
+        expect(hoisted.destroy).toHaveBeenCalled()
     })
 })
 

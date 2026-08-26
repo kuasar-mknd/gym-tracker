@@ -79,14 +79,22 @@ class ExerciseListLiveUpdateTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitUntil($this->domContains($exercise->name), 15);
 
-            // The page confirms before deleting, and Dusk cannot answer a native
-            // dialog — accepting it up front is the only way through.
-            $browser->script('window.confirm = () => true;');
-
+            /*
+             * La page demande confirmation, et c'est desormais un dialogue de
+             * l'APPLICATION. Ce test devait auparavant remplacer `window.confirm`
+             * par une fonction qui repond toujours oui, parce que Dusk ne sait
+             * pas repondre a une boite native — il verifiait donc la suppression
+             * en desactivant la question.
+             *
+             * Il clique maintenant le vrai bouton, ce qui couvre aussi le fait
+             * que la question soit bien posee.
+             */
             // The row's own control, not the name: the name lingers elsewhere in
             // the document after the card goes, so a text match would never
             // clear and would report a working deletion as broken.
             $browser->click('[dusk="delete-exercise-btn-'.$exercise->id.'"]')
+                ->waitFor('@confirm-dialog-confirm', 10)
+                ->click('@confirm-dialog-confirm')
                 ->waitUntilMissing('[dusk="delete-exercise-btn-'.$exercise->id.'"]', 15);
 
             // The row left the screen; this is what says it also left the

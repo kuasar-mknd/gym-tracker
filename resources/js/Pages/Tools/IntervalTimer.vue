@@ -23,6 +23,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 defineProps({
     timers: {
@@ -103,11 +105,15 @@ const editTimer = (timer) => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-const deleteTimer = (timer) => {
-    if (confirm('Voulez-vous vraiment supprimer ce minuteur ?')) {
-        router.delete(route('tools.interval-timer.destroy', timer.id))
-    }
-}
+const {
+    cible: minuteurASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((timer, termine) => {
+    router.delete(route('tools.interval-timer.destroy', timer.id), { onFinish: termine })
+})
 
 const loadTimer = (timer) => {
     timerConfig.value = {
@@ -521,7 +527,7 @@ onUnmounted(() => {
                                 <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                             </button>
                             <button
-                                @click="deleteTimer(timer)"
+                                @click="demanderSuppression(timer)"
                                 class="text-text-muted hover:text-accent-danger-deep relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
                                 aria-label="Supprimer"
                             >
@@ -532,5 +538,12 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer ce minuteur ?"
+            :description="minuteurASupprimer ? `« ${minuteurASupprimer.name} » sera définitivement effacé.` : ''"
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>

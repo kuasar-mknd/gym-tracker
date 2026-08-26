@@ -4,6 +4,8 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 defineProps({
     templates: {
@@ -34,11 +36,15 @@ const executeTemplate = (templateId) => {
     )
 }
 
-const deleteTemplate = (templateId) => {
-    if (confirm('Es-tu sûr de vouloir supprimer ce modèle ?')) {
-        router.delete(route('templates.destroy', { template: templateId }))
-    }
-}
+const {
+    cible: modeleASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((modele, termine) => {
+    router.delete(route('templates.destroy', { template: modele.id }), { onFinish: termine })
+})
 </script>
 
 <template>
@@ -110,7 +116,7 @@ const deleteTemplate = (templateId) => {
                                      is no hover to reveal it. -->
                                 <button
                                     type="button"
-                                    @click="deleteTemplate(template.id)"
+                                    @click="demanderSuppression(template)"
                                     :dusk="`delete-template-${template.id}`"
                                     :aria-label="`Supprimer ${template.name}`"
                                     class="text-text-muted focus-visible:ring-accent-primary hover:bg-accent-danger/10 hover:text-accent-danger-deep rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
@@ -168,5 +174,12 @@ const deleteTemplate = (templateId) => {
                 </GlassCard>
             </div>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer ce modèle ?"
+            :description="modeleASupprimer ? `« ${modeleASupprimer.name} » sera définitivement effacé.` : ''"
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>

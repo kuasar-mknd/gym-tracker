@@ -34,6 +34,9 @@ vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => hoisted
 
 import ExercisesIndex from '@/Pages/Exercises/Index.vue'
 
+/** La question passe par un dialogue de l'application, plus par `confirm()`. */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
 const PECS = { id: 1, name: 'Développé couché', type: 'strength', category: 'Pectoraux' }
 const BACK = { id: 2, name: 'Tractions', type: 'strength', category: 'Dos' }
 const PECS_2 = { id: 3, name: 'Écarté couché', type: 'strength', category: 'Pectoraux' }
@@ -294,6 +297,11 @@ describe('Exercises/Index — suppression optimiste', () => {
     const deleteFirstCard = async (wrapper) => {
         wrapper.findAllComponents({ name: 'ExerciseCard' })[0].vm.$emit('delete', PECS.id)
         await wrapper.vm.$nextTick()
+
+        // La suppression passe par un dialogue de l'application : la ligne ne
+        // part qu'une fois la question tranchée.
+        await dialogue(wrapper).vm.$emit('confirmer')
+        await wrapper.vm.$nextTick()
     }
 
     it('retire la ligne avant même la réponse du serveur', async () => {
@@ -328,10 +336,13 @@ describe('Exercises/Index — suppression optimiste', () => {
     })
 
     it('ne supprime rien si la confirmation est refusée', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(false)
-
         const wrapper = mountPage([PECS, PECS_2, BACK])
-        await deleteFirstCard(wrapper)
+
+        wrapper.findAllComponents({ name: 'ExerciseCard' })[0].vm.$emit('delete', PECS.id)
+        await wrapper.vm.$nextTick()
+
+        await dialogue(wrapper).vm.$emit('annuler')
+        await wrapper.vm.$nextTick()
 
         expect(hoisted.routerDelete).not.toHaveBeenCalled()
         expect(renderedCards(wrapper)).toHaveLength(3)

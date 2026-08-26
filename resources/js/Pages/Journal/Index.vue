@@ -17,6 +17,8 @@ import JournalList from '@/Components/Journal/JournalList.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent } from 'vue'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 const JournalChart = defineAsyncComponent(() => import('@/Components/Stats/JournalChart.vue'))
 
@@ -111,10 +113,22 @@ const submit = () => {
  *
  * @param {Number} id - The ID of the journal entry to delete.
  */
-const deleteJournal = (id) => {
-    if (confirm('Supprimer cette entrée ?')) {
-        useForm({}).delete(route('daily-journals.destroy', { daily_journal: id }))
-    }
+const {
+    cible: entreeASupprimer,
+    ouvert: suppressionDemandee,
+    demander: retenirSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((entree, termine) => {
+    useForm({}).delete(route('daily-journals.destroy', { daily_journal: entree.id }), { onFinish: termine })
+})
+
+/*
+ * L'enfant n'emet qu'un identifiant : on retrouve l'entree pour pouvoir la
+ * NOMMER dans la question. C'est ce que `confirm()` ne pouvait pas faire.
+ */
+const demanderSuppression = (id) => {
+    retenirSuppression(props.journals.find((journal) => journal.id === id) ?? { id })
 }
 
 /**
@@ -186,8 +200,19 @@ const journalsByMonth = computed(() => {
                 :journals-by-month="journalsByMonth"
                 :moods="moods"
                 @edit="editJournal"
-                @delete="deleteJournal"
+                @delete="demanderSuppression"
             />
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer cette entrée ?"
+            :description="
+                entreeASupprimer?.date
+                    ? `L'entrée du ${parseCalendarDate(entreeASupprimer.date).toLocaleDateString('fr-FR')} sera effacée.`
+                    : ''
+            "
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>
