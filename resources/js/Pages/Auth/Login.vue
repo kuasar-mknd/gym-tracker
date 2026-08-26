@@ -39,7 +39,7 @@ const submit = () => {
 
         <div
             v-if="status"
-            class="border-accent-state bg-accent-state text-trend-up mb-4 rounded-xl border p-3 text-sm font-medium"
+            class="state-fill border-accent-state mb-4 rounded-xl border p-3 text-sm font-medium"
         >
             {{ status }}
         </div>

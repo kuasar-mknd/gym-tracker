@@ -201,6 +201,29 @@
     --color-accent-warning-deep: #8d6b04;
 
     /*
+     * --- La seance en cours ---------------------------------------------
+     *
+     * Le bandeau du tableau de bord, et lui seul. Un degrade vert-emeraude vers
+     * cyan, qui n'appartient a aucune autre famille : ce n'est ni un accent —
+     * il ne demande rien — ni une categorie. C'est une identite, celle d'une
+     * seance ouverte.
+     *
+     * Il portait `emerald-500`, `teal-500` et `cyan-500` de Tailwind. La
+     * conversion vers la charte les a envoyes sur `accent-state` et
+     * `accent-info`, les jetons VIFS, bien plus clairs : le texte blanc y est
+     * passe de 2,5:1 a 1,2:1, et pas un mot du bandeau ne se lisait. C'est le
+     * piege de ce genre de table — remplacer une nuance par un role change la
+     * luminosite, pas seulement le nom.
+     *
+     * Les trois tons d'origine sont donc rendus, assombris du minimum
+     * necessaire pour que le blanc tienne 4,52:1. A l'oeil, le bandeau est
+     * celui d'avant ; a la mesure, il est lisible, ce qu'il n'a jamais ete.
+     */
+    --color-session-from: #0b875e;
+    --color-session-via: #0e8578;
+    --color-session-to: #048297;
+
+    /*
      * --- Tendance ------------------------------------------------------
      *
      * Une direction, pas un jugement. `comparison > 0 ? trend-up : trend-down`
