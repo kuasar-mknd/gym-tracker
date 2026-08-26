@@ -107,9 +107,21 @@ const formatDate = (date) => {
                             <div
                                 :class="[
                                     'mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                                    /*
+                                     * En aplat avec de l'encre, et non en texte
+                                     * colore sur son propre lavis : ce motif-la
+                                     * rendait 2,70:1 pour le rose et 1,36:1
+                                     * pour le cyan, illisible dans les deux cas.
+                                     * En plein, ils rendent 4,73 et 11,61.
+                                     *
+                                     * Le record portait `yellow-500`, qui est la
+                                     * valeur de l'alerte : un trophee n'est pas
+                                     * un avertissement, et le jour ou l'alerte
+                                     * serait retouchee le badge aurait suivi.
+                                     */
                                     notification.data.type === 'personal_record'
-                                        ? 'bg-yellow-500/20 text-yellow-500'
-                                        : 'bg-blue-500/20 text-blue-500',
+                                        ? 'bg-accent-secondary text-text-on-accent'
+                                        : 'bg-accent-info text-text-on-accent',
                                 ]"
                             >
                                 <svg

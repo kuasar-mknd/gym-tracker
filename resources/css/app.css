@@ -94,7 +94,15 @@
     --color-accent-state: #ccff00;
 
     --color-accent-info: #00e5ff;
+    /*
+     * Le danger existe en deux valeurs, pour la meme raison que l'orange :
+     * `#ef4444` sert de FOND (a 10 %, sous un texte), `deep` sert de TEXTE.
+     * Ecrit en #ef4444 sur ce fond compose, le libelle rend 4,23:1 — sous le
+     * seuil, de peu, ce qui est exactement le genre d'ecart que seul un calcul
+     * attrape. En deep il rend 5,5:1, sans difference perceptible.
+     */
     --color-accent-danger: #ef4444;
+    --color-accent-danger-deep: #b91c1c;
     --color-accent-warning: #eab308;
 
     /*
@@ -106,8 +114,14 @@
      * `accent-danger` malgre des valeurs voisines. Les confondre empecherait de
      * changer l'un sans changer l'autre.
      */
-    --color-trend-up: #10b981;
-    --color-trend-down: #ef4444;
+    /*
+     * Assombris pour etre lisibles EN TEXTE, qui est leur seul usage : la
+     * comparaison hebdomadaire ecrit « +12 % » dans cette couleur. #10b981 rend
+     * 2,54:1 sur une carte et #ef4444 3,76:1 — les deux echouent, et le second
+     * echouait deja avant la charte.
+     */
+    --color-trend-up: #0b875e;
+    --color-trend-down: #c81111;
 
     /*
      * --- Categories d'exercice ------------------------------------------
@@ -417,14 +431,34 @@
     }
 }
 
+/*
+ * L'action principale : vert d'etat, encre dessus.
+ *
+ * Elle portait `--gradient-main` avec du texte blanc, et ca ne pouvait pas
+ * tenir : le degrade va de #ff5500 a #8800ff, soit un ecart de luminosite que
+ * AUCUNE couleur de texte ne traverse. Blanc — 3,21:1 sur l'orange, 6,02 sur le
+ * violet ; encre — 5,57 sur l'orange, 2,97 sur le violet. Le libelle commencait
+ * donc a 3,2:1, sous le seuil de 4,5, et c'etait le bouton le plus employe de
+ * l'application (44 occurrences).
+ *
+ * Le vert d'etat avec de l'encre rend 15,19:1 — le meilleur contraste de toute
+ * la palette. La variante `neon` existait deja dans ce fichier, exactement ainsi,
+ * et n'etait employee nulle part.
+ *
+ * Le degrade n'est pas retire de l'application : il reste partout ou aucun texte
+ * ne se pose dessus — le bouton `+` de la barre (une icone y tient les 3:1
+ * demandes pour du non-texte), les en-tetes du tableau de bord, les cartes
+ * d'objectif, les cases a cocher, et le logo, ou `text-gradient` colore le texte
+ * lui-meme au lieu de se poser derriere.
+ */
 @utility glass-button-primary {
-    background: var(--gradient-main);
+    background: var(--color-accent-state);
     border: none;
-    color: white;
-    box-shadow: 0 10px 30px rgba(255, 85, 0, 0.3);
+    color: var(--color-text-on-accent);
+    box-shadow: 0 10px 30px rgba(204, 255, 0, 0.35);
 
     &:hover {
-        box-shadow: 0 15px 40px rgba(255, 85, 0, 0.4);
+        box-shadow: 0 15px 40px rgba(204, 255, 0, 0.5);
     }
 }
 

@@ -8,7 +8,7 @@ declare(strict_types=1);
  * C'est la regle qui manquait, et son absence a coute le mode sombre. Une meme
  * couleur s'ecrivait de quatre facons — `electric-orange`, `accent-primary`,
  * `#ff5500` en dur, ou `orange-500` de Tailwind — et le choix entre elles etait
- * un hasard d'ecriture. Mesure avant la charte : 700 usages de couleurs brutes dans 69 fichiers
+ * un hasard d'ecriture. Mesure avant la charte : 700 usages de couleurs brutes dans 69 fichiers ; 140 apres la premiere vague de conversion
  * en 56 teintes, dont 764 sans aucun jeton portant leur valeur.
  *
  * Un cliquet plutot qu'une interdiction seche, pour la meme raison que le
@@ -88,7 +88,7 @@ it('ne laisse pas remonter le nombre de couleurs brutes', function (): void {
      * laisse au-dessus du reel laisse re-rentrer ce qu'on vient de sortir : le
      * baseline PHPStan a deja appris cette lecon a ce depot.
      */
-    $plafond = 700;
+    $plafond = 140;
 
     $tete = array_slice($parFichier, 0, 6, true);
     $lignes = [];

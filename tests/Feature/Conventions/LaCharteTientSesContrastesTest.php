@@ -95,6 +95,10 @@ function pairesDeLaCharte(): array
         ['text-on-accent', 'accent-state', "encre sur le vert d'etat"],
         ['text-on-accent', 'accent-info', "encre sur l'information"],
         ['text-on-accent', 'accent-warning', "encre sur l'alerte"],
+        ['text-on-accent', 'accent-state', "encre sur l'action principale, qui porte ce vert"],
+        ['trend-up', 'surface-card', 'une hausse, ecrite sur une carte'],
+        ['trend-down', 'surface-card', 'une baisse, ecrite sur une carte'],
+        ['accent-danger-deep', 'surface-card', 'un libelle de danger sur une carte'],
     ];
 }
 

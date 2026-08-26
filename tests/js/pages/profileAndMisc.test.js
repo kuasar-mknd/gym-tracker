@@ -506,8 +506,22 @@ describe('Notifications/Index — what a notification shows', () => {
     it('marks a record apart from the rest', () => {
         const wrapper = mountNotifications()
 
-        expect(wrapper.get('[data-notification-id="n-1"]').html()).toContain('text-yellow-500')
-        expect(wrapper.get('[data-notification-id="n-2"]').html()).toContain('text-blue-500')
+        // Le record porte le rose, l'ordinaire porte le cyan — et les deux
+        // s'écrivent en aplat avec de l'encre. Le motif précédent posait la
+        // couleur en TEXTE sur son propre lavis à 20 %, ce qui rendait 2,70:1
+        // pour le rose et 1,36:1 pour le cyan : la distinction existait dans le
+        // balisage sans être lisible à l'écran.
+        const record = wrapper.get('[data-notification-id="n-1"]').html()
+        const ordinaire = wrapper.get('[data-notification-id="n-2"]').html()
+
+        expect(record).toContain('bg-accent-secondary')
+        expect(ordinaire).toContain('bg-accent-info')
+
+        // Ce que le test garde vraiment : que les deux DIFFÈRENT. Deux
+        // assertions sur deux littéraux passeraient encore le jour où les deux
+        // branches du ternaire porteraient la même couleur.
+        expect(record).not.toContain('bg-accent-info')
+        expect(ordinaire).not.toContain('bg-accent-secondary')
     })
 })
 
