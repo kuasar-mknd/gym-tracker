@@ -1605,7 +1605,7 @@ onUnmounted(() => {
                 v-if="editError"
                 role="alert"
                 dusk="set-edit-error"
-                class="fixed inset-x-3 top-20 z-50 rounded-2xl border border-red-500/30 bg-red-500/95 px-4 py-3 text-sm font-bold text-white shadow-lg backdrop-blur-md"
+                class="border-accent-danger/30 bg-accent-danger/95 text-text-on-accent fixed inset-x-3 top-20 z-50 rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
             >
                 {{ editError }}
             </div>
@@ -1618,7 +1618,7 @@ onUnmounted(() => {
                 dusk="workout-settings-button"
                 :class="[
                     'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
-                    'border border-white bg-white/60 transition-all',
+                    'border-surface-card bg-surface-card/60 border transition-all',
                     ' ',
                 ]"
                 aria-label="Paramètres de la séance"
@@ -1677,7 +1677,7 @@ onUnmounted(() => {
                         v-press="{ haptic: 'warning' }"
                         @click="removeLine(line.id)"
                         :dusk="`remove-line-${lineIndex}`"
-                        class="text-text-muted transition-colors hover:text-red-500"
+                        class="text-text-muted hover:text-accent-danger transition-colors"
                         aria-label="Supprimer l'exercice"
                     >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -1723,7 +1723,7 @@ onUnmounted(() => {
                                 @click="removeSet(set.id)"
                                 :dusk="`swipe-remove-set-${lineIndex}-${index}`"
                                 :aria-label="`Supprimer la série ${index + 1}`"
-                                class="flex h-full w-full items-center justify-center bg-red-500 text-white"
+                                class="bg-accent-danger text-text-on-accent flex h-full w-full items-center justify-center"
                             >
                                 <span class="flex flex-col items-center" aria-hidden="true">
                                     <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
@@ -1733,7 +1733,7 @@ onUnmounted(() => {
                         </template>
 
                         <div
-                            class="flex items-center gap-2 rounded-2xl border border-white bg-white/80 p-3 shadow-sm"
+                            class="border-surface-card bg-surface-card/80 flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
                             :class="{ 'opacity-50': set.is_completed }"
                         >
                             <button
@@ -1743,7 +1743,9 @@ onUnmounted(() => {
                                 :dusk="`complete-set-${lineIndex}-${index}`"
                                 class="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
                                 :class="
-                                    set.is_completed ? 'bg-neon-green text-text-main' : 'bg-slate-100 text-slate-300'
+                                    set.is_completed
+                                        ? 'bg-neon-green text-text-main'
+                                        : 'bg-surface-sunken text-slate-300'
                                 "
                                 :aria-label="set.is_completed ? 'Annuler la série' : 'Valider la série'"
                             >
@@ -1764,7 +1766,7 @@ onUnmounted(() => {
                                 <!-- PR Trophy Badge -->
                                 <div
                                     v-if="set.personal_record"
-                                    class="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-sm"
+                                    class="bg-accent-warning text-text-on-accent absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full shadow-sm"
                                     :dusk="`pr-trophy-${lineIndex}-${index}`"
                                 >
                                     <span class="material-symbols-outlined text-[12px] font-bold" aria-hidden="true"
@@ -1773,7 +1775,7 @@ onUnmounted(() => {
                                 </div>
                             </button>
                             <div
-                                class="text-text-muted relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-sm font-black"
+                                class="text-text-muted bg-surface-sunken relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black"
                             >
                                 {{ index + 1 }}
 
@@ -1783,7 +1785,7 @@ onUnmounted(() => {
                                      a touch device never shows. -->
                                 <span
                                     v-if="unsyncedSetIds.has(String(set.id))"
-                                    class="absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-amber-500 text-white"
+                                    class="bg-accent-warning text-text-on-accent absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full"
                                     :dusk="`set-unsynced-${lineIndex}-${index}`"
                                     role="img"
                                     :aria-label="`Série ${index + 1} non enregistrée`"
@@ -1805,7 +1807,7 @@ onUnmounted(() => {
                                     :disabled="isFinished"
                                     :dusk="`weight-input-${lineIndex}-${index}`"
                                     :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                 />
                                 <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">kg</span>
                                 <input
@@ -1818,7 +1820,7 @@ onUnmounted(() => {
                                     :disabled="isFinished"
                                     :dusk="`reps-input-${lineIndex}-${index}`"
                                     :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                 />
                                 <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">reps</span>
                             </template>
@@ -1835,7 +1837,7 @@ onUnmounted(() => {
                                     :disabled="isFinished"
                                     :dusk="`distance-input-${lineIndex}-${index}`"
                                     :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-slate-200 text-center font-bold"
+                                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                 />
                                 <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">km</span>
                                 <DurationWheel
@@ -1864,7 +1866,7 @@ onUnmounted(() => {
                                 @click="removeSet(set.id)"
                                 :dusk="`remove-set-${lineIndex}-${index}`"
                                 :class="[
-                                    'relative ml-auto text-slate-300 hover:text-red-500',
+                                    'hover:text-accent-danger relative ml-auto text-slate-300',
                                     'before:absolute before:-inset-2.5 before:content-[\'\']',
                                     // Redundant on a phone, where the row swipes.
                                     // Kept from sm up, where there is no swipe at
@@ -1885,7 +1887,7 @@ onUnmounted(() => {
                     v-press
                     @click="addSet(line.id)"
                     :dusk="`add-set-${lineIndex}`"
-                    class="text-text-muted hover:border-neon-green mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 py-3 text-sm font-bold uppercase transition-all"
+                    class="text-text-muted hover:border-neon-green border-border mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition-all"
                 >
                     Ajouter une série
                 </button>
@@ -1939,7 +1941,7 @@ onUnmounted(() => {
                             type="button"
                             @click="quickCreate"
                             dusk="quick-create-exercise"
-                            class="flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center transition-all hover:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+                            class="border-border flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all hover:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
                         >
                             <span class="text-text-muted mb-2 block text-sm italic"
                                 >Aucun résultat pour "{{ searchQuery }}"</span

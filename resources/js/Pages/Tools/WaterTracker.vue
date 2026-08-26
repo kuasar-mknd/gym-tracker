@@ -76,7 +76,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 250ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
                                 >local_drink</span
@@ -88,7 +88,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 500ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
                                 >water_drop</span
@@ -100,7 +100,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 1L"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
                                 >water_bottle</span
@@ -154,7 +154,7 @@
                         <div
                             v-for="log in logs"
                             :key="log.id"
-                            class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-3 transition-all hover:bg-white/80"
+                            class="border-border bg-surface-card/50 hover:bg-surface-card/80 flex items-center justify-between rounded-2xl border p-3 transition-all"
                         >
                             <div class="flex items-center gap-3">
                                 <div
@@ -177,7 +177,7 @@
                             <button
                                 @click="deleteLog(log)"
                                 :aria-label="'Supprimer l\'entrée de ' + log.amount + ' ml'"
-                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                class="text-text-muted hover:bg-accent-danger/10 hover:text-accent-danger flex h-8 w-8 items-center justify-center rounded-full transition-colors"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>

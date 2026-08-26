@@ -114,7 +114,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
         >
             <div
                 v-if="pullDistance > 0 || isRefreshing"
-                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md"
+                class="border-border bg-surface-card/90 mt-4 rounded-full border p-3 shadow-lg backdrop-blur-md"
             >
                 <svg
                     v-if="isRefreshing"
@@ -303,7 +303,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <div
                             v-for="exercise in deferredData.exercises"
                             :key="exercise.id"
-                            class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm"
+                            class="border-border bg-surface-card/50 shrink-0 rounded-xl border px-3 py-2 text-sm shadow-sm"
                         >
                             <div class="text-text-main font-medium">{{ exercise.name }}</div>
                             <div class="text-text-muted text-xs">{{ exercise.category }}</div>
@@ -394,14 +394,14 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                             <span
                                                 v-for="line in workout.workout_lines.slice(0, 3)"
                                                 :key="line.id"
-                                                class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs"
+                                                class="text-text-muted border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
                                             >
                                                 {{ line.exercise.name }}
                                                 <span class="text-text-muted/50">• {{ line.sets_count }} séries</span>
                                             </span>
                                             <span
                                                 v-if="workout.workout_lines.length > 3"
-                                                class="text-text-muted/50 rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs"
+                                                class="text-text-muted/50 border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
                                             >
                                                 +{{ workout.workout_lines.length - 3 }}
                                             </span>

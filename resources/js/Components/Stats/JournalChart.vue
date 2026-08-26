@@ -153,8 +153,8 @@ const chartOptions = computed(() => {
                 :class="[
                     'focus-visible:ring-electric-orange rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-all focus-visible:ring-2 focus-visible:outline-none',
                     selectedMetric === metric.value
-                        ? 'scale-105 text-slate-900 shadow-lg'
-                        : 'text-text-muted hover:text-text-main bg-white/50 hover:bg-white/80',
+                        ? 'text-text-main scale-105 shadow-lg'
+                        : 'text-text-muted hover:text-text-main bg-surface-card/50 hover:bg-surface-card/80',
                 ]"
                 :style="selectedMetric === metric.value ? { backgroundColor: metric.color } : {}"
             >

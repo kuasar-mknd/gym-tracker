@@ -43,7 +43,7 @@ const streakLabel = computed(() => {
 <template>
     <header
         id="dashboard-header"
-        class="animate-fade-in flex items-center justify-between rounded-3xl border border-white/20 bg-white/10 p-4 shadow-lg backdrop-blur-md transition-all duration-300 hover:bg-white/20 hover:shadow-xl active:scale-[0.98]"
+        class="animate-fade-in border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 flex items-center justify-between rounded-3xl border p-4 shadow-lg backdrop-blur-md transition-all duration-300 hover:shadow-xl active:scale-[0.98]"
     >
         <div class="flex min-w-0 items-center gap-4">
             <!-- Avatar with gradient border -->
@@ -52,7 +52,7 @@ const streakLabel = computed(() => {
                     class="from-electric-orange to-vivid-violet relative size-14 overflow-hidden rounded-full bg-linear-to-tr p-[2px]"
                 >
                     <div
-                        class="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white"
+                        class="border-surface-card bg-surface-card flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2"
                     >
                         <span class="text-gradient text-2xl font-black">
                             {{ user.name?.charAt(0).toUpperCase() }}
@@ -92,7 +92,7 @@ const streakLabel = computed(() => {
             :href="route('stats.index')"
             dusk="dashboard-streak"
             :aria-label="streakLabel"
-            class="streak-badge group focus-visible:ring-electric-orange min-h-touch flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+            class="streak-badge group focus-visible:ring-electric-orange min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl border px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none active:scale-95"
         >
             <span
                 class="material-symbols-outlined text-electric-orange text-[24px] transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse"

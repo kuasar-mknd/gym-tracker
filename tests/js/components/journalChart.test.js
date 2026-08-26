@@ -175,7 +175,7 @@ describe('lisibilité du filtre actif', () => {
     }
 
     /** Les classes Tailwind ne sont pas résolues sous jsdom ; la teinte est lue ici. */
-    const TEXT_COLOURS = { 'text-slate-900': '#0f172a', 'text-white': '#ffffff' }
+    const TEXT_COLOURS = { 'text-text-main': '#0f172a', 'text-white': '#ffffff' }
 
     it('tient le seuil AA pour chacune des sept métriques', async () => {
         const wrapper = mount(JournalChart, { props: { data: entries } })

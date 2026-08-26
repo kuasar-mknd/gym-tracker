@@ -59,7 +59,7 @@ const handlePeriodChange = (period) => {
 
                 <!-- Period Selector -->
                 <div
-                    class="border-glass-border flex shrink-0 rounded-xl border bg-white/50 p-1 shadow-sm backdrop-blur-sm"
+                    class="border-glass-border bg-surface-card/50 flex shrink-0 rounded-xl border p-1 shadow-sm backdrop-blur-sm"
                 >
                     <button
                         v-for="period in periods"

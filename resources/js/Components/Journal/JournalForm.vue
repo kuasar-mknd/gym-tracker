@@ -64,16 +64,16 @@ const emit = defineEmits(['close', 'submit'])
                         :aria-label="mood.label"
                         :title="mood.label"
                         :class="[
-                            'focus-visible:ring-electric-orange flex-1 rounded-2xl border border-white/20 p-2 text-center text-sm backdrop-blur-md transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none',
+                            'focus-visible:ring-electric-orange border-surface-card/20 flex-1 rounded-2xl border p-2 text-center text-sm backdrop-blur-md transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none',
                             form.mood_score === mood.value
-                                ? 'bg-accent-primary border-transparent text-white shadow-lg'
-                                : 'text-text-muted bg-white/10 hover:bg-white/20 hover:text-white',
+                                ? 'bg-accent-primary text-text-on-accent border-transparent shadow-lg'
+                                : 'text-text-muted bg-surface-card/10 hover:bg-surface-card/20 hover:text-white',
                         ]"
                     >
                         <div class="text-xl" aria-hidden="true">{{ mood.label.split(' ')[0] }}</div>
                     </button>
                 </div>
-                <div v-if="form.errors.mood_score" class="mt-1 text-xs text-red-400">
+                <div v-if="form.errors.mood_score" class="text-accent-danger mt-1 text-xs">
                     {{ form.errors.mood_score }}
                 </div>
             </div>
@@ -147,7 +147,7 @@ const emit = defineEmits(['close', 'submit'])
                     <span
                         id="journal-content-counter"
                         class="text-[10px] font-bold tracking-wider uppercase"
-                        :class="form.content?.length > 1000 ? 'text-red-400' : 'text-text-muted/50'"
+                        :class="form.content?.length > 1000 ? 'text-accent-danger' : 'text-text-muted/50'"
                     >
                         {{ form.content?.length || 0 }} / 1000
                     </span>
@@ -158,10 +158,10 @@ const emit = defineEmits(['close', 'submit'])
                     rows="4"
                     maxlength="1000"
                     aria-describedby="journal-content-counter"
-                    class="text-text-main placeholder-text-muted/50 w-full rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-white/15 focus:border-white/50 focus:bg-white/20 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none"
+                    class="text-text-main placeholder-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none"
                     placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
                 ></textarea>
-                <div v-if="form.errors.content" class="mt-1 text-xs text-red-400">
+                <div v-if="form.errors.content" class="text-accent-danger mt-1 text-xs">
                     {{ form.errors.content }}
                 </div>
             </div>

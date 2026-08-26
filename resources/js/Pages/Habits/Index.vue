@@ -334,7 +334,7 @@ const getProgressPercent = (habit) => {
                     <div
                         v-for="day in weekDates"
                         :key="day.date"
-                        class="flex flex-col items-center justify-center border-l border-slate-100 p-2 text-center"
+                        class="border-border flex flex-col items-center justify-center border-l p-2 text-center"
                         :class="{ 'bg-accent-primary/5': day.is_today }"
                     >
                         <div class="text-text-muted text-[10px] uppercase">{{ day.day_short || day.day }}</div>
@@ -357,7 +357,7 @@ const getProgressPercent = (habit) => {
                 <GlassCard
                     v-for="habit in habits"
                     :key="habit.id"
-                    class="group overflow-hidden p-0 transition hover:bg-white/10"
+                    class="group hover:bg-surface-card/10 overflow-hidden p-0 transition"
                 >
                     <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
                         <!-- Habit Info -->
@@ -372,7 +372,7 @@ const getProgressPercent = (habit) => {
                                 <div class="min-w-0 flex-1">
                                     <h3 class="text-text-main truncate font-bold">{{ habit.name }}</h3>
                                     <div class="flex items-center gap-2">
-                                        <div class="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
+                                        <div class="bg-surface-sunken h-1.5 w-16 overflow-hidden rounded-full">
                                             <div
                                                 class="h-full rounded-full transition-all duration-500"
                                                 :class="habit.color"
@@ -401,7 +401,7 @@ const getProgressPercent = (habit) => {
                                 </button>
                                 <button
                                     @click="deleteHabit(habit)"
-                                    class="text-text-muted min-h-touch min-w-touch flex items-center justify-center rounded-lg hover:text-red-500"
+                                    class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger flex items-center justify-center rounded-lg"
                                     aria-label="Supprimer l'habitude"
                                 >
                                     <span class="material-symbols-outlined text-sm" aria-hidden="true">delete</span>
@@ -413,7 +413,7 @@ const getProgressPercent = (habit) => {
                         <div
                             v-for="day in weekDates"
                             :key="day.date"
-                            class="flex items-center justify-center border-l border-slate-100 p-2"
+                            class="border-border flex items-center justify-center border-l p-2"
                             :class="{ 'bg-accent-primary/5': day.is_today }"
                         >
                             <!-- aria-pressed carries the done/not-done state, which colour
@@ -430,7 +430,7 @@ const getProgressPercent = (habit) => {
                                 :class="[
                                     isCompleted(habit, day.date)
                                         ? `${habit.color} text-white shadow-md`
-                                        : 'bg-slate-100 text-slate-300 hover:bg-slate-200',
+                                        : 'bg-surface-sunken text-slate-300 hover:bg-slate-200',
                                 ]"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">check</span>
@@ -512,7 +512,7 @@ const getProgressPercent = (habit) => {
                                 :aria-label="iconNames[icon]"
                                 :aria-pressed="form.icon === icon"
                                 :dusk="`habit-icon-${icon}`"
-                                class="focus-visible:ring-accent-primary flex h-10 w-10 items-center justify-center rounded-lg border-2 transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary hover:bg-surface-sunken flex h-10 w-10 items-center justify-center rounded-lg border-2 transition focus-visible:ring-2 focus-visible:outline-none"
                                 :class="[
                                     form.icon === icon
                                         ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'

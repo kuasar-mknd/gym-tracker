@@ -213,8 +213,8 @@ describe('the notes box', () => {
         // 1000 is the limit, not one past it: a `>=` here would paint a full
         // but perfectly valid note red.
         expect(atLimit.wrapper.find('#journal-content-counter').classes()).toContain('text-text-muted/50')
-        expect(atLimit.wrapper.find('#journal-content-counter').classes()).not.toContain('text-red-400')
-        expect(over.wrapper.find('#journal-content-counter').classes()).toContain('text-red-400')
+        expect(atLimit.wrapper.find('#journal-content-counter').classes()).not.toContain('text-accent-danger')
+        expect(over.wrapper.find('#journal-content-counter').classes()).toContain('text-accent-danger')
     })
 
     it('reads an entry with no note at all as zero, not as NaN', () => {

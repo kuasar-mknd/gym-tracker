@@ -98,7 +98,7 @@ watch(selectedExercise, (newVal) => {
             role="alert"
             dusk="exercise-progress-error"
         >
-            <span class="material-symbols-outlined mb-2 text-4xl text-red-400" aria-hidden="true">cloud_off</span>
+            <span class="material-symbols-outlined text-accent-danger mb-2 text-4xl" aria-hidden="true">cloud_off</span>
             <p class="text-text-muted mb-3 text-sm">Impossible de charger la progression.</p>
             <button
                 type="button"

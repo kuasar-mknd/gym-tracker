@@ -224,7 +224,7 @@ const updatePreferences = () => {
                     Les notifications push ne sont pas supportées par votre navigateur.
                 </div>
 
-                <div v-else-if="pushSupported && !vapidPublicKey" class="mb-6 text-xs text-amber-400/80 italic">
+                <div v-else-if="pushSupported && !vapidPublicKey" class="text-accent-warning/80 mb-6 text-xs italic">
                     Le service de notifications n'est pas encore configuré sur le serveur.
                 </div>
 
@@ -263,7 +263,7 @@ const updatePreferences = () => {
                         leave-from-class="translate-y-0 opacity-100"
                         leave-to-class="translate-y-1 opacity-0"
                     >
-                        <div v-if="form.preferences.training_reminder" class="ml-2 border-l-2 border-slate-200 pl-4">
+                        <div v-if="form.preferences.training_reminder" class="border-border ml-2 border-l-2 pl-4">
                             <GlassInput
                                 v-model="form.values.training_reminder"
                                 type="number"
@@ -294,7 +294,12 @@ const updatePreferences = () => {
                 </Transition>
             </div>
 
-            <p v-if="pushError" class="text-sm font-bold text-red-500" role="alert" dusk="notification-push-error">
+            <p
+                v-if="pushError"
+                class="text-accent-danger text-sm font-bold"
+                role="alert"
+                dusk="notification-push-error"
+            >
                 {{ pushError }}
             </p>
         </form>
