@@ -55,7 +55,7 @@ const filteredAchievements = computed(() => {
                     class="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all"
                     :class="
                         currentCategory === cat.value
-                            ? 'bg-accent-primary-deep shadow-accent-primary/20 text-white-on-accent shadow-lg'
+                            ? 'bg-accent-primary shadow-accent-primary/20 text-text-on-dark-accent-on-accent shadow-lg'
                             : 'text-text-muted border-border bg-surface-card/50 hover:bg-surface-card/80 border'
                     "
                 >

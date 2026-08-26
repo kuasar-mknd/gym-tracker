@@ -79,7 +79,7 @@ const selectCommonPart = (part) => {
                                 :class="[
                                     'rounded-full px-3 py-1 text-xs transition',
                                     form.part === part
-                                        ? 'bg-accent-primary-deep text-white'
+                                        ? 'bg-accent-primary text-text-on-dark-accent'
                                         : 'text-text-muted bg-surface-sunken hover:bg-slate-200',
                                 ]"
                             >

@@ -69,19 +69,39 @@
      */
     --color-text-on-accent: #0f172a;
 
+    /*
+     * Et ce qu'on ecrit sur les accents SOMBRES — l'orange principal, le danger.
+     * Du blanc, parce qu'ils sont assez fonces pour le porter et trop pour
+     * porter de l'encre.
+     *
+     * Deux jetons et non un seul, parce qu'un accent clair et un accent sombre
+     * n'appellent pas le meme texte, et qu'il vaut mieux deux noms sans
+     * ambiguite qu'un seul que chaque composant devrait interpreter. Le
+     * composant ecrit `bg-accent-primary text-text-on-dark-accent` et n'a
+     * jamais a savoir de quelle couleur il s'agit.
+     */
+    --color-text-on-dark-accent: #ffffff;
+
     /* --- Accents ------------------------------------------------------- */
 
     /*
-     * L'orange existe en DEUX valeurs, et ce n'est pas un doublon.
+     * UN SEUL orange, et il porte du blanc.
      *
-     * `primary` porte l'identite : anneaux de focus, texte, bordures,
-     * degrades — 183 des 190 usages, ou le contraste ne se pose pas de la meme
-     * facon. `primary-deep` ne sert QUE de fond a du texte blanc, ou il rend
-     * 4,52:1 la ou `#ff5500` rendait 3,21. La pop est donc gardee partout sauf
-     * sur sept boutons.
+     * Il valait #ff5500, ou le blanc rend 3,21:1 — sous le seuil de 4,5 pour du
+     * texte courant. La charte a d'abord porte deux valeurs, une pour l'identite
+     * et une pour les fonds ; c'etait une erreur de conception, parce qu'elle
+     * obligeait CHAQUE composant a choisir entre les deux. Le but d'un jeton est
+     * exactement l'inverse : qu'un composant nomme un role et ignore sa valeur.
+     *
+     * #ce4400 est le meme orange assombri jusqu'a tenir ses quatre emplois d'un
+     * seul coup : blanc dessus 4,72:1, en texte sur une carte 4,72, en texte sur
+     * le fond de page 4,52, et en anneau de focus bien au-dessus des 3:1
+     * demandes pour du non-texte.
+     *
+     * Il ne porte PAS d'encre (3,78:1), et c'est voulu : un seul texte possible
+     * dessus, donc plus de choix a faire.
      */
-    --color-accent-primary: #ff5500;
-    --color-accent-primary-deep: #d34600;
+    --color-accent-primary: #ce4400;
 
     /* Le deuxieme et le troisieme du degrade. Identite, pas information. */
     --color-accent-secondary: #ff0080;

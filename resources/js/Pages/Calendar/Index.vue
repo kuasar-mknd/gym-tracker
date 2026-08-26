@@ -276,7 +276,7 @@ const formatDateFull = (dateStr) => {
                             <span
                                 :class="[
                                     'flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold',
-                                    day.isToday ? 'bg-accent-primary-deep text-white' : 'text-text-main',
+                                    day.isToday ? 'bg-accent-primary text-text-on-dark-accent' : 'text-text-main',
                                 ]"
                                 aria-hidden="true"
                             >

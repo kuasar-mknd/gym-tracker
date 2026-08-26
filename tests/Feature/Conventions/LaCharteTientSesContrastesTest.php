@@ -91,7 +91,6 @@ function pairesDeLaCharte(): array
         ['text-main', 'surface-sunken', 'texte principal sur une surface creuse'],
         ['text-muted', 'surface-page', 'texte secondaire sur le fond de page'],
         ['text-muted', 'surface-card', 'texte secondaire sur une carte'],
-        ['text-on-accent', 'accent-primary', "encre sur l'accent principal"],
         ['text-on-accent', 'accent-state', "encre sur le vert d'etat"],
         ['text-on-accent', 'accent-info', "encre sur l'information"],
         ['text-on-accent', 'accent-warning', "encre sur l'alerte"],
@@ -99,6 +98,7 @@ function pairesDeLaCharte(): array
         ['trend-up', 'surface-card', 'une hausse, ecrite sur une carte'],
         ['trend-down', 'surface-card', 'une baisse, ecrite sur une carte'],
         ['accent-danger-deep', 'surface-card', 'un libelle de danger sur une carte'],
+        ['accent-primary', 'surface-page', "l'accent principal ecrit en texte"],
     ];
 }
 
@@ -122,21 +122,15 @@ it('tient les contrastes que la charte annonce', function (): void {
     ));
 });
 
-it('garde du blanc lisible sur l accent profond, qui existe pour ca', function (): void {
-    $surProfond = contraste('#ffffff', valeurDuJeton('accent-primary-deep'));
-    $surVif = contraste('#ffffff', valeurDuJeton('accent-primary'));
+it('garde du blanc lisible sur l accent principal, qui n en porte pas d autre', function (): void {
+    $surOrange = contraste('#ffffff', valeurDuJeton('accent-primary'));
 
-    expect($surProfond)->toBeGreaterThanOrEqual(4.5, sprintf(
-        '`--color-accent-primary-deep` ne sert qu a porter du texte blanc, et il rend %.2f:1. '
-        ."S'il ne tient plus ce role, il n'a plus de raison d'exister : autant revenir a un seul orange.",
-        $surProfond
-    ));
-
-    // Et la raison d'etre du doublon : le vif ne peut PAS porter de blanc.
-    expect($surVif)->toBeLessThan(4.5, sprintf(
-        "`--color-accent-primary` rend %.2f:1 avec du blanc — s'il passait le seuil, l'accent profond "
-        .'serait inutile et la charte pourrait se simplifier.',
-        $surVif
+    expect($surOrange)->toBeGreaterThanOrEqual(4.5, sprintf(
+        "L'accent principal rend %.2f:1 avec du blanc, et le blanc est le seul texte qu'il porte. "
+        .'La charte a un temps porte DEUX oranges — un vif pour l identite, un profond pour les '
+        ."fonds — et c'etait une erreur : elle obligeait chaque composant a choisir entre les deux, "
+        .'ce qu un jeton existe precisement pour eviter.',
+        $surOrange
     ));
 });
 
