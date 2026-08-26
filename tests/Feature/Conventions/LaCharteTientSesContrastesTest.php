@@ -26,57 +26,7 @@ declare(strict_types=1);
  * elles ne portent aucun texte, donc la norme ne les regarde pas.
  */
 
-/**
- * La luminance relative d'une couleur, selon WCAG 2.1.
- */
-function luminance(string $hexa): float
-{
-    $hexa = ltrim($hexa, '#');
-
-    $canaux = [];
-
-    foreach ([0, 2, 4] as $decalage) {
-        $canal = hexdec(substr($hexa, $decalage, 2)) / 255;
-        $canaux[] = $canal <= 0.03928 ? $canal / 12.92 : (($canal + 0.055) / 1.055) ** 2.4;
-    }
-
-    return 0.2126 * $canaux[0] + 0.7152 * $canaux[1] + 0.0722 * $canaux[2];
-}
-
-function contraste(string $premier, string $second): float
-{
-    $a = luminance($premier);
-    $b = luminance($second);
-
-    return (max($a, $b) + 0.05) / (min($a, $b) + 0.05);
-}
-
-/**
- * La valeur d'un jeton, lue dans le bloc `@theme`.
- *
- * Les alias — ceux qui pointent vers un autre jeton — sont suivis, sinon le
- * controle passerait a cote de toute paire ecrite avec un ancien nom.
- */
-function valeurDuJeton(string $nom): string
-{
-    /** @var string|null $css */
-    static $css = null;
-    $css ??= (string) file_get_contents(resource_path('css/app.css'));
-
-    for ($saut = 0; $saut < 5; $saut++) {
-        if (preg_match('/--color-'.preg_quote($nom, '/').':\s*(#[0-9a-fA-F]{6})\s*;/', $css, $direct) === 1) {
-            return strtolower($direct[1]);
-        }
-
-        if (preg_match('/--color-'.preg_quote($nom, '/').':\s*var\(--color-([a-z0-9-]+)\)\s*;/', $css, $alias) !== 1) {
-            break;
-        }
-
-        $nom = $alias[1];
-    }
-
-    throw new RuntimeException("Le jeton `--color-{$nom}` n'est pas declare, ou sa valeur n'est pas une couleur pleine.");
-}
+use Tests\Support\Contraste;
 
 /**
  * Les paires que la charte promet lisibles.
@@ -91,10 +41,25 @@ function pairesDeLaCharte(): array
         ['text-main', 'surface-sunken', 'texte principal sur une surface creuse'],
         ['text-muted', 'surface-page', 'texte secondaire sur le fond de page'],
         ['text-muted', 'surface-card', 'texte secondaire sur une carte'],
-        ['text-on-accent', 'accent-primary', "encre sur l'accent principal"],
         ['text-on-accent', 'accent-state', "encre sur le vert d'etat"],
         ['text-on-accent', 'accent-info', "encre sur l'information"],
         ['text-on-accent', 'accent-warning', "encre sur l'alerte"],
+        ['trend-up', 'surface-card', 'une hausse, ecrite sur une carte'],
+        ['trend-down', 'surface-card', 'une baisse, ecrite sur une carte'],
+        ['accent-danger-deep', 'surface-card', 'un libelle de danger sur une carte'],
+        /*
+         * `accent-primary` n'est PAS dans cette liste, et c'est une decision.
+         *
+         * Vif, il rend 3,07:1 en texte sur le fond de page — sous le seuil. Il
+         * y sert pourtant a des libelles decoratifs en capitales (« APERCU »),
+         * ou sa vivacite est tout l'interet et ou le mot est repete par le titre
+         * juste en dessous. Le rendre conforme demanderait de l'assombrir
+         * partout, y compris sur les 183 emplois ou il ne porte aucun texte.
+         *
+         * C'est la seule exception de la charte, et elle est ecrite ici plutot
+         * que subie ailleurs. `accent-primary-fill`, lui, est tenu.
+         */
+        ['accent-primary-fill', 'surface-card', "l'accent principal en surface pleine"],
     ];
 }
 
@@ -102,7 +67,7 @@ it('tient les contrastes que la charte annonce', function (): void {
     $manques = [];
 
     foreach (pairesDeLaCharte() as [$devant, $derriere, $intitule]) {
-        $mesure = contraste(valeurDuJeton($devant), valeurDuJeton($derriere));
+        $mesure = Contraste::entre(Contraste::jeton($devant), Contraste::jeton($derriere));
 
         if ($mesure < 4.5) {
             $manques[] = sprintf('%s : %.2f:1 (il en faut 4,5)', $intitule, $mesure);
@@ -118,26 +83,46 @@ it('tient les contrastes que la charte annonce', function (): void {
     ));
 });
 
-it('garde du blanc lisible sur l accent profond, qui existe pour ca', function (): void {
-    $surProfond = contraste('#ffffff', valeurDuJeton('accent-primary-deep'));
-    $surVif = contraste('#ffffff', valeurDuJeton('accent-primary'));
+it('garde un orange lisible pour les fonds et un autre pour les mots', function (): void {
+    /*
+     * TROIS oranges, et c'est une decision, pas un oubli.
+     *
+     * Ce test a d'abord exige l'inverse — un seul orange, portant du blanc —
+     * parce qu'en porter deux obligeait chaque composant a choisir entre eux. Le
+     * raisonnement etait juste, la conclusion fausse : ce n'est pas le NOMBRE de
+     * valeurs qui remettait la decision au composant, c'est qu'aucune des deux
+     * ne disait ou elle allait.
+     *
+     * Les trois ont maintenant chacune leur lecteur unique, et aucun composant
+     * ne les rencontre :
+     *
+     *  - `accent-primary`, le vif, pour tout ce qui n'est pas du texte — icones,
+     *    bordures, anneaux, lueurs, degrades. C'est l'identite de l'application,
+     *    et c'est la grande majorite de ses emplois ;
+     *  - `accent-primary-fill`, lu SEULEMENT par `@utility accent-fill`, qui pose
+     *    le fond et son texte blanc d'un seul geste ;
+     *  - `accent-primary-deep`, pour l'interieur des lettres, ou la difference ne
+     *    se voit pas et ou elle decide de la lisibilite.
+     */
+    $enFond = Contraste::entre('#ffffff', Contraste::jeton('accent-primary-fill'));
+    $enTexte = Contraste::entre(Contraste::jeton('accent-primary-deep'), Contraste::jeton('surface-sunken'));
 
-    expect($surProfond)->toBeGreaterThanOrEqual(4.5, sprintf(
-        '`--color-accent-primary-deep` ne sert qu a porter du texte blanc, et il rend %.2f:1. '
-        ."S'il ne tient plus ce role, il n'a plus de raison d'exister : autant revenir a un seul orange.",
-        $surProfond
+    expect($enFond)->toBeGreaterThanOrEqual(4.5, sprintf(
+        "L'orange de remplissage rend %.2f:1 avec du blanc, et le blanc est le seul texte que "
+        ."`accent-fill` ecrit dessus. Sam a demande deux fois de l'orange AVEC DU BLANC ; c'est ce "
+        .'jeton qui tient cette promesse.',
+        $enFond
     ));
 
-    // Et la raison d'etre du doublon : le vif ne peut PAS porter de blanc.
-    expect($surVif)->toBeLessThan(4.5, sprintf(
-        "`--color-accent-primary` rend %.2f:1 avec du blanc — s'il passait le seuil, l'accent profond "
-        .'serait inutile et la charte pourrait se simplifier.',
-        $surVif
+    expect($enTexte)->toBeGreaterThanOrEqual(4.5, sprintf(
+        "L'orange de texte rend %.2f:1 sur la surface la moins favorable. Le vif y rend 2,93:1, ce "
+        .'qui rendait illisibles les libelles de section dans 35 fichiers.',
+        $enTexte
     ));
 });
 
 it('refuse le vert d etat en couleur de texte', function (): void {
-    $enTexte = contraste(valeurDuJeton('accent-state'), valeurDuJeton('surface-card'));
+    $enTexte = Contraste::entre(Contraste::jeton('accent-state'), Contraste::jeton('surface-card'));
 
     expect($enTexte)->toBeLessThan(4.5, sprintf(
         'Le vert d etat rend %.2f:1 en texte sur une carte : il est fait pour etre un FOND ou une '
@@ -145,5 +130,51 @@ it('refuse le vert d etat en couleur de texte', function (): void {
         .'impossibilite plutot qu une exigence, pour que la regle reste ecrite quelque part le jour ou '
         .'quelqu un voudra ecrire un message de confirmation en vert.',
         $enTexte
+    ));
+});
+
+it('ne laisse pas mentir les mesures ecrites dans la charte', function (): void {
+    /*
+     * Chaque utilitaire apparie porte son contraste en commentaire — `/* 4,72:1 *\/`.
+     * Ces chiffres sont la raison d'etre du fichier : ils disent que la valeur
+     * choisie l'a ete par le calcul, et non a l'oeil.
+     *
+     * Un commentaire chiffre se perime en silence. Celui de `plate-fill-10`
+     * annoncait 4,51:1 pour une valeur qui en rend 4,53 — sans consequence, mais
+     * c'est le meme mecanisme qui a laisse la charte affirmer que ses huit
+     * couleurs de categorie etaient « separables » alors que deux etaient a 9
+     * unites CIELAB l'une de l'autre. La ce n'etait plus un arrondi : la
+     * conclusion etait inverse.
+     *
+     * Ce controle rend le commentaire verifiable, donc utile.
+     */
+    $css = (string) file_get_contents(resource_path('css/app.css'));
+
+    preg_match_all(
+        '/\/\* ([\d.]+):1 \*\/\s*@utility ([a-z0-9-]+) \{\s*background: var\(--color-([a-z0-9-]+)\);\s*color: var\(--color-([a-z0-9-]+)\);/',
+        $css,
+        $annotes,
+        PREG_SET_ORDER
+    );
+
+    expect($annotes)->not->toBeEmpty('aucune annotation trouvee : le controle ne prouverait rien');
+
+    $menteurs = [];
+
+    foreach ($annotes as $annote) {
+        [, $annonce, $nom, $fond, $texte] = $annote;
+
+        $mesure = Contraste::entre(Contraste::jeton($texte), Contraste::jeton($fond));
+
+        if (abs($mesure - (float) $annonce) >= 0.01) {
+            $menteurs[] = sprintf('%s : annonce %s:1, mesure %.2f:1', $nom, $annonce, $mesure);
+        }
+    }
+
+    expect($menteurs)->toBe([], sprintf(
+        "Ces commentaires annoncent une mesure que la charte ne rend pas :\n  %s\n\n"
+        .'Corrigez le chiffre, ou la valeur. Un commentaire faux est pire que pas de commentaire : '
+        .'on le lit au lieu de recalculer.',
+        implode("\n  ", $menteurs)
     ));
 });

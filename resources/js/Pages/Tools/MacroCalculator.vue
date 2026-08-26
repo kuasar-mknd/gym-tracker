@@ -27,11 +27,11 @@
                                 type="button"
                                 @click="form.gender = 'male'"
                                 :aria-pressed="form.gender === 'male'"
-                                class="focus-visible:ring-electric-orange flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.gender === 'male'
-                                        ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80'
+                                        ? 'border-accent-primary accent-fill shadow-[0_0_15px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.3)]'
+                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Homme</span>
@@ -40,11 +40,11 @@
                                 type="button"
                                 @click="form.gender = 'female'"
                                 :aria-pressed="form.gender === 'female'"
-                                class="focus-visible:ring-hot-pink flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-secondary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.gender === 'female'
-                                        ? 'border-hot-pink bg-hot-pink/20 text-hot-pink shadow-[0_0_15px_rgba(236,72,153,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80'
+                                        ? 'border-accent-secondary secondary-fill shadow-[0_0_15px_rgb(from_var(--color-accent-secondary)_r_g_b_/_0.3)]'
+                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
                                 <span class="font-display text-lg font-black uppercase">Femme</span>
@@ -87,11 +87,11 @@
                                 type="button"
                                 @click="form.goal = goalOption"
                                 :aria-pressed="form.goal === goalOption"
-                                class="focus-visible:ring-electric-orange flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.goal === goalOption
-                                        ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,85,0,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:border-slate-300 hover:bg-white/80'
+                                        ? 'border-accent-primary accent-fill shadow-[0_0_15px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.3)]'
+                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
                                 <span class="font-display font-bold uppercase">{{
@@ -104,21 +104,21 @@
                     <!-- Result -->
                     <div
                         v-if="isValid"
-                        class="mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-slate-200 bg-white/50 p-6 text-center"
+                        class="border-border bg-surface-card/50 mt-6 flex flex-col items-center justify-center space-y-4 rounded-3xl border p-6 text-center"
                     >
                         <div>
                             <p class="text-text-muted text-sm font-bold tracking-wider uppercase">
                                 Cibles Journalières
                             </p>
                             <div
-                                class="from-electric-orange to-hot-pink font-display mt-1 bg-linear-to-r bg-clip-text text-5xl font-black tracking-tighter text-transparent italic"
+                                class="from-accent-primary to-accent-secondary font-display mt-1 bg-linear-to-r bg-clip-text text-5xl font-black tracking-tighter text-transparent italic"
                             >
                                 {{ calculatedResults.targetCalories }} kcal
                             </div>
                             <p class="text-text-muted text-xs font-semibold">TDEE: {{ calculatedResults.tdee }} kcal</p>
                         </div>
 
-                        <div class="grid w-full grid-cols-3 gap-4 border-t border-slate-200 pt-4">
+                        <div class="border-border grid w-full grid-cols-3 gap-4 border-t pt-4">
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Protéines</p>
                                 <p class="font-display text-text-main text-2xl font-black">
@@ -151,7 +151,7 @@
 
                             <p
                                 v-if="Object.keys(form.errors).length"
-                                class="mt-3 text-sm font-bold text-red-500"
+                                class="text-accent-danger-deep mt-3 text-sm font-bold"
                                 role="alert"
                                 dusk="macro-error"
                             >
@@ -177,7 +177,7 @@
                     <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
 
                     <div v-if="history.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200" aria-hidden="true"
+                        <span class="material-symbols-outlined text-surface-sunken mb-3 text-6xl" aria-hidden="true"
                             >history</span
                         >
                         <p class="text-text-muted font-medium">Aucun historique.</p>
@@ -187,11 +187,11 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/50 p-4 transition-all hover:bg-white/80 hover:shadow-lg sm:flex-row sm:items-center"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 relative flex flex-col justify-between rounded-2xl border p-4 transition-all hover:shadow-lg sm:flex-row sm:items-center"
                         >
                             <div class="flex items-center gap-4">
                                 <div
-                                    class="text-text-main flex h-12 w-16 items-center justify-center rounded-xl bg-slate-100 text-lg font-bold"
+                                    class="text-text-main bg-surface-sunken flex h-12 w-16 items-center justify-center rounded-xl text-lg font-bold"
                                 >
                                     {{ entry.target_calories }}
                                 </div>
@@ -217,7 +217,7 @@
                                 type="button"
                                 aria-label="Supprimer l'entrée"
                                 title="Supprimer l'entrée"
-                                class="text-text-muted absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-red-500/20 hover:text-red-500 sm:static"
+                                class="text-text-muted hover:bg-accent-danger/20 hover:text-accent-danger-deep absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full transition-colors sm:static"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>

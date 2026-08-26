@@ -90,7 +90,7 @@ watch(selectedExercise, (newVal) => {
         </div>
 
         <div v-if="loadingExercise" class="flex h-48 items-center justify-center">
-            <div class="border-electric-orange h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>
+            <div class="border-accent-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>
         </div>
         <div
             v-else-if="loadFailed"
@@ -98,12 +98,14 @@ watch(selectedExercise, (newVal) => {
             role="alert"
             dusk="exercise-progress-error"
         >
-            <span class="material-symbols-outlined mb-2 text-4xl text-red-400" aria-hidden="true">cloud_off</span>
+            <span class="material-symbols-outlined text-accent-danger-deep mb-2 text-4xl" aria-hidden="true"
+                >cloud_off</span
+            >
             <p class="text-text-muted mb-3 text-sm">Impossible de charger la progression.</p>
             <button
                 type="button"
                 @click="fetchExerciseProgress(selectedExercise)"
-                class="focus-visible:ring-electric-orange text-electric-orange rounded-lg px-3 py-1 text-sm font-bold underline focus-visible:ring-2 focus-visible:outline-none"
+                class="focus-visible:ring-accent-primary text-accent-primary-deep rounded-lg px-3 py-1 text-sm font-bold underline focus-visible:ring-2 focus-visible:outline-none"
             >
                 Réessayer
             </button>

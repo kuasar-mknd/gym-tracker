@@ -177,7 +177,7 @@ defineExpose({
             :class="['font-display-label text-text-muted mb-2 block', { 'sr-only': hideLabel }]"
         >
             {{ label }}
-            <span v-if="isRequired" class="ml-0.5 text-red-500" aria-hidden="true">*</span>
+            <span v-if="isRequired" class="text-accent-danger-deep ml-0.5" aria-hidden="true">*</span>
         </label>
 
         <!-- Standard input -->
@@ -205,7 +205,7 @@ defineExpose({
                     'glass-input',
                     sizeClasses[size],
                     {
-                        'border-red-500 focus:border-red-500 focus:ring-red-500/20': error,
+                        'border-accent-danger focus:border-accent-danger focus:ring-accent-danger/20': error,
                         'pl-10': type === 'search',
                         'pr-12':
                             (hasClearButton || isPassword || hasSuffix) &&
@@ -224,7 +224,7 @@ defineExpose({
                     v-if="showClearButton"
                     type="button"
                     @click="$emit('update:modelValue', '')"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange relative rounded-full p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary relative rounded-full p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                     aria-label="Effacer le texte"
                     v-press
                 >
@@ -236,7 +236,7 @@ defineExpose({
                     v-if="isPassword"
                     type="button"
                     @click="showPassword = !showPassword"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange relative rounded-full p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary relative rounded-full p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                     :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                     :title="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
                     v-press

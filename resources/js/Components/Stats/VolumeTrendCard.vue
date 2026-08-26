@@ -38,7 +38,7 @@ const totalVolume = computed(() => {
             </div>
             <div class="text-right">
                 <div class="text-text-muted text-xs font-black tracking-wider uppercase">Total</div>
-                <div class="font-display text-electric-orange text-2xl font-black">
+                <div class="font-display text-accent-primary-deep text-2xl font-black">
                     {{ totalVolume.toLocaleString() }}
                     <span class="text-text-muted text-sm">kg</span>
                 </div>

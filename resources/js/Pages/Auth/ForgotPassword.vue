@@ -26,7 +26,7 @@ const submit = () => {
             <p class="text-text-muted mt-2 text-sm">Entre ton email et nous t'enverrons un lien de réinitialisation.</p>
         </div>
 
-        <div v-if="status" class="bg-accent-success/20 text-accent-success mb-4 rounded-xl p-3 text-sm">
+        <div v-if="status" class="bg-accent-state/20 text-accent-state-deep mb-4 rounded-xl p-3 text-sm">
             {{ status }}
         </div>
 

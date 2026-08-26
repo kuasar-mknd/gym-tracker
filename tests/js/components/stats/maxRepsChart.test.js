@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 /**
@@ -85,6 +86,6 @@ describe('MaxRepsChart fill', () => {
         })
 
         expect(createLinearGradient).toHaveBeenCalledWith(0, 0, 0, 200)
-        expect(stops[1][1]).toBe('rgba(139, 92, 246, 0)')
+        expect(stops[1][1]).toBe(jetonTransparent('accent-tertiary', 0))
     })
 })

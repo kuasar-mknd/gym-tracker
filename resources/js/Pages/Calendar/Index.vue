@@ -166,7 +166,7 @@ const selectDate = (day) => {
  * buttons, so the grid keeps one continuous rule whichever element renders.
  */
 const cellBorderClasses = (index) => [
-    'relative flex aspect-square flex-col items-center justify-center border-r border-b border-slate-100',
+    'relative flex aspect-square flex-col items-center justify-center border-r border-b border-border',
     (index + 1) % 7 === 0 ? 'border-r-0' : '', // Remove right border for last column
 ]
 
@@ -227,7 +227,7 @@ const formatDateFull = (dateStr) => {
                 </GlassButton>
 
                 <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic" dusk="calendar-heading">
-                    {{ currentMonthName }} <span class="text-electric-orange">{{ currentYear }}</span>
+                    {{ currentMonthName }} <span class="text-accent-primary-deep">{{ currentYear }}</span>
                 </h2>
 
                 <GlassButton @click="changeMonth(1)" class="px-3!" aria-label="Mois suivant">
@@ -238,7 +238,7 @@ const formatDateFull = (dateStr) => {
             <!-- Calendar Grid -->
             <GlassCard class="overflow-hidden" padding="p-0">
                 <!-- Weekday Headers -->
-                <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 py-2">
+                <div class="border-border bg-surface-sunken/80 grid grid-cols-7 border-b py-2">
                     <div
                         v-for="day in weekDays"
                         :key="day"
@@ -268,15 +268,15 @@ const formatDateFull = (dateStr) => {
                             :aria-current="day.isToday ? 'date' : undefined"
                             :class="[
                                 ...cellBorderClasses(index),
-                                'focus-visible:ring-electric-orange cursor-pointer transition-all hover:bg-slate-50 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
-                                selectedDate?.dateStr === day.dateStr ? 'bg-slate-100 shadow-inner' : '',
+                                'focus-visible:ring-accent-primary hover:bg-surface-sunken cursor-pointer transition-all focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+                                selectedDate?.dateStr === day.dateStr ? 'bg-surface-sunken shadow-inner' : '',
                             ]"
                         >
                             <!-- Date Number -->
                             <span
                                 :class="[
                                     'flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold',
-                                    day.isToday ? 'bg-electric-orange text-white' : 'text-text-main',
+                                    day.isToday ? 'accent-fill' : 'text-text-main',
                                 ]"
                                 aria-hidden="true"
                             >
@@ -288,11 +288,11 @@ const formatDateFull = (dateStr) => {
                             <div class="mt-1 flex gap-1" aria-hidden="true">
                                 <span
                                     v-if="day.hasWorkout"
-                                    class="bg-vivid-violet h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgba(136,0,255,0.8)]"
+                                    class="bg-accent-tertiary h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgb(from_var(--color-accent-tertiary)_r_g_b_/_0.8)]"
                                 ></span>
                                 <span
                                     v-if="day.hasJournal"
-                                    class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]"
+                                    class="bg-accent-state h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgb(from_var(--color-accent-state)_r_g_b_/_0.8)]"
                                 ></span>
                             </div>
                         </button>
@@ -319,11 +319,11 @@ const formatDateFull = (dateStr) => {
                         :href="route('workouts.show', workout.id)"
                         class="block"
                     >
-                        <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]" padding="p-4">
+                        <GlassCard class="hover:bg-surface-glass-strong transition active:scale-[0.99]" padding="p-4">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="bg-vivid-violet/20 text-vivid-violet flex h-10 w-10 items-center justify-center rounded-xl"
+                                        class="bg-accent-tertiary/20 text-accent-tertiary-deep flex h-10 w-10 items-center justify-center rounded-xl"
                                     >
                                         <span class="material-symbols-outlined" aria-hidden="true">fitness_center</span>
                                     </div>
@@ -337,7 +337,7 @@ const formatDateFull = (dateStr) => {
                                         </div>
                                     </div>
                                 </div>
-                                <span class="material-symbols-outlined text-white/30" aria-hidden="true"
+                                <span class="material-symbols-outlined text-text-on-dark-accent/30" aria-hidden="true"
                                     >chevron_right</span
                                 >
                             </div>
@@ -351,7 +351,7 @@ const formatDateFull = (dateStr) => {
                     <GlassCard padding="p-4">
                         <div class="flex items-start gap-3">
                             <div
-                                class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400"
+                                class="bg-accent-state/20 text-accent-state-deep flex h-10 w-10 items-center justify-center rounded-xl"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
                             </div>
@@ -360,7 +360,7 @@ const formatDateFull = (dateStr) => {
                                     <span class="text-text-main font-bold">Entrée Journal</span>
                                     <span
                                         v-if="selectedDayDetails.journal.mood_score"
-                                        class="text-text-main rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold"
+                                        class="text-text-main bg-surface-sunken rounded px-1.5 py-0.5 text-[10px] font-bold"
                                     >
                                         Humeur: {{ selectedDayDetails.journal.mood_score }}/10
                                     </span>

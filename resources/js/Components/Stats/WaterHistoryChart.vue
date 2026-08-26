@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { computed } from 'vue'
 
@@ -28,12 +29,12 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, '#3B82F6') // Blue-500
-                    gradient.addColorStop(1, '#93C5FD') // Blue-300
+                    gradient.addColorStop(0, jeton('accent-info')) // Blue-500
+                    gradient.addColorStop(1, jetonTransparent('accent-info', 0.55)) // Blue-300
                     return gradient
                 },
                 borderRadius: 6,
-                hoverBackgroundColor: '#2563EB', // Blue-600
+                hoverBackgroundColor: jeton('accent-info'), // Blue-600
             },
         ],
     }
@@ -54,11 +55,11 @@ const chartOptions = computed(() => ({
             beginAtZero: true,
             max: Math.max(props.goal, ...props.data.map((item) => item.total)) + 200, // Add some padding above goal
             grid: {
-                color: 'rgba(0, 0, 0, 0.03)',
+                color: jetonTransparent('shadow-cast', 0.03),
             },
             ticks: {
                 stepSize: 500,
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
         },
@@ -67,7 +68,7 @@ const chartOptions = computed(() => ({
                 display: false,
             },
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
                 textTransform: 'uppercase',
             },
@@ -78,13 +79,13 @@ const chartOptions = computed(() => ({
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
+            backgroundColor: jetonTransparent('surface-card', 0.9),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
             padding: 12,
             cornerRadius: 12,
             borderWidth: 1,
-            borderColor: 'rgba(0, 0, 0, 0.05)',
+            borderColor: jetonTransparent('shadow-cast', 0.05),
             callbacks: {
                 label: (context) => `${context.raw} ml`,
                 title: (context) => context[0].label,

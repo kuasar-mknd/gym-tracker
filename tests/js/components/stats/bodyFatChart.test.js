@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 vi.mock('vue-chartjs', () => {
@@ -79,8 +80,8 @@ describe('BodyFatChart', () => {
 
             expect(stops).toEqual([
                 [0, 0, 0, 128],
-                [0, 'rgba(255, 0, 255, 0.2)'],
-                [1, 'rgba(255, 0, 255, 0)'],
+                [0, jetonTransparent('accent-secondary', 0.2)],
+                [1, jetonTransparent('accent-secondary', 0)],
             ])
         })
 

@@ -9,7 +9,7 @@
                     class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
                 >
                     Suivi<br />
-                    <span class="text-gradient from-blue-400 to-cyan-500">Hydratation</span>
+                    <span class="text-gradient from-accent-info to-accent-tertiary">Hydratation</span>
                 </h1>
                 <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">Reste Hydraté</p>
             </header>
@@ -34,7 +34,8 @@
                                 cy="50"
                                 r="45"
                                 fill="transparent"
-                                stroke="#e2e8f0"
+                                stroke="currentColor"
+                                class="text-border-strong"
                                 stroke-width="8"
                                 stroke-linecap="round"
                             />
@@ -53,8 +54,8 @@
                             />
                             <defs>
                                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#3b82f6" />
-                                    <stop offset="100%" stop-color="#06b6d4" />
+                                    <stop offset="0%" style="stop-color: var(--color-accent-info-deep)" />
+                                    <stop offset="100%" style="stop-color: var(--color-accent-tertiary)" />
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -65,7 +66,7 @@
                                 {{ todayTotal }}
                             </span>
                             <span class="text-text-muted text-sm font-bold uppercase"> / {{ goal }} ml </span>
-                            <span class="mt-2 text-sm font-bold text-blue-500"> {{ percentage }}% </span>
+                            <span class="text-accent-info-deep mt-2 text-sm font-bold"> {{ percentage }}% </span>
                         </div>
                     </div>
 
@@ -76,9 +77,11 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 250ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
                         >
-                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
+                            <span
+                                class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
+                                aria-hidden="true"
                                 >local_drink</span
                             >
                             <span class="text-text-main text-xs font-bold">250ml</span>
@@ -88,9 +91,11 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 500ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
                         >
-                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
+                            <span
+                                class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
+                                aria-hidden="true"
                                 >water_drop</span
                             >
                             <span class="text-text-main text-xs font-bold">500ml</span>
@@ -100,9 +105,11 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 1L"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
                         >
-                            <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
+                            <span
+                                class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
+                                aria-hidden="true"
                                 >water_bottle</span
                             >
                             <span class="text-text-main text-xs font-bold">1L</span>
@@ -144,7 +151,7 @@
                     </h2>
 
                     <div v-if="logs.length === 0" class="py-8 text-center">
-                        <span class="material-symbols-outlined mb-2 text-4xl text-slate-200" aria-hidden="true"
+                        <span class="material-symbols-outlined text-surface-sunken mb-2 text-4xl" aria-hidden="true"
                             >water_drop</span
                         >
                         <p class="text-text-muted text-sm font-medium">Aucune consommation aujourd'hui.</p>
@@ -154,11 +161,11 @@
                         <div
                             v-for="log in logs"
                             :key="log.id"
-                            class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-3 transition-all hover:bg-white/80"
+                            class="border-border bg-surface-card/50 hover:bg-surface-card/80 flex items-center justify-between rounded-2xl border p-3 transition-all"
                         >
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-500"
+                                    class="bg-accent-info/15 text-accent-info-deep flex h-10 w-10 items-center justify-center rounded-full"
                                 >
                                     <span class="material-symbols-outlined text-xl" aria-hidden="true">water_drop</span>
                                 </div>
@@ -177,7 +184,7 @@
                             <button
                                 @click="deleteLog(log)"
                                 :aria-label="'Supprimer l\'entrée de ' + log.amount + ' ml'"
-                                class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                                class="text-text-muted hover:bg-accent-danger/10 hover:text-accent-danger-deep flex h-8 w-8 items-center justify-center rounded-full transition-colors"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>

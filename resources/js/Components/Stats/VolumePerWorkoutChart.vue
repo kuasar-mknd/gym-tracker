@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { computed } from 'vue'
 import { commonTooltipOptions, volumeTooltipCallback } from './chartConfig'
@@ -25,28 +26,28 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, '#0ea5e9') // Sky Blue
-                    gradient.addColorStop(1, '#8b5cf6') // Violet
+                    gradient.addColorStop(0, jeton('accent-info')) // Sky Blue
+                    gradient.addColorStop(1, jeton('accent-tertiary')) // Violet
                     return gradient
                 },
                 borderRadius: 4,
-                hoverBackgroundColor: '#8b5cf6',
+                hoverBackgroundColor: jeton('accent-tertiary'),
             },
         ],
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     scales: {
         y: {
             beginAtZero: true,
             grid: {
-                color: 'rgba(255, 255, 255, 0.1)',
+                color: jetonTransparent('surface-card', 0.1),
             },
             ticks: {
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: jetonTransparent('surface-card', 0.7),
                 font: { size: 10, weight: 'bold' },
             },
         },
@@ -55,7 +56,7 @@ const chartOptions = {
                 display: false,
             },
             ticks: {
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: jetonTransparent('surface-card', 0.7),
                 font: { size: 10, weight: 'bold' },
             },
         },
@@ -71,7 +72,7 @@ const chartOptions = {
             },
         },
     },
-}
+}))
 </script>
 
 <template>

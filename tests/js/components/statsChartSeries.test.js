@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 /**
@@ -95,8 +96,8 @@ describe('BodyPartDiffChart series', () => {
     it('paints a gain green and a loss red', () => {
         const paint = seriesOf(mountChart(), 'Bar').datasets[0].backgroundColor
 
-        expect(stopsFor(paint, 2)).toEqual(['#34d399', '#059669'])
-        expect(stopsFor(paint, -1.5)).toEqual(['#f87171', '#dc2626'])
+        expect(stopsFor(paint, 2)).toEqual([jeton('trend-up'), jetonTransparent('trend-up', 0.55)])
+        expect(stopsFor(paint, -1.5)).toEqual([jeton('trend-down'), jetonTransparent('trend-down', 0.55)])
     })
 })
 
@@ -216,12 +217,22 @@ describe('ExerciseCategoryChart series', () => {
         // Fourth entry is 'Mobilité', a category with no colour of its own: it
         // keeps its name and borrows the neutral Autres grey.
         //
-        // Les valeurs sont écrites en minuscules depuis que le composant lit la
-        // charte au lieu de recopier des littéraux : `getComputedStyle` rend la
-        // valeur telle qu'elle est déclarée dans `app.css`. Elles restent
-        // écrites ici plutôt que lues par `couleurDeCategorie()` — un test qui
-        // importe l'utilitaire que la source utilise se compare à lui-même.
-        expect(series.datasets[0].backgroundColor).toEqual(['#ff5500', '#8800ff', '#64748b', '#64748b'])
+        // Le test nomme les jetons de CATÉGORIE, pas les rôles voisins qui
+        // portaient la même valeur. `category-other` et `text-muted` étaient
+        // tous deux `#64748b` — ils ont divergé le jour où le gris de texte a
+        // été assombri pour tenir 4,5:1, et c'est bien : un gris de catégorie
+        // ne porte aucun texte, il n'a aucune raison de suivre.
+        //
+        // Ils restent écrits ici plutôt que lus par `couleurDeCategorie()` : un
+        // test qui importe l'utilitaire que la source utilise se compare à
+        // lui-même. Nommer le jeton, en revanche, laisse la charte décider de
+        // sa valeur tout en fixant lequel doit être employé.
+        expect(series.datasets[0].backgroundColor).toEqual([
+            jeton('category-chest'),
+            jeton('category-back'),
+            jeton('category-other'),
+            jeton('category-other'),
+        ])
     })
 
     it('draws no slice when there is no exercise', () => {

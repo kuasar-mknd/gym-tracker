@@ -28,10 +28,10 @@ it('remplace une couleur vide par la couleur par defaut', function (): void {
         'goal_times_per_week' => 7,
     ]);
 
-    expect($habit->color)->toBe('bg-slate-500');
+    expect($habit->color)->toBe('bg-palette-ardoise');
     // L'icone fournie, elle, est conservee : le repli ne deborde pas.
     expect($habit->icon)->toBe('water_drop');
-    expect($habit->refresh()->color)->toBe('bg-slate-500');
+    expect($habit->refresh()->color)->toBe('bg-palette-ardoise');
 });
 
 it('remplace une icone vide par l\'icone par defaut', function (): void {

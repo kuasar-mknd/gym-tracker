@@ -123,7 +123,7 @@ describe('Dropdown', () => {
     /*
      * Le panneau flotte AU-DESSUS de la page : il lui faut une surface a lui.
      *
-     * Sa valeur par defaut etait `bg-white/10` — du blanc a 10 % sur le fond
+     * Sa valeur par defaut etait `bg-surface-card/10` — du blanc a 10 % sur le fond
      * clair de l'application, c'est-a-dire un fantome (#1314). Le test vise la
      * classe de surface plutot qu'une couleur precise : c'est
      * `glass-panel-strong` qui porte le jeton, et lui seul suit le theme.
@@ -133,7 +133,7 @@ describe('Dropdown', () => {
         const classes = panel(wrapper).find('div').classes()
 
         expect(classes).toContain('glass-panel-strong')
-        expect(classes.join(' ')).not.toMatch(/bg-white\/(?:5|10|20|30|40)\b/)
+        expect(classes.join(' ')).not.toMatch(/bg-surface-card\/(?:5|10|20|30|40)\b/)
 
         wrapper.unmount()
     })
@@ -253,12 +253,12 @@ describe('Dropdown', () => {
     })
 
     it('paints the panel with the content classes it was given', () => {
-        const wrapper = mountDropdown({ contentClasses: 'py-2 bg-slate-900' })
+        const wrapper = mountDropdown({ contentClasses: 'py-2 bg-text-main' })
 
         // Par la structure — la surface interne est le seul enfant du panneau —
         // et non par `.rounded-2xl.border` : la bordure vient maintenant de la
         // classe de surface, qui la fait suivre le theme.
-        expect(panel(wrapper).get('div').classes()).toEqual(expect.arrayContaining(['py-2', 'bg-slate-900']))
+        expect(panel(wrapper).get('div').classes()).toEqual(expect.arrayContaining(['py-2', 'bg-text-main']))
 
         wrapper.unmount()
     })
@@ -267,7 +267,7 @@ describe('Dropdown', () => {
 /*
  * Le defaut que le panneau opaque ne suffisait pas a corriger.
  *
- * Les entrees etaient ecrites `text-white/80` sur `bg-white/10` : pensees pour
+ * Les entrees etaient ecrites `text-surface-card/80` sur `bg-surface-card/10` : pensees pour
  * une surface sombre et translucide, alors que le menu flotte au-dessus du
  * fond clair de l'application. Rendre le panneau opaque a donc d'abord donne
  * du blanc sur du blanc — mesure a 17:1 apres correction, contre un rapport
@@ -283,7 +283,7 @@ describe('DropdownLink', () => {
             .join(' ')
 
     it('n’écrit pas en blanc sur une surface claire', () => {
-        expect(classes()).not.toMatch(/(?:^|\s)text-white(?:\/\d+)?(?:\s|$)/)
+        expect(classes()).not.toMatch(/(?:^|\s)text-surface-card(?:\/\d+)?(?:\s|$)/)
     })
 
     it('prend le jeton de couleur de texte plutôt qu’une teinte en dur', () => {
@@ -806,9 +806,9 @@ describe('ExerciseCard', () => {
             return classes
         }
 
-        expect(tileFor('strength')).toContain('text-electric-orange')
-        expect(tileFor('cardio')).toContain('bg-neon-green/30')
-        expect(tileFor('timed')).toContain('text-cyan-pure')
+        expect(tileFor('strength')).toContain('text-accent-primary-deep')
+        expect(tileFor('cardio')).toContain('bg-accent-state/30')
+        expect(tileFor('timed')).toContain('text-accent-info-deep')
 
         // The three branches must not collapse onto one another.
         expect(tileFor('strength')).not.toBe(tileFor('cardio'))
@@ -821,7 +821,7 @@ describe('ExerciseCard', () => {
         known.unmount()
 
         const unknown = mountCard({ exercise: { ...EXERCISE, category: 'Cardio doux' } })
-        expect(unknown.get('[data-testid="exercise-card"]').classes()).toContain('border-l-slate-300')
+        expect(unknown.get('[data-testid="exercise-card"]').classes()).toContain('border-l-border-strong')
         unknown.unmount()
     })
 

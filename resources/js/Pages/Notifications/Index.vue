@@ -74,7 +74,7 @@ const formatDate = (date) => {
                 class="flex flex-col items-center justify-center py-12 text-center"
             >
                 <div
-                    class="text-text-muted/20 mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100"
+                    class="text-text-muted/20 bg-surface-sunken mb-4 flex h-16 w-16 items-center justify-center rounded-full"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -107,9 +107,21 @@ const formatDate = (date) => {
                             <div
                                 :class="[
                                     'mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                                    /*
+                                     * En aplat avec de l'encre, et non en texte
+                                     * colore sur son propre lavis : ce motif-la
+                                     * rendait 2,70:1 pour le rose et 1,36:1
+                                     * pour le cyan, illisible dans les deux cas.
+                                     * En plein, ils rendent 4,73 et 11,61.
+                                     *
+                                     * Le record portait `yellow-500`, qui est la
+                                     * valeur de l'alerte : un trophee n'est pas
+                                     * un avertissement, et le jour ou l'alerte
+                                     * serait retouchee le badge aurait suivi.
+                                     */
                                     notification.data.type === 'personal_record'
-                                        ? 'bg-yellow-500/20 text-yellow-500'
-                                        : 'bg-blue-500/20 text-blue-500',
+                                        ? 'bg-accent-secondary text-text-on-accent'
+                                        : 'bg-accent-info text-text-on-accent',
                                 ]"
                             >
                                 <svg
@@ -155,7 +167,7 @@ const formatDate = (date) => {
                         <button
                             v-if="!notification.read_at"
                             @click="markAsRead(notification.id)"
-                            class="text-text-muted/20 hover:text-text-main rounded-lg p-1 hover:bg-slate-100/50"
+                            class="text-text-muted/20 hover:text-text-main hover:bg-surface-sunken/50 rounded-lg p-1"
                             title="Marquer comme lu"
                             aria-label="Marquer comme lu"
                         >

@@ -60,16 +60,16 @@ describe('WeightEvolutionCard trend badge', () => {
         const card = await mountCard({ latestWeight: '82.5', weightChange: -1.2 })
 
         expect(badge(card).text()).toContain('trending_down')
-        expect(badge(card).classes()).toContain('text-emerald-600')
-        expect(badge(card).classes()).not.toContain('text-red-600')
+        expect(badge(card).classes()).toContain('text-trend-up')
+        expect(badge(card).classes()).not.toContain('text-trend-down')
     })
 
     it('points up, in red, when the weight climbed', async () => {
         const card = await mountCard({ latestWeight: '82.5', weightChange: 1.2 })
 
         expect(badge(card).text()).toContain('trending_up')
-        expect(badge(card).classes()).toContain('text-red-600')
-        expect(badge(card).classes()).not.toContain('text-emerald-600')
+        expect(badge(card).classes()).toContain('text-trend-down')
+        expect(badge(card).classes()).not.toContain('text-trend-up')
     })
 
     it('signs the gain, and leaves the loss its own minus', async () => {

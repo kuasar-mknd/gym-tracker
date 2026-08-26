@@ -114,11 +114,11 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
         >
             <div
                 v-if="pullDistance > 0 || isRefreshing"
-                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md"
+                class="border-border bg-surface-card/90 mt-4 rounded-full border p-3 shadow-lg backdrop-blur-md"
             >
                 <svg
                     v-if="isRefreshing"
-                    class="text-electric-orange h-6 w-6 animate-spin"
+                    class="text-accent-primary-deep h-6 w-6 animate-spin"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -132,7 +132,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 </svg>
                 <span
                     v-else
-                    class="material-symbols-outlined text-electric-orange transition-transform duration-200"
+                    class="material-symbols-outlined text-accent-primary-deep transition-transform duration-200"
                     :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
                     aria-hidden="true"
                 >
@@ -197,7 +197,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </GlassCard>
                     <GlassCard padding="p-4">
                         <div class="text-center">
-                            <div class="text-accent-success text-2xl font-bold">
+                            <div class="text-accent-state-deep text-2xl font-bold">
                                 {{ totalExercises || 0 }}
                             </div>
                             <div class="text-text-muted mt-1 text-xs">Exercices</div>
@@ -303,7 +303,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <div
                             v-for="exercise in deferredData.exercises"
                             :key="exercise.id"
-                            class="shrink-0 rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-sm shadow-sm"
+                            class="border-border bg-surface-card/50 shrink-0 rounded-xl border px-3 py-2 text-sm shadow-sm"
                         >
                             <div class="text-text-main font-medium">{{ exercise.name }}</div>
                             <div class="text-text-muted text-xs">{{ exercise.category }}</div>
@@ -360,10 +360,14 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                 @click="confirmDeletion(workout)"
                                 :dusk="`delete-workout-${workout.id}`"
                                 :aria-label="`Supprimer la séance ${workout.name || 'sans nom'}`"
-                                class="flex h-full w-full items-center justify-center text-white transition-all active:scale-95"
+                                class="text-text-on-dark-accent flex h-full w-full items-center justify-center transition-all active:scale-95"
                                 style="
-                                    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-                                    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2);
+                                    background: linear-gradient(
+                                        135deg,
+                                        var(--color-accent-danger) 0%,
+                                        var(--color-accent-danger-deep) 100%
+                                    );
+                                    box-shadow: inset 0 2px 4px rgb(from var(--color-surface-card) r g b / 0.2);
                                 "
                             >
                                 <div class="flex flex-col items-center drop-shadow-md" aria-hidden="true">
@@ -374,7 +378,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         </template>
 
                         <Link :href="route('workouts.show', { workout: workout.id })" class="block">
-                            <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]">
+                            <GlassCard class="hover:bg-surface-glass-strong transition active:scale-[0.99]">
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2">
@@ -394,14 +398,14 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                             <span
                                                 v-for="line in workout.workout_lines.slice(0, 3)"
                                                 :key="line.id"
-                                                class="text-text-muted rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs"
+                                                class="text-text-muted border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
                                             >
                                                 {{ line.exercise.name }}
                                                 <span class="text-text-muted/50">• {{ line.sets_count }} séries</span>
                                             </span>
                                             <span
                                                 v-if="workout.workout_lines.length > 3"
-                                                class="text-text-muted/50 rounded-lg border border-slate-200 bg-white/50 px-2 py-1 text-xs"
+                                                class="text-text-muted/50 border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
                                             >
                                                 +{{ workout.workout_lines.length - 3 }}
                                             </span>

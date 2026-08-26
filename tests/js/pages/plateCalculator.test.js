@@ -128,13 +128,13 @@ describe('PlateCalculator inventory', () => {
             tiles
                 .find((tile) => tile.text().startsWith(weight))
                 .classes()
-                .find((c) => c.startsWith('bg-'))
+                .find((c) => c.startsWith('plate-fill-'))
 
-        expect(colourOf('25')).toBe('bg-red-600')
-        expect(colourOf('20')).toBe('bg-blue-600')
-        expect(colourOf('15')).toBe('bg-yellow-500')
-        expect(colourOf('10')).toBe('bg-green-600')
-        expect(colourOf('5')).toBe('bg-white')
+        expect(colourOf('25')).toBe('plate-fill-25')
+        expect(colourOf('20')).toBe('plate-fill-20')
+        expect(colourOf('15')).toBe('plate-fill-15')
+        expect(colourOf('10')).toBe('plate-fill-10')
+        expect(colourOf('5')).toBe('plate-fill-5')
     })
 
     it('shows how many of each plate are owned', () => {

@@ -37,7 +37,7 @@ const filteredAchievements = computed(() => {
                     <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
                 </div>
                 <div class="text-right">
-                    <div class="text-accent-primary text-2xl font-bold">
+                    <div class="text-accent-primary-deep text-2xl font-bold">
                         {{ summary.unlocked }} / {{ summary.total }}
                     </div>
                     <div class="text-text-muted/50 text-xs tracking-wider uppercase">Débloqués</div>
@@ -55,8 +55,8 @@ const filteredAchievements = computed(() => {
                     class="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all"
                     :class="
                         currentCategory === cat.value
-                            ? 'bg-accent-primary shadow-accent-primary/20 text-white shadow-lg'
-                            : 'text-text-muted border border-slate-200 bg-white/50 hover:bg-white/80'
+                            ? 'accent-fill shadow-lg'
+                            : 'text-text-muted border-border bg-surface-card/50 hover:bg-surface-card/80 border'
                     "
                 >
                     {{ cat.label }}
@@ -71,14 +71,14 @@ const filteredAchievements = computed(() => {
                         class="flex h-full flex-col items-center text-center transition-all duration-300"
                         :class="[
                             achievement.is_unlocked
-                                ? 'bg-glass-strong border-accent-primary/20'
+                                ? 'bg-surface-glass-strong border-accent-primary/20'
                                 : 'opacity-60 grayscale',
                         ]"
                     >
                         <!-- Badge Icon -->
                         <div
                             class="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl text-4xl transition-transform duration-300 group-hover:scale-110"
-                            :class="achievement.is_unlocked ? 'bg-accent-primary/10' : 'bg-white/5'"
+                            :class="achievement.is_unlocked ? 'bg-accent-primary/10' : 'bg-surface-card/5'"
                         >
                             {{ achievement.icon }}
                         </div>
@@ -95,11 +95,24 @@ const filteredAchievements = computed(() => {
 
                         <!-- Tooltip Overlay -->
                         <div
-                            class="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[20px] bg-black/80 p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
+                            class="bg-text-main/80 pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[20px] p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
-                            <span class="text-accent-primary mb-1 text-xs font-bold">{{ achievement.name }}</span>
-                            <span class="text-[10px] leading-tight text-white/80">{{ achievement.description }}</span>
-                            <div v-if="achievement.is_unlocked" class="mt-2 text-[8px] text-white/30 italic">
+                            <!--
+                                Le nom s'ecrit en CLAIR : cette infobulle est un
+                                voile sombre (`bg-text-main/80`), pas une carte.
+                                `accent-primary-deep` y rendait 1,91:1 — il est
+                                fait pour ecrire sur les surfaces claires, et le
+                                garde qui verifie ca ne peut pas connaitre un
+                                fond pose par une classe voisine.
+                            -->
+                            <span class="text-text-on-dark-accent mb-1 text-xs font-bold">{{ achievement.name }}</span>
+                            <span class="text-text-on-dark-accent/80 text-[10px] leading-tight">{{
+                                achievement.description
+                            }}</span>
+                            <div
+                                v-if="achievement.is_unlocked"
+                                class="text-text-on-dark-accent/30 mt-2 text-[8px] italic"
+                            >
                                 Débloqué le {{ new Date(achievement.unlocked_at).toLocaleDateString('fr-FR') }}
                             </div>
                         </div>
@@ -107,9 +120,14 @@ const filteredAchievements = computed(() => {
                         <!-- Unlocked Checkmark -->
                         <div
                             v-if="achievement.is_unlocked"
-                            class="bg-accent-success absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full shadow-lg"
+                            class="bg-accent-state absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full shadow-lg"
                         >
-                            <svg class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg
+                                class="text-text-on-accent h-3 w-3"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"

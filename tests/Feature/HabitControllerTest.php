@@ -41,7 +41,7 @@ describe('HabitController Store', function (): void {
         $habitData = [
             'name' => 'Drink Water',
             'description' => 'Drink 2L of water daily',
-            'color' => 'bg-blue-500',
+            'color' => 'bg-palette-bleu',
             'icon' => 'water_drop',
             'goal_times_per_week' => 7,
             'archived' => false,

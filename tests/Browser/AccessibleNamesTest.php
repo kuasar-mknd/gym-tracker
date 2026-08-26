@@ -80,7 +80,7 @@ class AccessibleNamesTest extends DuskTestCase
                 ->waitFor('@add-habit', 15)
                 ->click('@add-habit')
                 ->waitFor('dialog[open]', 15)
-                ->waitFor('@habit-color-bg-red-500', 15);
+                ->waitFor('@habit-color-bg-palette-rouge', 15);
 
             $pickers = $browser->script(
                 'const named = (selector) => Array.from(document.querySelectorAll(selector))'

@@ -2,7 +2,19 @@
 defineProps({
     variant: {
         type: String,
-        default: 'default', // default | primary | neon | gradient-border | danger | ghost
+        /*
+         * Quatre degres, du plus insistant au plus efface :
+         *
+         *   primary    — plein, vert d'etat sur encre. L'action de la page.
+         *   default    — la carte de verre. Une action ordinaire.
+         *   secondary  — contour seul, fond transparent. Le second choix.
+         *   ghost      — rien jusqu'au survol. Ce qui ne doit pas attirer.
+         *
+         * `secondary` n'etait PAS implementee : elle n'apparaissait pas dans
+         * l'objet de classes, donc ses dix boutons — six « Annuler » — rendaient
+         * exactement comme `default`. Deux degres declares, un seul visible.
+         */
+        default: 'default', // default | primary | secondary | neon | gradient-border | danger | ghost
     },
     size: {
         type: String,
@@ -47,14 +59,17 @@ const sizeClasses = {
         :aria-label="ariaLabel || $attrs['aria-label']"
         :title="ariaLabel"
         :class="[
-            'glass-button focus-visible:ring-electric-orange transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+            'glass-button focus-visible:ring-accent-primary transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
             sizeClasses[size],
             {
-                'glass-button-primary shadow-glow-orange': variant === 'primary',
+                'glass-button-primary': variant === 'primary',
                 'glass-button-neon shadow-neon': variant === 'neon',
                 'glass-button-gradient-border': variant === 'gradient-border',
-                'border-red-500/30 bg-red-500/10 text-red-600 hover:bg-red-500/20': variant === 'danger',
-                'border-transparent bg-transparent shadow-none hover:bg-white/50': variant === 'ghost',
+                'border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20':
+                    variant === 'danger',
+                'border-border-strong hover:bg-surface-sunken bg-transparent shadow-none backdrop-blur-none':
+                    variant === 'secondary',
+                'hover:bg-surface-card/50 border-transparent bg-transparent shadow-none': variant === 'ghost',
                 'cursor-not-allowed opacity-50': disabled,
                 'cursor-wait': loading,
             },

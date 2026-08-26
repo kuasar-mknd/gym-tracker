@@ -432,11 +432,11 @@ describe('Goals/Index', () => {
         /** The classes on the percentage readout itself, not just somewhere on the card. */
         const readout = (id) => cardFor(wrapper, id).get('.drop-shadow-sm').classes()
 
-        expect(readout(1)).toContain('text-gray-500')
-        expect(readout(2)).toContain('text-orange-500')
-        expect(readout(3)).toContain('text-blue-500')
+        expect(readout(1)).toContain('text-text-muted')
+        expect(readout(2)).toContain('text-accent-primary-deep')
+        expect(readout(3)).toContain('text-accent-info-deep')
         // Completed wins over the percentage, which would otherwise read blue.
-        expect(readout(4)).toContain('text-green-500')
+        expect(readout(4)).toContain('text-accent-state-deep')
 
         wrapper.unmount()
     })

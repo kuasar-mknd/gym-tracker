@@ -206,7 +206,7 @@ const setColumnRef = (key) => (element) => {
         :dusk="dusk"
         :aria-label="`${label} : ${spoken}`"
         :data-seconds="modelValue ?? ''"
-        class="text-text-main h-11 shrink-0 rounded-xl border-2 border-slate-200 px-2 text-center font-bold tabular-nums disabled:opacity-60"
+        class="text-text-main border-border h-11 shrink-0 rounded-xl border-2 px-2 text-center font-bold tabular-nums disabled:opacity-60"
         :class="fill ? 'w-full min-w-32 flex-1' : 'w-auto'"
         @click="show"
     >
@@ -320,7 +320,7 @@ const setColumnRef = (key) => (element) => {
     top: calc(var(--item) * 2);
     height: var(--item);
     border-radius: 12px;
-    background: rgb(120 120 128 / 0.16);
+    background: rgb(from var(--color-border-strong) r g b / 0.5);
     pointer-events: none;
 }
 

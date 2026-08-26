@@ -161,7 +161,7 @@ const scatterData = computed(() => {
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('exercises.index')"
-                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
+                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors"
                     aria-label="Retour aux exercices"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>

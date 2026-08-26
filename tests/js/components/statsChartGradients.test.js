@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 import { chartDataOf } from './chartRecorder.js'
 
@@ -111,8 +112,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#f97316'],
-            [1, '#fb923c'],
+            [0, jeton('accent-primary')],
+            [1, jetonTransparent('accent-primary', 0.55)],
         ],
     },
     {
@@ -122,8 +123,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(99, 102, 241, 0.2)'],
-            [1, 'rgba(99, 102, 241, 0)'],
+            [0, jetonTransparent('accent-tertiary', 0.2)],
+            [1, jetonTransparent('accent-tertiary', 0)],
         ],
     },
     {
@@ -133,8 +134,8 @@ const cases = [
         key: 'borderColor',
         requested: RIGHTWARD,
         stops: [
-            [0, '#8B5CF6'],
-            [1, '#FF1493'],
+            [0, jeton('accent-tertiary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -144,8 +145,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(255, 20, 147, 0.25)'],
-            [1, 'rgba(139, 92, 246, 0.05)'],
+            [0, jetonTransparent('accent-secondary', 0.25)],
+            [1, jetonTransparent('accent-tertiary', 0.05)],
         ],
     },
     {
@@ -155,8 +156,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(0, 209, 255, 0.3)'],
-            [1, 'rgba(0, 209, 255, 0)'],
+            [0, jetonTransparent('accent-info', 0.3)],
+            [1, jetonTransparent('accent-info', 0)],
         ],
     },
     {
@@ -166,8 +167,8 @@ const cases = [
         key: 'borderColor',
         requested: RIGHTWARD,
         stops: [
-            [0, '#00D1FF'],
-            [1, '#00FF66'],
+            [0, jeton('accent-info')],
+            [1, jeton('accent-state')],
         ],
     },
     {
@@ -176,8 +177,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, '#06b6d4'],
-            [1, '#3b82f6'],
+            [0, jeton('accent-info')],
+            [1, jetonTransparent('accent-info', 0.55)],
         ],
     },
     {
@@ -187,8 +188,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(236, 72, 153, 0.2)'],
-            [1, 'rgba(236, 72, 153, 0)'],
+            [0, jetonTransparent('accent-secondary', 0.2)],
+            [1, jetonTransparent('accent-secondary', 0)],
         ],
     },
     {
@@ -197,8 +198,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#FF9F43'],
-            [1, '#FF5252'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-danger')],
         ],
     },
     {
@@ -208,8 +209,8 @@ const cases = [
         key: 'borderColor',
         requested: RIGHTWARD,
         stops: [
-            [0, '#34D399'],
-            [1, '#2DD4BF'],
+            [0, jeton('accent-state')],
+            [1, jeton('accent-info')],
         ],
     },
     {
@@ -219,8 +220,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(52, 211, 153, 0.2)'],
-            [1, 'rgba(52, 211, 153, 0)'],
+            [0, jetonTransparent('accent-state', 0.2)],
+            [1, jetonTransparent('accent-state', 0)],
         ],
     },
     {
@@ -229,8 +230,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#8B5CF6'],
-            [1, '#EC4899'],
+            [0, jeton('accent-tertiary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -240,8 +241,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, 'rgba(255, 0, 128, 0.05)'],
-            [1, 'rgba(255, 0, 128, 0.4)'],
+            [0, jetonTransparent('accent-secondary', 0.05)],
+            [1, jetonTransparent('accent-secondary', 0.4)],
         ],
     },
     {
@@ -251,8 +252,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(16, 185, 129, 0.2)'],
-            [1, 'rgba(16, 185, 129, 0)'],
+            [0, jetonTransparent('accent-state', 0.2)],
+            [1, jetonTransparent('accent-state', 0)],
         ],
     },
     {
@@ -261,8 +262,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, '#FF5500'],
-            [1, '#FF0080'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -271,8 +272,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#FF5500'],
-            [1, '#FF0080'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -281,8 +282,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#FF5500'],
-            [1, '#FFCC00'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-warning')],
         ],
     },
     {
@@ -291,8 +292,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#FF5500'],
-            [1, '#FF0080'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -301,8 +302,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#00D1FF'],
-            [1, '#00FF66'],
+            [0, jeton('accent-info')],
+            [1, jeton('accent-state')],
         ],
     },
     {
@@ -312,8 +313,8 @@ const cases = [
         key: 'borderColor',
         requested: RIGHTWARD,
         stops: [
-            [0, '#8800FF'],
-            [1, '#FF5500'],
+            [0, jeton('accent-tertiary')],
+            [1, jeton('accent-primary')],
         ],
     },
     {
@@ -323,8 +324,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(136, 0, 255, 0.2)'],
-            [1, 'rgba(255, 85, 0, 0)'],
+            [0, jetonTransparent('accent-tertiary', 0.2)],
+            [1, jetonTransparent('accent-primary', 0)],
         ],
     },
     {
@@ -333,8 +334,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#ff4b2b'],
-            [1, '#ff416c'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -343,8 +344,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, '#06B6D4'],
-            [1, '#3B82F6'],
+            [0, jeton('accent-info')],
+            [1, jetonTransparent('accent-info', 0.55)],
         ],
     },
     {
@@ -353,8 +354,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, '#00d2ff'],
-            [1, '#3a7bd5'],
+            [0, jeton('accent-info')],
+            [1, jetonTransparent('accent-info', 0.55)],
         ],
     },
     {
@@ -363,8 +364,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, '#0ea5e9'],
-            [1, '#8b5cf6'],
+            [0, jeton('accent-info')],
+            [1, jeton('accent-tertiary')],
         ],
     },
     {
@@ -373,8 +374,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, '#FF5500'],
-            [1, '#FF0080'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -383,8 +384,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, '#3B82F6'],
-            [1, '#93C5FD'],
+            [0, jeton('accent-info')],
+            [1, jetonTransparent('accent-info', 0.55)],
         ],
     },
     {
@@ -394,8 +395,8 @@ const cases = [
         key: 'borderColor',
         requested: RIGHTWARD,
         stops: [
-            [0, '#00E5FF'],
-            [1, '#00A3FF'],
+            [0, jeton('accent-info')],
+            [1, jetonTransparent('accent-info', 0.55)],
         ],
     },
     {
@@ -405,8 +406,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(0, 229, 255, 0.2)'],
-            [1, 'rgba(0, 229, 255, 0)'],
+            [0, jetonTransparent('accent-info', 0.2)],
+            [1, jetonTransparent('accent-info', 0)],
         ],
     },
     {
@@ -416,8 +417,8 @@ const cases = [
         key: 'borderColor',
         requested: RIGHTWARD,
         stops: [
-            [0, '#FF5500'],
-            [1, '#FF0080'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -427,8 +428,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(255, 85, 0, 0.2)'],
-            [1, 'rgba(255, 0, 128, 0)'],
+            [0, jetonTransparent('accent-primary', 0.2)],
+            [1, jetonTransparent('accent-secondary', 0)],
         ],
     },
     {
@@ -438,8 +439,8 @@ const cases = [
         key: 'borderColor',
         requested: RIGHTWARD,
         stops: [
-            [0, '#F97316'],
-            [1, '#EC4899'],
+            [0, jeton('accent-primary')],
+            [1, jeton('accent-secondary')],
         ],
     },
     {
@@ -449,8 +450,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(249, 115, 22, 0.2)'],
-            [1, 'rgba(236, 72, 153, 0)'],
+            [0, jetonTransparent('accent-primary', 0.2)],
+            [1, jetonTransparent('accent-secondary', 0)],
         ],
     },
     {
@@ -460,8 +461,8 @@ const cases = [
         key: 'backgroundColor',
         requested: DOWNWARD,
         stops: [
-            [0, 'rgba(136, 0, 255, 0.2)'],
-            [1, 'rgba(136, 0, 255, 0)'],
+            [0, jetonTransparent('accent-tertiary', 0.2)],
+            [1, jetonTransparent('accent-tertiary', 0)],
         ],
     },
     {
@@ -470,8 +471,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, 'rgba(0, 229, 255, 0.6)'],
-            [1, 'rgba(136, 0, 255, 0.8)'],
+            [0, jetonTransparent('accent-info', 0.6)],
+            [1, jetonTransparent('accent-tertiary', 0.8)],
         ],
     },
     {
@@ -482,8 +483,8 @@ const cases = [
         key: 'backgroundColor',
         requested: UPWARD,
         stops: [
-            [0, 'rgba(255, 85, 0, 0.4)'],
-            [1, 'rgba(255, 0, 128, 0.8)'],
+            [0, jetonTransparent('accent-primary', 0.4)],
+            [1, jetonTransparent('accent-secondary', 0.8)],
         ],
     },
 ]
@@ -537,8 +538,8 @@ describe('JournalChart teinte son remplissage selon la métrique choisie', () =>
         const paint = chartDataOf(mountJournal(), 'Line').datasets[0].backgroundColor
 
         expect(paintWith(paint).stops).toEqual([
-            [0, 'rgba(244, 114, 182, 0.2)'],
-            [1, 'rgba(244, 114, 182, 0)'],
+            [0, jetonTransparent('palette-rose', 0.2)],
+            [1, jetonTransparent('palette-rose', 0)],
         ])
     })
 
@@ -552,8 +553,8 @@ describe('JournalChart teinte son remplissage selon la métrique choisie', () =>
         const paint = chartDataOf(wrapper, 'Line').datasets[0].backgroundColor
 
         expect(paintWith(paint).stops).toEqual([
-            [0, 'rgba(250, 204, 21, 0.2)'],
-            [1, 'rgba(250, 204, 21, 0)'],
+            [0, jetonTransparent('palette-ambre', 0.2)],
+            [1, jetonTransparent('palette-ambre', 0)],
         ])
     })
 

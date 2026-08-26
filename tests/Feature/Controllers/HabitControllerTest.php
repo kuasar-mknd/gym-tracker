@@ -36,7 +36,7 @@ it('creates a new habit', function (): void {
     $payload = [
         'name' => 'Drink Water',
         'description' => 'Drink 2L of water',
-        'color' => 'bg-blue-500',
+        'color' => 'bg-palette-bleu',
         'icon' => 'water_drop',
         'goal_times_per_week' => 7,
     ];
@@ -50,7 +50,7 @@ it('creates a new habit', function (): void {
         'user_id' => $user->id,
         'name' => 'Drink Water',
         'description' => 'Drink 2L of water',
-        'color' => 'bg-blue-500',
+        'color' => 'bg-palette-bleu',
         'icon' => 'water_drop',
         'goal_times_per_week' => 7,
         'archived' => false,
@@ -76,7 +76,7 @@ it('updates an existing habit', function (): void {
         'name' => 'New Name',
         'description' => 'New Description',
         'goal_times_per_week' => 5,
-        'color' => 'bg-red-500',
+        'color' => 'bg-palette-rouge',
         'icon' => 'check',
     ];
 

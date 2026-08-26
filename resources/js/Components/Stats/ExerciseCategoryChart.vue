@@ -1,5 +1,5 @@
 <script setup>
-import { couleurDeCategorie } from '@/Utils/couleurs'
+import { couleurDeCategorie, jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { computed } from 'vue'
@@ -39,7 +39,7 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     cutout: '65%',
@@ -47,7 +47,7 @@ const chartOptions = {
         legend: {
             position: 'right',
             labels: {
-                color: '#64748B', // text-muted
+                color: jeton('text-muted'), // text-muted
                 font: {
                     family: "'Space Grotesk', sans-serif",
                     size: 11,
@@ -59,14 +59,14 @@ const chartOptions = {
             },
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#0F172A', // text-main
+            backgroundColor: jetonTransparent('surface-card', 0.9),
+            titleColor: jeton('text-main'), // text-main
             titleFont: {
                 family: "'Archivo', sans-serif",
                 size: 13,
                 weight: 'bold',
             },
-            bodyColor: '#64748B', // text-muted
+            bodyColor: jeton('text-muted'), // text-muted
             bodyFont: {
                 family: "'Inter', sans-serif",
                 size: 12,
@@ -74,7 +74,7 @@ const chartOptions = {
             padding: 12,
             cornerRadius: 12,
             boxPadding: 6,
-            borderColor: 'rgba(255, 255, 255, 0.5)',
+            borderColor: jetonTransparent('surface-card', 0.5),
             borderWidth: 1,
             displayColors: true,
             callbacks: {
@@ -91,7 +91,7 @@ const chartOptions = {
     layout: {
         padding: 10,
     },
-}
+}))
 </script>
 
 <template>

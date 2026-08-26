@@ -54,7 +54,7 @@ const cancel = () => {
             <div class="mx-auto max-w-3xl space-y-6 sm:px-6 lg:px-8">
                 <Link
                     :href="route('goals.index')"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange min-h-touch inline-flex items-center gap-1 rounded-xl text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch inline-flex items-center gap-1 rounded-xl text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <span class="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_back</span>
                     Retour aux objectifs

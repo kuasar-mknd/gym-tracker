@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Widgets;
 
 use App\Models\User;
+use App\Support\Charte;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
 
@@ -28,8 +29,8 @@ class UserActivityChart extends ChartWidget
                 [
                     'label' => 'New Users',
                     'data' => $this->fillMonthlyData($usersPerMonth)['data'],
-                    'backgroundColor' => '#8b5cf6', // Violet
-                    'borderColor' => '#8b5cf6',
+                    'backgroundColor' => Charte::jeton('accent-tertiary'),
+                    'borderColor' => Charte::jeton('accent-tertiary'),
                 ],
             ],
             'labels' => $this->fillMonthlyData($usersPerMonth)['labels'],

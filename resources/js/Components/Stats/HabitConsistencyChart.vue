@@ -1,5 +1,6 @@
 <script setup>
 import { Line } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -39,8 +40,8 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-                    gradient.addColorStop(0, '#34D399') // Emerald 400
-                    gradient.addColorStop(1, '#2DD4BF') // Teal 400
+                    gradient.addColorStop(0, jeton('accent-state')) // Emerald 400
+                    gradient.addColorStop(1, jeton('accent-info')) // Teal 400
                     return gradient
                 },
                 backgroundColor: (context) => {
@@ -48,22 +49,22 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, 'rgba(52, 211, 153, 0.2)')
-                    gradient.addColorStop(1, 'rgba(52, 211, 153, 0)')
+                    gradient.addColorStop(0, jetonTransparent('accent-state', 0.2))
+                    gradient.addColorStop(1, jetonTransparent('accent-state', 0))
                     return gradient
                 },
                 borderWidth: 3,
                 pointRadius: 0, // Hide points for cleaner look, show on hover
                 pointHoverRadius: 6,
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: '#34D399',
+                pointHoverBackgroundColor: jeton('surface-card'),
+                pointHoverBorderColor: jeton('accent-state'),
                 pointHoverBorderWidth: 3,
             },
         ],
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
@@ -75,14 +76,14 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
+            backgroundColor: jetonTransparent('surface-card', 0.9),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
             padding: 12,
             cornerRadius: 12,
             displayColors: false,
             borderWidth: 1,
-            borderColor: 'rgba(52, 211, 153, 0.2)',
+            borderColor: jetonTransparent('accent-state', 0.2),
             callbacks: {
                 label: (context) => `${context.parsed.y} Complétés`,
             },
@@ -95,7 +96,7 @@ const chartOptions = {
         y: {
             display: true,
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
                 stepSize: 1,
                 precision: 0,
@@ -106,7 +107,7 @@ const chartOptions = {
             beginAtZero: true,
         },
     },
-}
+}))
 </script>
 
 <template>

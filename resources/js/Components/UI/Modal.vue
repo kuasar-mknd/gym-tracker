@@ -225,7 +225,7 @@ const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
                     -->
                     <div
                         v-show="show"
-                        class="glass-modal text-text-main transform overflow-y-auto rounded-3xl border border-white/20 bg-white/80 shadow-2xl backdrop-blur-xl transition-all sm:mx-auto sm:w-full"
+                        class="glass-modal text-text-main border-surface-card/20 bg-surface-card/80 transform overflow-y-auto rounded-3xl border shadow-2xl backdrop-blur-xl transition-all sm:mx-auto sm:w-full"
                         :class="[maxWidthClass, panelSpacingClass]"
                     >
                         <slot v-if="showSlot" />

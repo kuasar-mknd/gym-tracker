@@ -56,7 +56,7 @@ const hasRightAction = computed(() => Boolean(slots['action-right']))
  * An action is exactly as wide as the strip the content has uncovered.
  *
  * It used to be half the row, which the content then sat on top of — and the
- * content is glass, `bg-white/10` over a row at `bg-white/80`. A red delete
+ * content is glass, `bg-surface-card/10` over a row at `bg-surface-card/80`. A red delete
  * panel behind that does not stay behind it: it came through as a pink wash
  * across the middle of the row, over the values. Fading the layer in with the
  * drag was meant to hide that, but the fade completes long before the row is
@@ -261,7 +261,7 @@ defineExpose({ close })
 
         <!-- Foreground Content Layer -->
         <div
-            class="relative z-10 touch-pan-y rounded-3xl border border-white/20 bg-white/10 transition-transform active:scale-[0.99]"
+            class="border-surface-card/20 bg-surface-card/10 relative z-10 touch-pan-y rounded-3xl border transition-transform active:scale-[0.99]"
             :style="style"
             @touchstart="onTouchStart"
             @touchmove="onTouchMove"

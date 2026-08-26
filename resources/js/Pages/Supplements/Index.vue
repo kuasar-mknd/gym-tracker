@@ -131,7 +131,7 @@ const formatDate = (dateString) => {
                     v-press
                     @click="showAddForm = true"
                     aria-label="Ajouter un complément"
-                    class="bg-gradient-main flex size-12 items-center justify-center rounded-xl text-white shadow-lg sm:hidden"
+                    class="bg-gradient-main text-text-on-dark-accent flex size-12 items-center justify-center rounded-xl shadow-lg sm:hidden"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">add</span>
                 </button>
@@ -250,7 +250,7 @@ const formatDate = (dateString) => {
                             <div class="mb-2 flex items-start justify-between">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="flex size-10 items-center justify-center rounded-lg bg-linear-to-br from-blue-400 to-cyan-300 text-white shadow-md"
+                                        class="info-fill flex size-10 items-center justify-center rounded-lg shadow-md"
                                     >
                                         <span class="material-symbols-outlined" aria-hidden="true">medication</span>
                                     </div>
@@ -266,7 +266,7 @@ const formatDate = (dateString) => {
                                         v-press
                                         @click="startEdit(supplement)"
                                         aria-label="Modifier le complément"
-                                        class="text-text-muted hover:text-electric-orange min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors"
+                                        class="text-text-muted hover:text-accent-primary-deep min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors"
                                     >
                                         <span class="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
                                     </button>
@@ -274,7 +274,7 @@ const formatDate = (dateString) => {
                                         v-press
                                         @click="deleteSupplement(supplement.id)"
                                         aria-label="Supprimer le complément"
-                                        class="text-text-muted min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors hover:text-red-500"
+                                        class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger-deep flex items-center justify-center p-1 transition-colors"
                                     >
                                         <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                                     </button>
@@ -288,7 +288,7 @@ const formatDate = (dateString) => {
                                         class="font-display text-2xl font-black"
                                         :class="
                                             supplement.servings_remaining <= supplement.low_stock_threshold
-                                                ? 'text-red-500'
+                                                ? 'text-accent-danger-deep'
                                                 : 'text-text-main'
                                         "
                                     >
@@ -306,14 +306,14 @@ const formatDate = (dateString) => {
 
                             <div
                                 v-if="supplement.dosage"
-                                class="text-text-muted mt-3 inline-flex items-center rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs font-medium"
+                                class="text-text-muted border-surface-card/10 bg-surface-card/5 mt-3 inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium"
                             >
                                 {{ supplement.dosage }}
                             </div>
                         </div>
 
                         <!-- Action Footer -->
-                        <div class="border-t border-white/5 bg-white/5 p-3">
+                        <div class="border-surface-card/5 bg-surface-card/5 border-t p-3">
                             <GlassButton
                                 @click="consume(supplement.id)"
                                 variant="primary"

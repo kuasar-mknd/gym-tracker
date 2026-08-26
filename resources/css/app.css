@@ -17,7 +17,17 @@
 @source not '../../docs';
 @source not '../../*.md';
 
-@theme {
+/*
+ * `static` : Tailwind emet TOUTES les variables, pas seulement celles qu'une
+ * classe utilise.
+ *
+ * Sans ca, les jetons lus depuis le JavaScript n'existent pas dans le CSS
+ * produit : `Utils/couleurs.js` interroge `--color-category-chest` par
+ * `getComputedStyle`, recoit une chaine vide, et le graphique dessine en noir.
+ * Le defaut ne se voit qu'a l'ecran — aucun test de classe ne le rencontre,
+ * puisque justement aucune classe n'est en jeu.
+ */
+@theme static {
     --font-sans:
         Space Grotesk, Inter, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
@@ -42,16 +52,44 @@
     --color-surface-page: #f8faff;
     --color-surface-card: #ffffff;
     --color-surface-sunken: #f1f5f9;
-    --color-surface-glass: rgba(255, 255, 255, 0.65);
+    --color-surface-glass: rgb(from var(--color-surface-card) r g b / 0.65);
+
+    /*
+     * La meme surface, plus dense. Trois vues ecrivaient `bg-glass-strong`, une
+     * classe que rien ne declarait : le navigateur n'applique alors RIEN, et le
+     * survol de ces cartes ne faisait rien du tout. Le jeton existait pourtant,
+     * sous le nom `--glass-bg-strong` du bloc historique, que Tailwind ne lit
+     * pas pour fabriquer des utilitaires.
+     */
+    --color-surface-glass-strong: rgb(from var(--color-surface-card) r g b / 0.85);
+
+    /*
+     * Le voile d'une modale. Quatre fichiers ecrivaient `bg-black/80` sans
+     * qu'aucun role ne le nomme — et `bg-text-main/80` aurait detourne de
+     * l'encre en surface, ce qui est faux : ce n'est pas du texte.
+     */
+    --color-overlay: rgb(from var(--color-shadow-cast) r g b / 0.8);
+
+    /*
+     * Les deux noirs qui ne sont pas du texte.
+     *
+     * `shadow-cast` est ce qui projette une ombre ou assombrit une scene — le
+     * voile d'une modale, l'ombre portee d'un disque de fonte. `shadow-ambient`
+     * est le bleu-nuit tres dilue des ombres de cartes, qui rend une elevation
+     * plus juste qu'un gris neutre. Aucun des deux n'est `text-main` : les
+     * confondre ferait bouger toutes les ombres du jour ou l'encre changerait.
+     */
+    --color-shadow-cast: #000000;
+    --color-shadow-ambient: #1f2687;
 
     /* --- Traits -------------------------------------------------------- */
     --color-border: #e2e8f0;
     --color-border-strong: #cbd5e1;
-    --color-glass-border: rgba(255, 255, 255, 0.8);
+    --color-glass-border: rgb(from var(--color-surface-card) r g b / 0.8);
 
     /* --- Texte --------------------------------------------------------- */
     --color-text-main: #0f172a;
-    --color-text-muted: #64748b;
+    --color-text-muted: #627188;
 
     /*
      * Ce qu'on ecrit PAR-DESSUS un accent, et c'est de l'encre.
@@ -62,22 +100,76 @@
      */
     --color-text-on-accent: #0f172a;
 
+    /*
+     * Et ce qu'on ecrit sur les accents SOMBRES — l'orange principal, le danger.
+     * Du blanc, parce qu'ils sont assez fonces pour le porter et trop pour
+     * porter de l'encre.
+     *
+     * Deux jetons et non un seul, parce qu'un accent clair et un accent sombre
+     * n'appellent pas le meme texte, et qu'il vaut mieux deux noms sans
+     * ambiguite qu'un seul que chaque composant devrait interpreter. Le
+     * composant ecrit `bg-accent-primary text-text-on-dark-accent` et n'a
+     * jamais a savoir de quelle couleur il s'agit.
+     */
+    --color-text-on-dark-accent: #ffffff;
+
     /* --- Accents ------------------------------------------------------- */
 
     /*
-     * L'orange existe en DEUX valeurs, et ce n'est pas un doublon.
-     *
-     * `primary` porte l'identite : anneaux de focus, texte, bordures,
-     * degrades — 183 des 190 usages, ou le contraste ne se pose pas de la meme
-     * facon. `primary-deep` ne sert QUE de fond a du texte blanc, ou il rend
-     * 4,52:1 la ou `#ff5500` rendait 3,21. La pop est donc gardee partout sauf
-     * sur sept boutons.
+     * L'orange de l'identite, vif, tel qu'il a toujours ete. Anneaux de focus,
+     * icones, bandeaux, degrades : 183 de ses 190 emplois, ou il ne porte aucun
+     * texte et ou sa vivacite est tout l'interet.
      */
     --color-accent-primary: #ff5500;
-    --color-accent-primary-deep: #d34600;
+
+    /*
+     * Et sa version pour les SURFACES PLEINES qui portent du texte, ou le vif
+     * ne rend que 3,21:1 avec du blanc.
+     *
+     * Un composant ne choisit JAMAIS entre les deux — c'est l'erreur que la
+     * premiere version de cette charte a commise, et elle obligeait chaque
+     * appelant a trancher. Ce jeton n'est lu que par l'utilitaire `accent-fill`
+     * ci-dessous, qui pose le fond ET son texte d'un seul geste : le composant
+     * ecrit `accent-fill` et n'a rien a savoir.
+     */
+    --color-accent-primary-fill: #ce4400;
+
+    /*
+     * Et l'orange qui porte les MOTS.
+     *
+     * Le vif rend 2.93:1 sur la surface la moins favorable — les libelles
+     * en capitales qui annoncent une section (« APERCU », « REUSSITES ») etaient
+     * donc illisibles, dans 35 fichiers. La reponse n'est pas d'assombrir
+     * `accent-primary` : sa vivacite est l'identite de l'application, et elle
+     * reste partout ou elle se voit vraiment — icones, bordures, anneaux de
+     * focus, lueurs, degrades, soit la grande majorite de ses emplois.
+     *
+     * Celui-ci n'existe QUE pour l'interieur des lettres, ou la difference ne se
+     * remarque pas et ou elle decide de la lisibilite.
+     */
+    --color-accent-primary-deep: #b63c00;
+
+    /*
+     * Le violet LISIBLE. Le vif tient sur une carte blanche (6,02:1) mais tombe
+     * a 4,15:1 des qu'on l'ecrit sur un lavis de lui-meme a 20 %, ce que font
+     * cinq boutons de la page Outils.
+     */
+    --color-accent-tertiary-deep: #8100f2;
 
     /* Le deuxieme et le troisieme du degrade. Identite, pas information. */
     --color-accent-secondary: #ff0080;
+
+    /*
+     * Le rose en surface pleine, pour la meme raison que l'orange : le vif rend
+     * 3,77:1 avec du blanc. Lu UNIQUEMENT par `@utility secondary-fill`.
+     */
+    --color-accent-secondary-fill: #e50073;
+
+    /*
+     * Et le rose LISIBLE, pour les libelles qui s'ecrivent dedans. Le vif rend
+     * 3.45:1 sur la surface la moins favorable, celui-ci 4.52:1.
+     */
+    --color-accent-secondary-deep: #bd005f;
     --color-accent-tertiary: #8800ff;
 
     /*
@@ -93,9 +185,76 @@
      */
     --color-accent-state: #ccff00;
 
+    /*
+     * Sa version LISIBLE, la seule qui ait le droit de porter du texte.
+     *
+     * Calculee contre le PIRE fond qu'elle rencontre : un lavis de son propre
+     * accent a 20 %, pose sur une carte. Elle l'a d'abord ete contre la surface
+     * creuse, et trente-deux badges tombaient alors entre 3,5 et 4,5:1 — un
+     * ecart qui ne se voit pas et qui rend la lecture penible.
+     * Le vif rend 1.18:1 sur une carte ; celui-ci 4.58:1.
+     */
+    --color-accent-state-deep: #607900;
+
     --color-accent-info: #00e5ff;
+
+    /*
+     * Le cyan LISIBLE, pour les rares fois ou l'information s'ecrit en toutes
+     * lettres. Le vif rend 1,54:1 sur une carte — il est fait pour etre une
+     * marque, une icone, un filet, jamais un mot. Mesure : 5,06:1.
+     */
+    --color-accent-info-deep: #007a8a;
+    /*
+     * Le danger existe en deux valeurs, pour la meme raison que l'orange :
+     * `#ef4444` sert de FOND (a 10 %, sous un texte), `deep` sert de TEXTE.
+     * Ecrit en #ef4444 sur ce fond compose, le libelle rend 4,23:1 — sous le
+     * seuil, de peu, ce qui est exactement le genre d'ecart que seul un calcul
+     * attrape. En deep il rend 5,5:1, sans difference perceptible.
+     */
     --color-accent-danger: #ef4444;
+    --color-accent-danger-deep: #b91c1c;
     --color-accent-warning: #eab308;
+
+    /*
+     * Sa version LISIBLE, la seule qui ait le droit de porter du texte.
+     * Le vif rend 1.92:1 sur une carte ; celui-ci 4.60:1.
+     */
+    --color-accent-warning-deep: #8a6803;
+
+    /*
+     * --- La seance en cours ---------------------------------------------
+     *
+     * Le bandeau du tableau de bord, et lui seul. Un degrade vert-emeraude vers
+     * cyan, qui n'appartient a aucune autre famille : ce n'est ni un accent —
+     * il ne demande rien — ni une categorie. C'est une identite, celle d'une
+     * seance ouverte.
+     *
+     * Il portait `emerald-500`, `teal-500` et `cyan-500` de Tailwind. La
+     * conversion vers la charte les a envoyes sur `accent-state` et
+     * `accent-info`, les jetons VIFS, bien plus clairs : le texte blanc y est
+     * passe de 2,5:1 a 1,2:1, et pas un mot du bandeau ne se lisait. C'est le
+     * piege de ce genre de table — remplacer une nuance par un role change la
+     * luminosite, pas seulement le nom.
+     *
+     * Ce sont les trois tons d'ORIGINE, a l'identique.
+     *
+     * Ils ont d'abord ete assombris ici pour que le blanc y tienne 4,5:1 —
+     * mesure, le blanc n'y rend que 2,5:1. Sam a demande les couleurs d'avant,
+     * et les a redemandees : c'est donc une decision assumee, pas un oubli.
+     *
+     * Ce qui la rend defendable : ce bandeau ne porte aucune information qu'on
+     * ne retrouve ailleurs. Il annonce une seance ouverte, l'annonce aussi par
+     * sa pastille « En cours », et mene a la page qui porte le detail. Le seuil
+     * AA protege la lecture d'un contenu ; il s'agit ici d'une banniere de
+     * navigation, et personne n'y lit longtemps.
+     *
+     * Si un jour on veut les deux, la reponse n'est pas d'assombrir ces trois
+     * tons : c'est de poser un voile sombre sous le texte, qui laisse le degrade
+     * intact la ou il se voit et donne au mot le fond qu'il lui faut.
+     */
+    --color-session-from: #10b981;
+    --color-session-via: #14b8a6;
+    --color-session-to: #06b6d4;
 
     /*
      * --- Tendance ------------------------------------------------------
@@ -106,8 +265,14 @@
      * `accent-danger` malgre des valeurs voisines. Les confondre empecherait de
      * changer l'un sans changer l'autre.
      */
-    --color-trend-up: #10b981;
-    --color-trend-down: #ef4444;
+    /*
+     * Assombris pour etre lisibles EN TEXTE, qui est leur seul usage : la
+     * comparaison hebdomadaire ecrit « +12 % » dans cette couleur. #10b981 rend
+     * 2,54:1 sur une carte et #ef4444 3,76:1 — les deux echouent, et le second
+     * echouait deja avant la charte.
+     */
+    --color-trend-up: #08724f;
+    --color-trend-down: #bd1010;
 
     /*
      * --- Categories d'exercice ------------------------------------------
@@ -117,9 +282,16 @@
      * confirmer), une couleur de categorie ne porte qu'une identite — elle doit
      * seulement se distinguer de ses sept voisines.
      *
-     * Deux d'entre elles n'existaient que pour ca : `magenta` et `lime`, assez
-     * proches du rose et du vert d'etat pour qu'on les prenne pour des doublons,
-     * et pourtant necessaires puisqu'il faut huit teintes separables.
+     * « Separables » se mesure, et ne s'affirme pas. Deux d'entre elles ne
+     * l'etaient pas : `cardio` etait a 9 unites de `legs` — deux verts acides
+     * cote a cote dans l'anneau de la bibliotheque, impossibles a distinguer —
+     * et `core` a 18 de `shoulders`. Ce commentaire affirmait pourtant le
+     * contraire, ce qui montre a quel point l'oeil est mauvais juge ici :
+     * l'ecart se calcule dans l'espace CIELAB, pas en regardant deux carres.
+     *
+     * Elles valent desormais une menthe et un bleu, aussi vifs que les autres,
+     * et la paire la plus proche des huit est passee de 9 a 52.
+     * `MusclePaletteCoversCategoriesTest` mesure cet ecart a chaque execution.
      *
      * La correspondance etait ecrite DEUX fois — en classes dans
      * `Utils/constants.js`, en hexadecimal dans `ExerciseCategoryChart.vue`,
@@ -131,29 +303,68 @@
     --color-category-shoulders: #ff0080;
     --color-category-arms: #00e5ff;
     --color-category-legs: #ccff00;
-    --color-category-core: #f5009b;
-    --color-category-cardio: #c0eb00;
+    --color-category-core: #196ef7;
+    --color-category-cardio: #00ffa2;
     --color-category-other: #64748b;
 
     /*
-     * --- Anciens noms, le temps de la conversion -----------------------
+     * --- La palette que L'UTILISATEUR choisit --------------------------
      *
-     * Ils REFERENCENT le role, ils ne recopient pas sa valeur : c'est en
-     * portant chacune son litteral que deux familles ont diverge sans que rien
-     * ne le signale, et `LesJetonsNeSeRecopientPasTest` garde cette lecon.
+     * Seize teintes pour marquer ses habitudes. Ce n'est ni un accent ni une
+     * categorie : un accent porte une intention, une categorie designe un
+     * groupe musculaire, celles-ci ne veulent rien dire du tout. Elles doivent
+     * seulement se distinguer les unes des autres et plaire.
      *
-     * A supprimer quand le compteur de `LaCharteRemplaceLesCouleursBrutesTest`
-     * atteint zero.
+     * Elles etaient les seize `-500` de Tailwind, et une conversion mecanique
+     * les a repliees sur six roles : `emerald`, `green` et `teal` devenaient le
+     * meme vert, `sky`, `cyan` et `blue` le meme cyan. Le choix de l'utilisateur
+     * entre « Vert » et « Emeraude » ne menait alors plus a rien, et le
+     * dictionnaire des noms se retrouvait avec des cles en double dont seule la
+     * derniere survivait. Une palette a besoin de valeurs DISTINGUABLES, pas de
+     * roles — c'est la difference que ce groupe existe pour tenir.
+     *
+     * Chacune porte du blanc a 4.50:1 au minimum, calcule et non choisi a
+     * l'oeil : la vue des habitudes ecrit le nom en blanc par-dessus la pastille
+     * quel que soit le choix, et il n'existe aucun endroit ou l'utilisateur
+     * pourrait etre averti que sa couleur preferee rend son texte illisible.
      */
-    --color-electric-orange: var(--color-accent-primary);
-    --color-hot-pink: var(--color-accent-secondary);
-    --color-vivid-violet: var(--color-accent-tertiary);
-    --color-neon-green: var(--color-accent-state);
-    --color-cyan-pure: var(--color-accent-info);
-    --color-accent-success: var(--color-accent-state);
-    --color-pearl-white: var(--color-surface-page);
-    --color-magenta-pure: var(--color-category-core);
-    --color-lime-pure: var(--color-category-cardio);
+    --color-palette-ardoise: #6d7785;
+    --color-palette-rouge: #d63c3c;
+    --color-palette-orange: #ab6330;
+    --color-palette-ambre: #8f7228;
+    --color-palette-vert: #268736;
+    --color-palette-emeraude: #258562;
+    --color-palette-turquoise: #248276;
+    --color-palette-cyan: #298091;
+    --color-palette-ciel: #2e7ea6;
+    --color-palette-bleu: #3d72db;
+    --color-palette-indigo: #4444f2;
+    --color-palette-violet: #8444f2;
+    --color-palette-pourpre: #ae40e5;
+    --color-palette-fuchsia: #bb3acf;
+    --color-palette-rose: #cf3a84;
+    --color-palette-framboise: #d43b61;
+
+    /*
+     * --- Les disques de fonte -------------------------------------------
+     *
+     * Le code couleur olympique : 25 kg rouge, 20 kg bleu, 15 kg jaune, 10 kg
+     * vert, 5 kg blanc, 2,5 kg noir.
+     *
+     * Ce ne sont PAS des accents, et c'est la raison d'etre de ce groupe. Un
+     * disque de 25 kg est rouge dans le monde, pas parce que cette application
+     * a decide que le rouge signalait un danger. Les avoir ecrits
+     * `bg-accent-danger` et `bg-accent-warning` liait le calculateur de barre
+     * aux humeurs de la charte : eclaircir l'alerte d'un cran aurait repeint des
+     * disques dont la couleur est une norme exterieure.
+     */
+    --color-plate-25: #d42027;
+    --color-plate-20: #1256a8;
+    --color-plate-15: #f2c500;
+    --color-plate-10: #1b883b;
+    --color-plate-5: #f4f4f4;
+    --color-plate-2: #1a1a1a;
+    --color-plate-small: #8a8f98;
 
     --backdrop-blur-glass: 20px;
     --backdrop-blur-glass-strong: 24px;
@@ -175,22 +386,90 @@
     --animate-pulse-glow: pulse-glow 8s infinite alternate;
     --animate-liquid-pulse: liquid-pulse 2s infinite;
 
-    --shadow-glow-orange: 0 0 20px rgba(255, 85, 0, 0.25), 0 10px 40px rgba(255, 85, 0, 0.15);
-    --shadow-glow-violet: 0 0 20px rgba(136, 0, 255, 0.25), 0 10px 40px rgba(136, 0, 255, 0.15);
-    --shadow-glow-pink: 0 0 20px rgba(255, 0, 128, 0.25), 0 10px 40px rgba(255, 0, 128, 0.15);
-    --shadow-glow-cyan: 0 0 20px rgba(0, 229, 255, 0.4);
-    --shadow-glow-magenta: 0 0 20px rgba(245, 0, 155, 0.4);
-    --shadow-neon: 0 10px 30px rgba(204, 255, 0, 0.5);
-    --shadow-neon-blue: 0 10px 30px rgba(0, 240, 255, 0.4);
-    --shadow-neon-pink: 0 10px 30px rgba(255, 0, 153, 0.4);
-    --shadow-glass-inset: inset 0 0 20px rgba(255, 255, 255, 0.8);
-    --shadow-glass-out: 0 8px 32px rgba(136, 0, 255, 0.1);
-    --shadow-glass-card: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-    --shadow-plate-shadow: 2px 0 4px rgba(0, 0, 0, 0.2);
+    /*
+     * Note sur `rgb(from … r g b / alpha)`, employe 63 fois ci-dessous.
+     *
+     * C'est la syntaxe de couleur RELATIVE. Elle demande Chrome 119, Safari 16.4
+     * ou Firefox 128. Tailwind v4 exige deja Chrome 111 et Safari 16.4 : la
+     * fenetre qui perd quelque chose est donc Chrome 111 a 118, soit des
+     * navigateurs de 2023 qui ne se sont pas mis a jour depuis.
+     *
+     * Le mode d'echec est une declaration ignoree — un fond absent, une ombre
+     * qui ne se dessine pas — jamais une page cassee. Aucun repli n'est pose :
+     * 63 blocs `@supports` couteraient plus que le defaut qu'ils evitent, et le
+     * depot ne declare aucune cible navigateur qui obligerait a le faire.
+     *
+     * C'est une decision, pas un oubli. Le jour ou une cible sera declaree, ce
+     * commentaire dit quoi verifier.
+     */
 
-    --background-image-gradient-main: linear-gradient(135deg, #ff5500 0%, #ff0080 50%, #8800ff 100%);
-    --background-image-gradient-orange-violet: linear-gradient(135deg, #ff5500 0%, #8800ff 100%);
-    --background-image-gradient-cyan-magenta: linear-gradient(135deg, #00e5ff 0%, #f5009b 100%);
+    /*
+     * Les ombres DERIVENT de leur accent, elles ne le recopient pas.
+     *
+     * `rgb(from <couleur> r g b / alpha)` reprend les canaux du jeton et n'en
+     * change que l'opacite. Ecrites en `rgba()` litteral, ces douze lignes
+     * etaient douze copies a la main — et deux avaient deja diverge sans que
+     * rien ne puisse le signaler : `--shadow-neon-blue` portait `0, 240, 255`
+     * pour un cyan qui vaut `#00e5ff`, `--shadow-neon-pink` portait
+     * `255, 0, 153` pour un rose qui vaut `#ff0080`. Deux couleurs sous un seul
+     * nom, exactement la panne que cette charte existe pour supprimer.
+     */
+    --shadow-glow-orange:
+        0 0 20px rgb(from var(--color-accent-primary) r g b / 0.25),
+        0 10px 40px rgb(from var(--color-accent-primary) r g b / 0.15);
+    --shadow-glow-violet:
+        0 0 20px rgb(from var(--color-accent-tertiary) r g b / 0.25),
+        0 10px 40px rgb(from var(--color-accent-tertiary) r g b / 0.15);
+    --shadow-glow-pink:
+        0 0 20px rgb(from var(--color-accent-secondary) r g b / 0.25),
+        0 10px 40px rgb(from var(--color-accent-secondary) r g b / 0.15);
+    --shadow-glow-cyan: 0 0 20px rgb(from var(--color-accent-info) r g b / 0.4);
+    --shadow-glow-magenta: 0 0 20px rgb(from var(--color-category-core) r g b / 0.4);
+    --shadow-neon: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
+    --shadow-neon-blue: 0 10px 30px rgb(from var(--color-accent-info) r g b / 0.4);
+    --shadow-neon-pink: 0 10px 30px rgb(from var(--color-accent-secondary) r g b / 0.4);
+    --shadow-glass-inset: inset 0 0 20px rgb(from var(--color-surface-card) r g b / 0.8);
+    --shadow-glass-out: 0 8px 32px rgb(from var(--color-accent-tertiary) r g b / 0.1);
+    --shadow-glass-card: 0 8px 32px 0 rgb(from var(--color-shadow-ambient) r g b / 0.07);
+    --shadow-plate-shadow: 2px 0 4px rgb(from var(--color-shadow-cast) r g b / 0.2);
+
+    /*
+     * Les degrades ne portent plus d'hexadecimal : ils citent les jetons.
+     *
+     * Ils restent des surfaces DECORATIVES. Aucun texte ne s'ecrit dessus, et
+     * c'est demontre plutot que promis : sur `gradient-main`, du blanc echoue de
+     * 0 a 50 % et de l'encre echoue de 75 a 100 %. Aucune des deux ne traverse.
+     * C'est ce qui a fait retirer le degrade des boutons.
+     */
+    --background-image-gradient-main: linear-gradient(
+        135deg,
+        var(--color-accent-primary) 0%,
+        var(--color-accent-secondary) 50%,
+        var(--color-accent-tertiary) 100%
+    );
+    --background-image-gradient-orange-violet: linear-gradient(
+        135deg,
+        var(--color-accent-primary) 0%,
+        var(--color-accent-tertiary) 100%
+    );
+    /*
+     * Il porte « magenta » dans son nom, alors il doit en contenir.
+     *
+     * Il a un temps pointe vers `category-core`, qui valait un magenta au moment
+     * de la conversion — et qui est devenu BLEU dans le meme lot, parce que ce
+     * jeton-la se confondait avec le rose des epaules. Le degrade est alors
+     * passe de cyan-magenta a cyan-bleu, soit presque plus de degrade du tout,
+     * sous un nom devenu faux.
+     *
+     * La lecon : un degrade DECORATIF ne doit pas emprunter un jeton dont le
+     * role est ailleurs. Une couleur de categorie change quand les categories
+     * doivent se distinguer, ce qui n'a rien a voir avec ce titre.
+     */
+    --background-image-gradient-cyan-magenta: linear-gradient(
+        135deg,
+        var(--color-accent-info) 0%,
+        var(--color-accent-secondary) 100%
+    );
 
     @keyframes fade-in {
         from {
@@ -232,13 +511,13 @@
     }
     @keyframes liquid-pulse {
         0% {
-            box-shadow: 0 0 0 0 rgba(204, 255, 0, 0.7);
+            box-shadow: 0 0 0 0 rgb(from var(--color-accent-state) r g b / 0.7);
         }
         70% {
-            box-shadow: 0 0 0 15px rgba(204, 255, 0, 0);
+            box-shadow: 0 0 0 15px rgb(from var(--color-accent-state) r g b / 0);
         }
         100% {
-            box-shadow: 0 0 0 0 rgba(204, 255, 0, 0);
+            box-shadow: 0 0 0 0 rgb(from var(--color-accent-state) r g b / 0);
         }
     }
 }
@@ -281,16 +560,15 @@
         'opsz' 24;
 }
 
-@utility liquid-bg-container {
-    position: relative;
-    overflow: hidden;
-}
-
 @utility liquid-bg-1 {
     position: absolute;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(255, 85, 0, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+    background: radial-gradient(
+        circle,
+        rgb(from var(--color-accent-primary) r g b / 0.15) 0%,
+        rgb(from var(--color-surface-card) r g b / 0) 70%
+    );
     top: -200px;
     left: -200px;
     filter: blur(60px);
@@ -303,7 +581,11 @@
     position: absolute;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(136, 0, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+    background: radial-gradient(
+        circle,
+        rgb(from var(--color-accent-tertiary) r g b / 0.15) 0%,
+        rgb(from var(--color-surface-card) r g b / 0) 70%
+    );
     bottom: -150px;
     right: -200px;
     filter: blur(60px);
@@ -318,7 +600,7 @@
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
+    box-shadow: 0 8px 32px rgb(from var(--color-shadow-ambient) r g b / 0.05);
 }
 
 /*
@@ -340,27 +622,13 @@
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
-    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.14);
-}
-
-@utility glass-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: 1.5rem;
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-    &:hover {
-        box-shadow: 0 12px 40px rgba(31, 38, 135, 0.1);
-    }
+    box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.14);
 }
 
 @utility iridescent-card {
     /* Iridescent Border Card */
     position: relative;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(from var(--color-surface-card) r g b / 0.9);
     border-radius: 1.5rem;
     z-index: 1;
 
@@ -369,7 +637,13 @@
         position: absolute;
         inset: -2px;
         border-radius: 1.6rem;
-        background: linear-gradient(135deg, #60a5fa, #e879f9, #34d399, #60a5fa);
+        background: linear-gradient(
+            135deg,
+            var(--color-accent-info),
+            var(--color-accent-secondary),
+            var(--color-accent-state),
+            var(--color-accent-info)
+        );
         z-index: -1;
         opacity: 0.6;
         filter: blur(1px);
@@ -390,26 +664,26 @@
     gap: 0.5rem;
     min-height: var(--touch-min);
     padding: 0.75rem 1.5rem;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgb(from var(--color-surface-card) r g b / 0.8);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.9);
     border-radius: 1rem;
     font-family: 'Archivo', sans-serif;
     font-weight: 800;
     font-style: italic;
     text-transform: uppercase;
     letter-spacing: -0.02em;
-    color: var(--text-main);
+    color: var(--color-text-main);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 15px rgb(from var(--color-shadow-cast) r g b / 0.05);
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 6px 20px rgb(from var(--color-shadow-cast) r g b / 0.1);
     }
 
     &:active {
@@ -417,25 +691,221 @@
     }
 }
 
+/*
+ * L'action principale : vert d'etat, encre dessus.
+ *
+ * Elle portait `--gradient-main` avec du texte blanc, et ca ne pouvait pas
+ * tenir : le degrade va de #ff5500 a #8800ff, soit un ecart de luminosite que
+ * AUCUNE couleur de texte ne traverse. Blanc — 3,21:1 sur l'orange, 6,02 sur le
+ * violet ; encre — 5,57 sur l'orange, 2,97 sur le violet. Le libelle commencait
+ * donc a 3,2:1, sous le seuil de 4,5, et c'etait le bouton le plus employe de
+ * l'application (44 occurrences).
+ *
+ * Le vert d'etat avec de l'encre rend 15,19:1 — le meilleur contraste de toute
+ * la palette. La variante `neon` existait deja dans ce fichier, exactement ainsi,
+ * et n'etait employee nulle part.
+ *
+ * Le degrade n'est pas retire de l'application : il reste partout ou aucun texte
+ * ne se pose dessus — le bouton `+` de la barre (une icone y tient les 3:1
+ * demandes pour du non-texte), les en-tetes du tableau de bord, les cartes
+ * d'objectif, les cases a cocher, et le logo, ou `text-gradient` colore le texte
+ * lui-meme au lieu de se poser derriere.
+ */
+/*
+ * Une surface d'accent et le texte qui va dessus, indissociables.
+ *
+ * Les separer, c'est laisser un composant poser un fond sans son texte — et
+ * c'est ainsi qu'on se retrouve avec du blanc a 3,21:1. Ici la paire est
+ * decidee une fois.
+ */
+/*
+ * LES SURFACES PLEINES. Un fond d'accent et le texte qui va dessus, ensemble.
+ *
+ * C'est la piece qui manquait, et son absence a produit un haltere NOIR sur la
+ * tuile « Demarrer Seance » : la charte portait un seul jeton `text-on-accent`,
+ * qui vaut de l'encre, et le composant l'a pose sur une tuile orange. La tuile
+ * voisine avait garde `text-white` en brut — donc l'une etait juste par hasard
+ * et l'autre fausse par regle.
+ *
+ * Un jeton de texte ne peut pas suffire, parce que la reponse depend du fond :
+ * mesure faite, l'orange porte du blanc a 4,72:1 et de l'encre a 3,78:1, le
+ * vert d'etat porte de l'encre a 15,19:1 et du blanc a 1,18:1. Aucune valeur
+ * unique ne convient aux deux, et demander au composant de trancher, c'est lui
+ * redonner la decision que la charte lui retire.
+ *
+ * Alors le composant ecrit UN nom — `accent-fill`, `state-fill` — et recoit le
+ * fond ET son texte. Il n'a jamais a savoir de quelle couleur il s'agit, ce qui
+ * est tout l'objet d'un fichier central.
+ *
+ * La regle : du blanc partout ou c'est physiquement possible. Les trois accents
+ * clairs — vert, cyan, jaune — ne peuvent pas le porter (1,18, 1,54 et 1,92) ;
+ * ils existent pour etre des marques lumineuses, et en surface ils portent de
+ * l'encre. Chaque valeur ci-dessous est calculee, et
+ * `LaCharteTientSesContrastesTest` la reverifie a chaque execution.
+ */
+
+/*
+ * Une categorie et le texte qui tient dessus, ensemble.
+ *
+ * `CATEGORY_COLORS` appariait deja les deux — `bg-accent-info text-text-main` —
+ * mais la vue des exercices recollait `text-white` APRES la valeur. Les deux
+ * classes ont la meme specificite : ce n'est donc pas l'ordre dans la chaine qui
+ * tranche, c'est l'ordre du CSS genere, que personne n'ecrit. La pastille
+ * « Bras » pouvait rendre du blanc sur cyan a 1,54:1, « Jambes » du blanc sur
+ * vert acide a 1,18:1, selon l'humeur du compilateur.
+ *
+ * Un seul nom par categorie supprime la question. Chaque texte ci-dessous est
+ * celui des deux qui contraste le mieux, calcule et non choisi.
+ */
+
+/* 5.57:1 */
+@utility category-fill-chest {
+    background: var(--color-category-chest);
+    color: var(--color-text-on-accent);
+}
+
+/* 6.02:1 */
+@utility category-fill-back {
+    background: var(--color-category-back);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 4.73:1 */
+@utility category-fill-shoulders {
+    background: var(--color-category-shoulders);
+    color: var(--color-text-on-accent);
+}
+
+/* 11.61:1 */
+@utility category-fill-arms {
+    background: var(--color-category-arms);
+    color: var(--color-text-on-accent);
+}
+
+/* 15.19:1 */
+@utility category-fill-legs {
+    background: var(--color-category-legs);
+    color: var(--color-text-on-accent);
+}
+
+/* 4.55:1 */
+@utility category-fill-core {
+    background: var(--color-category-core);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 13.45:1 */
+@utility category-fill-cardio {
+    background: var(--color-category-cardio);
+    color: var(--color-text-on-accent);
+}
+
+/* 4.76:1 */
+@utility category-fill-other {
+    background: var(--color-category-other);
+    color: var(--color-text-on-dark-accent);
+}
+
+/*
+ * Un disque et le chiffre qu'il porte.
+ *
+ * Meme faille qu'ailleurs, sous une autre forme : `getPlateColor()` rendait le
+ * fond, et un ternaire SEPARE dans le gabarit decidait du texte — avec sa propre
+ * liste de poids, a tenir en accord a la main. Deux regles pour une seule
+ * question.
+ */
+
+/* 5.20:1 */
+@utility plate-fill-25 {
+    background: var(--color-plate-25);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 7.19:1 */
+@utility plate-fill-20 {
+    background: var(--color-plate-20);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 10.85:1 */
+@utility plate-fill-15 {
+    background: var(--color-plate-15);
+    color: var(--color-text-on-accent);
+}
+
+/* 4.53:1 */
+@utility plate-fill-10 {
+    background: var(--color-plate-10);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 16.23:1 */
+@utility plate-fill-5 {
+    background: var(--color-plate-5);
+    color: var(--color-text-on-accent);
+}
+
+/* 17.40:1 */
+@utility plate-fill-2 {
+    background: var(--color-plate-2);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 5.49:1 */
+@utility plate-fill-small {
+    background: var(--color-plate-small);
+    color: var(--color-text-on-accent);
+}
+
+/* Orange assombri juste ce qu'il faut pour porter du blanc — 4,72:1. */
+@utility accent-fill {
+    background: var(--color-accent-primary-fill);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* Violet, 6,02:1 : assez sombre pour le blanc sans etre retouche. */
+@utility tertiary-fill {
+    background: var(--color-accent-tertiary);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* Danger, 6,47:1. C'est `deep` qui remplit, jamais le `#ef4444` de fond. */
+@utility danger-fill {
+    background: var(--color-accent-danger-deep);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* Vert d'etat, 15,19:1 en encre — le plus lisible de toute la charte. */
+@utility state-fill {
+    background: var(--color-accent-state);
+    color: var(--color-text-on-accent);
+}
+
+/* Cyan, 11,61:1 en encre. */
+@utility info-fill {
+    background: var(--color-accent-info);
+    color: var(--color-text-on-accent);
+}
+
 @utility glass-button-primary {
-    background: var(--gradient-main);
+    background: var(--color-accent-state);
     border: none;
-    color: white;
-    box-shadow: 0 10px 30px rgba(255, 85, 0, 0.3);
+    color: var(--color-text-on-accent);
+    box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.35);
 
     &:hover {
-        box-shadow: 0 15px 40px rgba(255, 85, 0, 0.4);
+        box-shadow: 0 15px 40px rgb(from var(--color-accent-state) r g b / 0.5);
     }
 }
 
 @utility glass-button-neon {
-    background: var(--neon-green);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #000;
-    box-shadow: 0 10px 30px rgba(204, 255, 0, 0.5);
+    background: var(--color-accent-state);
+    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.2);
+    color: var(--color-text-on-accent);
+    box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
 
     &:hover {
-        box-shadow: 0 15px 40px rgba(204, 255, 0, 0.6);
+        box-shadow: 0 15px 40px rgb(from var(--color-accent-state) r g b / 0.6);
     }
 }
 
@@ -453,7 +923,16 @@
         inset: 0;
         border-radius: 1rem;
         padding: 2px;
-        background: var(--gradient-main);
+        background: var(--background-image-gradient-main);
+
+        /*
+         * Les deux `#fff` ci-dessous ne sont PAS des couleurs : c'est un
+         * masque, et un masque ne lit que l'opacite. `#fff` y veut dire
+         * « opaque », pas « blanc ». Les remplacer par un jeton de surface
+         * marcherait tant que ce jeton reste clair, et effacerait la bordure le
+         * jour ou il cesserait de l'etre — une panne d'autant plus penible que
+         * la cause serait a l'autre bout du fichier.
+         */
         -webkit-mask:
             linear-gradient(#fff 0 0) content-box,
             linear-gradient(#fff 0 0);
@@ -469,15 +948,15 @@
     width: 100%;
     min-height: var(--touch-min);
     padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.9);
-    border: 2px solid rgba(230, 230, 230, 0.6);
+    background: rgb(from var(--color-surface-card) r g b / 0.9);
+    border: 2px solid rgb(from var(--color-border) r g b / 0.6);
     border-radius: 1rem;
-    color: var(--text-main);
+    color: var(--color-text-main);
     font-size: 1rem;
     font-weight: 500;
     transition: all 0.2s ease;
     outline: none;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 15px rgb(from var(--color-shadow-cast) r g b / 0.03);
 
     &::-webkit-search-decoration,
     &::-webkit-search-cancel-button,
@@ -487,17 +966,17 @@
     }
 
     &::placeholder {
-        color: var(--text-muted);
+        color: var(--color-text-muted);
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-weight: 600;
     }
 
     &:focus-visible {
-        border-color: rgba(255, 85, 0, 0.5);
+        border-color: rgb(from var(--color-accent-primary) r g b / 0.5);
         box-shadow:
-            0 0 0 4px rgba(255, 85, 0, 0.1),
-            0 8px 20px rgba(0, 0, 0, 0.08);
+            0 0 0 4px rgb(from var(--color-accent-primary) r g b / 0.1),
+            0 8px 20px rgb(from var(--color-shadow-cast) r g b / 0.08);
         transform: scale(1.02);
     }
 }
@@ -508,16 +987,16 @@
     bottom: calc(1rem + var(--safe-area-bottom));
     left: 1rem;
     right: 1rem;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(from var(--color-surface-card) r g b / 0.9);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.5);
     border-radius: 1rem;
     padding: 0.5rem 0.75rem;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    box-shadow: 0 10px 40px rgba(100, 116, 139, 0.2);
+    box-shadow: 0 10px 40px rgb(from var(--color-text-muted) r g b / 0.2);
     z-index: 50;
     transition:
         transform 0.3s ease,
@@ -531,40 +1010,40 @@
     justify-content: center;
     gap: 0.25rem;
     padding: 0.5rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     transition: all 0.2s ease;
     -webkit-tap-highlight-color: transparent;
 
     &:hover {
-        color: var(--vivid-violet);
+        color: var(--color-accent-tertiary);
     }
 
     &.active {
-        color: var(--electric-orange);
+        color: var(--color-accent-primary);
     }
 
     &.active::after {
         content: '';
         width: 4px;
         height: 4px;
-        background: var(--electric-orange);
+        background: var(--color-accent-primary);
         border-radius: 50%;
-        box-shadow: 0 0 6px var(--electric-orange);
+        box-shadow: 0 0 6px var(--color-accent-primary);
     }
 }
 
 @utility active {
     &.glass-nav-item {
-        color: var(--electric-orange);
+        color: var(--color-accent-primary);
     }
 
     &.glass-nav-item::after {
         content: '';
         width: 4px;
         height: 4px;
-        background: var(--electric-orange);
+        background: var(--color-accent-primary);
         border-radius: 50%;
-        box-shadow: 0 0 6px var(--electric-orange);
+        box-shadow: 0 0 6px var(--color-accent-primary);
     }
 }
 
@@ -573,32 +1052,19 @@
     top: -1.25rem;
     width: 4.5rem;
     height: 4.5rem;
-    background: var(--gradient-main);
+    background: var(--background-image-gradient-main);
     border: 4px solid white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    box-shadow: 0 10px 30px rgba(255, 85, 0, 0.4);
+    box-shadow: 0 10px 30px rgb(from var(--color-accent-primary) r g b / 0.4);
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
     &:hover {
         transform: scale(1.05);
     }
-}
-
-@utility glass-header {
-    /* ===== PAGE HEADER ===== */
-    position: sticky;
-    top: 0;
-    background: rgba(248, 250, 255, 0.8);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-    padding: 1rem 1.25rem;
-    padding-top: calc(1rem + var(--safe-area-top));
-    z-index: 30;
 }
 
 @utility streak-badge {
@@ -608,61 +1074,46 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgb(from var(--color-surface-card) r g b / 0.8);
     border: 1px solid white;
     border-radius: 9999px;
-    box-shadow: 0 4px 15px rgba(136, 0, 255, 0.1);
+    box-shadow: 0 4px 15px rgb(from var(--color-accent-tertiary) r g b / 0.1);
 
     &::before {
         content: '';
         position: absolute;
         inset: 0;
         border-radius: 9999px;
-        background: linear-gradient(135deg, rgba(255, 85, 0, 0.1), rgba(136, 0, 255, 0.1));
+        background: linear-gradient(
+            135deg,
+            rgb(from var(--color-accent-primary) r g b / 0.1),
+            rgb(from var(--color-accent-tertiary) r g b / 0.1)
+        );
         filter: blur(10px);
         opacity: 0.3;
         z-index: -1;
     }
 }
 
-@utility glass-stat {
-    /* ===== STAT CARD ===== */
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    border-radius: 1.5rem;
-    padding: 1.5rem;
-}
-
-@utility glass-stat-value {
-    font-family: 'Archivo', sans-serif;
-    font-size: 2.5rem;
-    font-weight: 900;
-    font-style: italic;
-    letter-spacing: -0.02em;
-    color: var(--text-main);
-}
-
 @utility glass-overlay {
     /* ===== MODAL ===== */
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgb(from var(--color-shadow-cast) r g b / 0.5);
     backdrop-filter: blur(var(--backdrop-blur-glass-strong));
     -webkit-backdrop-filter: blur(var(--backdrop-blur-glass-strong));
     z-index: 50;
 }
 
 @utility glass-modal {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgb(from var(--color-surface-card) r g b / 0.95);
     backdrop-filter: blur(var(--glass-blur-strong));
     -webkit-backdrop-filter: blur(var(--glass-blur-strong));
     border: 1px solid var(--glass-border);
     border-radius: 2rem;
     max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 25px 50px rgb(from var(--color-shadow-cast) r g b / 0.15);
 }
 
 @utility category-pill {
@@ -677,7 +1128,7 @@
     text-transform: uppercase;
     letter-spacing: 0.02em;
     color: white;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 14px rgb(from var(--color-shadow-cast) r g b / 0.1);
     transition: all 0.2s ease;
     white-space: nowrap;
 
@@ -690,95 +1141,14 @@
     }
 }
 
-@utility activity-card {
-    /* ===== ACTIVITY CARD ===== */
-    position: relative;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid white;
-    border-radius: 1rem;
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-    transition: all 0.2s ease;
-
-    &:hover {
-        border-color: rgba(136, 0, 255, 0.3);
-    }
-
-    &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 6px;
-        height: 2.5rem;
-        border-radius: 0 4px 4px 0;
-    }
-
-    &[data-color='violet']::before {
-        background: var(--vivid-violet);
-    }
-    &[data-color='orange']::before {
-        background: var(--electric-orange);
-    }
-    &[data-color='pink']::before {
-        background: var(--hot-pink);
-    }
-    &[data-color='cyan']::before {
-        background: var(--cyan-pure);
-    }
-    &[data-color='green']::before {
-        background: #22c55e;
-    }
-}
-
-@utility rest-timer-bar {
-    /* ===== REST TIMER BAR ===== */
-    height: 2rem;
-    width: 100%;
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    overflow: hidden;
-    padding: 0.25rem;
-}
-
-@utility rest-timer-bar-fill {
-    height: 100%;
-    background: var(--neon-green);
-    border-radius: 0.375rem;
-    box-shadow: 0 0 15px rgba(204, 255, 0, 0.6);
-    position: relative;
-    transition: width 1s linear;
-
-    &::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-            45deg,
-            rgba(255, 255, 255, 0.4) 25%,
-            transparent 25%,
-            transparent 50%,
-            rgba(255, 255, 255, 0.4) 50%,
-            rgba(255, 255, 255, 0.4) 75%,
-            transparent 75%,
-            transparent
-        );
-        background-size: 20px 20px;
-        opacity: 0.5;
-        animation: stripe-move 1s linear infinite;
-    }
-}
-
 @utility glass-skeleton {
     /* ===== SKELETON LOADING ===== */
-    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background: linear-gradient(
+        90deg,
+        var(--color-surface-sunken) 25%,
+        var(--color-border) 50%,
+        var(--color-surface-sunken) 75%
+    );
     background-size: 200% 100%;
     animation: skeleton-pulse 1.5s ease-in-out infinite;
     border-radius: 0.5rem;
@@ -796,44 +1166,59 @@
     border-radius: 0.5rem;
 }
 
+/*
+ * Les badges d'etat : un fond FRANC et son texte, pas un lavis.
+ *
+ * `success` a porte pendant un moment `background` et `color` sur le MEME
+ * jeton — un rectangle vert fonce uni, dans lequel le mot « Fait » etait
+ * invisible. L'original etait un lavis vert pale sous un texte vert fonce, et
+ * une table de conversion mecanique a envoye les deux valeurs sur le meme role.
+ *
+ * Il aurait de toute facon fallu y revenir : `trend-up` est un vert ASSOMBRI
+ * pour se lire en texte, et l'employer en fond donnait une pastille terne au
+ * milieu d'une interface neon. Une seance terminee, dans cette charte, c'est le
+ * vert d'etat — le vif — avec de l'encre par-dessus, a 15,19:1.
+ */
 @utility glass-badge-success {
-    background: #dcfce7;
-    color: #15803d;
+    background: var(--color-accent-state);
+    color: var(--color-text-on-accent);
+}
+
+/*
+ * `warning` etait UTILISE par le badge « En cours » et n'existait nulle part :
+ * une classe sans declaration ne produit rien, et le badge s'affichait sans
+ * couleur du tout. Rien ne pouvait le signaler — un nom de classe inconnu n'est
+ * pas une erreur pour un navigateur.
+ */
+@utility glass-badge-warning {
+    background: var(--color-accent-warning);
+    color: var(--color-text-on-accent);
 }
 
 @utility glass-badge-primary {
-    background: rgba(255, 85, 0, 0.1);
-    color: var(--electric-orange);
-}
+    background: rgb(from var(--color-accent-primary) r g b / 0.1);
 
-@utility glass-badge-violet {
-    background: rgba(136, 0, 255, 0.1);
-    color: var(--vivid-violet);
+    /*
+     * `-deep` et non le vif : sur son propre lavis a 10 %, l'orange vif rend
+     * 2,86:1. Le lavis est presque blanc, donc le seuil s'y applique comme sur
+     * une carte.
+     */
+    color: var(--color-accent-primary-deep);
 }
 
 @utility text-gradient {
     /* Text gradient utility */
-    background: var(--gradient-main);
+    background: var(--background-image-gradient-main);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
 
 @utility text-gradient-cyan-magenta {
-    background: var(--gradient-cyan-magenta);
+    background: var(--background-image-gradient-cyan-magenta);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-}
-
-@utility font-display-title {
-    /* Display typography */
-    font-family: 'Archivo', sans-serif;
-    font-weight: 900;
-    font-style: italic;
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
-    line-height: 0.9;
 }
 
 @utility font-display-label {
@@ -844,36 +1229,13 @@
     letter-spacing: 0.2em;
 }
 
-@utility pb-safe {
-    /* Safe area utilities */
-    padding-bottom: var(--safe-area-bottom);
-}
-
-@utility pt-safe {
-    padding-top: var(--safe-area-top);
-}
-
 @utility pt-main-safe {
     /* Additive utilities for main content areas */
     padding-top: calc(1.5rem + var(--safe-area-top));
 }
 
-@utility pt-main-safe-sm {
-    @media (min-width: 640px) {
-        padding-top: 1.5rem;
-    }
-}
-
-@utility pb-content-safe {
-    padding-bottom: calc(2rem + var(--safe-area-bottom));
-}
-
 @utility pb-main-safe {
     padding-bottom: calc(9rem + var(--safe-area-bottom));
-}
-
-@utility mb-nav {
-    margin-bottom: calc(100px + var(--safe-area-bottom));
 }
 
 @utility hide-scrollbar {
@@ -886,30 +1248,13 @@
     }
 }
 
-@utility no-tap-highlight {
-    /* Touch highlight disable */
-    -webkit-tap-highlight-color: transparent;
-}
-
 @utility glow-orange {
     /* Glow effects */
-    box-shadow: 0 0 20px rgba(255, 85, 0, 0.4);
+    box-shadow: 0 0 20px rgb(from var(--color-accent-primary) r g b / 0.4);
 }
 
 @utility glow-violet {
-    box-shadow: 0 0 20px rgba(136, 0, 255, 0.4);
-}
-
-@utility glow-pink {
-    box-shadow: 0 0 20px rgba(255, 0, 128, 0.4);
-}
-
-@utility glow-cyan {
-    box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
-}
-
-@utility glow-neon {
-    box-shadow: 0 0 20px rgba(204, 255, 0, 0.5);
+    box-shadow: 0 0 20px rgb(from var(--color-accent-tertiary) r g b / 0.4);
 }
 
 /* ===================================
@@ -920,33 +1265,11 @@
 @layer base {
     :root {
         /* New Light Theme Glass Effects */
-        --glass-bg: rgba(255, 255, 255, 0.65);
-        --glass-bg-strong: rgba(255, 255, 255, 0.85);
-        --glass-border: rgba(255, 255, 255, 0.8);
+        --glass-bg: rgb(from var(--color-surface-card) r g b / 0.65);
+        --glass-bg-strong: rgb(from var(--color-surface-card) r g b / 0.85);
+        --glass-border: rgb(from var(--color-surface-card) r g b / 0.8);
         --glass-blur: 20px;
         --glass-blur-strong: 24px;
-
-        /* Primary Gradient (Orange → Pink → Violet) */
-        --gradient-main: linear-gradient(135deg, #ff5500 0%, #ff0080 50%, #8800ff 100%);
-        --gradient-orange-violet: linear-gradient(135deg, #ff5500 0%, #8800ff 100%);
-        --gradient-cyan-magenta: linear-gradient(135deg, #00e5ff 0%, #f5009b 100%);
-
-        /* Accent Colors */
-        --electric-orange: #ff5500;
-        --vivid-violet: #8800ff;
-        --hot-pink: #ff0080;
-        --neon-green: #ccff00;
-        --cyan-pure: #00e5ff;
-        --magenta-pure: #f5009b;
-
-        /*
-         * Une seule source par couleur : ces deux-la referencent les jetons du
-         * bloc `@theme`, au lieu de repeter leur valeur. C'est en les repetant
-         * que le mode sombre n'en avait renverse qu'une moitie.
-         */
-        --text-main: var(--color-text-main);
-        --text-muted: var(--color-text-muted);
-        --pearl-white: #f8faff;
 
         /* Spacing for mobile touch */
         --touch-min: 44px;
@@ -986,15 +1309,15 @@
      * this off.
      */
     body {
-        background-color: var(--pearl-white);
+        background-color: var(--color-surface-page);
         min-height: 100vh;
         min-height: 100dvh;
-        color: var(--text-main);
+        color: var(--color-text-main);
     }
 
     /* Selection styling */
     ::selection {
-        background-color: var(--electric-orange);
+        background-color: var(--color-accent-primary);
         color: white;
     }
 }

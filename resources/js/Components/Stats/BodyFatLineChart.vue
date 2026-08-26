@@ -1,5 +1,6 @@
 <script setup>
 import { Line } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -37,8 +38,8 @@ const chartData = computed(() => {
                     if (!chartArea) return null
                     // Gradient matching a neon 'Liquid Glass' theme: Violet to Hot Pink
                     const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-                    gradient.addColorStop(0, '#8B5CF6') // Violet
-                    gradient.addColorStop(1, '#FF1493') // Hot Pink
+                    gradient.addColorStop(0, jeton('accent-tertiary')) // Violet
+                    gradient.addColorStop(1, jeton('accent-secondary')) // Hot Pink
                     return gradient
                 },
                 backgroundColor: (context) => {
@@ -46,25 +47,25 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, 'rgba(255, 20, 147, 0.25)') // Translucent pink
-                    gradient.addColorStop(1, 'rgba(139, 92, 246, 0.05)') // Fading to faint violet
+                    gradient.addColorStop(0, jetonTransparent('accent-secondary', 0.25)) // Translucent pink
+                    gradient.addColorStop(1, jetonTransparent('accent-tertiary', 0.05)) // Fading to faint violet
                     return gradient
                 },
                 borderWidth: 3,
                 pointRadius: 2,
-                pointBackgroundColor: '#FF1493',
-                pointBorderColor: '#fff',
+                pointBackgroundColor: jeton('accent-secondary'),
+                pointBorderColor: jeton('surface-card'),
                 pointBorderWidth: 2,
                 pointHoverRadius: 6,
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: '#8B5CF6',
+                pointHoverBackgroundColor: jeton('surface-card'),
+                pointHoverBorderColor: jeton('accent-tertiary'),
                 pointHoverBorderWidth: 3,
             },
         ],
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -72,14 +73,14 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
+            backgroundColor: jetonTransparent('surface-card', 0.9),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
             padding: 12,
             cornerRadius: 12,
             displayColors: false,
             borderWidth: 1,
-            borderColor: 'rgba(255, 20, 147, 0.1)',
+            borderColor: jetonTransparent('accent-secondary', 0.1),
             callbacks: {
                 label: (context) => `${context.parsed.y} %`,
             },
@@ -92,7 +93,7 @@ const chartOptions = {
         y: {
             display: true,
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
             grid: {
@@ -100,7 +101,7 @@ const chartOptions = {
             },
         },
     },
-}
+}))
 </script>
 
 <template>
@@ -112,6 +113,6 @@ const chartOptions = {
 <style scoped>
 /* Liquid Glass aesthetic drop shadow for the chart line */
 canvas {
-    filter: drop-shadow(0 4px 6px rgba(255, 20, 147, 0.2));
+    filter: drop-shadow(0 4px 6px rgb(from var(--color-accent-secondary) r g b / 0.2));
 }
 </style>

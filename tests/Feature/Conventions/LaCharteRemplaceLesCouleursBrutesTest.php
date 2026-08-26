@@ -8,35 +8,91 @@ declare(strict_types=1);
  * C'est la regle qui manquait, et son absence a coute le mode sombre. Une meme
  * couleur s'ecrivait de quatre facons — `electric-orange`, `accent-primary`,
  * `#ff5500` en dur, ou `orange-500` de Tailwind — et le choix entre elles etait
- * un hasard d'ecriture. Mesure avant la charte : 700 usages de couleurs brutes dans 69 fichiers
- * en 56 teintes, dont 764 sans aucun jeton portant leur valeur.
+ * un hasard d'ecriture. Mesure avant la charte : 781 couleurs ecrites en brut —
+ * 247 classes Tailwind, 340 hexadecimaux et 194 `rgba()` — reparties sur 69
+ * fichiers.
  *
- * Un cliquet plutot qu'une interdiction seche, pour la meme raison que le
- * baseline PHPStan : il y a 49 fichiers a convertir, ca ne tient pas dans une
- * revue, et un garde qui exigerait tout d'un coup ne serait jamais pose. Le
- * plafond descend a chaque lot converti et ne remonte que par une decision
- * visible.
+ * Ce test a d'abord ete un CLIQUET, un plafond qui ne descendait qu'a chaque lot
+ * converti, parce qu'il y avait 49 fichiers a reprendre et qu'un garde exigeant
+ * tout d'un coup n'aurait jamais ete pose. Le plafond est arrive a zero le
+ * 2026-08-26 : c'est desormais l'interdiction seche qu'il prefigurait.
  *
- * Le jour ou il atteint zero, ce test devient l'interdiction seche qu'il
- * prefigure — et les alias d'anciens noms d'`app.css` peuvent partir.
+ * Ce que la derniere vague a demande, et qui explique pourquoi elle n'etait pas
+ * qu'un remplacement mecanique :
+ *
+ *  - 160 des 340 hexadecimaux ne decrivaient aucune donnee. C'etaient les
+ *    infobulles et les axes, redecrits dans chacun des 47 graphiques faute d'un
+ *    endroit ou les poser une fois ;
+ *  - convertir une PALETTE vers des roles la detruit. Les seize couleurs
+ *    d'habitude se sont repliees sur six, et le dictionnaire de leurs noms s'est
+ *    retrouve avec des cles en double dont seule la derniere survivait ;
+ *  - le code couleur des disques de fonte est une norme exterieure. Un disque de
+ *    25 kg n'est pas rouge parce que cette application signale un danger ;
+ *  - `bg-red-50 text-red-600` est un COUPLE lavis/texte, pas un role ecrit deux
+ *    fois. Replie sur un seul jeton, il donne du rouge sur du rouge — 1:1.
  */
 
 use Symfony\Component\Finder\Finder;
 
 /**
- * Les utilitaires de couleur brute, par fichier.
+ * Combien de couleurs brutes un texte contient.
  *
  * « Brute » veut dire : une teinte de la palette Tailwind ou un litteral, par
- * opposition a un jeton de la charte. `bg-slate-800` en est une, `bg-surface-card`
- * n'en est pas.
+ * opposition a un jeton de la charte. `bg-slate-800` en est une,
+ * `bg-surface-card` n'en est pas.
+ */
+function couleursBrutesDansLeTexte(string $contenu): int
+{
+    /*
+     * Le prefixe n'est pas enumere, il est quelconque.
+     *
+     * La liste explicite en portait seize et il en manquait : `ring-offset-` et
+     * `border-l-` ont traverse toute la conversion sans etre vus, parce qu'ils
+     * n'y figuraient pas. Une enumeration de prefixes est une liste a tenir a
+     * jour, et Tailwind en ajoute a chaque version.
+     *
+     * Ce qui identifie une couleur brute n'est pas son prefixe : c'est le
+     * couple `<famille-tailwind>-<nombre>` a la fin. On reconnait donc ca, quel
+     * que soit ce qui precede.
+     *
+     * `white` et `black` font exception et gardent une liste de prefixes, parce
+     * qu'ils sont ambigus : `font-black` est un POIDS de police. Sans cette
+     * restriction, le controle comptait 166 couleurs brutes dans un depot qui
+     * n'en a aucune — et un garde qui crie a tort finit desactive.
+     */
+    $palette = 'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose';
+    $porteuses = 'bg|text|border|ring|from|via|to|fill|stroke|divide|placeholder|outline|decoration|caret|accent|shadow';
+
+    $compte = 0;
+
+    preg_match_all('/(?::)?class="([^"]*)"/s', $contenu, $attributs);
+
+    foreach ($attributs[1] as $attribut) {
+        $compteDeLAttribut = preg_match_all(
+            '/(?:[a-z][a-z-]*-(?:'.$palette.')-\\d{2,3}|(?:'.$porteuses.')-(?:[a-z]+-)?(?:white|black))\\b/',
+            $attribut
+        );
+
+        // `preg_match_all` rend `false` sur motif invalide. Le compter comme
+        // zero masquerait un balayage casse derriere un chiffre qui baisse,
+        // ce qui est exactement ce qu'un cliquet ne doit jamais faire.
+        if ($compteDeLAttribut === false) {
+            throw new RuntimeException('Le motif de balayage des couleurs brutes est invalide.');
+        }
+
+        $compte += $compteDeLAttribut;
+    }
+
+    return $compte;
+}
+
+/**
+ * Les utilitaires de couleur brute, par fichier.
  *
  * @return array<string, int>
  */
 function couleursBrutesParFichier(): array
 {
-    $familles = 'bg|text|border|from|to|via|ring|shadow|divide|placeholder|fill|stroke|accent|caret|outline|decoration';
-    $palette = 'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose';
-
     $fichiers = Finder::create()
         ->files()
         ->in(resource_path('js'))
@@ -45,27 +101,7 @@ function couleursBrutesParFichier(): array
     $trouves = [];
 
     foreach ($fichiers as $fichier) {
-        $contenu = $fichier->getContents();
-        $compte = 0;
-
-        // Chaque attribut de classe, y compris les liaisons dynamiques.
-        preg_match_all('/(?::)?class="([^"]*)"/s', $contenu, $attributs);
-
-        foreach ($attributs[1] as $attribut) {
-            $compteDeLAttribut = preg_match_all(
-                '/\b(?:'.$familles.')-(?:(?:'.$palette.')-\d{2,3}|white|black)\b/',
-                $attribut
-            );
-
-            // `preg_match_all` rend `false` sur motif invalide. Le compter comme
-            // zero masquerait un balayage casse derriere un chiffre qui baisse,
-            // ce qui est exactement ce qu'un cliquet ne doit jamais faire.
-            if ($compteDeLAttribut === false) {
-                throw new RuntimeException('Le motif de balayage des couleurs brutes est invalide.');
-            }
-
-            $compte += $compteDeLAttribut;
-        }
+        $compte = couleursBrutesDansLeTexte($fichier->getContents());
 
         if ($compte > 0) {
             $trouves[$fichier->getRelativePathname()] = $compte;
@@ -84,11 +120,16 @@ it('ne laisse pas remonter le nombre de couleurs brutes', function (): void {
     /*
      * PLAFOND — releve le 2026-08-26, avant toute conversion.
      *
-     * A BAISSER a chaque lot, sur le compte reel rendu par ce test. Un plafond
+     * Zero, et il n'y a plus de raison qu'il remonte : la charte porte desormais
+     * un jeton pour chaque usage rencontre, y compris les trois groupes qui n'en
+     * avaient pas — la palette de l'utilisateur, les disques de fonte, et les
+     * deux noirs qui ne sont pas de l'encre.
+     *
+     * Ancien commentaire, garde pour la regle qu'il enonce. A BAISSER a chaque lot, sur le compte reel rendu par ce test. Un plafond
      * laisse au-dessus du reel laisse re-rentrer ce qu'on vient de sortir : le
      * baseline PHPStan a deja appris cette lecon a ce depot.
      */
-    $plafond = 700;
+    $plafond = 0;
 
     $tete = array_slice($parFichier, 0, 6, true);
     $lignes = [];
@@ -109,9 +150,36 @@ it('ne laisse pas remonter le nombre de couleurs brutes', function (): void {
     ));
 });
 
-it('compte quelque chose, sinon il ne prouve rien', function (): void {
-    expect(couleursBrutesParFichier())->not->toBeEmpty(
-        'aucune couleur brute trouvee : soit la conversion est finie — auquel cas ce test doit devenir '
-        .'une interdiction seche — soit le balayage ne lit plus les fichiers.'
-    );
+it('sait encore reconnaitre une couleur brute', function (): void {
+    /*
+     * Ce controle regardait autrefois si le depot en contenait encore, et
+     * s'inquietait de n'en trouver aucune : tant que la conversion durait, un
+     * balayage casse et une conversion finie rendaient le meme resultat — zero —
+     * et il fallait bien distinguer les deux.
+     *
+     * La conversion est finie, alors la question change de forme. Ce n'est plus
+     * « en reste-t-il ? » mais « saurais-tu en voir une ? ». On lui en montre
+     * donc une, et une seule, sur un echantillon ecrit ici : le jour ou le motif
+     * cesse de mordre, ce test tombe, pendant que le compteur reste a zero pour
+     * une raison qui n'aurait rien de rassurant.
+     */
+    $echantillon = <<<'VUE'
+        <template>
+            <div class="bg-slate-800 text-white">
+                <span :class="actif ? 'text-emerald-500' : 'text-surface-card'">ok</span>
+            </div>
+        </template>
+        VUE;
+
+    $trouves = couleursBrutesDansLeTexte($echantillon);
+
+    expect($trouves)->toBe(3, sprintf(
+        'Le balayage a compte %d couleurs brutes dans un echantillon qui en porte exactement trois : '
+        .'`bg-slate-800` et `text-white` dans un attribut fixe, `text-emerald-500` dans une liaison '
+        ."dynamique — celle-la compte, c'est tout l'interet du `(?::)?` du motif. `text-surface-card` "
+        ."n'en est pas une, puisque c'est un jeton.\n\n"
+        .'Un motif qui cesserait de mordre rendrait zero sur tout le depot, et le compteur resterait '
+        .'a zero pour une raison qui n\'aurait rien de rassurant.',
+        $trouves
+    ));
 });

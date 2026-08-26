@@ -21,14 +21,18 @@ defineProps({
         <GlassCard padding="p-5">
             <div class="flex items-start justify-between">
                 <div>
-                    <h4 class="mb-1 text-[10px] font-black tracking-[0.15em] text-pink-600 uppercase">Masse Grasse</h4>
+                    <h4 class="text-accent-secondary-deep mb-1 text-[10px] font-black tracking-[0.15em] uppercase">
+                        Masse Grasse
+                    </h4>
                     <p class="font-display text-text-main text-3xl font-black">
                         {{ bodyFat || '—' }}
                         <span class="text-text-muted text-sm">%</span>
                     </p>
                 </div>
-                <div class="bg-magenta-pure/10 flex size-12 items-center justify-center rounded-xl">
-                    <span class="material-symbols-outlined text-2xl text-pink-600" aria-hidden="true">water_drop</span>
+                <div class="bg-category-core/10 flex size-12 items-center justify-center rounded-xl">
+                    <span class="material-symbols-outlined text-accent-secondary-deep text-2xl" aria-hidden="true"
+                        >water_drop</span
+                    >
                 </div>
             </div>
 
@@ -58,7 +62,7 @@ defineProps({
                 </template>
                 <div class="flex items-start justify-between">
                     <div>
-                        <h4 class="mb-1 text-[10px] font-black tracking-[0.15em] text-violet-600 uppercase">
+                        <h4 class="text-accent-tertiary-deep mb-1 text-[10px] font-black tracking-[0.15em] uppercase">
                             Volume Mois
                         </h4>
                         <p class="font-display text-text-main text-3xl font-black">
@@ -70,8 +74,8 @@ defineProps({
                         :class="[
                             'flex items-center gap-0.5 rounded-lg px-2 py-1 text-xs font-bold',
                             (monthlyComparison?.percentage || 0) >= 0
-                                ? 'bg-emerald-50 text-emerald-600'
-                                : 'bg-red-50 text-red-600',
+                                ? 'bg-trend-up/10 text-trend-up'
+                                : 'bg-trend-down/10 text-trend-down',
                         ]"
                     >
                         <span class="material-symbols-outlined text-sm" aria-hidden="true">

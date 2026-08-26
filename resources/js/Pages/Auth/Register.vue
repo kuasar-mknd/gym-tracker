@@ -91,20 +91,20 @@ const submit = () => {
 
             <!-- Social Login -->
             <div class="my-6 flex items-center justify-center gap-4 text-sm">
-                <div class="h-px flex-1 bg-slate-200"></div>
+                <div class="bg-border h-px flex-1"></div>
                 <span
-                    class="text-text-muted rounded-full border border-white/50 bg-white/60 px-4 py-1 font-medium backdrop-blur-md"
+                    class="text-text-muted border-surface-card/50 bg-surface-card/60 rounded-full border px-4 py-1 font-medium backdrop-blur-md"
                 >
                     Ou s'inscrire avec
                 </span>
-                <div class="h-px flex-1 bg-slate-200"></div>
+                <div class="bg-border h-px flex-1"></div>
             </div>
 
             <div class="flex justify-center gap-4">
                 <a
                     v-if="$page.props.social_login_enabled?.google"
                     :href="route('social.redirect', 'google')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-surface-sunken bg-surface-card flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/475656/google-color.svg"
@@ -116,7 +116,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.github"
                     :href="route('social.redirect', 'github')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-text-main bg-text-main flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/512317/github-142.svg"
@@ -128,7 +128,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.apple"
                     :href="route('social.redirect', 'apple')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-700 bg-black shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-text-main bg-text-main flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                 >
                     <img
                         src="https://www.svgrepo.com/show/511330/apple-173.svg"
@@ -145,7 +145,7 @@ const submit = () => {
                 Déjà inscrit ?
                 <Link
                     :href="route('login')"
-                    class="text-electric-orange hover:text-vivid-violet font-bold transition-colors"
+                    class="text-accent-primary-deep hover:text-accent-tertiary-deep font-bold transition-colors"
                     >Se connecter</Link
                 >
             </p>

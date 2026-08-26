@@ -154,7 +154,7 @@ watch(
             </div>
         </div>
 
-        <div class="flex justify-end gap-3 border-t border-white/5 pt-4">
+        <div class="border-surface-card/5 flex justify-end gap-3 border-t pt-4">
             <GlassButton type="button" variant="secondary" @click="emit('cancel')">Annuler</GlassButton>
             <GlassButton type="submit" :loading="form.processing" dusk="goal-submit">{{ submitLabel }}</GlassButton>
         </div>

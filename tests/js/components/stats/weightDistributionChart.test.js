@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jeton } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 vi.mock('vue-chartjs', () => {
@@ -83,8 +84,8 @@ describe('WeightDistributionChart', () => {
 
             expect(stops).toEqual([
                 [0, 0, 0, 150],
-                [0, '#3B82F6'],
-                [1, '#8B5CF6'],
+                [0, jeton('accent-info')],
+                [1, jeton('accent-tertiary')],
             ])
         })
 

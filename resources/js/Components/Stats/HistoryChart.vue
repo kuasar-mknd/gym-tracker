@@ -1,5 +1,6 @@
 <script setup>
 import { Line } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -37,21 +38,21 @@ const chartData = computed(() => {
             {
                 label: 'Meilleur 1RM (kg)',
                 data: values,
-                borderColor: '#FF0080', // hot-pink
+                borderColor: jeton('accent-secondary'), // hot-pink
                 backgroundColor: (context) => {
                     const chart = context.chart
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
 
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, 'rgba(255, 0, 128, 0.05)')
-                    gradient.addColorStop(1, 'rgba(255, 0, 128, 0.4)')
+                    gradient.addColorStop(0, jetonTransparent('accent-secondary', 0.05))
+                    gradient.addColorStop(1, jetonTransparent('accent-secondary', 0.4))
 
                     return gradient
                 },
                 borderWidth: 3,
-                pointBackgroundColor: '#fff',
-                pointBorderColor: '#FF0080',
+                pointBackgroundColor: jeton('surface-card'),
+                pointBorderColor: jeton('accent-secondary'),
                 pointBorderWidth: 2,
                 pointRadius: 4,
                 pointHoverRadius: 6,
@@ -62,16 +63,16 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            borderColor: 'rgba(255, 0, 128, 0.2)',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('accent-secondary', 0.2),
             borderWidth: 1,
             padding: 10,
             cornerRadius: 12,
@@ -85,7 +86,7 @@ const chartOptions = {
         x: {
             grid: { display: false },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
             },
             border: { display: false },
@@ -108,7 +109,7 @@ const chartOptions = {
         intersect: false,
         mode: 'index',
     },
-}
+}))
 </script>
 
 <template>

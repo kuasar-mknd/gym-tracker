@@ -170,11 +170,11 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
      * exactement ce que le scanner doit pouvoir trouver dans la source.
      */
     it.each([
-        ['orange', 'text-electric-orange'],
-        ['violet', 'text-vivid-violet'],
-        ['pink', 'text-hot-pink'],
-        ['cyan', 'text-cyan-pure'],
-        ['green', 'text-neon-green'],
+        ['orange', 'text-accent-primary-deep'],
+        ['violet', 'text-accent-tertiary-deep'],
+        ['pink', 'text-accent-secondary-deep'],
+        ['cyan', 'text-accent-info-deep'],
+        ['green', 'text-accent-state-deep'],
     ])('peint l’icône de %s avec %s', (color, expected) => {
         const wrapper = mountState({ icon: 'search_off', color })
 
@@ -190,10 +190,10 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
      * le scanner de Tailwind ne lit que des chaînes littérales complètes. Il
      * faut regarder le fichier, pas le rendu.
      *
-     * Mesuré dans le CSS généré, avant correctif : `text-electric-orange`,
-     * `text-vivid-violet`, `text-hot-pink` et `text-cyan-pure` étaient bien
+     * Mesuré dans le CSS généré, avant correctif : `text-accent-primary-deep`,
+     * `text-accent-tertiary-deep`, `text-accent-secondary-deep` et `text-accent-info-deep` étaient bien
      * présents — non pas grâce à ce composant, mais parce que d'autres les
-     * écrivent en toutes lettres. `text-neon-green`, que personne d'autre
+     * écrivent en toutes lettres. `text-accent-state-deep`, que personne d'autre
      * n'emploie, était absent : `color="green"` peignait donc l'icône avec une
      * classe sans règle. Quatre couleurs sur cinq marchaient par emprunt, ce
      * qui est la pire façon de marcher — laquelle dépendait de fichiers sans
@@ -208,11 +208,11 @@ describe('GlassEmptyState — ce que « court » voulait dire', () => {
         const source = await import('@/Components/UI/GlassEmptyState.vue?raw').then((m) => m.default)
 
         for (const expected of [
-            'text-electric-orange',
-            'text-vivid-violet',
-            'text-hot-pink',
-            'text-cyan-pure',
-            'text-neon-green',
+            'text-accent-primary-deep',
+            'text-accent-tertiary-deep',
+            'text-accent-secondary-deep',
+            'text-accent-info-deep',
+            'text-accent-state-deep',
         ]) {
             expect(source).toContain(expected)
         }

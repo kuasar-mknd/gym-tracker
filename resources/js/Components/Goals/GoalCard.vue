@@ -48,27 +48,27 @@ const typeLabel = computed(() => {
 const formattedDeadline = computed(() => parseCalendarDate(props.goal.deadline)?.toLocaleDateString() ?? '')
 
 const statusColor = computed(() => {
-    if (isCompleted.value) return 'text-green-500'
-    if (progress.value > 75) return 'text-blue-500'
-    if (progress.value > 25) return 'text-orange-500'
-    return 'text-gray-500'
+    if (isCompleted.value) return 'text-accent-state-deep'
+    if (progress.value > 75) return 'text-accent-info-deep'
+    if (progress.value > 25) return 'text-accent-primary-deep'
+    return 'text-text-muted'
 })
 </script>
 
 <template>
     <div
         v-press
-        class="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-5 shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl"
+        class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-5 shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
     >
         <!-- Liquid Glow Background behind the card (subtle) -->
         <div
-            class="absolute inset-0 z-0 bg-white/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            class="bg-surface-card/5 absolute inset-0 z-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         ></div>
 
         <!-- Completion Badge -->
         <div
             v-if="isCompleted"
-            class="absolute -top-2 -right-2 z-10 rotate-12 bg-green-600 px-3 py-1.5 text-[10px] font-bold text-white shadow-lg"
+            class="bg-accent-state text-text-on-accent absolute -top-2 -right-2 z-10 rotate-12 px-3 py-1.5 text-[10px] font-bold shadow-lg"
         >
             COMPLÉTÉ
         </div>
@@ -76,7 +76,7 @@ const statusColor = computed(() => {
         <div class="relative z-10 mb-4 flex items-start justify-between">
             <div class="flex items-center gap-3">
                 <div
-                    class="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-2xl shadow-sm backdrop-blur-md transition-transform duration-300 group-hover:scale-110 group-hover:bg-white/20"
+                    class="border-surface-card/20 bg-surface-card/10 group-hover:bg-surface-card/20 flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl shadow-sm backdrop-blur-md transition-transform duration-300 group-hover:scale-110"
                 >
                     {{ typeIcon }}
                 </div>
@@ -98,12 +98,12 @@ const statusColor = computed(() => {
         <div class="relative z-10 space-y-4">
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
-                <div class="flex justify-between text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                <div class="text-text-muted flex justify-between text-[10px] font-bold tracking-widest uppercase">
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
                 <div
-                    class="h-2 w-full overflow-hidden rounded-full border border-white/20 bg-white/10 shadow-inner backdrop-blur-md"
+                    class="border-surface-card/20 bg-surface-card/10 h-2 w-full overflow-hidden rounded-full border shadow-inner backdrop-blur-md"
                     role="progressbar"
                     :aria-valuenow="progress"
                     aria-valuemin="0"
@@ -113,12 +113,17 @@ const statusColor = computed(() => {
                         class="relative h-full transition-all duration-1000 ease-out"
                         :class="
                             isCompleted
-                                ? 'shadow-glow-green bg-green-500'
-                                : 'from-electric-orange to-hot-pink shadow-glow-orange bg-linear-to-r'
+                                ? // Le vert acide ne se detache d'aucune piste claire : 1,13:1
+                                  // contre la sienne. Le contour, lui, rend 4,02:1 — la
+                                  // barre garde son neon et devient perceptible.
+                                  'bg-accent-state ring-accent-state-deep ring-1 ring-inset'
+                                : 'from-accent-primary to-accent-secondary shadow-glow-orange bg-linear-to-r'
                         "
                         :style="{ width: progress + '%' }"
                     >
-                        <div class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent to-white/30"></div>
+                        <div
+                            class="to-surface-card/30 absolute inset-0 animate-pulse bg-linear-to-r from-transparent"
+                        ></div>
                     </div>
                 </div>
             </div>
@@ -126,28 +131,28 @@ const statusColor = computed(() => {
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-3">
                 <div
-                    class="rounded-2xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md transition-colors group-hover:bg-white/20"
+                    class="border-surface-card/20 bg-surface-card/10 group-hover:bg-surface-card/20 rounded-2xl border p-3 shadow-sm backdrop-blur-md transition-colors"
                 >
-                    <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase">Actuel</p>
-                    <p class="font-display mt-0.5 text-lg font-black text-slate-900 italic">
+                    <p class="text-text-muted text-[10px] font-black tracking-widest uppercase">Actuel</p>
+                    <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
                         {{ goal.current_value }}
-                        <span class="text-[10px] font-bold text-slate-500 not-italic">{{ goal.unit }}</span>
+                        <span class="text-text-muted text-[10px] font-bold not-italic">{{ goal.unit }}</span>
                     </p>
                 </div>
                 <div
-                    class="rounded-2xl border border-white/20 bg-white/10 p-3 shadow-sm backdrop-blur-md transition-colors group-hover:bg-white/20"
+                    class="border-surface-card/20 bg-surface-card/10 group-hover:bg-surface-card/20 rounded-2xl border p-3 shadow-sm backdrop-blur-md transition-colors"
                 >
-                    <p class="text-[10px] font-black tracking-widest text-slate-500 uppercase">Cible</p>
-                    <p class="font-display mt-0.5 text-lg font-black text-slate-900 italic">
+                    <p class="text-text-muted text-[10px] font-black tracking-widest uppercase">Cible</p>
+                    <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
                         {{ goal.target_value }}
-                        <span class="text-[10px] font-bold text-slate-500 not-italic">{{ goal.unit }}</span>
+                        <span class="text-text-muted text-[10px] font-bold not-italic">{{ goal.unit }}</span>
                     </p>
                 </div>
             </div>
 
             <div
                 v-if="goal.deadline"
-                class="flex items-center gap-1.5 pt-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+                class="text-text-muted flex items-center gap-1.5 pt-1 text-[10px] font-bold tracking-wider uppercase"
             >
                 <span class="material-symbols-outlined text-[14px]" aria-hidden="true">schedule</span>
                 <span>Échéance : {{ formattedDeadline }}</span>
@@ -158,12 +163,12 @@ const statusColor = computed(() => {
               controls of a page holding six goals otherwise reads "Modifier,
               Supprimer" six times over with nothing to tell them apart.
             -->
-            <div class="flex items-center gap-2 border-t border-white/10 pt-3">
+            <div class="border-surface-card/10 flex items-center gap-2 border-t pt-3">
                 <Link
                     :href="route('goals.edit', { goal: goal.id })"
                     :dusk="`edit-goal-${goal.id}`"
                     :aria-label="`Modifier l'objectif ${goal.title}`"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange min-h-touch inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/10 text-xs font-bold uppercase transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <span class="material-symbols-outlined text-[18px]" aria-hidden="true">edit</span>
                     Modifier
@@ -172,7 +177,7 @@ const statusColor = computed(() => {
                     type="button"
                     :dusk="`delete-goal-${goal.id}`"
                     :aria-label="`Supprimer l'objectif ${goal.title}`"
-                    class="focus-visible:ring-electric-orange min-h-touch inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-bold text-red-600 uppercase transition-colors hover:bg-red-500/20 focus-visible:ring-2 focus-visible:outline-none"
+                    class="focus-visible:ring-accent-primary min-h-touch border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     @click="emit('delete', goal)"
                 >
                     <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span>

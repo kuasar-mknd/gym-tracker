@@ -212,7 +212,7 @@ describe('Workouts/Index — the summary above the history', () => {
     it('shows a zero rather than a blank where the exercise count belongs', () => {
         const wrapper = mountPage({ totalExercises: undefined })
 
-        expect(wrapper.find('.text-accent-success').text()).toBe('0')
+        expect(wrapper.find('.text-accent-state-deep').text()).toBe('0')
     })
 })
 

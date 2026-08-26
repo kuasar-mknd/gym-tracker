@@ -24,7 +24,7 @@ final class CreateHabitAction
          * couleur, c'est une chaine non vide ; sinon prends celle-ci ».
          */
         if (! is_string($data['color'] ?? null) || $data['color'] === '') {
-            $data['color'] = 'bg-slate-500';
+            $data['color'] = 'bg-palette-ardoise';
         }
 
         if (! is_string($data['icon'] ?? null) || $data['icon'] === '') {

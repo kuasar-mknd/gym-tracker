@@ -56,7 +56,7 @@ const isActiveRoute = (itemRoute) => {
                 v-press
                 :href="route(item.route)"
                 :class="[
-                    'glass-nav-item group focus-visible:ring-electric-orange rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none',
+                    'glass-nav-item group focus-visible:ring-accent-primary rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none',
                     { active: isActiveRoute(item.route) },
                 ]"
                 :aria-label="item.name"
@@ -64,7 +64,7 @@ const isActiveRoute = (itemRoute) => {
                 :dusk="'nav-' + item.route.split('.')[0]"
             >
                 <span
-                    class="material-symbols-outlined text-[28px] transition-all group-hover:drop-shadow-[0_0_8px_rgba(255,85,0,0.5)]"
+                    class="material-symbols-outlined text-[28px] transition-all group-hover:drop-shadow-[0_0_8px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.5)]"
                     :style="{ fontVariationSettings: isActiveRoute(item.route) ? `'FILL' 1` : `'FILL' 0` }"
                     aria-hidden="true"
                 >

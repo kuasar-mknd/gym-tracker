@@ -1,5 +1,6 @@
 <script setup>
 import { Line } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -39,8 +40,8 @@ const chartData = computed(() => {
                     if (!chartArea) return null
 
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, 'rgba(136, 0, 255, 0.4)') // vivid-violet
-                    gradient.addColorStop(1, 'rgba(255, 0, 128, 0)') // hot-pink
+                    gradient.addColorStop(0, jetonTransparent('accent-tertiary', 0.4)) // vivid-violet
+                    gradient.addColorStop(1, jetonTransparent('accent-secondary', 0)) // hot-pink
 
                     return gradient
                 },
@@ -50,15 +51,15 @@ const chartData = computed(() => {
                     if (!chartArea) return null
 
                     const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-                    gradient.addColorStop(0, '#8800FF') // vivid-violet
-                    gradient.addColorStop(1, '#FF0080') // hot-pink
+                    gradient.addColorStop(0, jeton('accent-tertiary')) // vivid-violet
+                    gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
 
                     return gradient
                 },
                 borderWidth: 4,
                 tension: 0.4,
-                pointBackgroundColor: '#FFFFFF',
-                pointBorderColor: '#8800FF',
+                pointBackgroundColor: jeton('surface-card'),
+                pointBorderColor: jeton('accent-tertiary'),
                 pointBorderWidth: 2,
                 pointRadius: 4,
                 pointHoverRadius: 6,
@@ -67,16 +68,16 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            borderColor: 'rgba(136, 0, 255, 0.2)',
+            backgroundColor: jetonTransparent('surface-card', 0.9),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('accent-tertiary', 0.2),
             borderWidth: 1,
             padding: 10,
             displayColors: false,
@@ -89,7 +90,7 @@ const chartOptions = {
         x: {
             grid: { display: false },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
                 padding: 10,
             },
@@ -112,11 +113,14 @@ const chartOptions = {
             top: 10,
         },
     },
-}
+}))
 </script>
 
 <template>
-    <div class="h-full w-full" style="filter: drop-shadow(0 4px 6px rgba(136, 0, 255, 0.15))">
+    <div
+        class="h-full w-full"
+        style="filter: drop-shadow(0 4px 6px rgb(from var(--color-accent-tertiary) r g b / 0.15))"
+    >
         <Line :data="chartData" :options="chartOptions" />
     </div>
 </template>

@@ -244,11 +244,11 @@ const typeLabel = (type) => {
         >
             <div
                 v-if="pullDistance > 0 || isRefreshing"
-                class="mt-4 rounded-full border border-slate-200 bg-white/90 p-3 shadow-lg backdrop-blur-md"
+                class="border-border bg-surface-card/90 mt-4 rounded-full border p-3 shadow-lg backdrop-blur-md"
             >
                 <svg
                     v-if="isRefreshing"
-                    class="text-electric-orange h-6 w-6 animate-spin"
+                    class="text-accent-primary-deep h-6 w-6 animate-spin"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -262,7 +262,7 @@ const typeLabel = (type) => {
                 </svg>
                 <span
                     v-else
-                    class="material-symbols-outlined text-electric-orange transition-transform duration-200"
+                    class="material-symbols-outlined text-accent-primary-deep transition-transform duration-200"
                     :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
                     aria-hidden="true"
                 >
@@ -286,7 +286,7 @@ const typeLabel = (type) => {
                 </div>
                 <button
                     @click="showAddForm = true"
-                    class="bg-gradient-main flex size-14 items-center justify-center rounded-2xl text-white shadow-lg shadow-orange-500/20 active:scale-95 sm:hidden"
+                    class="bg-gradient-main shadow-accent-primary/20 text-text-on-dark-accent flex size-14 items-center justify-center rounded-2xl shadow-lg active:scale-95 sm:hidden"
                     data-testid="create-exercise-mobile-header"
                     dusk="create-exercise-btn"
                     aria-label="Nouvel exercice"
@@ -337,7 +337,7 @@ const typeLabel = (type) => {
                 >
                     <template #suffix>
                         <div
-                            class="text-text-muted/40 hidden items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
+                            class="text-text-muted/40 border-border hidden items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
                             aria-hidden="true"
                         >
                             <span class="material-symbols-outlined text-sm" aria-hidden="true">keyboard</span>
@@ -356,8 +356,8 @@ const typeLabel = (type) => {
                     :class="[
                         'category-pill shrink-0 transition-all',
                         activeCategory === 'all'
-                            ? 'bg-text-main text-white shadow-lg'
-                            : 'text-text-main border border-slate-200 bg-white',
+                            ? 'bg-text-main text-surface-card shadow-lg'
+                            : 'text-text-main border-border bg-surface-card border',
                     ]"
                     :aria-pressed="activeCategory === 'all'"
                 >
@@ -373,8 +373,8 @@ const typeLabel = (type) => {
                     :class="[
                         'category-pill shrink-0 transition-all',
                         activeCategory === cat
-                            ? `${CATEGORY_COLORS[cat] || 'bg-slate-500'} text-white`
-                            : 'text-text-main border border-slate-200 bg-white',
+                            ? (CATEGORY_COLORS[cat] ?? 'category-fill-other')
+                            : 'text-text-main border-border bg-surface-card border',
                     ]"
                     :aria-pressed="activeCategory === cat"
                 >
@@ -435,8 +435,8 @@ const typeLabel = (type) => {
             </Modal>
 
             <!-- Error display -->
-            <GlassCard v-if="$page.props.errors?.exercise" class="border-red-500 bg-red-50">
-                <p class="text-center font-bold text-red-600">{{ $page.props.errors.exercise }}</p>
+            <GlassCard v-if="$page.props.errors?.exercise" class="border-accent-danger bg-accent-danger/10">
+                <p class="text-accent-danger-deep text-center font-bold">{{ $page.props.errors.exercise }}</p>
             </GlassCard>
 
             <!-- Empty State -->
@@ -500,7 +500,7 @@ const typeLabel = (type) => {
                         <h3 class="text-text-muted/60 text-[10px] font-black tracking-[0.25em] uppercase">
                             {{ category }}
                         </h3>
-                        <div class="h-px flex-1 bg-slate-100"></div>
+                        <div class="bg-surface-sunken h-px flex-1"></div>
                         <span class="text-text-muted/30 text-[10px] font-black">
                             {{ exercisesInCat.length }}
                         </span>

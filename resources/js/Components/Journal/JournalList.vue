@@ -14,7 +14,7 @@ const emit = defineEmits(['edit', 'delete'])
     <div class="space-y-8">
         <div v-for="(group, month) in journalsByMonth" :key="month">
             <h3
-                class="text-text-main sticky top-0 z-10 mb-4 rounded-2xl border border-white/20 bg-white/10 p-2 text-lg font-medium capitalize shadow-lg backdrop-blur-md"
+                class="text-text-main border-surface-card/20 bg-surface-card/10 sticky top-0 z-10 mb-4 rounded-2xl border p-2 text-lg font-medium capitalize shadow-lg backdrop-blur-md"
             >
                 {{ month }}
             </h3>
@@ -22,13 +22,13 @@ const emit = defineEmits(['edit', 'delete'])
                 <GlassCard
                     v-for="journal in group"
                     :key="journal.id"
-                    class="group relative overflow-hidden rounded-3xl border border-white/20 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-[0.98]"
+                    class="group border-surface-card/20 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.98]"
                     padding="p-0"
                 >
                     <div class="flex flex-col sm:flex-row">
                         <!-- Date Column -->
                         <div
-                            class="flex w-full shrink-0 flex-row items-center justify-between bg-white/5 p-4 sm:w-24 sm:flex-col sm:justify-center sm:border-r sm:border-white/10"
+                            class="bg-surface-card/5 sm:border-surface-card/10 flex w-full shrink-0 flex-row items-center justify-between p-4 sm:w-24 sm:flex-col sm:justify-center sm:border-r"
                         >
                             <div class="text-center">
                                 <div class="text-text-muted text-xs uppercase">
@@ -59,37 +59,37 @@ const emit = defineEmits(['edit', 'delete'])
                                     <div class="flex flex-wrap gap-2">
                                         <span
                                             v-if="journal.sleep_quality"
-                                            class="inline-flex items-center rounded-md bg-indigo-400/10 px-2 py-1 text-[10px] font-medium text-indigo-400 ring-1 ring-indigo-400/30 ring-inset"
+                                            class="bg-accent-tertiary/10 text-accent-tertiary-deep ring-accent-tertiary/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             💤 {{ journal.sleep_quality }}/5
                                         </span>
                                         <span
                                             v-if="journal.stress_level"
-                                            class="inline-flex items-center rounded-md bg-orange-400/10 px-2 py-1 text-[10px] font-medium text-orange-400 ring-1 ring-orange-400/30 ring-inset"
+                                            class="bg-accent-primary/10 text-accent-primary-deep ring-accent-primary/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             ⚡ Stress: {{ journal.stress_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.energy_level"
-                                            class="inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-1 text-[10px] font-medium text-yellow-400 ring-1 ring-yellow-400/30 ring-inset"
+                                            class="bg-accent-warning/10 text-accent-warning-deep ring-accent-warning/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🔋 Énergie: {{ journal.energy_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.motivation_level"
-                                            class="inline-flex items-center rounded-md bg-pink-400/10 px-2 py-1 text-[10px] font-medium text-pink-400 ring-1 ring-pink-400/30 ring-inset"
+                                            class="bg-accent-secondary/10 text-accent-secondary-deep ring-accent-secondary/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🔥 Motivation: {{ journal.motivation_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.nutrition_score"
-                                            class="inline-flex items-center rounded-md bg-emerald-400/10 px-2 py-1 text-[10px] font-medium text-emerald-400 ring-1 ring-emerald-400/30 ring-inset"
+                                            class="bg-accent-state/10 text-accent-state-deep ring-accent-state/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🥗 Diète: {{ journal.nutrition_score }}/5
                                         </span>
                                         <span
                                             v-if="journal.training_intensity"
-                                            class="inline-flex items-center rounded-md bg-red-400/10 px-2 py-1 text-[10px] font-medium text-red-600 ring-1 ring-red-400/30 ring-inset"
+                                            class="bg-accent-danger/10 text-accent-danger-deep ring-accent-danger/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🏋️ Intensité: {{ journal.training_intensity }}/10
                                         </span>
@@ -102,7 +102,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <button
                                         v-press
                                         @click="emit('edit', journal)"
-                                        class="text-text-muted/50 hover:text-text-main focus-visible:ring-electric-orange rounded-xl p-1 transition-all hover:bg-white/20 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                        class="text-text-muted/50 hover:text-text-main focus-visible:ring-accent-primary hover:bg-surface-card/20 rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                         aria-label="Modifier l'entrée"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -117,7 +117,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <button
                                         v-press
                                         @click="emit('delete', journal.id)"
-                                        class="text-text-muted/50 focus-visible:ring-electric-orange rounded-xl p-1 transition-all hover:bg-white/20 hover:text-red-400 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                        class="text-text-muted/50 focus-visible:ring-accent-primary hover:bg-surface-card/20 hover:text-accent-danger-deep rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                         aria-label="Supprimer l'entrée"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

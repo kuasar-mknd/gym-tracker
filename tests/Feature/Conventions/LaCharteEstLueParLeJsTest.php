@@ -34,10 +34,25 @@ function jetonsCitesParLeJs(): array
 {
     $source = (string) file_get_contents(resource_path('js/Utils/couleurs.js'));
 
-    // Les valeurs de la table de correspondance, en chaines simples.
-    preg_match_all("/:\s*'([a-z][a-z0-9-]*)'/", $source, $trouves);
+    /*
+     * TOUS les noms de jetons cites, pas seulement ceux d'une table.
+     *
+     * Le motif ne lisait que les valeurs suivant un `:` — donc la
+     * correspondance des categories, et rien d'autre. Il capturait 8 noms sur
+     * les 14 que ce fichier cite : la liste `SERIE`, qui alimente les series de
+     * graphiques, et le repli de `couleurDeCategorie()` passaient a cote. Un
+     * garde qui verifie la moitie de ce qu'il annonce est pire qu'aucun garde,
+     * parce qu'on lui fait confiance pour le tout.
+     */
+    preg_match_all("/'([a-z][a-z0-9-]*(?:-[a-z0-9]+)*)'/", $source, $trouves);
 
-    return array_values(array_unique($trouves[1]));
+    // Les noms de jetons portent tous un tiret ; `strength`, `cardio` n'en sont
+    // pas. On ne garde que ce qui ressemble a un jeton, et le controle suivant
+    // verifie que chacun existe.
+    return array_values(array_unique(array_filter(
+        $trouves[1],
+        static fn (string $nom): bool => str_contains($nom, '-')
+    )));
 }
 
 it('ne cite aucun jeton que la charte ne declare pas', function (): void {
@@ -68,10 +83,16 @@ it('ne laisse pas revenir une couleur ecrite en dur dans un graphique', function
     $coupables = [];
 
     foreach ($fichiers as $fichier) {
-        // Les degrades de Chart.js portent des couleurs de rendu qui ne sont pas
-        // des jetons de charte — on ne regarde que les litteraux a six chiffres,
-        // ceux qui recopient une couleur nommee.
-        preg_match_all('/#[0-9A-Fa-f]{6}\b/', $fichier->getContents(), $trouves);
+        /*
+         * Trois OU six chiffres.
+         *
+         * Le motif n'en lisait que six, et 33 `'#fff'` sont restes dans les
+         * graphiques pendant que le compteur affichait zero. Une forme courte
+         * est une couleur comme une autre : `#fff` est le blanc de la surface
+         * des cartes, recopie a la main, avec exactement le meme defaut que
+         * `#ffffff` aurait eu.
+         */
+        preg_match_all('/#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})\b/', $fichier->getContents(), $trouves);
 
         if ($trouves[0] !== []) {
             $coupables[$fichier->getRelativePathname()] = count($trouves[0]);
@@ -81,13 +102,17 @@ it('ne laisse pas revenir une couleur ecrite en dur dans un graphique', function
     $total = array_sum($coupables);
 
     /*
-     * Un cliquet, comme le baseline PHPStan : le plafond ne descend jamais tout
-     * seul, et il ne remonte que par une decision visible en revue.
+     * Zero depuis le 2026-08-26. Les 326 valeurs sont parties en deux temps : 160
+     * etaient l'habillage commun — infobulles, graduations, grilles — qui a
+     * trouve sa place dans `chartConfig.js`, et le reste nomme desormais un role
+     * via `Utils/couleurs.js`.
      *
-     * Releve le 2026-08-26, avant la conversion des graphiques restants.
+     * La traine etait faite de doublons que rien ne pouvait rapprocher : cinq
+     * oranges, six roses, sept violets, nes de graphiques ecrits l'un apres
+     * l'autre sans registre commun.
      */
-    expect($total)->toBeLessThanOrEqual(326, sprintf(
-        "Il y a %d couleurs ecrites en dur dans les graphiques, contre 326 au dernier releve.\n\n"
+    expect($total)->toBe(0, sprintf(
+        "Il y a %d couleurs ecrites en dur dans les graphiques, et il n'en faut aucune.\n\n"
         .'Les valeurs se lisent par `Utils/couleurs.js`, qui interroge la charte. Une couleur ecrite '
         ."ici est un litteral que rien ne relie a `app.css` — c'est ainsi que `#00FF66` a pu se faire "
         ."appeler `neon-green` pendant que le jeton valait `#CCFF00`.\n\nFichiers : %s",

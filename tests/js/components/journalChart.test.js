@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { jeton } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 /**
@@ -95,7 +96,7 @@ describe('JournalChart', () => {
         const dataset = line(wrapper).props('data').datasets[0]
         expect(dataset.label).toBe('Énergie')
         expect(dataset.data).toEqual([3, 7, 9])
-        expect(dataset.borderColor).toBe('#FACC15')
+        expect(dataset.borderColor).toBe(jeton('palette-ambre'))
         expect(buttonLabelled(wrapper, 'Énergie').attributes('aria-pressed')).toBe('true')
         expect(buttonLabelled(wrapper, 'Humeur').attributes('aria-pressed')).toBe('false')
     })
@@ -145,14 +146,14 @@ describe('JournalChart', () => {
  * Le libellé du filtre actif doit se lire sur sa propre couleur.
  *
  * Le bouton sélectionné prend la couleur de sa courbe en fond, et prenait aussi
- * `text-white`. Les sept teintes sont les `-400` de Tailwind, choisies pour être
+ * `text-surface-card`. Les sept teintes sont les `-400` de Tailwind, choisies pour être
  * lisibles comme *courbes sur fond sombre* et jamais comme *fond sous du texte
  * blanc* : les sept échouaient au seuil AA, « Énergie » à 1,53:1 — du blanc sur
  * jaune, le mot disparaissait. Le seul libellé illisible des sept était celui du
  * bouton chargé de dire quelle métrique on regarde (#1400).
  *
  * Le rapport est calculé ici plutôt que la classe comparée à une valeur
- * attendue : une assertion sur `text-slate-900` passerait encore si quelqu'un
+ * attendue : une assertion sur `text-text-main` passerait encore si quelqu'un
  * ajoutait une huitième métrique dans une teinte trop sombre, ce qui est
  * exactement le cas que ce test existe pour attraper.
  *
@@ -175,7 +176,10 @@ describe('lisibilité du filtre actif', () => {
     }
 
     /** Les classes Tailwind ne sont pas résolues sous jsdom ; la teinte est lue ici. */
-    const TEXT_COLOURS = { 'text-slate-900': '#0f172a', 'text-white': '#ffffff' }
+    const TEXT_COLOURS = {
+        'text-text-main': jeton('text-main'),
+        'text-text-on-dark-accent': jeton('text-on-dark-accent'),
+    }
 
     it('tient le seuil AA pour chacune des sept métriques', async () => {
         const wrapper = mount(JournalChart, { props: { data: entries } })

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 vi.mock('vue-chartjs', () => {
@@ -139,8 +140,8 @@ describe('BodyPartHistoryChart', () => {
 
             expect(recorded).toEqual([
                 [10, 0, 310, 0],
-                [0, '#C084FC'],
-                [1, '#E879F9'],
+                [0, jeton('accent-tertiary')],
+                [1, jeton('accent-secondary')],
             ])
         })
 
@@ -151,8 +152,8 @@ describe('BodyPartHistoryChart', () => {
 
             expect(recorded).toEqual([
                 [0, 0, 0, 256],
-                [0, 'rgba(192, 132, 252, 0.2)'],
-                [1, 'rgba(192, 132, 252, 0)'],
+                [0, jetonTransparent('accent-tertiary', 0.2)],
+                [1, jetonTransparent('accent-tertiary', 0)],
             ])
         })
 

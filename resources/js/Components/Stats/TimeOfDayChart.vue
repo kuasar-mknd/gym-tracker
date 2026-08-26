@@ -1,5 +1,6 @@
 <script setup>
 import { Doughnut } from 'vue-chartjs'
+import { jeton } from '@/Utils/couleurs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { computed, ref } from 'vue'
 import { optionsDAnneau, pluginCentreDAnneau } from '@/Utils/donut'
@@ -19,20 +20,33 @@ const chartData = computed(() => {
         datasets: [
             {
                 data: props.data.map((item) => item.count),
+                /*
+                 * Quatre moments, quatre couleurs DISTINCTES.
+                 *
+                 * « Soir » et « Nuit » portaient un violet et un indigo, deux
+                 * teintes proches mais séparables ; la conversion les a envoyés
+                 * sur le même `accent-tertiary`, et deux parts de l'anneau sont
+                 * devenues impossibles à distinguer — quatre étiquettes pour
+                 * trois couleurs.
+                 *
+                 * Ces quatre-là ne portent aucune intention : elles doivent
+                 * seulement se séparer. Le bleu de `category-core` fait la nuit,
+                 * puisqu'il est la teinte la plus éloignée des trois autres.
+                 */
                 backgroundColor: [
-                    '#38BDF8', // Sky 400 (Matin)
-                    '#F59E0B', // Amber 500 (Après-midi)
-                    '#8B5CF6', // Violet 500 (Soir)
-                    '#312E81', // Indigo 900 (Nuit)
+                    jeton('accent-info'), // Matin
+                    jeton('accent-warning'), // Après-midi
+                    jeton('accent-tertiary'), // Soir
+                    jeton('category-core'), // Nuit
                 ],
                 hoverBackgroundColor: [
-                    '#0EA5E9', // Sky 500
-                    '#D97706', // Amber 600
-                    '#7C3AED', // Violet 600
-                    '#1E1B4B', // Indigo 950
+                    jeton('accent-info'),
+                    jeton('accent-primary'),
+                    jeton('accent-tertiary'),
+                    jeton('category-core'),
                 ],
                 borderWidth: 2,
-                borderColor: '#ffffff',
+                borderColor: jeton('surface-card'),
                 hoverOffset: 4,
             },
         ],

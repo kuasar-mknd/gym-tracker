@@ -1,5 +1,33 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { vi } from 'vitest'
 import { config } from '@vue/test-utils'
+
+/*
+ * La charte, chargée pour de vrai.
+ *
+ * jsdom n'applique aucune feuille de style : `getComputedStyle` y rend une
+ * chaîne vide pour toute variable, donc `Utils/couleurs.js` ne trouvait rien et
+ * les graphiques recevaient des dégradés sans couleur. C'est précisément le
+ * défaut qui s'est vu à l'écran — un anneau aux segments noirs — et il est
+ * heureux que les tests le reproduisent plutôt que de le manquer.
+ *
+ * Poser ici une liste de variables écrite à la main aurait recréé la panne que
+ * toute cette charte existe pour supprimer : une deuxième copie des valeurs,
+ * libre de diverger. Ce fichier en portait justement une — huit couleurs de
+ * catégorie en dur, posées APRÈS ce chargeur, donc l'écrasant. Elle datait
+ * d'avant la conversion : `category-core` y valait encore un magenta et
+ * `category-cardio` un vert acide, deux valeurs que cette branche venait de
+ * remplacer. Toute la suite JS tournait donc sur des couleurs que le dépôt
+ * n'avait plus, sans qu'un seul test ne tombe. On lit donc `app.css`, le registre lui-même. Un test qui
+ * vérifie qu'un graphique emploie l'orange de la charte vérifie alors le vrai
+ * orange, et le jour où il change, il change des deux côtés à la fois.
+ */
+const charte = readFileSync(resolve(__dirname, 'resources/css/app.css'), 'utf-8')
+
+for (const [, nom, valeur] of charte.matchAll(/--color-([a-z0-9-]+):\s*([^;]+);/g)) {
+    document.documentElement.style.setProperty(`--color-${nom}`, valeur.trim())
+}
 
 /*
  * jsdom ships no canvas, so every chart component that reaches for a drawing
@@ -112,30 +140,3 @@ config.global.directives = { ...config.global.directives, press: {} }
  * les assertions de structure.
  */
 config.global.components = { ...config.global.components, Head: { render: () => null } }
-
-/*
- * La charte, sous jsdom.
- *
- * `Utils/couleurs.js` lit les jetons par `getComputedStyle` sur la racine. Une
- * feuille Tailwind n'est pas chargee ici, donc sans ces declarations tout
- * graphique dessinerait avec une couleur vide.
- *
- * Ces valeurs ne sont PAS une copie de la charte : elles n'ont pas a coincider
- * avec elle, elles ont seulement a exister pour que le mecanisme de lecture
- * soit exerce. `LaCharteEstLueParLeJsTest` verifie la correspondance des NOMS
- * cote depot ; c'est la que la charte est tenue.
- */
-const JETONS_DE_TEST = {
-    'category-chest': '#ff5500',
-    'category-back': '#8800ff',
-    'category-shoulders': '#ff0080',
-    'category-arms': '#00e5ff',
-    'category-legs': '#ccff00',
-    'category-core': '#f5009b',
-    'category-cardio': '#c0eb00',
-    'category-other': '#64748b',
-}
-
-for (const [nom, valeur] of Object.entries(JETONS_DE_TEST)) {
-    document.documentElement.style.setProperty(`--color-${nom}`, valeur)
-}

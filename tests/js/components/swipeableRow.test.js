@@ -148,8 +148,8 @@ describe('SwipeableRow', () => {
      * An action is exactly the strip the content has uncovered, and never wider.
      *
      * Each action used to be half the row, with the content sitting on top of
-     * the other half — and the content is glass, `bg-white/10` over a row at
-     * `bg-white/80`. A red delete panel behind that does not stay behind it: on
+     * the other half — and the content is glass, `bg-surface-card/10` over a row at
+     * `bg-surface-card/80`. A red delete panel behind that does not stay behind it: on
      * an open row it came through as a pink wash across the values. Fading the
      * layer in with the drag was supposed to hide that, but the fade is complete
      * by 20px and the row opens at 80, so by the time it mattered opacity was 1.

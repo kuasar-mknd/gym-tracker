@@ -33,11 +33,11 @@ defineProps({
 defineEmits(['action'])
 
 const glowColors = {
-    orange: 'bg-electric-orange',
-    violet: 'bg-vivid-violet',
-    pink: 'bg-hot-pink',
-    cyan: 'bg-cyan-pure',
-    green: 'bg-neon-green',
+    orange: 'bg-accent-primary',
+    violet: 'bg-accent-tertiary',
+    pink: 'bg-accent-secondary',
+    cyan: 'bg-accent-info',
+    green: 'bg-accent-state',
 }
 
 /*
@@ -51,11 +51,11 @@ const glowColors = {
  * `color`. Rien n'échouait ; elle était simplement absente (#1386).
  */
 const iconColors = {
-    orange: 'text-electric-orange',
-    violet: 'text-vivid-violet',
-    pink: 'text-hot-pink',
-    cyan: 'text-cyan-pure',
-    green: 'text-neon-green',
+    orange: 'text-accent-primary-deep',
+    violet: 'text-accent-tertiary-deep',
+    pink: 'text-accent-secondary-deep',
+    cyan: 'text-accent-info-deep',
+    green: 'text-accent-state-deep',
 }
 
 /**
@@ -85,7 +85,7 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
         <div class="relative z-10 flex flex-col items-center">
             <!-- Icon Wrapper -->
             <div
-                class="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border border-white/50 bg-white/30 shadow-lg backdrop-blur-md"
+                class="border-surface-card/50 bg-surface-card/30 mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border shadow-lg backdrop-blur-md"
             >
                 <!-- Emoji -->
                 <span v-if="icon && !isLigatureName(icon)" class="text-5xl drop-shadow-sm">{{ icon }}</span>

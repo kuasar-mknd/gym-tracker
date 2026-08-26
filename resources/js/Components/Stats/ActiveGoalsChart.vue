@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { computed } from 'vue'
 
@@ -24,30 +25,30 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, '#f97316') // electric orange
-                    gradient.addColorStop(1, '#fb923c')
+                    gradient.addColorStop(0, jeton('accent-primary')) // electric orange
+                    gradient.addColorStop(1, jetonTransparent('accent-primary', 0.55))
                     return gradient
                 },
                 borderRadius: 4,
                 barPercentage: 0.5,
                 borderWidth: 0,
-                hoverBackgroundColor: '#ea580c',
+                hoverBackgroundColor: jeton('accent-primary'),
             },
         ],
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y', // Horizontal bar chart
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            borderColor: 'rgba(249, 115, 22, 0.2)',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('accent-primary', 0.2),
             borderWidth: 1,
             padding: 10,
             cornerRadius: 12,
@@ -66,11 +67,11 @@ const chartOptions = {
             min: 0,
             max: 100,
             grid: {
-                color: 'rgba(255, 255, 255, 0.1)',
+                color: jetonTransparent('surface-card', 0.1),
                 drawBorder: false,
             },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
                 callback: (value) => value + '%',
             },
@@ -79,13 +80,13 @@ const chartOptions = {
         y: {
             grid: { display: false },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
             },
             border: { display: false },
         },
     },
-}
+}))
 </script>
 
 <template>

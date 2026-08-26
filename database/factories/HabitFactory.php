@@ -23,7 +23,7 @@ class HabitFactory extends Factory
             'user_id' => User::factory(),
             'name' => $this->faker->words(3, true),
             'description' => $this->faker->sentence(),
-            'color' => 'bg-slate-500',
+            'color' => 'bg-palette-ardoise',
             'icon' => 'check_circle',
             'goal_times_per_week' => $this->faker->numberBetween(1, 7),
             'archived' => false,

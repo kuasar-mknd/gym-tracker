@@ -59,7 +59,7 @@ const handlePeriodChange = (period) => {
 
                 <!-- Period Selector -->
                 <div
-                    class="border-glass-border flex shrink-0 rounded-xl border bg-white/50 p-1 shadow-sm backdrop-blur-sm"
+                    class="border-glass-border bg-surface-card/50 flex shrink-0 rounded-xl border p-1 shadow-sm backdrop-blur-sm"
                 >
                     <button
                         v-for="period in periods"
@@ -69,7 +69,7 @@ const handlePeriodChange = (period) => {
                         :class="[
                             'rounded-lg px-3 py-1.5 text-[10px] font-black tracking-wider uppercase transition-all',
                             currentPeriod === period.value
-                                ? 'bg-cyan-pure text-text-main shadow-sm'
+                                ? 'bg-accent-info text-text-main shadow-sm'
                                 : 'text-text-muted hover:text-text-main',
                         ]"
                         :aria-pressed="currentPeriod === period.value"

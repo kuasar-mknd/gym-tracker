@@ -30,7 +30,7 @@ defineProps({
 <template>
     <component
         :is="as"
-        class="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl active:scale-[0.98]"
+        class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 rounded-3xl border p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.98]"
     >
         <header class="mb-6">
             <h2 class="text-text-main text-lg font-medium">

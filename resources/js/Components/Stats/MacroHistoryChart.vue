@@ -1,5 +1,6 @@
 <script setup>
 import { Line } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -44,8 +45,8 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-                    gradient.addColorStop(0, '#FF5500') // electric-orange
-                    gradient.addColorStop(1, '#FF0080') // hot-pink
+                    gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
+                    gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
                     return gradient
                 },
                 backgroundColor: (context) => {
@@ -53,18 +54,18 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, 'rgba(255, 85, 0, 0.2)')
-                    gradient.addColorStop(1, 'rgba(255, 85, 0, 0)')
+                    gradient.addColorStop(0, jetonTransparent('accent-primary', 0.2))
+                    gradient.addColorStop(1, jetonTransparent('accent-primary', 0))
                     return gradient
                 },
                 borderWidth: 3,
                 pointRadius: 3,
-                pointBackgroundColor: '#FF5500',
-                pointBorderColor: '#fff',
+                pointBackgroundColor: jeton('accent-primary'),
+                pointBorderColor: jeton('surface-card'),
                 pointBorderWidth: 2,
                 pointHoverRadius: 6,
-                pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: '#FF5500',
+                pointHoverBackgroundColor: jeton('surface-card'),
+                pointHoverBorderColor: jeton('accent-primary'),
                 pointHoverBorderWidth: 3,
             },
             {
@@ -72,7 +73,7 @@ const chartData = computed(() => {
                 data: sortedData.map((item) => item.tdee),
                 fill: false,
                 tension: 0.4,
-                borderColor: '#94a3b8', // Slate-400
+                borderColor: jeton('text-muted'), // Slate-400
                 borderDash: [5, 5],
                 borderWidth: 2,
                 pointRadius: 0,
@@ -82,7 +83,7 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -94,19 +95,19 @@ const chartOptions = {
                 usePointStyle: true,
                 boxWidth: 8,
                 font: { size: 10, family: 'Space Grotesk' },
-                color: '#64748B', // text-muted
+                color: jeton('text-muted'), // text-muted
             },
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
             padding: 12,
             cornerRadius: 12,
             displayColors: true,
             boxPadding: 4,
             borderWidth: 1,
-            borderColor: 'rgba(255, 85, 0, 0.1)',
+            borderColor: jetonTransparent('accent-primary', 0.1),
             titleFont: { family: 'Space Grotesk', weight: 'bold' },
             bodyFont: { family: 'Space Grotesk' },
             callbacks: {
@@ -121,7 +122,7 @@ const chartOptions = {
                 display: false,
             },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10 },
                 maxRotation: 0,
                 autoSkip: true,
@@ -131,11 +132,11 @@ const chartOptions = {
         y: {
             display: true,
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
             grid: {
-                color: 'rgba(148, 163, 184, 0.1)',
+                color: jetonTransparent('text-muted', 0.1),
                 borderDash: [4, 4],
             },
         },
@@ -144,7 +145,7 @@ const chartOptions = {
         mode: 'index',
         intersect: false,
     },
-}
+}))
 </script>
 
 <template>
@@ -155,6 +156,6 @@ const chartOptions = {
 
 <style scoped>
 canvas {
-    filter: drop-shadow(0 4px 6px rgba(255, 85, 0, 0.1));
+    filter: drop-shadow(0 4px 6px rgb(from var(--color-accent-primary) r g b / 0.1));
 }
 </style>

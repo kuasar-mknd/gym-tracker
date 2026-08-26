@@ -168,7 +168,7 @@ describe('Measurements/Index headline figures', () => {
         expect(wrapper.vm.previousWeight).toBe('76.00')
         expect(wrapper.vm.weightDiff).toBe('-1.5')
         // Green is the whole point of the tile: it says the trend is the one wanted.
-        expect(wrapper.find('.text-accent-success').text()).toBe('-1.5')
+        expect(wrapper.find('div.text-trend-up').text()).toBe('-1.5')
     })
 
     it('signs a gain, since "1.5" on its own reads like a loss', async () => {
@@ -176,7 +176,7 @@ describe('Measurements/Index headline figures', () => {
 
         const wrapper = await mountPage(MeasurementsIndex, { measurements: gaining })
 
-        expect(wrapper.find('.text-accent-warning').text()).toBe('+1.5')
+        expect(wrapper.find('.text-trend-down').text()).toBe('+1.5')
     })
 
     it('has nothing to compare after a first weigh-in, and says so instead of showing a zero', async () => {
@@ -416,7 +416,7 @@ describe('Measurements/Parts/Index part picker', () => {
 
         const highlighted = wrapper
             .findAll('button.rounded-full')
-            .filter((chip) => chip.classes().includes('bg-electric-orange'))
+            .filter((chip) => chip.classes().includes('accent-fill'))
 
         expect(highlighted).toHaveLength(1)
         expect(highlighted[0].text()).toBe('Chest')
@@ -513,15 +513,15 @@ describe('Measurements/Parts/Index cards', () => {
 
         // Green up, red down: on a waist and on a biceps those mean opposite
         // things, so the colour only claims direction, never progress.
-        expect(wrapper.find('.text-green-400').text()).toBe('+0.75')
-        expect(wrapper.find('.text-red-400').text()).toBe('-1.5')
+        expect(wrapper.find('div.text-trend-up').text()).toBe('+0.75')
+        expect(wrapper.find('.text-trend-down').text()).toBe('-1.5')
     })
 
     it('says nothing at all about a part that has not moved', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
 
         // A bare "0" beside a figure reads as a measurement, not as an absence.
-        expect(wrapper.findAll('.text-green-400, .text-red-400')).toHaveLength(2)
+        expect(wrapper.findAll('div.text-trend-up, div.text-trend-down')).toHaveLength(2)
     })
 })
 

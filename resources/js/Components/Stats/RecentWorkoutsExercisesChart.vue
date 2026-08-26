@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { computed } from 'vue'
 
@@ -38,30 +39,30 @@ const chartData = computed(() => {
                     if (!chartArea) return null
 
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, '#00D1FF') // cyan-pure
-                    gradient.addColorStop(1, '#00FF66') // neon-green
+                    gradient.addColorStop(0, jeton('accent-info')) // cyan-pure
+                    gradient.addColorStop(1, jeton('accent-state')) // neon-green
 
                     return gradient
                 },
                 borderRadius: 8,
                 barPercentage: 0.6,
                 borderWidth: 0,
-                hoverBackgroundColor: '#8800FF', // vivid-violet
+                hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
             },
         ],
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            borderColor: 'rgba(0, 255, 102, 0.2)',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('accent-state', 0.2),
             borderWidth: 1,
             padding: 10,
             cornerRadius: 12,
@@ -75,7 +76,7 @@ const chartOptions = {
         x: {
             grid: { display: false },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
             },
             border: { display: false },
@@ -88,7 +89,7 @@ const chartOptions = {
             },
         },
     },
-}
+}))
 </script>
 
 <template>
