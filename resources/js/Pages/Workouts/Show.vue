@@ -1894,15 +1894,18 @@ onUnmounted(() => {
             </GlassCard>
 
             <div v-if="localWorkout.workout_lines.length > 0 && !isFinished" class="mt-8 space-y-3 px-1">
-                <GlassButton
-                    variant="secondary"
-                    @click="showAddExercise = true"
-                    class="w-full"
-                    dusk="add-exercise-existing"
+                <!--
+                    Pas de variante : la carte pleine. Ajouter un exercice est
+                    l'action courante de cette page ; « Modele », en dessous, est
+                    occasionnelle et prend le contour. Elles etaient inversees —
+                    et invisiblement, puisque ni `secondary` ni `solid`
+                    n'existaient dans l'objet de classes.
+                -->
+                <GlassButton @click="showAddExercise = true" class="w-full" dusk="add-exercise-existing"
                     >Ajouter un exercice</GlassButton
                 >
                 <div class="grid grid-cols-2 gap-3">
-                    <GlassButton variant="solid" @click="saveAsTemplate" :loading="savingTemplate" class="w-full"
+                    <GlassButton variant="secondary" @click="saveAsTemplate" :loading="savingTemplate" class="w-full"
                         >Modèle</GlassButton
                     >
                     <GlassButton

@@ -66,7 +66,7 @@ const emit = defineEmits(['close', 'submit'])
                         :class="[
                             'focus-visible:ring-electric-orange border-surface-card/20 flex-1 rounded-2xl border p-2 text-center text-sm backdrop-blur-md transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none',
                             form.mood_score === mood.value
-                                ? 'bg-accent-primary text-text-on-accent border-transparent shadow-lg'
+                                ? 'bg-accent-primary-deep border-transparent text-white shadow-lg'
                                 : 'text-text-muted bg-surface-card/10 hover:bg-surface-card/20 hover:text-white',
                         ]"
                     >

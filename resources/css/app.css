@@ -44,6 +44,13 @@
     --color-surface-sunken: #f1f5f9;
     --color-surface-glass: rgba(255, 255, 255, 0.65);
 
+    /*
+     * Le voile d'une modale. Quatre fichiers ecrivaient `bg-black/80` sans
+     * qu'aucun role ne le nomme — et `bg-text-main/80` aurait detourne de
+     * l'encre en surface, ce qui est faux : ce n'est pas du texte.
+     */
+    --color-overlay: rgba(0, 0, 0, 0.8);
+
     /* --- Traits -------------------------------------------------------- */
     --color-border: #e2e8f0;
     --color-border-strong: #cbd5e1;

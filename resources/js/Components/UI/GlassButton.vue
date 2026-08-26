@@ -62,7 +62,7 @@ const sizeClasses = {
             'glass-button focus-visible:ring-electric-orange transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
             sizeClasses[size],
             {
-                'glass-button-primary shadow-glow-orange': variant === 'primary',
+                'glass-button-primary': variant === 'primary',
                 'glass-button-neon shadow-neon': variant === 'neon',
                 'glass-button-gradient-border': variant === 'gradient-border',
                 'border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20':

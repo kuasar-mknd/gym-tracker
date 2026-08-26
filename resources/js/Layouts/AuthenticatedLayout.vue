@@ -81,7 +81,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
     <div class="bg-pearl-white relative min-h-dvh w-full">
         <a
             href="#main-content"
-            class="bg-electric-orange text-text-on-accent focus:ring-surface-card absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
+            class="bg-accent-primary-deep focus:ring-surface-card absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold text-white transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
         >
             Aller au contenu principal
         </a>
@@ -209,7 +209,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                             <span class="material-symbols-outlined text-[22px]" aria-hidden="true">notifications</span>
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
-                                class="bg-electric-orange shadow-glow-orange text-text-on-accent absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black"
+                                class="bg-accent-primary-deep shadow-glow-orange absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black text-white"
                             >
                                 {{ $page.props.auth.user.unread_notifications_count }}
                             </span>
@@ -310,7 +310,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                     <span class="material-symbols-outlined text-[22px]" aria-hidden="true">notifications</span>
                     <span
                         v-if="$page.props.auth.user.unread_notifications_count > 0"
-                        class="bg-electric-orange text-text-on-accent absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black"
+                        class="bg-accent-primary-deep absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black text-white"
                     >
                         {{ $page.props.auth.user.unread_notifications_count }}
                     </span>

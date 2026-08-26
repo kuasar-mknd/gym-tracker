@@ -96,12 +96,12 @@ const close = () => {
         >
             <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center px-4">
                 <!-- Backdrop -->
-                <div class="animate-fade-in absolute inset-0 bg-black/80 backdrop-blur-sm" @click="close"></div>
+                <div class="animate-fade-in bg-overlay absolute inset-0 backdrop-blur-sm" @click="close"></div>
 
                 <!-- Modal. No role or aria-modal here: the <dialog> above is the
                      dialog, and nesting a second one would announce two. -->
                 <div
-                    class="animate-bounce-in border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl backdrop-blur-md transition-all duration-300"
+                    class="animate-bounce-in border-border bg-surface-card relative w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl transition-all duration-300"
                 >
                     <!-- Glow Effect -->
                     <div
@@ -119,7 +119,7 @@ const close = () => {
                         <!-- Icon -->
                         <div class="relative mb-4" aria-hidden="true">
                             <div
-                                class="animate-wobble border-surface-card/20 bg-surface-card/10 flex h-24 w-24 items-center justify-center rounded-3xl border text-6xl shadow-lg backdrop-blur-md"
+                                class="animate-wobble border-border bg-surface-sunken flex h-24 w-24 items-center justify-center rounded-3xl border text-6xl shadow-lg backdrop-blur-md"
                             >
                                 {{ achievement.icon }}
                             </div>
@@ -143,7 +143,7 @@ const close = () => {
                             type="button"
                             @click="close"
                             dusk="celebration-dismiss"
-                            class="border-surface-card/20 bg-surface-card/10 text-text-main hover:bg-surface-card/20 w-full rounded-2xl border py-3 font-bold shadow-lg backdrop-blur-md transition-all active:scale-95"
+                            class="bg-accent-state text-text-on-accent w-full rounded-2xl border py-3 font-bold shadow-lg backdrop-blur-md transition-all hover:brightness-95 active:scale-95"
                         >
                             Génial ! 🤩
                         </button>

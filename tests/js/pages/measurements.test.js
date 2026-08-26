@@ -416,7 +416,10 @@ describe('Measurements/Parts/Index part picker', () => {
 
         const highlighted = wrapper
             .findAll('button.rounded-full')
-            .filter((chip) => chip.classes().includes('bg-electric-orange'))
+            // Le fond orange qui porte du texte est `accent-primary-deep` : le
+            // vif rend 3,21:1 avec du blanc, le profond 4,52. Ce que le test
+            // garde est inchangé — qu'UNE seule pastille soit marquée.
+            .filter((chip) => chip.classes().includes('bg-accent-primary-deep'))
 
         expect(highlighted).toHaveLength(1)
         expect(highlighted[0].text()).toBe('Chest')
