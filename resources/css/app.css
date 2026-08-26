@@ -55,6 +55,15 @@
     --color-surface-glass: rgb(from var(--color-surface-card) r g b / 0.65);
 
     /*
+     * La meme surface, plus dense. Trois vues ecrivaient `bg-glass-strong`, une
+     * classe que rien ne declarait : le navigateur n'applique alors RIEN, et le
+     * survol de ces cartes ne faisait rien du tout. Le jeton existait pourtant,
+     * sous le nom `--glass-bg-strong` du bloc historique, que Tailwind ne lit
+     * pas pour fabriquer des utilitaires.
+     */
+    --color-surface-glass-strong: rgb(from var(--color-surface-card) r g b / 0.85);
+
+    /*
      * Le voile d'une modale. Quatre fichiers ecrivaient `bg-black/80` sans
      * qu'aucun role ne le nomme — et `bg-text-main/80` aurait detourne de
      * l'encre en surface, ce qui est faux : ce n'est pas du texte.
@@ -376,6 +385,23 @@
     --animate-pulse-slow: pulse 3s ease-in-out infinite;
     --animate-pulse-glow: pulse-glow 8s infinite alternate;
     --animate-liquid-pulse: liquid-pulse 2s infinite;
+
+    /*
+     * Note sur `rgb(from … r g b / alpha)`, employe 63 fois ci-dessous.
+     *
+     * C'est la syntaxe de couleur RELATIVE. Elle demande Chrome 119, Safari 16.4
+     * ou Firefox 128. Tailwind v4 exige deja Chrome 111 et Safari 16.4 : la
+     * fenetre qui perd quelque chose est donc Chrome 111 a 118, soit des
+     * navigateurs de 2023 qui ne se sont pas mis a jour depuis.
+     *
+     * Le mode d'echec est une declaration ignoree — un fond absent, une ombre
+     * qui ne se dessine pas — jamais une page cassee. Aucun repli n'est pose :
+     * 63 blocs `@supports` couteraient plus que le defaut qu'ils evitent, et le
+     * depot ne declare aucune cible navigateur qui obligerait a le faire.
+     *
+     * C'est une decision, pas un oubli. Le jour ou une cible sera declaree, ce
+     * commentaire dit quoi verifier.
+     */
 
     /*
      * Les ombres DERIVENT de leur accent, elles ne le recopient pas.
@@ -807,7 +833,7 @@
     color: var(--color-text-on-accent);
 }
 
-/* 4.51:1 */
+/* 4.53:1 */
 @utility plate-fill-10 {
     background: var(--color-plate-10);
     color: var(--color-text-on-dark-accent);

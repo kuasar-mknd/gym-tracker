@@ -224,7 +224,7 @@ const updatePreferences = () => {
                     Les notifications push ne sont pas supportées par votre navigateur.
                 </div>
 
-                <div v-else-if="pushSupported && !vapidPublicKey" class="text-accent-warning/80 mb-6 text-xs italic">
+                <div v-else-if="pushSupported && !vapidPublicKey" class="text-accent-warning-deep mb-6 text-xs italic">
                     Le service de notifications n'est pas encore configuré sur le serveur.
                 </div>
 

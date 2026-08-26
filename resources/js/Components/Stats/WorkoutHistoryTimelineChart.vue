@@ -59,7 +59,7 @@ const chartData = computed(() => {
                 data: durations,
                 borderColor: jeton('accent-secondary'), // hot-pink
                 borderWidth: 3,
-                pointBackgroundColor: '#fff',
+                pointBackgroundColor: jeton('surface-card'),
                 pointBorderColor: jeton('accent-secondary'),
                 pointBorderWidth: 2,
                 pointRadius: 4,

@@ -132,7 +132,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                             :class="[
                                 'flex size-10 items-center justify-center rounded-xl',
                                 type === 'success'
-                                    ? 'bg-accent-state/10 text-text-main'
+                                    ? 'bg-accent-state/10 text-accent-state-deep'
                                     : 'bg-accent-danger/10 text-accent-danger-deep',
                             ]"
                         >

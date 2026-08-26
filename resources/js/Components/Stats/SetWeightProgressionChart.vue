@@ -53,7 +53,7 @@ const chartData = computed(() => {
             spanGaps: true,
             pointRadius: 3,
             pointHoverRadius: 6,
-            pointBackgroundColor: '#fff',
+            pointBackgroundColor: jeton('surface-card'),
             pointBorderColor: setColors[i % setColors.length],
             pointBorderWidth: 2,
         })

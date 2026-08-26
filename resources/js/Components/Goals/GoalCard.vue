@@ -113,7 +113,10 @@ const statusColor = computed(() => {
                         class="relative h-full transition-all duration-1000 ease-out"
                         :class="
                             isCompleted
-                                ? 'bg-accent-state'
+                                ? // Le vert acide ne se detache d'aucune piste claire : 1,13:1
+                                  // contre la sienne. Le contour, lui, rend 4,02:1 — la
+                                  // barre garde son neon et devient perceptible.
+                                  'bg-accent-state ring-accent-state-deep ring-1 ring-inset'
                                 : 'from-accent-primary to-accent-secondary shadow-glow-orange bg-linear-to-r'
                         "
                         :style="{ width: progress + '%' }"

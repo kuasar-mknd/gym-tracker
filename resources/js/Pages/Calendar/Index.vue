@@ -319,7 +319,7 @@ const formatDateFull = (dateStr) => {
                         :href="route('workouts.show', workout.id)"
                         class="block"
                     >
-                        <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]" padding="p-4">
+                        <GlassCard class="hover:bg-surface-glass-strong transition active:scale-[0.99]" padding="p-4">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
                                     <div

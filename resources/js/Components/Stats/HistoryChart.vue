@@ -51,7 +51,7 @@ const chartData = computed(() => {
                     return gradient
                 },
                 borderWidth: 3,
-                pointBackgroundColor: '#fff',
+                pointBackgroundColor: jeton('surface-card'),
                 pointBorderColor: jeton('accent-secondary'),
                 pointBorderWidth: 2,
                 pointRadius: 4,

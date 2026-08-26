@@ -44,7 +44,6 @@ function pairesDeLaCharte(): array
         ['text-on-accent', 'accent-state', "encre sur le vert d'etat"],
         ['text-on-accent', 'accent-info', "encre sur l'information"],
         ['text-on-accent', 'accent-warning', "encre sur l'alerte"],
-        ['text-on-accent', 'accent-state', "encre sur l'action principale, qui porte ce vert"],
         ['trend-up', 'surface-card', 'une hausse, ecrite sur une carte'],
         ['trend-down', 'surface-card', 'une baisse, ecrite sur une carte'],
         ['accent-danger-deep', 'surface-card', 'un libelle de danger sur une carte'],
@@ -131,5 +130,51 @@ it('refuse le vert d etat en couleur de texte', function (): void {
         .'impossibilite plutot qu une exigence, pour que la regle reste ecrite quelque part le jour ou '
         .'quelqu un voudra ecrire un message de confirmation en vert.',
         $enTexte
+    ));
+});
+
+it('ne laisse pas mentir les mesures ecrites dans la charte', function (): void {
+    /*
+     * Chaque utilitaire apparie porte son contraste en commentaire — `/* 4,72:1 *\/`.
+     * Ces chiffres sont la raison d'etre du fichier : ils disent que la valeur
+     * choisie l'a ete par le calcul, et non a l'oeil.
+     *
+     * Un commentaire chiffre se perime en silence. Celui de `plate-fill-10`
+     * annoncait 4,51:1 pour une valeur qui en rend 4,53 — sans consequence, mais
+     * c'est le meme mecanisme qui a laisse la charte affirmer que ses huit
+     * couleurs de categorie etaient « separables » alors que deux etaient a 9
+     * unites CIELAB l'une de l'autre. La ce n'etait plus un arrondi : la
+     * conclusion etait inverse.
+     *
+     * Ce controle rend le commentaire verifiable, donc utile.
+     */
+    $css = (string) file_get_contents(resource_path('css/app.css'));
+
+    preg_match_all(
+        '/\/\* ([\d.]+):1 \*\/\s*@utility ([a-z0-9-]+) \{\s*background: var\(--color-([a-z0-9-]+)\);\s*color: var\(--color-([a-z0-9-]+)\);/',
+        $css,
+        $annotes,
+        PREG_SET_ORDER
+    );
+
+    expect($annotes)->not->toBeEmpty('aucune annotation trouvee : le controle ne prouverait rien');
+
+    $menteurs = [];
+
+    foreach ($annotes as $annote) {
+        [, $annonce, $nom, $fond, $texte] = $annote;
+
+        $mesure = Contraste::entre(Contraste::jeton($texte), Contraste::jeton($fond));
+
+        if (abs($mesure - (float) $annonce) >= 0.01) {
+            $menteurs[] = sprintf('%s : annonce %s:1, mesure %.2f:1', $nom, $annonce, $mesure);
+        }
+    }
+
+    expect($menteurs)->toBe([], sprintf(
+        "Ces commentaires annoncent une mesure que la charte ne rend pas :\n  %s\n\n"
+        .'Corrigez le chiffre, ou la valeur. Un commentaire faux est pire que pas de commentaire : '
+        .'on le lit au lieu de recalculer.',
+        implode("\n  ", $menteurs)
     ));
 });

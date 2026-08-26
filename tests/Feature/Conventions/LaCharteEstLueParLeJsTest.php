@@ -83,10 +83,16 @@ it('ne laisse pas revenir une couleur ecrite en dur dans un graphique', function
     $coupables = [];
 
     foreach ($fichiers as $fichier) {
-        // Les degrades de Chart.js portent des couleurs de rendu qui ne sont pas
-        // des jetons de charte — on ne regarde que les litteraux a six chiffres,
-        // ceux qui recopient une couleur nommee.
-        preg_match_all('/#[0-9A-Fa-f]{6}\b/', $fichier->getContents(), $trouves);
+        /*
+         * Trois OU six chiffres.
+         *
+         * Le motif n'en lisait que six, et 33 `'#fff'` sont restes dans les
+         * graphiques pendant que le compteur affichait zero. Une forme courte
+         * est une couleur comme une autre : `#fff` est le blanc de la surface
+         * des cartes, recopie a la main, avec exactement le meme defaut que
+         * `#ffffff` aurait eu.
+         */
+        preg_match_all('/#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})\b/', $fichier->getContents(), $trouves);
 
         if ($trouves[0] !== []) {
             $coupables[$fichier->getRelativePathname()] = count($trouves[0]);

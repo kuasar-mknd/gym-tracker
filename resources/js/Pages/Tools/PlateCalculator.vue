@@ -65,7 +65,7 @@
                         <div class="relative flex h-[200px] min-w-[300px] items-center justify-center">
                             <!-- Bar -->
                             <div
-                                class="from-text-muted via-text-muted to-text-muted absolute z-0 h-5 w-full rounded-full bg-linear-to-r shadow-inner"
+                                class="from-border-strong via-text-muted to-border-strong absolute z-0 h-5 w-full rounded-full bg-linear-to-r shadow-inner"
                             ></div>
 
                             <!-- Center Marker -->
@@ -197,7 +197,7 @@
                                     type="button"
                                     aria-label="Supprimer la plaque"
                                     title="Supprimer la plaque"
-                                    class="bg-accent-danger text-text-on-accent hover:bg-accent-danger absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full opacity-100 shadow-md transition-all sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                                    class="bg-accent-danger text-text-on-accent hover:bg-accent-danger-deep hover:text-text-on-dark-accent absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full opacity-100 shadow-md transition-all sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                                 >
                                     <span class="material-symbols-outlined text-sm" aria-hidden="true">close</span>
                                 </button>

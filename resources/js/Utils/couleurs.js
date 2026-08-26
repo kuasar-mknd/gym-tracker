@@ -137,31 +137,3 @@ function canauxDe(valeur) {
 
     return null
 }
-
-/**
- * L'ordre dans lequel les séries d'un graphique prennent leurs couleurs.
- *
- * Huit teintes séparables, celles des catégories — un graphique à six séries a
- * besoin de six couleurs distinctes, pas de six intentions. Les prendre dans les
- * accents mélangerait « alerter » et « troisième barre ».
- */
-export const SERIE = [
-    'accent-primary',
-    'accent-tertiary',
-    'accent-info',
-    'accent-secondary',
-    'category-cardio',
-    'category-core',
-    'accent-state',
-    'category-other',
-]
-
-/**
- * La couleur de la n-ième série, qui reboucle au-delà de huit.
- *
- * @param {number} rang
- * @returns {string}
- */
-export function couleurDeSerie(rang) {
-    return jeton(SERIE[rang % SERIE.length])
-}

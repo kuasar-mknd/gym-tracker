@@ -71,7 +71,7 @@ const filteredAchievements = computed(() => {
                         class="flex h-full flex-col items-center text-center transition-all duration-300"
                         :class="[
                             achievement.is_unlocked
-                                ? 'bg-glass-strong border-accent-primary/20'
+                                ? 'bg-surface-glass-strong border-accent-primary/20'
                                 : 'opacity-60 grayscale',
                         ]"
                     >

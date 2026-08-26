@@ -378,7 +378,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         </template>
 
                         <Link :href="route('workouts.show', { workout: workout.id })" class="block">
-                            <GlassCard class="hover:bg-glass-strong transition active:scale-[0.99]">
+                            <GlassCard class="hover:bg-surface-glass-strong transition active:scale-[0.99]">
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2">

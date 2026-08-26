@@ -56,7 +56,7 @@ const chartData = computed(() => {
                 borderWidth: 3,
                 pointRadius: 0, // Hide points for cleaner look, show on hover
                 pointHoverRadius: 6,
-                pointHoverBackgroundColor: '#fff',
+                pointHoverBackgroundColor: jeton('surface-card'),
                 pointHoverBorderColor: jeton('accent-state'),
                 pointHoverBorderWidth: 3,
             },

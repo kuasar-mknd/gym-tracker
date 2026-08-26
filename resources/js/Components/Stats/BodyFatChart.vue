@@ -45,7 +45,7 @@ const chartData = computed(() => {
                 borderWidth: 3,
                 pointRadius: 2,
                 pointBackgroundColor: jeton('accent-secondary'),
-                pointBorderColor: '#fff',
+                pointBorderColor: jeton('surface-card'),
                 pointBorderWidth: 2,
             },
         ],
