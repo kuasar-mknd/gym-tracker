@@ -81,13 +81,17 @@ it('ne laisse pas revenir une couleur ecrite en dur dans un graphique', function
     $total = array_sum($coupables);
 
     /*
-     * Un cliquet, comme le baseline PHPStan : le plafond ne descend jamais tout
-     * seul, et il ne remonte que par une decision visible en revue.
+     * Zero depuis le 2026-08-26. Les 326 valeurs sont parties en deux temps : 160
+     * etaient l'habillage commun — infobulles, graduations, grilles — qui a
+     * trouve sa place dans `chartConfig.js`, et le reste nomme desormais un role
+     * via `Utils/couleurs.js`.
      *
-     * Releve le 2026-08-26, avant la conversion des graphiques restants.
+     * La traine etait faite de doublons que rien ne pouvait rapprocher : cinq
+     * oranges, six roses, sept violets, nes de graphiques ecrits l'un apres
+     * l'autre sans registre commun.
      */
-    expect($total)->toBeLessThanOrEqual(326, sprintf(
-        "Il y a %d couleurs ecrites en dur dans les graphiques, contre 326 au dernier releve.\n\n"
+    expect($total)->toBe(0, sprintf(
+        "Il y a %d couleurs ecrites en dur dans les graphiques, et il n'en faut aucune.\n\n"
         .'Les valeurs se lisent par `Utils/couleurs.js`, qui interroge la charte. Une couleur ecrite '
         ."ici est un litteral que rien ne relie a `app.css` — c'est ainsi que `#00FF66` a pu se faire "
         ."appeler `neon-green` pendant que le jeton valait `#CCFF00`.\n\nFichiers : %s",

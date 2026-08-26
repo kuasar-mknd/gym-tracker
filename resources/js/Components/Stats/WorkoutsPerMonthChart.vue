@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { computed } from 'vue'
 
@@ -18,7 +19,7 @@ const chartData = computed(() => {
         datasets: [
             {
                 label: 'Séances',
-                backgroundColor: 'rgba(0, 229, 255, 0.6)',
+                backgroundColor: jetonTransparent('accent-info', 0.6),
                 borderRadius: 4,
                 data: props.data.map((item) => item.count),
             },
@@ -26,17 +27,17 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     scales: {
         y: {
             beginAtZero: true,
             grid: {
-                color: 'rgba(0, 0, 0, 0.05)',
+                color: jetonTransparent('shadow-cast', 0.05),
             },
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
                 stepSize: 1,
             },
@@ -46,7 +47,7 @@ const chartOptions = {
                 display: false,
             },
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
         },
@@ -56,14 +57,14 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
+            backgroundColor: jetonTransparent('surface-card', 0.9),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
             padding: 12,
             cornerRadius: 12,
         },
     },
-}
+}))
 </script>
 
 <template>

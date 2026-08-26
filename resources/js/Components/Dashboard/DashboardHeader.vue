@@ -49,7 +49,7 @@ const streakLabel = computed(() => {
             <!-- Avatar with gradient border -->
             <div class="relative">
                 <div
-                    class="from-electric-orange to-vivid-violet relative size-14 overflow-hidden rounded-full bg-linear-to-tr p-[2px]"
+                    class="from-accent-primary to-accent-tertiary relative size-14 overflow-hidden rounded-full bg-linear-to-tr p-[2px]"
                 >
                     <div
                         class="border-surface-card bg-surface-card flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2"
@@ -74,7 +74,7 @@ const streakLabel = computed(() => {
                     v-if="formattedWeight"
                     :href="route('body-measurements.index')"
                     dusk="dashboard-latest-weight"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange mt-1 inline-flex items-center gap-1 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary mt-1 inline-flex items-center gap-1 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <span class="material-symbols-outlined text-[14px]" aria-hidden="true">monitor_weight</span>
                     {{ formattedWeight }} kg
@@ -92,10 +92,10 @@ const streakLabel = computed(() => {
             :href="route('stats.index')"
             dusk="dashboard-streak"
             :aria-label="streakLabel"
-            class="streak-badge group focus-visible:ring-electric-orange min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl border px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+            class="streak-badge group focus-visible:ring-accent-primary min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl border px-3 py-2 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none active:scale-95"
         >
             <span
-                class="material-symbols-outlined text-electric-orange text-[24px] transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse"
+                class="material-symbols-outlined text-accent-primary-deep text-[24px] transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse"
                 style="font-variation-settings: 'FILL' 1"
                 aria-hidden="true"
                 >local_fire_department</span

@@ -33,11 +33,11 @@ defineProps({
 defineEmits(['action'])
 
 const glowColors = {
-    orange: 'bg-electric-orange',
-    violet: 'bg-vivid-violet',
-    pink: 'bg-hot-pink',
-    cyan: 'bg-cyan-pure',
-    green: 'bg-neon-green',
+    orange: 'bg-accent-primary',
+    violet: 'bg-accent-tertiary',
+    pink: 'bg-accent-secondary',
+    cyan: 'bg-accent-info',
+    green: 'bg-accent-state',
 }
 
 /*
@@ -51,11 +51,11 @@ const glowColors = {
  * `color`. Rien n'échouait ; elle était simplement absente (#1386).
  */
 const iconColors = {
-    orange: 'text-electric-orange',
-    violet: 'text-vivid-violet',
-    pink: 'text-hot-pink',
-    cyan: 'text-cyan-pure',
-    green: 'text-neon-green',
+    orange: 'text-accent-primary-deep',
+    violet: 'text-accent-tertiary',
+    pink: 'text-accent-secondary-deep',
+    cyan: 'text-accent-info-deep',
+    green: 'text-accent-state-deep',
 }
 
 /**

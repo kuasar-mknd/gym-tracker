@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jeton } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 vi.mock('vue-chartjs', () => {
@@ -49,8 +50,8 @@ describe('TimeOfDayChart', () => {
         const dataset = chartOf(slots).props('data').datasets[0]
 
         expect(dataset.backgroundColor).toHaveLength(4)
-        expect(dataset.backgroundColor[0]).toBe('#38BDF8')
-        expect(dataset.backgroundColor[3]).toBe('#312E81')
+        expect(dataset.backgroundColor[0]).toBe(jeton('accent-info'))
+        expect(dataset.backgroundColor[3]).toBe(jeton('accent-tertiary'))
         expect(dataset.hoverBackgroundColor).toHaveLength(4)
     })
 

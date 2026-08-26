@@ -10,8 +10,7 @@
  * Une seule source, donc, et la dérive n'a plus où se loger.
  */
 
-const TEXTE_ATTENUE = '#64748B'
-const TEXTE_PRINCIPAL = '#0F172A'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 
 /**
  * Les options communes aux anneaux du tableau de bord.
@@ -33,7 +32,7 @@ export const optionsDAnneau = (etiquetteInfobulle) => ({
         legend: {
             position: 'bottom',
             labels: {
-                color: TEXTE_ATTENUE,
+                color: jeton('text-muted'),
                 font: { family: "'Space Grotesk', sans-serif", size: 11, weight: 'bold' },
                 padding: 12,
                 boxHeight: 8,
@@ -42,15 +41,15 @@ export const optionsDAnneau = (etiquetteInfobulle) => ({
             },
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: TEXTE_PRINCIPAL,
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
             titleFont: { family: "'Space Grotesk', sans-serif", size: 13, weight: 'bold' },
-            bodyColor: TEXTE_ATTENUE,
+            bodyColor: jeton('text-muted'),
             bodyFont: { family: "'Inter', sans-serif", size: 12 },
             padding: 12,
             cornerRadius: 12,
             boxPadding: 6,
-            borderColor: 'rgba(0, 0, 0, 0.05)',
+            borderColor: jetonTransparent('shadow-cast', 0.05),
             borderWidth: 1,
             callbacks: { label: etiquetteInfobulle },
         },

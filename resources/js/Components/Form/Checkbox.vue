@@ -33,7 +33,7 @@ const proxyChecked = computed({
             type="checkbox"
             :value="value"
             v-model="proxyChecked"
-            class="peer checked:from-electric-orange checked:to-hot-pink focus-visible:ring-electric-orange/30 border-border bg-surface-sunken hover:border-border-strong h-5 w-5 cursor-pointer appearance-none rounded-lg border shadow-sm transition-all checked:border-transparent checked:bg-linear-to-br hover:scale-110 hover:bg-slate-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
+            class="peer checked:from-accent-primary checked:to-accent-secondary focus-visible:ring-accent-primary/30 border-border bg-surface-sunken hover:border-border-strong hover:bg-text-muted h-5 w-5 cursor-pointer appearance-none rounded-lg border shadow-sm transition-all checked:border-transparent checked:bg-linear-to-br hover:scale-110 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
         />
         <svg
             class="text-text-on-accent pointer-events-none absolute h-3.5 w-3.5 opacity-0 transition-opacity duration-200 peer-checked:opacity-100"

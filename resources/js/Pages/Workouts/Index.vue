@@ -118,7 +118,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             >
                 <svg
                     v-if="isRefreshing"
-                    class="text-electric-orange h-6 w-6 animate-spin"
+                    class="text-accent-primary-deep h-6 w-6 animate-spin"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -132,7 +132,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 </svg>
                 <span
                     v-else
-                    class="material-symbols-outlined text-electric-orange transition-transform duration-200"
+                    class="material-symbols-outlined text-accent-primary-deep transition-transform duration-200"
                     :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
                     aria-hidden="true"
                 >
@@ -197,7 +197,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </GlassCard>
                     <GlassCard padding="p-4">
                         <div class="text-center">
-                            <div class="text-accent-success text-2xl font-bold">
+                            <div class="text-accent-state-deep text-2xl font-bold">
                                 {{ totalExercises || 0 }}
                             </div>
                             <div class="text-text-muted mt-1 text-xs">Exercices</div>
@@ -360,10 +360,14 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                 @click="confirmDeletion(workout)"
                                 :dusk="`delete-workout-${workout.id}`"
                                 :aria-label="`Supprimer la séance ${workout.name || 'sans nom'}`"
-                                class="flex h-full w-full items-center justify-center text-white transition-all active:scale-95"
+                                class="text-text-on-dark-accent flex h-full w-full items-center justify-center transition-all active:scale-95"
                                 style="
-                                    background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-                                    box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2);
+                                    background: linear-gradient(
+                                        135deg,
+                                        var(--color-accent-danger) 0%,
+                                        var(--color-accent-danger-deep) 100%
+                                    );
+                                    box-shadow: inset 0 2px 4px rgb(from var(--color-surface-card) r g b / 0.2);
                                 "
                             >
                                 <div class="flex flex-col items-center drop-shadow-md" aria-hidden="true">

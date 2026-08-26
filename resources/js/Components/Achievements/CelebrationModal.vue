@@ -127,7 +127,7 @@ const close = () => {
 
                         <!-- Text -->
                         <h2 class="text-text-main mb-1 text-xl font-bold" id="achievement-title">Badge Débloqué !</h2>
-                        <h3 class="text-accent-primary mb-3 text-lg font-bold">{{ achievement.name }}</h3>
+                        <h3 class="text-accent-primary-deep mb-3 text-lg font-bold">{{ achievement.name }}</h3>
                         <p class="text-text-muted mb-6 text-sm" id="achievement-description">
                             {{
                                 achievement.message?.replace(

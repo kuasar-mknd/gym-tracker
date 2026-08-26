@@ -53,8 +53,8 @@ const trackClasses = computed(() => {
     }
 
     const stateClass = props.modelValue
-        ? 'bg-electric-orange focus-visible:ring-electric-orange/30'
-        : 'bg-slate-300 focus-visible:ring-slate-400/30'
+        ? 'bg-accent-primary focus-visible:ring-accent-primary/30'
+        : 'bg-text-muted focus-visible:ring-text-muted/30'
 
     const disabledClass = props.disabled ? 'opacity-50 cursor-not-allowed' : ''
 
@@ -63,7 +63,7 @@ const trackClasses = computed(() => {
 
 const thumbClasses = computed(() => {
     const base =
-        'pointer-events-none inline-block transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out'
+        'pointer-events-none inline-block transform rounded-full bg-surface-card shadow-lg ring-0 transition duration-200 ease-in-out'
 
     const sizeMap = {
         sm: props.modelValue ? 'h-4 w-4 translate-x-4' : 'h-4 w-4 translate-x-0',

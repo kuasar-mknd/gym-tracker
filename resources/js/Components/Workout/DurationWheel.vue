@@ -320,7 +320,7 @@ const setColumnRef = (key) => (element) => {
     top: calc(var(--item) * 2);
     height: var(--item);
     border-radius: 12px;
-    background: rgb(120 120 128 / 0.16);
+    background: rgb(from var(--color-border-strong) r g b / 0.5);
     pointer-events: none;
 }
 

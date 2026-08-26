@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jeton } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 vi.mock('vue-chartjs', () => {
@@ -49,13 +50,13 @@ describe('DurationDistributionChart', () => {
             { label: '90+ min', count: 1 },
         ])
 
-        expect(chart.props('data').datasets[0].backgroundColor).toEqual(['#00E5FF', '#FF5500'])
+        expect(chart.props('data').datasets[0].backgroundColor).toEqual([jeton('accent-info'), jeton('accent-primary')])
     })
 
     it('retombe sur le gris pour une tranche inconnue', () => {
         const chart = chartOf([{ label: '120+ min', count: 2 }])
 
-        expect(chart.props('data').datasets[0].backgroundColor).toEqual(['#64748B'])
+        expect(chart.props('data').datasets[0].backgroundColor).toEqual([jeton('text-muted')])
     })
 
     it('ne découpe rien sans séance', () => {

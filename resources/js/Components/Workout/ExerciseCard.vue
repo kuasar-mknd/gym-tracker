@@ -62,7 +62,7 @@ const emit = defineEmits([
         <template #action-left>
             <button
                 @click="emit('start-edit', exercise)"
-                class="flex h-full w-full items-center justify-center bg-blue-500 text-white"
+                class="bg-accent-info text-text-on-dark-accent flex h-full w-full items-center justify-center"
                 data-testid="edit-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
@@ -104,16 +104,16 @@ const emit = defineEmits([
                 <Link
                     :href="route('exercises.show', { exercise: exercise.id })"
                     :dusk="`open-exercise-${exercise.id}`"
-                    class="focus-visible:ring-electric-orange flex min-w-0 flex-1 items-center gap-4 rounded-2xl focus-visible:ring-2 focus-visible:outline-none"
+                    class="focus-visible:ring-accent-primary flex min-w-0 flex-1 items-center gap-4 rounded-2xl focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <div
                         :class="[
                             'flex size-14 items-center justify-center rounded-2xl',
                             exercise.type === 'strength'
-                                ? 'bg-electric-orange/10 text-electric-orange'
+                                ? 'bg-accent-primary/10 text-accent-primary-deep'
                                 : exercise.type === 'cardio'
-                                  ? 'bg-neon-green/30 text-text-main'
-                                  : 'bg-cyan-pure/10 text-cyan-pure',
+                                  ? 'bg-accent-state/30 text-text-main'
+                                  : 'bg-accent-info/10 text-accent-info-deep',
                         ]"
                     >
                         <span class="material-symbols-outlined text-3xl" aria-hidden="true">
@@ -135,7 +135,7 @@ const emit = defineEmits([
                     <button
                         @click.stop="emit('start-edit', exercise)"
                         :dusk="`edit-exercise-btn-${exercise.id}`"
-                        class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange focus-visible:ring-electric-orange flex size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:hidden"
+                        class="text-text-muted hover:bg-accent-primary/10 hover:text-accent-primary-deep focus-visible:ring-accent-primary flex size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:hidden"
                         :aria-label="`Modifier ${exercise.name}`"
                     >
                         <span class="material-symbols-outlined text-sm opacity-50" aria-hidden="true">edit</span>
@@ -145,7 +145,7 @@ const emit = defineEmits([
                     <button
                         @click.stop="emit('start-edit', exercise)"
                         :dusk="`edit-exercise-btn-desktop-${exercise.id}`"
-                        class="text-text-muted hover:bg-electric-orange/10 hover:text-electric-orange focus-visible:ring-electric-orange hidden size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:flex"
+                        class="text-text-muted hover:bg-accent-primary/10 hover:text-accent-primary-deep focus-visible:ring-accent-primary hidden size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:flex"
                         data-testid="edit-exercise-button"
                         :aria-label="`Modifier ${exercise.name}`"
                     >
@@ -154,7 +154,7 @@ const emit = defineEmits([
                     <button
                         @click.stop="emit('delete', exercise.id)"
                         :dusk="`delete-exercise-btn-${exercise.id}`"
-                        class="text-text-muted focus-visible:ring-electric-orange hover:bg-accent-danger/10 hover:text-accent-danger hidden size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:flex"
+                        class="text-text-muted focus-visible:ring-accent-primary hover:bg-accent-danger/10 hover:text-accent-danger-deep hidden size-10 items-center justify-center rounded-xl transition-all focus-visible:ring-2 focus-visible:outline-none sm:flex"
                         data-testid="delete-exercise-button"
                         :aria-label="`Supprimer ${exercise.name}`"
                     >

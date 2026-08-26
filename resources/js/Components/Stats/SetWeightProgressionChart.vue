@@ -1,5 +1,6 @@
 <script setup>
 import { Line } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -33,9 +34,9 @@ const chartData = computed(() => {
 
     // Liquid Glass inspired colors for up to 3 sets
     const setColors = [
-        '#FF5500', // electric-orange
-        '#00E5FF', // cyan-pure
-        '#8800FF', // vivid-violet
+        jeton('accent-primary'), // electric-orange
+        jeton('accent-info'), // cyan-pure
+        jeton('accent-tertiary'), // vivid-violet
     ]
 
     for (let i = 0; i < maxSets; i++) {
@@ -64,7 +65,7 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
@@ -76,17 +77,17 @@ const chartOptions = {
             display: true,
             position: 'top',
             labels: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
                 usePointStyle: true,
                 boxWidth: 6,
             },
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#0F172A',
-            bodyColor: '#0F172A',
-            borderColor: 'rgba(0, 0, 0, 0.1)',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('shadow-cast', 0.1),
             borderWidth: 1,
             cornerRadius: 12,
             padding: 12,
@@ -101,21 +102,21 @@ const chartOptions = {
                 display: false,
             },
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
         },
         y: {
             grid: {
-                color: 'rgba(0, 0, 0, 0.05)',
+                color: jetonTransparent('shadow-cast', 0.05),
             },
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
         },
     },
-}
+}))
 </script>
 
 <template>

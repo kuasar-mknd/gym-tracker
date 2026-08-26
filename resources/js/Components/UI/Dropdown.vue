@@ -11,7 +11,7 @@ const props = defineProps({
         default: '48',
     },
     /*
-     * `bg-white/10` par defaut jusqu'ici : le panneau etait blanc a 10 %,
+     * `bg-surface-card/10` par defaut jusqu'ici : le panneau etait blanc a 10 %,
      * donc illisible sur le fond clair de l'application (#1314).
      * `glass-panel-strong` porte le jeton prevu pour une surface flottante,
      */
@@ -76,7 +76,7 @@ const open = ref(false)
                     Ni `style="display: none"` ni `shadow-lg` ici : `v-show`
                     pilote deja l'affichage, et l'ombre vient de
                     `glass-panel-strong`, avec la bordure qui suit le theme.
-                    La bordure `border-white/20` codee en dur disparaissait
+                    La bordure `border-glass-border/20` codee en dur disparaissait
                     en mode sombre.
                 -->
                 <div class="rounded-2xl" :class="contentClasses">

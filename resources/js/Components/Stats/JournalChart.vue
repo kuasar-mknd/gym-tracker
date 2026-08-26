@@ -1,5 +1,6 @@
 <script setup>
 import { Line } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -23,14 +24,30 @@ const props = defineProps({
     },
 })
 
+/**
+ * Les sept métriques du journal, dans les teintes de la palette.
+ *
+ * La palette et non les accents, pour deux raisons que ce composant a apprises
+ * à ses dépens. D'abord ces sept-là ne portent aucune intention : « Humeur » et
+ * « Stress » ne sont ni une alerte ni une confirmation, ils doivent seulement se
+ * distinguer l'un de l'autre. Les avoir pris dans les accents en repliait deux
+ * sur la même valeur — « Humeur » et « Motivation » devenaient le même rose, et
+ * sept boutons n'offraient plus que six couleurs.
+ *
+ * Ensuite le bouton actif prend sa couleur en fond et écrit son libellé
+ * par-dessus. Chaque teinte de la palette porte du blanc à 4,50:1 au minimum,
+ * calculé dans la charte : la lisibilité est donc acquise par construction, et
+ * non vérifiée après coup. Le violet des accents rendait 2,97:1 avec de l'encre,
+ * ce qu'aucune relecture n'avait vu.
+ */
 const metrics = [
-    { value: 'mood_score', label: 'Humeur', color: '#F472B6', labelSuffix: '/5' }, // Pink
-    { value: 'sleep_quality', label: 'Sommeil', color: '#818CF8', labelSuffix: '/5' }, // Indigo
-    { value: 'energy_level', label: 'Énergie', color: '#FACC15', labelSuffix: '/10' }, // Yellow
-    { value: 'stress_level', label: 'Stress', color: '#FB923C', labelSuffix: '/10' }, // Orange
-    { value: 'motivation_level', label: 'Motivation', color: '#F43F5E', labelSuffix: '/10' }, // Rose
-    { value: 'nutrition_score', label: 'Diète', color: '#34D399', labelSuffix: '/5' }, // Emerald
-    { value: 'training_intensity', label: 'Intensité', color: '#EF4444', labelSuffix: '/10' }, // Red
+    { value: 'mood_score', label: 'Humeur', color: jeton('palette-rose'), labelSuffix: '/5' },
+    { value: 'sleep_quality', label: 'Sommeil', color: jeton('palette-indigo'), labelSuffix: '/5' },
+    { value: 'energy_level', label: 'Énergie', color: jeton('palette-ambre'), labelSuffix: '/10' },
+    { value: 'stress_level', label: 'Stress', color: jeton('palette-orange'), labelSuffix: '/10' },
+    { value: 'motivation_level', label: 'Motivation', color: jeton('palette-framboise'), labelSuffix: '/10' },
+    { value: 'nutrition_score', label: 'Diète', color: jeton('palette-emeraude'), labelSuffix: '/5' },
+    { value: 'training_intensity', label: 'Intensité', color: jeton('palette-rouge'), labelSuffix: '/10' },
 ]
 
 const selectedMetric = ref('mood_score')
@@ -95,14 +112,14 @@ const chartOptions = computed(() => {
                 display: false,
             },
             tooltip: {
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                titleColor: '#1e293b',
-                bodyColor: '#1e293b',
+                backgroundColor: jetonTransparent('surface-card', 0.9),
+                titleColor: jeton('text-main'),
+                bodyColor: jeton('text-main'),
                 padding: 12,
                 cornerRadius: 12,
                 displayColors: false,
                 borderWidth: 1,
-                borderColor: 'rgba(0, 0, 0, 0.05)',
+                borderColor: jetonTransparent('shadow-cast', 0.05),
                 callbacks: {
                     label: (context) => `${context.parsed.y} ${currentMetricConfig.value.labelSuffix}`,
                 },
@@ -114,7 +131,7 @@ const chartOptions = computed(() => {
                     display: false,
                 },
                 ticks: {
-                    color: '#94a3b8',
+                    color: jeton('text-muted'),
                     font: { size: 10 },
                     maxRotation: 45,
                     minRotation: 0,
@@ -124,12 +141,12 @@ const chartOptions = computed(() => {
                 beginAtZero: true,
                 suggestedMax: currentMetricConfig.value.labelSuffix === '/5' ? 5 : 10,
                 ticks: {
-                    color: '#94a3b8',
+                    color: jeton('text-muted'),
                     font: { size: 10, weight: 'bold' },
                     stepSize: 1,
                 },
                 grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
+                    color: jetonTransparent('surface-card', 0.1),
                     borderDash: [5, 5],
                 },
                 border: {
@@ -151,9 +168,9 @@ const chartOptions = computed(() => {
                 @click="selectedMetric = metric.value"
                 :aria-pressed="selectedMetric === metric.value"
                 :class="[
-                    'focus-visible:ring-electric-orange rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-all focus-visible:ring-2 focus-visible:outline-none',
+                    'focus-visible:ring-accent-primary rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-all focus-visible:ring-2 focus-visible:outline-none',
                     selectedMetric === metric.value
-                        ? 'text-text-main scale-105 shadow-lg'
+                        ? 'text-text-on-dark-accent scale-105 shadow-lg'
                         : 'text-text-muted hover:text-text-main bg-surface-card/50 hover:bg-surface-card/80',
                 ]"
                 :style="selectedMetric === metric.value ? { backgroundColor: metric.color } : {}"
@@ -174,6 +191,6 @@ const chartOptions = computed(() => {
 
 <style scoped>
 canvas {
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    filter: drop-shadow(0 4px 6px rgb(from var(--color-shadow-cast) r g b / 0.1));
 }
 </style>

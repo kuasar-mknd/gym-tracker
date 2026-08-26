@@ -48,9 +48,9 @@ const typeLabel = computed(() => {
 const formattedDeadline = computed(() => parseCalendarDate(props.goal.deadline)?.toLocaleDateString() ?? '')
 
 const statusColor = computed(() => {
-    if (isCompleted.value) return 'text-green-500'
-    if (progress.value > 75) return 'text-blue-500'
-    if (progress.value > 25) return 'text-accent-primary'
+    if (isCompleted.value) return 'text-accent-state-deep'
+    if (progress.value > 75) return 'text-accent-info-deep'
+    if (progress.value > 25) return 'text-accent-primary-deep'
     return 'text-text-muted'
 })
 </script>
@@ -114,11 +114,13 @@ const statusColor = computed(() => {
                         :class="
                             isCompleted
                                 ? 'bg-accent-state'
-                                : 'from-electric-orange to-hot-pink shadow-glow-orange bg-linear-to-r'
+                                : 'from-accent-primary to-accent-secondary shadow-glow-orange bg-linear-to-r'
                         "
                         :style="{ width: progress + '%' }"
                     >
-                        <div class="absolute inset-0 animate-pulse bg-linear-to-r from-transparent to-white/30"></div>
+                        <div
+                            class="to-surface-card/30 absolute inset-0 animate-pulse bg-linear-to-r from-transparent"
+                        ></div>
                     </div>
                 </div>
             </div>
@@ -163,7 +165,7 @@ const statusColor = computed(() => {
                     :href="route('goals.edit', { goal: goal.id })"
                     :dusk="`edit-goal-${goal.id}`"
                     :aria-label="`Modifier l'objectif ${goal.title}`"
-                    class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                     <span class="material-symbols-outlined text-[18px]" aria-hidden="true">edit</span>
                     Modifier
@@ -172,7 +174,7 @@ const statusColor = computed(() => {
                     type="button"
                     :dusk="`delete-goal-${goal.id}`"
                     :aria-label="`Supprimer l'objectif ${goal.title}`"
-                    class="focus-visible:ring-electric-orange min-h-touch border-accent-danger/30 bg-accent-danger/10 text-accent-danger hover:bg-accent-danger/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    class="focus-visible:ring-accent-primary min-h-touch border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     @click="emit('delete', goal)"
                 >
                     <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span>

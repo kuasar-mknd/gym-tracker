@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { computed } from 'vue'
 
@@ -24,29 +25,29 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, '#ff4b2b') // Electric orange shade
-                    gradient.addColorStop(1, '#ff416c') // Hot pink shade
+                    gradient.addColorStop(0, jeton('accent-primary')) // Electric orange shade
+                    gradient.addColorStop(1, jeton('accent-secondary')) // Hot pink shade
                     return gradient
                 },
                 borderRadius: 4,
                 barPercentage: 0.5,
                 borderWidth: 0,
-                hoverBackgroundColor: '#8800FF',
+                hoverBackgroundColor: jeton('accent-tertiary'),
             },
         ],
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            borderColor: 'rgba(255, 65, 108, 0.2)',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('accent-secondary', 0.2),
             borderWidth: 1,
             padding: 10,
             cornerRadius: 12,
@@ -60,7 +61,7 @@ const chartOptions = {
         x: {
             grid: { display: false },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
             },
             border: { display: false },
@@ -70,7 +71,7 @@ const chartOptions = {
             beginAtZero: true,
         },
     },
-}
+}))
 </script>
 
 <template>

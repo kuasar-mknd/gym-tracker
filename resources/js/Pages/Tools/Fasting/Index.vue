@@ -188,7 +188,7 @@ const formatHistoryDuration = (start, end) => {
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('tools.index')"
-                    class="text-text-muted hover:text-electric-orange border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors"
+                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
@@ -209,7 +209,7 @@ const formatHistoryDuration = (start, end) => {
                                 cy="50"
                                 r="45"
                                 fill="none"
-                                stroke="rgba(255,255,255,0.1)"
+                                stroke="rgb(from var(--color-surface-card) r g b / 0.1)"
                                 stroke-width="8"
                             />
                             <!-- Progress Circle -->
@@ -227,8 +227,8 @@ const formatHistoryDuration = (start, end) => {
                             />
                             <defs>
                                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stop-color="#FF9F43" />
-                                    <stop offset="100%" stop-color="#FF5252" />
+                                    <stop offset="0%" style="stop-color: var(--color-accent-primary)" />
+                                    <stop offset="100%" style="stop-color: var(--color-accent-danger)" />
                                 </linearGradient>
                             </defs>
                         </svg>
@@ -276,7 +276,7 @@ const formatHistoryDuration = (start, end) => {
                          to a field, so without this the rejection is invisible. -->
                     <p
                         v-if="Object.keys(startForm.errors).length"
-                        class="text-accent-danger text-sm font-bold"
+                        class="text-accent-danger-deep text-sm font-bold"
                         role="alert"
                         dusk="fasting-error"
                     >
@@ -297,7 +297,7 @@ const formatHistoryDuration = (start, end) => {
                 </div>
 
                 <div v-if="history.data.filter((f) => f.end_time).length === 0" class="py-8 text-center">
-                    <span class="material-symbols-outlined mb-2 text-4xl text-slate-200" aria-hidden="true"
+                    <span class="material-symbols-outlined text-surface-sunken mb-2 text-4xl" aria-hidden="true"
                         >show_chart</span
                     >
                     <p class="text-text-muted text-sm font-medium">Pas assez de données pour afficher le graphique.</p>
@@ -335,7 +335,7 @@ const formatHistoryDuration = (start, end) => {
                                 type="button"
                                 @click="deleteFast(fast.id)"
                                 :aria-label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
-                                class="focus-visible:ring-electric-orange text-accent-danger hover:text-accent-danger/70 relative rounded-lg p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary text-accent-danger-deep hover:text-accent-danger/70 relative rounded-lg p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                             </button>

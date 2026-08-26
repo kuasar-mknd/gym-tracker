@@ -118,7 +118,7 @@ const deleteTemplate = (templateId) => {
                                     :href="route('templates.edit', { template: template.id })"
                                     :dusk="`edit-template-${template.id}`"
                                     :aria-label="`Modifier ${template.name}`"
-                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary hover:bg-surface-sunken rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
                                     <span class="material-symbols-outlined block text-xl" aria-hidden="true">edit</span>
                                 </Link>
@@ -129,7 +129,7 @@ const deleteTemplate = (templateId) => {
                                     @click="deleteTemplate(template.id)"
                                     :dusk="`delete-template-${template.id}`"
                                     :aria-label="`Supprimer ${template.name}`"
-                                    class="text-text-muted focus-visible:ring-accent-primary hover:bg-accent-danger/10 hover:text-accent-danger rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                    class="text-text-muted focus-visible:ring-accent-primary hover:bg-accent-danger/10 hover:text-accent-danger-deep rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
                                     <svg
                                         class="h-5 w-5"

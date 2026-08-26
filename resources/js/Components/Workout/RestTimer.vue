@@ -237,7 +237,7 @@ watch(
                 <button
                     @click="close"
                     dusk="close-timer-x"
-                    class="focus-visible:ring-electric-orange bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                    class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                     aria-label="Fermer le minuteur"
                     title="Fermer le minuteur"
                 >
@@ -263,7 +263,7 @@ watch(
                         <button
                             @click="addTime(30)"
                             dusk="add-30s"
-                            class="focus-visible:ring-electric-orange bg-surface-card/40 text-text-main hover:bg-surface-card/60 flex h-10 w-10 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="focus-visible:ring-accent-primary bg-surface-card/40 text-text-main hover:bg-surface-card/60 flex h-10 w-10 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             title="Ajouter 30 secondes"
                             aria-label="Ajouter 30 secondes"
                         >
@@ -272,7 +272,7 @@ watch(
 
                         <button
                             @click="toggleTimer"
-                            class="bg-accent-primary focus-visible:ring-electric-orange text-text-on-accent shadow-accent-primary/20 flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
                             :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
                         >
@@ -292,7 +292,7 @@ watch(
                     <button
                         @click="skipTimer"
                         dusk="skip-rest-timer"
-                        class="focus-visible:ring-electric-orange border-surface-card/20 bg-surface-card/20 text-text-main hover:bg-surface-card/30 flex flex-1 items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                        class="focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/20 text-text-main hover:bg-surface-card/30 flex flex-1 items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                         title="Passer le repos"
                         aria-label="Passer le repos"
                     >
@@ -301,7 +301,7 @@ watch(
                     <button
                         @click="close"
                         dusk="close-timer"
-                        class="focus-visible:ring-electric-orange bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken rounded-xl px-3 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                        class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken rounded-xl px-3 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                         title="Fermer le minuteur"
                         aria-label="Fermer le minuteur"
                     >

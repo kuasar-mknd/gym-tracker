@@ -129,7 +129,7 @@ describe('GoalCard — completion', () => {
         const done = wrapper.get('.text-right > div').classes().join(' ')
         const running = mountCard({ progress_pct: 30 }).get('.text-right > div').classes().join(' ')
 
-        expect(done).toContain('green')
+        expect(done).toContain('accent-state')
         expect(done).not.toBe(running)
     })
 })

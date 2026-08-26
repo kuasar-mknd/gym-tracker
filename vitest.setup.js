@@ -1,5 +1,28 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { vi } from 'vitest'
 import { config } from '@vue/test-utils'
+
+/*
+ * La charte, chargée pour de vrai.
+ *
+ * jsdom n'applique aucune feuille de style : `getComputedStyle` y rend une
+ * chaîne vide pour toute variable, donc `Utils/couleurs.js` ne trouvait rien et
+ * les graphiques recevaient des dégradés sans couleur. C'est précisément le
+ * défaut qui s'est vu à l'écran — un anneau aux segments noirs — et il est
+ * heureux que les tests le reproduisent plutôt que de le manquer.
+ *
+ * Poser ici une liste de variables écrite à la main aurait recréé la panne que
+ * toute cette charte existe pour supprimer : une deuxième copie des valeurs,
+ * libre de diverger. On lit donc `app.css`, le registre lui-même. Un test qui
+ * vérifie qu'un graphique emploie l'orange de la charte vérifie alors le vrai
+ * orange, et le jour où il change, il change des deux côtés à la fois.
+ */
+const charte = readFileSync(resolve(__dirname, 'resources/css/app.css'), 'utf-8')
+
+for (const [, nom, valeur] of charte.matchAll(/--color-([a-z0-9-]+):\s*([^;]+);/g)) {
+    document.documentElement.style.setProperty(`--color-${nom}`, valeur.trim())
+}
 
 /*
  * jsdom ships no canvas, so every chart component that reaches for a drawing

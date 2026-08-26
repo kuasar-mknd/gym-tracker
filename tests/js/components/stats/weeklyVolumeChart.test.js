@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 /**
@@ -96,8 +97,8 @@ describe('WeeklyVolumeChart', () => {
             // the fill left-to-right, across days rather than towards the axis.
             expect(created[0].coordinates).toEqual([0, 0, 0, 200])
             expect(created[0].stops.map(([offset]) => offset)).toEqual([0, 1])
-            expect(created[0].stops[0][1]).toBe('rgba(255, 85, 0, 0.2)')
-            expect(created[0].stops[1][1]).toBe('rgba(255, 85, 0, 0)')
+            expect(created[0].stops[0][1]).toBe(jetonTransparent('accent-primary', 0.2))
+            expect(created[0].stops[1][1]).toBe(jetonTransparent('accent-primary', 0))
         })
 
         it('trace la ligne de gauche à droite, orange vers violet', () => {
@@ -107,9 +108,9 @@ describe('WeeklyVolumeChart', () => {
 
             expect(created[0].coordinates).toEqual([10, 0, 310, 0])
             expect(created[0].stops).toEqual([
-                [0, '#FF5500'],
-                [0.5, '#FF0080'],
-                [1, '#8800FF'],
+                [0, jeton('accent-primary')],
+                [0.5, jeton('accent-secondary')],
+                [1, jeton('accent-tertiary')],
             ])
         })
 

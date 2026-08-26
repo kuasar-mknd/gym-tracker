@@ -49,7 +49,7 @@ const editingHabit = ref(null)
 const form = useForm({
     name: '',
     description: '',
-    color: 'bg-slate-500',
+    color: 'bg-palette-ardoise',
     icon: 'check_circle',
     goal_times_per_week: 7,
 })
@@ -72,23 +72,32 @@ const icons = [
     'savings',
     'book',
 ]
+/*
+ * Les seize couleurs de la palette utilisateur. Elles nomment des jetons de la
+ * charte (`--color-palette-*`) et non des nuances de Tailwind : chacune y est
+ * calculee pour porter du blanc, ce que la pastille ecrit sans le demander.
+ *
+ * La valeur est PERSISTEE telle quelle — `habits.color` contient la classe. La
+ * renommer demande donc une migration, et il y en a une :
+ * `2026_08_26_000000_les_couleurs_d_habitude_nomment_la_charte`.
+ */
 const colors = [
-    'bg-slate-500',
-    'bg-red-500',
-    'bg-orange-500',
-    'bg-amber-500',
-    'bg-green-500',
-    'bg-emerald-500',
-    'bg-teal-500',
-    'bg-cyan-500',
-    'bg-sky-500',
-    'bg-blue-500',
-    'bg-indigo-500',
-    'bg-violet-500',
-    'bg-purple-500',
-    'bg-fuchsia-500',
-    'bg-pink-500',
-    'bg-rose-500',
+    'bg-palette-ardoise',
+    'bg-palette-rouge',
+    'bg-palette-orange',
+    'bg-palette-ambre',
+    'bg-palette-vert',
+    'bg-palette-emeraude',
+    'bg-palette-turquoise',
+    'bg-palette-cyan',
+    'bg-palette-ciel',
+    'bg-palette-bleu',
+    'bg-palette-indigo',
+    'bg-palette-violet',
+    'bg-palette-pourpre',
+    'bg-palette-fuchsia',
+    'bg-palette-rose',
+    'bg-palette-framboise',
 ]
 
 /**
@@ -101,22 +110,22 @@ const colors = [
  * act on.
  */
 const colorNames = {
-    'bg-slate-500': 'Ardoise',
-    'bg-red-500': 'Rouge',
-    'bg-orange-500': 'Orange',
-    'bg-amber-500': 'Ambre',
-    'bg-green-500': 'Vert',
-    'bg-emerald-500': 'Émeraude',
-    'bg-teal-500': 'Turquoise',
-    'bg-cyan-500': 'Cyan',
-    'bg-sky-500': 'Bleu ciel',
-    'bg-blue-500': 'Bleu',
-    'bg-indigo-500': 'Indigo',
-    'bg-violet-500': 'Violet',
-    'bg-purple-500': 'Pourpre',
-    'bg-fuchsia-500': 'Fuchsia',
-    'bg-pink-500': 'Rose',
-    'bg-rose-500': 'Framboise',
+    'bg-palette-ardoise': 'Ardoise',
+    'bg-palette-rouge': 'Rouge',
+    'bg-palette-orange': 'Orange',
+    'bg-palette-ambre': 'Ambre',
+    'bg-palette-vert': 'Vert',
+    'bg-palette-emeraude': 'Émeraude',
+    'bg-palette-turquoise': 'Turquoise',
+    'bg-palette-cyan': 'Cyan',
+    'bg-palette-ciel': 'Bleu ciel',
+    'bg-palette-bleu': 'Bleu',
+    'bg-palette-indigo': 'Indigo',
+    'bg-palette-violet': 'Violet',
+    'bg-palette-pourpre': 'Pourpre',
+    'bg-palette-fuchsia': 'Fuchsia',
+    'bg-palette-rose': 'Rose',
+    'bg-palette-framboise': 'Framboise',
 }
 
 const iconNames = {
@@ -338,7 +347,10 @@ const getProgressPercent = (habit) => {
                         :class="{ 'bg-accent-primary/5': day.is_today }"
                     >
                         <div class="text-text-muted text-[10px] uppercase">{{ day.day_short || day.day }}</div>
-                        <div class="text-sm font-bold" :class="day.is_today ? 'text-accent-primary' : 'text-text-main'">
+                        <div
+                            class="text-sm font-bold"
+                            :class="day.is_today ? 'text-accent-primary-deep' : 'text-text-main'"
+                        >
                             {{ day.day_num }}
                         </div>
                     </div>
@@ -364,7 +376,7 @@ const getProgressPercent = (habit) => {
                         <div class="relative col-span-7 flex min-w-0 flex-col justify-center p-4 sm:col-span-1">
                             <div class="flex items-center gap-3">
                                 <div
-                                    class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white sm:flex"
+                                    class="text-text-on-dark-accent hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex"
                                     :class="habit.color"
                                 >
                                     <span class="material-symbols-outlined" aria-hidden="true">{{ habit.icon }}</span>
@@ -401,7 +413,7 @@ const getProgressPercent = (habit) => {
                                 </button>
                                 <button
                                     @click="deleteHabit(habit)"
-                                    class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger flex items-center justify-center rounded-lg"
+                                    class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger-deep flex items-center justify-center rounded-lg"
                                     aria-label="Supprimer l'habitude"
                                 >
                                     <span class="material-symbols-outlined text-sm" aria-hidden="true">delete</span>
@@ -429,8 +441,8 @@ const getProgressPercent = (habit) => {
                                 class="flex size-11 shrink-0 items-center justify-center rounded-full transition-all active:scale-95"
                                 :class="[
                                     isCompleted(habit, day.date)
-                                        ? `${habit.color} text-white shadow-md`
-                                        : 'bg-surface-sunken text-slate-300 hover:bg-slate-200',
+                                        ? `${habit.color} text-text-on-dark-accent shadow-md`
+                                        : 'bg-surface-sunken text-text-muted hover:bg-surface-sunken',
                                 ]"
                             >
                                 <span class="material-symbols-outlined text-lg" aria-hidden="true">check</span>
@@ -515,7 +527,7 @@ const getProgressPercent = (habit) => {
                                 class="focus-visible:ring-accent-primary hover:bg-surface-sunken flex h-10 w-10 items-center justify-center rounded-lg border-2 transition focus-visible:ring-2 focus-visible:outline-none"
                                 :class="[
                                     form.icon === icon
-                                        ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
+                                        ? 'border-accent-primary bg-accent-primary/10 text-accent-primary-deep'
                                         : 'text-text-muted border-transparent',
                                 ]"
                             >

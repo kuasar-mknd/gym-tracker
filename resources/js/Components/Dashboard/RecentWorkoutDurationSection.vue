@@ -15,7 +15,7 @@ defineProps({
         style="animation-delay: 0.2s"
     >
         <div class="relative z-10 mb-6">
-            <h3 class="text-cyan-pure mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Endurance</h3>
+            <h3 class="text-accent-info-deep mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Endurance</h3>
             <p class="font-display text-text-main text-2xl font-black uppercase italic">Durée Récente</p>
         </div>
 

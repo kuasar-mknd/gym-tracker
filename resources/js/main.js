@@ -1,4 +1,5 @@
 import '../css/app.css'
+import { jeton } from '@/Utils/couleurs'
 import './bootstrap'
 
 // Initialize theme early to prevent flash of wrong theme
@@ -101,6 +102,10 @@ createInertiaApp({
         return app.mount(el)
     },
     progress: {
-        color: '#4B5563',
+        /*
+         * La barre de chargement d'Inertia. Elle veut une valeur, pas une
+         * classe — on la prend donc dans la charte au démarrage, une seule fois.
+         */
+        color: jeton('text-muted'),
     },
 })

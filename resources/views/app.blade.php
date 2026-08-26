@@ -7,7 +7,7 @@
         content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta property="csp-nonce" content="{{ Vite::cspNonce() }}">
-    <meta name="theme-color" content="#F8FAFF">
+    <meta name="theme-color" content="{{ \App\Support\Charte::jeton('surface-page') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="apple-touch-icon" href="/logo.svg">

@@ -4,7 +4,7 @@
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('profile.index')"
-                    class="text-text-muted hover:text-electric-orange focus-visible:ring-electric-orange border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    class="text-text-muted hover:text-accent-primary-deep focus-visible:ring-accent-primary border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     aria-label="Retour au profil"
                     v-press
                 >
@@ -21,7 +21,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-primary/20 text-accent-primary rounded-full p-4">
+                        <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"
@@ -52,7 +52,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-secondary/20 text-accent-secondary rounded-full p-4">
+                        <div class="bg-accent-secondary/20 text-accent-secondary-deep rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"
@@ -83,7 +83,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-electric-orange/20 text-electric-orange rounded-full p-4">
+                        <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"
@@ -114,7 +114,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="rounded-full bg-emerald-500/20 p-4 text-emerald-500">
+                        <div class="bg-accent-state/20 text-trend-up rounded-full p-4">
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true"
                                 >local_fire_department</span
                             >
@@ -133,7 +133,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="rounded-full bg-blue-500/20 p-4 text-blue-500">
+                        <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 class="h-8 w-8"
@@ -164,7 +164,7 @@
                     class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
-                        <div class="bg-accent-info/20 text-accent-info rounded-full p-4">
+                        <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
                             <span class="material-symbols-outlined text-3xl" aria-hidden="true">water_drop</span>
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Suivi Hydratation</h3>

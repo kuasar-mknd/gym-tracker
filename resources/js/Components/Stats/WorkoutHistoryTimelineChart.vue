@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -56,10 +57,10 @@ const chartData = computed(() => {
                 type: 'line',
                 label: 'Durée (min)',
                 data: durations,
-                borderColor: '#FF0080', // hot-pink
+                borderColor: jeton('accent-secondary'), // hot-pink
                 borderWidth: 3,
                 pointBackgroundColor: '#fff',
-                pointBorderColor: '#FF0080',
+                pointBorderColor: jeton('accent-secondary'),
                 pointBorderWidth: 2,
                 pointRadius: 4,
                 tension: 0.4,
@@ -75,8 +76,8 @@ const chartData = computed(() => {
                     if (!chartArea) return null
 
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, 'rgba(255, 85, 0, 0.4)') // electric-orange with opacity
-                    gradient.addColorStop(1, 'rgba(255, 0, 128, 0.8)') // hot-pink with opacity
+                    gradient.addColorStop(0, jetonTransparent('accent-primary', 0.4)) // electric-orange with opacity
+                    gradient.addColorStop(1, jetonTransparent('accent-secondary', 0.8)) // hot-pink with opacity
 
                     return gradient
                 },
@@ -88,7 +89,7 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -96,17 +97,17 @@ const chartOptions = {
             display: true,
             position: 'top',
             labels: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
                 usePointStyle: true,
                 pointStyle: 'circle',
             },
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            borderColor: 'rgba(255, 85, 0, 0.2)',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('accent-primary', 0.2),
             borderWidth: 1,
             padding: 10,
             cornerRadius: 12,
@@ -125,7 +126,7 @@ const chartOptions = {
         x: {
             grid: { display: false },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
             },
             border: { display: false },
@@ -136,7 +137,7 @@ const chartOptions = {
             position: 'left',
             beginAtZero: true,
             grid: {
-                color: 'rgba(255, 255, 255, 0.05)',
+                color: jetonTransparent('surface-card', 0.05),
             },
         },
         y1: {
@@ -149,7 +150,7 @@ const chartOptions = {
             },
         },
     },
-}
+}))
 </script>
 
 <template>

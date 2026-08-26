@@ -31,7 +31,7 @@
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 border-border bg-surface-card/50 hover:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -48,7 +48,7 @@
                                     type="number"
                                     v-model="form.bar_weight"
                                     placeholder="20"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 border-border bg-surface-card/50 hover:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -71,7 +71,7 @@
                             >
                                 <div class="flex items-center gap-4">
                                     <div
-                                        class="bg-electric-orange/10 text-electric-orange flex h-10 w-10 items-center justify-center rounded-full font-bold"
+                                        class="bg-accent-primary/10 text-accent-primary-deep flex h-10 w-10 items-center justify-center rounded-full font-bold"
                                     >
                                         {{ index + 1 }}
                                     </div>
@@ -115,7 +115,7 @@
 
                     <p
                         v-if="saveError"
-                        class="text-accent-danger text-sm font-bold"
+                        class="text-accent-danger-deep text-sm font-bold"
                         role="alert"
                         dusk="warmup-save-error"
                     >
@@ -143,7 +143,7 @@
                                         type="number"
                                         v-model="step.percent"
                                         :aria-label="`Pourcentage, palier ${index + 1}`"
-                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition-all outline-none focus:ring-1"
+                                        class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition-all outline-none focus:ring-1"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -155,7 +155,7 @@
                                     type="number"
                                     v-model="step.reps"
                                     :aria-label="`Répétitions, palier ${index + 1}`"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition-all outline-none focus:ring-1"
+                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition-all outline-none focus:ring-1"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -164,14 +164,14 @@
                                     v-model="step.label"
                                     :aria-label="`Label, palier ${index + 1}`"
                                     placeholder="ex: Barre vide"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 border-border bg-surface-card/50 placeholder-text-muted hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base transition-all outline-none focus:ring-1"
+                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 placeholder-text-muted hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base transition-all outline-none focus:ring-1"
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">
                                 <button
                                     type="button"
                                     @click="removeStep(index)"
-                                    class="text-text-muted hover:text-accent-danger relative transition-colors before:absolute before:-inset-3.5 before:content-[''] active:scale-95"
+                                    class="text-text-muted hover:text-accent-danger-deep relative transition-colors before:absolute before:-inset-3.5 before:content-[''] active:scale-95"
                                     :disabled="form.steps.length <= 1"
                                     :aria-label="`Supprimer le palier ${index + 1}`"
                                 >
@@ -200,7 +200,7 @@
                                 class="flex-1 rounded-xl border py-2 text-sm font-bold backdrop-blur-md transition-all active:scale-95"
                                 :class="
                                     form.rounding_increment === inc
-                                        ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,107,0,0.3)]'
+                                        ? 'border-accent-primary bg-accent-primary/20 text-accent-primary-deep shadow-[0_0_15px_rgb(from var(--color-accent-primary) r g b / 0.3)]'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:bg-surface-card/80'
                                 "
                             >

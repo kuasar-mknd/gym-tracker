@@ -69,7 +69,7 @@ const handlePeriodChange = (period) => {
                         :class="[
                             'rounded-lg px-3 py-1.5 text-[10px] font-black tracking-wider uppercase transition-all',
                             currentPeriod === period.value
-                                ? 'bg-cyan-pure text-text-main shadow-sm'
+                                ? 'bg-accent-info text-text-main shadow-sm'
                                 : 'text-text-muted hover:text-text-main',
                         ]"
                         :aria-pressed="currentPeriod === period.value"

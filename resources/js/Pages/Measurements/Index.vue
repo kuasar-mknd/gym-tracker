@@ -125,9 +125,9 @@ const latestBodyFat = computed(() => {
                             :class="[
                                 'text-3xl font-bold',
                                 weightDiff > 0
-                                    ? 'text-accent-warning'
+                                    ? 'text-trend-down'
                                     : weightDiff < 0
-                                      ? 'text-accent-success'
+                                      ? 'text-trend-up'
                                       : 'text-text-muted',
                             ]"
                         >
@@ -138,7 +138,7 @@ const latestBodyFat = computed(() => {
                 </GlassCard>
                 <GlassCard padding="p-4">
                     <div class="text-center">
-                        <div class="text-3xl font-bold text-pink-600">
+                        <div class="text-accent-secondary-deep text-3xl font-bold">
                             {{ latestBodyFat ? `${latestBodyFat}%` : '—' }}
                         </div>
                         <div class="text-text-muted mt-1 text-sm font-semibold">Masse Grasse</div>
@@ -206,7 +206,9 @@ const latestBodyFat = computed(() => {
                 <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
                     <!-- Weight Chart -->
                     <GlassCard>
-                        <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">
+                        <h3
+                            class="font-display text-accent-info-deep mb-4 text-xs font-black tracking-[0.2em] uppercase"
+                        >
                             Évolution Poids
                         </h3>
                         <div class="h-64">
@@ -222,7 +224,9 @@ const latestBodyFat = computed(() => {
 
                     <!-- Body Fat Chart -->
                     <GlassCard>
-                        <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-pink-600 uppercase">
+                        <h3
+                            class="font-display text-accent-secondary-deep mb-4 text-xs font-black tracking-[0.2em] uppercase"
+                        >
                             Évolution Masse Grasse
                         </h3>
                         <div class="h-64">
@@ -240,7 +244,9 @@ const latestBodyFat = computed(() => {
 
             <!-- History -->
             <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="font-display mb-3 text-xs font-black tracking-[0.2em] text-sky-600 uppercase">Historique</h3>
+                <h3 class="font-display text-accent-info-deep mb-3 text-xs font-black tracking-[0.2em] uppercase">
+                    Historique
+                </h3>
 
                 <div v-if="measurements.length === 0">
                     <GlassCard>
@@ -259,7 +265,7 @@ const latestBodyFat = computed(() => {
                                     <span class="text-text-main text-xl font-bold">{{ measurement.weight }} kg</span>
                                     <span
                                         v-if="measurement.body_fat"
-                                        class="rounded-full bg-pink-50 px-2 py-0.5 text-xs font-bold text-pink-600"
+                                        class="bg-accent-secondary/15 text-accent-secondary-deep rounded-full px-2 py-0.5 text-xs font-bold"
                                         >{{ measurement.body_fat }}% BF</span
                                     >
                                 </div>
@@ -281,7 +287,7 @@ const latestBodyFat = computed(() => {
                                 type="button"
                                 @click="deleteMeasurement(measurement.id)"
                                 :aria-label="`Supprimer la mesure du ${measurement.measured_at.substring(0, 10)}`"
-                                class="text-text-muted/30 hover:text-accent-danger rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                                class="text-text-muted/30 hover:text-accent-danger-deep rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                             >
                                 <svg
                                     aria-hidden="true"

@@ -59,7 +59,7 @@ const sizeClasses = {
         :aria-label="ariaLabel || $attrs['aria-label']"
         :title="ariaLabel"
         :class="[
-            'glass-button focus-visible:ring-electric-orange transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+            'glass-button focus-visible:ring-accent-primary transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
             sizeClasses[size],
             {
                 'glass-button-primary': variant === 'primary',

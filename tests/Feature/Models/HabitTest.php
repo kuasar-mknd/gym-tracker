@@ -30,7 +30,7 @@ test('user can create a habit', function (): void {
         ->post(route('habits.store'), [
             'name' => 'Drink Water',
             'goal_times_per_week' => 7,
-            'color' => 'bg-blue-500',
+            'color' => 'bg-palette-bleu',
             'icon' => 'water_drop',
         ])
         ->assertRedirect();
@@ -50,7 +50,7 @@ test('user can update a habit', function (): void {
         ->put(route('habits.update', $habit), [
             'name' => 'Updated Name',
             'goal_times_per_week' => 5,
-            'color' => 'bg-red-500',
+            'color' => 'bg-palette-rouge',
             'icon' => 'edit',
             'archived' => false,
         ])

@@ -1,5 +1,6 @@
 <script setup>
 import { Doughnut } from 'vue-chartjs'
+import { jeton } from '@/Utils/couleurs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { computed, ref } from 'vue'
 import { optionsDAnneau, pluginCentreDAnneau } from '@/Utils/donut'
@@ -20,19 +21,19 @@ const chartData = computed(() => {
             {
                 data: props.data.map((item) => item.count),
                 backgroundColor: [
-                    '#38BDF8', // Sky 400 (Matin)
-                    '#F59E0B', // Amber 500 (Après-midi)
-                    '#8B5CF6', // Violet 500 (Soir)
-                    '#312E81', // Indigo 900 (Nuit)
+                    jeton('accent-info'), // Sky 400 (Matin)
+                    jeton('accent-warning'), // Amber 500 (Après-midi)
+                    jeton('accent-tertiary'), // Violet 500 (Soir)
+                    jeton('accent-tertiary'), // Indigo 900 (Nuit)
                 ],
                 hoverBackgroundColor: [
-                    '#0EA5E9', // Sky 500
-                    '#D97706', // Amber 600
-                    '#7C3AED', // Violet 600
-                    '#1E1B4B', // Indigo 950
+                    jeton('accent-info'), // Sky 500
+                    jeton('accent-primary'), // Amber 600
+                    jeton('accent-tertiary'), // Violet 600
+                    jeton('accent-tertiary'), // Indigo 950
                 ],
                 borderWidth: 2,
-                borderColor: '#ffffff',
+                borderColor: jeton('surface-card'),
                 hoverOffset: 4,
             },
         ],

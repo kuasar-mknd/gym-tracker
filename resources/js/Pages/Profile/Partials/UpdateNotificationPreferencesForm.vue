@@ -290,13 +290,13 @@ const updatePreferences = () => {
                     leave-active-class="transition ease-in-out"
                     leave-to-class="opacity-0"
                 >
-                    <p v-if="recentlySuccessful" class="text-sm text-emerald-400">Enregistré.</p>
+                    <p v-if="recentlySuccessful" class="text-trend-up text-sm">Enregistré.</p>
                 </Transition>
             </div>
 
             <p
                 v-if="pushError"
-                class="text-accent-danger text-sm font-bold"
+                class="text-accent-danger-deep text-sm font-bold"
                 role="alert"
                 dusk="notification-push-error"
             >

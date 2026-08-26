@@ -200,7 +200,9 @@ const submit = () => {
                             <span
                                 :id="'template-description-counter-' + template.id"
                                 class="text-[10px] font-bold tracking-wider uppercase"
-                                :class="form.description?.length > 1000 ? 'text-red-400' : 'text-text-muted/50'"
+                                :class="
+                                    form.description?.length > 1000 ? 'text-accent-danger-deep' : 'text-text-muted/50'
+                                "
                             >
                                 {{ form.description?.length || 0 }} / 1000
                             </span>
@@ -211,10 +213,10 @@ const submit = () => {
                             rows="2"
                             maxlength="1000"
                             :aria-describedby="'template-description-counter-' + template.id"
-                            class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none"
+                            class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 focus:shadow-[0_0_15px_rgb(from var(--color-surface-card) r g b / 0.1)] w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:ring-0 focus:outline-none"
                             placeholder="Détails de la séance..."
                         ></textarea>
-                        <p v-if="form.errors.description" class="text-accent-danger mt-2 text-sm font-medium">
+                        <p v-if="form.errors.description" class="text-accent-danger-deep mt-2 text-sm font-medium">
                             {{ form.errors.description }}
                         </p>
                     </div>
@@ -231,7 +233,7 @@ const submit = () => {
                                 v-press
                                 @click="removeExercise(exIndex)"
                                 type="button"
-                                class="text-text-muted/30 focus-visible:ring-electric-orange hover:text-accent-danger absolute top-4 right-4 rounded-lg transition-all focus-visible:ring-2 focus-visible:outline-none"
+                                class="text-text-muted/30 focus-visible:ring-accent-primary hover:text-accent-danger-deep absolute top-4 right-4 rounded-lg transition-all focus-visible:ring-2 focus-visible:outline-none"
                                 aria-label="Supprimer l'exercice"
                             >
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -276,10 +278,10 @@ const submit = () => {
                                         v-press="{ haptic: 'selection' }"
                                         @click="set.is_warmup = !set.is_warmup"
                                         type="button"
-                                        class="focus-visible:ring-electric-orange h-10 rounded-lg px-2 py-1 text-[10px] font-bold transition focus-visible:ring-2 focus-visible:outline-none"
+                                        class="focus-visible:ring-accent-primary h-10 rounded-lg px-2 py-1 text-[10px] font-bold transition focus-visible:ring-2 focus-visible:outline-none"
                                         :class="
                                             set.is_warmup
-                                                ? 'bg-accent-primary/20 text-accent-primary'
+                                                ? 'bg-accent-primary/20 text-accent-primary-deep'
                                                 : 'text-text-muted/50 bg-surface-sunken'
                                         "
                                         aria-label="Série d'échauffement"
@@ -291,7 +293,7 @@ const submit = () => {
                                         v-press
                                         @click="removeSet(exIndex, setIndex)"
                                         type="button"
-                                        class="text-text-muted/20 focus-visible:ring-electric-orange hover:text-accent-danger ml-auto rounded-lg p-1 transition-all focus-visible:ring-2 focus-visible:outline-none"
+                                        class="text-text-muted/20 focus-visible:ring-accent-primary hover:text-accent-danger-deep ml-auto rounded-lg p-1 transition-all focus-visible:ring-2 focus-visible:outline-none"
                                         aria-label="Supprimer la série"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,7 +310,7 @@ const submit = () => {
                                     v-press
                                     @click="addSet(exIndex)"
                                     type="button"
-                                    class="text-accent-primary focus-visible:ring-electric-orange rounded-lg text-xs transition-all hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                                    class="text-accent-primary-deep focus-visible:ring-accent-primary rounded-lg text-xs transition-all hover:underline focus-visible:ring-2 focus-visible:outline-none"
                                 >
                                     + Ajouter une série
                                 </button>
@@ -349,7 +351,7 @@ const submit = () => {
                         v-press
                         @click="closeAddModal"
                         type="button"
-                        class="text-text-muted hover:text-text-main focus-visible:ring-electric-orange hover:bg-surface-sunken rounded-xl p-2 transition-all focus-visible:ring-2 focus-visible:outline-none"
+                        class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary hover:bg-surface-sunken rounded-xl p-2 transition-all focus-visible:ring-2 focus-visible:outline-none"
                         aria-label="Fermer"
                     >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -385,7 +387,7 @@ const submit = () => {
                         </div>
                         <p
                             v-if="createError"
-                            class="text-accent-danger text-sm font-bold"
+                            class="text-accent-danger-deep text-sm font-bold"
                             role="alert"
                             dusk="quick-create-error"
                         >
@@ -436,7 +438,7 @@ const submit = () => {
                                     <div class="text-text-main font-bold">{{ ex.name }}</div>
                                     <div class="text-text-muted text-xs">{{ ex.category }}</div>
                                 </div>
-                                <span class="material-symbols-outlined text-accent-primary" aria-hidden="true"
+                                <span class="material-symbols-outlined text-accent-primary-deep" aria-hidden="true"
                                     >add_circle</span
                                 >
                             </button>

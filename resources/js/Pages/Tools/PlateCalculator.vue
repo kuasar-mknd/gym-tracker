@@ -31,7 +31,7 @@
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 border-border bg-surface-card h-16 w-full rounded-2xl border-2 px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card h-16 w-full rounded-2xl border-2 px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -48,7 +48,7 @@
                                     type="number"
                                     v-model="barWeight"
                                     placeholder="20"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 border-border bg-surface-card h-16 w-full rounded-2xl border-2 px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
+                                    class="font-display text-text-main focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card h-16 w-full rounded-2xl border-2 px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -65,11 +65,11 @@
                         <div class="relative flex h-[200px] min-w-[300px] items-center justify-center">
                             <!-- Bar -->
                             <div
-                                class="absolute z-0 h-5 w-full rounded-full bg-linear-to-r from-slate-300 via-slate-400 to-slate-300 shadow-inner"
+                                class="from-text-muted via-text-muted to-text-muted absolute z-0 h-5 w-full rounded-full bg-linear-to-r shadow-inner"
                             ></div>
 
                             <!-- Center Marker -->
-                            <div class="absolute z-10 h-24 w-2 rounded-full bg-slate-500"></div>
+                            <div class="bg-text-muted absolute z-10 h-24 w-2 rounded-full"></div>
 
                             <!-- Left Side Plates -->
                             <div
@@ -79,12 +79,7 @@
                                     v-for="(plate, index) in calculatedPlates"
                                     :key="`left-${index}`"
                                     class="border-surface-card/30 flex items-center justify-center rounded-md border-2 text-xs font-black shadow-lg"
-                                    :class="[
-                                        getPlateColor(plate.weight),
-                                        parseFloat(plate.weight) === 15 || parseFloat(plate.weight) < 5
-                                            ? 'text-text-main'
-                                            : 'text-white',
-                                    ]"
+                                    :class="getPlateColor(plate.weight)"
                                     :style="{
                                         height: `${getPlateSize(plate.weight)}px`,
                                         width: '24px',
@@ -100,12 +95,7 @@
                                     v-for="(plate, index) in calculatedPlates"
                                     :key="`right-${index}`"
                                     class="border-surface-card/30 flex items-center justify-center rounded-md border-2 text-xs font-black shadow-lg"
-                                    :class="[
-                                        getPlateColor(plate.weight),
-                                        parseFloat(plate.weight) === 15 || parseFloat(plate.weight) < 5
-                                            ? 'text-text-main'
-                                            : 'text-white',
-                                    ]"
+                                    :class="getPlateColor(plate.weight)"
                                     :style="{
                                         height: `${getPlateSize(plate.weight)}px`,
                                         width: '24px',
@@ -120,7 +110,7 @@
                         <div class="mt-6 text-center">
                             <p class="text-text-main text-lg font-bold">
                                 Poids Total:
-                                <span class="font-display text-electric-orange text-2xl font-black"
+                                <span class="font-display text-accent-primary-deep text-2xl font-black"
                                     >{{ actualWeight }} kg</span
                                 >
                             </p>
@@ -138,7 +128,7 @@
                         v-else-if="targetWeight > barWeight"
                         class="border-border bg-surface-sunken mt-8 rounded-3xl border py-8 text-center"
                     >
-                        <span class="material-symbols-outlined mb-3 text-5xl text-slate-300" aria-hidden="true"
+                        <span class="material-symbols-outlined text-text-muted mb-3 text-5xl" aria-hidden="true"
                             >error</span
                         >
                         <p class="text-text-muted font-medium">
@@ -166,7 +156,7 @@
                     </div>
 
                     <div v-if="plates.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined mb-3 text-6xl text-slate-200" aria-hidden="true"
+                        <span class="material-symbols-outlined text-surface-sunken mb-3 text-6xl" aria-hidden="true"
                             >inventory_2</span
                         >
                         <p class="text-text-muted font-medium">Aucune plaque dans l'inventaire.</p>
@@ -189,7 +179,7 @@
                                     :class="
                                         parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
                                             ? 'text-text-main'
-                                            : 'text-white'
+                                            : 'text-text-on-dark-accent'
                                     "
                                 >
                                     {{ plate.weight }}
@@ -199,7 +189,7 @@
                                     :class="
                                         parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10
                                             ? 'text-text-muted'
-                                            : 'text-white/70'
+                                            : 'text-text-on-dark-accent/70'
                                     "
                                 >
                                     x {{ plate.quantity }}
@@ -209,7 +199,7 @@
                                     type="button"
                                     aria-label="Supprimer la plaque"
                                     title="Supprimer la plaque"
-                                    class="bg-accent-danger text-text-on-accent absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full opacity-100 shadow-md transition-all hover:bg-red-600 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                                    class="bg-accent-danger text-text-on-accent hover:bg-accent-danger absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full opacity-100 shadow-md transition-all sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                                 >
                                     <span class="material-symbols-outlined text-sm" aria-hidden="true">close</span>
                                 </button>
@@ -316,14 +306,25 @@ const getPlateSize = (weight) => {
     return Math.max(min, Math.min(max, (weight / maxWeight) * max))
 }
 
+/**
+ * La couleur normalisée d'un disque, selon son poids.
+ *
+ * Le code est olympique, pas décoratif : un disque de 25 kg est rouge partout
+ * dans le monde. C'est pourquoi ces couleurs ont leur propre groupe dans la
+ * charte et n'empruntent pas aux accents — les avoir écrites `bg-accent-danger`
+ * et `bg-accent-warning` liait ce calculateur aux humeurs du thème, et
+ * éclaircir l'alerte d'un cran aurait repeint une norme extérieure.
+ *
+ * @param {number} weight
+ * @returns {string}
+ */
 const getPlateColor = (weight) => {
-    // Standard Olympic plate colors
-    if (weight >= 25) return 'bg-red-600'
-    if (weight >= 20) return 'bg-blue-600'
-    if (weight >= 15) return 'bg-yellow-500'
-    if (weight >= 10) return 'bg-green-600'
-    if (weight >= 5) return 'bg-white'
-    if (weight >= 2.5) return 'bg-slate-800'
-    return 'bg-slate-400'
+    if (weight >= 25) return 'plate-fill-25'
+    if (weight >= 20) return 'plate-fill-20'
+    if (weight >= 15) return 'plate-fill-15'
+    if (weight >= 10) return 'plate-fill-10'
+    if (weight >= 5) return 'plate-fill-5'
+    if (weight >= 2.5) return 'plate-fill-2'
+    return 'plate-fill-small'
 }
 </script>

@@ -26,12 +26,12 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
     >
         <div class="relative z-10 mb-6 flex items-start justify-between">
             <div>
-                <h3 class="text-electric-orange mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Aperçu</h3>
+                <h3 class="text-accent-primary-deep mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Aperçu</h3>
                 <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume Hebdo</p>
             </div>
             <div class="text-right">
                 <p
-                    class="from-electric-orange to-vivid-violet font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
+                    class="from-accent-primary to-accent-tertiary font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
                 >
                     {{ weeklyVolumeStats?.current_week_volume?.toLocaleString() || 0 }}
                 </p>

@@ -40,7 +40,7 @@ const emit = defineEmits(['close', 'submit'])
                         <span
                             id="workout-notes-counter"
                             class="text-[10px] font-bold tracking-wider uppercase"
-                            :class="form.notes?.length > 1000 ? 'text-accent-danger' : 'text-text-muted/50'"
+                            :class="form.notes?.length > 1000 ? 'text-accent-danger-deep' : 'text-text-muted/50'"
                         >
                             {{ form.notes?.length || 0 }} / 1000
                         </span>
@@ -51,11 +51,11 @@ const emit = defineEmits(['close', 'submit'])
                         rows="4"
                         maxlength="1000"
                         aria-describedby="workout-notes-counter"
-                        class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:shadow-[0_0_15px_rgba(255,255,255,0.1)] focus:ring-0 focus:outline-none"
+                        class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 focus:shadow-[0_0_15px_rgb(from var(--color-surface-card) r g b / 0.1)] w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:ring-0 focus:outline-none"
                         placeholder="Notes sur la séance..."
                         dusk="workout-notes-input"
                     ></textarea>
-                    <p v-if="form.errors.notes" class="text-accent-danger mt-2 text-sm font-medium">
+                    <p v-if="form.errors.notes" class="text-accent-danger-deep mt-2 text-sm font-medium">
                         {{ form.errors.notes }}
                     </p>
                 </div>

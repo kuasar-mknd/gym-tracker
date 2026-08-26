@@ -49,7 +49,7 @@ const submit = () => {
             />
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null" class="bg-accent-warning/20 rounded-xl p-3">
-                <p class="text-accent-warning text-sm">
+                <p class="text-accent-warning-deep text-sm">
                     Ton adresse email n'est pas vérifiée.
                     <Link
                         :href="route('verification.send')"
@@ -61,7 +61,7 @@ const submit = () => {
                     </Link>
                 </p>
 
-                <p v-if="status === 'verification-link-sent'" class="text-accent-success mt-2 text-sm">
+                <p v-if="status === 'verification-link-sent'" class="text-accent-state-deep mt-2 text-sm">
                     Un nouveau lien a été envoyé.
                 </p>
             </div>
@@ -82,7 +82,7 @@ const submit = () => {
                     leave-active-class="transition ease-in-out"
                     leave-to-class="opacity-0"
                 >
-                    <p v-if="form.recentlySuccessful" class="text-accent-success text-sm">Enregistré ✓</p>
+                    <p v-if="form.recentlySuccessful" class="text-accent-state-deep text-sm">Enregistré ✓</p>
                 </Transition>
             </div>
         </form>

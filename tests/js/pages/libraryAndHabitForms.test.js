@@ -326,7 +326,7 @@ describe('the habit form', () => {
         id: 1,
         name: 'Étirements',
         description: null,
-        color: 'bg-cyan-500',
+        color: 'bg-palette-framboise',
         icon: 'self_improvement',
         goal_times_per_week: 5,
         logs: [],
@@ -408,7 +408,7 @@ describe('the habit form', () => {
         // identical "button"s to a screen reader.
         await byLabel(wrapper, 'Framboise').trigger('click')
 
-        expect(forms[0].color).toBe('bg-rose-500')
+        expect(forms[0].color).toBe('bg-palette-framboise')
         expect(byLabel(wrapper, 'Framboise').attributes('aria-pressed')).toBe('true')
         expect(byLabel(wrapper, 'Ardoise').attributes('aria-pressed')).toBe('false')
         expect(wrapper.findAll('[dusk^="habit-color-"][aria-pressed="true"]')).toHaveLength(1)
@@ -479,7 +479,7 @@ describe('the habit week', () => {
         id: 1,
         name: 'Étirements',
         description: null,
-        color: 'bg-cyan-500',
+        color: 'bg-palette-framboise',
         icon: 'self_improvement',
         goal_times_per_week: 5,
         logs: [],
@@ -548,7 +548,14 @@ describe('the habit week', () => {
 })
 
 describe('the thirty-day habit charts', () => {
-    const habit = { id: 1, name: 'Étirements', color: 'bg-cyan-500', icon: 'spa', goal_times_per_week: 5, logs: [] }
+    const habit = {
+        id: 1,
+        name: 'Étirements',
+        color: 'bg-palette-framboise',
+        icon: 'spa',
+        goal_times_per_week: 5,
+        logs: [],
+    }
     const weekDates = [{ date: '2026-02-09', day_short: 'Lun', day_num: 9, is_today: false }]
 
     const mountPage = async (stats) => {

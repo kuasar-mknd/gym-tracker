@@ -3,9 +3,10 @@
  *
  * Les graphiques dessinent sur canvas : ils ne peuvent pas porter de classes,
  * donc ils ont besoin de valeurs. Ils en écrivaient 230 en dur, dont
- * `#F5009B // magenta-pure` et `#00FF66 // neon-green` — cette dernière ne
- * correspondant à aucun jeton, le vrai valant `#CCFF00`. Deux verts différents
- * portaient le même nom, et rien ne pouvait s'en apercevoir.
+ * un magenta commenté `magenta-pure` et un vert commenté `neon-green` — ce
+ * dernier ne correspondant à aucun jeton, puisque le vert d'état est bien plus
+ * acide que ce qui était écrit. Deux verts différents portaient le même nom, et
+ * rien ne pouvait s'en apercevoir.
  *
  * Le principe : **le JavaScript porte les noms, le CSS porte les valeurs.**
  * Aucune valeur n'est recopiée ici, et `LaCharteEstLueParLeJsTest` vérifie que
@@ -77,4 +78,90 @@ export function oublierLesJetons() {
  */
 export function couleurDeCategorie(categorie) {
     return jeton(JETON_PAR_CATEGORIE[categorie] ?? 'category-other')
+}
+
+/**
+ * Un jeton avec une opacité, prêt pour un canvas.
+ *
+ * Chart.js dessine sur canvas et accepte n'importe quelle couleur CSS, mais pas
+ * une variable : `var(--color-…)` n'a aucun sens pour un contexte 2D. Il faut
+ * donc une valeur — et c'est précisément là que 194 `rgba()` littéraux étaient
+ * apparus, dont un `rgba()` orange qui n'était que le jeton principal
+ * retranscrit à la main, canal par canal.
+ *
+ * Cette fonction CALCULE à partir du jeton au lieu de le recopier. Change
+ * l'orange dans `app.css`, et les lueurs, les bordures d'infobulle et les
+ * dégradés suivent sans qu'on touche à un seul graphique.
+ *
+ * @param {string} nom
+ * @param {number} opacite
+ * @returns {string}
+ */
+export function jetonTransparent(nom, opacite) {
+    const valeur = jeton(nom)
+
+    if (valeur === '') {
+        return 'transparent'
+    }
+
+    const canaux = canauxDe(valeur)
+
+    return canaux === null ? valeur : `rgba(${canaux[0]}, ${canaux[1]}, ${canaux[2]}, ${opacite})`
+}
+
+/**
+ * Les trois canaux d'une couleur calculée, quelle que soit sa notation.
+ *
+ * `getComputedStyle` rend ce que le navigateur a résolu : la notation
+ * hexadécimale sous jsdom, `rgb(…)` sous Chromium, et `color(srgb …)` dans
+ * certains cas. Les trois se lisent ici plutôt que de supposer un moteur.
+ *
+ * @param {string} valeur
+ * @returns {[number, number, number]|null}
+ */
+function canauxDe(valeur) {
+    const court = valeur.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i)
+    if (court !== null) {
+        return [1, 2, 3].map((i) => parseInt(court[i] + court[i], 16))
+    }
+
+    const long = valeur.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i)
+    if (long !== null) {
+        return [1, 2, 3].map((i) => parseInt(long[i], 16))
+    }
+
+    const fonctionnelle = valeur.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i)
+    if (fonctionnelle !== null) {
+        return [1, 2, 3].map((i) => Math.round(Number(fonctionnelle[i])))
+    }
+
+    return null
+}
+
+/**
+ * L'ordre dans lequel les séries d'un graphique prennent leurs couleurs.
+ *
+ * Huit teintes séparables, celles des catégories — un graphique à six séries a
+ * besoin de six couleurs distinctes, pas de six intentions. Les prendre dans les
+ * accents mélangerait « alerter » et « troisième barre ».
+ */
+export const SERIE = [
+    'accent-primary',
+    'accent-tertiary',
+    'accent-info',
+    'accent-secondary',
+    'category-cardio',
+    'category-core',
+    'accent-state',
+    'category-other',
+]
+
+/**
+ * La couleur de la n-ième série, qui reboucle au-delà de huit.
+ *
+ * @param {number} rang
+ * @returns {string}
+ */
+export function couleurDeSerie(rang) {
+    return jeton(SERIE[rang % SERIE.length])
 }

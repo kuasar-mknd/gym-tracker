@@ -1,5 +1,6 @@
 <script setup>
 import { Doughnut } from 'vue-chartjs'
+import { jeton } from '@/Utils/couleurs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { computed, ref } from 'vue'
 import { optionsDAnneau, pluginCentreDAnneau } from '@/Utils/donut'
@@ -15,17 +16,17 @@ const props = defineProps({
 
 // Colors for the buckets
 const bucketColors = {
-    '< 30 min': '#00E5FF', // cyan-pure
-    '30-60 min': '#FF0080', // hot-pink
-    '60-90 min': '#8800FF', // vivid-violet
-    '90+ min': '#FF5500', // electric-orange
+    '< 30 min': jeton('accent-info'), // cyan-pure
+    '30-60 min': jeton('accent-secondary'), // hot-pink
+    '60-90 min': jeton('accent-tertiary'), // vivid-violet
+    '90+ min': jeton('accent-primary'), // electric-orange
 }
 
 const chartData = computed(() => {
     // Expecting data to be [{ label: '< 30 min', count: 5 }, ...]
     const labels = props.data.map((item) => item.label)
     const counts = props.data.map((item) => item.count)
-    const backgroundColor = labels.map((label) => bucketColors[label] || '#64748B')
+    const backgroundColor = labels.map((label) => bucketColors[label] || jeton('text-muted'))
 
     return {
         labels: labels,

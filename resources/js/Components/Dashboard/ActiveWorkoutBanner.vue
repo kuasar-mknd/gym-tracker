@@ -33,13 +33,13 @@ onUnmounted(() => {
     <Link
         v-press
         :href="route('workouts.show', { workout: workout.id })"
-        class="animate-fade-in group relative block overflow-hidden rounded-3xl border-2 border-emerald-400/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:outline-none active:scale-[0.98]"
+        class="animate-fade-in group border-accent-state/40 focus-visible:ring-accent-state relative block overflow-hidden rounded-3xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:outline-none active:scale-[0.98]"
         dusk="active-workout-banner"
     >
         <!-- Animated gradient background -->
-        <div class="absolute inset-0 bg-linear-to-r from-emerald-500 via-teal-500 to-cyan-500 opacity-90"></div>
+        <div class="from-accent-state via-accent-info to-accent-info absolute inset-0 bg-linear-to-r opacity-90"></div>
         <div
-            class="absolute inset-0 bg-linear-to-r from-emerald-400 via-teal-400 to-cyan-400 opacity-0 transition-opacity duration-500 group-hover:opacity-90"
+            class="from-accent-state via-accent-info to-accent-info absolute inset-0 bg-linear-to-r opacity-0 transition-opacity duration-500 group-hover:opacity-90"
         ></div>
 
         <!-- Pulse ring effect -->
@@ -50,7 +50,7 @@ onUnmounted(() => {
                 ></span>
                 <span class="bg-surface-card relative inline-flex size-3 rounded-full"></span>
             </span>
-            <span class="text-xs font-black tracking-widest text-white/90 uppercase">En cours</span>
+            <span class="text-text-on-dark-accent/90 text-xs font-black tracking-widest uppercase">En cours</span>
         </div>
 
         <div class="relative z-10 flex items-center gap-4 p-5">
@@ -59,7 +59,7 @@ onUnmounted(() => {
                 class="bg-surface-card/20 flex size-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
             >
                 <span
-                    class="material-symbols-outlined text-3xl text-white"
+                    class="material-symbols-outlined text-text-on-dark-accent text-3xl"
                     style="font-variation-settings: 'FILL' 1"
                     aria-hidden="true"
                     >fitness_center</span
@@ -68,18 +68,20 @@ onUnmounted(() => {
 
             <!-- Content -->
             <div class="min-w-0 flex-1">
-                <p class="text-[10px] font-black tracking-[0.2em] text-white/70 uppercase">Séance active</p>
-                <h3 class="font-display truncate text-xl font-black text-white uppercase italic">
+                <p class="text-text-on-dark-accent/70 text-[10px] font-black tracking-[0.2em] uppercase">
+                    Séance active
+                </p>
+                <h3 class="font-display text-text-on-dark-accent truncate text-xl font-black uppercase italic">
                     {{ workout.name || 'Séance' }}
                 </h3>
                 <div class="mt-1 flex items-center gap-3">
-                    <span class="flex items-center gap-1 text-sm font-bold text-white/80">
+                    <span class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold">
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">timer</span>
                         {{ elapsed }}
                     </span>
                     <span
                         v-if="workout.workout_lines_count"
-                        class="flex items-center gap-1 text-sm font-bold text-white/80"
+                        class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold"
                     >
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">exercise</span>
                         {{ workout.workout_lines_count }} exos
@@ -90,7 +92,7 @@ onUnmounted(() => {
             <!-- Arrow -->
             <div class="flex shrink-0 items-center">
                 <span
-                    class="material-symbols-outlined text-2xl text-white/60 transition-transform duration-300 group-hover:translate-x-1 group-hover:text-white"
+                    class="material-symbols-outlined text-text-on-dark-accent/60 group-hover:text-text-on-dark-accent text-2xl transition-transform duration-300 group-hover:translate-x-1"
                     aria-hidden="true"
                     >arrow_forward_ios</span
                 >

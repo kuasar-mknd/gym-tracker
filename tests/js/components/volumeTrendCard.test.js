@@ -32,7 +32,7 @@ const mountCard = async (props = {}) => {
 }
 
 /** Le total en gros, en haut à droite de la carte. */
-const total = (wrapper) => wrapper.find('div.text-electric-orange').text().replace(/\s+/g, ' ')
+const total = (wrapper) => wrapper.find('div.text-accent-primary-deep').text().replace(/\s+/g, ' ')
 
 const digitsOf = (text) => text.replace(/\D/g, '')
 

@@ -7,6 +7,7 @@
 -->
 <script setup>
 import { computed } from 'vue'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -49,12 +50,12 @@ const chartData = computed(() => {
                 type: 'line',
                 label: 'Meilleur 1RM (kg)',
                 data: oneRmData,
-                borderColor: '#8b5cf6', // violet
-                backgroundColor: '#8b5cf6',
+                borderColor: jeton('accent-tertiary'), // violet
+                backgroundColor: jeton('accent-tertiary'),
                 borderWidth: 3,
                 tension: 0.4,
-                pointBackgroundColor: '#ffffff',
-                pointBorderColor: '#8b5cf6',
+                pointBackgroundColor: jeton('surface-card'),
+                pointBorderColor: jeton('accent-tertiary'),
                 pointBorderWidth: 2,
                 pointRadius: 4,
                 yAxisID: 'y1',
@@ -64,8 +65,8 @@ const chartData = computed(() => {
                 type: 'bar',
                 label: 'Volume Total (kg)',
                 data: volumeData,
-                backgroundColor: 'rgba(249, 115, 22, 0.2)', // orange with opacity
-                borderColor: '#f97316',
+                backgroundColor: jetonTransparent('accent-primary', 0.2), // orange with opacity
+                borderColor: jeton('accent-primary'),
                 borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
                 borderRadius: { topLeft: 6, topRight: 6 },
                 yAxisID: 'y',
@@ -75,7 +76,7 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
@@ -93,7 +94,7 @@ const chartOptions = {
                     family: "'Nunito', sans-serif",
                     weight: 'bold',
                 },
-                color: '#64748b', // slate-500
+                color: jeton('text-muted'), // slate-500
             },
         },
         tooltip: {
@@ -123,7 +124,7 @@ const chartOptions = {
                     family: "'Nunito', sans-serif",
                     weight: 'bold',
                 },
-                color: '#94a3b8',
+                color: jeton('text-muted'),
             },
         },
         y: {
@@ -131,7 +132,7 @@ const chartOptions = {
             display: true,
             position: 'left',
             grid: {
-                color: 'rgba(241, 245, 249, 0.5)',
+                color: jetonTransparent('surface-sunken', 0.5),
                 drawBorder: false,
             },
             ticks: {
@@ -139,7 +140,7 @@ const chartOptions = {
                     family: "'Nunito', sans-serif",
                     weight: 'bold',
                 },
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 callback: function (value) {
                     if (value >= 1000) {
                         return (value / 1000).toFixed(1) + 'k'
@@ -164,7 +165,7 @@ const chartOptions = {
                     family: "'Nunito', sans-serif",
                     weight: 'bold',
                 },
-                color: '#94a3b8',
+                color: jeton('text-muted'),
             },
             title: {
                 display: false,
@@ -172,7 +173,7 @@ const chartOptions = {
             },
         },
     },
-}
+}))
 </script>
 
 <template>

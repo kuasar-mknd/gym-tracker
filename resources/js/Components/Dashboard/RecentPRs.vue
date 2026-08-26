@@ -17,7 +17,7 @@ defineProps({
         style="animation-delay: 0.3s"
     >
         <div class="relative z-10 mb-6">
-            <h3 class="mb-1 text-[10px] font-black tracking-[0.2em] text-[#FF5500] uppercase">Réussites</h3>
+            <h3 class="text-accent-primary-deep mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Réussites</h3>
             <p class="font-display text-text-main text-2xl font-black uppercase italic">Records Personnels</p>
         </div>
 
@@ -51,7 +51,7 @@ defineProps({
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="font-display text-electric-orange text-2xl font-black">
+                        <div class="font-display text-accent-primary-deep text-2xl font-black">
                             {{ pr.value
                             }}<span class="text-text-muted text-sm">{{
                                 pr.type === 'max_volume_set' ? '' : 'kg'

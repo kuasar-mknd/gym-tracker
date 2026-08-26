@@ -39,7 +39,7 @@ const submit = () => {
 
         <div
             v-if="status"
-            class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700"
+            class="border-accent-state bg-accent-state text-trend-up mb-4 rounded-xl border p-3 text-sm font-medium"
         >
             {{ status }}
         </div>
@@ -79,7 +79,7 @@ const submit = () => {
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="text-electric-orange hover:text-vivid-violet text-sm font-semibold transition-colors"
+                    class="text-accent-primary-deep hover:text-accent-tertiary text-sm font-semibold transition-colors"
                 >
                     Mot de passe oublié ?
                 </Link>
@@ -111,7 +111,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.google"
                     :href="route('social.redirect', 'google')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-surface-sunken bg-surface-card flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec Google"
                 >
                     <img
@@ -124,7 +124,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.github"
                     :href="route('social.redirect', 'github')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-text-main bg-text-main flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec GitHub"
                 >
                     <img
@@ -137,7 +137,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.apple"
                     :href="route('social.redirect', 'apple')"
-                    class="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-700 bg-black shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-text-main bg-text-main flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec Apple"
                 >
                     <img
@@ -155,7 +155,7 @@ const submit = () => {
                 Pas encore de compte ?
                 <Link
                     :href="route('register')"
-                    class="text-electric-orange hover:text-vivid-violet font-bold transition-colors"
+                    class="text-accent-primary-deep hover:text-accent-tertiary font-bold transition-colors"
                     >Créer un compte</Link
                 >
             </p>

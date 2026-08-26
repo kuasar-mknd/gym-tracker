@@ -248,7 +248,7 @@ const typeLabel = (type) => {
             >
                 <svg
                     v-if="isRefreshing"
-                    class="text-electric-orange h-6 w-6 animate-spin"
+                    class="text-accent-primary-deep h-6 w-6 animate-spin"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -262,7 +262,7 @@ const typeLabel = (type) => {
                 </svg>
                 <span
                     v-else
-                    class="material-symbols-outlined text-electric-orange transition-transform duration-200"
+                    class="material-symbols-outlined text-accent-primary-deep transition-transform duration-200"
                     :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
                     aria-hidden="true"
                 >
@@ -286,7 +286,7 @@ const typeLabel = (type) => {
                 </div>
                 <button
                     @click="showAddForm = true"
-                    class="bg-gradient-main shadow-accent-primary/20 flex size-14 items-center justify-center rounded-2xl text-white shadow-lg active:scale-95 sm:hidden"
+                    class="bg-gradient-main shadow-accent-primary/20 text-text-on-dark-accent flex size-14 items-center justify-center rounded-2xl shadow-lg active:scale-95 sm:hidden"
                     data-testid="create-exercise-mobile-header"
                     dusk="create-exercise-btn"
                     aria-label="Nouvel exercice"
@@ -356,7 +356,7 @@ const typeLabel = (type) => {
                     :class="[
                         'category-pill shrink-0 transition-all',
                         activeCategory === 'all'
-                            ? 'bg-text-main text-white shadow-lg'
+                            ? 'bg-text-main text-surface-card shadow-lg'
                             : 'text-text-main border-border bg-surface-card border',
                     ]"
                     :aria-pressed="activeCategory === 'all'"
@@ -373,7 +373,7 @@ const typeLabel = (type) => {
                     :class="[
                         'category-pill shrink-0 transition-all',
                         activeCategory === cat
-                            ? `${CATEGORY_COLORS[cat] || 'bg-category-other'} text-white`
+                            ? (CATEGORY_COLORS[cat] ?? 'category-fill-other')
                             : 'text-text-main border-border bg-surface-card border',
                     ]"
                     :aria-pressed="activeCategory === cat"
@@ -436,7 +436,7 @@ const typeLabel = (type) => {
 
             <!-- Error display -->
             <GlassCard v-if="$page.props.errors?.exercise" class="border-accent-danger bg-accent-danger/10">
-                <p class="text-accent-danger text-center font-bold">{{ $page.props.errors.exercise }}</p>
+                <p class="text-accent-danger-deep text-center font-bold">{{ $page.props.errors.exercise }}</p>
             </GlassCard>
 
             <!-- Empty State -->

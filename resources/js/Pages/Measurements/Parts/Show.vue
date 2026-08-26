@@ -151,7 +151,7 @@ const formatMeasuredAt = (measuredAt) =>
                             @click="deleteMeasurement(item.id)"
                             :aria-label="`Delete the ${formatMeasuredAt(item.measured_at)} entry`"
                             :dusk="`delete-measurement-${item.id}`"
-                            class="text-text-muted/30 hover:text-accent-danger rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                            class="text-text-muted/30 hover:text-accent-danger-deep rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                         >
                             <svg
                                 class="h-5 w-5"

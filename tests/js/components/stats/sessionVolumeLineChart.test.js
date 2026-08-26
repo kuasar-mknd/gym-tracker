@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 /**
@@ -133,9 +134,12 @@ describe('SessionVolumeLineChart colours', () => {
 
         // Vertical: coloured at the top of the plot, transparent at the baseline.
         expect(fill.gradients[0].coords).toEqual([0, 0, 0, 200])
-        expect(fill.gradients[0].stops[1][1]).toBe('rgba(255, 0, 128, 0)')
+        expect(fill.gradients[0].stops[1][1]).toBe(jetonTransparent('accent-secondary', 0))
         // Horizontal: violet on the left edge, pink on the right.
         expect(stroke.gradients[0].coords).toEqual([10, 0, 310, 0])
-        expect(stroke.gradients[0].stops.map(([, color]) => color)).toEqual(['#8800FF', '#FF0080'])
+        expect(stroke.gradients[0].stops.map(([, color]) => color)).toEqual([
+            jeton('accent-tertiary'),
+            jeton('accent-secondary'),
+        ])
     })
 })

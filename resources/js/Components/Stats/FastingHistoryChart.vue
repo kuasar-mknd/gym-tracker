@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { computed } from 'vue'
 
@@ -38,8 +39,8 @@ const chartData = computed(() => {
                     if (!chartArea) return null
                     // Liquid Glass gradient: Orange to Red/Pink
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, '#FF9F43') // Orange
-                    gradient.addColorStop(1, '#FF5252') // Red
+                    gradient.addColorStop(0, jeton('accent-primary')) // Orange
+                    gradient.addColorStop(1, jeton('accent-danger')) // Red
                     return gradient
                 },
                 borderRadius: 8,
@@ -50,7 +51,7 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -58,14 +59,14 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
+            backgroundColor: jetonTransparent('surface-card', 0.9),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
             padding: 12,
             cornerRadius: 12,
             displayColors: false,
             borderWidth: 1,
-            borderColor: 'rgba(255, 159, 67, 0.2)', // Matches Orange
+            borderColor: jetonTransparent('accent-primary', 0.2), // Matches Orange
             callbacks: {
                 label: (context) => `${context.parsed.y} h`,
             },
@@ -74,7 +75,7 @@ const chartOptions = {
     scales: {
         x: {
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
             grid: {
@@ -87,12 +88,12 @@ const chartOptions = {
         y: {
             display: true,
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
                 stepSize: 4,
             },
             grid: {
-                color: 'rgba(255, 255, 255, 0.1)',
+                color: jetonTransparent('surface-card', 0.1),
                 drawBorder: false,
             },
             border: {
@@ -100,7 +101,7 @@ const chartOptions = {
             },
         },
     },
-}
+}))
 </script>
 
 <template>
@@ -111,6 +112,6 @@ const chartOptions = {
 
 <style scoped>
 canvas {
-    filter: drop-shadow(0 4px 6px rgba(255, 82, 82, 0.25));
+    filter: drop-shadow(0 4px 6px rgb(from var(--color-accent-danger) r g b / 0.25));
 }
 </style>

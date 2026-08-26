@@ -1677,7 +1677,7 @@ onUnmounted(() => {
                         v-press="{ haptic: 'warning' }"
                         @click="removeLine(line.id)"
                         :dusk="`remove-line-${lineIndex}`"
-                        class="text-text-muted hover:text-accent-danger transition-colors"
+                        class="text-text-muted hover:text-accent-danger-deep transition-colors"
                         aria-label="Supprimer l'exercice"
                     >
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -1744,8 +1744,8 @@ onUnmounted(() => {
                                 class="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
                                 :class="
                                     set.is_completed
-                                        ? 'bg-neon-green text-text-main'
-                                        : 'bg-surface-sunken text-slate-300'
+                                        ? 'bg-accent-state text-text-main'
+                                        : 'bg-surface-sunken text-text-muted'
                                 "
                                 :aria-label="set.is_completed ? 'Annuler la série' : 'Valider la série'"
                             >
@@ -1866,7 +1866,7 @@ onUnmounted(() => {
                                 @click="removeSet(set.id)"
                                 :dusk="`remove-set-${lineIndex}-${index}`"
                                 :class="[
-                                    'hover:text-accent-danger relative ml-auto text-slate-300',
+                                    'hover:text-accent-danger-deep text-text-muted relative ml-auto',
                                     'before:absolute before:-inset-2.5 before:content-[\'\']',
                                     // Redundant on a phone, where the row swipes.
                                     // Kept from sm up, where there is no swipe at
@@ -1887,7 +1887,7 @@ onUnmounted(() => {
                     v-press
                     @click="addSet(line.id)"
                     :dusk="`add-set-${lineIndex}`"
-                    class="text-text-muted hover:border-neon-green border-border mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition-all"
+                    class="text-text-muted hover:border-accent-state border-border mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition-all"
                 >
                     Ajouter une série
                 </button>
@@ -1944,12 +1944,12 @@ onUnmounted(() => {
                             type="button"
                             @click="quickCreate"
                             dusk="quick-create-exercise"
-                            class="border-border flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all hover:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+                            class="border-border hover:border-accent-state focus-visible:ring-accent-state flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all focus-visible:ring-2 focus-visible:outline-none"
                         >
                             <span class="text-text-muted mb-2 block text-sm italic"
                                 >Aucun résultat pour "{{ searchQuery }}"</span
                             >
-                            <span class="font-bold tracking-wider text-emerald-600 uppercase"
+                            <span class="text-trend-up font-bold tracking-wider uppercase"
                                 >Créer "{{ searchQuery }}"</span
                             >
                         </button>
@@ -1964,7 +1964,7 @@ onUnmounted(() => {
                             type="button"
                             @click="addExercise(exercise.id)"
                             :dusk="`select-exercise-${exercise.id}`"
-                            class="glass-panel-light hover:border-electric-orange/50 focus-visible:ring-electric-orange block w-full cursor-pointer rounded-2xl p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
+                            class="glass-panel-light hover:border-accent-primary/50 focus-visible:ring-accent-primary block w-full cursor-pointer rounded-2xl p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
                         >
                             <span class="text-text-main block font-bold">{{ exercise.name }}</span>
                             <span class="text-text-muted block text-xs uppercase">{{ exercise.category }}</span>

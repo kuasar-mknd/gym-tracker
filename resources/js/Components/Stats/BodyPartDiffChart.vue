@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { computed } from 'vue'
 
@@ -31,12 +32,12 @@ const chartData = computed(() => {
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
                     if (value > 0) {
                         // Green/Cyan for growth
-                        gradient.addColorStop(0, '#34d399')
-                        gradient.addColorStop(1, '#059669')
+                        gradient.addColorStop(0, jeton('accent-state'))
+                        gradient.addColorStop(1, jeton('trend-up'))
                     } else {
                         // Red/Orange for decrease
-                        gradient.addColorStop(0, '#f87171')
-                        gradient.addColorStop(1, '#dc2626')
+                        gradient.addColorStop(0, jeton('accent-danger'))
+                        gradient.addColorStop(1, jeton('accent-danger-deep'))
                     }
                     return gradient
                 },
@@ -47,7 +48,7 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: 'y', // Make it a horizontal bar chart
@@ -56,10 +57,10 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            borderColor: 'rgba(0, 0, 0, 0.1)',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('shadow-cast', 0.1),
             borderWidth: 1,
             cornerRadius: 12,
             padding: 12,
@@ -79,18 +80,18 @@ const chartOptions = {
         x: {
             display: true,
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
             grid: {
-                color: 'rgba(0, 0, 0, 0.05)',
+                color: jetonTransparent('shadow-cast', 0.05),
             },
             border: { display: false },
         },
         y: {
             display: true,
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 11, weight: 'bold' },
             },
             grid: {
@@ -99,7 +100,7 @@ const chartOptions = {
             border: { display: false },
         },
     },
-}
+}))
 </script>
 
 <template>
@@ -113,6 +114,6 @@ const chartOptions = {
 
 <style scoped>
 canvas {
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.05));
+    filter: drop-shadow(0 4px 6px rgb(from var(--color-shadow-cast) r g b / 0.05));
 }
 </style>

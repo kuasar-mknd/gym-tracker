@@ -1,5 +1,6 @@
 <script setup>
 import { Bar } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { computed } from 'vue'
 
@@ -36,30 +37,30 @@ const chartData = computed(() => {
                     if (!chartArea) return null
 
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, '#FF5500') // electric-orange
-                    gradient.addColorStop(1, '#FFCC00') // yellow
+                    gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
+                    gradient.addColorStop(1, jeton('accent-warning')) // yellow
 
                     return gradient
                 },
                 borderRadius: 8,
                 barPercentage: 0.6,
                 borderWidth: 0,
-                hoverBackgroundColor: '#8800FF', // vivid-violet
+                hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
             },
         ],
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
         legend: { display: false },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
-            borderColor: 'rgba(255, 85, 0, 0.2)',
+            backgroundColor: jetonTransparent('surface-card', 0.95),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
+            borderColor: jetonTransparent('accent-primary', 0.2),
             borderWidth: 1,
             padding: 10,
             cornerRadius: 12,
@@ -77,7 +78,7 @@ const chartOptions = {
         x: {
             grid: { display: false },
             ticks: {
-                color: '#94a3b8',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold', family: 'sans-serif' },
                 maxRotation: 45,
                 minRotation: 0,
@@ -89,7 +90,7 @@ const chartOptions = {
             beginAtZero: true,
         },
     },
-}
+}))
 </script>
 
 <template>

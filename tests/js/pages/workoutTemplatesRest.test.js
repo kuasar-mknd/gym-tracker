@@ -403,7 +403,7 @@ describe.each([
         // maxlength is 1000, so 1000 is legal — turning red there would flag a
         // description the server is perfectly happy with.
         expect(counter.text()).toBe('1000 / 1000')
-        expect(counter.classes()).not.toContain('text-red-400')
+        expect(counter.classes()).not.toContain('text-accent-danger-deep')
     })
 
     it('turns red on the first character over the limit', async () => {
@@ -411,7 +411,7 @@ describe.each([
         await wrapper.get('textarea').setValue('a'.repeat(1001))
 
         expect(counterOf(wrapper).text()).toBe('1001 / 1000')
-        expect(counterOf(wrapper).classes()).toContain('text-red-400')
+        expect(counterOf(wrapper).classes()).toContain('text-accent-danger-deep')
     })
 })
 

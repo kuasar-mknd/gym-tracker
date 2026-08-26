@@ -1,5 +1,6 @@
 <script setup>
 import { Line } from 'vue-chartjs'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -41,8 +42,8 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-                    gradient.addColorStop(0, '#F97316') // Orange
-                    gradient.addColorStop(1, '#EC4899') // Pink
+                    gradient.addColorStop(0, jeton('accent-primary')) // Orange
+                    gradient.addColorStop(1, jeton('accent-secondary')) // Pink
                     return gradient
                 },
                 backgroundColor: (context) => {
@@ -50,25 +51,25 @@ const chartData = computed(() => {
                     const { ctx, chartArea } = chart
                     if (!chartArea) return null
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, 'rgba(249, 115, 22, 0.2)')
-                    gradient.addColorStop(1, 'rgba(236, 72, 153, 0)')
+                    gradient.addColorStop(0, jetonTransparent('accent-primary', 0.2))
+                    gradient.addColorStop(1, jetonTransparent('accent-secondary', 0))
                     return gradient
                 },
                 borderWidth: 3,
                 pointRadius: 4,
-                pointBackgroundColor: '#F97316',
+                pointBackgroundColor: jeton('accent-primary'),
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointHoverRadius: 6,
                 pointHoverBackgroundColor: '#fff',
-                pointHoverBorderColor: '#EC4899',
+                pointHoverBorderColor: jeton('accent-secondary'),
                 pointHoverBorderWidth: 3,
             },
         ],
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -76,14 +77,14 @@ const chartOptions = {
             display: false,
         },
         tooltip: {
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
-            titleColor: '#1e293b',
-            bodyColor: '#1e293b',
+            backgroundColor: jetonTransparent('surface-card', 0.9),
+            titleColor: jeton('text-main'),
+            bodyColor: jeton('text-main'),
             padding: 12,
             cornerRadius: 12,
             displayColors: false,
             borderWidth: 1,
-            borderColor: 'rgba(249, 115, 22, 0.1)',
+            borderColor: jetonTransparent('accent-primary', 0.1),
             callbacks: {
                 label: (context) => `Score: ${parseFloat(context.parsed.y).toFixed(2)}`,
             },
@@ -99,16 +100,16 @@ const chartOptions = {
         y: {
             display: true,
             ticks: {
-                color: '#64748B',
+                color: jeton('text-muted'),
                 font: { size: 10, weight: 'bold' },
             },
             grid: {
-                color: 'rgba(148, 163, 184, 0.1)',
+                color: jetonTransparent('text-muted', 0.1),
                 borderDash: [4, 4],
             },
         },
     },
-}
+}))
 </script>
 
 <template>
@@ -119,6 +120,6 @@ const chartOptions = {
 
 <style scoped>
 canvas {
-    filter: drop-shadow(0 4px 6px rgba(249, 115, 22, 0.2));
+    filter: drop-shadow(0 4px 6px rgb(from var(--color-accent-primary) r g b / 0.2));
 }
 </style>

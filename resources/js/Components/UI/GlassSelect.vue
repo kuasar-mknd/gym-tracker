@@ -95,7 +95,7 @@ const isRequired = computed(() => {
             :class="['font-display-label text-text-muted mb-2 block', { 'sr-only': hideLabel }]"
         >
             {{ label }}
-            <span v-if="isRequired" class="text-accent-danger ml-0.5" aria-hidden="true">*</span>
+            <span v-if="isRequired" class="text-accent-danger-deep ml-0.5" aria-hidden="true">*</span>
         </label>
 
         <!-- Select -->

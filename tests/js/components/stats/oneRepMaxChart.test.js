@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
 
 vi.mock('vue-chartjs', () => {
@@ -66,7 +67,7 @@ describe('OneRepMaxChart', () => {
 
         expect(scales.y.beginAtZero).toBeUndefined()
         expect(scales.x.display).not.toBe(false)
-        expect(scales.x.ticks.color).toBe('#64748B')
+        expect(scales.x.ticks.color).toBe(jeton('text-muted'))
     })
 
     describe('dégradé de remplissage', () => {
@@ -86,8 +87,8 @@ describe('OneRepMaxChart', () => {
 
             expect(stops).toEqual([
                 [0, 0, 0, 192],
-                [0, 'rgba(255, 0, 128, 0.2)'],
-                [1, 'rgba(255, 0, 128, 0)'],
+                [0, jetonTransparent('accent-secondary', 0.2)],
+                [1, jetonTransparent('accent-secondary', 0)],
             ])
         })
 

@@ -17,7 +17,17 @@
 @source not '../../docs';
 @source not '../../*.md';
 
-@theme {
+/*
+ * `static` : Tailwind emet TOUTES les variables, pas seulement celles qu'une
+ * classe utilise.
+ *
+ * Sans ca, les jetons lus depuis le JavaScript n'existent pas dans le CSS
+ * produit : `Utils/couleurs.js` interroge `--color-category-chest` par
+ * `getComputedStyle`, recoit une chaine vide, et le graphique dessine en noir.
+ * Le defaut ne se voit qu'a l'ecran — aucun test de classe ne le rencontre,
+ * puisque justement aucune classe n'est en jeu.
+ */
+@theme static {
     --font-sans:
         Space Grotesk, Inter, ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
@@ -42,23 +52,35 @@
     --color-surface-page: #f8faff;
     --color-surface-card: #ffffff;
     --color-surface-sunken: #f1f5f9;
-    --color-surface-glass: rgba(255, 255, 255, 0.65);
+    --color-surface-glass: rgb(from var(--color-surface-card) r g b / 0.65);
 
     /*
      * Le voile d'une modale. Quatre fichiers ecrivaient `bg-black/80` sans
      * qu'aucun role ne le nomme — et `bg-text-main/80` aurait detourne de
      * l'encre en surface, ce qui est faux : ce n'est pas du texte.
      */
-    --color-overlay: rgba(0, 0, 0, 0.8);
+    --color-overlay: rgb(from var(--color-shadow-cast) r g b / 0.8);
+
+    /*
+     * Les deux noirs qui ne sont pas du texte.
+     *
+     * `shadow-cast` est ce qui projette une ombre ou assombrit une scene — le
+     * voile d'une modale, l'ombre portee d'un disque de fonte. `shadow-ambient`
+     * est le bleu-nuit tres dilue des ombres de cartes, qui rend une elevation
+     * plus juste qu'un gris neutre. Aucun des deux n'est `text-main` : les
+     * confondre ferait bouger toutes les ombres du jour ou l'encre changerait.
+     */
+    --color-shadow-cast: #000000;
+    --color-shadow-ambient: #1f2687;
 
     /* --- Traits -------------------------------------------------------- */
     --color-border: #e2e8f0;
     --color-border-strong: #cbd5e1;
-    --color-glass-border: rgba(255, 255, 255, 0.8);
+    --color-glass-border: rgb(from var(--color-surface-card) r g b / 0.8);
 
     /* --- Texte --------------------------------------------------------- */
     --color-text-main: #0f172a;
-    --color-text-muted: #64748b;
+    --color-text-muted: #627188;
 
     /*
      * Ce qu'on ecrit PAR-DESSUS un accent, et c'est de l'encre.
@@ -85,26 +107,53 @@
     /* --- Accents ------------------------------------------------------- */
 
     /*
-     * UN SEUL orange, et il porte du blanc.
-     *
-     * Il valait #ff5500, ou le blanc rend 3,21:1 — sous le seuil de 4,5 pour du
-     * texte courant. La charte a d'abord porte deux valeurs, une pour l'identite
-     * et une pour les fonds ; c'etait une erreur de conception, parce qu'elle
-     * obligeait CHAQUE composant a choisir entre les deux. Le but d'un jeton est
-     * exactement l'inverse : qu'un composant nomme un role et ignore sa valeur.
-     *
-     * #ce4400 est le meme orange assombri jusqu'a tenir ses quatre emplois d'un
-     * seul coup : blanc dessus 4,72:1, en texte sur une carte 4,72, en texte sur
-     * le fond de page 4,52, et en anneau de focus bien au-dessus des 3:1
-     * demandes pour du non-texte.
-     *
-     * Il ne porte PAS d'encre (3,78:1), et c'est voulu : un seul texte possible
-     * dessus, donc plus de choix a faire.
+     * L'orange de l'identite, vif, tel qu'il a toujours ete. Anneaux de focus,
+     * icones, bandeaux, degrades : 183 de ses 190 emplois, ou il ne porte aucun
+     * texte et ou sa vivacite est tout l'interet.
      */
-    --color-accent-primary: #ce4400;
+    --color-accent-primary: #ff5500;
+
+    /*
+     * Et sa version pour les SURFACES PLEINES qui portent du texte, ou le vif
+     * ne rend que 3,21:1 avec du blanc.
+     *
+     * Un composant ne choisit JAMAIS entre les deux — c'est l'erreur que la
+     * premiere version de cette charte a commise, et elle obligeait chaque
+     * appelant a trancher. Ce jeton n'est lu que par l'utilitaire `accent-fill`
+     * ci-dessous, qui pose le fond ET son texte d'un seul geste : le composant
+     * ecrit `accent-fill` et n'a rien a savoir.
+     */
+    --color-accent-primary-fill: #ce4400;
+
+    /*
+     * Et l'orange qui porte les MOTS.
+     *
+     * Le vif rend 2.93:1 sur la surface la moins favorable — les libelles
+     * en capitales qui annoncent une section (« APERCU », « REUSSITES ») etaient
+     * donc illisibles, dans 35 fichiers. La reponse n'est pas d'assombrir
+     * `accent-primary` : sa vivacite est l'identite de l'application, et elle
+     * reste partout ou elle se voit vraiment — icones, bordures, anneaux de
+     * focus, lueurs, degrades, soit la grande majorite de ses emplois.
+     *
+     * Celui-ci n'existe QUE pour l'interieur des lettres, ou la difference ne se
+     * remarque pas et ou elle decide de la lisibilite.
+     */
+    --color-accent-primary-deep: #c64200;
 
     /* Le deuxieme et le troisieme du degrade. Identite, pas information. */
     --color-accent-secondary: #ff0080;
+
+    /*
+     * Le rose en surface pleine, pour la meme raison que l'orange : le vif rend
+     * 3,77:1 avec du blanc. Lu UNIQUEMENT par `@utility secondary-fill`.
+     */
+    --color-accent-secondary-fill: #e50073;
+
+    /*
+     * Et le rose LISIBLE, pour les libelles qui s'ecrivent dedans. Le vif rend
+     * 3.45:1 sur la surface la moins favorable, celui-ci 4.52:1.
+     */
+    --color-accent-secondary-deep: #db006e;
     --color-accent-tertiary: #8800ff;
 
     /*
@@ -120,7 +169,20 @@
      */
     --color-accent-state: #ccff00;
 
+    /*
+     * Sa version LISIBLE, la seule qui ait le droit de porter du texte.
+     * Le vif rend 1.18:1 sur une carte ; celui-ci 4.58:1.
+     */
+    --color-accent-state-deep: #607900;
+
     --color-accent-info: #00e5ff;
+
+    /*
+     * Le cyan LISIBLE, pour les rares fois ou l'information s'ecrit en toutes
+     * lettres. Le vif rend 1,54:1 sur une carte — il est fait pour etre une
+     * marque, une icone, un filet, jamais un mot. Mesure : 5,06:1.
+     */
+    --color-accent-info-deep: #007a8a;
     /*
      * Le danger existe en deux valeurs, pour la meme raison que l'orange :
      * `#ef4444` sert de FOND (a 10 %, sous un texte), `deep` sert de TEXTE.
@@ -131,6 +193,12 @@
     --color-accent-danger: #ef4444;
     --color-accent-danger-deep: #b91c1c;
     --color-accent-warning: #eab308;
+
+    /*
+     * Sa version LISIBLE, la seule qui ait le droit de porter du texte.
+     * Le vif rend 1.92:1 sur une carte ; celui-ci 4.60:1.
+     */
+    --color-accent-warning-deep: #8d6b04;
 
     /*
      * --- Tendance ------------------------------------------------------
@@ -147,7 +215,7 @@
      * 2,54:1 sur une carte et #ef4444 3,76:1 — les deux echouent, et le second
      * echouait deja avant la charte.
      */
-    --color-trend-up: #0b875e;
+    --color-trend-up: #0a8059;
     --color-trend-down: #c81111;
 
     /*
@@ -175,6 +243,65 @@
     --color-category-core: #f5009b;
     --color-category-cardio: #c0eb00;
     --color-category-other: #64748b;
+
+    /*
+     * --- La palette que L'UTILISATEUR choisit --------------------------
+     *
+     * Seize teintes pour marquer ses habitudes. Ce n'est ni un accent ni une
+     * categorie : un accent porte une intention, une categorie designe un
+     * groupe musculaire, celles-ci ne veulent rien dire du tout. Elles doivent
+     * seulement se distinguer les unes des autres et plaire.
+     *
+     * Elles etaient les seize `-500` de Tailwind, et une conversion mecanique
+     * les a repliees sur six roles : `emerald`, `green` et `teal` devenaient le
+     * meme vert, `sky`, `cyan` et `blue` le meme cyan. Le choix de l'utilisateur
+     * entre « Vert » et « Emeraude » ne menait alors plus a rien, et le
+     * dictionnaire des noms se retrouvait avec des cles en double dont seule la
+     * derniere survivait. Une palette a besoin de valeurs DISTINGUABLES, pas de
+     * roles — c'est la difference que ce groupe existe pour tenir.
+     *
+     * Chacune porte du blanc a 4.50:1 au minimum, calcule et non choisi a
+     * l'oeil : la vue des habitudes ecrit le nom en blanc par-dessus la pastille
+     * quel que soit le choix, et il n'existe aucun endroit ou l'utilisateur
+     * pourrait etre averti que sa couleur preferee rend son texte illisible.
+     */
+    --color-palette-ardoise: #6d7785;
+    --color-palette-rouge: #d63c3c;
+    --color-palette-orange: #ab6330;
+    --color-palette-ambre: #8f7228;
+    --color-palette-vert: #268736;
+    --color-palette-emeraude: #258562;
+    --color-palette-turquoise: #248276;
+    --color-palette-cyan: #298091;
+    --color-palette-ciel: #2e7ea6;
+    --color-palette-bleu: #3d72db;
+    --color-palette-indigo: #4444f2;
+    --color-palette-violet: #8444f2;
+    --color-palette-pourpre: #ae40e5;
+    --color-palette-fuchsia: #bb3acf;
+    --color-palette-rose: #cf3a84;
+    --color-palette-framboise: #d43b61;
+
+    /*
+     * --- Les disques de fonte -------------------------------------------
+     *
+     * Le code couleur olympique : 25 kg rouge, 20 kg bleu, 15 kg jaune, 10 kg
+     * vert, 5 kg blanc, 2,5 kg noir.
+     *
+     * Ce ne sont PAS des accents, et c'est la raison d'etre de ce groupe. Un
+     * disque de 25 kg est rouge dans le monde, pas parce que cette application
+     * a decide que le rouge signalait un danger. Les avoir ecrits
+     * `bg-accent-danger` et `bg-accent-warning` liait le calculateur de barre
+     * aux humeurs de la charte : eclaircir l'alerte d'un cran aurait repeint des
+     * disques dont la couleur est une norme exterieure.
+     */
+    --color-plate-25: #d42027;
+    --color-plate-20: #1256a8;
+    --color-plate-15: #f2c500;
+    --color-plate-10: #1b883b;
+    --color-plate-5: #f4f4f4;
+    --color-plate-2: #1a1a1a;
+    --color-plate-small: #8a8f98;
 
     /*
      * --- Anciens noms, le temps de la conversion -----------------------
@@ -216,22 +343,60 @@
     --animate-pulse-glow: pulse-glow 8s infinite alternate;
     --animate-liquid-pulse: liquid-pulse 2s infinite;
 
-    --shadow-glow-orange: 0 0 20px rgba(255, 85, 0, 0.25), 0 10px 40px rgba(255, 85, 0, 0.15);
-    --shadow-glow-violet: 0 0 20px rgba(136, 0, 255, 0.25), 0 10px 40px rgba(136, 0, 255, 0.15);
-    --shadow-glow-pink: 0 0 20px rgba(255, 0, 128, 0.25), 0 10px 40px rgba(255, 0, 128, 0.15);
-    --shadow-glow-cyan: 0 0 20px rgba(0, 229, 255, 0.4);
-    --shadow-glow-magenta: 0 0 20px rgba(245, 0, 155, 0.4);
-    --shadow-neon: 0 10px 30px rgba(204, 255, 0, 0.5);
-    --shadow-neon-blue: 0 10px 30px rgba(0, 240, 255, 0.4);
-    --shadow-neon-pink: 0 10px 30px rgba(255, 0, 153, 0.4);
-    --shadow-glass-inset: inset 0 0 20px rgba(255, 255, 255, 0.8);
-    --shadow-glass-out: 0 8px 32px rgba(136, 0, 255, 0.1);
-    --shadow-glass-card: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-    --shadow-plate-shadow: 2px 0 4px rgba(0, 0, 0, 0.2);
+    /*
+     * Les ombres DERIVENT de leur accent, elles ne le recopient pas.
+     *
+     * `rgb(from <couleur> r g b / alpha)` reprend les canaux du jeton et n'en
+     * change que l'opacite. Ecrites en `rgba()` litteral, ces douze lignes
+     * etaient douze copies a la main — et deux avaient deja diverge sans que
+     * rien ne puisse le signaler : `--shadow-neon-blue` portait `0, 240, 255`
+     * pour un cyan qui vaut `#00e5ff`, `--shadow-neon-pink` portait
+     * `255, 0, 153` pour un rose qui vaut `#ff0080`. Deux couleurs sous un seul
+     * nom, exactement la panne que cette charte existe pour supprimer.
+     */
+    --shadow-glow-orange:
+        0 0 20px rgb(from var(--color-accent-primary) r g b / 0.25),
+        0 10px 40px rgb(from var(--color-accent-primary) r g b / 0.15);
+    --shadow-glow-violet:
+        0 0 20px rgb(from var(--color-accent-tertiary) r g b / 0.25),
+        0 10px 40px rgb(from var(--color-accent-tertiary) r g b / 0.15);
+    --shadow-glow-pink:
+        0 0 20px rgb(from var(--color-accent-secondary) r g b / 0.25),
+        0 10px 40px rgb(from var(--color-accent-secondary) r g b / 0.15);
+    --shadow-glow-cyan: 0 0 20px rgb(from var(--color-accent-info) r g b / 0.4);
+    --shadow-glow-magenta: 0 0 20px rgb(from var(--color-category-core) r g b / 0.4);
+    --shadow-neon: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
+    --shadow-neon-blue: 0 10px 30px rgb(from var(--color-accent-info) r g b / 0.4);
+    --shadow-neon-pink: 0 10px 30px rgb(from var(--color-accent-secondary) r g b / 0.4);
+    --shadow-glass-inset: inset 0 0 20px rgb(from var(--color-surface-card) r g b / 0.8);
+    --shadow-glass-out: 0 8px 32px rgb(from var(--color-accent-tertiary) r g b / 0.1);
+    --shadow-glass-card: 0 8px 32px 0 rgb(from var(--color-shadow-ambient) r g b / 0.07);
+    --shadow-plate-shadow: 2px 0 4px rgb(from var(--color-shadow-cast) r g b / 0.2);
 
-    --background-image-gradient-main: linear-gradient(135deg, #ff5500 0%, #ff0080 50%, #8800ff 100%);
-    --background-image-gradient-orange-violet: linear-gradient(135deg, #ff5500 0%, #8800ff 100%);
-    --background-image-gradient-cyan-magenta: linear-gradient(135deg, #00e5ff 0%, #f5009b 100%);
+    /*
+     * Les degrades ne portent plus d'hexadecimal : ils citent les jetons.
+     *
+     * Ils restent des surfaces DECORATIVES. Aucun texte ne s'ecrit dessus, et
+     * c'est demontre plutot que promis : sur `gradient-main`, du blanc echoue de
+     * 0 a 50 % et de l'encre echoue de 75 a 100 %. Aucune des deux ne traverse.
+     * C'est ce qui a fait retirer le degrade des boutons.
+     */
+    --background-image-gradient-main: linear-gradient(
+        135deg,
+        var(--color-accent-primary) 0%,
+        var(--color-accent-secondary) 50%,
+        var(--color-accent-tertiary) 100%
+    );
+    --background-image-gradient-orange-violet: linear-gradient(
+        135deg,
+        var(--color-accent-primary) 0%,
+        var(--color-accent-tertiary) 100%
+    );
+    --background-image-gradient-cyan-magenta: linear-gradient(
+        135deg,
+        var(--color-accent-info) 0%,
+        var(--color-category-core) 100%
+    );
 
     @keyframes fade-in {
         from {
@@ -273,13 +438,13 @@
     }
     @keyframes liquid-pulse {
         0% {
-            box-shadow: 0 0 0 0 rgba(204, 255, 0, 0.7);
+            box-shadow: 0 0 0 0 rgb(from var(--color-accent-state) r g b / 0.7);
         }
         70% {
-            box-shadow: 0 0 0 15px rgba(204, 255, 0, 0);
+            box-shadow: 0 0 0 15px rgb(from var(--color-accent-state) r g b / 0);
         }
         100% {
-            box-shadow: 0 0 0 0 rgba(204, 255, 0, 0);
+            box-shadow: 0 0 0 0 rgb(from var(--color-accent-state) r g b / 0);
         }
     }
 }
@@ -331,7 +496,11 @@
     position: absolute;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(255, 85, 0, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+    background: radial-gradient(
+        circle,
+        rgb(from var(--color-accent-primary) r g b / 0.15) 0%,
+        rgb(from var(--color-surface-card) r g b / 0) 70%
+    );
     top: -200px;
     left: -200px;
     filter: blur(60px);
@@ -344,7 +513,11 @@
     position: absolute;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(136, 0, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+    background: radial-gradient(
+        circle,
+        rgb(from var(--color-accent-tertiary) r g b / 0.15) 0%,
+        rgb(from var(--color-surface-card) r g b / 0) 70%
+    );
     bottom: -150px;
     right: -200px;
     filter: blur(60px);
@@ -359,7 +532,7 @@
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
+    box-shadow: 0 8px 32px rgb(from var(--color-shadow-ambient) r g b / 0.05);
 }
 
 /*
@@ -381,7 +554,7 @@
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
-    box-shadow: 0 12px 40px rgba(31, 38, 135, 0.14);
+    box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.14);
 }
 
 @utility glass-card {
@@ -390,18 +563,18 @@
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
     border-radius: 1.5rem;
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+    box-shadow: 0 8px 32px rgb(from var(--color-shadow-ambient) r g b / 0.07);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
-        box-shadow: 0 12px 40px rgba(31, 38, 135, 0.1);
+        box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.1);
     }
 }
 
 @utility iridescent-card {
     /* Iridescent Border Card */
     position: relative;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(from var(--color-surface-card) r g b / 0.9);
     border-radius: 1.5rem;
     z-index: 1;
 
@@ -410,7 +583,13 @@
         position: absolute;
         inset: -2px;
         border-radius: 1.6rem;
-        background: linear-gradient(135deg, #60a5fa, #e879f9, #34d399, #60a5fa);
+        background: linear-gradient(
+            135deg,
+            var(--color-accent-info),
+            var(--color-accent-secondary),
+            var(--color-accent-state),
+            var(--color-accent-info)
+        );
         z-index: -1;
         opacity: 0.6;
         filter: blur(1px);
@@ -431,10 +610,10 @@
     gap: 0.5rem;
     min-height: var(--touch-min);
     padding: 0.75rem 1.5rem;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgb(from var(--color-surface-card) r g b / 0.8);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid rgba(255, 255, 255, 0.9);
+    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.9);
     border-radius: 1rem;
     font-family: 'Archivo', sans-serif;
     font-weight: 800;
@@ -446,11 +625,11 @@
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 15px rgb(from var(--color-shadow-cast) r g b / 0.05);
 
     &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 6px 20px rgb(from var(--color-shadow-cast) r g b / 0.1);
     }
 
     &:active {
@@ -478,25 +657,213 @@
  * d'objectif, les cases a cocher, et le logo, ou `text-gradient` colore le texte
  * lui-meme au lieu de se poser derriere.
  */
+/*
+ * Une surface d'accent et le texte qui va dessus, indissociables.
+ *
+ * Les separer, c'est laisser un composant poser un fond sans son texte — et
+ * c'est ainsi qu'on se retrouve avec du blanc a 3,21:1. Ici la paire est
+ * decidee une fois.
+ */
+/*
+ * LES SURFACES PLEINES. Un fond d'accent et le texte qui va dessus, ensemble.
+ *
+ * C'est la piece qui manquait, et son absence a produit un haltere NOIR sur la
+ * tuile « Demarrer Seance » : la charte portait un seul jeton `text-on-accent`,
+ * qui vaut de l'encre, et le composant l'a pose sur une tuile orange. La tuile
+ * voisine avait garde `text-white` en brut — donc l'une etait juste par hasard
+ * et l'autre fausse par regle.
+ *
+ * Un jeton de texte ne peut pas suffire, parce que la reponse depend du fond :
+ * mesure faite, l'orange porte du blanc a 4,72:1 et de l'encre a 3,78:1, le
+ * vert d'etat porte de l'encre a 15,19:1 et du blanc a 1,18:1. Aucune valeur
+ * unique ne convient aux deux, et demander au composant de trancher, c'est lui
+ * redonner la decision que la charte lui retire.
+ *
+ * Alors le composant ecrit UN nom — `accent-fill`, `state-fill` — et recoit le
+ * fond ET son texte. Il n'a jamais a savoir de quelle couleur il s'agit, ce qui
+ * est tout l'objet d'un fichier central.
+ *
+ * La regle : du blanc partout ou c'est physiquement possible. Les trois accents
+ * clairs — vert, cyan, jaune — ne peuvent pas le porter (1,18, 1,54 et 1,92) ;
+ * ils existent pour etre des marques lumineuses, et en surface ils portent de
+ * l'encre. Chaque valeur ci-dessous est calculee, et
+ * `LaCharteTientSesContrastesTest` la reverifie a chaque execution.
+ */
+
+/*
+ * Une categorie et le texte qui tient dessus, ensemble.
+ *
+ * `CATEGORY_COLORS` appariait deja les deux — `bg-accent-info text-text-main` —
+ * mais la vue des exercices recollait `text-white` APRES la valeur. Les deux
+ * classes ont la meme specificite : ce n'est donc pas l'ordre dans la chaine qui
+ * tranche, c'est l'ordre du CSS genere, que personne n'ecrit. La pastille
+ * « Bras » pouvait rendre du blanc sur cyan a 1,54:1, « Jambes » du blanc sur
+ * vert acide a 1,18:1, selon l'humeur du compilateur.
+ *
+ * Un seul nom par categorie supprime la question. Chaque texte ci-dessous est
+ * celui des deux qui contraste le mieux, calcule et non choisi.
+ */
+
+/* 5.57:1 */
+@utility category-fill-chest {
+    background: var(--color-category-chest);
+    color: var(--color-text-on-accent);
+}
+
+/* 6.02:1 */
+@utility category-fill-back {
+    background: var(--color-category-back);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 4.73:1 */
+@utility category-fill-shoulders {
+    background: var(--color-category-shoulders);
+    color: var(--color-text-on-accent);
+}
+
+/* 11.61:1 */
+@utility category-fill-arms {
+    background: var(--color-category-arms);
+    color: var(--color-text-on-accent);
+}
+
+/* 15.19:1 */
+@utility category-fill-legs {
+    background: var(--color-category-legs);
+    color: var(--color-text-on-accent);
+}
+
+/* 4.55:1 */
+@utility category-fill-core {
+    background: var(--color-category-core);
+    color: var(--color-text-on-accent);
+}
+
+/* 12.86:1 */
+@utility category-fill-cardio {
+    background: var(--color-category-cardio);
+    color: var(--color-text-on-accent);
+}
+
+/* 4.76:1 */
+@utility category-fill-other {
+    background: var(--color-category-other);
+    color: var(--color-text-on-dark-accent);
+}
+
+/*
+ * Un disque et le chiffre qu'il porte.
+ *
+ * Meme faille qu'ailleurs, sous une autre forme : `getPlateColor()` rendait le
+ * fond, et un ternaire SEPARE dans le gabarit decidait du texte — avec sa propre
+ * liste de poids, a tenir en accord a la main. Deux regles pour une seule
+ * question.
+ */
+
+/* 5.20:1 */
+@utility plate-fill-25 {
+    background: var(--color-plate-25);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 7.19:1 */
+@utility plate-fill-20 {
+    background: var(--color-plate-20);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 10.85:1 */
+@utility plate-fill-15 {
+    background: var(--color-plate-15);
+    color: var(--color-text-on-accent);
+}
+
+/* 4.51:1 */
+@utility plate-fill-10 {
+    background: var(--color-plate-10);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 16.23:1 */
+@utility plate-fill-5 {
+    background: var(--color-plate-5);
+    color: var(--color-text-on-accent);
+}
+
+/* 17.40:1 */
+@utility plate-fill-2 {
+    background: var(--color-plate-2);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* 5.49:1 */
+@utility plate-fill-small {
+    background: var(--color-plate-small);
+    color: var(--color-text-on-accent);
+}
+
+/* Orange assombri juste ce qu'il faut pour porter du blanc — 4,72:1. */
+@utility accent-fill {
+    background: var(--color-accent-primary-fill);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* Rose, 4,59:1 en blanc. Le vif `#ff0080` reste la marque du record. */
+@utility secondary-fill {
+    background: var(--color-accent-secondary-fill);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* Violet, 6,02:1 : assez sombre pour le blanc sans etre retouche. */
+@utility tertiary-fill {
+    background: var(--color-accent-tertiary);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* Danger, 6,47:1. C'est `deep` qui remplit, jamais le `#ef4444` de fond. */
+@utility danger-fill {
+    background: var(--color-accent-danger-deep);
+    color: var(--color-text-on-dark-accent);
+}
+
+/* Vert d'etat, 15,19:1 en encre — le plus lisible de toute la charte. */
+@utility state-fill {
+    background: var(--color-accent-state);
+    color: var(--color-text-on-accent);
+}
+
+/* Cyan, 11,61:1 en encre. */
+@utility info-fill {
+    background: var(--color-accent-info);
+    color: var(--color-text-on-accent);
+}
+
+/* Jaune, 9,31:1 en encre. */
+@utility warning-fill {
+    background: var(--color-accent-warning);
+    color: var(--color-text-on-accent);
+}
+
 @utility glass-button-primary {
     background: var(--color-accent-state);
     border: none;
     color: var(--color-text-on-accent);
-    box-shadow: 0 10px 30px rgba(204, 255, 0, 0.35);
+    box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.35);
 
     &:hover {
-        box-shadow: 0 15px 40px rgba(204, 255, 0, 0.5);
+        box-shadow: 0 15px 40px rgb(from var(--color-accent-state) r g b / 0.5);
     }
 }
 
 @utility glass-button-neon {
     background: var(--neon-green);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.2);
     color: #000;
-    box-shadow: 0 10px 30px rgba(204, 255, 0, 0.5);
+    box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
 
     &:hover {
-        box-shadow: 0 15px 40px rgba(204, 255, 0, 0.6);
+        box-shadow: 0 15px 40px rgb(from var(--color-accent-state) r g b / 0.6);
     }
 }
 
@@ -530,15 +897,15 @@
     width: 100%;
     min-height: var(--touch-min);
     padding: 0.75rem 1rem;
-    background: rgba(255, 255, 255, 0.9);
-    border: 2px solid rgba(230, 230, 230, 0.6);
+    background: rgb(from var(--color-surface-card) r g b / 0.9);
+    border: 2px solid rgb(from var(--color-border) r g b / 0.6);
     border-radius: 1rem;
     color: var(--text-main);
     font-size: 1rem;
     font-weight: 500;
     transition: all 0.2s ease;
     outline: none;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 15px rgb(from var(--color-shadow-cast) r g b / 0.03);
 
     &::-webkit-search-decoration,
     &::-webkit-search-cancel-button,
@@ -555,10 +922,10 @@
     }
 
     &:focus-visible {
-        border-color: rgba(255, 85, 0, 0.5);
+        border-color: rgb(from var(--color-accent-primary) r g b / 0.5);
         box-shadow:
-            0 0 0 4px rgba(255, 85, 0, 0.1),
-            0 8px 20px rgba(0, 0, 0, 0.08);
+            0 0 0 4px rgb(from var(--color-accent-primary) r g b / 0.1),
+            0 8px 20px rgb(from var(--color-shadow-cast) r g b / 0.08);
         transform: scale(1.02);
     }
 }
@@ -569,16 +936,16 @@
     bottom: calc(1rem + var(--safe-area-bottom));
     left: 1rem;
     right: 1rem;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgb(from var(--color-surface-card) r g b / 0.9);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgb(from var(--color-surface-card) r g b / 0.5);
     border-radius: 1rem;
     padding: 0.5rem 0.75rem;
     display: flex;
     justify-content: space-around;
     align-items: center;
-    box-shadow: 0 10px 40px rgba(100, 116, 139, 0.2);
+    box-shadow: 0 10px 40px rgb(from var(--color-text-muted) r g b / 0.2);
     z-index: 50;
     transition:
         transform 0.3s ease,
@@ -592,7 +959,7 @@
     justify-content: center;
     gap: 0.25rem;
     padding: 0.5rem;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     transition: all 0.2s ease;
     -webkit-tap-highlight-color: transparent;
 
@@ -641,7 +1008,7 @@
     align-items: center;
     justify-content: center;
     color: white;
-    box-shadow: 0 10px 30px rgba(255, 85, 0, 0.4);
+    box-shadow: 0 10px 30px rgb(from var(--color-accent-primary) r g b / 0.4);
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
     &:hover {
@@ -653,10 +1020,10 @@
     /* ===== PAGE HEADER ===== */
     position: sticky;
     top: 0;
-    background: rgba(248, 250, 255, 0.8);
+    background: rgb(from var(--color-surface-page) r g b / 0.8);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    border-bottom: 1px solid rgb(from var(--color-surface-card) r g b / 0.4);
     padding: 1rem 1.25rem;
     padding-top: calc(1rem + var(--safe-area-top));
     z-index: 30;
@@ -669,17 +1036,21 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgb(from var(--color-surface-card) r g b / 0.8);
     border: 1px solid white;
     border-radius: 9999px;
-    box-shadow: 0 4px 15px rgba(136, 0, 255, 0.1);
+    box-shadow: 0 4px 15px rgb(from var(--color-accent-tertiary) r g b / 0.1);
 
     &::before {
         content: '';
         position: absolute;
         inset: 0;
         border-radius: 9999px;
-        background: linear-gradient(135deg, rgba(255, 85, 0, 0.1), rgba(136, 0, 255, 0.1));
+        background: linear-gradient(
+            135deg,
+            rgb(from var(--color-accent-primary) r g b / 0.1),
+            rgb(from var(--color-accent-tertiary) r g b / 0.1)
+        );
         filter: blur(10px);
         opacity: 0.3;
         z-index: -1;
@@ -709,21 +1080,21 @@
     /* ===== MODAL ===== */
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgb(from var(--color-shadow-cast) r g b / 0.5);
     backdrop-filter: blur(var(--backdrop-blur-glass-strong));
     -webkit-backdrop-filter: blur(var(--backdrop-blur-glass-strong));
     z-index: 50;
 }
 
 @utility glass-modal {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgb(from var(--color-surface-card) r g b / 0.95);
     backdrop-filter: blur(var(--glass-blur-strong));
     -webkit-backdrop-filter: blur(var(--glass-blur-strong));
     border: 1px solid var(--glass-border);
     border-radius: 2rem;
     max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 25px 50px rgb(from var(--color-shadow-cast) r g b / 0.15);
 }
 
 @utility category-pill {
@@ -738,7 +1109,7 @@
     text-transform: uppercase;
     letter-spacing: 0.02em;
     color: white;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 14px rgb(from var(--color-shadow-cast) r g b / 0.1);
     transition: all 0.2s ease;
     white-space: nowrap;
 
@@ -754,7 +1125,7 @@
 @utility activity-card {
     /* ===== ACTIVITY CARD ===== */
     position: relative;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgb(from var(--color-surface-card) r g b / 0.8);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid white;
@@ -763,11 +1134,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 2px 10px rgb(from var(--color-shadow-cast) r g b / 0.03);
     transition: all 0.2s ease;
 
     &:hover {
-        border-color: rgba(136, 0, 255, 0.3);
+        border-color: rgb(from var(--color-accent-tertiary) r g b / 0.3);
     }
 
     &::before {
@@ -794,7 +1165,7 @@
         background: var(--cyan-pure);
     }
     &[data-color='green']::before {
-        background: #22c55e;
+        background: var(--color-accent-state);
     }
 }
 
@@ -803,7 +1174,7 @@
     height: 2rem;
     width: 100%;
     background: white;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-radius: 0.5rem;
     overflow: hidden;
     padding: 0.25rem;
@@ -813,7 +1184,7 @@
     height: 100%;
     background: var(--neon-green);
     border-radius: 0.375rem;
-    box-shadow: 0 0 15px rgba(204, 255, 0, 0.6);
+    box-shadow: 0 0 15px rgb(from var(--color-accent-state) r g b / 0.6);
     position: relative;
     transition: width 1s linear;
 
@@ -823,11 +1194,11 @@
         inset: 0;
         background: linear-gradient(
             45deg,
-            rgba(255, 255, 255, 0.4) 25%,
+            rgb(from var(--color-surface-card) r g b / 0.4) 25%,
             transparent 25%,
             transparent 50%,
-            rgba(255, 255, 255, 0.4) 50%,
-            rgba(255, 255, 255, 0.4) 75%,
+            rgb(from var(--color-surface-card) r g b / 0.4) 50%,
+            rgb(from var(--color-surface-card) r g b / 0.4) 75%,
             transparent 75%,
             transparent
         );
@@ -839,7 +1210,12 @@
 
 @utility glass-skeleton {
     /* ===== SKELETON LOADING ===== */
-    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background: linear-gradient(
+        90deg,
+        var(--color-surface-sunken) 25%,
+        var(--color-border) 50%,
+        var(--color-surface-sunken) 75%
+    );
     background-size: 200% 100%;
     animation: skeleton-pulse 1.5s ease-in-out infinite;
     border-radius: 0.5rem;
@@ -858,17 +1234,17 @@
 }
 
 @utility glass-badge-success {
-    background: #dcfce7;
-    color: #15803d;
+    background: var(--color-trend-up);
+    color: var(--color-trend-up);
 }
 
 @utility glass-badge-primary {
-    background: rgba(255, 85, 0, 0.1);
+    background: rgb(from var(--color-accent-primary) r g b / 0.1);
     color: var(--electric-orange);
 }
 
 @utility glass-badge-violet {
-    background: rgba(136, 0, 255, 0.1);
+    background: rgb(from var(--color-accent-tertiary) r g b / 0.1);
     color: var(--vivid-violet);
 }
 
@@ -954,23 +1330,23 @@
 
 @utility glow-orange {
     /* Glow effects */
-    box-shadow: 0 0 20px rgba(255, 85, 0, 0.4);
+    box-shadow: 0 0 20px rgb(from var(--color-accent-primary) r g b / 0.4);
 }
 
 @utility glow-violet {
-    box-shadow: 0 0 20px rgba(136, 0, 255, 0.4);
+    box-shadow: 0 0 20px rgb(from var(--color-accent-tertiary) r g b / 0.4);
 }
 
 @utility glow-pink {
-    box-shadow: 0 0 20px rgba(255, 0, 128, 0.4);
+    box-shadow: 0 0 20px rgb(from var(--color-accent-secondary) r g b / 0.4);
 }
 
 @utility glow-cyan {
-    box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+    box-shadow: 0 0 20px rgb(from var(--color-accent-info) r g b / 0.4);
 }
 
 @utility glow-neon {
-    box-shadow: 0 0 20px rgba(204, 255, 0, 0.5);
+    box-shadow: 0 0 20px rgb(from var(--color-accent-state) r g b / 0.5);
 }
 
 /* ===================================
@@ -981,24 +1357,33 @@
 @layer base {
     :root {
         /* New Light Theme Glass Effects */
-        --glass-bg: rgba(255, 255, 255, 0.65);
-        --glass-bg-strong: rgba(255, 255, 255, 0.85);
-        --glass-border: rgba(255, 255, 255, 0.8);
+        --glass-bg: rgb(from var(--color-surface-card) r g b / 0.65);
+        --glass-bg-strong: rgb(from var(--color-surface-card) r g b / 0.85);
+        --glass-border: rgb(from var(--color-surface-card) r g b / 0.8);
         --glass-blur: 20px;
         --glass-blur-strong: 24px;
 
         /* Primary Gradient (Orange → Pink → Violet) */
-        --gradient-main: linear-gradient(135deg, #ff5500 0%, #ff0080 50%, #8800ff 100%);
-        --gradient-orange-violet: linear-gradient(135deg, #ff5500 0%, #8800ff 100%);
-        --gradient-cyan-magenta: linear-gradient(135deg, #00e5ff 0%, #f5009b 100%);
+        --gradient-main: linear-gradient(
+            135deg,
+            var(--color-accent-primary) 0%,
+            var(--color-accent-secondary) 50%,
+            var(--color-accent-tertiary) 100%
+        );
+        --gradient-orange-violet: linear-gradient(
+            135deg,
+            var(--color-accent-primary) 0%,
+            var(--color-accent-tertiary) 100%
+        );
+        --gradient-cyan-magenta: linear-gradient(135deg, var(--color-accent-info) 0%, var(--color-category-core) 100%);
 
         /* Accent Colors */
-        --electric-orange: #ff5500;
-        --vivid-violet: #8800ff;
-        --hot-pink: #ff0080;
-        --neon-green: #ccff00;
-        --cyan-pure: #00e5ff;
-        --magenta-pure: #f5009b;
+        --electric-orange: var(--color-accent-primary);
+        --vivid-violet: var(--color-accent-tertiary);
+        --hot-pink: var(--color-accent-secondary);
+        --neon-green: var(--color-accent-state);
+        --cyan-pure: var(--color-accent-info);
+        --magenta-pure: var(--color-category-core);
 
         /*
          * Une seule source par couleur : ces deux-la referencent les jetons du
@@ -1007,7 +1392,7 @@
          */
         --text-main: var(--color-text-main);
         --text-muted: var(--color-text-muted);
-        --pearl-white: #f8faff;
+        --pearl-white: var(--color-surface-page);
 
         /* Spacing for mobile touch */
         --touch-min: 44px;

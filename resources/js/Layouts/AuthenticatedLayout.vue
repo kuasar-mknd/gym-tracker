@@ -78,10 +78,10 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 </script>
 
 <template>
-    <div class="bg-pearl-white relative min-h-dvh w-full">
+    <div class="bg-surface-page relative min-h-dvh w-full">
         <a
             href="#main-content"
-            class="bg-accent-primary focus:ring-surface-card text-text-on-dark-accent absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
+            class="accent-fill absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
         >
             Aller au contenu principal
         </a>
@@ -102,7 +102,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
             data-testid="pending-migrations-banner"
         >
             {{ $page.props.pending_migrations }} migration(s) en attente — lance
-            <code class="rounded bg-slate-900/15 px-1">sail artisan migrate</code>
+            <code class="bg-text-main/15 rounded px-1">sail artisan migrate</code>
             avant de continuer, sinon les enregistrements échoueront sans le dire.
         </div>
 
@@ -133,7 +133,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                 'flex size-10 items-center justify-center rounded-xl',
                                 type === 'success'
                                     ? 'bg-accent-state/10 text-text-main'
-                                    : 'bg-accent-danger/10 text-accent-danger',
+                                    : 'bg-accent-danger/10 text-accent-danger-deep',
                             ]"
                         >
                             <span class="material-symbols-outlined" aria-hidden="true">{{ cfg.icon }}</span>
@@ -156,7 +156,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 
         <!-- Desktop Navigation -->
         <nav
-            class="bg-pearl-white/80 border-surface-card/40 sticky top-0 z-40 hidden border-b backdrop-blur-xl sm:block"
+            class="bg-surface-page/80 border-surface-card/40 sticky top-0 z-40 hidden border-b backdrop-blur-xl sm:block"
         >
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
@@ -199,7 +199,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="text-text-muted hover:text-electric-orange border-surface-card bg-surface-card/60 hover:bg-surface-card relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition-all hover:shadow-md"
+                            class="text-text-muted hover:text-accent-primary-deep border-surface-card bg-surface-card/60 hover:bg-surface-card relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition-all hover:shadow-md"
                             :aria-label="
                                 $page.props.auth.user.unread_notifications_count > 0
                                     ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
@@ -209,7 +209,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                             <span class="material-symbols-outlined text-[22px]" aria-hidden="true">notifications</span>
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
-                                class="bg-accent-primary shadow-glow-orange text-text-on-dark-accent absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black"
+                                class="accent-fill absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black"
                             >
                                 {{ $page.props.auth.user.unread_notifications_count }}
                             </span>
@@ -223,10 +223,10 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                         type="button"
                                         aria-haspopup="true"
                                         :aria-expanded="open"
-                                        class="text-text-main focus-visible:ring-electric-orange border-border bg-surface-card hover:bg-surface-card inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
-                                            class="bg-gradient-main flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white"
+                                            class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 items-center justify-center rounded-full text-xs font-black"
                                         >
                                             {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                                         </div>
@@ -275,7 +275,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-pearl-white/80 border-surface-card/40 sticky top-0 z-30 flex items-center justify-between border-b px-5 py-4 backdrop-blur-xl sm:hidden"
+            class="bg-surface-page/80 border-surface-card/40 sticky top-0 z-30 flex items-center justify-between border-b px-5 py-4 backdrop-blur-xl sm:hidden"
             :style="{ paddingTop: 'calc(1rem + var(--safe-area-top))' }"
         >
             <div class="flex min-w-0 items-center gap-4">
@@ -283,7 +283,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                     v-if="showBack"
                     v-press
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
-                    class="text-text-muted hover:text-electric-orange border-border bg-surface-card flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
+                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
                     aria-label="Retour"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
@@ -310,7 +310,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                     <span class="material-symbols-outlined text-[22px]" aria-hidden="true">notifications</span>
                     <span
                         v-if="$page.props.auth.user.unread_notifications_count > 0"
-                        class="bg-accent-primary text-text-on-dark-accent absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black"
+                        class="accent-fill absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black"
                     >
                         {{ $page.props.auth.user.unread_notifications_count }}
                     </span>
@@ -322,7 +322,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         <!-- Desktop Page Heading Slot -->
         <header
             v-if="$slots.header"
-            class="bg-pearl-white/50 backdrop-blur-glass border-surface-card/40 hidden border-b sm:block"
+            class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 hidden border-b sm:block"
         >
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <slot name="header" />

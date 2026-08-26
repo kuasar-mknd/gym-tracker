@@ -59,37 +59,37 @@ const emit = defineEmits(['edit', 'delete'])
                                     <div class="flex flex-wrap gap-2">
                                         <span
                                             v-if="journal.sleep_quality"
-                                            class="inline-flex items-center rounded-md bg-indigo-400/10 px-2 py-1 text-[10px] font-medium text-indigo-400 ring-1 ring-indigo-400/30 ring-inset"
+                                            class="bg-accent-tertiary/10 text-accent-tertiary ring-accent-tertiary/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             💤 {{ journal.sleep_quality }}/5
                                         </span>
                                         <span
                                             v-if="journal.stress_level"
-                                            class="inline-flex items-center rounded-md bg-orange-400/10 px-2 py-1 text-[10px] font-medium text-orange-400 ring-1 ring-orange-400/30 ring-inset"
+                                            class="bg-accent-primary/10 text-accent-primary-deep ring-accent-primary/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             ⚡ Stress: {{ journal.stress_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.energy_level"
-                                            class="inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-1 text-[10px] font-medium text-yellow-400 ring-1 ring-yellow-400/30 ring-inset"
+                                            class="bg-accent-warning/10 text-accent-warning-deep ring-accent-warning/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🔋 Énergie: {{ journal.energy_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.motivation_level"
-                                            class="inline-flex items-center rounded-md bg-pink-400/10 px-2 py-1 text-[10px] font-medium text-pink-400 ring-1 ring-pink-400/30 ring-inset"
+                                            class="bg-accent-secondary/10 text-accent-secondary-deep ring-accent-secondary/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🔥 Motivation: {{ journal.motivation_level }}/10
                                         </span>
                                         <span
                                             v-if="journal.nutrition_score"
-                                            class="inline-flex items-center rounded-md bg-emerald-400/10 px-2 py-1 text-[10px] font-medium text-emerald-400 ring-1 ring-emerald-400/30 ring-inset"
+                                            class="bg-accent-state/10 text-trend-up ring-accent-state/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🥗 Diète: {{ journal.nutrition_score }}/5
                                         </span>
                                         <span
                                             v-if="journal.training_intensity"
-                                            class="inline-flex items-center rounded-md bg-red-400/10 px-2 py-1 text-[10px] font-medium text-red-600 ring-1 ring-red-400/30 ring-inset"
+                                            class="bg-accent-danger/10 text-accent-danger-deep ring-accent-danger/30 inline-flex items-center rounded-md px-2 py-1 text-[10px] font-medium ring-1 ring-inset"
                                         >
                                             🏋️ Intensité: {{ journal.training_intensity }}/10
                                         </span>
@@ -102,7 +102,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <button
                                         v-press
                                         @click="emit('edit', journal)"
-                                        class="text-text-muted/50 hover:text-text-main focus-visible:ring-electric-orange hover:bg-surface-card/20 rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                        class="text-text-muted/50 hover:text-text-main focus-visible:ring-accent-primary hover:bg-surface-card/20 rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                         aria-label="Modifier l'entrée"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -117,7 +117,7 @@ const emit = defineEmits(['edit', 'delete'])
                                     <button
                                         v-press
                                         @click="emit('delete', journal.id)"
-                                        class="text-text-muted/50 focus-visible:ring-electric-orange hover:bg-surface-card/20 hover:text-accent-danger rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                        class="text-text-muted/50 focus-visible:ring-accent-primary hover:bg-surface-card/20 hover:text-accent-danger-deep rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                         aria-label="Supprimer l'entrée"
                                     >
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

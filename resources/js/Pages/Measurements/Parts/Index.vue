@@ -79,8 +79,8 @@ const selectCommonPart = (part) => {
                                 :class="[
                                     'rounded-full px-3 py-1 text-xs transition',
                                     form.part === part
-                                        ? 'bg-accent-primary text-text-on-dark-accent'
-                                        : 'text-text-muted bg-surface-sunken hover:bg-slate-200',
+                                        ? 'accent-fill'
+                                        : 'text-text-muted bg-surface-sunken hover:bg-surface-sunken',
                                 ]"
                             >
                                 {{ part }}
@@ -130,7 +130,7 @@ const selectCommonPart = (part) => {
 
             <!-- Chart -->
             <GlassCard v-if="latestMeasurements.some((m) => m.diff !== 0)" class="animate-slide-up">
-                <h3 class="font-display mb-4 text-xs font-black tracking-[0.2em] text-emerald-500 uppercase">
+                <h3 class="font-display text-trend-up mb-4 text-xs font-black tracking-[0.2em] uppercase">
                     Évolution Récente
                 </h3>
                 <BodyPartDiffChart :data="latestMeasurements" />

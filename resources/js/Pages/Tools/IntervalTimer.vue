@@ -278,11 +278,11 @@ const formattedTime = computed(() => {
 const phaseColor = computed(() => {
     switch (phase.value) {
         case 'warmup':
-            return 'text-blue-400'
+            return 'text-accent-info-deep'
         case 'work':
-            return 'text-electric-orange'
+            return 'text-accent-primary-deep'
         case 'rest':
-            return 'text-emerald-400'
+            return 'text-trend-up'
         case 'finished':
             return 'text-text-main'
         default:
@@ -293,15 +293,15 @@ const phaseColor = computed(() => {
 const phaseBg = computed(() => {
     switch (phase.value) {
         case 'warmup':
-            return 'bg-blue-500/10 border-blue-500/20'
+            return 'bg-accent-info/10 border-accent-info/20'
         case 'work':
-            return 'bg-electric-orange/10 border-electric-orange/20'
+            return 'bg-accent-primary/10 border-accent-primary/20'
         case 'rest':
-            return 'bg-emerald-500/10 border-emerald-500/20'
+            return 'bg-accent-state/10 border-accent-state/20'
         case 'finished':
-            return 'bg-slate-100 border-slate-200'
+            return 'bg-surface-sunken border-surface-sunken'
         default:
-            return 'bg-slate-50 border-slate-200'
+            return 'bg-surface-sunken border-surface-sunken'
     }
 })
 
@@ -411,15 +411,15 @@ onUnmounted(() => {
                 <div class="grid grid-cols-3 gap-4 text-center">
                     <div class="glass-panel p-3">
                         <div class="text-text-muted text-xs tracking-wider uppercase">Travail</div>
-                        <div class="text-electric-orange text-xl font-bold">{{ timerConfig.work }}s</div>
+                        <div class="text-accent-primary-deep text-xl font-bold">{{ timerConfig.work }}s</div>
                     </div>
                     <div class="glass-panel p-3">
                         <div class="text-text-muted text-xs tracking-wider uppercase">Repos</div>
-                        <div class="text-xl font-bold text-emerald-400">{{ timerConfig.rest }}s</div>
+                        <div class="text-trend-up text-xl font-bold">{{ timerConfig.rest }}s</div>
                     </div>
                     <div class="glass-panel p-3">
                         <div class="text-text-muted text-xs tracking-wider uppercase">Échauff.</div>
-                        <div class="text-xl font-bold text-blue-400">{{ timerConfig.warmup }}s</div>
+                        <div class="text-accent-info-deep text-xl font-bold">{{ timerConfig.warmup }}s</div>
                     </div>
                 </div>
             </div>
@@ -497,7 +497,7 @@ onUnmounted(() => {
                         class="group relative flex items-center justify-between overflow-hidden p-4"
                     >
                         <div class="relative z-10 cursor-pointer" @click="loadTimer(timer)">
-                            <h4 class="text-text-main group-hover:text-electric-orange font-bold transition-colors">
+                            <h4 class="text-text-main group-hover:text-accent-primary-deep font-bold transition-colors">
                                 {{ timer.name }}
                             </h4>
                             <p class="text-text-muted text-xs">
@@ -507,7 +507,7 @@ onUnmounted(() => {
                         <div class="relative z-10 flex items-center gap-2">
                             <button
                                 @click="loadTimer(timer)"
-                                class="text-text-muted hover:text-electric-orange relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
+                                class="text-text-muted hover:text-accent-primary-deep relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
                                 title="Charger & Lancer"
                                 aria-label="Charger et lancer"
                             >
@@ -515,14 +515,14 @@ onUnmounted(() => {
                             </button>
                             <button
                                 @click="editTimer(timer)"
-                                class="text-text-muted relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-[''] hover:text-blue-500"
+                                class="text-text-muted hover:text-accent-info-deep relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
                                 aria-label="Modifier"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">edit</span>
                             </button>
                             <button
                                 @click="deleteTimer(timer)"
-                                class="text-text-muted hover:text-accent-danger relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
+                                class="text-text-muted hover:text-accent-danger-deep relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
                                 aria-label="Supprimer"
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">delete</span>
