@@ -104,10 +104,55 @@ describe('BottomNav — the central button', () => {
 
         await fab(wrapper).trigger('click')
 
-        expect(routerPost).toHaveBeenCalledWith('/resolved/workouts.store')
+        // On lit le premier argument plutôt que la signature entière : le
+        // bouton passe désormais des options à Inertia pour relâcher son verrou,
+        // et ce test-là parle de la DESTINATION, pas de la façon d'y aller.
+        expect(routerPost).toHaveBeenCalledTimes(1)
+        expect(routerPost.mock.calls[0][0]).toBe('/resolved/workouts.store')
         expect(opened).not.toHaveBeenCalled()
 
         window.removeEventListener('open-add-exercise', opened)
+    })
+
+    it('ne crée pas deux séances quand on appuie deux fois', async () => {
+        /*
+         * Le bouton est au centre de la barre, sous le pouce : c'est le plus
+         * facile à double-cliquer de toute l'application, et c'était le seul des
+         * quatre chemins vers « démarrer une séance » sans aucun verrou. Deux
+         * appuis rapprochés créaient deux séances, et l'écran s'ouvrait sur la
+         * mauvaise.
+         *
+         * Inertia n'appelle `onFinish` qu'à la fin de la requête ; tant qu'elle
+         * dure, le second appui doit être sans effet.
+         */
+        const wrapper = mountNav('stats.index')
+
+        await fab(wrapper).trigger('click')
+        await fab(wrapper).trigger('click')
+
+        expect(routerPost).toHaveBeenCalledTimes(1)
+        expect(fab(wrapper).attributes('disabled')).toBeDefined()
+        expect(fab(wrapper).attributes('aria-busy')).toBe('true')
+    })
+
+    it('rend le bouton même quand la création échoue', async () => {
+        /*
+         * `onFinish` et non `onSuccess` : un refus du serveur doit relâcher le
+         * verrou aussi, sinon une erreur réseau condamne le bouton jusqu'au
+         * rechargement de la page.
+         */
+        const wrapper = mountNav('stats.index')
+
+        await fab(wrapper).trigger('click')
+
+        const options = routerPost.mock.calls[0][2]
+
+        expect(options).toHaveProperty('onFinish')
+
+        options.onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(fab(wrapper).attributes('disabled')).toBeUndefined()
     })
 
     /** Starting a second session from inside the first is the bug this guards. */

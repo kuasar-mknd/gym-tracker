@@ -44,32 +44,33 @@ const selectCommonPart = (part) => {
 
     <AuthenticatedLayout page-title="Measurements">
         <template #header-actions>
-            <GlassButton size="sm" @click="showAddForm = !showAddForm">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
+            <GlassButton
+                :variant="showAddForm ? 'secondary' : 'primary'"
+                size="sm"
+                :aria-label="showAddForm ? 'Annuler la saisie' : 'Ajouter une mesure'"
+                @click="showAddForm = !showAddForm"
+            >
+                <span class="material-symbols-outlined text-base" aria-hidden="true">add</span>
             </GlassButton>
         </template>
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Measurements</h2>
-                <GlassButton @click="showAddForm = !showAddForm">
-                    <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Add
+                <h2 class="text-text-main text-xl font-semibold">Mesures</h2>
+                <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
+                    <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">add</span>
+                    Ajouter
                 </GlassButton>
             </div>
         </template>
 
         <div class="space-y-6">
-            <!-- Add Form -->
+            <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold">New Measurement</h3>
+                <h3 class="text-text-main mb-4 font-semibold">Nouvelle mesure</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>
-                        <label class="text-text-muted mb-1 block text-sm font-medium">Body Part</label>
+                        <label class="text-text-muted mb-1 block text-sm font-medium">Partie du corps</label>
                         <div class="mb-2 flex flex-wrap gap-2">
                             <button
                                 v-for="part in commonParts"
@@ -94,7 +95,7 @@ const selectCommonPart = (part) => {
                             v-model="form.value"
                             type="number"
                             step="0.1"
-                            label="Value"
+                            label="Valeur"
                             placeholder="0.00"
                             :error="form.errors.value"
                             inputmode="decimal"
@@ -103,7 +104,7 @@ const selectCommonPart = (part) => {
                         <div class="space-y-1">
                             <GlassSelect
                                 v-model="form.unit"
-                                label="Unit"
+                                label="Unité"
                                 :options="[
                                     { value: 'cm', label: 'cm' },
                                     { value: 'in', label: 'in' },
@@ -120,10 +121,10 @@ const selectCommonPart = (part) => {
                         required
                     />
 
-                    <GlassInput v-model="form.notes" label="Notes (optional)" :error="form.errors.notes" />
+                    <GlassInput v-model="form.notes" label="Notes (facultatif)" :error="form.errors.notes" />
 
                     <GlassButton type="submit" variant="primary" class="w-full" :loading="form.processing">
-                        Save
+                        Enregistrer
                     </GlassButton>
                 </form>
             </GlassCard>
@@ -178,8 +179,8 @@ const selectCommonPart = (part) => {
 
                 <!-- Empty State -->
                 <div v-if="latestMeasurements.length === 0 && !showAddForm" class="col-span-full py-12 text-center">
-                    <p class="text-text-muted">No measurements recorded.</p>
-                    <GlassButton @click="showAddForm = true" class="mt-4"> Start </GlassButton>
+                    <p class="text-text-muted">Aucune mesure enregistrée.</p>
+                    <GlassButton variant="primary" class="mt-4" @click="showAddForm = true"> Commencer </GlassButton>
                 </div>
             </div>
         </div>

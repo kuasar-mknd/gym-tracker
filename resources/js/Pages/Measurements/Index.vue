@@ -77,33 +77,32 @@ const latestBodyFat = computed(() => {
 
     <AuthenticatedLayout page-title="Mesures">
         <template #header-actions>
-            <GlassButton size="sm" @click="showAddForm = !showAddForm">
-                <svg
-                    class="h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
+            <!--
+                Le variant suit l'ÉTAT : ce bouton bascule, et il dit
+                « Annuler » une fois le formulaire ouvert. Un « Annuler » vert
+                serait faux — c'est ce qui arrive quand on pose un variant sans
+                regarder ce que le bouton fait dans son autre moitié.
+            -->
+            <GlassButton
+                :variant="showAddForm ? 'secondary' : 'primary'"
+                size="sm"
+                :aria-label="showAddForm ? 'Annuler la saisie' : 'Ajouter une mesure'"
+                @click="showAddForm = !showAddForm"
+            >
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">
+                    {{ showAddForm ? 'close' : 'add' }}
+                </span>
             </GlassButton>
         </template>
 
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Mesures</h2>
-                <GlassButton @click="showAddForm = !showAddForm">
-                    <svg
-                        class="mr-2 h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Ajouter
+                <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
+                    <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">
+                        {{ showAddForm ? 'close' : 'add' }}
+                    </span>
+                    {{ showAddForm ? 'Annuler' : 'Ajouter' }}
                 </GlassButton>
             </div>
         </template>

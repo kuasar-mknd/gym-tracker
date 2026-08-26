@@ -243,7 +243,7 @@ const formatHistoryDuration = (start, end) => {
                         <p class="text-text-muted text-sm">Objectif : {{ activeFast.type }}</p>
                     </div>
 
-                    <GlassButton @click="endFast" variant="accent" :loading="endForm.processing" class="w-full">
+                    <GlassButton @click="endFast" variant="primary" :loading="endForm.processing" class="w-full">
                         Terminer le jeûne
                     </GlassButton>
                 </GlassCard>

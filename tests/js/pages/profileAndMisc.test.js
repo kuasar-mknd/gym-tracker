@@ -194,7 +194,7 @@ const mountPart = (history = historyFixture) => {
 }
 
 const openAddForm = async (wrapper) => {
-    await clickText(wrapper, 'button', 'Add')
+    await clickText(wrapper, 'button', 'Ajouter')
 
     const form = wrapper.find('form')
 
@@ -295,7 +295,7 @@ describe('Measurements/Parts/Show — the history list', () => {
         const labels = wrapper.findAll('[dusk^="delete-measurement-"]').map((button) => button.attributes('aria-label'))
 
         expect(labels).toHaveLength(3)
-        labels.forEach((label) => expect(label).toMatch(/^Delete the .+ entry$/))
+        labels.forEach((label) => expect(label).toMatch(/^Supprimer la mesure du .+$/))
         expect(new Set(labels).size).toBe(3)
     })
 })
@@ -353,9 +353,9 @@ describe('Measurements/Parts/Show — recording a measurement', () => {
         const fieldWithLabel = (label) =>
             wrapper.findAllComponents({ name: 'GlassInput' }).find((input) => input.props('label') === label)
 
-        await fieldWithLabel('Value').vm.$emit('update:modelValue', 42)
+        await fieldWithLabel('Valeur').vm.$emit('update:modelValue', 42)
         await fieldWithLabel('Date').vm.$emit('update:modelValue', '2026-03-15')
-        await fieldWithLabel('Notes (optional)').vm.$emit('update:modelValue', 'après le cycle')
+        await fieldWithLabel('Notes (facultatif)').vm.$emit('update:modelValue', 'après le cycle')
 
         expect(wrapper.vm.form.value).toBe(42)
         expect(wrapper.vm.form.measured_at).toBe('2026-03-15')

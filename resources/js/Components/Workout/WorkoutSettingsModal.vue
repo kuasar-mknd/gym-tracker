@@ -29,8 +29,13 @@ const emit = defineEmits(['close', 'submit'])
                 Paramètres
             </h2>
             <form @submit.prevent="emit('submit')" class="space-y-5">
-                <GlassInput v-model="form.name" label="Nom" dusk="workout-name-input" />
-                <GlassInput v-model="form.started_at" type="datetime-local" label="Date" />
+                <GlassInput v-model="form.name" label="Nom" :error="form.errors.name" dusk="workout-name-input" />
+                <GlassInput
+                    v-model="form.started_at"
+                    type="datetime-local"
+                    label="Date"
+                    :error="form.errors.started_at"
+                />
 
                 <div>
                     <div class="mb-2 flex items-center justify-between">

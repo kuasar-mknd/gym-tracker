@@ -271,7 +271,13 @@ const getProgressPercent = (habit) => {
 
     <AuthenticatedLayout page-title="Habitudes">
         <template #header-actions>
-            <GlassButton size="sm" @click="openAddForm" aria-label="Ajouter une habitude" dusk="add-habit">
+            <GlassButton
+                variant="primary"
+                size="sm"
+                @click="openAddForm"
+                aria-label="Ajouter une habitude"
+                dusk="add-habit"
+            >
                 <span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>
             </GlassButton>
         </template>
@@ -279,7 +285,7 @@ const getProgressPercent = (habit) => {
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Habitudes</h2>
-                <GlassButton @click="openAddForm">
+                <GlassButton variant="primary" @click="openAddForm">
                     <span class="material-symbols-outlined mr-2 text-sm" aria-hidden="true">add</span>
                     Ajouter
                 </GlassButton>
