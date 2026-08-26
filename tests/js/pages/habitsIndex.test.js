@@ -45,10 +45,6 @@ import { passesSlot } from './pageStubs'
  */
 const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
 
-const confirmer = async (wrapper) => {
-    await dialogue(wrapper).vm.$emit('confirmer')
-}
-
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
 })
@@ -193,9 +189,14 @@ describe('deleting a habit', () => {
     it('demande avant, et ne supprime que sur confirmation', async () => {
         const wrapper = mountPage()
 
-        wrapper.vm.demanderSuppression(habit({ id: 7 }))
+        wrapper.vm.demanderSuppression(habit({ id: 7, name: 'Méditation' }))
         await wrapper.vm.$nextTick()
 
+        // On vérifie le DIALOGUE, pas seulement l'absence d'appel : un composant
+        // qui n'ouvrirait rien du tout passerait la seconde assertion sans que
+        // l'utilisateur ait jamais vu la question.
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
+        expect(dialogue(wrapper).props('description')).toContain('Méditation')
         expect(routerDelete).not.toHaveBeenCalled()
 
         wrapper.vm.confirmerSuppression()
