@@ -59,7 +59,7 @@
                                         />
                                         <span
                                             class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
-                                            >reps</span
+                                            >réps</span
                                         >
                                     </div>
                                 </div>

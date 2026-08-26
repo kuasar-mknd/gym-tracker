@@ -358,7 +358,7 @@ describe.each([
         const wrapper = mountPage()
         await seed(wrapper, twoExercises)
 
-        await wrapper.findAll('input[placeholder="reps"]')[1].setValue('12')
+        await wrapper.findAll('input[placeholder="réps"]')[1].setValue('12')
         await wrapper.findAll('input[placeholder="kg"]')[1].setValue('102.5')
 
         // Numbers, not strings: `type="number"` makes Vue cast, and the server

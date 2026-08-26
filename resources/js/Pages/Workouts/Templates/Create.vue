@@ -248,7 +248,7 @@ const submit = () => {
                                         v-model="set.reps"
                                         type="number"
                                         class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-10 w-20 rounded-lg border text-center text-base"
-                                        placeholder="reps"
+                                        placeholder="réps"
                                     />
                                     <input
                                         v-model="set.weight"

@@ -1822,7 +1822,7 @@ onUnmounted(() => {
                                     :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
                                     class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                 />
-                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">reps</span>
+                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">réps</span>
                             </template>
 
                             <template v-else-if="line.exercise.type === 'cardio'">

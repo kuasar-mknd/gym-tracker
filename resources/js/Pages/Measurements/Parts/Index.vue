@@ -40,9 +40,9 @@ const selectCommonPart = (part) => {
 </script>
 
 <template>
-    <Head title="Measurements" />
+    <Head title="Mesures" />
 
-    <AuthenticatedLayout page-title="Measurements">
+    <AuthenticatedLayout page-title="Mesures">
         <template #header-actions>
             <GlassButton
                 :variant="showAddForm ? 'secondary' : 'primary'"
