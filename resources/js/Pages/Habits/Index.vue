@@ -529,7 +529,7 @@ const getProgressPercent = (habit) => {
                                 :aria-label="iconNames[icon]"
                                 :aria-pressed="form.icon === icon"
                                 :dusk="`habit-icon-${icon}`"
-                                class="focus-visible:ring-accent-primary hover:bg-surface-sunken flex h-10 w-10 items-center justify-center rounded-lg border-2 transition focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary hover:bg-surface-sunken flex size-11 items-center justify-center rounded-lg border-2 transition focus-visible:ring-2 focus-visible:outline-none"
                                 :class="[
                                     form.icon === icon
                                         ? 'border-accent-primary bg-accent-primary/10 text-accent-primary-deep'

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 
-import { collectSourceFiles, jsRoot } from './sourceFiles'
+import { collectSourceFiles, jsRoot, visibleText } from './sourceFiles'
 
 /**
  * `<GlassButton …>` and everything up to its closing tag.
@@ -66,12 +66,7 @@ const libelle = (source, apres) => {
         return ''
     }
 
-    return source
-        .slice(apres, fin)
-        .replace(/<span[^>]*aria-hidden="true"[^>]*>.*?<\/span>/gs, '')
-        .replace(/<[^>]*>/gs, '')
-        .replace(/\s+/g, ' ')
-        .trim()
+    return visibleText(source.slice(apres, fin))
 }
 
 const boutons = () =>

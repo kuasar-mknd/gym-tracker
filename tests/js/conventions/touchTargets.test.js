@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 
-import { collectSourceFiles, jsRoot } from './sourceFiles'
+import { collectSourceFiles, jsRoot, visibleText } from './sourceFiles'
 
 /** La charte fixe `--spacing-touch` à 44 px, comme les WCAG 2.5.8 (AAA). */
 const CIBLE = 44
@@ -51,10 +51,28 @@ const cible = (classes) => {
 const boutonsIcone = /<button\b(?<attributs>(?:[^>"']|"[^"]*"|'[^']*')*?)>(?<corps>.*?)<\/button>/gs
 
 /**
- * `GlassInput` et `GlassIconButton` DÉFINISSENT l'affordance ; les mesurer
- * reviendrait à mesurer la règle avec elle-même.
+ * `GlassButton`, `GlassIconButton` et `GlassInput` DÉFINISSENT l'affordance ;
+ * les mesurer reviendrait à mesurer la règle avec elle-même. Leurs tailles
+ * passent d'ailleurs par une table indexée sur une prop, que rien ne permet de
+ * lire depuis le gabarit.
  */
-const primitives = ['Components/UI/GlassIconButton.vue', 'Components/UI/GlassInput.vue']
+const primitives = [
+    'Components/UI/GlassButton.vue',
+    'Components/UI/GlassIconButton.vue',
+    'Components/UI/GlassInput.vue',
+]
+
+/**
+ * Les boutons dont la taille ne se lit PAS dans leurs classes.
+ *
+ * Deux formes, toutes deux légitimes : celui qui remplit son parent (`h-full`,
+ * la trappe de suppression d'une ligne qu'on fait glisser) et celui qui porte un
+ * utilitaire nommé de la charte (`glass-nav-fab`, qui vaut 72 px). Les compter à
+ * 24 px serait faux ; les compter comme conformes serait un mensonge. Ils sont
+ * écartés de la mesure, et cette note est là pour que personne ne croie la
+ * mesure exhaustive.
+ */
+const mesurable = (classes) => !/\b(?:[hw]-full|size-full|inset-0|flex-1|glass-[a-z-]+)\b/.test(classes)
 
 describe('les cibles tactiles', () => {
     /**
@@ -72,19 +90,19 @@ describe('les cibles tactiles', () => {
             const source = readFileSync(fichier, 'utf8')
 
             return [...source.matchAll(boutonsIcone)]
-                .filter((trouve) => {
-                    const nu = trouve.groups.corps.replace(/<[^>]*>/gs, '').trim()
-
-                    return trouve.groups.corps.includes('material-symbols') && /^[a-z_]*$/.test(nu)
-                })
+                .filter(
+                    (trouve) =>
+                        trouve.groups.corps.includes('material-symbols') &&
+                        /^[a-z_]*$/.test(visibleText(trouve.groups.corps)),
+                )
                 .map((trouve) => ({
                     ou: `${fichier.replace(jsRoot, 'resources/js')}:${source.slice(0, trouve.index).split('\n').length}`,
-                    px: cible(
-                        [...trouve.groups.attributs.matchAll(/(?:class|:class)="([^"]*)"/gs)]
-                            .map((c) => c[1])
-                            .join(' '),
-                    ),
+                    classes: [...trouve.groups.attributs.matchAll(/(?:class|:class)="([^"]*)"/gs)]
+                        .map((c) => c[1])
+                        .join(' '),
                 }))
+                .filter((bouton) => mesurable(bouton.classes))
+                .map((bouton) => ({ ...bouton, px: cible(bouton.classes) }))
                 .filter((bouton) => bouton.px < CIBLE)
                 .map((bouton) => `${bouton.ou} — ${bouton.px} px`)
         })
