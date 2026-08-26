@@ -115,7 +115,10 @@ class ExerciseLibraryTest extends DuskTestCase
             $browser->pause(500);
             $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').click();");
 
-            $browser->acceptDialog()
+            // La confirmation est un dialogue de l'application, plus la boite
+            // native : Dusk clique un bouton au lieu de repondre au navigateur.
+            $browser->waitFor('@confirm-dialog-confirm', 10)
+                ->click('@confirm-dialog-confirm')
                 ->waitUntilMissingText(strtoupper($updatedName), 10)
                 ->assertDontSee(strtoupper($updatedName));
 

@@ -78,6 +78,9 @@ vi.mock('@inertiajs/vue3', async () => {
 
 import WorkoutsIndex from '@/Pages/Workouts/Index.vue'
 
+/** La question passe par un dialogue de l'application, plus par `confirm()`. */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
 beforeAll(() => {
     globalThis.route = (name, params) => {
         if (name === 'workouts.store') return '/workouts'
@@ -180,6 +183,8 @@ const deleteRow = async (wrapper, id) => {
 
     expect(button.exists(), `no delete button for session ${id}`).toBe(true)
     await button.trigger('click')
+    await dialogue(wrapper).vm.$emit('confirmer')
+    await wrapper.vm.$nextTick()
 }
 
 beforeEach(() => {
@@ -329,10 +334,11 @@ describe('Workouts/Index — reaching the older pages', () => {
  */
 describe('Workouts/Index — deleting a session', () => {
     it('asks first, and leaves everything alone when the answer is no', async () => {
-        globalThis.confirm = vi.fn(() => false)
         const wrapper = mountPage()
 
-        await deleteRow(wrapper, 2)
+        await wrapper.find('[dusk="delete-workout-2"]').trigger('click')
+        await dialogue(wrapper).vm.$emit('annuler')
+        await wrapper.vm.$nextTick()
 
         expect(destroy).not.toHaveBeenCalled()
         expect(rowIds(wrapper)).toEqual([1, 2, 3])
@@ -341,11 +347,23 @@ describe('Workouts/Index — deleting a session', () => {
     it('names the session it is about to delete, even the unnamed one', async () => {
         const wrapper = mountPage()
 
-        await deleteRow(wrapper, 1)
-        expect(globalThis.confirm).toHaveBeenCalledWith(expect.stringContaining('"Push Day"'))
+        await wrapper.find('[dusk="delete-workout-1"]').trigger('click')
+        expect(dialogue(wrapper).props('description')).toContain('Push Day')
 
-        await deleteRow(wrapper, 2)
-        expect(globalThis.confirm).toHaveBeenLastCalledWith(expect.stringContaining('"Séance"'))
+        await dialogue(wrapper).vm.$emit('annuler')
+        await wrapper.find('[dusk="delete-workout-2"]').trigger('click')
+
+        // Une séance sans nom garde un repli lisible plutôt qu'un blanc.
+        expect(dialogue(wrapper).props('description')).toContain('Séance')
+    })
+
+    it('ne supprime rien tant que la question n’est pas tranchée', async () => {
+        const wrapper = mountPage()
+
+        await wrapper.find('[dusk="delete-workout-3"]').trigger('click')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
+        expect(destroy).not.toHaveBeenCalled()
     })
 
     it('sends the deletion for the session that was swiped', async () => {

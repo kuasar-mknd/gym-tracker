@@ -182,7 +182,7 @@
                                 </div>
                             </div>
                             <button
-                                @click="deleteLog(log)"
+                                @click="demanderSuppression(log)"
                                 :aria-label="'Supprimer l\'entrée de ' + log.amount + ' ml'"
                                 class="text-text-muted hover:bg-accent-danger/10 hover:text-accent-danger-deep flex h-8 w-8 items-center justify-center rounded-full transition-colors"
                             >
@@ -202,6 +202,13 @@
                 </GlassCard>
             </div>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer cette prise ?"
+            :description="entreeASupprimer ? `${entreeASupprimer.amount} ml seront retires de ton total du jour.` : ''"
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>
 
@@ -213,6 +220,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
 
@@ -269,14 +278,19 @@ const addWater = (amount) => {
     })
 }
 
-const deleteLog = (log) => {
-    if (confirm('Supprimer cette entrée ?')) {
-        triggerHaptic('warning')
-        router.delete(route('tools.water.destroy', { waterLog: log.id }), {
-            preserveScroll: true,
-        })
-    }
-}
+const {
+    cible: entreeASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((log, termine) => {
+    triggerHaptic('warning')
+    router.delete(route('tools.water.destroy', { waterLog: log.id }), {
+        preserveScroll: true,
+        onFinish: termine,
+    })
+})
 </script>
 
 <style scoped>

@@ -36,6 +36,19 @@ vi.mock('@inertiajs/vue3', async () => {
 import HabitsIndex from '@/Pages/Habits/Index.vue'
 import { passesSlot } from './pageStubs'
 
+/**
+ * La question passe par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Sur mobile, plusieurs navigateurs suppriment la boîte native après quelques
+ * appels : le geste s'exécutait alors SANS question. Une confirmation qui peut
+ * disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
 })
@@ -177,19 +190,28 @@ describe('the habit form', () => {
 })
 
 describe('deleting a habit', () => {
-    it('asks first, and drops it only on a yes', () => {
+    it('demande avant, et ne supprime que sur confirmation', async () => {
         const wrapper = mountPage()
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
 
-        wrapper.vm.deleteHabit(habit({ id: 7 }))
+        wrapper.vm.demanderSuppression(habit({ id: 7 }))
+        await wrapper.vm.$nextTick()
 
         expect(routerDelete).not.toHaveBeenCalled()
 
-        confirmSpy.mockReturnValue(true)
-        wrapper.vm.deleteHabit(habit({ id: 7 }))
+        wrapper.vm.confirmerSuppression()
 
         expect(routerDelete).toHaveBeenCalledTimes(1)
+    })
 
-        confirmSpy.mockRestore()
+    it('ne supprime rien quand on annule', async () => {
+        const wrapper = mountPage()
+
+        wrapper.vm.demanderSuppression(habit({ id: 7 }))
+        await wrapper.vm.$nextTick()
+
+        wrapper.vm.annulerSuppression()
+        wrapper.vm.confirmerSuppression()
+
+        expect(routerDelete).not.toHaveBeenCalled()
     })
 })

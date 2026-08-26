@@ -9,6 +9,8 @@ import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 const WorkoutFrequencyChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutFrequencyChart.vue'))
 const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
@@ -80,26 +82,39 @@ watch(
 )
 
 const deleteForm = useForm({})
-const confirmDeletion = (workout) => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer la séance "${workout.name || 'Séance'}" ?`)) {
-        // Optimistic UI
-        const index = workoutList.value.findIndex((w) => w.id === workout.id)
-        if (index === -1) return
+const {
+    cible: seanceASupprimer,
+    ouvert: suppressionDemandee,
+    demander: confirmDeletion,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((workout, termine) => {
+    /*
+     * La ligne part de l'écran avant la réponse du serveur, et revient à sa
+     * place exacte si elle échoue. L'ordre compte : on referme le dialogue
+     * AVANT de retirer la ligne, sinon la modale reste ouverte sur une liste
+     * qui a déjà bougé sous elle.
+     */
+    termine()
 
-        const removedWorkout = workoutList.value[index]
-        workoutList.value.splice(index, 1)
-        triggerHaptic('warning')
+    const index = workoutList.value.findIndex((w) => w.id === workout.id)
 
-        deleteForm.delete(route('workouts.destroy', { workout: workout.id }), {
-            preserveScroll: true,
-            onError: () => {
-                // Rollback
-                workoutList.value.splice(index, 0, removedWorkout)
-                triggerHaptic('error')
-            },
-        })
+    if (index === -1) {
+        return
     }
-}
+
+    const removedWorkout = workoutList.value[index]
+    workoutList.value.splice(index, 1)
+    triggerHaptic('warning')
+
+    deleteForm.delete(route('workouts.destroy', { workout: workout.id }), {
+        preserveScroll: true,
+        onError: () => {
+            workoutList.value.splice(index, 0, removedWorkout)
+            triggerHaptic('error')
+        },
+    })
+})
 const { isRefreshing, pullDistance } = usePullToRefresh()
 </script>
 
@@ -453,5 +468,14 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 </nav>
             </div>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer cette séance ?"
+            :description="
+                seanceASupprimer ? `« ${seanceASupprimer.name || 'Séance'} » sera effacée, avec toutes ses séries.` : ''
+            "
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>

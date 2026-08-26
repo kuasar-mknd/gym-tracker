@@ -74,6 +74,19 @@ import HabitsIndex from '@/Pages/Habits/Index.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { passesSlot, layoutStub } from './pageStubs'
 
+/**
+ * La question passe par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Sur mobile, plusieurs navigateurs suppriment la boîte native après quelques
+ * appels : le geste s'exécutait alors SANS question. Une confirmation qui peut
+ * disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
 beforeAll(() => {
     // Both pages are here, and they call `route()` differently: the library
     // names its parameter, the habits page passes a bare id.
@@ -306,16 +319,24 @@ describe('editing an exercise in place', () => {
 
     it('sends nothing for a row that has already gone', async () => {
         const wrapper = mountPage([PECS])
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-        // Two taps on the same bin before the first response lands: the second
-        // finds nothing to remove, and `splice(-1, 1)` would take the last row
-        // in the list instead.
+        /*
+         * Deux appuis sur la même corbeille avant que la première réponse
+         * n'arrive : le second ne trouve plus rien à retirer, et
+         * `splice(-1, 1)` prendrait la DERNIÈRE ligne de la liste à la place.
+         *
+         * Le dialogue ne rend pas ce cas impossible — il le rend seulement plus
+         * rare, puisqu'il faut confirmer deux fois. Le garde reste utile.
+         */
         cards(wrapper)[0].vm.$emit('delete', PECS.id)
         await wrapper.vm.$nextTick()
+        await dialogue(wrapper).vm.$emit('confirmer')
+        await wrapper.vm.$nextTick()
+
         expect(hoisted.routerDelete).toHaveBeenCalledTimes(1)
 
-        wrapper.vm.deleteExercise(PECS.id)
+        wrapper.vm.demanderSuppression(PECS.id)
+        wrapper.vm.confirmerSuppression()
 
         expect(hoisted.routerDelete).toHaveBeenCalledTimes(1)
     })
@@ -532,18 +553,20 @@ describe('the habit week', () => {
         expect(wrapper.find('[dusk="habit-3-2026-02-09"]').attributes('aria-pressed')).toBe('false')
     })
 
-    it('asks before dropping the habit the bin sits on', async () => {
+    it('demande avant de supprimer l’habitude sur laquelle porte la corbeille', async () => {
         const wrapper = await mountPage([habit({ id: 3 }), habit({ id: 8, name: 'Lecture' })])
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
 
         const bins = wrapper.findAll('button').filter((b) => b.attributes('aria-label') === "Supprimer l'habitude")
         await bins[1].trigger('click')
+
         expect(hoisted.routerDelete).not.toHaveBeenCalled()
+        // Le dialogue NOMME l'habitude : c'est ce que la boîte native ne
+        // pouvait pas faire.
+        expect(dialogue(wrapper).props('description')).toContain('Lecture')
 
-        confirmSpy.mockReturnValue(true)
-        await bins[1].trigger('click')
+        await confirmer(wrapper)
 
-        expect(hoisted.routerDelete).toHaveBeenCalledWith('/habits.destroy/8')
+        expect(hoisted.routerDelete).toHaveBeenCalledTimes(1)
     })
 })
 

@@ -11,6 +11,19 @@ vi.mock('@inertiajs/vue3', () => ({
 
 import PlateCalculator from '@/Pages/Tools/PlateCalculator.vue'
 
+/**
+ * La question passe par un dialogue de l'application, plus par `confirm()`.
+ *
+ * Sur mobile, plusieurs navigateurs suppriment la boîte native après quelques
+ * appels : le geste s'exécutait alors SANS question. Une confirmation qui peut
+ * disparaître n'en est pas une.
+ */
+const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+const confirmer = async (wrapper) => {
+    await dialogue(wrapper).vm.$emit('confirmer')
+}
+
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
 })
@@ -150,31 +163,28 @@ describe('PlateCalculator inventory', () => {
     })
 
     /** Two plates, and the second one's cross: with one, any id would pass. */
-    it('deletes the plate whose cross was clicked, and only once the confirmation is accepted', async () => {
+    it('supprime le disque dont la croix a été cliquée, et seulement après confirmation', async () => {
         routerDelete.mockReset()
 
         const wrapper = mountCalculator([
             { id: 3, weight: '20', quantity: 4 },
             { id: 7, weight: '10', quantity: 2 },
         ])
-        const deleteButton = wrapper.findAll('[aria-label="Supprimer la plaque"]')[1]
 
-        vi.stubGlobal(
-            'confirm',
-            vi.fn(() => false),
-        )
-        await deleteButton.trigger('click')
+        await wrapper.findAll('[aria-label="Supprimer la plaque"]')[1].trigger('click')
+
+        expect(dialogue(wrapper).props('ouvert')).toBe(true)
         expect(routerDelete).not.toHaveBeenCalled()
+        // La question nomme le poids : la boîte native ne le pouvait pas.
+        expect(dialogue(wrapper).props('description')).toContain('10')
 
-        vi.stubGlobal(
-            'confirm',
-            vi.fn(() => true),
-        )
-        await deleteButton.trigger('click')
+        await confirmer(wrapper)
+
         expect(routerDelete).toHaveBeenCalledTimes(1)
         expect(routerDelete.mock.calls[0][0]).toContain('plates.destroy')
-        expect(routerDelete.mock.calls[0][0]).toContain('"id":7')
-
-        vi.unstubAllGlobals()
+        // L'identifiant, plus l'objet entier serialise : la route n'a besoin
+        // que de la cle, et lui passer le disque complet faisait voyager son
+        // poids et sa quantite dans l'URL.
+        expect(routerDelete.mock.calls[0][0]).toContain('"plate":7')
     })
 })

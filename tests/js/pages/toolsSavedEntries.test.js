@@ -380,14 +380,12 @@ describe('the water log', () => {
 
     it('deletes the entry that was clicked, not the first one', async () => {
         const wrapper = await mountPage(WaterTracker, { logs, todayTotal: 1250, history: [] })
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
 
         await deleteButtons(wrapper, 'Supprimer')[1].trigger('click')
+        await confirmer(wrapper)
 
         expect(routerDelete.mock.calls[0][0]).toContain('"waterLog":5')
         expect(haptic).toHaveBeenCalledWith('warning')
-
-        confirmSpy.mockRestore()
     })
 
     it('keeps the entry when the confirmation is refused, and stays silent', async () => {

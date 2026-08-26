@@ -19,6 +19,8 @@ import Modal from '@/Components/UI/Modal.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 import {
     EXERCISE_CATEGORIES,
     EXERCISE_TYPES,
@@ -161,24 +163,45 @@ const updateExercise = (exercise) => {
  * Optimistically delete an exercise.
  * Removes it from the local list immediately and restores it if the server request fails.
  */
-const deleteExercise = (id) => {
-    if (confirm('Supprimer cet exercice ?')) {
-        const index = localExercises.value.findIndex((e) => e.id === id)
-        if (index === -1) return
+const {
+    cible: exerciceASupprimer,
+    ouvert: suppressionDemandee,
+    demander: retenirSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((exercice, termine) => {
+    /*
+     * On referme le dialogue AVANT de retirer la ligne : la mise à jour est
+     * optimiste, et la modale resterait sinon ouverte sur une liste qui a déjà
+     * bougé sous elle. La ligne revient à sa place exacte si le serveur refuse.
+     */
+    termine()
 
-        const removed = localExercises.value[index]
-        localExercises.value.splice(index, 1)
-        triggerHaptic('warning')
+    const index = localExercises.value.findIndex((e) => e.id === exercice.id)
 
-        router.delete(route('exercises.destroy', { exercise: id }), {
-            preserveScroll: true,
-            onError: () => {
-                // Rollback if server fails
-                localExercises.value.splice(index, 0, removed)
-                triggerHaptic('error')
-            },
-        })
+    if (index === -1) {
+        return
     }
+
+    const removed = localExercises.value[index]
+    localExercises.value.splice(index, 1)
+    triggerHaptic('warning')
+
+    router.delete(route('exercises.destroy', { exercise: exercice.id }), {
+        preserveScroll: true,
+        onError: () => {
+            localExercises.value.splice(index, 0, removed)
+            triggerHaptic('error')
+        },
+    })
+})
+
+/*
+ * L'enfant n'émet qu'un identifiant : on retrouve l'exercice pour le NOMMER
+ * dans la question. « Supprimer cet exercice ? » ne disait pas lequel.
+ */
+const demanderSuppression = (id) => {
+    retenirSuppression(localExercises.value.find((exercice) => exercice.id === id) ?? { id })
 }
 
 // Filter exercises based on the search query and selected category
@@ -522,11 +545,20 @@ const typeLabel = (type) => {
                             @start-edit="startEdit"
                             @cancel-edit="cancelEdit"
                             @update="updateExercise"
-                            @delete="deleteExercise"
+                            @delete="demanderSuppression"
                         />
                     </div>
                 </div>
             </div>
         </div>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer cet exercice ?"
+            :description="
+                exerciceASupprimer?.name ? `« ${exerciceASupprimer.name} » sera retiré de ta bibliothèque.` : ''
+            "
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>

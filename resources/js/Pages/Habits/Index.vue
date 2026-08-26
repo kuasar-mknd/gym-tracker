@@ -7,6 +7,8 @@ import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import Modal from '@/Components/UI/Modal.vue'
 import { Head, useForm, router, Deferred } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { useConfirmation } from '@/composables/useConfirmation'
 
 const HabitHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HabitHistoryChart.vue'))
 const HabitConsistencyChart = defineAsyncComponent(() => import('@/Components/Stats/HabitConsistencyChart.vue'))
@@ -197,11 +199,15 @@ const submit = () => {
  *
  * @param {Object} habit - The habit to delete.
  */
-const deleteHabit = (habit) => {
-    if (confirm('Voulez-vous vraiment supprimer cette habitude ?')) {
-        router.delete(route('habits.destroy', habit.id))
-    }
-}
+const {
+    cible: habitudeASupprimer,
+    ouvert: suppressionDemandee,
+    demander: demanderSuppression,
+    annuler: annulerSuppression,
+    confirmer: confirmerSuppression,
+} = useConfirmation((habit, termine) => {
+    router.delete(route('habits.destroy', habit.id), { onFinish: termine })
+})
 
 /**
  * Toggles the completion status of a habit for a specific date.
@@ -418,7 +424,7 @@ const getProgressPercent = (habit) => {
                                     <span class="material-symbols-outlined text-sm" aria-hidden="true">edit</span>
                                 </button>
                                 <button
-                                    @click="deleteHabit(habit)"
+                                    @click="demanderSuppression(habit)"
                                     class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger-deep flex items-center justify-center rounded-lg"
                                     aria-label="Supprimer l'habitude"
                                 >
@@ -561,5 +567,14 @@ const getProgressPercent = (habit) => {
                 </form>
             </div>
         </Modal>
+        <ConfirmDialog
+            :ouvert="suppressionDemandee"
+            titre="Supprimer cette habitude ?"
+            :description="
+                habitudeASupprimer ? `« ${habitudeASupprimer.name} » sera effacée, avec tout son historique.` : ''
+            "
+            @confirmer="confirmerSuppression"
+            @annuler="annulerSuppression"
+        />
     </AuthenticatedLayout>
 </template>
