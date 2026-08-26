@@ -226,9 +226,16 @@
      * confirmer), une couleur de categorie ne porte qu'une identite — elle doit
      * seulement se distinguer de ses sept voisines.
      *
-     * Deux d'entre elles n'existaient que pour ca : `magenta` et `lime`, assez
-     * proches du rose et du vert d'etat pour qu'on les prenne pour des doublons,
-     * et pourtant necessaires puisqu'il faut huit teintes separables.
+     * « Separables » se mesure, et ne s'affirme pas. Deux d'entre elles ne
+     * l'etaient pas : `cardio` etait a 9 unites de `legs` — deux verts acides
+     * cote a cote dans l'anneau de la bibliotheque, impossibles a distinguer —
+     * et `core` a 18 de `shoulders`. Ce commentaire affirmait pourtant le
+     * contraire, ce qui montre a quel point l'oeil est mauvais juge ici :
+     * l'ecart se calcule dans l'espace CIELAB, pas en regardant deux carres.
+     *
+     * Elles valent desormais une menthe et un bleu, aussi vifs que les autres,
+     * et la paire la plus proche des huit est passee de 9 a 52.
+     * `MusclePaletteCoversCategoriesTest` mesure cet ecart a chaque execution.
      *
      * La correspondance etait ecrite DEUX fois — en classes dans
      * `Utils/constants.js`, en hexadecimal dans `ExerciseCategoryChart.vue`,
@@ -240,8 +247,8 @@
     --color-category-shoulders: #ff0080;
     --color-category-arms: #00e5ff;
     --color-category-legs: #ccff00;
-    --color-category-core: #f5009b;
-    --color-category-cardio: #c0eb00;
+    --color-category-core: #196ef7;
+    --color-category-cardio: #00ffa2;
     --color-category-other: #64748b;
 
     /*
@@ -302,26 +309,6 @@
     --color-plate-5: #f4f4f4;
     --color-plate-2: #1a1a1a;
     --color-plate-small: #8a8f98;
-
-    /*
-     * --- Anciens noms, le temps de la conversion -----------------------
-     *
-     * Ils REFERENCENT le role, ils ne recopient pas sa valeur : c'est en
-     * portant chacune son litteral que deux familles ont diverge sans que rien
-     * ne le signale, et `LesJetonsNeSeRecopientPasTest` garde cette lecon.
-     *
-     * A supprimer quand le compteur de `LaCharteRemplaceLesCouleursBrutesTest`
-     * atteint zero.
-     */
-    --color-electric-orange: var(--color-accent-primary);
-    --color-hot-pink: var(--color-accent-secondary);
-    --color-vivid-violet: var(--color-accent-tertiary);
-    --color-neon-green: var(--color-accent-state);
-    --color-cyan-pure: var(--color-accent-info);
-    --color-accent-success: var(--color-accent-state);
-    --color-pearl-white: var(--color-surface-page);
-    --color-magenta-pure: var(--color-category-core);
-    --color-lime-pure: var(--color-category-cardio);
 
     --backdrop-blur-glass: 20px;
     --backdrop-blur-glass-strong: 24px;
@@ -620,7 +607,7 @@
     font-style: italic;
     text-transform: uppercase;
     letter-spacing: -0.02em;
-    color: var(--text-main);
+    color: var(--color-text-main);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     user-select: none;
@@ -737,10 +724,10 @@
 /* 4.55:1 */
 @utility category-fill-core {
     background: var(--color-category-core);
-    color: var(--color-text-on-accent);
+    color: var(--color-text-on-dark-accent);
 }
 
-/* 12.86:1 */
+/* 13.45:1 */
 @utility category-fill-cardio {
     background: var(--color-category-cardio);
     color: var(--color-text-on-accent);
@@ -857,9 +844,9 @@
 }
 
 @utility glass-button-neon {
-    background: var(--neon-green);
+    background: var(--color-accent-state);
     border: 1px solid rgb(from var(--color-surface-card) r g b / 0.2);
-    color: #000;
+    color: var(--color-text-on-accent);
     box-shadow: 0 10px 30px rgb(from var(--color-accent-state) r g b / 0.5);
 
     &:hover {
@@ -882,6 +869,15 @@
         border-radius: 1rem;
         padding: 2px;
         background: var(--gradient-main);
+
+        /*
+         * Les deux `#fff` ci-dessous ne sont PAS des couleurs : c'est un
+         * masque, et un masque ne lit que l'opacite. `#fff` y veut dire
+         * « opaque », pas « blanc ». Les remplacer par un jeton de surface
+         * marcherait tant que ce jeton reste clair, et effacerait la bordure le
+         * jour ou il cesserait de l'etre — une panne d'autant plus penible que
+         * la cause serait a l'autre bout du fichier.
+         */
         -webkit-mask:
             linear-gradient(#fff 0 0) content-box,
             linear-gradient(#fff 0 0);
@@ -900,7 +896,7 @@
     background: rgb(from var(--color-surface-card) r g b / 0.9);
     border: 2px solid rgb(from var(--color-border) r g b / 0.6);
     border-radius: 1rem;
-    color: var(--text-main);
+    color: var(--color-text-main);
     font-size: 1rem;
     font-weight: 500;
     transition: all 0.2s ease;
@@ -915,7 +911,7 @@
     }
 
     &::placeholder {
-        color: var(--text-muted);
+        color: var(--color-text-muted);
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-weight: 600;
@@ -964,35 +960,35 @@
     -webkit-tap-highlight-color: transparent;
 
     &:hover {
-        color: var(--vivid-violet);
+        color: var(--color-accent-tertiary);
     }
 
     &.active {
-        color: var(--electric-orange);
+        color: var(--color-accent-primary);
     }
 
     &.active::after {
         content: '';
         width: 4px;
         height: 4px;
-        background: var(--electric-orange);
+        background: var(--color-accent-primary);
         border-radius: 50%;
-        box-shadow: 0 0 6px var(--electric-orange);
+        box-shadow: 0 0 6px var(--color-accent-primary);
     }
 }
 
 @utility active {
     &.glass-nav-item {
-        color: var(--electric-orange);
+        color: var(--color-accent-primary);
     }
 
     &.glass-nav-item::after {
         content: '';
         width: 4px;
         height: 4px;
-        background: var(--electric-orange);
+        background: var(--color-accent-primary);
         border-radius: 50%;
-        box-shadow: 0 0 6px var(--electric-orange);
+        box-shadow: 0 0 6px var(--color-accent-primary);
     }
 }
 
@@ -1073,7 +1069,7 @@
     font-weight: 900;
     font-style: italic;
     letter-spacing: -0.02em;
-    color: var(--text-main);
+    color: var(--color-text-main);
 }
 
 @utility glass-overlay {
@@ -1153,16 +1149,16 @@
     }
 
     &[data-color='violet']::before {
-        background: var(--vivid-violet);
+        background: var(--color-accent-tertiary);
     }
     &[data-color='orange']::before {
-        background: var(--electric-orange);
+        background: var(--color-accent-primary);
     }
     &[data-color='pink']::before {
-        background: var(--hot-pink);
+        background: var(--color-accent-secondary);
     }
     &[data-color='cyan']::before {
-        background: var(--cyan-pure);
+        background: var(--color-accent-info);
     }
     &[data-color='green']::before {
         background: var(--color-accent-state);
@@ -1182,7 +1178,7 @@
 
 @utility rest-timer-bar-fill {
     height: 100%;
-    background: var(--neon-green);
+    background: var(--color-accent-state);
     border-radius: 0.375rem;
     box-shadow: 0 0 15px rgb(from var(--color-accent-state) r g b / 0.6);
     position: relative;
@@ -1240,12 +1236,12 @@
 
 @utility glass-badge-primary {
     background: rgb(from var(--color-accent-primary) r g b / 0.1);
-    color: var(--electric-orange);
+    color: var(--color-accent-primary);
 }
 
 @utility glass-badge-violet {
     background: rgb(from var(--color-accent-tertiary) r g b / 0.1);
-    color: var(--vivid-violet);
+    color: var(--color-accent-tertiary);
 }
 
 @utility text-gradient {
@@ -1377,23 +1373,6 @@
         );
         --gradient-cyan-magenta: linear-gradient(135deg, var(--color-accent-info) 0%, var(--color-category-core) 100%);
 
-        /* Accent Colors */
-        --electric-orange: var(--color-accent-primary);
-        --vivid-violet: var(--color-accent-tertiary);
-        --hot-pink: var(--color-accent-secondary);
-        --neon-green: var(--color-accent-state);
-        --cyan-pure: var(--color-accent-info);
-        --magenta-pure: var(--color-category-core);
-
-        /*
-         * Une seule source par couleur : ces deux-la referencent les jetons du
-         * bloc `@theme`, au lieu de repeter leur valeur. C'est en les repetant
-         * que le mode sombre n'en avait renverse qu'une moitie.
-         */
-        --text-main: var(--color-text-main);
-        --text-muted: var(--color-text-muted);
-        --pearl-white: var(--color-surface-page);
-
         /* Spacing for mobile touch */
         --touch-min: 44px;
         --safe-area-bottom: env(safe-area-inset-bottom, 0px);
@@ -1432,15 +1411,15 @@
      * this off.
      */
     body {
-        background-color: var(--pearl-white);
+        background-color: var(--color-surface-page);
         min-height: 100vh;
         min-height: 100dvh;
-        color: var(--text-main);
+        color: var(--color-text-main);
     }
 
     /* Selection styling */
     ::selection {
-        background-color: var(--electric-orange);
+        background-color: var(--color-accent-primary);
         color: white;
     }
 }

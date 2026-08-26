@@ -105,6 +105,76 @@ it('ne donne jamais la même couleur à deux catégories', function (): void {
     ));
 });
 
+/**
+ * La distance perceptuelle entre deux couleurs, dans l'espace CIELAB.
+ *
+ * Deux valeurs differentes peuvent etre indistinguables : `#ccff00` et
+ * `#c0eb00` sont deux entrees distinctes de la charte, et l'anneau de la
+ * bibliotheque les affichait cote a cote sans que personne ne puisse dire ou
+ * l'une finissait. L'unicite ne suffit donc pas, il faut l'ecart — et l'ecart
+ * ne se juge pas a l'oeil, il se calcule.
+ */
+function ecartPerceptuel(string $premier, string $second): float
+{
+    $lab = static function (string $hexa): array {
+        $hexa = ltrim($hexa, '#');
+        $canaux = [];
+
+        foreach ([0, 2, 4] as $decalage) {
+            $canal = hexdec(substr($hexa, $decalage, 2)) / 255;
+            $canaux[] = $canal <= 0.04045 ? $canal / 12.92 : (($canal + 0.055) / 1.055) ** 2.4;
+        }
+
+        [$rouge, $vert, $bleu] = $canaux;
+
+        $x = ($rouge * 0.4124 + $vert * 0.3576 + $bleu * 0.1805) / 0.95047;
+        $y = $rouge * 0.2126 + $vert * 0.7152 + $bleu * 0.0722;
+        $z = ($rouge * 0.0193 + $vert * 0.1192 + $bleu * 0.9505) / 1.08883;
+
+        $racine = static fn (float $valeur): float => $valeur > 0.008856
+            ? $valeur ** (1 / 3)
+            : 7.787 * $valeur + 16 / 116;
+
+        [$x, $y, $z] = [$racine($x), $racine($y), $racine($z)];
+
+        return [116 * $y - 16, 500 * ($x - $y), 200 * ($y - $z)];
+    };
+
+    [$l1, $a1, $b1] = $lab($premier);
+    [$l2, $a2, $b2] = $lab($second);
+
+    return sqrt(($l1 - $l2) ** 2 + ($a1 - $a2) ** 2 + ($b1 - $b2) ** 2);
+}
+
+it('garde les couleurs de categorie distinguables les unes des autres', function (): void {
+    /*
+     * Le seuil : 25. En dessous, deux parts adjacentes d'un anneau se lisent
+     * comme une seule. `cardio` et `legs` etaient a 9, `core` et `shoulders` a
+     * 18 — et le commentaire de la charte affirmait pourtant que les huit
+     * teintes etaient « separables », ce qui montre que l'oeil ne suffit pas
+     * plus ici qu'ailleurs.
+     */
+    $jetons = array_values(array_unique(correspondanceDesCategories()));
+    $trop_proches = [];
+
+    foreach ($jetons as $index => $premier) {
+        foreach (array_slice($jetons, $index + 1) as $second) {
+            $ecart = ecartPerceptuel(Charte::jeton($premier), Charte::jeton($second));
+
+            if ($ecart < 25.0) {
+                $trop_proches[] = sprintf('%s et %s : %.1f', $premier, $second, $ecart);
+            }
+        }
+    }
+
+    expect($trop_proches)->toBe([], sprintf(
+        "Ces couleurs de categorie se confondent :\n  %s\n\n"
+        .'Un ecart CIELAB sous 25 ne se distingue pas sur un graphique, et sous 10 pas du tout. '
+        ."Deux parts d'un meme anneau doivent pouvoir se nommer sans hesiter.",
+        implode("\n  ", $trop_proches)
+    ));
+});
+
 it('declare dans la charte chaque jeton que la correspondance cite', function (): void {
     $absents = array_values(array_unique(array_filter(
         correspondanceDesCategories(),
