@@ -579,7 +579,7 @@ describe('Measurements/Parts/Index empty state', () => {
     it('says the list is empty and offers the way out of it', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: [], commonParts: COMMON_PARTS })
 
-        expect(wrapper.text()).toContain('Aucune mesure enregistrée.')
+        expect(wrapper.text()).toContain('Aucune mesure enregistrée')
 
         await click(wrapper, 'Commencer')
 
@@ -591,6 +591,6 @@ describe('Measurements/Parts/Index empty state', () => {
 
         await click(wrapper, 'Commencer')
 
-        expect(wrapper.text()).not.toContain('Aucune mesure enregistrée.')
+        expect(wrapper.text()).not.toContain('Aucune mesure enregistrée')
     })
 })

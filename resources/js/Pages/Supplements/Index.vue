@@ -1,7 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
@@ -127,20 +129,20 @@ const formatDate = (dateString) => {
                 <GlassButton
                     @click="showAddForm = true"
                     variant="primary"
-                    class="flex hidden size-11 shrink-0 items-center justify-center sm:flex"
+                    class="hidden size-11 shrink-0 items-center justify-center sm:flex"
                 >
                     <span class="material-symbols-outlined mr-2" aria-hidden="true">add</span>
                     Ajouter
                 </GlassButton>
                 <!-- Mobile Add Button -->
-                <button
-                    v-press
+                <GlassButton
                     @click="showAddForm = true"
+                    variant="primary"
                     aria-label="Ajouter un complément"
-                    class="bg-gradient-main text-text-on-dark-accent flex size-12 items-center justify-center rounded-xl shadow-lg sm:hidden"
+                    class="flex size-12 items-center justify-center p-0! sm:hidden"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">add</span>
-                </button>
+                </GlassButton>
             </div>
 
             <!-- Usage Chart -->
@@ -196,20 +198,25 @@ const formatDate = (dateString) => {
                         <GlassButton type="submit" variant="primary" class="flex-1" :loading="form.processing">
                             Ajouter
                         </GlassButton>
-                        <GlassButton type="button" variant="ghost" @click="showAddForm = false"> Annuler </GlassButton>
+                        <GlassButton type="button" variant="secondary" @click="showAddForm = false">
+                            Annuler
+                        </GlassButton>
                     </div>
                 </form>
             </GlassCard>
 
             <!-- List -->
-            <div v-if="supplements.length === 0 && !showAddForm" class="animate-slide-up py-10 text-center">
-                <div class="mb-4 text-6xl">💊</div>
-                <p class="text-text-main text-lg font-bold">Aucun complément</p>
-                <p class="text-text-muted mb-6 text-sm">
-                    Ajoutez vos compléments pour suivre votre stock et consommation.
-                </p>
-                <GlassButton variant="primary" @click="showAddForm = true"> Commencer </GlassButton>
-            </div>
+            <GlassEmptyState
+                v-if="supplements.length === 0 && !showAddForm"
+                class="animate-slide-up"
+                icon="💊"
+                color="pink"
+                title="Aucun complément"
+                description="Ajoutez vos compléments pour suivre votre stock et consommation."
+                action-label="Commencer"
+                action-id="empty-state-supplement"
+                @action="showAddForm = true"
+            />
 
             <div v-else class="animate-slide-up grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <GlassCard
@@ -244,9 +251,9 @@ const formatDate = (dateString) => {
                                 variant="primary"
                                 size="sm"
                                 class="flex-1"
-                                >Sauvegarder</GlassButton
+                                >Enregistrer</GlassButton
                             >
-                            <GlassButton @click="cancelEdit" variant="ghost" size="sm">Annuler</GlassButton>
+                            <GlassButton @click="cancelEdit" variant="secondary" size="sm">Annuler</GlassButton>
                         </div>
                     </div>
 
@@ -268,22 +275,20 @@ const formatDate = (dateString) => {
                                     </div>
                                 </div>
                                 <div class="flex gap-1">
-                                    <button
+                                    <GlassIconButton
                                         v-press
+                                        icon="edit"
+                                        label="Modifier le complément"
+                                        ton="accent"
                                         @click="startEdit(supplement)"
-                                        aria-label="Modifier le complément"
-                                        class="text-text-muted hover:text-accent-primary-deep min-h-touch min-w-touch flex items-center justify-center p-1 transition-colors"
-                                    >
-                                        <span class="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
-                                    </button>
-                                    <button
+                                    />
+                                    <GlassIconButton
                                         v-press
+                                        icon="delete"
+                                        label="Supprimer le complément"
+                                        ton="danger"
                                         @click="demanderSuppression(supplement)"
-                                        aria-label="Supprimer le complément"
-                                        class="text-text-muted min-h-touch min-w-touch hover:text-accent-danger-deep flex items-center justify-center p-1 transition-colors"
-                                    >
-                                        <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                                    </button>
+                                    />
                                 </div>
                             </div>
 

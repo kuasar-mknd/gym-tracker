@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
@@ -72,18 +73,20 @@ const {
         </template>
 
         <div class="space-y-6">
-            <div v-if="templates.length === 0" class="animate-slide-up">
-                <GlassCard class="transition-all duration-300">
-                    <div class="py-12 text-center">
-                        <div class="mb-3 text-5xl">📋</div>
-                        <h3 class="text-text-main text-lg font-semibold">Aucun modèle</h3>
-                        <p class="text-text-muted mt-1">Crée tes routines pour gagner du temps</p>
-                        <Link :href="route('templates.create')" class="mt-4 inline-block">
-                            <GlassButton variant="primary">Créer mon premier modèle</GlassButton>
-                        </Link>
-                    </div>
-                </GlassCard>
-            </div>
+            <GlassEmptyState
+                v-if="templates.length === 0"
+                class="animate-slide-up"
+                icon="📋"
+                color="violet"
+                title="Aucun modèle"
+                description="Crée tes routines pour gagner du temps."
+            >
+                <template #action>
+                    <Link :href="route('templates.create')">
+                        <GlassButton variant="primary">Créer mon premier modèle</GlassButton>
+                    </Link>
+                </template>
+            </GlassEmptyState>
 
             <div v-else class="animate-slide-up grid gap-4 md:grid-cols-2" style="animation-delay: 0.1s">
                 <GlassCard

@@ -22,47 +22,25 @@
                     <GlassCard class="animate-slide-up shadow-2xl" style="animation-delay: 0.05s">
                         <div class="space-y-6 p-6">
                             <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="orm-weight" class="font-display-label text-text-muted mb-2 block"
-                                        >Poids Soulevé</label
-                                    >
-                                    <div class="relative">
-                                        <input
-                                            id="orm-weight"
-                                            type="number"
-                                            v-model="weight"
-                                            placeholder="100"
-                                            min="0"
-                                            step="0.5"
-                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:ring-2"
-                                        />
-                                        <span
-                                            class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
-                                            >kg</span
-                                        >
-                                    </div>
-                                </div>
-                                <div>
-                                    <label for="orm-reps" class="font-display-label text-text-muted mb-2 block"
-                                        >Répétitions</label
-                                    >
-                                    <div class="relative">
-                                        <input
-                                            id="orm-reps"
-                                            type="number"
-                                            v-model="reps"
-                                            placeholder="5"
-                                            min="1"
-                                            max="100"
-                                            step="1"
-                                            class="font-display text-text-main placeholder-text-muted/50 focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-sm transition-all outline-none focus:ring-2"
-                                        />
-                                        <span
-                                            class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
-                                            >réps</span
-                                        >
-                                    </div>
-                                </div>
+                                <GlassBigNumber
+                                    id="orm-weight"
+                                    v-model="weight"
+                                    label="Poids Soulevé"
+                                    unite="kg"
+                                    placeholder="100"
+                                    min="0"
+                                    step="0.5"
+                                />
+                                <GlassBigNumber
+                                    id="orm-reps"
+                                    v-model="reps"
+                                    label="Répétitions"
+                                    unite="réps"
+                                    placeholder="5"
+                                    min="1"
+                                    max="100"
+                                    step="1"
+                                />
                             </div>
 
                             <div class="text-text-muted pt-4 text-sm">
@@ -150,6 +128,7 @@
 import { ref, computed, defineAsyncComponent } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import { oneRepMax as epley } from '@/Utils/formulas'
 
 const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))

@@ -20,41 +20,21 @@
             <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="plate-target-weight" class="font-display-label text-text-muted mb-2 block"
-                                >Poids Cible</label
-                            >
-                            <div class="relative">
-                                <input
-                                    id="plate-target-weight"
-                                    type="number"
-                                    v-model="targetWeight"
-                                    placeholder="100"
-                                    step="0.5"
-                                    class="font-display text-text-main focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card h-16 w-full rounded-2xl border-2 px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
-                                />
-                                <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
-                                    >kg</span
-                                >
-                            </div>
-                        </div>
-                        <div>
-                            <label for="plate-bar-weight" class="font-display-label text-text-muted mb-2 block"
-                                >Poids Barre</label
-                            >
-                            <div class="relative">
-                                <input
-                                    id="plate-bar-weight"
-                                    type="number"
-                                    v-model="barWeight"
-                                    placeholder="20"
-                                    class="font-display text-text-main focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card h-16 w-full rounded-2xl border-2 px-4 text-center text-3xl font-black transition-all outline-none focus:ring-2"
-                                />
-                                <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
-                                    >kg</span
-                                >
-                            </div>
-                        </div>
+                        <GlassBigNumber
+                            id="plate-target-weight"
+                            v-model="targetWeight"
+                            label="Poids Cible"
+                            unite="kg"
+                            placeholder="100"
+                            step="0.5"
+                        />
+                        <GlassBigNumber
+                            id="plate-bar-weight"
+                            v-model="barWeight"
+                            label="Poids Barre"
+                            unite="kg"
+                            placeholder="20"
+                        />
                     </div>
 
                     <!-- Barbell Visualization -->
@@ -192,15 +172,20 @@
                                 <div class="mt-1 text-xs font-bold tracking-wider uppercase opacity-70">
                                     x {{ plate.quantity }}
                                 </div>
-                                <button
-                                    @click="demanderSuppression(plate)"
-                                    type="button"
-                                    aria-label="Supprimer la plaque"
+                                <!--
+                                    `compact` : la vignette reste à 24 px pour ne
+                                    pas manger le disque qu'elle surplombe, mais
+                                    la cible tactile fait bien 44 px.
+                                -->
+                                <GlassIconButton
+                                    icon="close"
+                                    label="Supprimer la plaque"
+                                    ton="danger"
                                     title="Supprimer la plaque"
-                                    class="bg-accent-danger text-text-on-accent hover:bg-accent-danger-deep hover:text-text-on-dark-accent absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full opacity-100 shadow-md transition-all sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-                                >
-                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">close</span>
-                                </button>
+                                    compact
+                                    class="bg-surface-card absolute -top-2 -right-2 rounded-full opacity-100 shadow-md sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                                    @click="demanderSuppression(plate)"
+                                />
                             </div>
                         </div>
                     </div>
@@ -209,9 +194,11 @@
         </div>
 
         <!-- Add Plate Modal -->
-        <Modal :show="addingPlate" @close="addingPlate = false">
+        <Modal :show="addingPlate" @close="addingPlate = false" aria-labelledby="add-plate-title">
             <div class="space-y-6 p-6">
-                <h2 class="font-display text-text-main text-xl font-black uppercase italic">Ajouter une plaque</h2>
+                <h2 id="add-plate-title" class="font-display text-text-main text-xl font-black uppercase italic">
+                    Ajouter une plaque
+                </h2>
 
                 <div class="space-y-4">
                     <!-- GlassInput renders this exact label markup itself, and wires
@@ -239,11 +226,11 @@
                 </div>
 
                 <div class="border-border flex justify-end gap-3 border-t pt-4">
-                    <GlassButton @click="addingPlate = false" variant="ghost">Annuler</GlassButton>
+                    <GlassButton @click="addingPlate = false" variant="secondary">Annuler</GlassButton>
                     <!-- Was :disabled="form.processing", where `form` was an empty
                          useForm({}) that never submits — so it read false forever
                          and the button stayed live through the request. -->
-                    <GlassButton @click="savePlate" variant="primary" :disabled="newPlate.processing"
+                    <GlassButton @click="savePlate" variant="primary" :loading="newPlate.processing"
                         >Enregistrer</GlassButton
                     >
                 </div>
@@ -265,6 +252,8 @@ import { calculatePlates, actualWeight as plateActualWeight } from '@/Utils/plat
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import Modal from '@/Components/UI/Modal.vue'

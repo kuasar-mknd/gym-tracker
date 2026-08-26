@@ -285,7 +285,7 @@ describe('editing a supplement', () => {
         const wrapper = await mountPage({ supplements: [supplement(), supplement({ id: 42, name: 'Créatine' })] })
 
         await wrapper.findAll('[aria-label="Modifier le complément"]')[1].trigger('click')
-        await buttonsLabelled(wrapper, 'Sauvegarder')[0].trigger('click')
+        await buttonsLabelled(wrapper, 'Enregistrer')[0].trigger('click')
 
         const [url, options] = editForm.put.mock.calls[0]
 

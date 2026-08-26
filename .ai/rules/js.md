@@ -1,6 +1,7 @@
 ---
 paths:
   - 'resources/js/**'
+  - 'resources/js/**/*.vue'
 ---
 
 # Js
@@ -17,3 +18,14 @@ Deux pièges de conversion, appris à nos dépens :
 Le JavaScript lit les jetons par `Utils/couleurs.js` (`jeton()`, `jetonTransparent()`), jamais une valeur recopiée. Côté PHP — courriels, pages d'erreur, widgets Filament — c'est `App\Support\Charte`.
 
 `@theme static` est obligatoire dans `app.css` : Tailwind n'émet sinon que les variables qu'une classe utilise, et les jetons lus uniquement par le JS sont absents du CSS compilé (les graphiques dessinent alors en noir).
+
+## Un bouton passe par son composant, jamais par du markup recopié
+Trois composants couvrent l'essentiel : `GlassButton` (action avec libellé), `GlassIconButton` (action réduite à une icône) et `GlassBigNumber` (le grand champ chiffré des calculateurs). Écrire un `<button>` à la main, c'est perdre la cible de 44 px, l'anneau de focus, l'état de chargement, et surtout la capacité de suivre la charte quand elle bouge — c'est ainsi que le « + » de la bibliothèque s'est retrouvé en dégradé alors que son jumeau desktop était en `primary`.
+
+Trois règles se tiennent dans `tests/js/conventions/buttonVariants.test.js` et `touchTargets.test.js` :
+- tout `type="submit"` DÉCLARE sa variante (l'absence retombe sur `default`, le verre pâle des actions tertiaires) ;
+- « Annuler » est toujours `secondary`, jamais `ghost` : refuser et confirmer ne doivent pas se ressembler ;
+- toute création (« Ajouter », « Créer », « Nouveau », l'icône `add`) est `primary` ;
+- un bouton réduit à une icône atteint 44 px, par `min-h-touch`, par une taille explicite, ou par un `before:-inset-*` qui déborde sans pousser ses voisins.
+
+Sur `GlassSelect`, `placeholder` est une INVITE (rendue `disabled`) et `empty-label` est un CHOIX vide sélectionnable. Les confondre donnait un « — Aucune — » sur lequel personne ne pouvait revenir.

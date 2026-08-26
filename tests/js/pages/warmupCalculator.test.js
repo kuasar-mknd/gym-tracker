@@ -84,7 +84,7 @@ describe('saving the preferences', () => {
     it('shows what the server objected to', async () => {
         const wrapper = mountPage()
 
-        await buttonSaying(wrapper, 'Sauvegarder').trigger('click')
+        await buttonSaying(wrapper, 'Enregistrer').trigger('click')
         post.mock.calls[0][1].onError({ 'steps.0.percent': 'Le pourcentage ne peut dépasser 100.' })
         await wrapper.vm.$nextTick()
 
@@ -97,7 +97,7 @@ describe('saving the preferences', () => {
     it('still says something when the rejection carries no message', async () => {
         const wrapper = mountPage()
 
-        await buttonSaying(wrapper, 'Sauvegarder').trigger('click')
+        await buttonSaying(wrapper, 'Enregistrer').trigger('click')
         post.mock.calls[0][1].onError({})
         await wrapper.vm.$nextTick()
 
@@ -107,11 +107,11 @@ describe('saving the preferences', () => {
     it('clears the previous complaint before trying again', async () => {
         const wrapper = mountPage()
 
-        await buttonSaying(wrapper, 'Sauvegarder').trigger('click')
+        await buttonSaying(wrapper, 'Enregistrer').trigger('click')
         post.mock.calls[0][1].onError({ bar_weight: 'Trop lourd.' })
         await wrapper.vm.$nextTick()
 
-        await buttonSaying(wrapper, 'Sauvegarder').trigger('click')
+        await buttonSaying(wrapper, 'Enregistrer').trigger('click')
         await wrapper.vm.$nextTick()
 
         // Leaving the old error under a fresh attempt reads as a new refusal.

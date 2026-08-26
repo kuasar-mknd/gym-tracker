@@ -132,7 +132,9 @@
                         </GlassInput>
                         <GlassButton
                             @click="addWater(customAmount)"
-                            :disabled="!customAmount || form.processing"
+                            :disabled="!customAmount"
+                            :loading="form.processing"
+                            aria-label="Ajouter la quantité saisie"
                             class="h-12 !px-4"
                             variant="primary"
                         >
@@ -181,13 +183,12 @@
                                     </p>
                                 </div>
                             </div>
-                            <button
+                            <GlassIconButton
+                                icon="delete"
+                                :label="`Supprimer l'entrée de ${log.amount} ml`"
+                                ton="danger"
                                 @click="demanderSuppression(log)"
-                                :aria-label="'Supprimer l\'entrée de ' + log.amount + ' ml'"
-                                class="text-text-muted hover:bg-accent-danger/10 hover:text-accent-danger-deep flex h-8 w-8 items-center justify-center rounded-full transition-colors"
-                            >
-                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                            </button>
+                            />
                         </div>
                     </div>
                 </GlassCard>
@@ -218,6 +219,7 @@ import { Head, useForm, router } from '@inertiajs/vue3'
 import { triggerHaptic } from '@/composables/useHaptics'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'

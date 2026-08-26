@@ -72,8 +72,13 @@ const updatePassword = () => {
             />
 
             <div class="flex items-center gap-4">
-                <GlassButton type="submit" :loading="form.processing" data-testid="update-password-button">
-                    Mettre à jour
+                <GlassButton
+                    type="submit"
+                    variant="primary"
+                    :loading="form.processing"
+                    data-testid="update-password-button"
+                >
+                    Enregistrer
                 </GlassButton>
 
                 <Transition

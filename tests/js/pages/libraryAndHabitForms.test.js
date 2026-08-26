@@ -194,8 +194,14 @@ describe('the library’s create form', () => {
         const [, category] = wrapper.findAll('select')
 
         // Without it there is no way back to an uncategorised exercise once a
-        // category has been picked.
-        expect(category.findAll('option').map((option) => option.text())).toContain('— Aucune —')
+        // category has been picked. The option has to be SELECTABLE for that:
+        // this assertion read only the text, and passed just as happily while
+        // the option was rendered `disabled`.
+        const aucune = category.findAll('option').find((option) => option.text() === '— Aucune —')
+
+        expect(aucune).toBeDefined()
+        expect(aucune.attributes('disabled')).toBeUndefined()
+        expect(aucune.element.value).toBe('')
     })
 
     it('closes the form and says so once the exercise is created', async () => {

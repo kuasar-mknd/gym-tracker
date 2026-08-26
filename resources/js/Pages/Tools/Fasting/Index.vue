@@ -19,6 +19,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
@@ -335,15 +336,18 @@ const formatHistoryDuration = (start, end) => {
                             <span class="text-text-main font-mono text-sm" v-if="fast.end_time">
                                 {{ formatHistoryDuration(fast.start_time, fast.end_time) }}
                             </span>
-                            <!-- Icon-only and destructive: it had no name at all. -->
-                            <button
-                                type="button"
+                            <!--
+                                Rouge au SURVOL seulement. Peinte en plein dès le
+                                repos, la corbeille mettait une alerte sur chaque
+                                ligne de l'historique — et une alerte partout
+                                n'alerte plus nulle part.
+                            -->
+                            <GlassIconButton
+                                icon="delete"
+                                :label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
+                                ton="danger"
                                 @click="demanderSuppression(fast.id)"
-                                :aria-label="`Supprimer le jeûne du ${formatDate(fast.start_time)}`"
-                                class="focus-visible:ring-accent-primary text-accent-danger-deep hover:text-accent-danger/70 relative rounded-lg p-1 transition-colors before:absolute before:-inset-2.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
-                            >
-                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                            </button>
+                            />
                         </div>
                     </div>
                 </div>

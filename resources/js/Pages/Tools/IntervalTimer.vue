@@ -21,6 +21,7 @@ import { ref, computed, onUnmounted, onMounted } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
@@ -484,7 +485,7 @@ onUnmounted(() => {
                             <GlassButton v-if="isEditing" type="button" variant="secondary" @click="resetForm">
                                 Annuler
                             </GlassButton>
-                            <GlassButton type="submit" :loading="form.processing">
+                            <GlassButton variant="primary" type="submit" :loading="form.processing">
                                 {{ isEditing ? 'Mettre à jour' : 'Enregistrer' }}
                             </GlassButton>
                         </div>
@@ -519,20 +520,18 @@ onUnmounted(() => {
                             >
                                 <span class="material-symbols-outlined" aria-hidden="true">play_circle</span>
                             </button>
-                            <button
+                            <GlassIconButton
+                                icon="edit"
+                                label="Modifier le minuteur"
+                                ton="info"
                                 @click="editTimer(timer)"
-                                class="text-text-muted hover:text-accent-info-deep relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
-                                aria-label="Modifier"
-                            >
-                                <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                            </button>
-                            <button
+                            />
+                            <GlassIconButton
+                                icon="delete"
+                                label="Supprimer le minuteur"
+                                ton="danger"
                                 @click="demanderSuppression(timer)"
-                                class="text-text-muted hover:text-accent-danger-deep relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
-                                aria-label="Supprimer"
-                            >
-                                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                            </button>
+                            />
                         </div>
                     </GlassCard>
                 </div>

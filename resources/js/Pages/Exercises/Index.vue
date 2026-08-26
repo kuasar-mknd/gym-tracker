@@ -307,15 +307,16 @@ const typeLabel = (type) => {
                         {{ exercises.length }} exercices disponibles
                     </p>
                 </div>
-                <button
+                <GlassButton
                     @click="showAddForm = true"
-                    class="bg-gradient-main shadow-accent-primary/20 text-text-on-dark-accent flex size-14 items-center justify-center rounded-2xl shadow-lg active:scale-95 sm:hidden"
+                    variant="primary"
+                    class="flex size-14 items-center justify-center p-0! sm:hidden"
                     data-testid="create-exercise-mobile-header"
                     dusk="create-exercise-btn"
                     aria-label="Nouvel exercice"
                 >
                     <span class="material-symbols-outlined text-4xl" aria-hidden="true">add</span>
-                </button>
+                </GlassButton>
                 <GlassButton
                     @click="showAddForm = true"
                     variant="primary"
@@ -406,9 +407,10 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Add Form Modal -->
-            <Modal :show="showAddForm" @close="showAddForm = false" max-width="sm">
+            <Modal :show="showAddForm" @close="showAddForm = false" max-width="sm" aria-labelledby="new-exercise-title">
                 <div class="p-6">
                     <h3
+                        id="new-exercise-title"
                         class="font-display text-text-main mb-5 text-xl font-black uppercase"
                         dusk="exercise-modal-title"
                     >
@@ -436,11 +438,8 @@ const typeLabel = (type) => {
                                 v-model="form.category"
                                 name="category"
                                 label="Catégorie"
-                                :options="[
-                                    { value: '', label: '— Aucune —' },
-                                    ...EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c })),
-                                ]"
-                                placeholder=""
+                                :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
+                                empty-label="— Aucune —"
                             />
                         </div>
                         <GlassButton
@@ -498,7 +497,7 @@ const typeLabel = (type) => {
             <div v-if="!exercises" class="animate-pulse space-y-4">
                 <GlassCard padding="p-4">
                     <div class="flex gap-4">
-                        <GlassSkeleton width="60px" height="60px" border-radius="16px" />
+                        <GlassSkeleton width="60px" height="60px" class="rounded-2xl" />
                         <div class="flex-1 space-y-3 py-1">
                             <GlassSkeleton width="70%" height="1.2rem" />
                             <GlassSkeleton width="40%" height="0.8rem" />
@@ -507,7 +506,7 @@ const typeLabel = (type) => {
                 </GlassCard>
                 <GlassCard padding="p-4">
                     <div class="flex gap-4">
-                        <GlassSkeleton width="60px" height="60px" border-radius="16px" />
+                        <GlassSkeleton width="60px" height="60px" class="rounded-2xl" />
                         <div class="flex-1 space-y-3 py-1">
                             <GlassSkeleton width="60%" height="1.2rem" />
                             <GlassSkeleton width="50%" height="0.8rem" />

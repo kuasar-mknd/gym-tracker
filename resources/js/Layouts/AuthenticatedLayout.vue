@@ -2,6 +2,7 @@
 import { watch, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
 import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
@@ -141,14 +142,12 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         <p class="text-text-main flex-1 text-sm font-bold">
                             {{ $page.props.flash[type] }}
                         </p>
-                        <button
+                        <GlassIconButton
                             v-press
+                            icon="close"
+                            label="Fermer le message"
                             @click="$page.props.flash[type] = null"
-                            class="min-h-touch min-w-touch text-text-muted hover:text-text-main flex items-center justify-center"
-                            aria-label="Fermer"
-                        >
-                            <span class="material-symbols-outlined text-base" aria-hidden="true">close</span>
-                        </button>
+                        />
                     </div>
                 </div>
             </Transition>

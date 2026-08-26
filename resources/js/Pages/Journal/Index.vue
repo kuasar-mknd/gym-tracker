@@ -12,6 +12,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import JournalForm from '@/Components/Journal/JournalForm.vue'
 import JournalList from '@/Components/Journal/JournalList.vue'
 import { Head, useForm } from '@inertiajs/vue3'
@@ -154,7 +155,7 @@ const journalsByMonth = computed(() => {
 
     <AuthenticatedLayout page-title="Journal">
         <template #header-actions>
-            <GlassButton variant="primary" size="sm" @click="openAddForm">
+            <GlassButton variant="primary" size="sm" aria-label="Nouvelle entrée" @click="openAddForm">
                 <span class="material-symbols-outlined text-base" aria-hidden="true">add</span>
             </GlassButton>
         </template>
@@ -188,12 +189,15 @@ const journalsByMonth = computed(() => {
                 @submit="submit"
             />
 
-            <div v-if="journals.length === 0 && !showAddForm" class="py-12 text-center">
-                <div class="mb-4 text-5xl">📓</div>
-                <h3 class="text-text-main text-lg font-medium">Votre journal est vide</h3>
-                <p class="text-text-muted">Commencez par ajouter une note pour aujourd'hui.</p>
-                <GlassButton class="mt-4" @click="openAddForm">Commencer</GlassButton>
-            </div>
+            <GlassEmptyState
+                v-if="journals.length === 0 && !showAddForm"
+                icon="📓"
+                title="Votre journal est vide"
+                description="Commencez par ajouter une note pour aujourd'hui."
+                action-label="Commencer"
+                action-id="empty-state-journal"
+                @action="openAddForm"
+            />
 
             <JournalList
                 v-else

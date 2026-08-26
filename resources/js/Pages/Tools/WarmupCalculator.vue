@@ -20,41 +20,21 @@
             <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="warmup-target-weight" class="font-display-label text-text-muted mb-2 block"
-                                >Poids de travail</label
-                            >
-                            <div class="relative">
-                                <input
-                                    id="warmup-target-weight"
-                                    type="number"
-                                    v-model="targetWeight"
-                                    placeholder="100"
-                                    step="0.5"
-                                    class="font-display text-text-main focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
-                                />
-                                <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
-                                    >kg</span
-                                >
-                            </div>
-                        </div>
-                        <div>
-                            <label for="warmup-bar-weight" class="font-display-label text-text-muted mb-2 block"
-                                >Poids Barre</label
-                            >
-                            <div class="relative">
-                                <input
-                                    id="warmup-bar-weight"
-                                    type="number"
-                                    v-model="form.bar_weight"
-                                    placeholder="20"
-                                    class="font-display text-text-main focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
-                                />
-                                <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
-                                    >kg</span
-                                >
-                            </div>
-                        </div>
+                        <GlassBigNumber
+                            id="warmup-target-weight"
+                            v-model="targetWeight"
+                            label="Poids de travail"
+                            unite="kg"
+                            placeholder="100"
+                            step="0.5"
+                        />
+                        <GlassBigNumber
+                            id="warmup-bar-weight"
+                            v-model="form.bar_weight"
+                            label="Poids Barre"
+                            unite="kg"
+                            placeholder="20"
+                        />
                     </div>
 
                     <!-- Warmup Sets -->
@@ -109,7 +89,7 @@
                             </p>
                         </div>
                         <GlassButton @click="savePreferences" variant="primary" size="sm" :loading="form.processing">
-                            Sauvegarder
+                            Enregistrer
                         </GlassButton>
                     </div>
 
@@ -168,19 +148,18 @@
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">
-                                <button
-                                    type="button"
-                                    @click="removeStep(index)"
-                                    class="text-text-muted hover:text-accent-danger-deep relative transition-colors before:absolute before:-inset-3.5 before:content-[''] active:scale-95"
+                                <GlassIconButton
+                                    icon="delete"
+                                    :label="`Supprimer le palier ${index + 1}`"
+                                    ton="danger"
+                                    class="active:scale-95"
                                     :disabled="form.steps.length <= 1"
-                                    :aria-label="`Supprimer le palier ${index + 1}`"
-                                >
-                                    <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                                </button>
+                                    @click="removeStep(index)"
+                                />
                             </div>
                         </div>
 
-                        <GlassButton @click="addStep" variant="ghost" size="sm" icon="add" class="w-full">
+                        <GlassButton @click="addStep" variant="primary" size="sm" icon="add" class="w-full">
                             Ajouter un palier
                         </GlassButton>
                     </div>
@@ -220,6 +199,8 @@ import { calculateWarmupSets } from '@/Utils/warmup'
 import { Head, useForm } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
 const props = defineProps({

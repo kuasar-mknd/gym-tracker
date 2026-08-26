@@ -58,7 +58,7 @@ function iconNamesInSource(): array
             preg_match_all('/\{\{(.*?)\}\}/s', $span, $mustaches);
 
             foreach ($mustaches[1] as $expression) {
-                preg_match_all('/[\'"`]([a-z][a-z0-9_]{2,30})[\'"`]/', $expression, $branch);
+                preg_match_all('/(?<![a-zA-Z])[\'"`]([a-z][a-z0-9_]{2,30})[\'"`]/', $expression, $branch);
                 $names = [...$names, ...$branch[1]];
             }
         }
@@ -88,6 +88,16 @@ function iconNamesInSource(): array
          * l'exemple reste parce que la forme qu'il décrit, elle, se reproduira. So an open brace on an `icon` line keeps the
          * sweep alive until it closes.
          */
+        /*
+         * L'apostrophe française est un délimiteur pour ce balayage.
+         *
+         * `label="Modifier l'habitude"` porte le mot `icon` sur sa ligne — c'est
+         * un `<GlassIconButton>` —, et le `'` de l'élision ouvre alors une
+         * chaîne que le `"` fermant termine : le balayage y lit `habitude` et
+         * réclame une ligature de ce nom. Le rejet se fait sur la forme, non sur
+         * le mot : aucun nom d'icône ne se colle jamais à la lettre qui le
+         * précède, une élision toujours.
+         */
         $depth = 0;
 
         foreach (explode("\n", $source) as $line) {
@@ -97,7 +107,7 @@ function iconNamesInSource(): array
                 continue;
             }
 
-            preg_match_all('/[\'"`]([a-z][a-z0-9_]{2,30})[\'"`]/', $line, $quoted);
+            preg_match_all('/(?<![a-zA-Z])[\'"`]([a-z][a-z0-9_]{2,30})[\'"`]/', $line, $quoted);
             $names = [...$names, ...$quoted[1]];
 
             $depth += substr_count($line, '{') + substr_count($line, '[')
@@ -108,7 +118,7 @@ function iconNamesInSource(): array
 
         // The habit picker is a bare array of names with no `icon` on the lines.
         if (preg_match('/const icons = \[(.*?)\]/s', $source, $picker)) {
-            preg_match_all('/[\'"]([a-z][a-z0-9_]{2,30})[\'"]/', $picker[1], $chosen);
+            preg_match_all('/(?<![a-zA-Z])[\'"]([a-z][a-z0-9_]{2,30})[\'"]/', $picker[1], $chosen);
             $names = [...$names, ...$chosen[1]];
         }
     }

@@ -229,7 +229,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                                     <GlassSkeleton width="120px" height="1.5rem" />
                                     <GlassSkeleton width="180px" height="0.8rem" class="mt-2" />
                                 </div>
-                                <GlassSkeleton height="200px" width="100%" variant="card" />
+                                <GlassSkeleton height="200px" width="100%" class="rounded-xl" />
                             </GlassCard>
                         </div>
                     </template>
@@ -333,7 +333,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
                 <!-- Skeleton Loading -->
                 <div v-if="!workouts" class="space-y-3">
-                    <GlassCard v-for="i in 3" :key="i" class="p-4" padding="none">
+                    <GlassCard v-for="i in 3" :key="i" padding="p-4">
                         <div class="flex items-start justify-between">
                             <div class="flex-1 space-y-2">
                                 <div class="flex items-center gap-2">

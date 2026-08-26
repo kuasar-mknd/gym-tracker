@@ -141,7 +141,8 @@
                             <GlassButton
                                 @click="saveScore"
                                 variant="primary"
-                                :disabled="!isValid || form.processing"
+                                :disabled="!isValid"
+                                :loading="form.processing"
                                 class="min-w-[200px]"
                             >
                                 Enregistrer
@@ -211,15 +212,13 @@
                                 </div>
                             </div>
 
-                            <button
-                                @click="demanderSuppression(entry)"
-                                type="button"
-                                aria-label="Supprimer l'entrée"
+                            <GlassIconButton
+                                icon="delete"
+                                label="Supprimer l'entrée"
+                                ton="danger"
                                 title="Supprimer l'entrée"
-                                class="text-text-muted hover:bg-accent-danger/10 hover:text-accent-danger-deep flex h-8 w-8 items-center justify-center rounded-full transition-colors"
-                            >
-                                <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                            </button>
+                                @click="demanderSuppression(entry)"
+                            />
                         </div>
                     </div>
                 </div>
@@ -244,6 +243,7 @@ import { computed, defineAsyncComponent } from 'vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
