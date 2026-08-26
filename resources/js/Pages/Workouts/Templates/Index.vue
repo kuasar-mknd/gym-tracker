@@ -86,8 +86,8 @@ const deleteTemplate = (templateId) => {
                 <GlassCard class="transition-all duration-300">
                     <div class="py-12 text-center">
                         <div class="mb-3 text-5xl">📋</div>
-                        <h3 class="text-text-main text-lg font-semibold dark:text-white">Aucun modèle</h3>
-                        <p class="text-text-muted mt-1 dark:text-slate-400">Crée tes routines pour gagner du temps</p>
+                        <h3 class="text-text-main text-lg font-semibold">Aucun modèle</h3>
+                        <p class="text-text-muted mt-1">Crée tes routines pour gagner du temps</p>
                         <Link :href="route('templates.create')" class="mt-4 inline-block">
                             <GlassButton variant="primary">Créer mon premier modèle</GlassButton>
                         </Link>
@@ -104,9 +104,7 @@ const deleteTemplate = (templateId) => {
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3
-                                    class="font-display text-text-main text-xl font-black uppercase italic dark:text-white"
-                                >
+                                <h3 class="font-display text-text-main text-xl font-black uppercase italic">
                                     {{ template.name }}
                                 </h3>
                                 <p v-if="template.description" class="text-text-muted mt-1 text-sm font-medium">
@@ -155,7 +153,7 @@ const deleteTemplate = (templateId) => {
                             <div
                                 v-for="line in template.workout_template_lines"
                                 :key="line.id"
-                                class="text-text-muted flex items-center gap-2 rounded-xl border border-slate-200 bg-white/50 px-2 py-1 text-xs transition-all duration-300 hover:-translate-y-0.5 active:scale-95 dark:border-slate-700 dark:bg-slate-800/30"
+                                class="text-text-muted flex items-center gap-2 rounded-xl border border-slate-200 bg-white/50 px-2 py-1 text-xs transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
                             >
                                 <span class="text-text-main font-medium">{{ line.exercise.name }}</span>
                                 <span class="text-text-muted/50"

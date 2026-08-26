@@ -567,7 +567,7 @@ const mountProfile = (user = { name: 'samuel', email: 'sam@example.com' }) =>
         global: {
             mocks: { route, $page: { props: { auth: { user } } } },
             directives: { press: {} },
-            stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot, ThemeToggle: { template: '<div />' } },
+            stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
         },
     })
 

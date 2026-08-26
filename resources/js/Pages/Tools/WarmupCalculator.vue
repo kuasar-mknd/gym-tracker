@@ -31,7 +31,7 @@
                                     v-model="targetWeight"
                                     placeholder="100"
                                     step="0.5"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/80 focus:ring-2 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/80 focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -48,7 +48,7 @@
                                     type="number"
                                     v-model="form.bar_weight"
                                     placeholder="20"
-                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/80 focus:ring-2 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                    class="font-display text-text-main focus:border-electric-orange focus:ring-electric-orange/20 h-16 w-full rounded-2xl border border-slate-200 bg-white/50 px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none hover:bg-white/80 focus:ring-2"
                                 />
                                 <span class="text-text-muted absolute top-1/2 right-4 -translate-y-1/2 font-bold"
                                     >kg</span
@@ -67,7 +67,7 @@
                             <div
                                 v-for="(set, index) in calculatedSets"
                                 :key="index"
-                                class="flex items-center justify-between rounded-xl border border-slate-200 bg-white/50 p-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800/30"
+                                class="flex items-center justify-between rounded-xl border border-slate-200 bg-white/50 p-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
                             >
                                 <div class="flex items-center gap-4">
                                     <div
@@ -138,7 +138,7 @@
                                         type="number"
                                         v-model="step.percent"
                                         :aria-label="`Pourcentage, palier ${index + 1}`"
-                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                        class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base font-bold transition-all outline-none hover:bg-white/80 focus:ring-1"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -150,7 +150,7 @@
                                     type="number"
                                     v-model="step.reps"
                                     :aria-label="`Répétitions, palier ${index + 1}`"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base font-bold transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base font-bold transition-all outline-none hover:bg-white/80 focus:ring-1"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -159,7 +159,7 @@
                                     v-model="step.label"
                                     :aria-label="`Label, palier ${index + 1}`"
                                     placeholder="ex: Barre vide"
-                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base placeholder-slate-400 transition-all outline-none hover:bg-white/80 focus:ring-1 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                                    class="text-text-main focus:border-electric-orange focus:ring-electric-orange/30 w-full rounded-xl border border-slate-200 bg-white/50 px-3 py-2 text-base placeholder-slate-400 transition-all outline-none hover:bg-white/80 focus:ring-1"
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">
@@ -180,7 +180,7 @@
                         </GlassButton>
                     </div>
 
-                    <div class="border-t border-slate-200 pt-4 dark:border-slate-700">
+                    <div class="border-t border-slate-200 pt-4">
                         <span id="warmup-rounding-label" class="font-display-label text-text-muted mb-2 block"
                             >Arrondi (kg)</span
                         >
@@ -196,7 +196,7 @@
                                 :class="
                                     form.rounding_increment === inc
                                         ? 'border-electric-orange bg-electric-orange/20 text-electric-orange shadow-[0_0_15px_rgba(255,107,0,0.3)]'
-                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800'
+                                        : 'text-text-muted hover:text-text-main border-slate-200 bg-white/50 hover:bg-white/80'
                                 "
                             >
                                 {{ inc }}

@@ -76,7 +76,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 250ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
                                 >local_drink</span
@@ -88,7 +88,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 500ml"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
                                 >water_drop</span
@@ -100,7 +100,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 1L"
-                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+                            class="group flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/50 py-4 transition-all hover:bg-white/80"
                         >
                             <span class="material-symbols-outlined mb-1 text-2xl text-blue-500" aria-hidden="true"
                                 >water_bottle</span
@@ -154,7 +154,7 @@
                         <div
                             v-for="log in logs"
                             :key="log.id"
-                            class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-3 transition-all hover:bg-white/80 dark:border-slate-700 dark:bg-slate-800/30 dark:hover:bg-slate-800/50"
+                            class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-3 transition-all hover:bg-white/80"
                         >
                             <div class="flex items-center gap-3">
                                 <div

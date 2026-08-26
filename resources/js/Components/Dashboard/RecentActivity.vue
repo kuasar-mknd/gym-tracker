@@ -35,7 +35,7 @@ const emit = defineEmits(['startWorkout'])
             class="rounded-3xl border border-white/20 bg-white/10 p-8 text-center backdrop-blur-md"
         >
             <div class="mb-3 text-5xl" aria-hidden="true">🏋️</div>
-            <p class="text-text-main font-bold dark:text-white">Aucune séance pour l'instant</p>
+            <p class="text-text-main font-bold">Aucune séance pour l'instant</p>
             <p class="text-text-muted mt-1 mb-5 text-sm">Commence ton parcours fitness !</p>
             <GlassButton variant="primary" @click="emit('startWorkout')" :loading="processing" class="mx-auto">
                 Démarrer une séance
@@ -92,9 +92,7 @@ const emit = defineEmits(['startWorkout'])
                         </span>
                     </div>
                     <div>
-                        <h4
-                            class="font-display text-text-main text-lg leading-tight font-bold uppercase italic dark:text-white"
-                        >
+                        <h4 class="font-display text-text-main text-lg leading-tight font-bold uppercase italic">
                             {{ workout.name || 'Séance' }}
                         </h4>
                         <p class="text-text-muted mt-1 text-xs font-bold">

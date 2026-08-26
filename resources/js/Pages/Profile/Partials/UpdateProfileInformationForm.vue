@@ -24,10 +24,8 @@ const submit = () => {
 <template>
     <GlassCard as="section">
         <header>
-            <h2 class="text-text-main text-lg font-semibold dark:text-white">Informations du profil</h2>
-            <p class="text-text-muted mt-1 text-sm dark:text-slate-400">
-                Modifie tes informations de compte et ton adresse email.
-            </p>
+            <h2 class="text-text-main text-lg font-semibold">Informations du profil</h2>
+            <p class="text-text-muted mt-1 text-sm">Modifie tes informations de compte et ton adresse email.</p>
         </header>
 
         <form @submit.prevent="submit" class="mt-6 space-y-4">

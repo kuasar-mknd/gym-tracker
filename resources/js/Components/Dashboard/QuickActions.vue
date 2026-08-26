@@ -22,7 +22,7 @@ const emit = defineEmits(['startWorkout'])
             class="hover:shadow-glow-orange/70 group shadow-glow-orange focus-visible:ring-electric-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             :class="{ 'cursor-wait': processing }"
         >
-            <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md dark:bg-slate-800/60"></div>
+            <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md"></div>
             <div
                 class="from-electric-orange/10 absolute inset-0 z-0 bg-linear-to-br to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             ></div>
@@ -44,7 +44,7 @@ const emit = defineEmits(['startWorkout'])
                     >
                 </div>
                 <span
-                    class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic dark:text-white"
+                    class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"
                 >
                     Démarrer<br />Séance
                 </span>
@@ -58,7 +58,7 @@ const emit = defineEmits(['startWorkout'])
             aria-label="Voir mes programmes d'entraînement"
             class="hover:shadow-glow-violet/70 group shadow-glow-violet focus-visible:ring-electric-orange relative h-52 overflow-hidden rounded-3xl transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-            <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md dark:bg-slate-800/60"></div>
+            <div class="absolute inset-0 z-0 bg-white/60 backdrop-blur-md"></div>
             <div
                 class="from-vivid-violet/10 absolute inset-0 z-0 bg-linear-to-br to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             ></div>
@@ -72,7 +72,7 @@ const emit = defineEmits(['startWorkout'])
                     <span class="material-symbols-outlined text-4xl text-white" aria-hidden="true">assignment_add</span>
                 </div>
                 <span
-                    class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic dark:text-white"
+                    class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"
                 >
                     Mes<br />Programmes
                 </span>

@@ -1619,7 +1619,7 @@ onUnmounted(() => {
                 :class="[
                     'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
                     'border border-white bg-white/60 transition-all',
-                    'dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400',
+                    ' ',
                 ]"
                 aria-label="Paramètres de la séance"
             >
@@ -1666,10 +1666,10 @@ onUnmounted(() => {
                           the exercise you are working on was effectively
                           invisible.
                         -->
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic dark:text-white">
+                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
                             {{ line.exercise.name }}
                         </h3>
-                        <p class="text-text-muted text-xs font-bold uppercase dark:text-slate-300">
+                        <p class="text-text-muted text-xs font-bold uppercase">
                             {{ line.exercise.category }}
                         </p>
                     </div>
@@ -1961,7 +1961,7 @@ onUnmounted(() => {
                             :dusk="`select-exercise-${exercise.id}`"
                             class="glass-panel-light hover:border-electric-orange/50 focus-visible:ring-electric-orange block w-full cursor-pointer rounded-2xl p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
                         >
-                            <span class="text-text-main block font-bold dark:text-white">{{ exercise.name }}</span>
+                            <span class="text-text-main block font-bold">{{ exercise.name }}</span>
                             <span class="text-text-muted block text-xs uppercase">{{ exercise.category }}</span>
                         </button>
                     </div>

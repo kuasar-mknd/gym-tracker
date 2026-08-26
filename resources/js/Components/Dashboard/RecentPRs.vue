@@ -18,9 +18,7 @@ defineProps({
     >
         <div class="relative z-10 mb-6">
             <h3 class="mb-1 text-[10px] font-black tracking-[0.2em] text-[#FF5500] uppercase">Réussites</h3>
-            <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
-                Records Personnels
-            </p>
+            <p class="font-display text-text-main text-2xl font-black uppercase italic">Records Personnels</p>
         </div>
 
         <!-- PR Bar Chart -->
@@ -38,7 +36,7 @@ defineProps({
                             <span class="material-symbols-outlined text-2xl text-white" aria-hidden="true">star</span>
                         </div>
                         <div>
-                            <div class="text-text-main font-bold dark:text-white">{{ pr.exercise?.name }}</div>
+                            <div class="text-text-main font-bold">{{ pr.exercise?.name }}</div>
                             <div class="text-text-muted text-xs">
                                 {{
                                     pr.type === 'max_weight'

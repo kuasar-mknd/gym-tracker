@@ -36,8 +36,8 @@ const closeModal = () => {
 <template>
     <GlassCard as="section" class="space-y-6">
         <header>
-            <h2 class="text-text-main text-lg font-semibold dark:text-white">Supprimer le compte</h2>
-            <p class="text-text-muted mt-1 text-sm dark:text-slate-400">
+            <h2 class="text-text-main text-lg font-semibold">Supprimer le compte</h2>
+            <p class="text-text-muted mt-1 text-sm">
                 Une fois ton compte supprimé, toutes tes données seront définitivement effacées.
             </p>
         </header>

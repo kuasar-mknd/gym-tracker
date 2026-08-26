@@ -52,7 +52,7 @@ const streakLabel = computed(() => {
                     class="from-electric-orange to-vivid-violet relative size-14 overflow-hidden rounded-full bg-linear-to-tr p-[2px]"
                 >
                     <div
-                        class="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white dark:border-slate-700 dark:bg-slate-800"
+                        class="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white"
                     >
                         <span class="text-gradient text-2xl font-black">
                             {{ user.name?.charAt(0).toUpperCase() }}
@@ -67,9 +67,7 @@ const streakLabel = computed(() => {
                 >
                     BON RETOUR
                 </p>
-                <h1
-                    class="font-display text-text-main truncate text-3xl font-black tracking-tighter uppercase italic dark:text-white"
-                >
+                <h1 class="font-display text-text-main truncate text-3xl font-black tracking-tighter uppercase italic">
                     {{ user.name?.split(' ')[0] }}
                 </h1>
                 <Link
@@ -102,7 +100,7 @@ const streakLabel = computed(() => {
                 aria-hidden="true"
                 >local_fire_department</span
             >
-            <span class="text-text-main text-xl font-black italic dark:text-white" aria-hidden="true">
+            <span class="text-text-main text-xl font-black italic" aria-hidden="true">
                 {{ streakDays }}
                 <span class="text-text-muted ml-0.5 text-[10px] font-bold uppercase not-italic">
                     {{ streakDays === 1 ? 'Jour' : 'Jours' }}

@@ -14,7 +14,7 @@ const emit = defineEmits(['edit', 'delete'])
     <div class="space-y-8">
         <div v-for="(group, month) in journalsByMonth" :key="month">
             <h3
-                class="text-text-main sticky top-0 z-10 mb-4 rounded-2xl border border-white/20 bg-white/10 p-2 text-lg font-medium capitalize shadow-lg backdrop-blur-md dark:text-white"
+                class="text-text-main sticky top-0 z-10 mb-4 rounded-2xl border border-white/20 bg-white/10 p-2 text-lg font-medium capitalize shadow-lg backdrop-blur-md"
             >
                 {{ month }}
             </h3>

@@ -100,7 +100,7 @@ const startWorkout = () => {
                     <h3 class="text-electric-orange mb-1 text-[10px] font-black tracking-[0.2em] uppercase">
                         Visualisation
                     </h3>
-                    <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
+                    <p class="font-display text-text-main text-2xl font-black uppercase italic">
                         Progression des Objectifs
                     </p>
                 </div>

@@ -18,9 +18,7 @@ defineProps({
     >
         <div class="relative z-10 mb-6">
             <h3 class="text-cyan-pure mb-1 text-[10px] font-black tracking-[0.2em] uppercase">Complexité</h3>
-            <p class="font-display text-text-main text-2xl font-black uppercase italic dark:text-white">
-                Exercices / Séance
-            </p>
+            <p class="font-display text-text-main text-2xl font-black uppercase italic">Exercices / Séance</p>
         </div>
 
         <!-- Recent Workouts Bar Chart -->

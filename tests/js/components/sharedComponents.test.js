@@ -286,9 +286,8 @@ describe('DropdownLink', () => {
         expect(classes()).not.toMatch(/(?:^|\s)text-white(?:\/\d+)?(?:\s|$)/)
     })
 
-    it('prend une couleur de texte qui suit le thème', () => {
+    it('prend le jeton de couleur de texte plutôt qu’une teinte en dur', () => {
         expect(classes()).toContain('text-text-main')
-        expect(classes()).toContain('dark:text-slate-100')
     })
 })
 

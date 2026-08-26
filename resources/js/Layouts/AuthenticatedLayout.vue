@@ -78,7 +78,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 </script>
 
 <template>
-    <div class="bg-pearl-white relative min-h-dvh w-full dark:bg-slate-900">
+    <div class="bg-pearl-white relative min-h-dvh w-full">
         <a
             href="#main-content"
             class="bg-electric-orange absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold text-white transition-transform focus:translate-y-0 focus:ring-2 focus:ring-white focus:outline-none"
@@ -136,7 +136,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         >
                             <span class="material-symbols-outlined" aria-hidden="true">{{ cfg.icon }}</span>
                         </div>
-                        <p class="flex-1 text-sm font-bold text-slate-900 dark:text-white">
+                        <p class="flex-1 text-sm font-bold text-slate-900">
                             {{ $page.props.flash[type] }}
                         </p>
                         <button
@@ -153,9 +153,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         </div>
 
         <!-- Desktop Navigation -->
-        <nav
-            class="bg-pearl-white/80 sticky top-0 z-40 hidden border-b border-white/40 backdrop-blur-xl sm:block dark:border-slate-700/40 dark:bg-slate-900/80"
-        >
+        <nav class="bg-pearl-white/80 sticky top-0 z-40 hidden border-b border-white/40 backdrop-blur-xl sm:block">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
                     <div class="flex">
@@ -163,7 +161,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         <div class="flex shrink-0 items-center">
                             <Link
                                 :href="route('dashboard')"
-                                class="text-gradient font-display text-2xl font-black tracking-tight uppercase italic dark:text-white"
+                                class="text-gradient font-display text-2xl font-black tracking-tight uppercase italic"
                             >
                                 GymTracker
                             </Link>
@@ -197,7 +195,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="text-text-muted hover:text-electric-orange relative flex size-11 shrink-0 items-center justify-center rounded-xl border border-white bg-white/60 transition-all hover:bg-white hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-700"
+                            class="text-text-muted hover:text-electric-orange relative flex size-11 shrink-0 items-center justify-center rounded-xl border border-white bg-white/60 transition-all hover:bg-white hover:shadow-md"
                             :aria-label="
                                 $page.props.auth.user.unread_notifications_count > 0
                                     ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
@@ -221,7 +219,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                         type="button"
                                         aria-haspopup="true"
                                         :aria-expanded="open"
-                                        class="text-text-main focus-visible:ring-electric-orange inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold shadow-sm transition-all hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:hover:bg-slate-700"
+                                        class="text-text-main focus-visible:ring-electric-orange inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold shadow-sm transition-all hover:bg-white hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
                                             class="bg-gradient-main flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white"
@@ -273,7 +271,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-pearl-white/80 sticky top-0 z-30 flex items-center justify-between border-b border-white/40 px-5 py-4 backdrop-blur-xl sm:hidden dark:border-slate-700/40 dark:bg-slate-900/80"
+            class="bg-pearl-white/80 sticky top-0 z-30 flex items-center justify-between border-b border-white/40 px-5 py-4 backdrop-blur-xl sm:hidden"
             :style="{ paddingTop: 'calc(1rem + var(--safe-area-top))' }"
         >
             <div class="flex min-w-0 items-center gap-4">
@@ -281,14 +279,14 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                     v-if="showBack"
                     v-press
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
-                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    class="text-text-muted hover:text-electric-orange flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors"
                     aria-label="Retour"
                 >
                     <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
                 </Link>
                 <h1
                     v-if="pageTitle"
-                    class="font-display text-text-main truncate text-2xl font-black tracking-tight uppercase italic dark:text-white"
+                    class="font-display text-text-main truncate text-2xl font-black tracking-tight uppercase italic"
                 >
                     {{ pageTitle }}
                 </h1>
@@ -298,7 +296,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                 <Link
                     v-press
                     :href="route('notifications.index')"
-                    class="text-text-muted relative flex size-11 shrink-0 items-center justify-center rounded-xl border border-white bg-white/60 transition-all dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400"
+                    class="text-text-muted relative flex size-11 shrink-0 items-center justify-center rounded-xl border border-white bg-white/60 transition-all"
                     :aria-label="
                         $page.props.auth.user.unread_notifications_count > 0
                             ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
@@ -320,7 +318,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         <!-- Desktop Page Heading Slot -->
         <header
             v-if="$slots.header"
-            class="bg-pearl-white/50 backdrop-blur-glass hidden border-b border-white/40 sm:block dark:border-slate-700/40 dark:bg-slate-900/50"
+            class="bg-pearl-white/50 backdrop-blur-glass hidden border-b border-white/40 sm:block"
         >
             <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                 <slot name="header" />

@@ -66,7 +66,7 @@ const selectCommonPart = (part) => {
         <div class="space-y-6">
             <!-- Add Form -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold dark:text-white">New Measurement</h3>
+                <h3 class="text-text-main mb-4 font-semibold">New Measurement</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>
                         <label class="text-text-muted mb-1 block text-sm font-medium">Body Part</label>
@@ -80,7 +80,7 @@ const selectCommonPart = (part) => {
                                     'rounded-full px-3 py-1 text-xs transition',
                                     form.part === part
                                         ? 'bg-electric-orange text-white'
-                                        : 'text-text-muted bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600',
+                                        : 'text-text-muted bg-slate-100 hover:bg-slate-200',
                                 ]"
                             >
                                 {{ part }}

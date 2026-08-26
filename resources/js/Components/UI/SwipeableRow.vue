@@ -261,7 +261,7 @@ defineExpose({ close })
 
         <!-- Foreground Content Layer -->
         <div
-            class="relative z-10 touch-pan-y rounded-3xl border border-white/20 bg-white/10 transition-transform active:scale-[0.99] dark:border-slate-700/30 dark:bg-slate-800/20"
+            class="relative z-10 touch-pan-y rounded-3xl border border-white/20 bg-white/10 transition-transform active:scale-[0.99]"
             :style="style"
             @touchstart="onTouchStart"
             @touchmove="onTouchMove"

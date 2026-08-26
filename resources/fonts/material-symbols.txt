@@ -26,7 +26,6 @@ bar_chart_4_bars
 bedtime
 bolt
 book
-brightness_auto
 calculate
 calendar_month
 cancel
@@ -36,7 +35,6 @@ chevron_left
 chevron_right
 close
 cloud_off
-dark_mode
 dashboard
 delete
 directions_run
@@ -54,7 +52,6 @@ history
 inventory_2
 keyboard
 library_books
-light_mode
 local_cafe
 local_drink
 local_fire_department

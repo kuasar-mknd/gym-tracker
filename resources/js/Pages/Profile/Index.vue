@@ -1,7 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import ThemeToggle from '@/Components/UI/ThemeToggle.vue'
 import { Head, Link } from '@inertiajs/vue3'
 
 const menuGroups = [
@@ -124,15 +123,13 @@ const menuGroups = [
                     class="bg-gradient-main flex h-20 w-20 items-center justify-center rounded-3xl p-[3px] shadow-lg shadow-orange-500/20"
                 >
                     <div
-                        class="flex h-full w-full items-center justify-center rounded-[1.2rem] bg-white text-3xl font-black dark:bg-slate-800"
+                        class="flex h-full w-full items-center justify-center rounded-[1.2rem] bg-white text-3xl font-black"
                     >
                         {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                     </div>
                 </div>
                 <div>
-                    <h2
-                        class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic dark:text-white"
-                    >
+                    <h2 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
                         {{ $page.props.auth.user.name }}
                     </h2>
                     <p class="text-text-muted text-sm font-bold">{{ $page.props.auth.user.email }}</p>
@@ -151,9 +148,7 @@ const menuGroups = [
             </div>
 
             <!-- Theme Toggle -->
-            <div class="animate-fade-in">
-                <ThemeToggle class="w-full" />
-            </div>
+            <div class="animate-fade-in"></div>
 
             <!-- Menu Groups -->
             <div
@@ -173,11 +168,7 @@ const menuGroups = [
                         :href="route(item.route)"
                         class="group focus-visible:ring-electric-orange block rounded-2xl transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     >
-                        <GlassCard
-                            padding="p-4"
-                            :hover="true"
-                            class="rounded-2xl! border-white/40 bg-white/60 dark:border-slate-700/40 dark:bg-slate-800/60"
-                        >
+                        <GlassCard padding="p-4" :hover="true" class="rounded-2xl! border-white/40 bg-white/60">
                             <div class="flex items-center gap-4">
                                 <div
                                     :class="[
@@ -191,7 +182,7 @@ const menuGroups = [
                                     }}</span>
                                 </div>
                                 <div class="flex-1">
-                                    <h4 class="text-text-main font-bold dark:text-white">{{ item.name }}</h4>
+                                    <h4 class="text-text-main font-bold">{{ item.name }}</h4>
                                     <p class="text-text-muted text-xs">{{ item.description }}</p>
                                 </div>
                                 <span

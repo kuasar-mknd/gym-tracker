@@ -2,8 +2,6 @@ import '../css/app.css'
 import './bootstrap'
 
 // Initialize theme early to prevent flash of wrong theme
-import { initTheme } from '@/composables/useTheme'
-initTheme()
 
 import { createInertiaApp, router } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'

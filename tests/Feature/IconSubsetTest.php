@@ -83,7 +83,9 @@ function iconNamesInSource(): array
          * A line-scoped sweep reads the declaration and none of the values,
          * which is how `brightness_auto`, `light_mode` and `dark_mode` reached
          * production absent from the subset: the theme toggle on the Plus tab
-         * drew its name as a word. So an open brace on an `icon` line keeps the
+         * drew its name as a word. Ce sélecteur a depuis été retiré avec le mode
+         * sombre (#1580) et ces trois icônes ne sont plus dans la police —
+         * l'exemple reste parce que la forme qu'il décrit, elle, se reproduira. So an open brace on an `icon` line keeps the
          * sweep alive until it closes.
          */
         $depth = 0;

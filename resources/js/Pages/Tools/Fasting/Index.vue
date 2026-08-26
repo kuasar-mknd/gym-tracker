@@ -251,7 +251,7 @@ const formatHistoryDuration = (start, end) => {
 
             <!-- Start Fast Section -->
             <GlassCard v-else class="mx-auto max-w-md">
-                <h3 class="text-text-main mb-6 text-lg font-semibold dark:text-white">Démarrer un jeûne</h3>
+                <h3 class="text-text-main mb-6 text-lg font-semibold">Démarrer un jeûne</h3>
 
                 <form @submit.prevent="startFast" class="space-y-4">
                     <GlassSelect
@@ -309,7 +309,7 @@ const formatHistoryDuration = (start, end) => {
 
             <!-- History Details Section -->
             <GlassCard>
-                <h3 class="text-text-main mb-4 text-lg font-semibold dark:text-white">Historique détaillé</h3>
+                <h3 class="text-text-main mb-4 text-lg font-semibold">Historique détaillé</h3>
                 <div v-if="history.data.length === 0" class="text-text-muted py-4 text-center">
                     Aucun historique de jeûne.
                 </div>
@@ -317,7 +317,7 @@ const formatHistoryDuration = (start, end) => {
                     <div
                         v-for="fast in history.data"
                         :key="fast.id"
-                        class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800/30"
+                        class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/50 p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]"
                     >
                         <div>
                             <p class="text-text-main font-medium">{{ fast.type }}</p>
