@@ -100,10 +100,16 @@ jobs:
                     #
                     # SEUILS RELEVES le 2026-08-20, sur quatre nocturnes reels.
                     #
-                    #                 16/08    17/08    19/08    20/08
-                    #   Services      58,74    58,74    79,17    80,05
-                    #   Actions       64,49    64,49    66,47    67,88
-                    #   Policies      94,28    94,28    94,28    94,28
+                    #                 16/08    17/08    19/08    20/08    26/08
+                    #   Services      58,74    58,74    79,17    80,05    81,06
+                    #   Actions       64,49    64,49    66,47    67,88    97,26
+                    #   Policies      94,28    94,28    94,28    94,28    94,94
+                    #
+                    # Le bond d'Actions n'est pas une derive de mesure : c'est la
+                    # campagne de #1446, qui a ferme 224 mutants sur 29 fichiers en
+                    # deux vagues. Le nombre de mutants monte AUSSI (760 -> 800) :
+                    # le perimetre est `--covered-only`, donc couvrir plus de lignes
+                    # en fabrique plus.
                     #
                     # Le point qui autorise a serrer : le score est DETERMINISTE
                     # en CI. Code identique, score identique au centieme — les
@@ -134,9 +140,21 @@ jobs:
                     - scope: 'App\Services'
                       timeout: 60
                       min: 80
+                    # 95 et non 97, contrairement aux deux autres parts qui se posent
+                    # a un point sous leur mesure. La raison est le nombre
+                    # d'observations, pas la prudence : Services et Policies ont
+                    # quatre nocturnes derriere elles, Actions en a UNE avec son
+                    # corpus de tests neuf. Le determinisme du score est etabli pour
+                    # du code deja mesure quatre fois, pas pour 1 465 lignes de tests
+                    # ecrites hier, dont certaines figent une horloge et comptent des
+                    # requetes.
+                    #
+                    # A resserrer a 97 apres deux nocturnes vertes de plus. Ce n'est
+                    # pas une intention vague : 95 laisse passer une regression de
+                    # deux points, la ou 66 en laissait passer trente.
                     - scope: 'App\Actions'
                       timeout: 30
-                      min: 66
+                      min: 95
                     - scope: 'App\Policies'
                       timeout: 30
                       min: 94
