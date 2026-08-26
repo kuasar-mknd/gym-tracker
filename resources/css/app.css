@@ -23,28 +23,125 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-display: Archivo, sans-serif;
 
-    --color-electric-orange: #ff5500;
-    --color-vivid-violet: #8800ff;
-    --color-hot-pink: #ff0080;
-    --color-neon-green: #ccff00;
-    --color-cyan-pure: #00e5ff;
-    --color-magenta-pure: #f5009b;
-    --color-lime-pure: #c0eb00;
-    --color-pearl-white: #f8faff;
+    /*
+     * LA CHARTE. Un composant nomme un ROLE, jamais une couleur.
+     *
+     * Ces valeurs sont declarees ICI et nulle part ailleurs. C'est le point que
+     * l'ancienne organisation n'avait pas : une meme couleur s'ecrivait de
+     * quatre facons — `electric-orange`, `accent-primary`, `#ff5500` en dur
+     * dans un graphique, ou `orange-500` de Tailwind — et le choix entre elles
+     * etait un hasard d'ecriture. C'est ce qui a rendu le mode sombre
+     * inreparable et l'a fait retirer (#1580).
+     *
+     * Les contrastes annonces sont calcules selon WCAG 2.1, seuil AA de 4,5:1
+     * pour le texte courant. `LaCharteTientSesContrastesTest` les verifie : ce
+     * ne sont pas des intentions, ce sont des mesures.
+     */
+
+    /* --- Surfaces ------------------------------------------------------ */
+    --color-surface-page: #f8faff;
+    --color-surface-card: #ffffff;
+    --color-surface-sunken: #f1f5f9;
     --color-surface-glass: rgba(255, 255, 255, 0.65);
+
+    /* --- Traits -------------------------------------------------------- */
+    --color-border: #e2e8f0;
+    --color-border-strong: #cbd5e1;
     --color-glass-border: rgba(255, 255, 255, 0.8);
+
+    /* --- Texte --------------------------------------------------------- */
     --color-text-main: #0f172a;
     --color-text-muted: #64748b;
-    --color-plate-red: #ef4444;
-    --color-plate-blue: #3b82f6;
-    --color-plate-yellow: #eab308;
-    --color-plate-green: #22c55e;
 
+    /*
+     * Ce qu'on ecrit PAR-DESSUS un accent, et c'est de l'encre.
+     *
+     * Mesure : blanc sur `#ff5500` rend 3,21:1, sous le seuil de 4,5:1 pour du
+     * texte courant. Sept endroits le faisaient, dont la navigation. L'encre
+     * sur le meme orange rend 5,57:1.
+     */
+    --color-text-on-accent: #0f172a;
+
+    /* --- Accents ------------------------------------------------------- */
+
+    /*
+     * L'orange existe en DEUX valeurs, et ce n'est pas un doublon.
+     *
+     * `primary` porte l'identite : anneaux de focus, texte, bordures,
+     * degrades — 183 des 190 usages, ou le contraste ne se pose pas de la meme
+     * facon. `primary-deep` ne sert QUE de fond a du texte blanc, ou il rend
+     * 4,52:1 la ou `#ff5500` rendait 3,21. La pop est donc gardee partout sauf
+     * sur sept boutons.
+     */
     --color-accent-primary: #ff5500;
-    --color-accent-success: #22c55e;
-    --color-accent-warning: #eab308;
-    --color-accent-danger: #ef4444;
+    --color-accent-primary-deep: #d34600;
+
+    /* Le deuxieme et le troisieme du degrade. Identite, pas information. */
+    --color-accent-secondary: #ff0080;
+    --color-accent-tertiary: #8800ff;
+
+    /*
+     * L'etat : une serie cochee, une confirmation.
+     *
+     * Un seul vert, celui-ci. Le vert conventionnel `#22c55e` a ete retire : il
+     * echouait deja a 2,28:1 avec du blanc, et personne ne l'avait vu.
+     *
+     * Il vaut 15,19:1 EN FOND avec de l'encre et 1,18:1 EN TEXTE sur une carte
+     * blanche. Il se pose donc comme surface ou comme marque — un point, un
+     * filet — jamais comme couleur de texte. Un message de confirmation s'ecrit
+     * en encre, avec cette marque a cote.
+     */
+    --color-accent-state: #ccff00;
+
     --color-accent-info: #00e5ff;
+    --color-accent-danger: #ef4444;
+    --color-accent-warning: #eab308;
+
+    /*
+     * --- Categories d'exercice ------------------------------------------
+     *
+     * Huit groupes musculaires, huit couleurs distinguables. Ce n'est PAS la
+     * meme chose que les accents : un accent porte une intention (agir, alerter,
+     * confirmer), une couleur de categorie ne porte qu'une identite — elle doit
+     * seulement se distinguer de ses sept voisines.
+     *
+     * Deux d'entre elles n'existaient que pour ca : `magenta` et `lime`, assez
+     * proches du rose et du vert d'etat pour qu'on les prenne pour des doublons,
+     * et pourtant necessaires puisqu'il faut huit teintes separables.
+     *
+     * La correspondance etait ecrite DEUX fois — en classes dans
+     * `Utils/constants.js`, en hexadecimal dans `ExerciseCategoryChart.vue`,
+     * avec un commentaire avouant le rapprochement a la main. Elle est
+     * desormais ici seule ; le JS la lit par `Utils/couleurs.js`.
+     */
+    --color-category-chest: #ff5500;
+    --color-category-back: #8800ff;
+    --color-category-shoulders: #ff0080;
+    --color-category-arms: #00e5ff;
+    --color-category-legs: #ccff00;
+    --color-category-core: #f5009b;
+    --color-category-cardio: #c0eb00;
+    --color-category-other: #64748b;
+
+    /*
+     * --- Anciens noms, le temps de la conversion -----------------------
+     *
+     * Ils REFERENCENT le role, ils ne recopient pas sa valeur : c'est en
+     * portant chacune son litteral que deux familles ont diverge sans que rien
+     * ne le signale, et `LesJetonsNeSeRecopientPasTest` garde cette lecon.
+     *
+     * A supprimer quand le compteur de `LaCharteRemplaceLesCouleursBrutesTest`
+     * atteint zero.
+     */
+    --color-electric-orange: var(--color-accent-primary);
+    --color-hot-pink: var(--color-accent-secondary);
+    --color-vivid-violet: var(--color-accent-tertiary);
+    --color-neon-green: var(--color-accent-state);
+    --color-cyan-pure: var(--color-accent-info);
+    --color-accent-success: var(--color-accent-state);
+    --color-pearl-white: var(--color-surface-page);
+    --color-magenta-pure: var(--color-category-core);
+    --color-lime-pure: var(--color-category-cardio);
 
     --backdrop-blur-glass: 20px;
     --backdrop-blur-glass-strong: 24px;

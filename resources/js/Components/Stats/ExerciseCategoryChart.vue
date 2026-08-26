@@ -1,4 +1,5 @@
 <script setup>
+import { couleurDeCategorie } from '@/Utils/couleurs'
 import { Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
 import { computed } from 'vue'
@@ -12,18 +13,6 @@ const props = defineProps({
     },
 })
 
-// Color mapping matching the @theme block in resources/css/app.css and Exercises/Index.vue
-const categoryColors = {
-    Pectoraux: '#FF5500', // electric-orange
-    Dos: '#8800FF', // vivid-violet
-    Épaules: '#FF0080', // hot-pink
-    Bras: '#00E5FF', // cyan-pure
-    Jambes: '#CCFF00', // neon-green
-    Core: '#F5009B', // magenta-pure
-    Cardio: '#C0EB00', // lime-pure
-    Autres: '#64748B', // text-muted (slate-500 equivalent)
-}
-
 const chartData = computed(() => {
     // Group exercises by category
     const counts = {}
@@ -34,7 +23,7 @@ const chartData = computed(() => {
 
     const labels = Object.keys(counts)
     const data = Object.values(counts)
-    const backgroundColor = labels.map((cat) => categoryColors[cat] || categoryColors['Autres'])
+    const backgroundColor = labels.map((cat) => couleurDeCategorie(cat))
 
     return {
         labels: labels,
