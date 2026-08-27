@@ -58,11 +58,6 @@ class FastingController extends Controller
 
         $user = $this->user();
 
-        // Check if there is already an active fast
-        if ($user->fasts()->where('status', 'active')->exists()) {
-            return back()->withErrors(['message' => 'You already have an active fast.']);
-        }
-
         $user->fasts()->create([
             ...$request->validated(),
             'status' => 'active',

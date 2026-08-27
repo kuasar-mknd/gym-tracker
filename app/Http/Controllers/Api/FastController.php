@@ -43,7 +43,8 @@ class FastController extends Controller
         $this->authorize('viewAny', Fast::class);
 
         $fasts = $this->user()->fasts()
-            ->latest()
+            // `latest()` trie sur `created_at`, que rien n'indexe.
+            ->latest('start_time')
             ->paginate();
 
         return FastResource::collection($fasts);
