@@ -19,6 +19,15 @@ class UserActivityChart extends ChartWidget
         return 'bar';
     }
 
+    /*
+     * `ChartWidget` herite de `CanPoll`, dont l'intervalle par defaut vaut
+     * `'5s'`. Ne rien declarer ne desactive donc rien : un graphique
+     * d'inscriptions PAR MOIS se rafraichissait douze fois par minute et par
+     * onglet, chaque passage balayant `users` en entier.
+     */
+    #[\Override]
+    protected ?string $pollingInterval = null;
+
     #[\Override]
     protected function getData(): array
     {
@@ -42,7 +51,10 @@ class UserActivityChart extends ChartWidget
     {
         /** @phpstan-ignore-next-line */
         return User::selectRaw('COUNT(*) as count, MONTH(created_at) as month')
-            ->whereYear('created_at', Carbon::now()->year)
+            // Un intervalle sur la colonne nue : `whereYear()` lui appliquait une
+            // fonction et rendait tout index inutilisable.
+            ->where('created_at', '>=', Carbon::now()->startOfYear())
+            ->where('created_at', '<', Carbon::now()->addYear()->startOfYear())
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('count', 'month')

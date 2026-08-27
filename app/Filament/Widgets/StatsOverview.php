@@ -47,6 +47,6 @@ class StatsOverview extends StatsOverviewWidget
 
     private function getWorkoutsTodayCount(): int
     {
-        return Workout::whereDate('started_at', Carbon::today())->count();
+        return Workout::whereBetween('started_at', [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()])->count();
     }
 }
