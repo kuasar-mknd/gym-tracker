@@ -36,6 +36,12 @@ class FetchExerciseHistoryAction
             ->where('workout_lines.exercise_id', $exercise->id)
             ->where('workouts.user_id', $user->id)
             ->whereNotNull('workouts.started_at')
+            // La meme fenetre que `getExercise1RMProgress`, appelee juste
+            // au-dessus dans `ExerciseController::show`. L'historique complet
+            // partait entier dans la prop Inertia : trois ans de developpe
+            // couche font ~1 200 series hydratees et serialisees a chaque
+            // ouverture de fiche.
+            ->where('workouts.started_at', '>=', now()->subDays(365))
             ->with(['workout', 'sets'])
             ->get()
             /*

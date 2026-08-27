@@ -37,7 +37,7 @@ final class FetchWorkoutsIndexAction
             // session, so a bench press done in 40 sessions counted 40 times.
             // The figure had no relation to the library's "N exercices
             // disponibles" or to the Stats page's own Exercices card.
-            'totalExercises' => $user->workoutLines()->distinct()->count('exercise_id'),
+            'totalExercises' => $this->getTotalExercises($user),
         ];
     }
 
@@ -68,6 +68,24 @@ final class FetchWorkoutsIndexAction
             ],
             'exercises' => Exercise::getCachedForUser($user->id),
         ];
+    }
+
+    /**
+     * Un COUNT DISTINCT sur toutes les lignes de toutes les seances.
+     *
+     * Il restait immediat pendant que le reste de la page passait en differe et
+     * en cache — et la requete XHR de la prop differee rejoue le controleur, si
+     * bien qu'il partait deux fois par affichage. Meme cache d'une heure que ses
+     * voisines, plutot que de le rendre differe : la carte afficherait sinon 0
+     * avant de se corriger.
+     */
+    protected function getTotalExercises(User $user): int
+    {
+        return (int) Cache::remember(
+            "stats.total_exercises.{$user->id}",
+            now()->addHour(),
+            fn (): int => $user->workoutLines()->distinct()->count('exercise_id')
+        );
     }
 
     /**
