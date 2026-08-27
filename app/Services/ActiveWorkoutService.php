@@ -30,12 +30,7 @@ final class ActiveWorkoutService
         $enveloppe = Cache::remember(
             self::cle($user->id),
             now()->addHours(2),
-            fn (): array => ['seance' => $user->workouts()
-                ->select('id', 'name', 'started_at')
-                ->whereNull('ended_at')
-                ->withCount('workoutLines')
-                ->latest('started_at')
-                ->first()],
+            fn (): array => ['seance' => self::chercher($user)],
         );
 
         if (! is_array($enveloppe)) {
@@ -45,6 +40,16 @@ final class ActiveWorkoutService
         $seance = $enveloppe['seance'] ?? null;
 
         return $seance instanceof Workout ? $seance : null;
+    }
+
+    private static function chercher(User $user): ?Workout
+    {
+        return $user->workouts()
+            ->select('id', 'name', 'started_at')
+            ->whereNull('ended_at')
+            ->withCount('workoutLines')
+            ->latest('started_at')
+            ->first();
     }
 
     public function forget(int $userId): void

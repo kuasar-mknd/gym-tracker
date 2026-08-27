@@ -41,10 +41,7 @@ final class NotificationService
         $enveloppe = Cache::remember(
             $this->getLatestAchievementCacheKey($user),
             now()->addDays(7),
-            fn (): array => ['trophee' => $user->unreadNotifications()
-                ->where('type', \App\Notifications\AchievementUnlocked::class)
-                ->latest()
-                ->first()],
+            fn (): array => ['trophee' => self::chercherTrophee($user)],
         );
 
         if (! is_array($enveloppe)) {
@@ -59,6 +56,14 @@ final class NotificationService
     /**
      * Clear the notification-related cache for a user.
      */
+    private static function chercherTrophee(User $user): ?Notification
+    {
+        return $user->unreadNotifications()
+            ->where('type', \App\Notifications\AchievementUnlocked::class)
+            ->latest()
+            ->first();
+    }
+
     /**
      * @param  class-string|null  $notification  Le type envoye, s'il est connu.
      */
