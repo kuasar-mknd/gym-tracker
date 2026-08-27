@@ -127,10 +127,21 @@ final class AppServiceProvider extends ServiceProvider
             \App\Jobs\SyncUserGoals::dispatch($user);
         });
 
+        // `personal_records.set_id` est ON DELETE SET NULL : apres coup, plus rien
+        // ne dit ce que la serie detenait.
+        Set::deleting(function (Set $set): void {
+            app(\App\Services\PersonalRecordService::class)->retenirTypesDetenus($set);
+        });
+
         Set::deleted(function (Set $set): void {
-            // Unconditional: the database resolves personal_records.set_id as the
-            // row goes, so by now nothing still admits this set held a record.
-            app(\App\Services\PersonalRecordService::class)->refreshFor($set);
+            $records = app(\App\Services\PersonalRecordService::class);
+            $detenus = $records->typesRetenus($set);
+
+            if ($detenus === []) {
+                return;
+            }
+
+            $records->refreshFor($set, null, $detenus);
         });
 
         \App\Models\WorkoutLine::deleted(function (\App\Models\WorkoutLine $line): void {

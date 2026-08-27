@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\PersonalRecordService;
+use Illuminate\Support\Facades\DB;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -186,4 +187,93 @@ it('rebâtit le record quand la série qui le détenait est corrigée', function
     $serie->update(['weight' => 100]);
 
     expect((float) recordDeType($user, 'max_weight')?->value)->toBe(100.0);
+});
+
+function seriesPour(User $user, Exercise $exercise, int $combien): void
+{
+    $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
+    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
+
+    for ($i = 1; $i <= $combien; $i++) {
+        Set::factory()->create([
+            'workout_line_id' => $line->id,
+            'weight' => 50 + $i,
+            'reps' => 5,
+            'is_warmup' => false,
+        ]);
+    }
+}
+
+/** @return list<string> */
+function requetesDe(callable $geste): array
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    $geste();
+
+    $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
+    DB::disableQueryLog();
+
+    return array_values($requetes);
+}
+
+/** @return list<string> */
+function lecturesDeSeries(User $user, Exercise $exercise): array
+{
+    $requetes = requetesDe(fn () => app(PersonalRecordService::class)->recompute($user, $exercise->id));
+
+    return array_values(array_filter($requetes, fn (string $sql): bool => str_contains($sql, 'from `sets`')));
+}
+
+it('ne rapatrie qu’une ligne, quel que soit l’historique', function (): void {
+    $exercise = Exercise::factory()->create(['type' => 'strength']);
+
+    $modeste = User::factory()->create();
+    seriesPour($modeste, $exercise, 3);
+    $surPetit = lecturesDeSeries($modeste, $exercise);
+
+    $fourni = User::factory()->create();
+    seriesPour($fourni, $exercise, 60);
+    $surGros = lecturesDeSeries($fourni, $exercise);
+
+    // Compter les requêtes ne dirait rien : l'ancien code en faisait autant.
+    expect($surPetit)->not->toBeEmpty()
+        ->and($surGros)->toHaveCount(count($surPetit));
+
+    foreach ($surGros as $sql) {
+        expect($sql)->toContain('limit 1');
+    }
+
+    $record = fn (User $user): ?PersonalRecord => PersonalRecord::where('user_id', $user->id)
+        ->where('exercise_id', $exercise->id)
+        ->where('type', 'max_weight')
+        ->first();
+
+    expect($record($modeste)?->value)->toEqual(53.0)
+        ->and($record($fourni)?->value)->toEqual(110.0);
+});
+
+it('ne reconstruit rien quand la série supprimée ne détenait aucun record', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create(['type' => 'strength']);
+    $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
+    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
+
+    $lourde = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 200, 'reps' => 5, 'is_warmup' => false]);
+    $legere = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 40, 'reps' => 5, 'is_warmup' => false]);
+
+    app(PersonalRecordService::class)->recompute($user, $exercise->id);
+
+    $avant = PersonalRecord::where('user_id', $user->id)->where('type', 'max_weight')->first();
+    expect($avant?->set_id)->toBe($lourde->id);
+
+    $requetes = requetesDe(fn () => $legere->delete());
+
+    // La table des séries n'est pas relue : le recalcul n'a pas été déclenché.
+    $relectures = array_filter($requetes, fn (string $sql): bool => str_contains($sql, 'from `sets`') && str_contains($sql, 'inner join'));
+
+    expect($relectures)->toBeEmpty()
+        ->and(PersonalRecord::where('user_id', $user->id)->where('type', 'max_weight')->first()?->set_id)
+        ->toBe($lourde->id);
 });

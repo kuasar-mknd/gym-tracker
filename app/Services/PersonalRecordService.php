@@ -143,60 +143,47 @@ final class PersonalRecordService
      *                                    means all of them, which is right when a set has gone and there is no
      *                                    longer any way to know which records it was holding.
      */
+    /** @var list<string> */
+    private const array TYPES = ['max_weight', 'max_1rm', 'max_volume_set'];
+
+    /**
+     * Rebuilds an exercise's records from the sets that actually exist.
+     *
+     * update() only ever raises a record, and nothing ever lowered one. A single
+     * mistyped weight — 500 for 50 — became that exercise's personal record
+     * permanently: correcting the set did nothing, deleting it did nothing, and
+     * the figure stayed on the user's profile for good.
+     *
+     * @param  list<string>|null  $types  Limit the rebuild to these records. Null
+     *                                    means all of them, which is right when a set has gone and there is no
+     *                                    longer any way to know which records it was holding.
+     */
     public function recompute(User $user, int $exerciseId, ?array $types = null): void
     {
-        $sets = Set::query()
-            ->join('workout_lines', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->join('workouts', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->where('workouts.user_id', $user->id)
-            ->where('workout_lines.exercise_id', $exerciseId)
-            ->where('sets.is_warmup', false)
-            ->where('sets.weight', '>', 0)
-            ->where('sets.reps', '>', 0)
-            ->select('sets.*')
-            ->with('workoutLine')
-            ->get();
+        $records = PersonalRecord::query()
+            ->where('user_id', $user->id)
+            ->where('exercise_id', $exerciseId)
+            ->get()
+            ->keyBy(fn (PersonalRecord $record): string => $record->type->value);
 
-        /** @var array<string, callable(Set): array{0: float, 1: float|null}> $measures */
-        $measures = [
-            'max_weight' => fn (Set $set): array => [(float) $set->weight, (float) $set->reps],
-            'max_1rm' => fn (Set $set): array => [
-                $this->calculate1RM((float) $set->weight, (int) $set->reps),
-                (float) $set->weight,
-            ],
-            'max_volume_set' => fn (Set $set): array => [(float) $set->weight * (int) $set->reps, null],
-        ];
-
-        foreach ($measures as $type => $measure) {
+        foreach (self::TYPES as $type) {
             if ($types !== null && ! in_array($type, $types, true)) {
                 continue;
             }
 
-            $record = PersonalRecord::where('user_id', $user->id)
-                ->where('exercise_id', $exerciseId)
-                ->where('type', $type)
-                ->first();
+            /** @var PersonalRecord|null $record */
+            $record = $records->get($type);
+            $meilleure = $this->meilleureSerie($user, $exerciseId, $type);
 
-            $best = null;
-            $bestValue = null;
-            $bestSecondary = null;
-
-            foreach ($sets as $set) {
-                [$value, $secondary] = $measure($set);
-
-                if ($bestValue === null || $value > $bestValue) {
-                    $bestValue = $value;
-                    $bestSecondary = $secondary;
-                    $best = $set;
-                }
-            }
-
-            if ($best === null || $bestValue === null) {
+            if (! $meilleure instanceof Set) {
                 // Nothing left that qualifies; the record no longer stands.
                 $record?->delete();
 
                 continue;
             }
+
+            [$valeur, $secondaire] = $this->mesurer($type, $meilleure);
+            $seanceId = $meilleure->getAttribute('workout_id');
 
             $record ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
 
@@ -206,13 +193,65 @@ final class PersonalRecordService
              * fixed a typo would be worse than saying nothing.
              */
             $record->fill([
-                'value' => $bestValue,
-                'secondary_value' => $bestSecondary,
-                'workout_id' => $best->workoutLine?->workout_id,
-                'set_id' => $best->id,
-                'achieved_at' => $best->created_at ?? now(),
+                'value' => $valeur,
+                'secondary_value' => $secondaire,
+                'workout_id' => is_numeric($seanceId) ? (int) $seanceId : null,
+                'set_id' => $meilleure->id,
+                'achieved_at' => $meilleure->created_at ?? now(),
             ])->save();
         }
+    }
+
+    /** A egalite, la premiere serie : `sets.id` croissant, plutot que l'ordre du moteur. */
+    private function meilleureSerie(User $user, int $exerciseId, string $type): ?Set
+    {
+        $requete = Set::query()
+            ->join('workout_lines', 'workout_lines.id', '=', 'sets.workout_line_id')
+            ->join('workouts', 'workouts.id', '=', 'workout_lines.workout_id')
+            ->where('workouts.user_id', $user->id)
+            ->where('workout_lines.exercise_id', $exerciseId)
+            ->where('sets.is_warmup', false)
+            ->where('sets.weight', '>', 0)
+            ->where('sets.reps', '>', 0)
+            ->select(['sets.id', 'sets.weight', 'sets.reps', 'sets.created_at', 'workout_lines.workout_id']);
+
+        $ordonnee = match ($type) {
+            'max_weight' => $requete->orderByDesc('sets.weight'),
+            'max_1rm' => $requete->orderByRaw('case when sets.reps <= 1 then sets.weight else sets.weight * (1 + sets.reps / 30) end desc'),
+            default => $requete->orderByRaw('sets.weight * sets.reps desc'),
+        };
+
+        return $ordonnee->orderBy('sets.id')->first();
+    }
+
+    /** Retient ce que la serie detient, tant que la base le sait encore. */
+    public function retenirTypesDetenus(Set $set): void
+    {
+        $set->setAttribute('records_detenus', $this->typesDetenusPar($set));
+    }
+
+    /** @return list<string>|null */
+    public function typesRetenus(Set $set): ?array
+    {
+        $retenus = $set->getAttribute('records_detenus');
+
+        if (! is_array($retenus)) {
+            return null;
+        }
+
+        return array_values(array_filter($retenus, is_string(...)));
+    }
+
+    /**
+     * @return array{0: float, 1: float|null}
+     */
+    private function mesurer(string $type, Set $set): array
+    {
+        return match ($type) {
+            'max_weight' => [(float) $set->weight, (float) $set->reps],
+            'max_1rm' => [$this->calculate1RM((float) $set->weight, (int) $set->reps), (float) $set->weight],
+            default => [(float) $set->weight * (int) $set->reps, null],
+        };
     }
 
     /**
@@ -242,19 +281,25 @@ final class PersonalRecordService
          * morte, avec ses quatre mutants, et le `filter()` qui ecartait la chaine
          * vide n'avait rien a ecarter.
          */
-        $types = array_values(
-            PersonalRecord::query()
-                ->where('set_id', $set->id)
-                ->get(['type'])
-                ->map(fn (PersonalRecord $record): string => $record->type->value)
-                ->all()
-        );
+        $types = $this->typesDetenusPar($set);
 
         if ($types === []) {
             return;
         }
 
         $this->refreshFor($set, $user, $types);
+    }
+
+    /** @return list<string> */
+    public function typesDetenusPar(Set $set): array
+    {
+        return array_values(
+            PersonalRecord::query()
+                ->where('set_id', $set->id)
+                ->get(['type'])
+                ->map(fn (PersonalRecord $record): string => $record->type->value)
+                ->all()
+        );
     }
 
     /**
