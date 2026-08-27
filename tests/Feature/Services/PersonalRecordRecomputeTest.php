@@ -223,7 +223,7 @@ function lecturesDeSeries(User $user, Exercise $exercise): array
 {
     $requetes = requetesDe(fn () => app(PersonalRecordService::class)->recompute($user, $exercise->id));
 
-    return array_values(array_filter($requetes, fn (string $sql): bool => str_contains($sql, 'from `sets`')));
+    return array_values(array_filter($requetes, fn (string $sql): bool => preg_match('/from `?sets`?/', $sql) === 1));
 }
 
 it('ne rapatrie qu’une ligne, quel que soit l’historique', function (): void {
@@ -241,9 +241,14 @@ it('ne rapatrie qu’une ligne, quel que soit l’historique', function (): void
     expect($surPetit)->not->toBeEmpty()
         ->and($surGros)->toHaveCount(count($surPetit));
 
+    // La borne, c'est le filtre de rang : la requête ne rend que les lignes
+    // gagnantes, trois au plus. Et aucune liste `in (…)` ne suit, dont la
+    // longueur grandissait avec l'historique.
     foreach ($surGros as $sql) {
-        expect($sql)->toContain('limit 1');
+        expect($sql)->toContain('rang_max_weight = 1');
     }
+
+    expect(array_filter($surGros, fn (string $sql): bool => str_contains($sql, ' in (')))->toBeEmpty();
 
     $record = fn (User $user): ?PersonalRecord => PersonalRecord::where('user_id', $user->id)
         ->where('exercise_id', $exercise->id)
@@ -271,7 +276,7 @@ it('ne reconstruit rien quand la série supprimée ne détenait aucun record', f
     $requetes = requetesDe(fn () => $legere->delete());
 
     // La table des séries n'est pas relue : le recalcul n'a pas été déclenché.
-    $relectures = array_filter($requetes, fn (string $sql): bool => str_contains($sql, 'from `sets`') && str_contains($sql, 'inner join'));
+    $relectures = array_filter($requetes, fn (string $sql): bool => preg_match('/from `?sets`?/', $sql) === 1 && preg_match('/join `?workout_lines`?/', $sql) === 1);
 
     expect($relectures)->toBeEmpty()
         ->and(PersonalRecord::where('user_id', $user->id)->where('type', 'max_weight')->first()?->set_id)
