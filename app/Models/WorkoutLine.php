@@ -167,7 +167,7 @@ class WorkoutLine extends Model
                 return;
             }
 
-            \Illuminate\Support\Facades\Cache::forget("user_active_workout_{$workout->user_id}");
+            app(\App\Services\ActiveWorkoutService::class)->forget($workout->user_id);
         };
 
         static::saved($clearCache);

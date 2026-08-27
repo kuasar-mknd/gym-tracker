@@ -81,8 +81,9 @@ class WorkoutController extends Controller
     {
         $this->authorize('create', Workout::class);
 
-        // ⚡ Bolt: Prevent creating multiple active sessions
-        $activeWorkout = $this->user()->workouts()->whereNull('ended_at')->first();
+        // La même question que la prop partagée pose déjà, dans cette requête.
+        $activeWorkout = app(\App\Services\ActiveWorkoutService::class)->for($this->user());
+
         if ($activeWorkout instanceof Workout) {
             return redirect()->route('workouts.show', $activeWorkout);
         }

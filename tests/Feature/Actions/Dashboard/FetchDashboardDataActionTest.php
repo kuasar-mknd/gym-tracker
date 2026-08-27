@@ -51,53 +51,14 @@ it('rend les cinq entrees du tableau de bord, ni plus ni moins', function (): vo
 
     $stats = app(FetchDashboardDataAction::class)->getImmediateStats($user);
 
-    // Comparer les cles exactes, et non un echantillon : la page lit les cinq,
-    // et retirer « activeWorkout » ou « recentPRs » du tableau ne se voyait
-    // nulle part.
+    // Comparer les cles exactes, et non un echantillon : la page lit les
+    // quatre, et retirer « recentPRs » du tableau ne se voyait nulle part.
     expect(array_keys($stats))->toBe([
         'latestWeight',
-        'activeWorkout',
         'recentWorkouts',
         'recentPRs',
         'activeGoals',
     ]);
-});
-
-it('designe comme seance en cours la plus recente de celles qui ne sont pas terminees', function (): void {
-    $user = scenePourTableauDeBord();
-
-    // Terminee : la plus recente de toutes, et pourtant pas la bonne reponse.
-    Workout::factory()->create([
-        'user_id' => $user->id,
-        'started_at' => Carbon::parse('2026-06-18 11:00:00'),
-        'ended_at' => Carbon::parse('2026-06-18 11:45:00'),
-    ]);
-
-    // En cours, mais l'avant-derniere.
-    Workout::factory()->create([
-        'user_id' => $user->id,
-        'started_at' => Carbon::parse('2026-06-16 09:00:00'),
-        'ended_at' => null,
-    ]);
-
-    $enCours = Workout::factory()->create([
-        'user_id' => $user->id,
-        'started_at' => Carbon::parse('2026-06-18 10:00:00'),
-        'ended_at' => null,
-    ]);
-
-    $stats = app(FetchDashboardDataAction::class)->getImmediateStats($user);
-
-    // Non nulle : un `return null` a la place de la requete rendait la barre
-    // « reprendre la seance » invisible pour tout le monde, et rien ne le disait.
-    // `?->` parce que la valeur est typee `Workout|null` : la premiere
-    // assertion attrape deja le cas nul, mais l'analyse statique ne la lit pas
-    // comme un retrecissement de type.
-    $enCoursRendue = $stats['activeWorkout'];
-
-    expect($enCoursRendue)->not->toBeNull()
-        ->and($enCoursRendue?->id)->toBe($enCours->id)
-        ->and($enCoursRendue?->workout_lines_count)->toBe(0);
 });
 
 it('rend exactement les deux records les plus recents, du plus recent au plus ancien', function (): void {

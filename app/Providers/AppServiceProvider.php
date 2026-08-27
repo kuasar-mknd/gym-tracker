@@ -88,7 +88,7 @@ final class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Event::listen(function (\Illuminate\Notifications\Events\NotificationSent $event): void {
             if ($event->notifiable instanceof \App\Models\User) {
-                app(\App\Services\NotificationService::class)->clearCache($event->notifiable);
+                app(\App\Services\NotificationService::class)->clearCache($event->notifiable, $event->notification::class);
             }
         });
     }
