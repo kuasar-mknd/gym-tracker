@@ -5,8 +5,11 @@ declare(strict_types=1);
 use App\Models\Achievement;
 use App\Models\Admin;
 use App\Models\Exercise;
+use App\Models\Goal;
 use App\Models\Habit;
 use App\Models\Set;
+use App\Models\Supplement;
+use App\Models\SupplementLog;
 use App\Models\User;
 use App\Models\UserAchievement;
 use App\Models\Workout;
@@ -16,12 +19,16 @@ use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
 use App\Policies\AchievementPolicy;
 use App\Policies\ExercisePolicy;
+use App\Policies\GoalPolicy;
 use App\Policies\HabitLogPolicy;
 use App\Policies\SetPolicy;
+use App\Policies\SupplementLogPolicy;
+use App\Policies\SupplementPolicy;
 use App\Policies\UserAchievementPolicy;
 use App\Policies\WorkoutPolicy;
 use App\Policies\WorkoutTemplateLinePolicy;
 use App\Policies\WorkoutTemplateSetPolicy;
+use Illuminate\Support\Facades\Gate;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -266,5 +273,130 @@ describe('achievements are read only for the people who earn them', function ():
             ->and($policy->update())->toBeFalse()
             ->and($policy->delete())->toBeFalse()
             ->and($policy->viewAny())->toBeTrue();
+    });
+});
+
+/**
+ * Un identifiant que jamais un administrateur ne portera.
+ *
+ * Les deux branches d'une policy repondent la meme chose quand elles regardent
+ * le meme entier par hasard : la branche de propriete compare `$authUser->id`
+ * au `user_id` de l'enregistrement, et un administrateur fraichement cree porte
+ * l'identifiant 1, comme le premier utilisateur. Un test ecrit sans y penser
+ * passe alors AUSSI avec la garde `instanceof` retiree, et ne dit donc rien.
+ *
+ * Epingler l'identifiant du proprietaire ecarte la coincidence, plutot que
+ * d'esperer qu'elle ne se produise pas.
+ */
+const IDENTIFIANT_HORS_DE_PORTEE = 9_000;
+
+/**
+ * La garde `instanceof \App\Models\User` que porte presque chaque methode de
+ * policy n'etait exercee QUE par des utilisateurs de l'application.
+ *
+ * Remplacer cette garde par `true` ne faisait donc tomber aucune assertion :
+ * seize mutants y survivaient. Ce n'est pas un manque de couverture — ces
+ * lignes sont executees a chaque test de policy — c'est de la couverture qui ne
+ * verifie rien.
+ *
+ * Ce que la garde decide est pourtant le coeur du modele d'autorisation : un
+ * utilisateur de l'application est juge sur ce qu'il POSSEDE, un administrateur
+ * de panneau sur ce qu'on lui a ACCORDE. Les deux chemins ne doivent jamais se
+ * croiser, et c'est cela que les tests ci-dessous fixent.
+ */
+describe('les deux chemins d\'autorisation ne se croisent jamais', function (): void {
+    /**
+     * Les abilites de collection : l'utilisateur passe toujours, l'administrateur
+     * seulement s'il porte la permission. Sans la garde, l'administrateur
+     * passerait lui aussi sans rien detenir.
+     */
+    it('n\'ouvre les abilites de collection a un administrateur que sur permission', function (): void {
+        $journal = new SupplementLogPolicy();
+
+        expect($journal->viewAny(adminGranted(['ViewAny:SupplementLog'])))->toBeTrue()
+            ->and($journal->viewAny(adminGranted([])))->toBeFalse()
+            ->and($journal->create(adminGranted(['Create:SupplementLog'])))->toBeTrue()
+            ->and($journal->create(adminGranted([])))->toBeFalse();
+    });
+
+    /**
+     * Les abilites sur un enregistrement : l'administrateur les obtient par
+     * permission, jamais par propriete. Le proprietaire porte un identifiant
+     * hors de portee pour que la branche de propriete reponde NON la ou la
+     * branche des permissions repond OUI — sans quoi les deux se confondent.
+     */
+    it('juge un administrateur sur ses permissions, jamais sur la propriete', function (): void {
+        $proprietaire = User::factory()->create(['id' => IDENTIFIANT_HORS_DE_PORTEE]);
+        $journal = SupplementLog::factory()->create([
+            'user_id' => $proprietaire->id,
+            'supplement_id' => Supplement::factory()->create(['user_id' => $proprietaire->id])->id,
+        ]);
+        $policy = new SupplementLogPolicy();
+
+        expect($policy->view(adminGranted(['View:SupplementLog']), $journal))->toBeTrue()
+            ->and($policy->view(adminGranted([]), $journal))->toBeFalse()
+            ->and($policy->update(adminGranted(['Update:SupplementLog']), $journal))->toBeTrue()
+            ->and($policy->update(adminGranted([]), $journal))->toBeFalse()
+            ->and($policy->delete(adminGranted(['Delete:SupplementLog']), $journal))->toBeTrue()
+            ->and($policy->delete(adminGranted([]), $journal))->toBeFalse();
+    });
+
+    it('applique la meme separation aux complements et aux objectifs', function (): void {
+        $proprietaire = User::factory()->create(['id' => IDENTIFIANT_HORS_DE_PORTEE]);
+        $complement = Supplement::factory()->create(['user_id' => $proprietaire->id]);
+        $objectif = Goal::factory()->create(['user_id' => $proprietaire->id]);
+
+        expect(new SupplementPolicy()->view(adminGranted(['View:Supplement']), $complement))->toBeTrue()
+            ->and(new SupplementPolicy()->view(adminGranted([]), $complement))->toBeFalse()
+            ->and(new SupplementPolicy()->delete(adminGranted(['Delete:Supplement']), $complement))->toBeTrue()
+            ->and(new SupplementPolicy()->delete(adminGranted([]), $complement))->toBeFalse()
+            ->and(new GoalPolicy()->view(adminGranted(['View:Goal']), $objectif))->toBeTrue()
+            ->and(new GoalPolicy()->view(adminGranted([]), $objectif))->toBeFalse()
+            ->and(new GoalPolicy()->delete(adminGranted(['Delete:Goal']), $objectif))->toBeTrue()
+            ->and(new GoalPolicy()->delete(adminGranted([]), $objectif))->toBeFalse();
+    });
+
+    /**
+     * La suppression etait la seule ability de Workout et d'Exercise dont la
+     * branche administrateur n'etait jamais atteinte : leurs jumelles `view` et
+     * `update` l'etaient deja, juste au-dessus.
+     */
+    it('separe aussi la suppression d\'une seance et d\'un exercice', function (): void {
+        $proprietaire = User::factory()->create(['id' => IDENTIFIANT_HORS_DE_PORTEE]);
+        $seance = Workout::factory()->create(['user_id' => $proprietaire->id]);
+        $exercice = Exercise::factory()->create(['user_id' => $proprietaire->id]);
+
+        expect(new WorkoutPolicy()->delete(adminGranted(['Delete:Workout']), $seance))->toBeTrue()
+            ->and(new WorkoutPolicy()->delete(adminGranted([]), $seance))->toBeFalse()
+            ->and(new ExercisePolicy()->delete(adminGranted(['Delete:Exercise']), $exercice))->toBeTrue()
+            ->and(new ExercisePolicy()->delete(adminGranted([]), $exercice))->toBeFalse();
+    });
+
+    it('ne laisse pas un administrateur lire les trophees sans la permission', function (): void {
+        expect(new AchievementPolicy()->view(adminGranted(['View:Achievement'])))->toBeTrue()
+            ->and(new AchievementPolicy()->view(adminGranted([])))->toBeFalse();
+    });
+
+    /**
+     * L'inverse, et c'est une frontiere de securite : sur les trophees, la garde
+     * ne donne pas un droit, elle en REFUSE un. Un utilisateur de l'application
+     * n'ecrit jamais un trophee, meme si une autorisation le lui accorde par
+     * ailleurs.
+     *
+     * L'autorisation est definie ici expres. Sans elle, les deux branches
+     * repondent NON — l'une par la garde, l'autre parce qu'aucune autorisation
+     * de ce nom n'existe — et le test passe aussi bien avec la garde qu'avec un
+     * `if (false)` a la place. C'est exactement ce qui laissait quatre mutants
+     * survivre ici.
+     */
+    it('refuse a un utilisateur d\'ecrire un trophee, meme autorise par ailleurs', function (): void {
+        Gate::define('Update:Achievement', fn (): bool => true);
+        Gate::define('Delete:Achievement', fn (): bool => true);
+
+        $utilisateur = User::factory()->create();
+        $policy = new AchievementPolicy();
+
+        expect($policy->update($utilisateur))->toBeFalse()
+            ->and($policy->delete($utilisateur))->toBeFalse();
     });
 });
