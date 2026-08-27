@@ -91,12 +91,9 @@ final class UpdateWorkoutTemplateAction
         $this->insertSetsData($setsData);
     }
 
+    /** Les series partent avec leurs lignes, par la cascade de la base. */
     private function deleteExistingLines(WorkoutTemplate $template): void
     {
-        $lineIds = $template->workoutTemplateLines()->pluck('id');
-        if ($lineIds->isNotEmpty()) {
-            \App\Models\WorkoutTemplateSet::whereIn('workout_template_line_id', $lineIds)->delete();
-            $template->workoutTemplateLines()->delete();
-        }
+        $template->workoutTemplateLines()->delete();
     }
 }

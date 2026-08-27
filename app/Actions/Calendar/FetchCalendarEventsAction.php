@@ -102,7 +102,7 @@ final class FetchCalendarEventsAction
                 'name' => $workout->name ?? 'Séance',
                 'date' => $workout->started_at->format('Y-m-d'),
                 'started_at' => $workout->started_at->toIso8601String(),
-                'exercises_count' => $workout->workout_lines_count ?? 0,
+                'exercises_count' => $workout->workout_lines_count,
                 'preview_exercises' => $previews[$workout->id] ?? [],
             ]
         );

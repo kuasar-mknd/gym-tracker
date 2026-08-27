@@ -18,9 +18,6 @@ final class CreateExerciseAction
         $exercise->user_id = $user->id;
         $exercise->save();
 
-        // Explicitly invalidate cache to ensure UI updates immediately
-        $exercise->invalidateCache();
-
         return $exercise;
     }
 }
