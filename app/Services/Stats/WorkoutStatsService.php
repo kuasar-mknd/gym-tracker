@@ -153,31 +153,32 @@ final class WorkoutStatsService
 
     private function resolveDurationLabel(string $startedAt, string $endedAt): string
     {
-        // Fast path: If the workout starts and ends on the same day, compute duration directly
-        // bypassing strtotime overhead.
-        if (substr($startedAt, 0, 10) === substr($endedAt, 0, 10)) {
-            $h1 = (int) substr($startedAt, 11, 2);
-            $m1 = (int) substr($startedAt, 14, 2);
-            $h2 = (int) substr($endedAt, 11, 2);
-            $m2 = (int) substr($endedAt, 14, 2);
-            $minutes = abs(($h2 * 60 + $m2) - ($h1 * 60 + $m1));
-        } else {
-            /*
-             * Repli pour une seance a cheval sur plusieurs jours.
-             *
-             * `parse()` plutot que `strtotime()`, et donc plus de garde
-             * `=== false` : les deux colonnes sont des DATETIME valides, le faux
-             * n'arrivait jamais, et le `return null` qui l'accompagnait faisait
-             * disparaitre la seance du graphique sans rien dire.
-             *
-             * Le type de retour cesse d'etre nullable dans la foulee, et le garde
-             * de l'appelant avec : PHPStan a signale la chaine entiere des que la
-             * branche morte est partie. Une seule branche morte en soutenait
-             * trois.
-             */
-            $debut = CarbonImmutable::parse($startedAt);
-            $minutes = (int) $debut->diffInMinutes(CarbonImmutable::parse($endedAt), true);
-        }
+        /*
+         * `parse()` plutot que `strtotime()`, et donc pas de garde `=== false` :
+         * les deux colonnes sont des DATETIME valides, le faux n'arrivait
+         * jamais, et le `return null` qui l'accompagnait faisait disparaitre la
+         * seance du graphique sans rien dire.
+         *
+         * Un « chemin rapide » se trouvait ici, qui lisait heures et minutes a
+         * coups de `substr` quand la seance tenait dans une journee, pour
+         * eviter le cout de l'analyse de date. Il sautait les SECONDES.
+         *
+         * Ce n'etait pas une approximation sans consequence : sa voisine
+         * `getDurationHistory` tronque des minutes reelles, et les deux
+         * graphiques du tableau de bord se retrouvaient a compter la meme
+         * seance differemment. De 10:00:30 a 10:30:00, le chemin rapide voyait
+         * trente minutes et la courbe vingt-neuf — trente etant exactement la
+         * frontiere entre deux seaux, la seance changeait de tranche selon le
+         * graphique qui la regardait. La production ecrit `now()`, secondes
+         * comprises, donc le cas se produit une fois sur soixante.
+         *
+         * Rien ne le voyait : toutes les fixtures se posaient a la seconde 00,
+         * ce qui laissait vingt-deux mutants survivre sur ces six lignes. Une
+         * branche dont le seul comportement propre est de contredire sa voisine
+         * sur les memes donnees se supprime — elle ne se teste pas.
+         */
+        $debut = CarbonImmutable::parse($startedAt);
+        $minutes = (int) $debut->diffInMinutes(CarbonImmutable::parse($endedAt), true);
 
         return match (true) {
             $minutes < 30 => '< 30 min',

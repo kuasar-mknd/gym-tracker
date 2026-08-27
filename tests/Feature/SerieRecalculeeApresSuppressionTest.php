@@ -81,3 +81,55 @@ it('ne compte qu’une fois deux séances le même jour', function (): void {
 
     expect($user->refresh()->current_streak)->toBe(2);
 });
+
+/**
+ * La serie EN COURS et la PLUS LONGUE sont deux choses, et le service les
+ * confondait.
+ *
+ * La boucle remonte le temps depuis la seance la plus recente. Elle avancait
+ * `$enCours` des qu'elle trouvait deux jours qui se suivent, sans retenir
+ * qu'une rupture avait deja ete franchie plus tot : une vieille serie de trois
+ * jours faisait donc remonter la serie « en cours » a trois, alors que la
+ * derniere seance etait isolee.
+ *
+ * Ce n'etait pas theorique. `HandleInertiaRequests` et la ressource Filament
+ * lisent tous deux `current_streak`, et `currentStreakFor()` ne corrige rien :
+ * il remet a zero une serie PERIMEE de plus d'un jour, il ne revoit jamais un
+ * chiffre trop grand a la baisse. Le compte affichait donc une serie qu'il
+ * n'avait pas, des la premiere suppression de seance.
+ */
+it('ne fait pas passer une vieille serie pour la serie en cours', function (): void {
+    $user = User::factory()->create();
+
+    // Une serie de trois jours, il y a longtemps.
+    seanceLe($user, '2026-06-01');
+    seanceLe($user, '2026-06-02');
+    seanceLe($user, '2026-06-03');
+
+    // Puis une seance isolee, bien plus tard.
+    seanceLe($user, '2026-06-20');
+
+    app(StreakService::class)->recalculerDepuisLesFaits($user);
+
+    expect($user->refresh()->current_streak)->toBe(1)
+        ->and($user->longest_streak)->toBe(3);
+});
+
+/**
+ * Le miroir du cas precedent : quand la serie en cours EST la plus longue, les
+ * deux valeurs doivent coincider. Sans cette assertion, un correctif qui poserait
+ * `current_streak` a 1 en toutes circonstances passerait le test ci-dessus.
+ */
+it('fait bien coincider les deux quand la serie en cours est la plus longue', function (): void {
+    $user = User::factory()->create();
+
+    seanceLe($user, '2026-06-01');
+    seanceLe($user, '2026-06-10');
+    seanceLe($user, '2026-06-11');
+    seanceLe($user, '2026-06-12');
+
+    app(StreakService::class)->recalculerDepuisLesFaits($user);
+
+    expect($user->refresh()->current_streak)->toBe(3)
+        ->and($user->longest_streak)->toBe(3);
+});
