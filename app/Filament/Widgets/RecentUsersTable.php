@@ -23,10 +23,12 @@ class RecentUsersTable extends TableWidget
         return $table
             ->query(User::query()->latest()->limit(10))
             ->columns([
-                TextColumn::make('name')
-                    ->searchable(),
-                TextColumn::make('email')
-                    ->searchable(),
+                // Pas de `searchable()` : chaque frappe declenchait deux
+                // parcours complets de `users` — la page et son COUNT — pour un
+                // `LIKE '%…%'` qu'aucun index B-tree ne sert. Un encart de dix
+                // inscrits recents n'a pas de recherche a offrir.
+                TextColumn::make('name'),
+                TextColumn::make('email'),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->label('Registration Date'),

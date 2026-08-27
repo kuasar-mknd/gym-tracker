@@ -17,7 +17,10 @@ class FetchWaterTrackerAction
     public function execute(User $user): array
     {
         $todayLogs = $user->waterLogs()
-            ->whereDate('consumed_at', Carbon::today())
+            // Un intervalle plutot que `whereDate()`, qui rendait inutilisable
+            // `water_logs(user_id, consumed_at)`. Meme forme que
+            // `WaterLog::scopeConsumedAtBetween`.
+            ->whereBetween('consumed_at', [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()])
             ->orderByDesc('consumed_at')
             ->get();
 
