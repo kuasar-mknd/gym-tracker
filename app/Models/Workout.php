@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -125,17 +126,27 @@ class Workout extends Model
             ->where('sets.is_completed', true)
             ->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
 
-        // Read back from the table: increment() writes straight to the database
-        // and leaves whatever instance the caller is holding behind.
-        $stored = $this->newQuery()->whereKey($this->getKey())->value('workout_volume');
-        $delta = $total - (is_numeric($stored) ? (float) $stored : 0.0);
-
-        if ($delta === 0.0) {
-            return;
-        }
-
         $this->newQuery()->whereKey($this->getKey())->update(['workout_volume' => $total]);
-        $this->user?->increment('total_volume', $delta);
+
+        /*
+         * `users.total_volume` etait le dernier delta, et il derivait.
+         *
+         * Le total de la seance etait bien recalcule en absolu, mais celui de
+         * l'utilisateur restait un `increment($delta)` calcule entre un SELECT
+         * et un UPDATE sans transaction. Deux requetes concurrentes lisaient le
+         * meme etat, calculaient le meme ecart, et l'appliquaient toutes les
+         * deux. Le client en emet par construction : `Workouts/Show.vue` tient
+         * deux files d'ecriture separees.
+         *
+         * Derive en somme, il ne revenait jamais ; derive en valeur, il se
+         * recale de lui-meme. C'est exactement ce que fait la passe nocturne
+         * `VerifyDataCoherence`, qui n'existait que pour reparer ce compteur.
+         */
+        User::whereKey($this->user_id)->update([
+            'total_volume' => DB::raw(
+                '(select coalesce(sum(workout_volume), 0) from workouts where workouts.user_id = users.id)'
+            ),
+        ]);
     }
 
     #[\Override]
