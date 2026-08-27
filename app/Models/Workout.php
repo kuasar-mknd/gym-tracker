@@ -142,7 +142,7 @@ class Workout extends Model
     protected static function booted(): void
     {
         $clearCache = function (self $workout): void {
-            \Illuminate\Support\Facades\Cache::forget("user_active_workout_{$workout->user_id}");
+            app(\App\Services\ActiveWorkoutService::class)->forget($workout->user_id);
         };
 
         static::saved($clearCache);

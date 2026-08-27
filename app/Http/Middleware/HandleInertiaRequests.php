@@ -131,16 +131,7 @@ class HandleInertiaRequests extends Middleware
 
         $latestAchievement = $notificationService->getLatestAchievement($user);
 
-        $activeWorkout = \Illuminate\Support\Facades\Cache::remember(
-            "user_active_workout_{$user->id}",
-            now()->addHours(2),
-            fn () => $user->workouts()
-                ->select('id', 'name', 'started_at')
-                ->whereNull('ended_at')
-                ->withCount('workoutLines')
-                ->latest('started_at')
-                ->first()
-        );
+        $activeWorkout = app(\App\Services\ActiveWorkoutService::class)->for($user);
 
         return [
             'id' => $user->id,
