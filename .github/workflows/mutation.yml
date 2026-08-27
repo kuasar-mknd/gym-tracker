@@ -155,9 +155,26 @@ jobs:
                     - scope: 'App\Actions'
                       timeout: 30
                       min: 95
+                    # 99 sur une mesure a 100,00 %, 316 mutants tues sur 316.
+                    #
+                    # Les seize survivants qui restaient etaient tous la meme
+                    # chose : la garde `instanceof \App\Models\User` que porte
+                    # presque chaque methode n'etait exercee QUE par des
+                    # utilisateurs de l'application. La remplacer par `true` ne
+                    # faisait donc tomber aucune assertion, alors que c'est elle
+                    # qui separe les deux chemins d'autorisation du modele : un
+                    # utilisateur est juge sur ce qu'il POSSEDE, un
+                    # administrateur de panneau sur ce qu'on lui a ACCORDE.
+                    #
+                    # 99 et non 100 pour la meme raison qu'Actions est a 95 : le
+                    # nombre d'observations. La mesure a 100 est locale et
+                    # unique. A resserrer a 100 apres deux nocturnes vertes — a
+                    # 316 mutants, un seul survivant rend 99,68 %, donc 99
+                    # laisse passer trois survivants la ou 94 en laissait
+                    # passer dix-neuf.
                     - scope: 'App\Policies'
                       timeout: 30
-                      min: 94
+                      min: 99
         services:
             mysql:
                 image: mysql:8.4
