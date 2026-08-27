@@ -215,3 +215,40 @@ it('mesure une séance qui franchit minuit', function (): void {
     expect(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $durees))
         ->toBe([0, 0, 1, 0]);
 });
+
+/**
+ * Les deux graphiques de duree du tableau de bord doivent compter la meme chose.
+ *
+ * `getWorkoutDistributions` avait un « chemin rapide » qui lisait les heures et
+ * les minutes a coups de `substr`, en sautant les SECONDES. Sa voisine
+ * `getDurationHistory` tronque des minutes reelles. Une seance de 10:00:30 a
+ * 10:30:00 valait donc trente minutes pour l'une et vingt-neuf pour l'autre —
+ * et trente est exactement la frontiere entre deux seaux, si bien que la meme
+ * seance changeait de tranche selon le graphique qui la regardait.
+ *
+ * La production ecrit `now()`, secondes comprises (`CreateWorkoutAction`), donc
+ * une seance sur soixante tombe dans ce cas. Aucun test ne le voyait : toutes
+ * les fixtures de ce fichier se posent a la seconde 00, ce qui laissait dix
+ * mutants survivre sur la seule ligne du `substr`.
+ */
+it('compte la meme duree que la courbe voisine, secondes comprises', function (): void {
+    $user = User::factory()->create();
+
+    $debut = now()->subDays(2)->setTime(10, 0, 30);
+
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => $debut,
+        'ended_at' => $debut->copy()->setTime(10, 30, 0),
+    ]);
+
+    $service = app(WorkoutStatsService::class);
+
+    $duree = $service->getWorkoutDistributions($user)['duration'];
+    $historique = $service->getDurationHistory($user);
+
+    // Vingt-neuf minutes et demie, tronquees a vingt-neuf : la seance est donc
+    // SOUS la barre des trente, dans les deux lectures.
+    expect($historique[0]->duration)->toBe(29)
+        ->and(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $duree))->toBe([1, 0, 0, 0]);
+});

@@ -89,7 +89,9 @@ final class StreakService
             ->unique()
             ->values();
 
-        if ($dates->isEmpty()) {
+        $derniere = $seances->first();
+
+        if ($derniere === null) {
             $user->forceFill([
                 'last_workout_at' => null,
                 'current_streak' => 0,
@@ -99,11 +101,16 @@ final class StreakService
             return;
         }
 
-        $derniere = $seances->first()?->started_at;
-
         $enCours = 1;
         $plusLongue = 1;
         $suite = 1;
+
+        /*
+         * Une rupture rencontree en remontant le temps ferme la serie EN COURS,
+         * definitivement. Ce que la boucle continue de compter apres, ce sont
+         * des series passees, qui n'interessent plus que `$plusLongue`.
+         */
+        $rupture = false;
 
         foreach ($dates->sliding(2) as $paire) {
             /** @var string $recente */
@@ -117,19 +124,29 @@ final class StreakService
                 $suite++;
             } else {
                 $suite = 1;
+                $rupture = true;
             }
 
             $plusLongue = max($plusLongue, $suite);
 
-            // La serie « en cours » ne compte que tant qu'on n'a pas rencontre
-            // de rupture depuis la derniere seance.
-            if ($consecutives && $enCours === $suite - 1) {
+            /*
+             * Le garde ecrit ici etait `$consecutives && $enCours === $suite - 1`,
+             * cense dire « aucune rupture depuis la derniere seance ». Il ne le
+             * disait pas : par recurrence, `$enCours` vaut TOUJOURS `$suite - 1`
+             * a l'entree d'une paire consecutive, y compris apres une rupture ou
+             * le compteur est reparti de 1. `$enCours` suivait donc `$suite`
+             * jusqu'au bout, et une vieille serie de trois jours faisait passer
+             * pour trois une derniere seance isolee.
+             *
+             * La rupture se retient, elle ne se deduit pas d'un compteur.
+             */
+            if (! $rupture) {
                 $enCours = $suite;
             }
         }
 
         $user->forceFill([
-            'last_workout_at' => $derniere,
+            'last_workout_at' => $derniere->started_at,
             'current_streak' => $enCours,
             'longest_streak' => $plusLongue,
         ])->save();
