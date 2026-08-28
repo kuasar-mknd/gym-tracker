@@ -186,6 +186,25 @@ final class StreakService
             return;
         }
 
+        /*
+         * Une seance ANTERIEURE a la derniere connue ne se traite pas d'un cran.
+         *
+         * Le chemin incremental ne sait qu'avancer depuis `last_workout_at` :
+         * il ne peut pas voir qu'une seance saisie apres coup vient de combler
+         * un trou. Trois jours d'affilee remplis retroactivement laissaient donc
+         * `longest_streak` a 1, pendant que le moteur de succes, qui repart des
+         * faits, en comptait bien trois — l'application affichait « record :
+         * 1 jour » a qui portait deja le trophee des trois jours.
+         *
+         * Reconstruire depuis les faits est la seule reponse juste : une seance
+         * ajoutee au milieu peut allonger une suite comme en souder deux.
+         */
+        if ($lastRecordedDate !== null && $workoutDate->lessThan($lastRecordedDate)) {
+            $this->recalculerDepuisLesFaits($user);
+
+            return;
+        }
+
         $this->calculateNewStreak($user, $workoutDate, $lastRecordedDate);
 
         if ($workout !== null) {
@@ -270,12 +289,11 @@ final class StreakService
             $user->current_streak = 1;
         } else {
             /*
-             * L'ecart est signe, et c'est ce qui compte : une seance anterieure a
-             * la derniere enregistree donne un ecart negatif et ne touche a rien.
-             * C'est le cas d'une seance ajoutee apres coup, qui ne doit ni
-             * prolonger ni casser la serie en cours. Passer `true` ici rendrait
-             * l'ecart absolu et une seance vieille de trois jours remettrait la
-             * serie a 1.
+             * L'ecart ne peut plus etre negatif ici : l'egalite sort plus haut,
+             * et une seance ANTERIEURE part desormais reconstruire depuis les
+             * faits, sans passer par cette methode. `false` reste, parce qu'un
+             * ecart signe dit ce qu'on veut dire, mais il ne porte plus seul la
+             * distinction entre « seance oubliee » et « interruption ».
              */
             $diffInDays = (int) $lastRecordedDate->diffInDays($workoutDate, false);
 
