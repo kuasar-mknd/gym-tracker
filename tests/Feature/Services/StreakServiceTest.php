@@ -298,21 +298,28 @@ it('ne touche à rien quand on recalcule sans séance le même jour', function (
 /**
  * Une séance antérieure ne casse pas la série en cours.
  *
- * L'écart de jours est calculé signé — `diffInDays($date, false)` — et c'est ce
- * qui distingue « je saisis une séance oubliée » de « j'ai arrêté trois jours ».
- * Le mutant qui passe `true` rend l'écart absolu : une séance vieille de trois
- * jours devient une interruption de trois jours, et remet la série à 1.
+ * La série de quatre est ici FAITE, et non posée sur les colonnes : un compteur
+ * qu'aucun historique ne soutient n'est pas un état que l'application peut
+ * atteindre, et le test se comparait alors à lui-même. Une séance vieille de
+ * dix jours ne prolonge rien et ne casse rien — la suite qui se termine
+ * aujourd'hui vaut toujours quatre.
  */
 it('ne casse pas la série en cours quand une séance antérieure est saisie', function (): void {
-    $user = User::factory()->create([
-        'current_streak' => 4,
-        'longest_streak' => 4,
-        'last_workout_at' => Carbon::now(),
-    ]);
+    $user = User::factory()->create();
+
+    foreach ([3, 2, 1, 0] as $recul) {
+        $seance = Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => Carbon::now()->subDays($recul)->setTime(10, 0),
+        ]);
+        $this->streakService->updateStreak($user->refresh(), $seance);
+    }
+
+    expect(User::findOrFail($user->id)->current_streak)->toBe(4);
 
     $ancienne = Workout::factory()->create([
         'user_id' => $user->id,
-        'started_at' => Carbon::now()->subDays(3),
+        'started_at' => Carbon::now()->subDays(10)->setTime(10, 0),
     ]);
 
     $this->streakService->updateStreak($user->refresh(), $ancienne);

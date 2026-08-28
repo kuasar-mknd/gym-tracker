@@ -181,18 +181,41 @@ final class AchievementService
      */
     private function getUniqueWorkoutDates(User $user): array
     {
-        // L'extraction et le dedoublonnage sont laisses a SQL, et `toBase()`
-        // evite d'hydrater des modeles pour lire une colonne.
-        $driver = DB::getDriverName();
-        $dateFormat = $driver === 'sqlite' ? "strftime('%Y-%m-%d', started_at)" : 'DATE(started_at)';
-
-        /** @var list<string> $dates */
-        $dates = $user->workouts()
+        /*
+         * La colonne NUE, dedoublonnee en PHP.
+         *
+         * `DISTINCT DATE(started_at)` appliquait une fonction a la colonne :
+         * l'index ne rendait plus les lignes deja ordonnees, d'ou une table
+         * temporaire et un tri — `Using temporary; Using filesort` au plan.
+         * Mesure aux compteurs `Handler_read_*` : 98 lectures a 40 seances,
+         * 418 a 200, sur un chemin que chaque enregistrement de seance emprunte
+         * tant qu'un succes de serie reste verrouille.
+         *
+         * Lue nue, `workouts(user_id, started_at)` sert le filtre ET l'ordre.
+         * Les doublons d'un meme jour sont alors adjacents, donc un seul passage
+         * suffit — et la double ecriture selon le pilote disparait, la colonne
+         * se lisant partout de la meme facon. Meme correctif qu'en #1600.
+         */
+        /** @var list<string> $horodatages */
+        $horodatages = $user->workouts()
             ->toBase()
-            ->selectRaw("DISTINCT {$dateFormat} as date")
-            ->orderByDesc('date')
-            ->pluck('date')
+            ->orderByDesc('started_at')
+            ->pluck('started_at')
             ->all();
+
+        $dates = [];
+        $veille = null;
+
+        foreach ($horodatages as $horodatage) {
+            $jour = mb_substr($horodatage, 0, 10);
+
+            if ($jour === $veille) {
+                continue;
+            }
+
+            $dates[] = $jour;
+            $veille = $jour;
+        }
 
         return $dates;
     }
