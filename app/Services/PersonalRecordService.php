@@ -123,8 +123,14 @@ final class PersonalRecordService
          * doivent bien etre ignores — une serie a zero kilo ou zero repetition
          * ne produit que des records nuls — mais le code disait « non renseigne »
          * en pensant « nul ou zero ». Un poids negatif, lui, passait.
+         *
+         * `is_completed` manquait, et c'est le plus grave : l'interface cree
+         * chaque serie decochee, puis l'utilisateur la coche une fois faite. Un
+         * poids saisi mais jamais coche — une intention, pas un souleve —
+         * devenait donc un record personnel.
          */
         return $set->is_warmup
+            || ! $set->is_completed
             || $set->weight === null || $set->weight <= 0.0
             || $set->reps === null || $set->reps <= 0;
     }
@@ -166,6 +172,7 @@ final class PersonalRecordService
              where workout_lines.user_id = ?
                and workout_lines.exercise_id = ?
                and sets.is_warmup = 0
+               and sets.is_completed = 1
                and sets.weight > 0
                and sets.reps > 0
         ) as classees

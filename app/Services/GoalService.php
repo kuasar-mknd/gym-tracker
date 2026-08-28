@@ -166,11 +166,13 @@ final class GoalService
             return;
         }
 
-        $maxWeight = $goal->user->workouts()
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workout_lines.exercise_id', $goal->exercise_id)
-            ->max('sets.weight');
+        // Meme source que le chemin groupe : le record, tenu par
+        // `PersonalRecordService`, et non une seconde derivation.
+        $maxWeight = \Illuminate\Support\Facades\DB::table('personal_records')
+            ->where('user_id', $goal->user_id)
+            ->where('exercise_id', $goal->exercise_id)
+            ->where('type', 'max_weight')
+            ->value('value');
 
         if ($maxWeight !== null && is_numeric($maxWeight)) {
             $goal->current_value = (float) $maxWeight;
@@ -226,13 +228,14 @@ final class GoalService
 
         // ⚡ Bolt Optimization: Calculate max volume directly in SQL instead of loading into PHP memory.
         // Impact: Reduces memory usage and improves performance for users with many workouts.
-        $maxVolume = \App\Models\Workout::query()
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+        // Memes regles que le chemin groupe, sinon les deux divergent.
+        $maxVolume = \Illuminate\Support\Facades\DB::table('workout_lines')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $goal->user_id)
+            ->where('workout_lines.user_id', $goal->user_id)
             ->where('workout_lines.exercise_id', $goal->exercise_id)
+            ->where('sets.is_completed', true)
             ->selectRaw('SUM(sets.weight * sets.reps) as total_volume')
-            ->groupBy('workouts.id')
+            ->groupBy('workout_lines.workout_id')
             ->orderByDesc('total_volume')
             ->limit(1)
             ->value('total_volume');
@@ -376,16 +379,28 @@ final class GoalService
      */
     private function preCalculateMaxWeights(User $user, array $exerciseIds): array
     {
+        /*
+         * Le record, pas une seconde derivation.
+         *
+         * Cette methode refaisait le `MAX(sets.weight)` que
+         * `PersonalRecordService` tient deja — sans en reprendre les regles :
+         * ni `is_warmup = 0`, ni `is_completed = 1`, ni `reps > 0`. Sur les
+         * memes donnees, l'objectif annoncait 200 kg la ou le record en disait
+         * 100, le 200 venant d'une serie saisie et jamais cochee.
+         *
+         * Deux definitions de « mon maximum » dans la meme application ne
+         * peuvent que diverger. Il n'y en a plus qu'une, et elle est deja
+         * surveillee par `app:verify-data-coherence`.
+         *
+         * `(user_id, exercise_id, type)` sert exactement cette lecture.
+         */
         /** @var array<int, float> $maxWeights */
-        $maxWeights = \Illuminate\Support\Facades\DB::table('workouts')
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-            ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $user->id)
-            ->whereIn('workout_lines.exercise_id', $exerciseIds)
-            ->selectRaw('workout_lines.exercise_id, MAX(sets.weight) as max_weight')
-            ->groupBy('workout_lines.exercise_id')
-            ->pluck('max_weight', 'exercise_id')
-            // Un exercice sans aucune serie pesee est ECARTE, pas ramene a zero.
+        $maxWeights = \Illuminate\Support\Facades\DB::table('personal_records')
+            ->where('user_id', $user->id)
+            ->whereIn('exercise_id', $exerciseIds)
+            ->where('type', 'max_weight')
+            ->pluck('value', 'exercise_id')
+            // Un exercice sans record est ECARTE, pas ramene a zero.
             // Voir la note de `preCalculateMaxVolumes` : c'est le meme piege.
             ->filter(fn (mixed $val): bool => is_numeric($val))
             ->map(fn (mixed $val): float => (float) $val)
@@ -404,13 +419,22 @@ final class GoalService
     {
         // ⚡ Bolt Optimization: Calculate max volumes directly in SQL using a subquery instead of pulling all records into memory.
         // Impact: Prevents memory overflow and reduces execution time from O(N) to O(1) in PHP for users with many workouts.
-        $subQuery = \Illuminate\Support\Facades\DB::table('workouts')
-            ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
+        /*
+         * `is_completed`, comme `Workout::recomputeVolume()` depuis #1499 : le
+         * volume compte ce qui a ete souleve, pas ce qui etait prevu. Sans ce
+         * filtre, l'objectif de volume et le volume de la seance repondaient
+         * differemment sur les memes series.
+         *
+         * La jointure a `workouts` disparait : `workout_lines` porte le
+         * proprietaire depuis #1601, et son `workout_id` suffit a grouper.
+         */
+        $subQuery = \Illuminate\Support\Facades\DB::table('workout_lines')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-            ->where('workouts.user_id', $user->id)
+            ->where('workout_lines.user_id', $user->id)
             ->whereIn('workout_lines.exercise_id', $exerciseIds)
-            ->selectRaw('workout_lines.exercise_id, workouts.id as workout_id, SUM(sets.weight * sets.reps) as total_volume')
-            ->groupBy('workout_lines.exercise_id', 'workouts.id');
+            ->where('sets.is_completed', true)
+            ->selectRaw('workout_lines.exercise_id, workout_lines.workout_id, SUM(sets.weight * sets.reps) as total_volume')
+            ->groupBy('workout_lines.exercise_id', 'workout_lines.workout_id');
 
         /** @var array<int, float> $maxVolumes */
         $maxVolumes = \Illuminate\Support\Facades\DB::query()

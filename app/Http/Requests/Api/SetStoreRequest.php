@@ -46,4 +46,26 @@ class SetStoreRequest extends FormRequest
             'is_completed' => 'boolean',
         ];
     }
+
+    /**
+     * Une serie postee sans `is_completed` est une serie FAITE.
+     *
+     * La colonne vaut 0 par defaut en base, et l'interface web l'exploite : elle
+     * cree chaque ligne decochee, puis l'utilisateur la coche une fois la serie
+     * executee. Elle envoie donc `false` explicitement, et ce faux-la est
+     * respecte.
+     *
+     * Un client d'API qui poste un poids et des repetitions, lui, rapporte ce
+     * qu'il vient de faire. En retombant sur le defaut de la colonne, sa serie
+     * ne comptait dans AUCUN volume depuis #1499 — ni celui de la seance, ni
+     * celui de l'utilisateur — alors qu'elle posait quand meme un record. Deux
+     * reponses contraires a la meme question.
+     */
+    #[\Override]
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('is_completed')) {
+            $this->merge(['is_completed' => true]);
+        }
+    }
 }
