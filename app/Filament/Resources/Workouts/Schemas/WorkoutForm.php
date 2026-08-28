@@ -18,6 +18,7 @@ class WorkoutForm
             ->components([
                 Select::make('user_id')
                     ->relationship('user', 'name')
+                    ->searchable()
                     ->required(),
                 TextInput::make('name'),
                 DateTimePicker::make('started_at')
