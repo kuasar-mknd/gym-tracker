@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * @property int $id
  * @property int $habit_id
+ * @property int|null $user_id la copie denormalisee du proprietaire, pour qu'un index serve
+ *                             a la fois le filtre et l'ordre
  * @property \Illuminate\Support\Carbon $date
  * @property string|null $notes
  * @property-read \App\Models\Habit $habit
@@ -35,6 +37,27 @@ class HabitLog extends Model
     protected function ownershipPath(): string
     {
         return 'habit';
+    }
+
+    /**
+     * La copie denormalisee, posee avant l'ecriture.
+     *
+     * `user_id` n'est pas la verite — `habit_id` l'est, et porte la cascade.
+     * D'ou la lecture par la CLEF plutot que par la relation : `$journal->habit`
+     * rend l'instance mise en cache, donc l'ancienne habitude quand c'est
+     * justement `habit_id` qui vient de changer.
+     */
+    #[\Override]
+    protected static function booted(): void
+    {
+        static::saving(function (self $journal): void {
+            if (! $journal->isDirty('habit_id') && $journal->user_id !== null) {
+                return;
+            }
+
+            $proprietaire = Habit::whereKey($journal->habit_id)->value('user_id');
+            $journal->user_id = is_numeric($proprietaire) ? (int) $proprietaire : null;
+        });
     }
 
     /**

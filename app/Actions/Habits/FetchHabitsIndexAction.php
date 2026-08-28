@@ -59,12 +59,16 @@ final class FetchHabitsIndexAction
         $now = Carbon::now();
         $past30Days = $now->copy()->subDays(29)->startOfDay();
 
+        /*
+         * `DATE()` sur une colonne deja de type `date` etait sans effet sur la
+         * valeur et fatal a l'index. Sans la jointure ni la fonction,
+         * `(user_id, date)` borne la lecture aux trente jours demandes.
+         */
         $consistencyStats = \App\Models\HabitLog::query()
-            ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
-            ->where('habits.user_id', $user->id)
-            ->where('habit_logs.date', '>=', $past30Days)
-            ->groupBy('habit_logs.date')
-            ->selectRaw('DATE(habit_logs.date) as date, COUNT(*) as count')
+            ->where('user_id', $user->id)
+            ->where('date', '>=', $past30Days->toDateString())
+            ->groupBy('date')
+            ->selectRaw('date, count(*) as count')
             ->pluck('count', 'date');
 
         $consistencyData = [];
