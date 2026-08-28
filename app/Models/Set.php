@@ -11,6 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @property int $id
  * @property int $workout_line_id
+ * @property int|null $user_id la copie denormalisee du proprietaire, pour qu'un index
+ *                             serve a la fois le filtre et l'ordre
  * @property float|null $weight
  * @property int|null $reps
  * @property int|null $duration_seconds
@@ -120,6 +122,26 @@ class Set extends Model
     #[\Override]
     protected static function booted(): void
     {
+        /*
+         * La copie denormalisee, posee avant l'ecriture.
+         *
+         * `user_id` n'est pas la verite — `workout_line_id` l'est, et porte la
+         * cascade. Elle est derivee de la CLEF et non de la relation :
+         * `$serie->workoutLine` rend l'instance mise en cache, donc l'ancienne
+         * ligne quand c'est justement `workout_line_id` qui vient de changer.
+         *
+         * Recalculee seulement quand la clef bouge : une serie dont on ne
+         * corrige que le poids n'emet aucune requete de plus.
+         */
+        static::saving(function (Set $set): void {
+            if (! $set->isDirty('workout_line_id') && $set->user_id !== null) {
+                return;
+            }
+
+            $proprietaire = WorkoutLine::whereKey($set->workout_line_id)->value('user_id');
+            $set->user_id = is_numeric($proprietaire) ? (int) $proprietaire : null;
+        });
+
         static::saved(function (Set $set): void {
             $set->updateVolumes();
         });
