@@ -152,6 +152,21 @@ class Workout extends Model
     #[\Override]
     protected static function booted(): void
     {
+        /*
+         * La date recopiee sur les lignes suit celle de la seance.
+         *
+         * `started_at` est modifiable — `WorkoutUpdateRequest` l'accepte — et
+         * une copie qui ne suit pas fait repondre a l'index une question
+         * perimee.
+         */
+        static::updated(function (self $workout): void {
+            if (! $workout->wasChanged('started_at')) {
+                return;
+            }
+
+            $workout->workoutLines()->update(['workout_started_at' => $workout->started_at]);
+        });
+
         $clearCache = function (self $workout): void {
             app(\App\Services\ActiveWorkoutService::class)->forget($workout->user_id);
         };

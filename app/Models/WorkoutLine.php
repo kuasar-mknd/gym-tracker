@@ -15,6 +15,9 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property int $id
  * @property int $workout_id
  * @property int $exercise_id
+ * @property int $user_id la copie denormalisee du proprietaire, pour qu'un index serve
+ *                        filtre et ordre sans jointure ; `workout_id` reste la verite
+ * @property \Illuminate\Support\Carbon|null $workout_started_at
  * @property int $order
  * @property string|null $notes
  * @property string|null $idempotency_key names the client attempt that created this row, so a
@@ -170,6 +173,25 @@ class WorkoutLine extends Model
             app(\App\Services\ActiveWorkoutService::class)->forget($workout->user_id);
         };
 
+        /*
+         * La copie denormalisee, posee avant l'ecriture.
+         *
+         * `user_id` et `workout_started_at` ne sont pas la verite — `workout_id`
+         * l'est. Ils existent pour qu'un index puisse servir a la fois le filtre
+         * et l'ordre de « la derniere fois que cet utilisateur a fait cet
+         * exercice », question qui sinon materialise toute la jointure.
+         */
+        static::saving(function (self $line): void {
+            $seance = $line->workout;
+
+            if ($seance === null) {
+                return;
+            }
+
+            $line->user_id = $seance->user_id;
+            $line->workout_started_at = $seance->started_at;
+        });
+
         static::saved($clearCache);
         static::deleted($clearCache);
 
@@ -197,6 +219,7 @@ class WorkoutLine extends Model
     {
         return [
             'order' => 'integer',
+            'workout_started_at' => 'datetime',
         ];
     }
 }
