@@ -21,32 +21,63 @@ final class ExerciseStatsService
         return Cache::remember(
             "stats.muscle_dist.{$user->id}.{$days}",
             now()->addMinutes(30),
-            fn (): array => Set::query()
-                ->toBase()
-                ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-                ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-                ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
-                ->where('workouts.user_id', $user->id)
-                ->where('workouts.started_at', '>=', now()->subDays($days))
-                ->selectRaw('exercises.category, SUM(sets.weight * sets.reps) as volume')
-                ->groupBy('exercises.category')
-                ->get()
-                /*
-                 * Les deux replis sont atteignables, contrairement a ceux qui
-                 * viennent d'etre retires plus bas : `exercises.category` est
-                 * nullable, et `SUM()` rend NULL quand tout le groupe l'est —
-                 * `sets.weight` et `sets.reps` le sont aussi.
-                 *
-                 * Ils sont ecrits en garde plutot qu'en cast : un cast sur du
-                 * `mixed` ne dit pas ce qu'il accepte, et c'etait deux entrees
-                 * de baseline PHPStan. La garde dit la meme chose et se verifie.
-                 */
-                ->map(fn (\stdClass $row): MuscleDistributionStat => new MuscleDistributionStat(
-                    is_string($row->category) ? $row->category : 'Unknown',
-                    is_numeric($row->volume) ? (float) $row->volume : 0.0,
-                ))
-                ->all()
+            fn (): array => $this->repartitionParCategorie($user, $days),
         );
+    }
+
+    /**
+     * Le volume de la fenetre, reparti par categorie d'exercice.
+     *
+     * `exercises` ne figure PAS dans l'agregation. Joint et groupe par
+     * `exercises.category`, MySQL attaquait par le catalogue — son index
+     * `(user_id, category, name)` rendait le groupe deja trie, ce qu'il prefere
+     * a tout le reste — puis tirait toutes les lignes de chaque exercice, tous
+     * utilisateurs confondus. La borne de trente jours ne s'appliquait qu'a la
+     * fin, ligne par ligne : elle etait decorative, 179 lectures d'index a 40
+     * seances contre 581 a 200 pour une fenetre qui en contient trente dans les
+     * deux cas.
+     *
+     * Agregees par `exercise_id`, les lignes sont lues par `(user_id,
+     * workout_started_at)` et rien ne detourne le plan. Les categories sont
+     * relues a part, par clef primaire, sur les seuls exercices rencontres.
+     *
+     * @return array<int, MuscleDistributionStat>
+     */
+    private function repartitionParCategorie(User $user, int $days): array
+    {
+        $parExercice = Set::query()
+            ->toBase()
+            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
+            ->where('workout_lines.user_id', $user->id)
+            ->where('workout_lines.workout_started_at', '>=', now()->subDays($days))
+            ->selectRaw('workout_lines.exercise_id, SUM(sets.weight * sets.reps) as volume')
+            ->groupBy('workout_lines.exercise_id')
+            ->get();
+
+        /** @var \Illuminate\Support\Collection<int, string|null> $categories */
+        $categories = \Illuminate\Support\Facades\DB::table('exercises')
+            ->whereIn('id', $parExercice->pluck('exercise_id')->all())
+            ->pluck('category', 'id');
+
+        $volumes = [];
+
+        foreach ($parExercice as $ligne) {
+            $exerciceId = is_numeric($ligne->exercise_id) ? (int) $ligne->exercise_id : 0;
+            $categorie = $categories[$exerciceId] ?? null;
+            $cle = is_string($categorie) ? $categorie : 'Unknown';
+
+            // `SUM()` rend NULL quand tout le groupe l'est : `sets.weight` et
+            // `sets.reps` sont nullables.
+            $volumes[$cle] = ($volumes[$cle] ?? 0.0) + (is_numeric($ligne->volume) ? (float) $ligne->volume : 0.0);
+        }
+
+        $repartition = [];
+
+        foreach ($volumes as $categorie => $volume) {
+            $repartition[] = new MuscleDistributionStat($categorie, $volume);
+        }
+
+        return $repartition;
     }
 
     /**
@@ -73,13 +104,12 @@ final class ExerciseStatsService
             fn (): array => Set::query()
                 ->toBase()
                 ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-                ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-                ->where('workouts.user_id', $user->id)
+                ->where('workout_lines.user_id', $user->id)
                 ->where('workout_lines.exercise_id', $exerciseId)
-                ->where('workouts.started_at', '>=', now()->subDays($days))
-                ->selectRaw('workouts.started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
-                ->groupBy('workouts.started_at')
-                ->orderBy('workouts.started_at')
+                ->where('workout_lines.workout_started_at', '>=', now()->subDays($days))
+                ->selectRaw('workout_lines.workout_started_at as started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
+                ->groupBy('workout_lines.workout_started_at')
+                ->orderBy('workout_lines.workout_started_at')
                 ->get()
                 ->map(function (\stdClass $set): Exercise1RMProgressPoint {
                     /*
