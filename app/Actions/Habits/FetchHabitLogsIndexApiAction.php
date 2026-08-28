@@ -15,6 +15,11 @@ class FetchHabitLogsIndexApiAction
     /**
      * Fetch a paginated list of habit logs for the user.
      *
+     * Le filtre passait par une jointure sur `habits`, l'ordre restait sur
+     * `habit_logs` : aucun index ne pouvait servir les deux. Sur la colonne
+     * denormalisee, `(user_id, date)` sert le filtre ET l'ordre, et la page
+     * s'arrete a ses quinze lignes.
+     *
      * @return LengthAwarePaginator<int, HabitLog>
      */
     public function execute(User $user): LengthAwarePaginator
@@ -27,10 +32,7 @@ class FetchHabitLogsIndexApiAction
             )
             ->allowedSorts('date', 'created_at')
             ->defaultSort('-date')
-            // Bolt: Optimize belongsTo filtering with INNER JOIN
-            ->join('habits', 'habit_logs.habit_id', '=', 'habits.id')
-            ->where('habits.user_id', $user->id)
-            ->select('habit_logs.*')
+            ->where('habit_logs.user_id', $user->id)
             ->paginate();
     }
 }
