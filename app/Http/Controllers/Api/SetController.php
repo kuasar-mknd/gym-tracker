@@ -57,11 +57,15 @@ class SetController extends Controller
 
         $sets = QueryBuilder::for(Set::class)
             ->allowedFilters('workout_line_id')
-            // Bolt: Optimize belongsTo filtering with INNER JOIN
-            ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->where('workouts.user_id', $this->user()->id)
-            ->select('sets.*')
+            /*
+             * Sur la copie denormalisee : le filtre et l'ordre tombent dans la
+             * meme table. Les deux jointures ne servaient qu'a retrouver le
+             * proprietaire, et interdisaient tout index de servir les deux —
+             * MySQL materialisait la jointure entiere et la triait avant d'en
+             * prendre quinze lignes. 484 lectures d'index pour 120 series,
+             * 2 802 pour 600.
+             */
+            ->where('sets.user_id', $this->user()->id)
             ->orderByDesc('sets.id')
             ->paginate();
 

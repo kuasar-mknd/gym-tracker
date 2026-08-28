@@ -48,6 +48,10 @@ final class CreateWorkoutFromTemplateAction
             foreach ($templateLine->workoutTemplateSets as $templateSet) {
                 $allSets[] = [
                     'workout_line_id' => $workoutLine->id,
+                    // `insert()` ne declenche aucun evenement : la copie du
+                    // proprietaire doit etre posee ici, sans quoi ces series
+                    // seraient invisibles a `GET /api/v1/sets`.
+                    'user_id' => $workoutLine->user_id,
                     'reps' => $templateSet->reps,
                     'weight' => $templateSet->weight,
                     'is_warmup' => $templateSet->is_warmup,
