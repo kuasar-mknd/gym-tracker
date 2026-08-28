@@ -104,49 +104,93 @@ class Workout extends Model
      * Recomputing from the rows costs one aggregate instead of an increment and
      * cannot drift, whatever order the writes land in.
      */
-    public function recomputeVolume(): void
+    /**
+     * Le total de l'utilisateur, refait depuis les faits.
+     *
+     * L'ecart applique a chaque serie est constant mais ne se corrige pas :
+     * une ecriture qui contourne `recomputeVolume()` le laisse faux. Cette
+     * passe-ci resomme les seances et remet le compteur d'aplomb — elle coute
+     * l'historique du compte, et ne tourne donc qu'une fois par seance, quand
+     * celle-ci se termine, au lieu d'une fois par serie.
+     *
+     * Une derive dure ainsi au plus une seance, contre une nuit auparavant.
+     */
+    public function recalibrerLeTotalDeLUtilisateur(): void
     {
-        /*
-         * Seules les series validees comptent.
-         *
-         * La somme portait sur TOUTES les series de la seance, validees ou non.
-         * Demarrer une seance depuis un modele inserait ses series pre-remplies
-         * et creditait aussitot le volume complet : 4 000 kg avant le premier
-         * kilo souleve, et ils restaient acquis si la seance etait abandonnee.
-         *
-         * Le volume affiche a cote de « Total seances » se lit comme du travail
-         * accompli — c'est ce qu'il compte desormais. Une serie cochee est la
-         * seule preuve dont on dispose : les valeurs seules ne distinguent pas
-         * une serie faite d'une serie proposee par le modele.
-         *
-         * Voir #1499.
-         */
-        $total = (float) $this->workoutLines()
-            ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
-            ->where('sets.is_completed', true)
-            ->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
-
-        $this->newQuery()->whereKey($this->getKey())->update(['workout_volume' => $total]);
-
-        /*
-         * `users.total_volume` etait le dernier delta, et il derivait.
-         *
-         * Le total de la seance etait bien recalcule en absolu, mais celui de
-         * l'utilisateur restait un `increment($delta)` calcule entre un SELECT
-         * et un UPDATE sans transaction. Deux requetes concurrentes lisaient le
-         * meme etat, calculaient le meme ecart, et l'appliquaient toutes les
-         * deux. Le client en emet par construction : `Workouts/Show.vue` tient
-         * deux files d'ecriture separees.
-         *
-         * Derive en somme, il ne revenait jamais ; derive en valeur, il se
-         * recale de lui-meme. C'est exactement ce que fait la passe nocturne
-         * `VerifyDataCoherence`, qui n'existait que pour reparer ce compteur.
-         */
         User::whereKey($this->user_id)->update([
             'total_volume' => DB::raw(
                 '(select coalesce(sum(workout_volume), 0) from workouts where workouts.user_id = users.id)'
             ),
         ]);
+    }
+
+    public function recomputeVolume(): void
+    {
+        /*
+         * Le total de la seance en ABSOLU, celui de l'utilisateur par l'ECART.
+         *
+         * `users.total_volume = (select sum(workout_volume) ...)` etait exact et
+         * se recalait de lui-meme, mais il resommait TOUTES les seances du
+         * compte — a chaque serie enregistree. Mesure aux compteurs
+         * `Handler_read_*` : sur les 208 lectures de cette methode a 200
+         * seances, 202 etaient cette seule sous-requete, contre 42 a 40
+         * seances. Une seance de vingt series a dix ans d'anciennete la paie
+         * vingt fois.
+         *
+         * L'ecart, lui, ne depend de rien. Ce qui l'avait fait deriver avant
+         * #1595 n'etait pas l'accumulation mais sa forme : un SELECT puis un
+         * UPDATE, sans transaction, que deux requetes concurrentes traversaient
+         * en lisant le meme etat. Le client en emet par construction —
+         * `Workouts/Show.vue` tient deux files d'ecriture separees.
+         *
+         * Ici l'ancien total est relu SOUS VERROU dans la meme transaction que
+         * l'ecriture : deux enregistrements sur la meme seance se serialisent,
+         * et chacun ajoute son propre ecart. La suppression d'une seance
+         * procedait deja ainsi (`Workout::deleting`), les deux chemins ne se
+         * contredisent donc plus.
+         *
+         * Ce qui reste possible, c'est une ecriture qui contourne ce chemin —
+         * un `UPDATE` a la main, une migration. `app:verify-data-coherence` le
+         * detecte chaque nuit et sait le reparer.
+         *
+         * Seules les series validees comptent. La somme portait sur TOUTES les
+         * series, validees ou non : demarrer une seance depuis un modele
+         * creditait aussitot le volume complet, 4 000 kg avant le premier kilo
+         * souleve, acquis meme si la seance etait abandonnee. Voir #1499.
+         */
+        DB::transaction(function (): void {
+            $stocke = $this->newQuery()
+                ->whereKey($this->getKey())
+                ->lockForUpdate()
+                ->value('workout_volume');
+
+            $ancien = is_numeric($stocke) ? (float) $stocke : 0.0;
+
+            $total = (float) $this->workoutLines()
+                ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
+                ->where('sets.is_completed', true)
+                ->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
+
+            // Les volumes sont des decimaux a deux chiffres : en deca, l'ecart
+            // vient de l'arrondi et non d'un changement.
+            $ecart = round($total - $ancien, 2);
+
+            if ($ecart === 0.0) {
+                return;
+            }
+
+            $this->newQuery()->whereKey($this->getKey())->update(['workout_volume' => $total]);
+
+            $utilisateur = User::whereKey($this->user_id);
+
+            if ($ecart > 0.0) {
+                $utilisateur->increment('total_volume', $ecart);
+
+                return;
+            }
+
+            $utilisateur->decrement('total_volume', -$ecart);
+        });
     }
 
     #[\Override]
@@ -165,6 +209,18 @@ class Workout extends Model
             }
 
             $workout->workoutLines()->update(['workout_started_at' => $workout->started_at]);
+        });
+
+        /*
+         * La seance qui se termine remet le compteur d'aplomb.
+         *
+         * C'est le seul moment ou payer une resomme de l'historique se justifie :
+         * une fois par seance et non une fois par serie.
+         */
+        static::updated(function (self $workout): void {
+            if ($workout->wasChanged('ended_at') && $workout->ended_at !== null) {
+                $workout->recalibrerLeTotalDeLUtilisateur();
+            }
         });
 
         $clearCache = function (self $workout): void {
