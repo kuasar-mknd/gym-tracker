@@ -39,7 +39,7 @@ class VerifyDataCoherence extends Command
 
     public function handle(): int
     {
-        /** @var array<string, callable(): list<string>> $controles */
+        /** @var array<string, callable(): array{int, list<string>}> $controles */
         $controles = [
             'volume total des utilisateurs' => $this->volumeUtilisateurs(...),
             'volume des séances' => $this->volumeSeances(...),
@@ -56,8 +56,7 @@ class VerifyDataCoherence extends Command
         $total = 0;
 
         foreach ($controles as $intitule => $controle) {
-            $exemples = $controle();
-            $ecarts = count($exemples);
+            [$ecarts, $exemples] = $controle();
             $total += $ecarts;
 
             if ($ecarts === 0) {
@@ -70,6 +69,10 @@ class VerifyDataCoherence extends Command
 
             foreach ($exemples as $exemple) {
                 $this->line("       {$exemple}");
+            }
+
+            if ($ecarts > count($exemples)) {
+                $this->line(sprintf('       … et %d autre(s), non cité(s)', $ecarts - count($exemples)));
             }
         }
 
@@ -86,18 +89,6 @@ class VerifyDataCoherence extends Command
         return self::FAILURE;
     }
 
-    /**
-     * Reconstruit les records des exercices dont un record s'est detache.
-     *
-     * Sans chemin de reparation, un controle qui trouve un ecart heritee reste
-     * rouge indefiniment — et un controle qui ne peut pas passer au vert finit
-     * desactive. C'est le sort de toutes les portes qu'on ne peut pas franchir.
-     *
-     * La reparation n'invente rien : elle appelle `recompute()`, exactement ce
-     * que l'application execute deja quand une serie disparait (#1476). Les
-     * records sont reconstruits depuis les series qui restent, ou supprimes s'il
-     * n'en reste aucune.
-     */
     /**
      * Recale les compteurs de volume sur les series reellement faites.
      *
@@ -154,6 +145,18 @@ class VerifyDataCoherence extends Command
         $this->newLine();
     }
 
+    /**
+     * Reconstruit les records des exercices dont un record s'est detache.
+     *
+     * Sans chemin de reparation, un controle qui trouve un ecart heritee reste
+     * rouge indefiniment — et un controle qui ne peut pas passer au vert finit
+     * desactive. C'est le sort de toutes les portes qu'on ne peut pas franchir.
+     *
+     * La reparation n'invente rien : elle appelle `recompute()`, exactement ce
+     * que l'application execute deja quand une serie disparait (#1476). Les
+     * records sont reconstruits depuis les series qui restent, ou supprimes s'il
+     * n'en reste aucune.
+     */
     private function reconstruireLesRecords(): void
     {
         $detaches = PersonalRecord::query()
@@ -206,28 +209,22 @@ class VerifyDataCoherence extends Command
     }
 
     /**
-     * `users.total_volume` contre la somme des series de l'utilisateur.
+     * `users.total_volume` contre la somme des seances de l'utilisateur.
      *
-     * Le compteur est maintenu par `increment()` et `decrement()`, donc par des
-     * deltas. Toute ecriture qui contourne ces appels — une cascade en base, une
-     * suppression en masse — le laisse derriver sans rien signaler.
+     * Contre les SERIES, ce controle refaisait l'agregation que celui des
+     * seances fait deja : 29 167 lectures d'index contre 1 125 pour 12 000
+     * series. Il ne perd rien a s'arreter aux seances — si une seance ment sur
+     * ses series, c'est l'autre controle qui le dit.
      *
-     * @return list<string>
+     * @return array{int, list<string>}
      */
     private function volumeUtilisateurs(): array
     {
-        $lignes = DB::table('users')
+        $requete = DB::table('users')
             ->leftJoinSub(
                 DB::table('workouts')
-                    ->join('workout_lines', 'workouts.id', '=', 'workout_lines.workout_id')
-                    ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                    // Meme filtre que `Workout::recomputeVolume()` : le volume
-                    // compte les series faites, pas celles qui attendent (#1499).
-                    // Sans lui, une seance dont une serie n'est pas cochee
-                    // serait signalee divergente alors qu'elle est juste.
-                    ->where('sets.is_completed', true)
-                    ->selectRaw('workouts.user_id, SUM(COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)) as reel')
-                    ->groupBy('workouts.user_id'),
+                    ->selectRaw('user_id, SUM(workout_volume) as reel')
+                    ->groupBy('user_id'),
                 'calcul',
                 'calcul.user_id',
                 '=',
@@ -236,11 +233,9 @@ class VerifyDataCoherence extends Command
             ->selectRaw('users.id, users.total_volume as stocke, COALESCE(calcul.reel, 0) as reel')
             // Les volumes sont des decimaux : un centieme d'ecart vient de
             // l'arrondi, pas d'une derive.
-            ->whereRaw('ABS(users.total_volume - COALESCE(calcul.reel, 0)) > 0.01')
-            ->limit($this->limite())
-            ->get();
+            ->whereRaw('ABS(users.total_volume - COALESCE(calcul.reel, 0)) > 0.01');
 
-        return $this->decrire($lignes, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
             'utilisateur %s : stocké %s, calculé %s',
             $this->colonne($ligne, 'id'),
             $this->colonne($ligne, 'stocke'),
@@ -251,11 +246,11 @@ class VerifyDataCoherence extends Command
     /**
      * `workouts.workout_volume` contre la somme des series de la seance.
      *
-     * @return list<string>
+     * @return array{int, list<string>}
      */
     private function volumeSeances(): array
     {
-        $lignes = DB::table('workouts')
+        $requete = DB::table('workouts')
             ->leftJoinSub(
                 DB::table('workout_lines')
                     ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
@@ -272,11 +267,9 @@ class VerifyDataCoherence extends Command
                 'workouts.id',
             )
             ->selectRaw('workouts.id, workouts.workout_volume as stocke, COALESCE(calcul.reel, 0) as reel')
-            ->whereRaw('ABS(workouts.workout_volume - COALESCE(calcul.reel, 0)) > 0.01')
-            ->limit($this->limite())
-            ->get();
+            ->whereRaw('ABS(workouts.workout_volume - COALESCE(calcul.reel, 0)) > 0.01');
 
-        return $this->decrire($lignes, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
             'séance %s : stocké %s, calculé %s',
             $this->colonne($ligne, 'id'),
             $this->colonne($ligne, 'stocke'),
@@ -291,18 +284,16 @@ class VerifyDataCoherence extends Command
      * la disparition de la serie qui la portait, simplement detachee. C'est
      * exactement le defaut de #1476, et il ne se voit d'aucune autre facon.
      *
-     * @return list<string>
+     * @return array{int, list<string>}
      */
     private function recordsOrphelins(): array
     {
-        $lignes = DB::table('personal_records')
+        $requete = DB::table('personal_records')
             ->whereNull('set_id')
             ->orWhereNotIn('set_id', DB::table('sets')->select('id'))
-            ->select(['id', 'user_id', 'type', 'value'])
-            ->limit($this->limite())
-            ->get();
+            ->select(['id', 'user_id', 'type', 'value']);
 
-        return $this->decrire($lignes, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
             "record %s (%s, %s) de l'utilisateur %s ne pointe sur aucune série",
             $this->colonne($ligne, 'id'),
             $this->colonne($ligne, 'type'),
@@ -317,11 +308,11 @@ class VerifyDataCoherence extends Command
      * Un record juste en valeur et faux en provenance reste faux : c'est cette
      * incoherence-la qui laissait un chiffre fantome remonter dans les succes.
      *
-     * @return list<string>
+     * @return array{int, list<string>}
      */
     private function valeurDesRecords(): array
     {
-        $lignes = DB::table('personal_records')
+        $requete = DB::table('personal_records')
             ->join('sets', 'sets.id', '=', 'personal_records.set_id')
             ->where('personal_records.type', 'max_weight')
             ->whereRaw('ABS(personal_records.value - COALESCE(sets.weight, 0)) > 0.01')
@@ -329,11 +320,9 @@ class VerifyDataCoherence extends Command
                 'personal_records.id',
                 'personal_records.value as stocke',
                 'sets.weight as reel',
-            ])
-            ->limit($this->limite())
-            ->get();
+            ]);
 
-        return $this->decrire($lignes, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
             'record %s : annonce %s, la série porte %s',
             $this->colonne($ligne, 'id'),
             $this->colonne($ligne, 'stocke'),
@@ -348,11 +337,11 @@ class VerifyDataCoherence extends Command
      * calcule a la seance suivante part d'une date fausse et casse une serie
      * pourtant continue (#1459).
      *
-     * @return list<string>
+     * @return array{int, list<string>}
      */
     private function dateDerniereSeance(): array
     {
-        $lignes = DB::table('users')
+        $requete = DB::table('users')
             ->leftJoinSub(
                 DB::table('workouts')
                     ->selectRaw('user_id, MAX(started_at) as reel')
@@ -365,11 +354,9 @@ class VerifyDataCoherence extends Command
             ->selectRaw('users.id, users.last_workout_at as stocke, calcul.reel')
             // Un compte sans aucune seance doit avoir une date nulle, et une
             // date posee doit correspondre a la seance la plus recente.
-            ->whereRaw('NOT (users.last_workout_at <=> calcul.reel)')
-            ->limit($this->limite())
-            ->get();
+            ->whereRaw('NOT (users.last_workout_at <=> calcul.reel)');
 
-        return $this->decrire($lignes, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
             'utilisateur %s : stocké %s, dernière séance %s',
             $this->colonne($ligne, 'id'),
             $this->colonne($ligne, 'stocke'),
@@ -378,21 +365,26 @@ class VerifyDataCoherence extends Command
     }
 
     /**
-     * Les descriptions d'ecart, une par ligne rendue par la requete.
+     * Le NOMBRE d'ecarts, et quelques-uns decrits.
      *
-     * @param  \Illuminate\Support\Collection<int, \stdClass>  $lignes
+     * Les deux etaient confondus : `--limit` bornait la requete, et le compte
+     * affiche etait celui des lignes rendues. Cinq cents utilisateurs derivant
+     * s'annoncaient donc « 5 ».
+     *
+     * @param  \Illuminate\Database\Query\Builder  $requete
      * @param  callable(array<array-key, mixed>): string  $decrire
-     * @return list<string>
+     * @return array{int, list<string>}
      */
-    private function decrire($lignes, callable $decrire): array
+    private function ecarts($requete, callable $decrire): array
     {
+        $nombre = (clone $requete)->count();
         $descriptions = [];
 
-        foreach ($lignes as $ligne) {
+        foreach ($requete->limit($this->limite())->get() as $ligne) {
             $descriptions[] = $decrire(get_object_vars($ligne));
         }
 
-        return $descriptions;
+        return [$nombre, $descriptions];
     }
 
     /**
