@@ -15,6 +15,17 @@ class SupplementsTable
     public static function configure(Table $table): Table
     {
         return $table
+            /*
+             * « Tout selectionner » couvre la table entiere, pas la page affichee.
+             *
+             * Filament materialise ensuite le jeu et supprime LIGNE A LIGNE, avec
+             * la cascade d'evenements pour chacune. Mesure faite sur un compte de
+             * 400 seances : une seule suppression lit ~1 000 lignes, et le cout
+             * est lineaire dans l'historique. Cent est donc le plafond qui garde
+             * la requete sous les 100 000 lignes lues ; cinq cents l'y mettrait a
+             * un demi-million.
+             */
+            ->maxSelectableRecords(100)
             ->columns(self::getColumns())
             ->filters([])
             ->recordActions([
@@ -22,7 +33,7 @@ class SupplementsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()->chunkSelectedRecords(100),
                 ]),
             ]);
     }

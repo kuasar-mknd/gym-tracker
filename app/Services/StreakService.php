@@ -80,16 +80,34 @@ final class StreakService
      */
     public function recalculerDepuisLesFaits(User $user): void
     {
-        $seances = $user->workouts()
+        /*
+         * Une seule lecture, sans hydratation et sans fonction sur la colonne.
+         *
+         * La version d'avant construisait 400 modeles Eloquent pour n'en tirer
+         * que des dates. Un `DISTINCT DATE(started_at)` les aurait evites mais
+         * aurait impose une table temporaire et un tri : la fonction empeche
+         * l'index de rendre les lignes deja ordonnees. En lisant la colonne nue,
+         * `workouts(user_id, started_at)` sert le filtre ET l'ordre, et le
+         * dedoublonnage se fait sur des chaines deja triees.
+         */
+        /** @var list<string> $horodatages */
+        $horodatages = $user->workouts()
+            ->toBase()
             ->orderByDesc('started_at')
-            ->get(['id', 'user_id', 'started_at']);
+            ->pluck('started_at')
+            ->all();
 
-        $dates = $seances
-            ->map(fn (Workout $seance): string => $seance->started_at->toDateString())
-            ->unique()
-            ->values();
+        $derniere = $horodatages[0] ?? null;
 
-        $derniere = $seances->first();
+        $dates = [];
+
+        foreach ($horodatages as $horodatage) {
+            $jour = mb_substr($horodatage, 0, 10);
+
+            if ($dates === [] || end($dates) !== $jour) {
+                $dates[] = $jour;
+            }
+        }
 
         if ($derniere === null) {
             $user->forceFill([
@@ -112,11 +130,9 @@ final class StreakService
          */
         $rupture = false;
 
-        foreach ($dates->sliding(2) as $paire) {
-            /** @var string $recente */
-            $recente = $paire->first();
-            /** @var string $precedente */
-            $precedente = $paire->last();
+        for ($rang = 1; $rang < count($dates); $rang++) {
+            $recente = $dates[$rang - 1];
+            $precedente = $dates[$rang];
 
             $consecutives = Carbon::parse($precedente)->addDay()->toDateString() === $recente;
 
@@ -146,7 +162,7 @@ final class StreakService
         }
 
         $user->forceFill([
-            'last_workout_at' => $derniere->started_at,
+            'last_workout_at' => $derniere,
             'current_streak' => $enCours,
             'longest_streak' => $plusLongue,
         ])->save();
