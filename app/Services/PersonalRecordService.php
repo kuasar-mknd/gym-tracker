@@ -163,8 +163,7 @@ final class PersonalRecordService
                    row_number() over (order by sets.weight * sets.reps desc, sets.id asc) as rang_max_volume_set
               from sets
               join workout_lines on workout_lines.id = sets.workout_line_id
-              join workouts on workouts.id = workout_lines.workout_id
-             where workouts.user_id = ?
+             where workout_lines.user_id = ?
                and workout_lines.exercise_id = ?
                and sets.is_warmup = 0
                and sets.weight > 0

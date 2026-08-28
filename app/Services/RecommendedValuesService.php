@@ -46,18 +46,23 @@ final class RecommendedValuesService
             return $cached;
         }
 
-        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-        // Replaced redundant whereHas('workout') subquery with direct WHERE clauses
-        // on the already joined 'workouts' table to prevent an unnecessary EXISTS subquery execution.
+        /*
+         * Sans jointure : le filtre et l'ordre portent desormais sur la meme
+         * table, donc `workout_lines(user_id, exercise_id, workout_started_at)`
+         * les sert tous les deux et le `LIMIT 1` s'arrete a la premiere ligne.
+         *
+         * La jointure d'avant filtrait sur `workout_lines` et ordonnait sur
+         * `workouts` : aucun index ne pouvant servir les deux, MySQL
+         * materialisait toute la jointure et la triait. Mesure sur un exercice
+         * present dans chaque seance : 601 lignes lues a 600 seances.
+         */
         $lastLine = WorkoutLine::query()
             ->with(['sets'])
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->where('workout_lines.exercise_id', $line->exercise_id)
-            ->where('workouts.user_id', $workout->user_id)
-            ->where('workouts.id', '!=', $workout->id)
-            ->where('workouts.started_at', '<', $workout->started_at)
-            ->orderByDesc('workouts.started_at')
-            ->select('workout_lines.*')
+            ->where('user_id', $workout->user_id)
+            ->where('exercise_id', $line->exercise_id)
+            ->where('workout_started_at', '<', $workout->started_at)
+            ->where('workout_id', '!=', $workout->id)
+            ->orderByDesc('workout_started_at')
             ->first();
 
         $values = $this->calculateFromLine($lastLine);
@@ -244,17 +249,31 @@ final class RecommendedValuesService
     {
         $results = [];
 
+        /*
+         * La meme question que le chemin unitaire, et enfin la meme reponse.
+         *
+         * Ce lot prenait `MAX(workout_lines.id)` quand l'unitaire triait par
+         * `workouts.started_at` : sur une seance saisie apres coup, les deux
+         * designaient des lignes differentes. L'ordre porte desormais sur la
+         * date des deux cotes.
+         */
         $latestSubquery = WorkoutLine::query()
-            ->selectRaw('MAX(workout_lines.id) as latest_line_id')
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->whereIn('workout_lines.exercise_id', $uncachedExerciseIds)
-            ->where('workouts.user_id', $userId)
-            ->where('workouts.id', '!=', $workoutId)
-            ->where('workouts.started_at', '<', $workout->started_at)
-            ->groupBy('workout_lines.exercise_id');
+            ->selectRaw('MAX(workout_started_at) as derniere, exercise_id')
+            ->where('user_id', $userId)
+            ->whereIn('exercise_id', $uncachedExerciseIds)
+            ->where('workout_id', '!=', $workoutId)
+            ->where('workout_started_at', '<', $workout->started_at)
+            ->groupBy('exercise_id');
 
         $lastLines = WorkoutLine::query()
-            ->whereIn('id', $latestSubquery)
+            ->where('workout_lines.user_id', $userId)
+            ->whereIn('workout_lines.exercise_id', $uncachedExerciseIds)
+            ->where('workout_lines.workout_id', '!=', $workoutId)
+            ->joinSub($latestSubquery, 'dernieres', function (\Illuminate\Database\Query\JoinClause $jointure): void {
+                $jointure->on('workout_lines.exercise_id', '=', 'dernieres.exercise_id')
+                    ->on('workout_lines.workout_started_at', '=', 'dernieres.derniere');
+            })
+            ->select('workout_lines.*')
             ->with('sets')
             ->get()
             ->keyBy('exercise_id');
