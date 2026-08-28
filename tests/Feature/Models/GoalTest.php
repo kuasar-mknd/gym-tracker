@@ -50,10 +50,13 @@ class GoalTest extends TestCase
         $workout = $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
         $line = $workout->workoutLines()->create(['exercise_id' => $exercise->id]);
 
-        // This should trigger the saved event and GoalService since workout is finished
+        // `is_completed` est explicite : la colonne vaut 0 par defaut, et une
+        // serie non cochee est une serie PREVUE. Le test dit « l'utilisateur a
+        // souleve 80 kg », son decor doit le dire aussi.
         $line->sets()->create([
             'weight' => 80,
             'reps' => 5,
+            'is_completed' => true,
         ]);
 
         $this->assertEquals(80, $goal->refresh()->current_value);
@@ -78,6 +81,7 @@ class GoalTest extends TestCase
         $line->sets()->create([
             'weight' => 100,
             'reps' => 1,
+            'is_completed' => true,
         ]);
 
         $this->assertNotNull($goal->refresh()->completed_at);
