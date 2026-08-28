@@ -76,11 +76,8 @@ class Exercise extends Model
      */
     public static function getCachedForUser(int $userId): Collection
     {
-        $globalVersion = Cache::get('exercises_global_version', '1');
-        $globalVersion = is_scalar($globalVersion) ? (string) $globalVersion : '1';
-
         return Cache::remember(
-            "exercises_list_{$userId}_v{$globalVersion}",
+            self::cleDeListe($userId),
             3600,
             fn () => self::forUser($userId)
                 ->orderBy('category')
@@ -95,15 +92,32 @@ class Exercise extends Model
      */
     public function invalidateCache(): void
     {
-        $globalVersion = Cache::get('exercises_global_version', '1');
-        $globalVersion = is_scalar($globalVersion) ? (string) $globalVersion : '1';
-
         if ($this->user_id !== null) {
-            Cache::forget("exercises_list_{$this->user_id}_v{$globalVersion}");
-            Cache::forget("exercises_list_{$this->user_id}");
-        } else {
-            Cache::forever('exercises_global_version', (string) time());
+            Cache::forget(self::cleDeListe($this->user_id));
+
+            return;
         }
+
+        Cache::forever('exercises_catalogue_revision', self::revisionDuCatalogue() + 1);
+    }
+
+    /**
+     * La revision du catalogue partage, un compteur et non une horloge.
+     *
+     * `time()` marquait deux modifications faites dans la meme seconde de la
+     * meme valeur : la seconde n'invalidait plus rien, et les listes deja
+     * reconstruites entre les deux restaient servies une heure durant.
+     */
+    private static function revisionDuCatalogue(): int
+    {
+        $revision = Cache::get('exercises_catalogue_revision', 0);
+
+        return is_numeric($revision) ? (int) $revision : 0;
+    }
+
+    private static function cleDeListe(int $userId): string
+    {
+        return 'exercices_liste_'.$userId.'_r'.self::revisionDuCatalogue();
     }
 
     #[\Override]

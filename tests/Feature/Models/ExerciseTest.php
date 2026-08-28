@@ -177,28 +177,22 @@ class ExerciseTest extends TestCase
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create(['user_id' => $user->id]);
 
-        $globalVersion = '1';
-        Cache::put('exercises_global_version', $globalVersion);
-        Cache::put("exercises_list_{$user->id}_v{$globalVersion}", 'data');
-        Cache::put("exercises_list_{$user->id}", 'data');
+        Exercise::getCachedForUser($user->id);
+        $exercise->update(['name' => 'Renommé']);
 
-        $exercise->invalidateCache();
-
-        $this->assertFalse(Cache::has("exercises_list_{$user->id}_v{$globalVersion}"));
-        $this->assertFalse(Cache::has("exercises_list_{$user->id}"));
+        $this->assertContains('Renommé', Exercise::getCachedForUser($user->id)->pluck('name')->all());
     }
 
     public function test_invalidate_cache_for_global_exercise(): void
     {
         $exercise = Exercise::factory()->create(['user_id' => null]);
 
-        $initialTime = (string) (time() - 100);
-        Cache::put('exercises_global_version', $initialTime);
+        $this->freezeTime();
+        $exercise->invalidateCache();
+        $premiere = Cache::get('exercises_catalogue_revision');
 
         $exercise->invalidateCache();
 
-        $newVersion = Cache::get('exercises_global_version');
-        $this->assertNotEquals($initialTime, $newVersion);
-        $this->assertIsString($newVersion);
+        $this->assertNotEquals($premiere, Cache::get('exercises_catalogue_revision'));
     }
 }

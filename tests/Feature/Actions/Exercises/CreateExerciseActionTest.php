@@ -6,7 +6,6 @@ use App\Actions\Exercises\CreateExerciseAction;
 use App\Enums\ExerciseCategory;
 use App\Models\Exercise;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
 
 it('creates an exercise and invalidates cache', function (): void {
     // Arrange
@@ -18,24 +17,17 @@ it('creates an exercise and invalidates cache', function (): void {
         'default_rest_time' => 90,
     ];
 
-    Cache::shouldReceive('get')
-        ->with('exercises_global_version', '1')
-        ->andReturn('1');
-
-    Cache::shouldReceive('forget')
-        ->with("exercises_list_{$user->id}_v1")
-        ->atLeast()->once();
-
-    Cache::shouldReceive('forget')
-        ->with("exercises_list_{$user->id}")
-        ->atLeast()->once();
+    // La liste est mise en cache avant, pour que sa fraicheur apres soit une
+    // preuve d'invalidation et non un premier remplissage.
+    Exercise::getCachedForUser($user->id);
 
     // Act
     $action = app(CreateExerciseAction::class);
     $exercise = $action->execute($user, $data);
 
     // Assert
-    expect($exercise)->toBeInstanceOf(Exercise::class)
+    expect(Exercise::getCachedForUser($user->id)->pluck('name')->all())->toContain('Bench Press')
+        ->and($exercise)->toBeInstanceOf(Exercise::class)
         ->and($exercise->user_id)->toBe($user->id)
         ->and($exercise->name)->toBe('Bench Press')
         ->and($exercise->type)->toBe('strength')
