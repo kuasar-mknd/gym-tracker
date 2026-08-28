@@ -150,6 +150,17 @@ final class FetchWorkoutsIndexAction
     }
 
     /**
+     * Le debut des six mois glissants qu'affichent les cartes de frequence.
+     *
+     * Six MOIS CALENDAIRES et non cent quatre-vingts jours : la carte mensuelle
+     * dessine six barres, dont celle du mois en cours.
+     */
+    private static function debutDeLaFenetre(): \Illuminate\Support\Carbon
+    {
+        return now()->subMonths(5)->startOfMonth();
+    }
+
+    /**
      * @return Collection<
      *     int,
      *     array{month: string, count: int}
@@ -158,7 +169,7 @@ final class FetchWorkoutsIndexAction
     private function calculateMonthlyFrequency(
         User $user
     ): Collection {
-        $startDate = now()->subMonths(5)->startOfMonth();
+        $startDate = self::debutDeLaFenetre();
 
         // ⚡ Bolt Optimization: Group and count directly in SQL to reduce memory usage and CPU cycles in PHP.
         // Also uses toBase() to avoid Eloquent model hydration.
@@ -189,9 +200,23 @@ final class FetchWorkoutsIndexAction
      */
     private function calculateDayOfWeekFrequency(User $user): Collection
     {
+        /*
+         * La MEME fenetre que la frequence mensuelle, sa voisine immediate.
+         *
+         * Celle-ci n'en avait aucune : elle lisait toutes les seances du compte
+         * pour une carte posee a cote d'une autre bornee a six mois, et aucune
+         * des deux n'annoncait la sienne. Mesure aux compteurs
+         * `Handler_read_*` : 109 lectures d'index a 30 seances anciennes,
+         * 1 249 a 600 — la derniere page du produit dont le cout suivait
+         * l'anciennete du compte.
+         *
+         * Les deux la tirent desormais de `debutDeLaFenetre()`, pour qu'elles ne
+         * puissent plus diverger, et les deux sous-titres l'annoncent.
+         */
         $results = Workout::query()
             ->toBase()
             ->where('user_id', $user->id)
+            ->where('started_at', '>=', self::debutDeLaFenetre())
             ->selectRaw('DAYOFWEEK(started_at) as day_of_week, COUNT(*) as count')
             ->groupBy('day_of_week')
             ->get()

@@ -240,7 +240,9 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <GlassCard v-if="deferredData?.charts?.day_of_week_frequency?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold">Fréquence par Jour</h3>
-                                <p class="text-text-muted text-xs">Séances selon le jour de la semaine</p>
+                                <p class="text-text-muted text-xs">
+                                    Séances selon le jour de la semaine, 6 derniers mois
+                                </p>
                             </div>
                             <div class="h-48 w-full">
                                 <WorkoutFrequencyChart :data="deferredData.charts.day_of_week_frequency" />
@@ -251,7 +253,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         <GlassCard v-if="deferredData?.charts?.monthly_frequency?.length > 0">
                             <div class="mb-4">
                                 <h3 class="text-text-main text-lg font-bold">Fréquence Mensuelle</h3>
-                                <p class="text-text-muted text-xs">Séances par mois</p>
+                                <p class="text-text-muted text-xs">Séances par mois, 6 derniers mois</p>
                             </div>
                             <WorkoutsPerMonthChart :data="deferredData.charts.monthly_frequency" />
                         </GlassCard>
