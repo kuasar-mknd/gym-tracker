@@ -11,6 +11,7 @@ use App\Services\StatsService;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 final class FetchWorkoutsIndexAction
 {
@@ -84,8 +85,43 @@ final class FetchWorkoutsIndexAction
         return (int) Cache::remember(
             "stats.total_exercises.{$user->id}",
             now()->addHour(),
-            fn (): int => $user->workoutLines()->distinct()->count('exercise_id')
+            fn (): int => $this->compterExercicesDistincts($user)
         );
+    }
+
+    /**
+     * Combien d'exercices differents cet utilisateur a deja faits.
+     *
+     * `distinct()->count()` lisait toutes les lignes de toutes les seances :
+     * 321 lectures d'index a 40 seances, 1 601 a 200, pour rendre un chiffre
+     * qui ne depend que de la BIBLIOTHEQUE de l'utilisateur. Un `group by`
+     * n'aide pas — MySQL ne retient pas de balayage lache ici, `Extra` restant
+     * « Using index » et jamais « Using index for group-by ».
+     *
+     * Le saut, lui, coute une lecture par exercice trouve : `min(exercise_id)`
+     * au-dela du curseur forme une plage sur
+     * `(user_id, exercise_id, workout_started_at)` et s'arrete a la premiere
+     * entree. Neuf lectures aux deux profondeurs mesurees. Meme recette que
+     * `FetchBodyPartMeasurementsIndexAction`, et meme raison.
+     */
+    private function compterExercicesDistincts(User $user): int
+    {
+        $compte = 0;
+        $curseur = 0;
+
+        while (true) {
+            $suivant = DB::table('workout_lines')
+                ->where('user_id', $user->id)
+                ->where('exercise_id', '>', $curseur)
+                ->min('exercise_id');
+
+            if (! is_numeric($suivant)) {
+                return $compte;
+            }
+
+            $curseur = (int) $suivant;
+            $compte++;
+        }
     }
 
     /**
