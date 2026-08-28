@@ -80,16 +80,24 @@ final class StreakService
      */
     public function recalculerDepuisLesFaits(User $user): void
     {
-        $seances = $user->workouts()
+        /*
+         * Une seule lecture, sans hydratation et sans fonction sur la colonne.
+         *
+         * La version d'avant construisait 400 modeles Eloquent pour n'en tirer
+         * que des dates. Un `DISTINCT DATE(started_at)` les aurait evites mais
+         * aurait impose une table temporaire et un tri : la fonction empeche
+         * l'index de rendre les lignes deja ordonnees. En lisant la colonne nue,
+         * `workouts(user_id, started_at)` sert le filtre ET l'ordre, et le
+         * dedoublonnage se fait sur des chaines deja triees.
+         */
+        /** @var list<string> $horodatages */
+        $horodatages = $user->workouts()
+            ->toBase()
             ->orderByDesc('started_at')
-            ->get(['id', 'user_id', 'started_at']);
+            ->pluck('started_at')
+            ->all();
 
-        $dates = $seances
-            ->map(fn (Workout $seance): string => $seance->started_at->toDateString())
-            ->unique()
-            ->values();
-
-        $derniere = $seances->first();
+        $derniere = $horodatages[0] ?? null;
 
         if ($derniere === null) {
             $user->forceFill([
@@ -109,44 +117,46 @@ final class StreakService
          * Une rupture rencontree en remontant le temps ferme la serie EN COURS,
          * definitivement. Ce que la boucle continue de compter apres, ce sont
          * des series passees, qui n'interessent plus que `$plusLongue`.
+         *
+         * Le garde ecrit ici etait `$consecutives && $enCours === $suite - 1`,
+         * cense dire « aucune rupture depuis la derniere seance ». Il ne le
+         * disait pas : par recurrence, `$enCours` vaut TOUJOURS `$suite - 1` a
+         * l'entree d'une paire consecutive, y compris apres une rupture ou le
+         * compteur est reparti de 1. Une vieille serie de trois jours faisait
+         * donc passer pour trois une derniere seance isolee.
          */
         $rupture = false;
+        $veille = null;
 
-        foreach ($dates->sliding(2) as $paire) {
-            /** @var string $recente */
-            $recente = $paire->first();
-            /** @var string $precedente */
-            $precedente = $paire->last();
+        foreach ($horodatages as $horodatage) {
+            $jour = mb_substr($horodatage, 0, 10);
 
-            $consecutives = Carbon::parse($precedente)->addDay()->toDateString() === $recente;
-
-            if ($consecutives) {
-                $suite++;
-            } else {
-                $suite = 1;
-                $rupture = true;
+            // Deux seances le meme jour ne comptent qu'une fois. Les
+            // horodatages arrivant tries, le doublon est toujours adjacent.
+            if ($jour === $veille) {
+                continue;
             }
 
-            $plusLongue = max($plusLongue, $suite);
+            if ($veille !== null) {
+                if (Carbon::parse($jour)->addDay()->toDateString() === $veille) {
+                    $suite++;
+                } else {
+                    $suite = 1;
+                    $rupture = true;
+                }
 
-            /*
-             * Le garde ecrit ici etait `$consecutives && $enCours === $suite - 1`,
-             * cense dire « aucune rupture depuis la derniere seance ». Il ne le
-             * disait pas : par recurrence, `$enCours` vaut TOUJOURS `$suite - 1`
-             * a l'entree d'une paire consecutive, y compris apres une rupture ou
-             * le compteur est reparti de 1. `$enCours` suivait donc `$suite`
-             * jusqu'au bout, et une vieille serie de trois jours faisait passer
-             * pour trois une derniere seance isolee.
-             *
-             * La rupture se retient, elle ne se deduit pas d'un compteur.
-             */
-            if (! $rupture) {
-                $enCours = $suite;
+                $plusLongue = max($plusLongue, $suite);
+
+                if (! $rupture) {
+                    $enCours = $suite;
+                }
             }
+
+            $veille = $jour;
         }
 
         $user->forceFill([
-            'last_workout_at' => $derniere->started_at,
+            'last_workout_at' => $derniere,
             'current_streak' => $enCours,
             'longest_streak' => $plusLongue,
         ])->save();
