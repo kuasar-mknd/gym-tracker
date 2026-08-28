@@ -22,8 +22,8 @@ use Illuminate\Support\Carbon;
  * Onze jeunes termines, plus un en cours.
  *
  * Onze, et pas dix : c'est le premier compte auquel la page deborde, donc le
- * seul ou la taille de page est observable. Les `created_at` sont poses un par
- * jour pour que `latest()` ait un ordre defini — la fabrique les tirerait tous
+ * seul ou la taille de page est observable. Les `start_time` sont poses un par
+ * jour pour que le tri ait un ordre defini — la fabrique les tirerait tous
  * a la meme seconde, et le tri serait alors laisse au hasard de MySQL.
  *
  * `target_duration_minutes` sert d'etiquette : le jeune numero N vaut N.
@@ -39,7 +39,7 @@ function scenePourHistoriqueDeJeunes(): User
             'user_id' => $user->id,
             'status' => 'completed',
             'target_duration_minutes' => $rang,
-            'created_at' => Carbon::parse('2026-06-01 08:00:00')->addDays($rang),
+            'start_time' => Carbon::parse('2026-06-01 08:00:00')->addDays($rang),
         ]);
     }
 
