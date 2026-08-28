@@ -15,14 +15,20 @@ class FetchFastingIndexAction
      */
     public function execute(User $user): array
     {
+        /*
+         * Par `start_time`, pas par `created_at` : les deux index de `fasts`
+         * portent le premier, aucun le second. Et `Api\FastController` triait
+         * deja ainsi — un jeune saisi apres coup ne se rangeait donc pas a la
+         * meme place selon qu'on le regardait par le web ou par l'API.
+         */
         $activeFast = $user->fasts()
             ->where('status', 'active')
-            ->latest()
+            ->latest('start_time')
             ->first();
 
         $history = $user->fasts()
             ->where('status', '!=', 'active')
-            ->latest()
+            ->latest('start_time')
             ->paginate(10)
             ->withQueryString();
 
