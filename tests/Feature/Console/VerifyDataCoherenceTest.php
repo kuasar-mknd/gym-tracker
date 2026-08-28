@@ -154,3 +154,43 @@ it('reconstruit les records détachés et repasse au vert', function (): void {
 
     expect(is_numeric($valeur) ? (float) $valeur : null)->toBe(60.0);
 });
+
+/**
+ * Le compte affiche etait celui des lignes RENDUES, or `--limit` bornait la
+ * requete : cinq cents utilisateurs derivant s'annoncaient « 5 ». Un controle
+ * nocturne qui sous-estime l'etendue d'une derive est pire que muet, puisqu'il
+ * a l'air d'avoir mesure.
+ */
+it('annonce le nombre d’écarts, pas le nombre d’exemples cités', function (): void {
+    $derivants = [];
+
+    for ($i = 0; $i < 7; $i++) {
+        [$user] = compteCoherent();
+        $derivants[] = $user->id;
+    }
+
+    DB::table('users')->whereIn('id', $derivants)->update(['total_volume' => 9999]);
+
+    $this->artisan('app:verify-data-coherence', ['--limit' => 2])
+        ->assertExitCode(1)
+        ->expectsOutputToContain('7 volume total des utilisateurs')
+        ->expectsOutputToContain('… et 5 autre(s), non cité(s)');
+});
+
+/**
+ * Le controle des volumes utilisateurs ne descend plus jusqu'aux series : une
+ * seance qui ment sur les siennes doit rester vue par l'autre controle.
+ */
+it('voit encore une séance qui ment sur ses séries', function (): void {
+    [$user, $set] = compteCoherent();
+    $workoutId = $set->workoutLine->workout_id;
+
+    // La seance ET l'utilisateur portent le meme chiffre faux : leur somme
+    // concorde, seule la comparaison aux series peut les demasquer.
+    DB::table('workouts')->where('id', $workoutId)->update(['workout_volume' => 4242]);
+    DB::table('users')->where('id', $user->id)->update(['total_volume' => 4242]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain("séance {$workoutId}");
+});
