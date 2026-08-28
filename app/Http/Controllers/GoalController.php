@@ -80,7 +80,10 @@ class GoalController extends Controller
         return Inertia::render('Goals/Index', [
             'goals' => $this->user()->goals()
                 ->with('exercise')
+                // Rien n'archive un objectif termine : la liste ne fait que
+                // grandir, et `latest()` trie sur `created_at` que rien n'indexe.
                 ->latest()
+                ->limit(100)
                 ->get()
                 ->append(['unit']),
             'exercises' => Exercise::getCachedForUser($this->user()->id),

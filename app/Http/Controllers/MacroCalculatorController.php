@@ -21,7 +21,11 @@ class MacroCalculatorController extends Controller
         $user = $this->user();
 
         $history = $user->macroCalculations()
+            // Borne a 100, comme `BodyMeasurementController` et
+            // `DailyJournalController` : l'historique complet partait dans la
+            // reponse, et il grandit a chaque usage.
             ->orderBy('created_at', 'desc')
+            ->limit(100)
             ->get();
 
         return Inertia::render('Tools/MacroCalculator', [
