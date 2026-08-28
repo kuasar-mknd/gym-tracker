@@ -34,7 +34,8 @@ class IntervalTimerController extends Controller
         $this->authorize('viewAny', IntervalTimer::class);
 
         return IntervalTimerResource::collection(
-            $this->user()->intervalTimers()->latest()->get()
+            // `limit(50)`, comme le chemin web du meme modele.
+            $this->user()->intervalTimers()->latest('created_at')->limit(50)->get()
         );
     }
 

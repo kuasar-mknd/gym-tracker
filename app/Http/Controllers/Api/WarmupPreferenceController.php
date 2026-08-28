@@ -40,7 +40,18 @@ class WarmupPreferenceController extends Controller
         $validated = $request->validated();
         $validated['user_id'] = $this->user()->id;
 
-        $preference = WarmupPreference::create($validated);
+        /*
+         * `updateOrCreate`, comme le chemin web.
+         *
+         * `User::warmupPreference()` est un `hasOne` : il n'existe qu'UNE
+         * preference par compte. Un `create()` nu en empilait une par POST, que
+         * la relation ne lisait jamais — la table grossissait de lignes mortes,
+         * et `index()` les rendait toutes.
+         */
+        $preference = WarmupPreference::updateOrCreate(
+            ['user_id' => $validated['user_id']],
+            $validated
+        );
 
         return new WarmupPreferenceResource($preference)
             ->response()

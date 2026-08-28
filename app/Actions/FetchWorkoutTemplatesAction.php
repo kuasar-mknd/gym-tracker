@@ -36,6 +36,7 @@ class FetchWorkoutTemplatesAction
             ])
             ->where('user_id', $user->id)
             ->latest()
+            ->limit(100)
             ->get();
     }
 }
