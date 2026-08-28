@@ -40,16 +40,38 @@ final class FetchCalendarEventsAction
      */
     protected function getWorkoutPreviews(array $workoutIds): array
     {
+        /*
+         * Deux lectures plutot qu'une jointure.
+         *
+         * Jointe a `exercises`, MySQL attaquait par le CATALOGUE et non par les
+         * lignes du mois : `exercises_user_id_name_index` en tete de plan, plus
+         * une table temporaire et un tri pour retrouver l'ordre demande. Chaque
+         * exercice tirait alors toutes ses lignes, tous mois confondus — 280
+         * lectures d'index a 40 seances, 868 a 200, pour un mois qui en contient
+         * vingt-huit dans les deux cas.
+         *
+         * Separees, chacune est servie exactement : `(workout_id, order)` pour
+         * les lignes, la clef primaire pour les noms.
+         */
+        $lignes = \Illuminate\Support\Facades\DB::table('workout_lines')
+            ->whereIn('workout_id', $workoutIds)
+            ->orderBy('workout_id')
+            ->orderBy('order')
+            ->get(['workout_id', 'exercise_id']);
+
+        /** @var \Illuminate\Support\Collection<int, string> $noms */
+        $noms = \Illuminate\Support\Facades\DB::table('exercises')
+            ->whereIn('id', $lignes->pluck('exercise_id')->unique()->all())
+            ->pluck('name', 'id');
+
         /** @var array<int, array<int, string>> */
-        return \Illuminate\Support\Facades\DB::table('workout_lines')
-            ->join('exercises', 'workout_lines.exercise_id', '=', 'exercises.id')
-            ->whereIn('workout_lines.workout_id', $workoutIds)
-            ->select('workout_lines.workout_id', 'exercises.name')
-            ->orderBy('workout_lines.workout_id')
-            ->orderBy('workout_lines.order')
-            ->get()
+        return $lignes
             ->groupBy('workout_id')
-            ->map(fn (\Illuminate\Support\Collection $lines) => $lines->take(3)->pluck('name')->toArray())
+            ->map(fn (\Illuminate\Support\Collection $duJour): array => $duJour
+                ->take(3)
+                ->map(fn (object $ligne): string => $noms[$ligne->exercise_id] ?? '')
+                ->values()
+                ->toArray())
             ->toArray();
     }
 
