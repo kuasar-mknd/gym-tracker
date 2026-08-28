@@ -59,6 +59,14 @@ final class AchievementService
          */
         $user->achievements()->attach($toUnlockIds, ['achieved_at' => now()]);
 
+        /*
+         * `AchievementUnlocked::via()` lit les preferences, et `via()` est
+         * appele EN SYNCHRONE a la mise en file, meme pour une notification
+         * `ShouldQueue`. La relation n'etant jamais chargee, c'etait un EXISTS
+         * par succes debloque.
+         */
+        $user->loadMissing('notificationPreferences');
+
         foreach ($unlockedAchievements as $achievement) {
             $user->notify(new \App\Notifications\AchievementUnlocked($achievement));
         }

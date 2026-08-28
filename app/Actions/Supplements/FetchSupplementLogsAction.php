@@ -7,6 +7,7 @@ namespace App\Actions\Supplements;
 use App\Models\SupplementLog;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class FetchSupplementLogsAction
@@ -21,7 +22,10 @@ class FetchSupplementLogsAction
     public function execute(User $user, int $perPage): LengthAwarePaginator
     {
         return QueryBuilder::for(SupplementLog::class)
-            ->allowedFilters('supplement_id')
+            // Passe en CHAINE, Spatie en fait un filtre partiel : un
+            // `LOWER(supplement_id) LIKE '%1%'` qui remonte aussi 10, 21, 31…
+            // La forme exacte est deja employee dans le journal frere.
+            ->allowedFilters(AllowedFilter::exact('supplement_id'))
             ->allowedSorts('consumed_at', 'created_at')
             ->allowedIncludes('supplement')
             ->where('user_id', $user->id)
