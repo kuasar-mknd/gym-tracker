@@ -24,7 +24,8 @@ class ExerciseForm
                     ->numeric(),
                 TextInput::make('category'),
                 Select::make('user_id')
-                    ->relationship('user', 'name'),
+                    ->relationship('user', 'name')
+                    ->searchable(),
             ]);
     }
 }

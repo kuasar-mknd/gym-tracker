@@ -16,6 +16,7 @@ class SupplementForm
             ->components([
                 Select::make('user_id')
                     ->relationship('user', 'name')
+                    ->searchable()
                     ->required(),
                 TextInput::make('name')
                     ->required(),

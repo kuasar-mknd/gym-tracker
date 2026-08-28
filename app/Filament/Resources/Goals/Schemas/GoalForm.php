@@ -22,7 +22,7 @@ class GoalForm
     private static function getComponents(): array
     {
         return [
-            Select::make('user_id')->relationship('user', 'name')->required(),
+            Select::make('user_id')->relationship('user', 'name')->searchable()->required(),
             TextInput::make('title')->required(),
             Select::make('type')->options([
                 'weight' => 'Weight',
@@ -33,7 +33,7 @@ class GoalForm
             TextInput::make('target_value')->required()->numeric(),
             TextInput::make('current_value')->required()->numeric()->default(0),
             TextInput::make('start_value')->required()->numeric()->default(0),
-            Select::make('exercise_id')->relationship('exercise', 'name'),
+            Select::make('exercise_id')->relationship('exercise', 'name')->searchable(),
             TextInput::make('measurement_type'),
             DatePicker::make('deadline'),
             DateTimePicker::make('completed_at'),
