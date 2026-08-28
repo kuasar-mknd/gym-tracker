@@ -45,6 +45,7 @@ class VerifyDataCoherence extends Command
             'volume des séances' => $this->volumeSeances(...),
             'records rattachés à une série existante' => $this->recordsOrphelins(...),
             'valeur des records' => $this->valeurDesRecords(...),
+            'records assis sur une série éligible' => $this->recordsSurSerieInegible(...),
             'date de dernière séance' => $this->dateDerniereSeance(...),
         ];
 
@@ -161,8 +162,21 @@ class VerifyDataCoherence extends Command
     {
         $detaches = PersonalRecord::query()
             ->with('user')
-            ->whereNull('set_id')
-            ->orWhereNotIn('set_id', DB::table('sets')->select('id'))
+            ->where(function (\Illuminate\Database\Eloquent\Builder $arefaire): void {
+                $arefaire->whereNull('set_id')
+                    ->orWhereNotIn('set_id', DB::table('sets')->select('id'))
+                    // Et ceux qui pointent sur une serie que les regles
+                    // n'acceptent pas : ils ne sont pas detaches, mais ils
+                    // annoncent un poids que personne n'a souleve.
+                    ->orWhereIn('set_id', DB::table('sets')->select('id')->where(function (\Illuminate\Database\Query\Builder $inegible): void {
+                        $inegible->where('is_warmup', true)
+                            ->orWhere('is_completed', false)
+                            ->orWhereNull('weight')
+                            ->orWhere('weight', '<=', 0)
+                            ->orWhereNull('reps')
+                            ->orWhere('reps', '<=', 0);
+                    }));
+            })
             ->get();
 
         if ($detaches->isEmpty()) {
@@ -327,6 +341,50 @@ class VerifyDataCoherence extends Command
             $this->colonne($ligne, 'id'),
             $this->colonne($ligne, 'stocke'),
             $this->colonne($ligne, 'reel'),
+        ));
+    }
+
+    /**
+     * Un record doit s'appuyer sur une serie que les regles ACCEPTENT.
+     *
+     * Le controle voisin compare la valeur du record au poids de sa serie ; il
+     * ne demande jamais si cette serie comptait. Or l'interface cree chaque
+     * ligne DECOCHEE, puis l'utilisateur la coche une fois faite : un poids
+     * saisi et jamais coche est une intention, pas un souleve. #1615 l'a exclu
+     * du calcul, mais les records deja poses dessus restaient debout — ils ne
+     * sont pas detaches, donc `reconstruireLesRecords()` ne les voyait pas non
+     * plus.
+     *
+     * Les memes regles que `PersonalRecordService::CLASSEMENT`, et pour la meme
+     * raison : deux definitions de l'eligibilite divergeraient.
+     *
+     * @return array{int, list<string>}
+     */
+    private function recordsSurSerieInegible(): array
+    {
+        $requete = DB::table('personal_records')
+            ->join('sets', 'sets.id', '=', 'personal_records.set_id')
+            ->where(function (\Illuminate\Database\Query\Builder $inegible): void {
+                $inegible->where('sets.is_warmup', true)
+                    ->orWhere('sets.is_completed', false)
+                    ->orWhereNull('sets.weight')
+                    ->orWhere('sets.weight', '<=', 0)
+                    ->orWhereNull('sets.reps')
+                    ->orWhere('sets.reps', '<=', 0);
+            })
+            ->select([
+                'personal_records.id',
+                'personal_records.type',
+                'personal_records.value',
+                'personal_records.user_id',
+            ]);
+
+        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
+            "record %s (%s, %s) de l'utilisateur %s s'appuie sur une série qui ne compte pas",
+            $this->colonne($ligne, 'id'),
+            $this->colonne($ligne, 'type'),
+            $this->colonne($ligne, 'value'),
+            $this->colonne($ligne, 'user_id'),
         ));
     }
 
