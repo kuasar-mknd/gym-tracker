@@ -99,16 +99,6 @@ final class StreakService
 
         $derniere = $horodatages[0] ?? null;
 
-        $dates = [];
-
-        foreach ($horodatages as $horodatage) {
-            $jour = mb_substr($horodatage, 0, 10);
-
-            if ($dates === [] || end($dates) !== $jour) {
-                $dates[] = $jour;
-            }
-        }
-
         if ($derniere === null) {
             $user->forceFill([
                 'last_workout_at' => null,
@@ -127,38 +117,42 @@ final class StreakService
          * Une rupture rencontree en remontant le temps ferme la serie EN COURS,
          * definitivement. Ce que la boucle continue de compter apres, ce sont
          * des series passees, qui n'interessent plus que `$plusLongue`.
+         *
+         * Le garde ecrit ici etait `$consecutives && $enCours === $suite - 1`,
+         * cense dire « aucune rupture depuis la derniere seance ». Il ne le
+         * disait pas : par recurrence, `$enCours` vaut TOUJOURS `$suite - 1` a
+         * l'entree d'une paire consecutive, y compris apres une rupture ou le
+         * compteur est reparti de 1. Une vieille serie de trois jours faisait
+         * donc passer pour trois une derniere seance isolee.
          */
         $rupture = false;
+        $veille = null;
 
-        for ($rang = 1; $rang < count($dates); $rang++) {
-            $recente = $dates[$rang - 1];
-            $precedente = $dates[$rang];
+        foreach ($horodatages as $horodatage) {
+            $jour = mb_substr($horodatage, 0, 10);
 
-            $consecutives = Carbon::parse($precedente)->addDay()->toDateString() === $recente;
-
-            if ($consecutives) {
-                $suite++;
-            } else {
-                $suite = 1;
-                $rupture = true;
+            // Deux seances le meme jour ne comptent qu'une fois. Les
+            // horodatages arrivant tries, le doublon est toujours adjacent.
+            if ($jour === $veille) {
+                continue;
             }
 
-            $plusLongue = max($plusLongue, $suite);
+            if ($veille !== null) {
+                if (Carbon::parse($jour)->addDay()->toDateString() === $veille) {
+                    $suite++;
+                } else {
+                    $suite = 1;
+                    $rupture = true;
+                }
 
-            /*
-             * Le garde ecrit ici etait `$consecutives && $enCours === $suite - 1`,
-             * cense dire « aucune rupture depuis la derniere seance ». Il ne le
-             * disait pas : par recurrence, `$enCours` vaut TOUJOURS `$suite - 1`
-             * a l'entree d'une paire consecutive, y compris apres une rupture ou
-             * le compteur est reparti de 1. `$enCours` suivait donc `$suite`
-             * jusqu'au bout, et une vieille serie de trois jours faisait passer
-             * pour trois une derniere seance isolee.
-             *
-             * La rupture se retient, elle ne se deduit pas d'un compteur.
-             */
-            if (! $rupture) {
-                $enCours = $suite;
+                $plusLongue = max($plusLongue, $suite);
+
+                if (! $rupture) {
+                    $enCours = $suite;
+                }
             }
+
+            $veille = $jour;
         }
 
         $user->forceFill([
