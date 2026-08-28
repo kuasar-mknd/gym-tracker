@@ -29,6 +29,8 @@ class WorkoutTemplateLineController extends Controller
             ->join('workout_templates', 'workout_template_lines.workout_template_id', '=', 'workout_templates.id')
             ->where('workout_templates.user_id', $request->user()?->id)
             ->select('workout_template_lines.*')
+            ->orderBy('workout_template_lines.order')
+            ->orderBy('workout_template_lines.id')
             ->paginate();
 
         return WorkoutTemplateLineResource::collection($lines);

@@ -54,6 +54,7 @@ class WorkoutTemplateController extends Controller
         $templates = QueryBuilder::for(WorkoutTemplate::class)
             ->allowedSorts('created_at', 'name')
             ->allowedIncludes('workoutTemplateLines.exercise', 'workoutTemplateLines.workoutTemplateSets')
+            ->defaultSort('-created_at', '-id')
             ->where('user_id', $this->user()->id)
             ->paginate();
 

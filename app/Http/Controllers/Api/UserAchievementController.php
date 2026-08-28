@@ -26,6 +26,7 @@ class UserAchievementController extends Controller
         $achievements = QueryBuilder::for(UserAchievement::where('user_id', $this->user()->id))
             ->allowedIncludes('achievement')
             ->allowedSorts('achieved_at', 'created_at')
+            ->defaultSort('-achieved_at', '-id')
             ->paginate();
 
         return UserAchievementResource::collection($achievements);

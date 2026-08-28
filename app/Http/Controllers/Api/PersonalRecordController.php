@@ -43,6 +43,10 @@ class PersonalRecordController extends Controller
 
         $query->with('exercise');
 
+        // `(user_id, achieved_at)` sert le tri ; `id` departage a egalite,
+        // et l'index le porte deja en queue, donc sans surcout.
+        $query->orderByDesc('achieved_at')->orderByDesc('id');
+
         return PersonalRecordResource::collection($query->paginate());
     }
 

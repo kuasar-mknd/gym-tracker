@@ -27,6 +27,7 @@ class FetchSupplementLogsAction
             // La forme exacte est deja employee dans le journal frere.
             ->allowedFilters(AllowedFilter::exact('supplement_id'))
             ->allowedSorts('consumed_at', 'created_at')
+            ->defaultSort('-consumed_at', '-id')
             ->allowedIncludes('supplement')
             ->where('user_id', $user->id)
             ->paginate($perPage);

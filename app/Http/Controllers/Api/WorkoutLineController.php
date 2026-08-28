@@ -38,10 +38,10 @@ class WorkoutLineController extends Controller
 
         $lines = QueryBuilder::for(WorkoutLine::class)
             ->allowedFilters('workout_id')
-            // Bolt: Optimize belongsTo filtering with INNER JOIN
-            ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
-            ->where('workouts.user_id', $this->user()->id)
-            ->select('workout_lines.*')
+            // Sur la copie denormalisee : le filtre et l'ordre tombent dans la
+            // meme table, la jointure ne servait qu'a retrouver le proprietaire.
+            ->where('workout_lines.user_id', $this->user()->id)
+            ->orderByDesc('workout_lines.id')
             ->paginate();
 
         return WorkoutLineResource::collection($lines);

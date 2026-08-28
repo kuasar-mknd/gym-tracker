@@ -24,6 +24,7 @@ class UserController extends Controller
 
         $query = QueryBuilder::for(User::class)
             ->allowedSorts('name', 'email', 'created_at')
+            ->defaultSort('id')
             ->paginate();
 
         return UserResource::collection($query);

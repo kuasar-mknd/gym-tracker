@@ -62,6 +62,7 @@ class SetController extends Controller
             ->join('workouts', 'workout_lines.workout_id', '=', 'workouts.id')
             ->where('workouts.user_id', $this->user()->id)
             ->select('sets.*')
+            ->orderByDesc('sets.id')
             ->paginate();
 
         return SetResource::collection($sets);
