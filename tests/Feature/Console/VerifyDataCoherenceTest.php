@@ -194,3 +194,54 @@ it('voit encore une séance qui ment sur ses séries', function (): void {
         ->assertExitCode(1)
         ->expectsOutputToContain("séance {$workoutId}");
 });
+
+/**
+ * Le controle voisin compare la valeur du record au poids de sa serie ; il ne
+ * demande jamais si cette serie comptait. Un record pose sur une serie jamais
+ * cochee — le defaut corrige par #1615 — n'est pas DETACHE, donc il passait
+ * les deux controles existants et survivait a la reparation.
+ */
+it('signale un record assis sur une série jamais cochée', function (): void {
+    [$user, $set] = compteCoherent();
+
+    DB::table('sets')->where('id', $set->id)->update(['is_completed' => false]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain("de l'utilisateur {$user->id} s'appuie sur une série qui ne compte pas");
+});
+
+it('signale un record assis sur un échauffement', function (): void {
+    [, $set] = compteCoherent();
+
+    DB::table('sets')->where('id', $set->id)->update(['is_warmup' => true]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain("s'appuie sur une série qui ne compte pas");
+});
+
+it('reconstruit un record assis sur une série inéligible', function (): void {
+    [$user, $set] = compteCoherent();
+
+    // Une seconde serie, faite celle-la, plus legere : c'est elle qui doit
+    // porter le record une fois la premiere ecartee.
+    Set::factory()->create([
+        'workout_line_id' => $set->workout_line_id,
+        'weight' => 40,
+        'reps' => 10,
+        'is_warmup' => false,
+        'is_completed' => true,
+    ]);
+
+    DB::table('sets')->where('id', $set->id)->update(['is_completed' => false]);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true]);
+
+    $record = DB::table('personal_records')
+        ->where('user_id', $user->id)
+        ->where('type', 'max_weight')
+        ->value('value');
+
+    expect(is_numeric($record) ? (float) $record : null)->toBe(40.0);
+});
