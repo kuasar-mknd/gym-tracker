@@ -57,6 +57,7 @@ final class FetchCalendarEventsAction
             ->whereIn('workout_id', $workoutIds)
             ->orderBy('workout_id')
             ->orderBy('order')
+            ->orderBy('id')
             ->get(['workout_id', 'exercise_id']);
 
         /** @var \Illuminate\Support\Collection<int, string> $noms */
