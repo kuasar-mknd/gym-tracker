@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\PersonalRecord;
+use App\Models\User;
 use App\Services\PersonalRecordService;
+use App\Services\StreakService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +54,7 @@ class VerifyDataCoherence extends Command
         if ($this->option('repair')) {
             $this->reconstruireLesRecords();
             $this->recalculerLesVolumes();
+            $this->recalculerLesSeries();
         }
 
         $total = 0;
@@ -88,6 +91,44 @@ class VerifyDataCoherence extends Command
         $this->error("{$total} écart(s). Une valeur dérivée qui ment ne lève aucune erreur ailleurs.");
 
         return self::FAILURE;
+    }
+
+    /**
+     * Refait les series de jours depuis les seances qui existent.
+     *
+     * `last_workout_at` etait CONTROLE et jamais REPARE : une seance supprimee
+     * avant #1460 laissait la date pointer dans le vide, et rien ne pouvait
+     * plus la corriger. Mesure en production le 31/08 : un compte annoncait le
+     * 10/08 pour une derniere seance du 24/05.
+     *
+     * `recalculerDepuisLesFaits()` refait les trois valeurs — la date, la serie
+     * en cours et la plus longue — depuis les seances qui restent. C'est deja
+     * ce que la suppression d'une seance declenche.
+     */
+    private function recalculerLesSeries(): void
+    {
+        $service = app(StreakService::class);
+        $recales = 0;
+
+        User::query()
+            ->select(['id', 'last_workout_at', 'current_streak', 'longest_streak'])
+            ->orderBy('id')
+            ->chunkById(500, function (\Illuminate\Database\Eloquent\Collection $utilisateurs) use ($service, &$recales): void {
+                foreach ($utilisateurs as $utilisateur) {
+                    $reelle = $utilisateur->workouts()->max('started_at');
+                    $stockee = $utilisateur->last_workout_at?->toDateTimeString();
+
+                    if ($reelle === $stockee) {
+                        continue;
+                    }
+
+                    $service->recalculerDepuisLesFaits($utilisateur);
+                    $recales++;
+                }
+            });
+
+        $this->line(sprintf('  <fg=yellow>%d</> série(s) refaite(s) depuis les séances restantes', $recales));
+        $this->newLine();
     }
 
     /**
@@ -175,7 +216,25 @@ class VerifyDataCoherence extends Command
                             ->orWhere('weight', '<=', 0)
                             ->orWhereNull('reps')
                             ->orWhere('reps', '<=', 0);
-                    }));
+                    }))
+                    /*
+                     * Et ceux dont la VALEUR ne correspond plus a leur serie.
+                     *
+                     * Ils pointent sur une serie qui existe et que les regles
+                     * acceptent : ni detaches, ni inegibles. Le controle les
+                     * voyait, la reparation non — un poids corrige apres coup
+                     * laissait le record sur l'ancien chiffre, et rien ne
+                     * pouvait plus le remettre d'aplomb.
+                     *
+                     * Le tri sur `max_weight` suffit a declencher : `recompute()`
+                     * refait les trois types du couple (utilisateur, exercice)
+                     * d'un seul coup.
+                     */
+                    ->orWhere(function (\Illuminate\Database\Eloquent\Builder $valeurFausse): void {
+                        $valeurFausse->where('type', 'max_weight')
+                            ->whereIn('set_id', DB::table('sets')->select('id'))
+                            ->whereRaw('ABS(personal_records.value - COALESCE((select weight from sets where sets.id = personal_records.set_id), 0)) > 0.01');
+                    });
             })
             ->get();
 

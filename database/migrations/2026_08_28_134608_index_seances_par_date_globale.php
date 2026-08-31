@@ -23,6 +23,10 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::table('workouts', function (Blueprint $table): void {
+            if (Schema::hasIndex('workouts', 'workouts_started_at_index')) {
+                return;
+            }
+
             $table->index(['started_at'], 'workouts_started_at_index');
         });
     }

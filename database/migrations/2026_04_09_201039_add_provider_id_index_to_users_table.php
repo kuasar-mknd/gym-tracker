@@ -11,6 +11,10 @@ return new class() extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasIndex('users', 'users_provider_id_index')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->index('provider_id');
         });

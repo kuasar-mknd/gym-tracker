@@ -23,9 +23,11 @@ return new class() extends Migration
 {
     public function up(): void
     {
-        Schema::table('habit_logs', function (Blueprint $table): void {
-            $table->unsignedBigInteger('user_id')->nullable()->after('habit_id');
-        });
+        if (! Schema::hasColumn('habit_logs', 'user_id')) {
+            Schema::table('habit_logs', function (Blueprint $table): void {
+                $table->unsignedBigInteger('user_id')->nullable()->after('habit_id');
+            });
+        }
 
         DB::statement(
             'update habit_logs
@@ -34,8 +36,13 @@ return new class() extends Migration
         );
 
         Schema::table('habit_logs', function (Blueprint $table): void {
-            $table->index(['user_id', 'date'], 'habit_logs_user_date_index');
-            $table->dropIndex('habit_logs_date_index');
+            if (! Schema::hasIndex('habit_logs', 'habit_logs_user_date_index')) {
+                $table->index(['user_id', 'date'], 'habit_logs_user_date_index');
+            }
+
+            if (Schema::hasIndex('habit_logs', 'habit_logs_date_index')) {
+                $table->dropIndex('habit_logs_date_index');
+            }
         });
     }
 

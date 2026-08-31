@@ -28,6 +28,10 @@ return new class() extends Migration
                 and plus_recente.id > p.id'
         );
 
+        if (Schema::hasIndex('warmup_preferences', 'warmup_preferences_user_id_unique')) {
+            return;
+        }
+
         Schema::table('warmup_preferences', function (Blueprint $table): void {
             $table->unique('user_id', 'warmup_preferences_user_id_unique');
         });

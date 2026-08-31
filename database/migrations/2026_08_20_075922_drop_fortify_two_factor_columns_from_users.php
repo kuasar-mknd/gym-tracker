@@ -24,12 +24,20 @@ return new class() extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table): void {
-            $table->dropColumn([
-                'two_factor_secret',
-                'two_factor_recovery_codes',
-                'two_factor_confirmed_at',
-            ]);
+        // Seulement celles qui sont la : une base qui n'a jamais installe
+        // Fortify n'en a aucune, et `dropColumn` sur une colonne absente
+        // interrompt toute la serie de migrations.
+        $presentes = array_values(array_filter(
+            ['two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at'],
+            fn (string $colonne): bool => Schema::hasColumn('users', $colonne),
+        ));
+
+        if ($presentes === []) {
+            return;
+        }
+
+        Schema::table('users', function (Blueprint $table) use ($presentes): void {
+            $table->dropColumn($presentes);
         });
     }
 

@@ -19,6 +19,10 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::table('notifications', function (Blueprint $table): void {
+            if (Schema::hasIndex('notifications', 'notifications_notifiable_read_at_index')) {
+                return;
+            }
+
             // `read_at IS NULL` n'était couvert par rien : MySQL remontait chaque
             // notification jamais reçue, lues comprises, pour la tester.
             $table->index(
@@ -28,6 +32,10 @@ return new class() extends Migration
         });
 
         Schema::table('workouts', function (Blueprint $table): void {
+            if (Schema::hasIndex('workouts', 'workouts_user_id_ended_at_index')) {
+                return;
+            }
+
             // Le pire cas est le cas normal : quand aucune séance n'est ouverte,
             // rien n'arrête le parcours et le `LIMIT 1` ne coupe jamais.
             $table->index(

@@ -19,6 +19,10 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::table('workout_lines', function (Blueprint $table): void {
+            if (Schema::hasIndex('workout_lines', 'workout_lines_user_date_index')) {
+                return;
+            }
+
             $table->index(['user_id', 'workout_started_at'], 'workout_lines_user_date_index');
         });
     }

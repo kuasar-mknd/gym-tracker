@@ -28,8 +28,13 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::table('workout_lines', function (Blueprint $table): void {
-            $table->unsignedBigInteger('user_id')->nullable()->after('workout_id');
-            $table->dateTime('workout_started_at')->nullable()->after('user_id');
+            if (! Schema::hasColumn('workout_lines', 'user_id')) {
+                $table->unsignedBigInteger('user_id')->nullable()->after('workout_id');
+            }
+
+            if (! Schema::hasColumn('workout_lines', 'workout_started_at')) {
+                $table->dateTime('workout_started_at')->nullable()->after('user_id');
+            }
         });
 
         DB::statement(
@@ -38,6 +43,10 @@ return new class() extends Migration
               set workout_lines.user_id = workouts.user_id,
                   workout_lines.workout_started_at = workouts.started_at'
         );
+
+        if (Schema::hasIndex('workout_lines', 'workout_lines_user_exercise_date_index')) {
+            return;
+        }
 
         Schema::table('workout_lines', function (Blueprint $table): void {
             $table->index(
