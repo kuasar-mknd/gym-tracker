@@ -87,6 +87,7 @@ describe('opening an existing template for editing', () => {
         // sets missing, and saving then deletes them.
         expect(wrapper.vm.form.exercises).toEqual([
             {
+                uid: expect.any(Number),
                 id: 1,
                 name: 'Développé Couché',
                 sets: [
@@ -203,5 +204,76 @@ describe('quick-creating an exercise from the template screen', () => {
         // Sorted, so the new one is findable where its name puts it rather than
         // stuck at the bottom of the picker.
         expect(wrapper.vm.localExercises[0].name).toBe('Aabtiré')
+    })
+})
+
+const troisExercices = {
+    name: 'Push A',
+    description: '',
+    workout_template_lines: [
+        { exercise_id: 1, exercise: { name: 'Développé Couché' }, workout_template_sets: [] },
+        { exercise_id: 2, exercise: { name: 'Squat' }, workout_template_sets: [] },
+        { exercise_id: 3, exercise: { name: 'Rowing' }, workout_template_sets: [] },
+    ],
+}
+
+describe('reordering the exercises of a template', () => {
+    const noms = (wrapper) => wrapper.vm.form.exercises.map((e) => e.name)
+
+    it('moves an exercise up', () => {
+        const wrapper = mountEdit(troisExercices)
+
+        wrapper.vm.moveExercise(2, -1)
+
+        expect(noms(wrapper)).toEqual(['Développé Couché', 'Rowing', 'Squat'])
+    })
+
+    it('moves an exercise down', () => {
+        const wrapper = mountEdit(troisExercices)
+
+        wrapper.vm.moveExercise(0, 1)
+
+        expect(noms(wrapper)).toEqual(['Squat', 'Développé Couché', 'Rowing'])
+    })
+
+    /**
+     * Les bornes sont gardees dans le gestionnaire ET par `:disabled`. Ici
+     * c'est le gestionnaire : un `splice` a -1 insere en fin de tableau,
+     * silencieusement.
+     */
+    it('refuses to move past either end', () => {
+        const wrapper = mountEdit(troisExercices)
+
+        wrapper.vm.moveExercise(0, -1)
+        wrapper.vm.moveExercise(2, 1)
+
+        expect(noms(wrapper)).toEqual(['Développé Couché', 'Squat', 'Rowing'])
+    })
+
+    /**
+     * La clef doit suivre l'EXERCICE, pas son rang. Avec `:key` par index, Vue
+     * reutilise le noeud du rang : le focus reste sur la carte d'a cote, et un
+     * champ en cours de saisie change d'exercice sous les doigts.
+     */
+    it('carries each key with its exercise, not its rank', () => {
+        const wrapper = mountEdit(troisExercices)
+
+        const avant = wrapper.vm.form.exercises.map((e) => e.uid)
+        wrapper.vm.moveExercise(0, 1)
+        const apres = wrapper.vm.form.exercises.map((e) => e.uid)
+
+        expect(new Set(avant).size).toBe(3)
+        expect(apres).toEqual([avant[1], avant[0], avant[2]])
+    })
+
+    it('disables the arrow that would leave the list', async () => {
+        const wrapper = mountEdit(troisExercices)
+        await wrapper.vm.$nextTick()
+
+        const monter = wrapper.findAll('button[aria-label^="Monter"]')
+        const descendre = wrapper.findAll('button[aria-label^="Descendre"]')
+
+        expect(monter.map((b) => b.attributes('disabled') !== undefined)).toEqual([true, false, false])
+        expect(descendre.map((b) => b.attributes('disabled') !== undefined)).toEqual([false, false, true])
     })
 })

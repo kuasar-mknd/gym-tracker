@@ -19,6 +19,7 @@ arrow_back
 arrow_downward
 arrow_forward
 arrow_forward_ios
+arrow_upward
 assignment_add
 autorenew
 bar_chart
