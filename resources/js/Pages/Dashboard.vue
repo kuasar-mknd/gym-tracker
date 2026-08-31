@@ -14,7 +14,9 @@ import RecentWorkoutDurationSection from '@/Components/Dashboard/RecentWorkoutDu
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
-import ActiveGoalsChart from '@/Components/Stats/ActiveGoalsChart.vue'
+import { defineAsyncComponent } from 'vue'
+
+const ActiveGoalsChart = defineAsyncComponent(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
 /**
  * Dashboard - Command Center
