@@ -29,23 +29,42 @@ return new class() extends Migration
     public function up(): void
     {
         foreach (self::TABLES as $table => $ancien) {
-            Schema::table($table, function (Blueprint $blueprint) use ($table, $ancien): void {
-                if (! Schema::hasIndex($table, $table.'_user_id_created_at_index')) {
+            /*
+             * L'ajout D'ABORD, la suppression ENSUITE, dans deux appels.
+             *
+             * Dans un seul `Schema::table()`, les deux `hasIndex` sont evalues
+             * avant qu'aucun ordre ne parte. Or l'ajout de `(user_id,
+             * created_at)` fait disparaitre `<table>_user_id_foreign` de
+             * lui-meme : InnoDB ne garde l'index qu'il cree pour une contrainte
+             * que tant qu'aucun autre ne peut la servir. Le controle voyait
+             * donc un index que l'ajout venait de supprimer, et le `DROP`
+             * echouait en 1091 — ce qui a interrompu un deploiement de
+             * production le 31/08.
+             *
+             * Separes, le second controle lit l'etat d'apres l'ajout.
+             */
+            if (! Schema::hasIndex($table, $table.'_user_id_created_at_index')) {
+                Schema::table($table, function (Blueprint $blueprint) use ($table): void {
                     $blueprint->index(['user_id', 'created_at'], $table.'_user_id_created_at_index');
-                }
+                });
+            }
 
-                if (Schema::hasIndex($table, $ancien)) {
+            if (Schema::hasIndex($table, $ancien)) {
+                Schema::table($table, function (Blueprint $blueprint) use ($ancien): void {
                     $blueprint->dropIndex($ancien);
-                }
-            });
+                });
+            }
         }
     }
 
     public function down(): void
     {
         foreach (self::TABLES as $table => $ancien) {
-            Schema::table($table, function (Blueprint $blueprint) use ($table, $ancien): void {
+            Schema::table($table, function (Blueprint $blueprint) use ($ancien): void {
                 $blueprint->index(['user_id'], $ancien);
+            });
+
+            Schema::table($table, function (Blueprint $blueprint) use ($table): void {
                 $blueprint->dropIndex($table.'_user_id_created_at_index');
             });
         }

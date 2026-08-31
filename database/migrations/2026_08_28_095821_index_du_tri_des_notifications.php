@@ -22,18 +22,22 @@ return new class() extends Migration
 {
     public function up(): void
     {
-        Schema::table('notifications', function (Blueprint $table): void {
-            if (! Schema::hasIndex('notifications', 'notifications_notifiable_created_at_index')) {
+        // Deux appels, pour la meme raison qu'en `index_created_at_des_outils` :
+        // un controle pose avant l'ajout ne dit rien de l'etat d'apres.
+        if (! Schema::hasIndex('notifications', 'notifications_notifiable_created_at_index')) {
+            Schema::table('notifications', function (Blueprint $table): void {
                 $table->index(
                     ['notifiable_type', 'notifiable_id', 'created_at'],
                     'notifications_notifiable_created_at_index'
                 );
-            }
+            });
+        }
 
-            if (Schema::hasIndex('notifications', 'notifications_notifiable_type_notifiable_id_index')) {
+        if (Schema::hasIndex('notifications', 'notifications_notifiable_type_notifiable_id_index')) {
+            Schema::table('notifications', function (Blueprint $table): void {
                 $table->dropIndex('notifications_notifiable_type_notifiable_id_index');
-            }
-        });
+            });
+        }
     }
 
     public function down(): void
@@ -43,6 +47,9 @@ return new class() extends Migration
                 ['notifiable_type', 'notifiable_id'],
                 'notifications_notifiable_type_notifiable_id_index'
             );
+        });
+
+        Schema::table('notifications', function (Blueprint $table): void {
             $table->dropIndex('notifications_notifiable_created_at_index');
         });
     }
