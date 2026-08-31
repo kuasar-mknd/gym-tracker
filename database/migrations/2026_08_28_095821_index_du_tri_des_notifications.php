@@ -23,11 +23,16 @@ return new class() extends Migration
     public function up(): void
     {
         Schema::table('notifications', function (Blueprint $table): void {
-            $table->index(
-                ['notifiable_type', 'notifiable_id', 'created_at'],
-                'notifications_notifiable_created_at_index'
-            );
-            $table->dropIndex('notifications_notifiable_type_notifiable_id_index');
+            if (! Schema::hasIndex('notifications', 'notifications_notifiable_created_at_index')) {
+                $table->index(
+                    ['notifiable_type', 'notifiable_id', 'created_at'],
+                    'notifications_notifiable_created_at_index'
+                );
+            }
+
+            if (Schema::hasIndex('notifications', 'notifications_notifiable_type_notifiable_id_index')) {
+                $table->dropIndex('notifications_notifiable_type_notifiable_id_index');
+            }
         });
     }
 

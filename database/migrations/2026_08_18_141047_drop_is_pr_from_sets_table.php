@@ -22,6 +22,19 @@ return new class() extends Migration
 {
     public function up(): void
     {
+        /*
+         * La colonne n'existe pas partout.
+         *
+         * Aucune migration ne la cree : elle vient du dump
+         * `database/schema/mysql-schema.sql`, que seule une base construite a
+         * neuf charge. Une base migree pas a pas depuis avant le dump ne l'a
+         * jamais eue — et cette migration l'a appris en cassant un deploiement
+         * de production le 31/08, laissant les quinze suivantes non appliquees.
+         */
+        if (! Schema::hasColumn('sets', 'is_pr')) {
+            return;
+        }
+
         Schema::table('sets', function (Blueprint $table): void {
             $table->dropColumn('is_pr');
         });

@@ -30,8 +30,13 @@ return new class() extends Migration
     {
         foreach (self::TABLES as $table => $ancien) {
             Schema::table($table, function (Blueprint $blueprint) use ($table, $ancien): void {
-                $blueprint->index(['user_id', 'created_at'], $table.'_user_id_created_at_index');
-                $blueprint->dropIndex($ancien);
+                if (! Schema::hasIndex($table, $table.'_user_id_created_at_index')) {
+                    $blueprint->index(['user_id', 'created_at'], $table.'_user_id_created_at_index');
+                }
+
+                if (Schema::hasIndex($table, $ancien)) {
+                    $blueprint->dropIndex($ancien);
+                }
             });
         }
     }

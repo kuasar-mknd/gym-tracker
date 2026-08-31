@@ -245,3 +245,65 @@ it('reconstruit un record assis sur une série inéligible', function (): void {
 
     expect(is_numeric($record) ? (float) $record : null)->toBe(40.0);
 });
+
+/**
+ * Le controle voyait ces deux-la, la reparation non.
+ *
+ * Un record dont la VALEUR diverge d'une serie pourtant valide n'est ni
+ * detache ni inegible : il sortait de la selection de `reconstruireLesRecords()`.
+ * Et `last_workout_at` etait controle sans jamais etre repare. Les deux sont
+ * apparus en production le 31/08, apres un `--repair` qui les a laisses rouges.
+ */
+it('reconstruit un record dont la valeur ne correspond plus à sa série', function (): void {
+    [$user, $set] = compteCoherent();
+
+    // La valeur du record ment, mais sa serie est valide : ni detache, ni
+    // inegible. C'est le cas qu'aucune reparation ne couvrait.
+    DB::table('personal_records')
+        ->where('user_id', $user->id)
+        ->where('type', 'max_weight')
+        ->update(['value' => 500]);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true]);
+
+    $record = DB::table('personal_records')
+        ->where('user_id', $user->id)
+        ->where('type', 'max_weight')
+        ->value('value');
+
+    expect(is_numeric($record) ? (float) $record : null)->toBe((float) $set->weight);
+});
+
+it('refait la date de dernière séance quand elle pointe dans le vide', function (): void {
+    [$user, $set] = compteCoherent();
+
+    $reelle = $set->workoutLine->workout->started_at;
+
+    // Une date en avance de trois mois sur la derniere seance : c'est ce qu'une
+    // suppression anterieure a #1460 laissait derriere elle.
+    DB::table('users')->where('id', $user->id)->update([
+        'last_workout_at' => $reelle->copy()->addMonths(3),
+    ]);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true]);
+
+    $stockee = DB::table('users')->where('id', $user->id)->value('last_workout_at');
+
+    expect(is_string($stockee) ? $stockee : null)->toBe($reelle->toDateTimeString());
+});
+
+it('repasse au vert après réparation', function (): void {
+    [$user, $set] = compteCoherent();
+
+    DB::table('personal_records')->where('user_id', $user->id)->where('type', 'max_weight')->update(['value' => 500]);
+    DB::table('users')->where('id', $user->id)->update([
+        'last_workout_at' => $set->workoutLine->workout->started_at->copy()->addMonths(3),
+        'total_volume' => 99_999,
+    ]);
+    DB::table('workouts')->where('id', $set->workoutLine->workout_id)->update(['workout_volume' => 42]);
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true]);
+
+    // Une seconde passe, sans réparer : plus rien ne doit être signalé.
+    $this->artisan('app:verify-data-coherence')->assertExitCode(0);
+});

@@ -28,15 +28,21 @@ return new class() extends Migration
 {
     public function up(): void
     {
-        Schema::table('sets', function (Blueprint $table): void {
-            $table->unsignedBigInteger('user_id')->nullable()->after('workout_line_id');
-        });
+        if (! Schema::hasColumn('sets', 'user_id')) {
+            Schema::table('sets', function (Blueprint $table): void {
+                $table->unsignedBigInteger('user_id')->nullable()->after('workout_line_id');
+            });
+        }
 
         DB::statement(
             'update sets
                 join workout_lines on workout_lines.id = sets.workout_line_id
               set sets.user_id = workout_lines.user_id'
         );
+
+        if (Schema::hasIndex('sets', 'sets_user_id_id_index')) {
+            return;
+        }
 
         Schema::table('sets', function (Blueprint $table): void {
             $table->index(['user_id', 'id'], 'sets_user_id_id_index');

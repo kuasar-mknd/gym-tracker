@@ -27,15 +27,19 @@ return new class() extends Migration
 {
     public function up(): void
     {
-        Schema::table('activity_log', function (Blueprint $table): void {
-            $table->json('attribute_changes')->nullable()->after('causer_id');
-        });
+        if (! Schema::hasColumn('activity_log', 'attribute_changes')) {
+            Schema::table('activity_log', function (Blueprint $table): void {
+                $table->json('attribute_changes')->nullable()->after('causer_id');
+            });
+        }
 
         $this->splitProperties();
 
-        Schema::table('activity_log', function (Blueprint $table): void {
-            $table->dropColumn('batch_uuid');
-        });
+        if (Schema::hasColumn('activity_log', 'batch_uuid')) {
+            Schema::table('activity_log', function (Blueprint $table): void {
+                $table->dropColumn('batch_uuid');
+            });
+        }
     }
 
     public function down(): void

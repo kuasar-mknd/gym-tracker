@@ -44,9 +44,14 @@ return new class() extends Migration
     public function up(): void
     {
         foreach ($this->scopes as $table => $parent) {
-            Schema::table($table, function (Blueprint $blueprint) use ($parent): void {
-                $blueprint->string('idempotency_key', 64)->nullable();
-                $blueprint->unique([$parent, 'idempotency_key']);
+            Schema::table($table, function (Blueprint $blueprint) use ($table, $parent): void {
+                if (! Schema::hasColumn($table, 'idempotency_key')) {
+                    $blueprint->string('idempotency_key', 64)->nullable();
+                }
+
+                if (! Schema::hasIndex($table, $table.'_'.$parent.'_idempotency_key_unique')) {
+                    $blueprint->unique([$parent, 'idempotency_key']);
+                }
             });
         }
     }
