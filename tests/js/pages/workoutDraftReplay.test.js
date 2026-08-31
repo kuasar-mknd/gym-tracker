@@ -20,7 +20,7 @@ vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: vi.fn() }))
 vi.mock('@inertiajs/vue3', () => ({
     Head: { template: '<div />' },
     Link: { template: '<a><slot /></a>' },
-    usePage: () => ({ props: { auth: { user: { id: 1 } }, is_testing: true } }),
+    usePage: () => ({ props: { auth: { user: { id: 1, auto_rest_timer: true } }, is_testing: true } }),
     router: { visit: vi.fn(), post: vi.fn(), reload: vi.fn(), delete: vi.fn() },
     useForm: (data) => ({ ...data, processing: false, errors: {}, post: vi.fn(), put: vi.fn(), reset: vi.fn() }),
 }))

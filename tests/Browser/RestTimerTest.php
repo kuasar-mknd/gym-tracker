@@ -16,16 +16,6 @@ class RestTimerTest extends DuskTestCase
     use DatabaseTruncation;
 
     /**
-     * Remaining rest time, in seconds, read from the "M:SS" timer.
-     */
-    private function timerSecondsLeft(Browser $browser): int
-    {
-        [$minutes, $seconds] = array_map(intval(...), explode(':', trim($browser->text('[role="timer"]'))));
-
-        return $minutes * 60 + $seconds;
-    }
-
-    /**
      * L'etat du bouton, tel que l'utilisateur l'entend.
      *
      * Sert a dire ce qu'on a trouve quand l'attente echoue, plutot que de
@@ -138,25 +128,12 @@ class RestTimerTest extends DuskTestCase
                 ->waitFor('[dusk="skip-rest-timer"]', 15)
                 ->assertSee('REPOS');
 
-            // 2. Add Time (+30s) — the countdown is ticking down, so the only stable
-            // fact is that the remaining time went UP. Waiting on that condition also
-            // removes the race a fixed pause left open on a slow runner.
-            $secondsLeft = fn (): int => $this->timerSecondsLeft($browser);
-            $before = $secondsLeft();
-
-            $browser->click('@add-30s')
-                ->waitUsing(10, 100, fn (): bool => $secondsLeft() > $before, 'Le minuteur n’a pas augmenté après +30s');
-
-            // 3. Close via "X" button
+            // 2. Close via "X" button — desormais la seule affordance de
+            // fermeture, le bouton « Fermer » qui la doublait ayant ete retire.
             $browser->click('@close-timer-x')
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10);
 
-            // 4. Trigger again and close via "Fermer" button
-            $this->retriggerRestTimer($browser)
-                ->click('@close-timer')
-                ->waitUntilMissing('[dusk="skip-rest-timer"]', 10);
-
-            // 5. Trigger again and use "Skip" (Passer)
+            // 3. Trigger again and use "Skip" (Passer)
             $this->retriggerRestTimer($browser)
                 ->click('@skip-rest-timer')
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10)

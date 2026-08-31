@@ -160,6 +160,23 @@ const showTimer = ref(false)
 const timerDuration = ref(90)
 
 /**
+ * Le reglage est tenu localement pour que l'interrupteur bouge tout de suite,
+ * puis ecrit. La page reste sur place : basculer un reglage ne doit pas sortir
+ * de la seance en cours.
+ */
+const autoRestTimer = ref(usePage().props.auth.user.auto_rest_timer !== false)
+
+const setAutoRestTimer = (valeur) => {
+    autoRestTimer.value = valeur
+
+    router.patch(
+        route('profile.rest-timer.update'),
+        { auto_rest_timer: valeur },
+        { preserveScroll: true, preserveState: true },
+    )
+}
+
+/**
  * Counts rest periods, so each one gets a fresh timer.
  *
  * The timer only reset itself while it was NOT running, and completing a set
@@ -405,7 +422,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
 
     // ⚡ Perf: Optimistic update — no router.reload
     set.is_completed = newState
-    if (newState) {
+    if (newState && autoRestTimer.value) {
         timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
         timerRun.value += 1
         showTimer.value = true
@@ -2058,8 +2075,10 @@ onUnmounted(() => {
             v-if="showTimer"
             :key="timerRun"
             :duration="timerDuration"
+            :auto-rest-timer="autoRestTimer"
             @finished="showTimer = false"
             @close="showTimer = false"
+            @update:auto-rest-timer="setAutoRestTimer"
             dusk="rest-timer"
         />
     </AuthenticatedLayout>

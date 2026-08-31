@@ -30,6 +30,7 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', 'string', Password::defaults()],
             'avatar' => ['nullable', 'string', 'max:255'],
             'default_rest_time' => ['nullable', 'integer', 'min:0'],
+            'auto_rest_timer' => ['sometimes', 'boolean'],
         ];
     }
 }

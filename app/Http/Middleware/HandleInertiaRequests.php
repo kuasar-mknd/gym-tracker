@@ -154,6 +154,7 @@ class HandleInertiaRequests extends Middleware
              * defaut en base — donc exactement la valeur du repli.
              */
             'default_rest_time' => $user->default_rest_time,
+            'auto_rest_timer' => $user->auto_rest_timer,
             'current_streak' => app(\App\Services\StreakService::class)->currentStreakFor($user),
             'longest_streak' => $user->longest_streak,
             'active_workout' => $activeWorkout,

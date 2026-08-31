@@ -48,6 +48,21 @@ final class User extends Authenticatable implements MustVerifyEmail
     use Notifiable;
 
     /**
+     * La valeur en memoire d'une instance fraiche, alignee sur celle de la base.
+     *
+     * Sans elle, un utilisateur qui vient d'etre cree n'a PAS l'attribut :
+     * Eloquent ne relit pas les defauts apres l'insertion. `shouldBeStrict`
+     * transforme alors la lecture faite par `HandleInertiaRequests` en erreur
+     * hors production, et en `null` silencieux en production.
+     *
+     * @var array<string, mixed>
+     */
+    #[\Override]
+    protected $attributes = [
+        'auto_rest_timer' => true,
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
@@ -59,6 +74,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         'password',
         'avatar',
         'default_rest_time',
+        'auto_rest_timer',
     ];
 
     /**
@@ -162,6 +178,7 @@ final class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'default_rest_time' => 'integer',
+            'auto_rest_timer' => 'boolean',
             'current_streak' => 'integer',
             'longest_streak' => 'integer',
             'last_workout_at' => 'datetime',
