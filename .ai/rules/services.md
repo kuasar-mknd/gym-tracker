@@ -15,3 +15,12 @@ Trois pièges de protocole, rencontrés en série sur #1593 :
 3. **Témoin instable** — un test qui assère un nombre de lectures passe seul et tombe dans la suite : les statistiques que MySQL tient par table bougent avec les tests voisins. Un témoin de coût doit porter sur la FORME de la requête, pas sur le compte.
 
 Voir `.ai/rules/actions.md` pour le saut d'index par `min()`.
+
+## Une relation qui lit une ligne exige une contrainte d'unicité
+`keyBy()` et `firstOrNew()` ne gardent que la dernière ligne d'une clef répétée. La ligne en trop n'est alors ni corrigée, ni supprimée, indéfiniment — elle annonce une valeur que plus rien ne soutient.
+
+Deux occurrences réelles, même forme : les préférences d'échauffement (relation `hasOne` sans unicité), puis `personal_records` où le couple (user, exercise, type) portait deux lignes et où `recompute()` en ignorait une. Aucune des deux ne rendait d'erreur : le défaut est silencieux par construction.
+
+`$x ??= new Model(...)` sur un couple non unique est une course : deux écritures concurrentes créent deux lignes.
+
+Donc, dès qu'un code lit UNE ligne pour un couple de colonnes : poser l'index unique en base, et faire écarter les doublons par le code de recalcul lui-même — il doit pouvoir réparer une base d'avant la contrainte, et ne dépendre d'aucune garantie qu'il ne vérifie pas.
