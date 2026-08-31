@@ -18,11 +18,16 @@ uses(RefreshDatabase::class);
 
 test('user can list personal records', function (): void {
     $user = User::factory()->create();
-    $exercise = Exercise::factory()->create();
-    PersonalRecord::factory()->count(3)->create([
-        'user_id' => $user->id,
-        'exercise_id' => $exercise->id,
-    ]);
+
+    // Un exercice par record : un utilisateur ne peut avoir qu'UN record d'un
+    // type donne sur un exercice donne, et la fabrique tire son type parmi
+    // deux valeurs — trois records sur le meme exercice se percutaient.
+    foreach (Exercise::factory()->count(3)->create() as $exercise) {
+        PersonalRecord::factory()->create([
+            'user_id' => $user->id,
+            'exercise_id' => $exercise->id,
+        ]);
+    }
 
     actingAs($user, 'sanctum')
         ->getJson(route('api.v1.personal-records.index'))

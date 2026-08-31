@@ -195,11 +195,38 @@ final class PersonalRecordService
     {
         $gagnantes = $this->gagnantes($user, $exerciseId);
 
-        $records = PersonalRecord::query()
+        /*
+         * Les doublons sont supprimes avant d'indexer.
+         *
+         * `keyBy()` ne garde que le DERNIER d'une clef repetee : sur deux
+         * records du meme type, le premier n'etait ni mis a jour ni supprime,
+         * et annoncait indefiniment une valeur que plus rien ne soutenait —
+         * y compris une serie jamais cochee. Constate en production le 31/08.
+         *
+         * `un_seul_record_par_type` pose la contrainte qui l'empeche desormais.
+         * Ce nettoyage reste parce qu'une base d'avant la contrainte doit
+         * pouvoir se reparer, et parce que `recompute()` ne doit dependre
+         * d'aucune garantie qu'il ne verifie pas lui-meme.
+         */
+        $tous = PersonalRecord::query()
             ->where('user_id', $user->id)
             ->where('exercise_id', $exerciseId)
-            ->get()
-            ->keyBy(fn (PersonalRecord $record): string => $record->type->value);
+            ->orderBy('id')
+            ->get();
+
+        /** @var array<string, PersonalRecord> $records */
+        $records = [];
+
+        foreach ($tous as $existant) {
+            $type = $existant->type->value;
+
+            // Trie par `id` : on garde le plus recent, comme la migration.
+            if (isset($records[$type])) {
+                $records[$type]->delete();
+            }
+
+            $records[$type] = $existant;
+        }
 
         foreach (self::TYPES as $type) {
             if ($types !== null && ! in_array($type, $types, true)) {
@@ -207,7 +234,7 @@ final class PersonalRecordService
             }
 
             /** @var PersonalRecord|null $record */
-            $record = $records->get($type);
+            $record = $records[$type] ?? null;
             $meilleure = $gagnantes[$type] ?? null;
 
             if ($meilleure === null) {
