@@ -35,21 +35,26 @@ return new class() extends Migration
               set habit_logs.user_id = habits.user_id'
         );
 
-        Schema::table('habit_logs', function (Blueprint $table): void {
-            if (! Schema::hasIndex('habit_logs', 'habit_logs_user_date_index')) {
+        if (! Schema::hasIndex('habit_logs', 'habit_logs_user_date_index')) {
+            Schema::table('habit_logs', function (Blueprint $table): void {
                 $table->index(['user_id', 'date'], 'habit_logs_user_date_index');
-            }
+            });
+        }
 
-            if (Schema::hasIndex('habit_logs', 'habit_logs_date_index')) {
+        if (Schema::hasIndex('habit_logs', 'habit_logs_date_index')) {
+            Schema::table('habit_logs', function (Blueprint $table): void {
                 $table->dropIndex('habit_logs_date_index');
-            }
-        });
+            });
+        }
     }
 
     public function down(): void
     {
         Schema::table('habit_logs', function (Blueprint $table): void {
             $table->index(['date'], 'habit_logs_date_index');
+        });
+
+        Schema::table('habit_logs', function (Blueprint $table): void {
             $table->dropIndex('habit_logs_user_date_index');
             $table->dropColumn('user_id');
         });
