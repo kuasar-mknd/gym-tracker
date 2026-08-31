@@ -50,6 +50,7 @@ Route::middleware('auth')->group(function (): void {
     Route::middleware(app()->isProduction() ? 'throttle:60,1' : 'throttle:1000,1')->group(function (): void {
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::patch('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences.update');
+        Route::patch('/profile/rest-timer', [ProfileController::class, 'updateRestTimerPreference'])->name('profile.rest-timer.update');
         Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
         Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');

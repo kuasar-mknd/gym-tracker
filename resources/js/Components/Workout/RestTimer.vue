@@ -5,7 +5,7 @@
 
   Features:
   - Visual progress bar indicating remaining time.
-  - Controls to add time (+30s), pause/resume, and skip.
+  - Controls to pause/resume and skip.
   - Audio and Haptic feedback upon completion.
   - Minimizable/Closeable interface.
   - Draggable or fixed positioning (currently fixed).
@@ -14,6 +14,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
+import GlassToggle from '@/Components/UI/GlassToggle.vue'
 
 /**
  * Component Props
@@ -30,6 +31,17 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+
+    /**
+     * Le reglage de l'utilisateur, rendu ici pour qu'il se change sans quitter
+     * la seance. Le composant ne l'ecrit pas lui-meme : il l'annonce, et la
+     * page decide quoi en faire — c'est ce qui le garde ignorant d'Inertia, et
+     * donc montable seul.
+     */
+    autoRestTimer: {
+        type: Boolean,
+        default: true,
+    },
 })
 
 /**
@@ -38,7 +50,7 @@ const props = defineProps({
  * @event finished - Fired when the timer reaches 0.
  * @event close - Fired when the user manually closes the timer.
  */
-const emit = defineEmits(['finished', 'close'])
+const emit = defineEmits(['finished', 'close', 'update:autoRestTimer'])
 
 // --- State ---
 
@@ -118,18 +130,6 @@ const toggleTimer = () => {
         pauseTimer()
     } else {
         startTimer()
-    }
-}
-
-/**
- * Adds extra time to the current timer.
- * @param {Number} seconds - Amount of seconds to add.
- */
-const addTime = (seconds) => {
-    triggerHaptic('tap')
-    timeLeft.value += seconds
-    if (isActive.value && endTime.value) {
-        endTime.value += seconds * 1000
     }
 }
 
@@ -261,16 +261,6 @@ watch(
 
                     <div class="flex gap-2">
                         <button
-                            @click="addTime(30)"
-                            dusk="add-30s"
-                            class="focus-visible:ring-accent-primary bg-surface-card/40 text-text-main hover:bg-surface-card/60 flex h-10 w-10 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                            title="Ajouter 30 secondes"
-                            aria-label="Ajouter 30 secondes"
-                        >
-                            <span class="text-xs font-bold">+30s</span>
-                        </button>
-
-                        <button
                             @click="toggleTimer"
                             class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
@@ -298,15 +288,16 @@ watch(
                     >
                         Passer
                     </button>
-                    <button
-                        @click="close"
-                        dusk="close-timer"
-                        class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken rounded-xl px-3 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                        title="Fermer le minuteur"
-                        aria-label="Fermer le minuteur"
-                    >
-                        Fermer
-                    </button>
+                </div>
+
+                <div class="border-surface-card/20 mt-3 border-t pt-3">
+                    <GlassToggle
+                        :model-value="autoRestTimer"
+                        label="Démarrage automatique"
+                        size="sm"
+                        dusk="auto-rest-timer"
+                        @update:model-value="emit('update:autoRestTimer', $event)"
+                    />
                 </div>
             </div>
         </div>

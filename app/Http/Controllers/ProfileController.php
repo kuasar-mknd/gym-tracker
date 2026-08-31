@@ -122,6 +122,22 @@ class ProfileController extends Controller
     }
 
     /**
+     * Bascule le demarrage automatique du minuteur de repos.
+     *
+     * Renvoie en arriere plutot que vers le profil : l'interrupteur vit dans le
+     * panneau du minuteur, donc pendant une seance. Un redirect vers
+     * `profile.edit` sortirait l'utilisateur de sa seance pour un basculement.
+     */
+    public function updateRestTimerPreference(\App\Http\Requests\UpdateRestTimerPreferenceRequest $request): RedirectResponse
+    {
+        $this->authorize('update', $this->user());
+
+        $this->user()->update(['auto_rest_timer' => $request->boolean('auto_rest_timer')]);
+
+        return back();
+    }
+
+    /**
      * Delete the user's account.
      *
      * Validates the password, logs the user out, deletes their account

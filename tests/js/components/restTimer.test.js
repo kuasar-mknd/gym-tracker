@@ -38,12 +38,13 @@ describe('RestTimer progress bar', () => {
         expect(bar(wrapper).attributes('aria-valuemax')).toBe('100')
     })
 
-    it('never reports more than its own maximum after time is added', async () => {
-        const wrapper = mountTimer({ duration: 90 })
+    it('never reports more than its own maximum when the rest shrinks mid-count', async () => {
+        const wrapper = mountTimer({ duration: 150, autoStart: true })
 
-        // Two taps of +30s on a 90 second rest.
-        wrapper.vm.addTime(30)
-        wrapper.vm.addTime(30)
+        // La voie de production : le watcher ne recale `timeLeft` que HORS
+        // comptage, donc passer a l'exercice suivant pendant un repos laisse
+        // `timeLeft` au-dessus de la nouvelle duree — et la barre a 250 %.
+        await wrapper.setProps({ duration: 60 })
         await wrapper.vm.$nextTick()
 
         const value = Number(bar(wrapper).attributes('aria-valuenow'))
@@ -56,7 +57,10 @@ describe('RestTimer progress bar', () => {
     it('never reports less than nothing', async () => {
         const wrapper = mountTimer({ duration: 90 })
 
-        wrapper.vm.addTime(-200)
+        // `duration` vient de la page, donc rien ne garantit qu'elle soit
+        // sensee : une valeur negative doit rendre une barre a zero, pas une
+        // barre a l'envers.
+        await wrapper.setProps({ duration: -200 })
         await wrapper.vm.$nextTick()
 
         expect(Number(bar(wrapper).attributes('aria-valuenow'))).toBeGreaterThanOrEqual(0)
@@ -99,20 +103,6 @@ describe('RestTimer countdown', () => {
         await wrapper.vm.$nextTick()
 
         expect(clock(wrapper)).toBe('1:30')
-    })
-
-    it('adds thirty seconds to the time left, and keeps them', async () => {
-        const wrapper = mountTimer({ duration: 90, autoStart: true })
-
-        vi.advanceTimersByTime(10000)
-        await button(wrapper, 'add-30s').trigger('click')
-        expect(clock(wrapper)).toBe('1:50')
-
-        // The next tick recomputes from the deadline: if +30s had not moved it
-        // too, the added time would evaporate a second later.
-        vi.advanceTimersByTime(1000)
-        await wrapper.vm.$nextTick()
-        expect(clock(wrapper)).toBe('1:49')
     })
 
     it('recovers the seconds a backgrounded tab did not tick', async () => {
@@ -165,7 +155,7 @@ describe('RestTimer countdown', () => {
     it('closes without claiming the rest was completed', async () => {
         const wrapper = mountTimer({ duration: 90, autoStart: true })
 
-        await button(wrapper, 'close-timer').trigger('click')
+        await button(wrapper, 'close-timer-x').trigger('click')
 
         expect(wrapper.emitted('close')).toHaveLength(1)
         expect(wrapper.emitted('finished')).toBeUndefined()
@@ -195,5 +185,25 @@ describe('RestTimer countdown', () => {
         wrapper.unmount()
 
         expect(vi.getTimerCount()).toBe(0)
+    })
+})
+
+describe('le démarrage automatique', () => {
+    it('annonce le basculement sans rien écrire lui-même', async () => {
+        const wrapper = mountTimer({ duration: 90, autoRestTimer: true })
+
+        await wrapper.find('[dusk="auto-rest-timer"] button[role="switch"]').trigger('click')
+
+        expect(wrapper.emitted('update:autoRestTimer')).toEqual([[false]])
+    })
+
+    it('reflète le réglage reçu plutôt qu un état interne', async () => {
+        const wrapper = mountTimer({ duration: 90, autoRestTimer: false })
+
+        expect(wrapper.find('[dusk="auto-rest-timer"] button[role="switch"]').attributes('aria-checked')).toBe('false')
+
+        await wrapper.setProps({ autoRestTimer: true })
+
+        expect(wrapper.find('[dusk="auto-rest-timer"] button[role="switch"]').attributes('aria-checked')).toBe('true')
     })
 })

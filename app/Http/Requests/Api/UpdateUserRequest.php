@@ -37,6 +37,7 @@ class UpdateUserRequest extends FormRequest
             'password' => ['sometimes', 'string', Password::defaults()],
             'avatar' => ['nullable', 'string', 'max:255'],
             'default_rest_time' => ['nullable', 'integer', 'min:0'],
+            'auto_rest_timer' => ['sometimes', 'boolean'],
         ];
     }
 }
