@@ -341,7 +341,9 @@ describe.each([
             { id: 3, name: 'Soulevé de Terre', sets: [] },
         ])
 
-        await byLabel(wrapper, "Supprimer l'exercice")[1].trigger('click')
+        // Le libelle nomme l'exercice, donc le temoin designe la carte visee
+        // plutot que son rang.
+        await byLabel(wrapper, 'Supprimer Squat')[0].trigger('click')
 
         expect(wrapper.vm.form.exercises.map((e) => e.name)).toEqual(['Développé Couché', 'Soulevé de Terre'])
     })
@@ -650,7 +652,7 @@ describe('opening a template the server described sparsely', () => {
 
         // `workout_template_sets` is a relation, so it is missing — not empty —
         // whenever the controller forgot to eager-load it.
-        expect(wrapper.vm.form.exercises).toEqual([{ id: 1, name: 'Squat', sets: [] }])
+        expect(wrapper.vm.form.exercises).toEqual([{ uid: expect.any(Number), id: 1, name: 'Squat', sets: [] }])
     })
 
     it('opens a template that arrived without any lines key at all', () => {

@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import Modal from '@/Components/UI/Modal.vue'
@@ -26,6 +27,10 @@ const props = defineProps({
         ],
     },
 })
+
+// Clef de rendu stable : sans elle, `:key` par index fait suivre le focus
+// au rang plutot qu'a l'exercice deplace.
+let nextUid = 0
 
 const form = useForm({
     name: '',
@@ -60,6 +65,7 @@ const hasNoResults = computed(() => {
 
 const addExercise = (exercise) => {
     form.exercises.push({
+        uid: nextUid++,
         id: exercise.id,
         name: exercise.name,
         sets: [{ reps: 10, weight: null, is_warmup: false }],
@@ -151,6 +157,17 @@ const removeSet = (exerciseIndex, setIndex) => {
     form.exercises[exerciseIndex].sets.splice(setIndex, 1)
 }
 
+const moveExercise = (index, delta) => {
+    const target = index + delta
+
+    if (target < 0 || target >= form.exercises.length) {
+        return
+    }
+
+    const [moved] = form.exercises.splice(index, 1)
+    form.exercises.splice(target, 0, moved)
+}
+
 const removeExercise = (index) => {
     form.exercises.splice(index, 1)
 }
@@ -210,27 +227,34 @@ const submit = () => {
                 <h3 class="text-text-main mb-3 font-semibold">Exercices</h3>
 
                 <div class="space-y-4">
-                    <div v-for="(exercise, exIndex) in form.exercises" :key="exIndex">
-                        <GlassCard class="relative">
-                            <button
-                                v-press
-                                @click="removeExercise(exIndex)"
-                                type="button"
-                                class="text-text-muted/30 focus-visible:ring-accent-primary hover:text-accent-danger-deep absolute top-4 right-4 rounded-lg transition-all focus-visible:ring-2 focus-visible:outline-none"
-                                aria-label="Supprimer l'exercice"
-                            >
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
+                    <div v-for="(exercise, exIndex) in form.exercises" :key="exercise.uid">
+                        <GlassCard>
+                            <div class="mb-4 flex items-start justify-between gap-2">
+                                <h4 class="text-text-main min-w-0 text-lg font-bold">{{ exercise.name }}</h4>
 
-                            <div class="mb-4">
-                                <h4 class="text-text-main text-lg font-bold">{{ exercise.name }}</h4>
+                                <div class="flex shrink-0 items-center gap-1">
+                                    <GlassIconButton
+                                        v-press
+                                        icon="arrow_upward"
+                                        :label="`Monter ${exercise.name}`"
+                                        :disabled="exIndex === 0"
+                                        @click="moveExercise(exIndex, -1)"
+                                    />
+                                    <GlassIconButton
+                                        v-press
+                                        icon="arrow_downward"
+                                        :label="`Descendre ${exercise.name}`"
+                                        :disabled="exIndex === form.exercises.length - 1"
+                                        @click="moveExercise(exIndex, 1)"
+                                    />
+                                    <GlassIconButton
+                                        v-press
+                                        icon="close"
+                                        :label="`Supprimer ${exercise.name}`"
+                                        ton="danger"
+                                        @click="removeExercise(exIndex)"
+                                    />
+                                </div>
                             </div>
 
                             <div class="space-y-2">

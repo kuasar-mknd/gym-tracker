@@ -39,6 +39,6 @@ class WorkoutTemplate extends Model
      */
     public function workoutTemplateLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(WorkoutTemplateLine::class);
+        return $this->hasMany(WorkoutTemplateLine::class)->orderBy('order')->orderBy('id');
     }
 }
