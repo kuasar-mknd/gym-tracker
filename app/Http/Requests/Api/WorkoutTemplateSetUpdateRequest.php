@@ -27,7 +27,7 @@ class WorkoutTemplateSetUpdateRequest extends FormRequest
             'reps' => ['nullable', 'integer', 'min:0'],
             'weight' => ['nullable', 'numeric', 'min:0'],
             'is_warmup' => ['boolean'],
-            'order' => ['nullable', 'integer', 'min:0'],
+            'order' => ['sometimes', 'integer', 'min:0'],
         ];
     }
 }
