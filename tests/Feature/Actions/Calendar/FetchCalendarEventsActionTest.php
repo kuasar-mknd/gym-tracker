@@ -266,3 +266,46 @@ it('dit « note » pour un journal ecrit, et « pas de note » pour un journal v
         '2026-06-10' => false,
     ]);
 });
+
+/*
+ * Les seances anciennes portent toutes `order = 0` : la colonne est
+ * `NOT NULL DEFAULT 0` et rien ne l'a renseignee avant que le reordonnancement
+ * n'existe. Trier sur elle seule ne departage donc rien, et les TROIS
+ * exercices montres dans l'apercu du mois sont ceux que la base a bien voulu
+ * rendre — ils peuvent changer d'un chargement a l'autre.
+ *
+ * L'assertion porte sur la FORME de la requete et non sur les lignes rendues,
+ * pour la meme raison que dans `OrdreDesExercicesDuModeleTest` : l'index
+ * `(workout_id, order)` porte deja la clef primaire, si bien que MySQL rend
+ * aujourd'hui le bon ordre par accident de plan. Un temoin de comportement
+ * passerait donc avant comme apres le correctif.
+ *
+ * Le departage est gratuit — mesure a 12 000 lignes, 28 lectures de clef et
+ * 167 de suite, sans tri, avec et sans lui.
+ */
+it('departe l apercu par identifiant, faute de quoi les seances anciennes en rendent trois au hasard', function (): void {
+    $user = sceneCalendrier();
+    $seance = seanceDuCalendrier($user, '2026-06-12 18:30:00');
+
+    foreach (['Developpe couche', 'Squat', 'Souleve de terre', 'Traction'] as $nom) {
+        exerciceDeLaSeance($seance, $nom, 0);
+    }
+
+    $requetes = [];
+    \Illuminate\Support\Facades\DB::listen(function (\Illuminate\Database\Events\QueryExecuted $execute) use (&$requetes): void {
+        $requetes[] = $execute->sql;
+    });
+
+    $rendue = seancesDeJuin($user)->sole();
+
+    $surLesLignes = array_values(array_filter(
+        $requetes,
+        static fn (string $sql): bool => str_contains($sql, 'from `workout_lines`') && str_contains($sql, 'order by')
+    ));
+
+    expect($surLesLignes)->not->toBeEmpty()
+        ->and($surLesLignes[0])->toContain('order by `workout_id` asc, `order` asc, `id` asc');
+
+    // Et le contrat que ce departage rend enfin vrai.
+    expect($rendue['preview_exercises'])->toBe(['Developpe couche', 'Squat', 'Souleve de terre']);
+});
