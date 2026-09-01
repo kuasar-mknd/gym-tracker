@@ -166,6 +166,19 @@ const timerDuration = ref(90)
  */
 const autoRestTimer = ref(usePage().props.auth.user.auto_rest_timer !== false)
 
+/**
+ * Le repos, demande explicitement.
+ *
+ * Sans lui, couper le demarrage automatique fermait une porte a sens unique :
+ * plus rien n'ouvrait le minuteur, et l'interrupteur qui le rallume vit DANS le
+ * minuteur. Le reglage etait donc irreversible depuis l'interface.
+ */
+const openRestTimer = () => {
+    timerDuration.value = usePage().props.auth.user.default_rest_time || 90
+    timerRun.value += 1
+    showTimer.value = true
+}
+
 const setAutoRestTimer = (valeur) => {
     autoRestTimer.value = valeur
 
@@ -1914,6 +1927,9 @@ onUnmounted(() => {
                 -->
                 <GlassButton @click="showAddExercise = true" class="w-full" dusk="add-exercise-existing"
                     >Ajouter un exercice</GlassButton
+                >
+                <GlassButton variant="secondary" @click="openRestTimer" class="w-full" dusk="open-rest-timer"
+                    >Démarrer un repos</GlassButton
                 >
                 <div class="grid grid-cols-2 gap-3">
                     <GlassButton variant="secondary" @click="saveAsTemplate" :loading="savingTemplate" class="w-full"

@@ -178,7 +178,7 @@ const IconButtonStub = {
 }
 const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
-const RestTimerStub = { name: 'RestTimerStub', props: ['duration'], template: '<div />' }
+const RestTimerStub = { name: 'RestTimerStub', props: ['duration', 'autoRestTimer'], template: '<div />' }
 
 const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDIO, TIMED]) => {
     const wrapper = mount(WorkoutShow, {
@@ -365,6 +365,34 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         await emitOn(wrapper, RestTimerStub, 'close')
 
         expect(wrapper.findComponent(RestTimerStub).exists()).toBe(false)
+    })
+
+    /**
+     * Sans ce bouton, couper le démarrage automatique était irréversible depuis
+     * l'interface : plus rien n'ouvrait le minuteur, et l'interrupteur qui le
+     * rallume vit DANS le minuteur.
+     */
+    it('opens the timer on demand even when auto-start is off', async () => {
+        pageStub.props.auth.user.auto_rest_timer = false
+
+        try {
+            const wrapper = await mountPage()
+
+            await click(wrapper, 'complete-set-0-0')
+            expect(wrapper.findComponent(RestTimerStub).exists()).toBe(false)
+
+            await click(wrapper, 'open-rest-timer')
+
+            const timer = wrapper.findComponent(RestTimerStub)
+
+            expect(timer.exists()).toBe(true)
+            // Le temps de repos du COMPTE, pas celui de l'exercice : le geste
+            // n'est attaché à aucune série.
+            expect(timer.props('duration')).toBe(120)
+            expect(timer.props('autoRestTimer')).toBe(false)
+        } finally {
+            pageStub.props.auth.user.auto_rest_timer = true
+        }
     })
 
     /**
