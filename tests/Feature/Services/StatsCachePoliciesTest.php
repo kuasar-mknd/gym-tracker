@@ -116,6 +116,15 @@ it('transmet la répartition des séances au lieu d’un tableau vide', function
 it('date chaque point de l’historique de poids', function (): void {
     $user = User::factory()->create();
 
+    /*
+     * L'horloge est arretee, comme au temoin de duree de vie plus haut.
+     * L'historique est borne a `now()->subDays(90)` : une date absolue reste
+     * dans la fenetre le jour ou on l'ecrit, puis en sort toute seule. Celle-ci
+     * en est sortie le 01/09/2026 — 90 jours pile apres le 03/06 — et le test a
+     * echoue sur une PR qui ne touchait ni aux statistiques ni aux dates.
+     */
+    Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00'));
+
     BodyMeasurement::factory()->create([
         'user_id' => $user->id,
         'measured_at' => '2026-06-03',
