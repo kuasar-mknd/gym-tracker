@@ -160,6 +160,36 @@ const showTimer = ref(false)
 const timerDuration = ref(90)
 
 /**
+ * Le reglage est tenu localement pour que l'interrupteur bouge tout de suite,
+ * puis ecrit. La page reste sur place : basculer un reglage ne doit pas sortir
+ * de la seance en cours.
+ */
+const autoRestTimer = ref(usePage().props.auth.user.auto_rest_timer !== false)
+
+/**
+ * Le repos, demande explicitement.
+ *
+ * Sans lui, couper le demarrage automatique fermait une porte a sens unique :
+ * plus rien n'ouvrait le minuteur, et l'interrupteur qui le rallume vit DANS le
+ * minuteur. Le reglage etait donc irreversible depuis l'interface.
+ */
+const openRestTimer = () => {
+    timerDuration.value = usePage().props.auth.user.default_rest_time || 90
+    timerRun.value += 1
+    showTimer.value = true
+}
+
+const setAutoRestTimer = (valeur) => {
+    autoRestTimer.value = valeur
+
+    router.patch(
+        route('profile.rest-timer.update'),
+        { auto_rest_timer: valeur },
+        { preserveScroll: true, preserveState: true },
+    )
+}
+
+/**
  * Counts rest periods, so each one gets a fresh timer.
  *
  * The timer only reset itself while it was NOT running, and completing a set
@@ -405,7 +435,7 @@ const toggleSetCompletion = (set, exerciseRestTime) => {
 
     // ⚡ Perf: Optimistic update — no router.reload
     set.is_completed = newState
-    if (newState) {
+    if (newState && autoRestTimer.value) {
         timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
         timerRun.value += 1
         showTimer.value = true
@@ -1674,22 +1704,15 @@ onUnmounted(() => {
                             {{ line.exercise.category }}
                         </p>
                     </div>
-                    <button
+                    <GlassIconButton
                         v-press="{ haptic: 'warning' }"
-                        @click="removeLine(line.id)"
+                        icon="delete"
+                        label="Supprimer l'exercice"
+                        ton="danger"
+                        compact
                         :dusk="`remove-line-${lineIndex}`"
-                        class="text-text-muted hover:text-accent-danger-deep transition-colors"
-                        aria-label="Supprimer l'exercice"
-                    >
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                        </svg>
-                    </button>
+                        @click="removeLine(line.id)"
+                    />
                 </div>
 
                 <div class="space-y-2">
@@ -1905,6 +1928,9 @@ onUnmounted(() => {
                 <GlassButton @click="showAddExercise = true" class="w-full" dusk="add-exercise-existing"
                     >Ajouter un exercice</GlassButton
                 >
+                <GlassButton variant="secondary" @click="openRestTimer" class="w-full" dusk="open-rest-timer"
+                    >Démarrer un repos</GlassButton
+                >
                 <div class="grid grid-cols-2 gap-3">
                     <GlassButton variant="secondary" @click="saveAsTemplate" :loading="savingTemplate" class="w-full"
                         >Modèle</GlassButton
@@ -2058,8 +2084,10 @@ onUnmounted(() => {
             v-if="showTimer"
             :key="timerRun"
             :duration="timerDuration"
+            :auto-rest-timer="autoRestTimer"
             @finished="showTimer = false"
             @close="showTimer = false"
+            @update:auto-rest-timer="setAutoRestTimer"
             dusk="rest-timer"
         />
     </AuthenticatedLayout>

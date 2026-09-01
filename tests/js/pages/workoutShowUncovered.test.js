@@ -28,7 +28,11 @@ const fetchMock = vi.fn()
  * failed background write is ever said out loud.
  */
 const pageStub = vi.hoisted(() => ({
-    props: { auth: { user: { id: 1, default_rest_time: 120 } }, is_testing: true, flash: undefined },
+    props: {
+        auth: { user: { id: 1, default_rest_time: 120, auto_rest_timer: true } },
+        is_testing: true,
+        flash: undefined,
+    },
 }))
 
 vi.mock('@/Utils/SyncService', () => ({
@@ -174,7 +178,7 @@ const IconButtonStub = {
 }
 const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
-const RestTimerStub = { name: 'RestTimerStub', props: ['duration'], template: '<div />' }
+const RestTimerStub = { name: 'RestTimerStub', props: ['duration', 'autoRestTimer'], template: '<div />' }
 
 const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDIO, TIMED]) => {
     const wrapper = mount(WorkoutShow, {
@@ -359,6 +363,74 @@ describe('Workouts/Show — a background write the server refuses says so', () =
 
         await click(wrapper, 'complete-set-0-0')
         await emitOn(wrapper, RestTimerStub, 'close')
+
+        expect(wrapper.findComponent(RestTimerStub).exists()).toBe(false)
+    })
+
+    /**
+     * Sans ce bouton, couper le démarrage automatique était irréversible depuis
+     * l'interface : plus rien n'ouvrait le minuteur, et l'interrupteur qui le
+     * rallume vit DANS le minuteur.
+     */
+    it('opens the timer on demand even when auto-start is off', async () => {
+        pageStub.props.auth.user.auto_rest_timer = false
+
+        try {
+            const wrapper = await mountPage()
+
+            await click(wrapper, 'complete-set-0-0')
+            expect(wrapper.findComponent(RestTimerStub).exists()).toBe(false)
+
+            await click(wrapper, 'open-rest-timer')
+
+            const timer = wrapper.findComponent(RestTimerStub)
+
+            expect(timer.exists()).toBe(true)
+            // Le temps de repos du COMPTE, pas celui de l'exercice : le geste
+            // n'est attaché à aucune série.
+            expect(timer.props('duration')).toBe(120)
+            expect(timer.props('autoRestTimer')).toBe(false)
+        } finally {
+            pageStub.props.auth.user.auto_rest_timer = true
+        }
+    })
+
+    /**
+     * Le contrat de #1313 : le minuteur s'ouvrait TOUJOURS. Le réglage doit
+     * pouvoir le taire — sans quoi il n'y a pas de réglage, seulement un
+     * interrupteur qui ne commande rien.
+     */
+    it('does not open the timer at all when auto-start is off', async () => {
+        pageStub.props.auth.user.auto_rest_timer = false
+
+        try {
+            const wrapper = await mountPage()
+
+            await click(wrapper, 'complete-set-0-0')
+
+            expect(wrapper.findComponent(RestTimerStub).exists()).toBe(false)
+        } finally {
+            pageStub.props.auth.user.auto_rest_timer = true
+        }
+    })
+
+    it('writes the preference back without leaving the session', async () => {
+        const wrapper = await mountPage()
+
+        await click(wrapper, 'complete-set-0-0')
+        await emitOn(wrapper, RestTimerStub, 'update:autoRestTimer', false)
+
+        expect(routerPatch).toHaveBeenCalledWith(
+            expect.stringContaining('profile.rest-timer.update'),
+            { auto_rest_timer: false },
+            expect.objectContaining({ preserveScroll: true, preserveState: true }),
+        )
+
+        // Et l'effet est immédiat, sans attendre la réponse : décocher puis
+        // recocher la série ne rouvre plus rien.
+        await emitOn(wrapper, RestTimerStub, 'close')
+        await click(wrapper, 'complete-set-0-0')
+        await click(wrapper, 'complete-set-0-0')
 
         expect(wrapper.findComponent(RestTimerStub).exists()).toBe(false)
     })

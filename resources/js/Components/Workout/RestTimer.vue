@@ -5,7 +5,7 @@
 
   Features:
   - Visual progress bar indicating remaining time.
-  - Controls to add time (+30s), pause/resume, and skip.
+  - Controls to pause/resume and skip.
   - Audio and Haptic feedback upon completion.
   - Minimizable/Closeable interface.
   - Draggable or fixed positioning (currently fixed).
@@ -14,6 +14,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
+import GlassToggle from '@/Components/UI/GlassToggle.vue'
 
 /**
  * Component Props
@@ -30,6 +31,17 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+
+    /**
+     * Le reglage de l'utilisateur, rendu ici pour qu'il se change sans quitter
+     * la seance. Le composant ne l'ecrit pas lui-meme : il l'annonce, et la
+     * page decide quoi en faire — c'est ce qui le garde ignorant d'Inertia, et
+     * donc montable seul.
+     */
+    autoRestTimer: {
+        type: Boolean,
+        default: true,
+    },
 })
 
 /**
@@ -38,7 +50,7 @@ const props = defineProps({
  * @event finished - Fired when the timer reaches 0.
  * @event close - Fired when the user manually closes the timer.
  */
-const emit = defineEmits(['finished', 'close'])
+const emit = defineEmits(['finished', 'close', 'update:autoRestTimer'])
 
 // --- State ---
 
@@ -118,18 +130,6 @@ const toggleTimer = () => {
         pauseTimer()
     } else {
         startTimer()
-    }
-}
-
-/**
- * Adds extra time to the current timer.
- * @param {Number} seconds - Amount of seconds to add.
- */
-const addTime = (seconds) => {
-    triggerHaptic('tap')
-    timeLeft.value += seconds
-    if (isActive.value && endTime.value) {
-        endTime.value += seconds * 1000
     }
 }
 
@@ -215,7 +215,7 @@ watch(
     <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-[9999] sm:right-4 sm:left-auto sm:w-80">
         <!-- Liquid Glass Card -->
         <div
-            class="border-surface-card/20 bg-surface-card/10 relative overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md transition-all duration-300"
+            class="border-surface-card/20 bg-surface-card/10 overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md transition-all duration-300"
         >
             <!-- Progress bar -->
             <div
@@ -233,46 +233,18 @@ watch(
             </div>
 
             <div class="p-4">
-                <!-- Close button (X) top right -->
-                <button
-                    @click="close"
-                    dusk="close-timer-x"
-                    class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                    aria-label="Fermer le minuteur"
-                    title="Fermer le minuteur"
-                >
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
-                    </svg>
-                </button>
-
-                <div class="flex items-center justify-between">
-                    <div>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
                         <div class="text-text-main/60 text-xs font-bold tracking-wider uppercase">Repos en cours</div>
                         <div class="text-text-main text-3xl font-black tabular-nums" role="timer" aria-atomic="true">
                             {{ formatTime(timeLeft) }}
                         </div>
                     </div>
 
-                    <div class="flex gap-2">
-                        <button
-                            @click="addTime(30)"
-                            dusk="add-30s"
-                            class="focus-visible:ring-accent-primary bg-surface-card/40 text-text-main hover:bg-surface-card/60 flex h-10 w-10 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                            title="Ajouter 30 secondes"
-                            aria-label="Ajouter 30 secondes"
-                        >
-                            <span class="text-xs font-bold">+30s</span>
-                        </button>
-
+                    <div class="flex shrink-0 items-center gap-2">
                         <button
                             @click="toggleTimer"
-                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
                             :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
                         >
@@ -284,6 +256,23 @@ watch(
                                 <path d="M8 5v14l11-7z" />
                             </svg>
                         </button>
+
+                        <button
+                            @click="close"
+                            dusk="close-timer-x"
+                            class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken flex h-11 w-11 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            aria-label="Fermer le minuteur"
+                            title="Fermer le minuteur"
+                        >
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -292,21 +281,22 @@ watch(
                     <button
                         @click="skipTimer"
                         dusk="skip-rest-timer"
-                        class="focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/20 text-text-main hover:bg-surface-card/30 flex flex-1 items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                        class="focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/20 text-text-main hover:bg-surface-card/30 min-h-touch flex flex-1 items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                         title="Passer le repos"
                         aria-label="Passer le repos"
                     >
                         Passer
                     </button>
-                    <button
-                        @click="close"
-                        dusk="close-timer"
-                        class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken rounded-xl px-3 py-2 text-xs font-bold transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                        title="Fermer le minuteur"
-                        aria-label="Fermer le minuteur"
-                    >
-                        Fermer
-                    </button>
+                </div>
+
+                <div class="border-surface-card/20 mt-3 border-t pt-3">
+                    <GlassToggle
+                        :model-value="autoRestTimer"
+                        label="Démarrage automatique"
+                        size="sm"
+                        dusk="auto-rest-timer"
+                        @update:model-value="emit('update:autoRestTimer', $event)"
+                    />
                 </div>
             </div>
         </div>

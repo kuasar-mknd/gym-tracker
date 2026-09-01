@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, router } from '@inertiajs/vue3'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 
 defineProps({
     notifications: Object,
@@ -164,28 +165,14 @@ const formatDate = (date) => {
                             </div>
                         </div>
 
-                        <button
+                        <GlassIconButton
                             v-if="!notification.read_at"
-                            @click="markAsRead(notification.id)"
-                            class="text-text-muted/20 hover:text-text-main hover:bg-surface-sunken/50 rounded-lg p-1"
+                            icon="check"
+                            label="Marquer comme lu"
+                            compact
                             title="Marquer comme lu"
-                            aria-label="Marquer comme lu"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M5 13l4 4L19 7"
-                                />
-                            </svg>
-                        </button>
+                            @click="markAsRead(notification.id)"
+                        />
                     </div>
                 </GlassCard>
             </div>

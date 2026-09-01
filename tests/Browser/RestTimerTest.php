@@ -16,16 +16,6 @@ class RestTimerTest extends DuskTestCase
     use DatabaseTruncation;
 
     /**
-     * Remaining rest time, in seconds, read from the "M:SS" timer.
-     */
-    private function timerSecondsLeft(Browser $browser): int
-    {
-        [$minutes, $seconds] = array_map(intval(...), explode(':', trim($browser->text('[role="timer"]'))));
-
-        return $minutes * 60 + $seconds;
-    }
-
-    /**
      * L'etat du bouton, tel que l'utilisateur l'entend.
      *
      * Sert a dire ce qu'on a trouve quand l'attente echoue, plutot que de
@@ -75,6 +65,36 @@ class RestTimerTest extends DuskTestCase
      *    clic perdu d'une bascule partie dans le mauvais sens. La prochaine
      *    occurrence nommera le libelle reellement porte, et tranchera.
      */
+    /**
+     * Les rectangles des commandes du minuteur, mesures par le navigateur.
+     *
+     * jsdom n'a pas de moteur de rendu : `getBoundingClientRect()` y rend des
+     * zeros, et aucun temoin Vitest ne peut donc voir deux boutons se
+     * recouvrir. Seul Dusk le peut.
+     *
+     * @return array<string, array{x: float, y: float, w: float, h: float}>
+     */
+    private function rectanglesDesCommandes(Browser $browser): array
+    {
+        /** @var array<string, array{x: float, y: float, w: float, h: float}> */
+        return $browser->script(
+            <<<'JS'
+                const rect = (selecteur) => {
+                    const e = document.querySelector(selecteur);
+                    if (e === null) { return null; }
+                    const b = e.getBoundingClientRect();
+                    return { x: b.left, y: b.top, w: b.width, h: b.height };
+                };
+
+                return {
+                    pause: rect('[aria-label="Pause"], [aria-label="Démarrer le minuteur"]'),
+                    fermer: rect('[aria-label="Fermer le minuteur"]'),
+                    passer: rect('[dusk="skip-rest-timer"]'),
+                };
+            JS
+        )[0];
+    }
+
     private function retriggerRestTimer(Browser $browser): Browser
     {
         // En instructions plutot qu'en chaine fluide : `tap()` ne declare pas
@@ -138,25 +158,33 @@ class RestTimerTest extends DuskTestCase
                 ->waitFor('[dusk="skip-rest-timer"]', 15)
                 ->assertSee('REPOS');
 
-            // 2. Add Time (+30s) — the countdown is ticking down, so the only stable
-            // fact is that the remaining time went UP. Waiting on that condition also
-            // removes the race a fixed pause left open on a slow runner.
-            $secondsLeft = fn (): int => $this->timerSecondsLeft($browser);
-            $before = $secondsLeft();
+            /*
+             * La croix etait posee en `absolute` PAR-DESSUS le bouton de pause :
+             * 28 x 20 px de recouvrement visible, 34 x 26 px de zone tactile.
+             * Un appui sur le coin de la pause fermait le minuteur, et la croix
+             * se lisait mal sur l'orange.
+             */
+            $rectangles = $this->rectanglesDesCommandes($browser);
 
-            $browser->click('@add-30s')
-                ->waitUsing(10, 100, fn (): bool => $secondsLeft() > $before, 'Le minuteur n’a pas augmenté après +30s');
+            foreach (['pause', 'fermer', 'passer'] as $nom) {
+                $this->assertNotNull($rectangles[$nom] ?? null, "la commande « {$nom} » est absente");
+                $this->assertGreaterThanOrEqual(44, $rectangles[$nom]['h'], "« {$nom} » est sous 44 px de haut");
+            }
 
-            // 3. Close via "X" button
+            $pause = $rectangles['pause'];
+            $fermer = $rectangles['fermer'];
+
+            $recouvrement = max(0, min($pause['x'] + $pause['w'], $fermer['x'] + $fermer['w']) - max($pause['x'], $fermer['x']))
+                * max(0, min($pause['y'] + $pause['h'], $fermer['y'] + $fermer['h']) - max($pause['y'], $fermer['y']));
+
+            $this->assertSame(0.0, (float) $recouvrement, 'la croix et la pause se recouvrent');
+
+            // 2. Close via "X" button — desormais la seule affordance de
+            // fermeture, le bouton « Fermer » qui la doublait ayant ete retire.
             $browser->click('@close-timer-x')
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10);
 
-            // 4. Trigger again and close via "Fermer" button
-            $this->retriggerRestTimer($browser)
-                ->click('@close-timer')
-                ->waitUntilMissing('[dusk="skip-rest-timer"]', 10);
-
-            // 5. Trigger again and use "Skip" (Passer)
+            // 3. Trigger again and use "Skip" (Passer)
             $this->retriggerRestTimer($browser)
                 ->click('@skip-rest-timer')
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10)

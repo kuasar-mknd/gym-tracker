@@ -56,7 +56,7 @@ class WorkoutTemplateLineUpdateRequest extends FormRequest
                     });
                 }),
             ],
-            'order' => 'sometimes|nullable|integer',
+            'order' => 'sometimes|integer',
         ];
     }
 }

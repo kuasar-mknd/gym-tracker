@@ -9,6 +9,30 @@ const CIBLE = 44
 /** Le carré d'une ligature Material Symbols à sa taille par défaut. */
 const ICONE = 24
 
+/**
+ * Le carré que l'icône occupe réellement.
+ *
+ * Une ligature vaut 24 px ; un `<svg>`, lui, DÉCLARE sa taille — `h-4` en fait
+ * un carré de 16. Supposer 24 pour les deux surestimait la cible de chaque
+ * bouton SVG, donc sous-estimait le défaut : treize d'entre eux étaient sous la
+ * cible, et ce garde n'en voyait aucun.
+ */
+const icone = (corps) => {
+    const svg = /<svg[^>]*class="([^"]*)"/.exec(corps)
+
+    if (svg === null) {
+        return ICONE
+    }
+
+    const tailles = svg[1]
+        .split(/\s+/)
+        .map((mot) => /^(?:size|[hw])-(\d+(?:\.5)?|px)$/.exec(mot))
+        .filter(Boolean)
+        .map((trouve) => echelle(trouve[1]))
+
+    return tailles.length > 0 ? Math.min(...tailles) : ICONE
+}
+
 const echelle = (valeur) => (valeur === 'px' ? 1 : Number(valeur) * 4)
 
 /**
@@ -20,7 +44,7 @@ const echelle = (valeur) => (valeur === 'px' ? 1 : Number(valeur) * 4)
  * (`before:-inset-2.5`) — cette dernière étant la seule utilisable quand le
  * bouton doit rester visuellement petit.
  */
-const cible = (classes) => {
+const cible = (classes, tailleIcone) => {
     const mots = classes.split(/\s+/)
 
     const explicite = mots
@@ -42,7 +66,7 @@ const cible = (classes) => {
         return CIBLE
     }
 
-    const boite = explicite.length > 0 ? Math.min(...explicite) : ICONE + 2 * Math.max(0, ...rembourrage, 0)
+    const boite = explicite.length > 0 ? Math.min(...explicite) : tailleIcone + 2 * Math.max(0, ...rembourrage, 0)
 
     return boite + 2 * Math.max(0, ...debord, 0)
 }
@@ -89,22 +113,33 @@ describe('les cibles tactiles', () => {
         const trop_petits = collectSourceFiles({ skip: primitives }).flatMap((fichier) => {
             const source = readFileSync(fichier, 'utf8')
 
-            return [...source.matchAll(boutonsIcone)]
-                .filter(
-                    (trouve) =>
-                        trouve.groups.corps.includes('material-symbols') &&
-                        /^[a-z_]*$/.test(visibleText(trouve.groups.corps)),
-                )
-                .map((trouve) => ({
-                    ou: `${fichier.replace(jsRoot, 'resources/js')}:${source.slice(0, trouve.index).split('\n').length}`,
-                    classes: [...trouve.groups.attributs.matchAll(/(?:class|:class)="([^"]*)"/gs)]
-                        .map((c) => c[1])
-                        .join(' '),
-                }))
-                .filter((bouton) => mesurable(bouton.classes))
-                .map((bouton) => ({ ...bouton, px: cible(bouton.classes) }))
-                .filter((bouton) => bouton.px < CIBLE)
-                .map((bouton) => `${bouton.ou} — ${bouton.px} px`)
+            return (
+                [...source.matchAll(boutonsIcone)]
+                    /*
+                     * Deux formes portent une icône dans ce dépôt : la ligature
+                     * Material Symbols et le `<svg>` en ligne. Ne filtrer que sur
+                     * la première laissait la seconde entièrement hors de portée —
+                     * c'est ainsi que treize boutons, dont neuf suppressions et un
+                     * à 20 px sur l'écran de séance, tenaient sous un garde vert.
+                     */
+                    .filter(
+                        (trouve) =>
+                            (trouve.groups.corps.includes('material-symbols') ||
+                                trouve.groups.corps.includes('<svg')) &&
+                            /^[a-z_]*$/.test(visibleText(trouve.groups.corps)),
+                    )
+                    .map((trouve) => ({
+                        ou: `${fichier.replace(jsRoot, 'resources/js')}:${source.slice(0, trouve.index).split('\n').length}`,
+                        classes: [...trouve.groups.attributs.matchAll(/(?:class|:class)="([^"]*)"/gs)]
+                            .map((c) => c[1])
+                            .join(' '),
+                        icone: icone(trouve.groups.corps),
+                    }))
+                    .filter((bouton) => mesurable(bouton.classes))
+                    .map((bouton) => ({ ...bouton, px: cible(bouton.classes, bouton.icone) }))
+                    .filter((bouton) => bouton.px < CIBLE)
+                    .map((bouton) => `${bouton.ou} — ${bouton.px} px`)
+            )
         })
 
         expect(trop_petits).toEqual([])
