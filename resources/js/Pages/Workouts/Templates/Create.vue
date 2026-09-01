@@ -296,22 +296,15 @@ const submit = () => {
                                     >
                                         W
                                     </button>
-                                    <button
+                                    <GlassIconButton
                                         v-press
+                                        icon="delete"
+                                        label="Supprimer la série"
+                                        ton="danger"
+                                        compact
+                                        class="ml-auto"
                                         @click="removeSet(exIndex, setIndex)"
-                                        type="button"
-                                        class="text-text-muted/20 focus-visible:ring-accent-primary hover:text-accent-danger-deep ml-auto rounded-lg p-1 transition-all focus-visible:ring-2 focus-visible:outline-none"
-                                        aria-label="Supprimer la série"
-                                    >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                            />
-                                        </svg>
-                                    </button>
+                                    />
                                 </div>
                                 <button
                                     v-press
@@ -360,22 +353,7 @@ const submit = () => {
                     <h3 id="add-exercise-title" class="font-display text-text-main text-lg font-black uppercase italic">
                         {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
                     </h3>
-                    <button
-                        v-press
-                        @click="closeAddModal"
-                        type="button"
-                        class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary hover:bg-surface-sunken rounded-xl p-2 transition-all focus-visible:ring-2 focus-visible:outline-none"
-                        aria-label="Fermer"
-                    >
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
-                        </svg>
-                    </button>
+                    <GlassIconButton v-press icon="close" label="Fermer" @click="closeAddModal" />
                 </div>
 
                 <!-- Create Exercise Form -->
