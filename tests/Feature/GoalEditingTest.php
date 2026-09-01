@@ -42,7 +42,7 @@ it('renders the edit page filled with the goal it was asked for', function (): v
                 // exister comme colonnes de body_measurements, et provoquaient
                 // une erreur 500 des que la progression etait calculee. Ce test
                 // figeait l'etat casse (#1454).
-                ->has('measurementTypes', 2)
+                ->has('measurementTypes', count(\App\Http\Controllers\GoalController::measurementTypeValues()))
         );
 });
 

@@ -40,7 +40,17 @@ class GoalUpdateRequest extends FormRequest
                     });
                 }),
             ],
-            'measurement_type' => ['sometimes', 'nullable', 'string', 'max:255'],
+            /*
+             * Bornee comme a la creation. Elle ne l'etait pas : `PUT
+             * /api/v1/goals/{goal}` acceptait n'importe quelle chaine, donc la
+             * porte que #1454 avait fermee a la creation restait ouverte ici.
+             */
+            'measurement_type' => [
+                'sometimes',
+                'nullable',
+                'string',
+                \Illuminate\Validation\Rule::in(\App\Http\Controllers\GoalController::measurementTypeValues()),
+            ],
             'deadline' => ['nullable', 'date'], // Removed after:today to allow editing old goals without validation error if deadline passed
             'completed_at' => ['nullable', 'date'],
         ];

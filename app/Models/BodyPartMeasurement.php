@@ -23,6 +23,32 @@ class BodyPartMeasurement extends BaseMeasurement
     /** @use HasFactory<\Database\Factories\BodyPartMeasurementFactory> */
     use HasFactory;
 
+    /**
+     * Les parties du corps que le produit propose.
+     *
+     * `part` reste du texte libre — on n'ecrit pas dans le dos de qui saisit
+     * « Mollet gauche ». Mais les objectifs et le formulaire de saisie doivent
+     * s'accorder sur les MEMES noms, sans quoi un objectif sur le tour de
+     * taille ne trouverait jamais les mesures saisies.
+     *
+     * @var list<string>
+     */
+    public const array COMMON_PARTS = [
+        'Neck',
+        'Shoulders',
+        'Chest',
+        'Biceps L',
+        'Biceps R',
+        'Forearm L',
+        'Forearm R',
+        'Waist',
+        'Hips',
+        'Thigh L',
+        'Thigh R',
+        'Calf L',
+        'Calf R',
+    ];
+
     #[\Override]
     protected $fillable = [
         'user_id',

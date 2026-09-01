@@ -68,7 +68,14 @@ class Goal extends Model
         return match ($this->type) {
             GoalType::Weight, GoalType::Volume => 'kg',
             GoalType::Frequency => 'séances',
-            GoalType::Measurement => $this->measurement_type === 'body_fat' ? '%' : 'cm',
+            GoalType::Measurement => match ($this->measurement_type) {
+                'body_fat' => '%',
+                // Un objectif « Poids de corps » annoncait des CENTIMETRES : le
+                // ternaire ne connaissait que la masse grasse, tout le reste
+                // tombait sur 'cm'.
+                'weight' => 'kg',
+                default => 'cm',
+            },
         };
     }
 
