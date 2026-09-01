@@ -50,11 +50,32 @@ class GoalController extends Controller
     ];
 
     /**
+     * Les deux premieres se lisent dans une COLONNE de `body_measurements` ; les
+     * suivantes dans une LIGNE de `body_part_measurements`, designee par son nom
+     * de partie. Le nom sert donc de valeur, tel qu'il est propose a la saisie —
+     * aucun tableau de correspondance a tenir a jour, et la collation
+     * `utf8mb4_unicode_ci` de la colonne fait le rapprochement quelle que soit
+     * la casse, sans fonction qui ecarterait l'index.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    public static function measurementTypes(): array
+    {
+        return array_merge(
+            self::MEASUREMENT_TYPES,
+            array_map(
+                static fn (string $partie): array => ['value' => $partie, 'label' => $partie],
+                \App\Models\BodyPartMeasurement::COMMON_PARTS
+            )
+        );
+    }
+
+    /**
      * @return list<string>
      */
     public static function measurementTypeValues(): array
     {
-        return array_column(self::MEASUREMENT_TYPES, 'value');
+        return array_column(self::measurementTypes(), 'value');
     }
 
     /**
@@ -87,7 +108,7 @@ class GoalController extends Controller
                 ->get()
                 ->append(['unit']),
             'exercises' => Exercise::getCachedForUser($this->user()->id),
-            'measurementTypes' => self::MEASUREMENT_TYPES,
+            'measurementTypes' => self::measurementTypes(),
         ]);
     }
 
@@ -122,7 +143,7 @@ class GoalController extends Controller
                 'deadline' => $goal->deadline?->format('Y-m-d') ?? '',
             ],
             'exercises' => Exercise::getCachedForUser($this->user()->id),
-            'measurementTypes' => self::MEASUREMENT_TYPES,
+            'measurementTypes' => self::measurementTypes(),
         ]);
     }
 

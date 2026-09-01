@@ -83,20 +83,6 @@ class FetchBodyPartMeasurementsIndexAction
      */
     private function getCommonParts(): array
     {
-        return [
-            'Neck',
-            'Shoulders',
-            'Chest',
-            'Biceps L',
-            'Biceps R',
-            'Forearm L',
-            'Forearm R',
-            'Waist',
-            'Hips',
-            'Thigh L',
-            'Thigh R',
-            'Calf L',
-            'Calf R',
-        ];
+        return \App\Models\BodyPartMeasurement::COMMON_PARTS;
     }
 }

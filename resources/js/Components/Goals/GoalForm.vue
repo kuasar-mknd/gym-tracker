@@ -73,7 +73,14 @@ watch(
                 (candidate) => candidate.value === props.form.measurement_type,
             )
             if (measurement) {
-                const unit = props.form.measurement_type === 'body_fat' ? '%' : 'cm'
+                // Le meme accord que `Goal::getUnitAttribute` : le poids de
+                // corps s'annonce en kilogrammes, pas en centimetres.
+                const unit =
+                    props.form.measurement_type === 'body_fat'
+                        ? '%'
+                        : props.form.measurement_type === 'weight'
+                          ? 'kg'
+                          : 'cm'
                 props.form.title = `Atteindre ${props.form.target_value || '?'} ${unit} de ${measurement.label}`
             }
         } else if (props.form.type === 'frequency') {

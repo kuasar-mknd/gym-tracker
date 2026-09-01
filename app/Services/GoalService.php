@@ -260,19 +260,16 @@ final class GoalService
         }
 
         /*
-         * Une mensuration que `body_measurements` ne porte pas ne fait plus
-         * planter le calcul.
+         * Deux formes de mensuration, deux tables.
          *
-         * L'interface a longtemps propose tour de taille, de poitrine et de
-         * bras : lire ces colonnes rendait « Unknown column 'waist' », donc une
-         * erreur 500 a chaque pesee enregistree. Les options sont retirees, mais
-         * les objectifs deja crees restent en base — sans ce garde, ils
-         * continueraient de casser la page (#1454).
-         *
-         * L'objectif est simplement laisse sans progression, ce qui est la
-         * verite : rien ne mesure cette valeur aujourd'hui.
+         * `weight` et `body_fat` sont des COLONNES de `body_measurements`. Les
+         * parties du corps sont des LIGNES de `body_part_measurements`,
+         * designees par leur nom. Lire les secondes comme les premieres rendait
+         * « Unknown column 'waist' » — une erreur 500 a chaque pesee (#1454).
          */
         if (! in_array($goal->measurement_type, ['weight', 'body_fat'], true)) {
+            $this->releverLaPartieDuCorps($goal);
+
             return;
         }
 
@@ -288,6 +285,40 @@ final class GoalService
         if ($latestValue !== null && is_numeric($latestValue)) {
             $goal->current_value = (float) $latestValue;
         }
+    }
+
+    /**
+     * La derniere mesure d'une partie du corps, ramenee en centimetres.
+     *
+     * `part` est du texte libre, mais sa collation `utf8mb4_unicode_ci` compare
+     * sans egard a la casse : un objectif sur « waist » retrouve les mesures
+     * saisies sous « Waist » SANS `lower()`, qui aurait ecarte l'index
+     * `(user_id, part, measured_at)`. Mesure a 20 000 lignes et 400 jours
+     * d'historique : une seule lecture d'index, parcourue a l'envers, sans tri.
+     *
+     * Une mensuration inconnue laisse l'objectif sans progression plutot que de
+     * planter — c'est la verite, rien ne mesure cette valeur.
+     */
+    private function releverLaPartieDuCorps(Goal $goal): void
+    {
+        $mesure = $goal->user->bodyPartMeasurements()
+            ->where('part', $goal->measurement_type)
+            ->orderByDesc('measured_at')
+            ->orderByDesc('id')
+            ->first(['value', 'unit']);
+
+        if (! $mesure instanceof \App\Models\BodyPartMeasurement) {
+            return;
+        }
+
+        /*
+         * La saisie accepte le pouce ; l'objectif est toujours en centimetres.
+         * Sans cette conversion, « descendre a 80 » serait atteint par une
+         * mesure de 80 pouces, soit deux metres de tour de taille.
+         */
+        $goal->current_value = $mesure->unit === 'in'
+            ? (float) $mesure->value * 2.54
+            : (float) $mesure->value;
     }
 
     /**
