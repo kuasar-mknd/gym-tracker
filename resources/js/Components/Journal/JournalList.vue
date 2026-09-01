@@ -1,6 +1,7 @@
 <script setup>
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { parseCalendarDate } from '@/Utils/date'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 
 defineProps({
     journalsByMonth: { type: Object, required: true },
@@ -99,36 +100,22 @@ const emit = defineEmits(['edit', 'delete'])
                                 <div
                                     class="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
                                 >
-                                    <button
+                                    <GlassIconButton
                                         v-press
+                                        icon="edit"
+                                        label="Modifier l'entrée"
+                                        ton="accent"
+                                        compact
                                         @click="emit('edit', journal)"
-                                        class="text-text-muted/50 hover:text-text-main focus-visible:ring-accent-primary hover:bg-surface-card/20 rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                                        aria-label="Modifier l'entrée"
-                                    >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                            />
-                                        </svg>
-                                    </button>
-                                    <button
+                                    />
+                                    <GlassIconButton
                                         v-press
+                                        icon="delete"
+                                        label="Supprimer l'entrée"
+                                        ton="danger"
+                                        compact
                                         @click="emit('delete', journal.id)"
-                                        class="text-text-muted/50 focus-visible:ring-accent-primary hover:bg-surface-card/20 hover:text-accent-danger-deep rounded-xl p-1 transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                                        aria-label="Supprimer l'entrée"
-                                    >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                            />
-                                        </svg>
-                                    </button>
+                                    />
                                 </div>
                             </div>
 

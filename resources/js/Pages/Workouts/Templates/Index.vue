@@ -7,6 +7,7 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 
 defineProps({
     templates: {
@@ -117,28 +118,13 @@ const {
                                 </Link>
                                 <!-- title= is not a name on a touch device, where there
                                      is no hover to reveal it. -->
-                                <button
-                                    type="button"
-                                    @click="demanderSuppression(template)"
+                                <GlassIconButton
+                                    icon="delete"
+                                    :label="`Supprimer ${template.name}`"
+                                    ton="danger"
                                     :dusk="`delete-template-${template.id}`"
-                                    :aria-label="`Supprimer ${template.name}`"
-                                    class="text-text-muted focus-visible:ring-accent-primary hover:bg-accent-danger/10 hover:text-accent-danger-deep rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-                                >
-                                    <svg
-                                        class="h-5 w-5"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        aria-hidden="true"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                        />
-                                    </svg>
-                                </button>
+                                    @click="demanderSuppression(template)"
+                                />
                             </div>
                         </div>
 

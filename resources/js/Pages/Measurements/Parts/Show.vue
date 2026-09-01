@@ -8,6 +8,7 @@ import { ref, defineAsyncComponent } from 'vue'
 import { todayAsCalendarDate } from '@/Utils/date'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
@@ -150,28 +151,14 @@ const formatMeasuredAt = (measuredAt) =>
                         </div>
                         <!-- Icon-only and destructive: without a name a screen reader
                              announces nothing but "button". -->
-                        <button
-                            type="button"
-                            @click="demanderSuppression(item)"
-                            :aria-label="`Supprimer la mesure du ${formatMeasuredAt(item.measured_at)}`"
+                        <GlassIconButton
+                            icon="delete"
+                            :label="`Supprimer la mesure du ${formatMeasuredAt(item.measured_at)}`"
+                            ton="danger"
+                            class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                             :dusk="`delete-measurement-${item.id}`"
-                            class="text-text-muted/30 hover:text-accent-danger-deep rounded-lg p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-                        >
-                            <svg
-                                class="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                            </svg>
-                        </button>
+                            @click="demanderSuppression(item)"
+                        />
                     </div>
                 </GlassCard>
             </div>
