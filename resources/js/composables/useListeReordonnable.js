@@ -1,115 +1,116 @@
-import { onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 
 /**
- * Rend une liste déplaçable au doigt, sans composant enveloppant.
+ * Rend une liste déplaçable au doigt, et replie ses éléments pendant le geste.
  *
- * Le patron habituel enrobe la liste dans un composant tiers. Ici la liste est
- * le cœur de la page de séance : un enrobage chargé de façon asynchrone la
- * ferait clignoter au premier rendu, et un enrobage synchrone mettrait
- * SortableJS dans le paquet initial de tout le monde. La bibliothèque est donc
- * importée à la MONTURE, après la peinture, et rattachée au conteneur existant.
+ * Le repli ne peut pas attendre le démarrage du glissement : la bibliothèque
+ * fabrique alors un nœud de substitution à partir de ce qu'elle voit, et
+ * replier ensuite laisse à l'écran une carte pleine — séries comprises —
+ * au-dessus d'une liste qui vient de s'effondrer. Filmé sur simulateur : deux
+ * titres superposés, la page raccourcie de 800 px.
  *
- * Le piège du glisser-déposer avec Vue tient en une ligne : SortableJS déplace
- * le nœud du DOM lui-même, alors que Vue croit encore à l'ordre du tableau. Les
- * deux divergent, et le rendu suivant réordonne par-dessus le déplacement déjà
- * appliqué. On rend donc le nœud à sa place AVANT de muter le tableau — Vue
- * refait ensuite le déplacement, à partir de la seule source de vérité.
+ * On écoute donc le CONTACT soi-même, et l'appui long de la bibliothèque laisse
+ * à Vue le temps de rendre le repli avant que le geste ne commence. Un seul
+ * geste : j'appuie, ça se replie, je glisse.
  *
- * @param {() => HTMLElement | null} conteneur
+ * La bibliothèque est importée à la monture, après la peinture : la liste des
+ * exercices est le cœur de la page de séance, elle ne doit pas attendre un
+ * morceau de code pour s'afficher.
+ *
+ * @param {import('vue').Ref<HTMLElement | null>} conteneur
  * @param {{
+ *   valeurs: import('vue').Ref<Array<unknown>>,
  *   handle: string,
- *   draggable: string,
  *   estActif: () => boolean,
  *   auDebut?: () => void,
  *   aLaFin?: (ancien: number, nouveau: number) => void,
  * }} options
  */
 export const useListeReordonnable = (conteneur, options) => {
-    let instance = null
+    const cartesRepliees = ref(false)
+
     let montee = null
+    let branche = false
+    let enGlissement = false
+
+    const relacher = () => {
+        if (!enGlissement) {
+            cartesRepliees.value = false
+        }
+    }
+
+    /** Le repli part au CONTACT, pas au démarrage du glissement. */
+    const surAppui = (evenement) => {
+        if (evenement.target?.closest?.(options.handle) === null) {
+            return
+        }
+
+        cartesRepliees.value = true
+        options.auDebut?.()
+
+        window.addEventListener('pointerup', relacher, { once: true })
+        window.addEventListener('pointercancel', relacher, { once: true })
+    }
 
     const detacher = () => {
-        instance?.destroy()
-        instance = null
+        conteneur.value?.removeEventListener('pointerdown', surAppui)
+        enGlissement = false
+        cartesRepliees.value = false
     }
 
     const attacher = async () => {
-        const element = conteneur()
+        const element = conteneur.value
 
-        if (element === null || instance !== null) {
+        if (element === null || branche) {
             return
         }
 
-        montee ??= import('sortablejs')
+        montee ??= import('@formkit/drag-and-drop/vue')
 
-        const { default: Sortable } = await montee
+        const { dragAndDrop } = await montee
 
-        // Le conteneur a pu disparaître pendant l'import.
-        if (conteneur() === null || instance !== null) {
+        if (conteneur.value === null || branche) {
             return
         }
 
-        instance = new Sortable(element, {
-            handle: options.handle,
-            draggable: options.draggable,
-            direction: 'vertical',
+        branche = true
+
+        element.addEventListener('pointerdown', surAppui)
+
+        dragAndDrop({
+            parent: conteneur,
+            values: options.valeurs,
+
+            dragHandle: options.handle,
 
             /*
-             * Le glisser natif du HTML n'existe pas au tactile. Le repli de
-             * SortableJS le remplace par un CLONE qu'il déplace lui-même — et
-             * c'est ce clone que `fallbackClass` habille.
+             * L'appui long laisse à Vue le temps de rendre le repli avant que
+             * le geste ne commence — et il évite qu'un simple contact sur la
+             * poignée n'emporte la carte.
              */
-            forceFallback: true,
-            fallbackClass: 'rangee-en-vol',
-            dragClass: 'rangee-en-vol',
+            longPress: true,
+            longPressDuration: 250,
+
+            draggingClass: 'rangee-en-vol',
+            synthDraggingClass: 'rangee-en-vol',
+            dropZoneClass: 'rangee-creux',
+            synthDropZoneClass: 'rangee-creux',
+
+            onDragstart: () => {
+                enGlissement = true
+            },
+
+            onDragend: () => {
+                enGlissement = false
+                cartesRepliees.value = false
+            },
 
             /*
-             * Posée sur l'ORIGINAL resté dans la liste, pas sur le clone. Sans
-             * elle, la rangée se voit deux fois — l'original intact sous le
-             * clone — et les deux titres se superposent.
+             * La bibliothèque a DÉJÀ réordonné le tableau : ce rappel ne doit
+             * qu'écrire. Muter ici appliquerait le déplacement deux fois.
              */
-            ghostClass: 'rangee-creux',
-
-            fallbackTolerance: 3,
-            animation: 160,
-            easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-
-            /*
-             * Le défaut oblige à traverser toute la rangée visée avant que
-             * l'échange ne se fasse : c'est une part de la raideur ressentie.
-             */
-            swapThreshold: 0.65,
-
-            /*
-             * La bande de déclenchement du défilement automatique vaut 30 px
-             * par défaut, entièrement cachée derrière la barre de navigation
-             * flottante et l'en-tête collant.
-             */
-            scroll: true,
-            scrollSensitivity: 96,
-            scrollSpeed: 12,
-            bubbleScroll: true,
-
-            onStart: () => options.auDebut?.(),
-
-            onEnd: ({ oldIndex, newIndex, item, from }) => {
-                if (newIndex === oldIndex || oldIndex === undefined || newIndex === undefined) {
-                    return
-                }
-
-                /*
-                 * `oldIndex` compte les DÉPLAÇABLES ; `from.children` compte
-                 * tous les enfants. Indexer l'un par l'autre range la ligne un
-                 * rang à côté dès qu'un élément non déplaçable partage le
-                 * conteneur.
-                 */
-                const rangs = [...from.children].filter((noeud) => noeud !== item && noeud.matches(options.draggable))
-
-                // Rendre le nœud à sa place : le tableau est la source de
-                // vérité, et Vue va rejouer le déplacement à partir de lui.
-                from.insertBefore(item, rangs[oldIndex] ?? null)
-
-                options.aLaFin?.(oldIndex, newIndex)
+            onSort: ({ previousPosition, position }) => {
+                options.aLaFin?.(previousPosition, position)
             },
         })
     }
@@ -117,14 +118,10 @@ export const useListeReordonnable = (conteneur, options) => {
     const rafraichir = () => {
         if (options.estActif()) {
             void attacher()
-
-            return
         }
-
-        detacher()
     }
 
     onBeforeUnmount(detacher)
 
-    return { rafraichir, detacher }
+    return { cartesRepliees, rafraichir, detacher }
 }

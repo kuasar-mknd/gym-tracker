@@ -1,31 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { defineComponent, h, nextTick } from 'vue'
+import { defineComponent, h, ref, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 
 /**
- * SortableJS déplace le nœud du DOM lui-même. Vue, lui, rend depuis le tableau.
- * Si le nœud reste où la bibliothèque l'a mis ET que le tableau bouge aussi, le
- * déplacement est appliqué deux fois — l'exercice saute deux rangs.
- *
- * C'est le seul endroit où ce piège peut être éprouvé : jsdom n'a pas de
- * pointeur, donc on remplace la bibliothèque et on déclenche ses rappels à la
- * main.
+ * jsdom n'a pas de pointeur : le glissement lui-même ne peut pas être joué ici.
+ * Ce qui PEUT l'être, et qui a coûté deux allers-retours, c'est le moment du
+ * repli — il doit partir du CONTACT, jamais du démarrage du glissement, parce
+ * que la bibliothèque fabrique alors son nœud de substitution à partir de ce
+ * qu'elle voit.
  */
-const instances = []
+const configurations = vi.hoisted(() => [])
 
-vi.mock('sortablejs', () => ({
-    default: class {
-        constructor(element, options) {
-            this.element = element
-            this.options = options
-            this.destroyed = false
-            instances.push(this)
-        }
-
-        destroy() {
-            this.destroyed = true
-        }
-    },
+vi.mock('@formkit/drag-and-drop/vue', () => ({
+    dragAndDrop: (config) => configurations.push(config),
 }))
 
 import { useListeReordonnable } from '@/composables/useListeReordonnable'
@@ -35,31 +22,35 @@ const monter = (options = {}) => {
 
     const composant = defineComponent({
         setup() {
-            const conteneur = { value: null }
-            const outils = useListeReordonnable(() => conteneur.value, {
+            const conteneur = ref(null)
+            const valeurs = ref(['a', 'b', 'c'])
+
+            const outils = useListeReordonnable(conteneur, {
+                valeurs,
                 handle: '[data-poignee]',
-                draggable: '[data-element]',
                 ...rappels,
             })
 
-            return { conteneur, outils, rappels }
+            return { conteneur, valeurs, outils, rappels }
         },
         render() {
-            return h('div', { ref: (el) => (this.conteneur.value = el) }, [
-                // Le conteneur réel en porte : la carte « Séance vide » avant,
-                // et le bloc de boutons après.
-                h('div', { key: 'entete' }, 'entête'),
-                ...['a', 'b', 'c'].map((nom) => h('div', { key: nom, 'data-element': '' }, nom)),
-                h('div', { key: 'pied' }, 'pied'),
+            return h('div', { ref: 'conteneur' }, [
+                h('div', { 'data-poignee': '' }, 'poignée'),
+                h('div', {}, 'ailleurs'),
             ])
         },
     })
 
-    return mount(composant)
+    return mount(composant, { attachTo: document.body })
+}
+
+const appuyer = (wrapper, selecteur) => {
+    const cible = wrapper.find(selecteur).element
+    cible.dispatchEvent(new Event('pointerdown', { bubbles: true }))
 }
 
 beforeEach(() => {
-    instances.length = 0
+    configurations.length = 0
 })
 
 describe('une liste réordonnable', () => {
@@ -69,136 +60,120 @@ describe('une liste réordonnable', () => {
         wrapper.vm.outils.rafraichir()
         await nextTick()
 
-        expect(instances).toHaveLength(0)
+        expect(configurations).toHaveLength(0)
     })
 
     it('n’attache la bibliothèque qu’une fois', async () => {
         const wrapper = monter()
 
         wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(instances).toHaveLength(1))
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
 
         wrapper.vm.outils.rafraichir()
         await nextTick()
 
-        expect(instances).toHaveLength(1)
-    })
-
-    it('rend le nœud à sa place avant d’annoncer le déplacement', async () => {
-        const wrapper = monter()
-
-        wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(instances).toHaveLength(1))
-
-        const conteneur = wrapper.vm.conteneur.value
-        const [, a, b, c] = [...conteneur.children]
-
-        const deplacables = () => [...conteneur.querySelectorAll('[data-element]')]
-
-        // Ce que SortableJS vient de faire au DOM : « a » descendu en 3e place.
-        conteneur.append(a)
-        expect(deplacables()).toEqual([b, c, a])
-
-        /*
-         * `oldIndex` compte les DÉPLAÇABLES ; le conteneur porte en plus un
-         * en-tête et un pied. Indexer l'un par l'autre range la ligne un rang à
-         * côté — le défaut que ce témoin ferme.
-         */
-        instances[0].options.onEnd({ oldIndex: 0, newIndex: 2, item: a, from: conteneur })
-
-        // Le DOM est rendu à Vue, INTACT : c'est le tableau qui décide, et le
-        // rappel qui le mute.
-        expect(deplacables()).toEqual([a, b, c])
-        expect(wrapper.vm.rappels.aLaFin).toHaveBeenCalledWith(0, 2)
-    })
-
-    it('remet aussi le nœud quand il remonte', async () => {
-        const wrapper = monter()
-
-        wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(instances).toHaveLength(1))
-
-        const conteneur = wrapper.vm.conteneur.value
-        const [, a, b, c] = [...conteneur.children]
-
-        const deplacables = () => [...conteneur.querySelectorAll('[data-element]')]
-
-        a.before(c)
-        expect(deplacables()).toEqual([c, a, b])
-
-        instances[0].options.onEnd({ oldIndex: 2, newIndex: 0, item: c, from: conteneur })
-
-        expect(deplacables()).toEqual([a, b, c])
-    })
-
-    it('ne dit rien quand rien n’a bougé', async () => {
-        const wrapper = monter()
-
-        wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(instances).toHaveLength(1))
-
-        instances[0].options.onEnd({ oldIndex: 1, newIndex: 1, item: null, from: null })
-
-        expect(wrapper.vm.rappels.aLaFin).not.toHaveBeenCalled()
+        expect(configurations).toHaveLength(1)
     })
 
     /**
-     * Le drapeau de repli est SUPPRIMÉ : replier pendant le geste laissait à
-     * l'écran un clone plein — SortableJS le photographie au démarrage —
-     * au-dessus d'une liste qui venait de s'effondrer.
+     * Le cœur du correctif. Replier au démarrage du glissement laissait à
+     * l'écran une carte pleine — séries comprises — au-dessus d'une liste qui
+     * venait de s'effondrer : filmé sur simulateur, deux titres superposés et
+     * la page raccourcie de 800 px.
      */
-    it('n’expose plus de drapeau de déplacement', async () => {
+    it('replie dès l’appui sur la poignée, pas au démarrage du glissement', async () => {
         const wrapper = monter()
 
-        expect(wrapper.vm.outils.deplacementEnCours).toBeUndefined()
-        expect(Object.keys(wrapper.vm.outils).sort()).toEqual(['detacher', 'rafraichir'])
-
         wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(instances).toHaveLength(1))
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
 
-        instances[0].options.onStart()
+        expect(wrapper.vm.outils.cartesRepliees.value).toBe(false)
 
+        appuyer(wrapper, '[data-poignee]')
+
+        expect(wrapper.vm.outils.cartesRepliees.value).toBe(true)
         expect(wrapper.vm.rappels.auDebut).toHaveBeenCalled()
     })
 
-    /**
-     * Le clone est un `cloneNode(true)` que SortableJS habille de styles EN
-     * LIGNE. Sans `fallbackClass`, il reste par-dessus un original intact —
-     * deux fois la même rangée, titre sur titre. Et sans `ghostClass`, corriger
-     * le clone ne retire pas le doublon.
-     */
-    it('habille le clone ET le creux qu’il laisse', async () => {
+    it('ne replie pas quand l’appui tombe à côté de la poignée', async () => {
         const wrapper = monter()
 
         wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(instances).toHaveLength(1))
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
 
-        const { options } = instances[0]
+        appuyer(wrapper, 'div:not([data-poignee])')
 
-        expect(options.fallbackClass).toBe('rangee-en-vol')
-        expect(options.dragClass).toBe('rangee-en-vol')
-        expect(options.ghostClass).toBe('rangee-creux')
-        expect(options.forceFallback).toBe(true)
-
-        // Le délai protégeait un défilement que `touch-none` interdit déjà.
-        expect(options.delay ?? 0).toBe(0)
-        expect(options.chosenClass).toBeUndefined()
-
-        // Sur iOS le clone est en `position: absolute` ; `fallbackOnBody`
-        // changerait son repère de coordonnées.
-        expect(options.fallbackOnBody).toBeUndefined()
+        expect(wrapper.vm.outils.cartesRepliees.value).toBe(false)
     })
 
-    it('se détache quand la liste cesse d’être déplaçable', async () => {
-        let actif = true
-        const wrapper = monter({ estActif: () => actif })
+    /** Un appui relâché sans glisser doit rendre la carte à sa taille. */
+    it('déplie quand on relâche sans avoir glissé', async () => {
+        const wrapper = monter()
 
         wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(instances).toHaveLength(1))
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
 
-        actif = false
+        appuyer(wrapper, '[data-poignee]')
+        expect(wrapper.vm.outils.cartesRepliees.value).toBe(true)
+
+        window.dispatchEvent(new Event('pointerup'))
+
+        expect(wrapper.vm.outils.cartesRepliees.value).toBe(false)
+    })
+
+    it('reste replié tant que le glissement dure, puis déplie à la fin', async () => {
+        const wrapper = monter()
+
         wrapper.vm.outils.rafraichir()
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
 
-        expect(instances[0].destroyed).toBe(true)
+        const { onDragstart, onDragend } = configurations[0]
+
+        appuyer(wrapper, '[data-poignee]')
+        onDragstart({})
+
+        // Le doigt quitte l'écran pendant le glissement : la carte doit rester
+        // repliée jusqu'à ce que la bibliothèque dise que c'est fini.
+        window.dispatchEvent(new Event('pointerup'))
+        expect(wrapper.vm.outils.cartesRepliees.value).toBe(true)
+
+        onDragend({})
+        expect(wrapper.vm.outils.cartesRepliees.value).toBe(false)
+    })
+
+    /**
+     * La bibliothèque a DÉJÀ réordonné le tableau quand elle appelle `onSort` :
+     * muter une seconde fois appliquerait le déplacement deux fois.
+     */
+    it('annonce le déplacement sans y toucher', async () => {
+        const wrapper = monter()
+
+        wrapper.vm.outils.rafraichir()
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
+
+        configurations[0].onSort({ previousPosition: 0, position: 2 })
+
+        expect(wrapper.vm.rappels.aLaFin).toHaveBeenCalledWith(0, 2)
+        expect(wrapper.vm.valeurs).toEqual(['a', 'b', 'c'])
+    })
+
+    it('demande un appui long, et habille la rangée portée', async () => {
+        const wrapper = monter()
+
+        wrapper.vm.outils.rafraichir()
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
+
+        const config = configurations[0]
+
+        expect(config.dragHandle).toBe('[data-poignee]')
+
+        // L'appui long laisse à Vue le temps de rendre le repli avant que le
+        // geste ne commence.
+        expect(config.longPress).toBe(true)
+        expect(config.longPressDuration).toBeGreaterThanOrEqual(150)
+
+        expect(config.draggingClass).toBe('rangee-en-vol')
+        expect(config.synthDraggingClass).toBe('rangee-en-vol')
+        expect(config.dropZoneClass).toBe('rangee-creux')
     })
 })

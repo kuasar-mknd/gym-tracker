@@ -34,7 +34,7 @@ import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import { Head, useForm, router, usePage } from '@inertiajs/vue3'
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -215,70 +215,52 @@ const openRestTimer = () => {
 }
 
 /*
- * Reorganiser les exercices d'une seance.
+ * Reordonner les exercices, au doigt, pendant la seance.
  *
- * Le repli des cartes se fait AVANT le geste, pas pendant : SortableJS clone la
- * rangee au demarrage du glissement, donc replier ensuite laisse a l'ecran un
- * clone plein — series comprises — au-dessus d'une liste qui vient de
- * s'effondrer. Filme : deux titres superposes, la page raccourcie de 800 px, et
- * les boutons du bas remontes au milieu de l'ecran.
+ * Les cartes se replient DES L'APPUI sur la poignee, pas au demarrage du
+ * glissement : la bibliotheque fabrique alors son nœud de substitution a partir
+ * de ce qu'elle voit, et replier apres laissait a l'ecran une carte pleine —
+ * series comprises — au-dessus d'une liste qui venait de s'effondrer. Filme sur
+ * simulateur : deux titres superposes, la page raccourcie de 800 px, et les
+ * boutons du bas remontes au milieu de l'ecran.
  *
- * Le mode replie donc tout d'un coup, entre deux contacts, et on reordonne
- * ensuite des rangees courtes qui tiennent a l'ecran.
+ * L'appui long laisse a Vue le temps de rendre le repli avant que le geste ne
+ * commence. Un seul geste : j'appuie, ça se replie, je glisse.
  */
-const modeReorganisation = ref(false)
-const listeReordonnable = ref(null)
-const ligneDEntree = ref(null)
+const listeDesExercices = ref(null)
+
+/** Ce qu'un lecteur d'ecran entend apres un deplacement. */
 const annonceReorganisation = ref('')
 
-const { rafraichir: rafraichirLeDeplacement } = useListeReordonnable(() => listeReordonnable.value, {
-    handle: '[data-poignee-exercice]',
-    draggable: '[data-exercice]',
-    estActif: () => modeReorganisation.value && !isFinished.value && localWorkout.value.workout_lines.length > 1,
-    auDebut: () => triggerHaptic('tap'),
-    aLaFin: (ancien, nouveau) => deplacerExercice(ancien, nouveau),
+/*
+ * La bibliotheque mute CE tableau elle-meme : elle est donnee-d'abord, ce qui
+ * laisse Vue proprietaire du DOM. C'est ce qui evite d'avoir a defaire ses
+ * deplacements, et avec eux toute une classe de defauts.
+ */
+const lignesReordonnables = computed({
+    get: () => localWorkout.value.workout_lines,
+    set: (valeur) => {
+        localWorkout.value.workout_lines = valeur
+    },
 })
 
-/*
- * `flush: 'post'` : le `<ul>` du mode est en `v-if`, donc il n'existe pas
- * encore quand un rappel « pre » tourne — `attacher()` sortirait sur un
- * conteneur nul et rien ne serait jamais branche.
- */
-watch(
-    () => [modeReorganisation.value, isFinished.value, localWorkout.value.workout_lines.length],
-    () => {
-        if (modeReorganisation.value && (isFinished.value || localWorkout.value.workout_lines.length < 2)) {
-            modeReorganisation.value = false
-        }
-
-        rafraichirLeDeplacement()
-    },
-    { flush: 'post' },
-)
+const { cartesRepliees, rafraichir: rafraichirLeDeplacement } = useListeReordonnable(listeDesExercices, {
+    valeurs: lignesReordonnables,
+    handle: '[data-poignee-exercice]',
+    estActif: () => !isFinished.value && localWorkout.value.workout_lines.length > 1,
+    auDebut: () => triggerHaptic('tap'),
+    aLaFin: () => persisterLOrdre(),
+})
 
 onMounted(() => {
     ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
+    rafraichirLeDeplacement()
 })
 
-const ouvrirReorganisation = (index) => {
-    ligneDEntree.value = rowKey(localWorkout.value.workout_lines[index])
-    triggerHaptic('tap')
-    modeReorganisation.value = true
-}
-
-const fermerReorganisation = async () => {
-    modeReorganisation.value = false
-
-    await nextTick()
-
-    // Revenir sur la carte par laquelle on est entre : sans cela, on ouvre le
-    // mode depuis le sixieme exercice et on ressort en haut de page.
-    const carte = [...document.querySelectorAll('[data-line-id]')].find(
-        (noeud, rang) => rowKey(localWorkout.value.workout_lines[rang]) === ligneDEntree.value,
-    )
-
-    carte?.scrollIntoView({ block: 'center' })
-}
+watch(
+    () => [isFinished.value, localWorkout.value.workout_lines.length],
+    () => rafraichirLeDeplacement(),
+)
 
 /**
  * L'ordre part en entier, pas par echange.
@@ -290,8 +272,8 @@ const fermerReorganisation = async () => {
 const deplacerExercice = (ancien, nouveau) => {
     const lignes = localWorkout.value.workout_lines
 
-    // Au doigt, SortableJS ne rend jamais un rang hors liste ; au clavier et
-    // aux fleches, le premier exercice recoit « monter » comme les autres.
+    // Au doigt, la bibliotheque ne rend jamais un rang hors liste ; au clavier,
+    // le premier exercice recoit « monter » comme les autres.
     if (nouveau < 0 || nouveau >= lignes.length || nouveau === ancien) {
         return
     }
@@ -299,6 +281,19 @@ const deplacerExercice = (ancien, nouveau) => {
     lignes.splice(nouveau, 0, ...lignes.splice(ancien, 1))
 
     annonceReorganisation.value = `${lignes[nouveau].exercise.name} déplacé en position ${nouveau + 1} sur ${lignes.length}`
+
+    persisterLOrdre()
+}
+
+/**
+ * Ecrire l'ordre courant, sans y toucher.
+ *
+ * Au doigt, la bibliotheque a DEJA reordonne le tableau — muter ici
+ * appliquerait le deplacement deux fois. Aux fleches et au clavier, c'est
+ * `deplacerExercice` qui mute avant d'appeler.
+ */
+const persisterLOrdre = () => {
+    const lignes = localWorkout.value.workout_lines
 
     ordreEnVol.value += 1
 
@@ -1827,7 +1822,7 @@ onUnmounted(() => {
         </template>
 
         <div class="pb-main-safe">
-            <div v-show="!modeReorganisation" class="space-y-4" dusk="exercise-list">
+            <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
                 <GlassCard
                     v-if="localWorkout.workout_lines.length === 0"
                     class="flex flex-col items-center justify-center p-12 text-center"
@@ -1855,6 +1850,7 @@ onUnmounted(() => {
                     :data-line-id="line.id"
                     :dusk-id="`exercise-line-${line.id}`"
                     data-exercice
+                    :class="{ 'carte-portable': cartesRepliees }"
                 >
                     <div class="mb-4 flex items-center justify-between gap-2">
                         <div class="min-w-0">
@@ -1878,17 +1874,16 @@ onUnmounted(() => {
                             <!--
                           Une poignee, et non la carte entiere : les rangees de
                           series sont deja sensibles au glissement lateral, et
-                          laisser SortableJS ecouter toute la carte les rendrait
-                          inutilisables au doigt.
+                          laisser la bibliotheque ecouter toute la carte les
+                          rendrait inutilisables au doigt.
                         -->
                             <button
                                 v-if="!isFinished && localWorkout.workout_lines.length > 1"
-                                v-press
                                 type="button"
-                                class="text-text-muted focus-visible:ring-accent-primary min-h-touch min-w-touch inline-flex items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                                data-poignee-exercice
+                                class="text-text-muted focus-visible:ring-accent-primary min-h-touch min-w-touch inline-flex cursor-grab touch-none items-center justify-center rounded-lg transition-colors select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
                                 :dusk="`reorder-line-${lineIndex}`"
-                                :aria-label="`Réorganiser les exercices, à partir de ${line.exercise.name}`"
-                                @click="ouvrirReorganisation(lineIndex)"
+                                :aria-label="`Déplacer ${line.exercise.name}`"
                                 @keydown.up.prevent="deplacerExercice(lineIndex, lineIndex - 1)"
                                 @keydown.down.prevent="deplacerExercice(lineIndex, lineIndex + 1)"
                             >
@@ -1907,7 +1902,7 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <div class="space-y-2">
+                    <div v-show="!cartesRepliees" class="space-y-2">
                         <!--
                       Keyed on something that never changes for the life of the
                       row. Folding the index in made the key change for every row
@@ -2108,6 +2103,7 @@ onUnmounted(() => {
 
                     <button
                         v-if="!isFinished"
+                        v-show="!cartesRepliees"
                         v-press
                         @click="addSet(line.id)"
                         :dusk="`add-set-${lineIndex}`"
@@ -2118,67 +2114,9 @@ onUnmounted(() => {
                 </GlassCard>
             </div>
 
-            <ul v-if="modeReorganisation" ref="listeReordonnable" class="space-y-2" dusk="reorder-list">
-                <li
-                    v-for="(line, i) in localWorkout.workout_lines"
-                    :key="rowKey(line)"
-                    data-exercice
-                    :dusk="`reorder-row-${i}`"
-                    class="bg-surface-card border-border flex items-center gap-2 rounded-2xl border px-2 py-2"
-                >
-                    <span class="font-display text-text-muted w-5 shrink-0 text-center text-sm font-black italic">{{
-                        i + 1
-                    }}</span>
-
-                    <span class="min-w-0 flex-1">
-                        <span class="text-text-main block truncate text-sm font-black uppercase italic">{{
-                            line.exercise.name
-                        }}</span>
-                        <span class="text-text-muted block text-xs font-bold uppercase"
-                            >{{ line.sets.length }} série<span v-if="line.sets.length > 1">s</span></span
-                        >
-                    </span>
-
-                    <GlassIconButton
-                        v-press
-                        icon="arrow_upward"
-                        :label="`Monter ${line.exercise.name}`"
-                        :disabled="i === 0"
-                        compact
-                        :dusk="`reorder-up-${i}`"
-                        @click="deplacerExercice(i, i - 1)"
-                    />
-                    <GlassIconButton
-                        v-press
-                        icon="arrow_downward"
-                        :label="`Descendre ${line.exercise.name}`"
-                        :disabled="i === localWorkout.workout_lines.length - 1"
-                        compact
-                        :dusk="`reorder-down-${i}`"
-                        @click="deplacerExercice(i, i + 1)"
-                    />
-
-                    <span
-                        data-poignee-exercice
-                        class="text-text-muted flex size-11 shrink-0 cursor-grab touch-none items-center justify-center"
-                    >
-                        <span class="material-symbols-outlined text-lg" aria-hidden="true">drag_indicator</span>
-                    </span>
-                </li>
-            </ul>
-
             <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
 
-            <div v-if="modeReorganisation" class="mt-6 px-1">
-                <GlassButton variant="primary" @click="fermerReorganisation" class="w-full" dusk="finish-reorder"
-                    >Terminé</GlassButton
-                >
-            </div>
-
-            <div
-                v-if="localWorkout.workout_lines.length > 0 && !isFinished && !modeReorganisation"
-                class="mt-8 space-y-3 px-1"
-            >
+            <div v-if="localWorkout.workout_lines.length > 0 && !isFinished" class="mt-8 space-y-3 px-1">
                 <!--
                     Pas de variante : la carte pleine. Ajouter un exercice est
                     l'action courante de cette page ; « Modele », en dessous, est

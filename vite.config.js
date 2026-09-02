@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
-import vue from '@vitejs/plugin-vue';
-import tailwindcss from '@tailwindcss/vite';
-import { VitePWA } from 'vite-plugin-pwa';
+import { defineConfig } from 'vite'
+import laravel from 'laravel-vite-plugin'
+import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
     plugins: [
@@ -64,10 +64,10 @@ export default defineConfig({
                         src: '/logo.svg',
                         sizes: '192x192 512x512',
                         type: 'image/svg+xml',
-                        purpose: 'any maskable'
-                    }
+                        purpose: 'any maskable',
+                    },
                 ],
-            }
+            },
         }),
     ],
     server: {
@@ -93,12 +93,18 @@ export default defineConfig({
                      * Rollup split the rest by actual use is what makes the
                      * charts load with the pages that draw them.
                      */
-                    if (id.includes('node_modules') && (id.includes('/vue/') || id.includes('@inertiajs'))) {
-                        return 'vue-core';
+                    /*
+                     * `/vue/` seul est trop large : il attrape tout paquet qui
+                     * expose un sous-chemin Vue — `@formkit/drag-and-drop/vue`
+                     * s'est ainsi retrouve dans le morceau que CHAQUE page
+                     * charge, alors qu'une seule s'en sert.
+                     */
+                    if (id.includes('node_modules/vue/') || id.includes('node_modules/@inertiajs')) {
+                        return 'vue-core'
                     }
                 },
             },
         },
         chunkSizeWarningLimit: 1000,
     },
-});
+})

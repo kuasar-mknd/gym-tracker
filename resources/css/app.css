@@ -626,27 +626,32 @@
 }
 
 /*
- * La rangee portee par le doigt, pendant une reorganisation.
+ * La carte portee par le doigt, pendant un reordonnancement.
  *
- * SortableJS ecrit `opacity: 0.8`, `z-index` et la geometrie du clone EN LIGNE.
- * Aucune specificite de classe ne passe devant un style en ligne, d'ou le seul
- * `!important` de ce fichier : sans lui la classe ne change rien a l'ecran, et
- * aucun test ne le verrait.
- *
- * Ni `background` ni `color` : le clone est un `cloneNode(true)`, il emporte
- * deja les siens. Et aucun `transform` — la bibliotheque lit la matrice
- * calculee du clone pour diviser ses deltas, une echelle le ferait deriver du
- * doigt a chaque pixel.
+ * Ni `background` ni `color` : la carte emporte deja les siens. Et aucun
+ * `transform` — la bibliotheque en pose un elle-meme pour suivre le doigt, et
+ * un second le ferait deriver.
  */
+/*
+ * Une carte qu'on porte ne doit pas se selectionner.
+ *
+ * L'appui long sur la poignee declenchait la selection de texte d'iOS : les
+ * poignees bleues apparaissaient et le glissement n'avait jamais lieu.
+ * `touch-action: none` n'y suffit pas — il regle le defilement, pas la
+ * selection ni la loupe.
+ */
+@utility carte-portable {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
 @utility rangee-en-vol {
-    opacity: 1 !important;
-    transition: none;
-    animation: none;
     box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.24);
     cursor: grabbing;
 }
 
-/* Le creux laisse dans la liste par la rangee partie. */
+/* Le creux laisse dans la liste par la carte partie. */
 @utility rangee-creux {
     opacity: 0.35;
     box-shadow: none;

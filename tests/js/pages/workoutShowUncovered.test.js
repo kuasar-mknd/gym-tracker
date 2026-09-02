@@ -46,21 +46,10 @@ vi.mock('@/Utils/SyncService', () => ({
     },
 }))
 
-const sortables = vi.hoisted(() => [])
+const reordonnancements = vi.hoisted(() => [])
 
-vi.mock('sortablejs', () => ({
-    default: class {
-        constructor(element, options) {
-            this.element = element
-            this.options = options
-            this.destroyed = false
-            sortables.push(this)
-        }
-
-        destroy() {
-            this.destroyed = true
-        }
-    },
+vi.mock('@formkit/drag-and-drop/vue', () => ({
+    dragAndDrop: (config) => reordonnancements.push(config),
 }))
 
 const haptics = vi.hoisted(() => ({ triggerHaptic: vi.fn() }))
@@ -1836,77 +1825,39 @@ describe('reordering the exercises of a workout', () => {
     })
 
     /**
-     * Le repli se fait AVANT le geste, pas pendant.
+     * Le repli part du CONTACT sur la poignée, pas du démarrage du glissement.
      *
-     * SortableJS clone la rangée au démarrage du glissement : replier ensuite
-     * laissait à l'écran un clone plein — séries comprises — au-dessus d'une
-     * liste effondrée. Filmé sur simulateur : deux titres superposés, la page
-     * raccourcie de 800 px, les boutons du bas remontés au milieu.
+     * La bibliothèque fabrique son nœud de substitution à partir de ce qu'elle
+     * voit : replier après laissait à l'écran une carte pleine — séries
+     * comprises — au-dessus d'une liste qui venait de s'effondrer.
      */
-    it('opens a compact list instead of folding mid-gesture', async () => {
-        const wrapper = await mountPage(deuxExercices())
-
-        expect(wrapper.find('[dusk="reorder-row-0"]').exists()).toBe(false)
-
-        await click(wrapper, 'reorder-line-0')
-
-        const cartes = wrapper.find('[dusk="exercise-list"]')
-
-        expect(cartes.attributes('style')).toContain('display: none')
-        expect(wrapper.find('[dusk="reorder-list"]').exists()).toBe(true)
-        expect(wrapper.findAll('[dusk^="reorder-row-"]')).toHaveLength(2)
-    })
-
-    it('attaches the library to the compact list, not to the cards', async () => {
-        sortables.length = 0
+    it('folds the cards from the press, not from the drag', async () => {
+        reordonnancements.length = 0
 
         const wrapper = await mountPage(deuxExercices())
-        await click(wrapper, 'reorder-line-0')
+
+        // L'écouteur de contact est posé après l'import dynamique.
         await flushPromises()
 
-        // `flush: 'post'` : sans lui le `<ul>` en `v-if` n'existe pas encore
-        // quand le rappel tourne, et rien n'est jamais attaché.
-        expect(sortables).toHaveLength(1)
-        expect(sortables[0].element).toBe(wrapper.find('[dusk="reorder-list"]').element)
+        const series = () => wrapper.find('[dusk="exercise-card-0"]').findAll('div.space-y-2')
+
+        expect(series()[0].attributes('style') ?? '').not.toContain('display: none')
+
+        wrapper.find('[dusk="reorder-line-0"]').element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+        await wrapper.vm.$nextTick()
+
+        expect(series()[0].attributes('style')).toContain('display: none')
     })
 
-    it('moves from the compact list, and disables the arrows at the ends', async () => {
-        const wrapper = await mountPage(deuxExercices())
-        await click(wrapper, 'reorder-line-0')
+    it('binds the library to the exercise list itself', async () => {
+        reordonnancements.length = 0
 
-        expect(wrapper.find('[dusk="reorder-up-0"]').attributes('disabled')).toBeDefined()
-        expect(wrapper.find('[dusk="reorder-down-1"]').attributes('disabled')).toBeDefined()
-
-        patch.mockResolvedValueOnce({})
-        await click(wrapper, 'reorder-down-0')
+        await mountPage(deuxExercices())
         await flushPromises()
 
-        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
-        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workouts.line-order'), { lines: [11, 10] })
-    })
-
-    /**
-     * Un écran de tri à un seul élément est une impasse : il n'y a rien à
-     * trier et plus rien pour en sortir.
-     */
-    it('leaves the mode when there is no longer anything to reorder', async () => {
-        const wrapper = await mountPage(deuxExercices())
-        await click(wrapper, 'reorder-line-0')
-
-        expect(wrapper.find('[dusk="reorder-list"]').exists()).toBe(true)
-
-        await wrapper.setProps({
-            workout: JSON.parse(
-                JSON.stringify(
-                    session({
-                        workout_lines: [{ id: 10, order: 0, exercise: STRENGTH, sets: [] }],
-                    }),
-                ),
-            ),
-        })
-        await flushPromises()
-
-        expect(wrapper.find('[dusk="reorder-list"]').exists()).toBe(false)
+        // Aucun mode a ouvrir : la liste des cartes EST la liste deplaçable.
+        expect(reordonnancements).toHaveLength(1)
+        expect(reordonnancements[0].dragHandle).toBe('[data-poignee-exercice]')
     })
 
     /**

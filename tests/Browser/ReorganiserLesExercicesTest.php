@@ -46,32 +46,16 @@ class ReorganiserLesExercicesTest extends DuskTestCase
             $browser->loginAs($user)
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
-                ->waitFor('@exercise-card-0', 30)
-                ->assertMissing('@reorder-list');
+                ->waitFor('@exercise-card-0', 30);
 
-            // 1. La poignee ouvre le mode, et les cartes se replient d'un coup
-            //    — avant tout geste, pas pendant.
-            $browser->click('@reorder-line-0')
-                ->waitFor('@reorder-list', 15)
-                ->assertSeeIn('[dusk="reorder-row-0"]', 'ALPHA');
+            // Le glissement au doigt ne se pilote pas par WebDriver ; la
+            // poignee accepte aussi les fleches, et c'est le meme chemin
+            // d'ecriture.
+            $browser->keys('[dusk="reorder-line-0"]', '{ARROW_DOWN}')
+                ->waitUntil("document.querySelectorAll('[data-line-id]')[1].textContent.includes('ALPHA')", 15);
 
-            // Masquees, pas detruites : les champs de saisie doivent garder leur
-            // etat et leur focus.
-            $browser->assertMissing('@add-set-0')
-                ->assertPresent('[dusk="exercise-card-0"]');
-
-            // 2. Descendre le premier exercice, par la fleche — le glissement
-            //    au doigt ne se pilote pas par WebDriver.
-            $browser->click('@reorder-down-0')
-                ->waitUntil("document.querySelector('[dusk=\"reorder-row-1\"]').textContent.includes('ALPHA')", 15);
-
-            // 3. Sortir du mode rend les cartes.
-            $browser->click('@finish-reorder')
-                ->waitFor('@add-set-0', 15)
-                ->assertMissing('@reorder-list');
-
-            // 4. Et l'ordre a bien ete ecrit : c'est la seule preuve que le
-            //    PATCH a atterri, et qu'il portait le bon ordre.
+            // L'ordre a bien ete ecrit : c'est la seule preuve que le PATCH a
+            // atterri, et qu'il portait le bon ordre.
             $browser->refresh()
                 ->waitFor('@exercise-card-0', 30)
                 ->assertSeeIn('[dusk="exercise-card-0"]', 'BRAVO')
