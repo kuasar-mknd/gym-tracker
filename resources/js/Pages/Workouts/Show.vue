@@ -439,6 +439,17 @@ const persisterLOrdre = () => {
  * la charge est la permutation COMPLETE — les series anciennes partagent un
  * rang, donc un echange n'ecrirait rien.
  */
+/**
+ * Une commande ne demarre pas un deplacement : le geste s'arrete a elle. Une
+ * seule regle plutot qu'un attribut sur chaque champ — la rangee en compte
+ * jusqu'a six, et un ajout futur serait oublie.
+ */
+const ecarterLesCommandes = (evenement) => {
+    if (evenement.target.closest('button, input, select, textarea, a')) {
+        evenement.stopPropagation()
+    }
+}
+
 /** Une seule serie ne se reordonne pas, et une seance close ne bouge plus. */
 const peutReordonner = (ligne) => !isFinished.value && ligne.sets.length > 1
 
@@ -2112,6 +2123,7 @@ onUnmounted(() => {
                             -->
                             <div
                                 :data-poignee-serie="peutReordonner(line) ? '' : undefined"
+                                @pointerdown="ecarterLesCommandes"
                                 class="border-surface-card bg-surface-card/80 carte-portable flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
                                 :class="{ 'opacity-50': set.is_completed }"
                             >
@@ -2120,7 +2132,6 @@ onUnmounted(() => {
                                     @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
                                     :disabled="isFinished"
                                     :dusk="`complete-set-${lineIndex}-${index}`"
-                                    @pointerdown.stop
                                     class="group relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
                                     :class="
                                         set.is_completed
@@ -2194,7 +2205,6 @@ onUnmounted(() => {
                                         @change="(e) => saisieTerminee(set, 'weight', e.target.value)"
                                         :disabled="isFinished"
                                         :dusk="`weight-input-${lineIndex}-${index}`"
-                                        @pointerdown.stop
                                         :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
                                         class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                     />
@@ -2210,7 +2220,6 @@ onUnmounted(() => {
                                         @change="(e) => saisieTerminee(set, 'reps', e.target.value)"
                                         :disabled="isFinished"
                                         :dusk="`reps-input-${lineIndex}-${index}`"
-                                        @pointerdown.stop
                                         :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
                                         class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                     />
@@ -2230,7 +2239,6 @@ onUnmounted(() => {
                                         @change="(e) => saisieTerminee(set, 'distance_km', e.target.value)"
                                         :disabled="isFinished"
                                         :dusk="`distance-input-${lineIndex}-${index}`"
-                                        @pointerdown.stop
                                         :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
                                         class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                     />
@@ -2243,7 +2251,6 @@ onUnmounted(() => {
                                         :disabled="isFinished"
                                         :fill="false"
                                         :dusk="`duration-input-${lineIndex}-${index}`"
-                                        @pointerdown.stop
                                         :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                     />
                                 </template>
@@ -2254,7 +2261,6 @@ onUnmounted(() => {
                                         @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
                                         :disabled="isFinished"
                                         :dusk="`duration-input-${lineIndex}-${index}`"
-                                        @pointerdown.stop
                                         :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                     />
                                 </template>
@@ -2264,7 +2270,6 @@ onUnmounted(() => {
                                     v-press="{ haptic: 'warning' }"
                                     @click="removeSet(set.id)"
                                     :dusk="`remove-set-${lineIndex}-${index}`"
-                                    @pointerdown.stop
                                     :class="[
                                         'hover:text-accent-danger-deep text-text-muted relative ml-auto',
                                         'before:absolute before:-inset-2.5 before:content-[\'\']',

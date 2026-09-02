@@ -2020,22 +2020,26 @@ describe('reordering the sets of an exercise', () => {
         expect(uneSeule.find('[dusk="reorder-set-0-0"]').element.tagName).toBe('DIV')
     })
 
-    /** Une zone cliquable ne demarre pas un deplacement : elle arrete l'evenement. */
-    it('keeps the inputs and the buttons out of the gesture', async () => {
+    /** Une commande ne demarre pas un deplacement : le geste s'arrete a elle. */
+    it('keeps every control of the row out of the gesture', async () => {
         const wrapper = await mountPage(deuxSeries())
         const rangee = wrapper.find('[data-poignee-serie]')
-        let vuParLaRangee = false
+        let vuAuDessus = 0
 
-        rangee.element.addEventListener('pointerdown', () => {
-            vuParLaRangee = true
+        rangee.element.parentElement.addEventListener('pointerdown', () => {
+            vuAuDessus += 1
         })
-        await wrapper.find('[dusk="weight-input-0-0"]').trigger('pointerdown')
 
-        expect(vuParLaRangee).toBe(false)
+        for (const commande of ['weight-input-0-0', 'reps-input-0-0', 'complete-set-0-0']) {
+            await wrapper.find(`[dusk="${commande}"]`).trigger('pointerdown')
+        }
 
+        expect(vuAuDessus).toBe(0)
+
+        // Le reste de la rangee, lui, porte bien le geste jusqu'a la liste.
         await rangee.trigger('pointerdown')
 
-        expect(vuParLaRangee).toBe(true)
+        expect(vuAuDessus).toBe(1)
     })
 
     it('moves a set with the arrow keys, and sends the whole order', async () => {
