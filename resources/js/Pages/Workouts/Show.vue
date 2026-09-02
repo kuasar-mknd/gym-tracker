@@ -222,7 +222,7 @@ const openRestTimer = () => {
 /*
  * Reordonner les exercices, au doigt, pendant la seance.
  *
- * Les cartes ne se replient PAS pendant le geste. C'est deliberе : replier
+ * Les cartes ne se replient PAS pendant le geste. C'est delibere : replier
  * raccourcissait la page de 400 px sous le doigt, et il fallait ensuite
  * rattraper le defilement, distinguer la tape du glissement, et devancer le
  * moment ou la bibliotheque photographie la carte. Trois mecanismes pour un
@@ -297,6 +297,20 @@ const poserLeConteneurDeSeries = (lineId) => (element) => {
     conteneursDeSeries.set(lineId, element)
 }
 
+const generationDesSeries = ref(new Map())
+
+/**
+ * La bibliotheque deplace le nœud elle-meme ; Vue, restee sur l'ancien
+ * arrangement, ecrit ensuite les numeros dans les mauvaises rangees. Changer la
+ * generation les reconstruit dans l'ordre du tableau.
+ */
+const reconstruireLesSeries = (lineId) => {
+    const generations = new Map(generationDesSeries.value)
+
+    generations.set(lineId, (generations.get(lineId) ?? 0) + 1)
+    generationDesSeries.value = generations
+}
+
 const { rafraichir: rafraichirLesSeries, oublier: oublierLesSeries } = useSousListesReordonnables(
     () =>
         localWorkout.value.workout_lines.map((ligne) => ({
@@ -313,7 +327,10 @@ const { rafraichir: rafraichirLesSeries, oublier: oublierLesSeries } = useSousLi
         handle: '[data-poignee-serie]',
         estActif: () => !isFinished.value,
         auDebut: () => triggerHaptic('tap'),
-        aLaFin: (lineId) => persisterLOrdreDesSeries(lineId),
+        aLaFin: (lineId) => {
+            reconstruireLesSeries(lineId)
+            persisterLOrdreDesSeries(lineId)
+        },
     },
 )
 
@@ -410,6 +427,9 @@ const persisterLOrdre = () => {
  * la charge est la permutation COMPLETE — les series anciennes partagent un
  * rang, donc un echange n'ecrirait rien.
  */
+/** Une seule serie ne se reordonne pas, et une seance close ne bouge plus. */
+const peutReordonner = (ligne) => !isFinished.value && ligne.sets.length > 1
+
 const deplacerSerie = (ligne, ancien, nouveau) => {
     if (nouveau < 0 || nouveau >= ligne.sets.length || nouveau === ancien) {
         return
@@ -2045,7 +2065,10 @@ onUnmounted(() => {
                       duration entry and did NOT fix it, so nothing here should be
                       read as a diagnosis of that.
                     -->
-                        <SwipeableRow v-for="(set, index) in line.sets" :key="rowKey(set)">
+                        <SwipeableRow
+                            v-for="(set, index) in line.sets"
+                            :key="`${rowKey(set)}:${generationDesSeries.get(line.id) ?? 0}`"
+                        >
                             <!-- The row was swipeable with no action behind it: dragging
                              it snapped it open onto an empty background and left it
                              there. Same delete the row's own button calls, reached
@@ -2071,26 +2094,6 @@ onUnmounted(() => {
                                 class="border-surface-card bg-surface-card/80 carte-portable flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
                                 :class="{ 'opacity-50': set.is_completed }"
                             >
-                                <!--
-                                  Une poignee, et non la rangee entiere : elle
-                                  ecoute deja le glissement lateral pour la
-                                  suppression, et les deux gestes se
-                                  disputeraient le doigt.
-                                -->
-                                <button
-                                    v-if="!isFinished && line.sets.length > 1"
-                                    type="button"
-                                    data-poignee-serie
-                                    class="text-text-muted/50 focus-visible:ring-accent-primary min-h-touch inline-flex w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
-                                    :dusk="`reorder-set-${lineIndex}-${index}`"
-                                    :aria-label="`Déplacer la série ${index + 1}`"
-                                    @keydown.up.prevent="deplacerSerie(line, index, index - 1)"
-                                    @keydown.down.prevent="deplacerSerie(line, index, index + 1)"
-                                >
-                                    <span class="material-symbols-outlined text-base" aria-hidden="true"
-                                        >drag_indicator</span
-                                    >
-                                </button>
                                 <button
                                     v-press
                                     @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
@@ -2129,8 +2132,18 @@ onUnmounted(() => {
                                         >
                                     </div>
                                 </button>
-                                <div
-                                    class="text-text-muted bg-surface-sunken relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black"
+                                <!-- Le numero EST la poignee : une de plus coutait
+                                     24 px dans une rangee qui n'en avait pas. -->
+                                <component
+                                    :is="peutReordonner(line) ? 'button' : 'div'"
+                                    :type="peutReordonner(line) ? 'button' : undefined"
+                                    :data-poignee-serie="peutReordonner(line) ? '' : undefined"
+                                    :dusk="`reorder-set-${lineIndex}-${index}`"
+                                    :aria-label="peutReordonner(line) ? `Déplacer la série ${index + 1}` : undefined"
+                                    class="text-text-muted bg-surface-sunken focus-visible:ring-accent-primary relative flex h-11 w-6 shrink-0 touch-none items-center justify-center rounded-lg text-sm font-black select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:outline-none"
+                                    :class="{ 'cursor-grab active:cursor-grabbing': peutReordonner(line) }"
+                                    @keydown.up.prevent="deplacerSerie(line, index, index - 1)"
+                                    @keydown.down.prevent="deplacerSerie(line, index, index + 1)"
                                 >
                                     {{ index + 1 }}
 
@@ -2149,7 +2162,7 @@ onUnmounted(() => {
                                             >cloud_off</span
                                         >
                                     </span>
-                                </div>
+                                </component>
 
                                 <template v-if="line.exercise.type === 'strength'">
                                     <input

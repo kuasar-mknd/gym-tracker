@@ -1873,6 +1873,31 @@ describe('reordering the exercises of a workout', () => {
         expect(patch).toHaveBeenCalledWith(expect.stringContaining('workouts.line-order'), { lines: [11, 10] })
     })
 
+    /**
+     * Sonde : apres un glissement, le rang que la carte connait est-il encore
+     * le sien ? Il arme les fleches du clavier, donc un rang fige deplacerait
+     * le mauvais exercice.
+     */
+    it('keeps each exercise card aware of its own rank after a sort', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxExercices())
+        await flushPromises()
+
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-exercice]')
+
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+        expect(wrapper.findAll('[data-exercice] [dusk^="reorder-line-"]').map((n) => n.attributes('dusk'))).toEqual([
+            'reorder-line-0',
+            'reorder-line-1',
+        ])
+    })
+
     it('binds the library to the exercise list itself', async () => {
         reordonnancements.length = 0
 
@@ -1974,14 +1999,25 @@ describe('reordering the sets of an exercise', () => {
 
     const poids = (wrapper) => wrapper.vm.localWorkout.workout_lines[0].sets.map((s) => s.weight)
 
-    it('offers a handle only when there is more than one set', async () => {
+    /**
+     * Le numéro EST la poignée : il est toujours affiché, mais il ne devient
+     * saisissable qu'à partir de deux séries. Le témoin porte donc sur le rôle,
+     * pas sur la présence.
+     */
+    it('makes the number a handle only when there is more than one set', async () => {
         const wrapper = await mountPage(deuxSeries())
+        const badge = wrapper.find('[dusk="reorder-set-0-0"]')
 
-        expect(wrapper.find('[dusk="reorder-set-0-0"]').exists()).toBe(true)
+        expect(badge.exists()).toBe(true)
+        expect(badge.attributes('data-poignee-serie')).toBeDefined()
+        expect(badge.element.tagName).toBe('BUTTON')
 
         const uneSeule = await mountPage()
+        const seul = uneSeule.find('[dusk="reorder-set-0-0"]')
 
-        expect(uneSeule.find('[dusk="reorder-set-0-0"]').exists()).toBe(false)
+        expect(seul.exists()).toBe(true)
+        expect(seul.attributes('data-poignee-serie')).toBeUndefined()
+        expect(seul.element.tagName).toBe('DIV')
     })
 
     it('moves a set with the arrow keys, and sends the whole order', async () => {
@@ -2057,6 +2093,33 @@ describe('reordering the sets of an exercise', () => {
 
         expect(poids(wrapper)).toEqual([90, 80])
         expect(patch).toHaveBeenCalledWith(expect.stringContaining('workout-lines.set-order'), { sets: [43, 42] })
+    })
+
+    /**
+     * Le temoin du numero qui ne suivait pas. La bibliotheque deplace le nœud
+     * elle-meme ; si Vue reutilise ses rangees, elle ecrit les nouveaux
+     * numeros dans les mauvaises et deux series portent le meme. Reconstruire
+     * les rangees est ce qui remet le DOM d'accord avec le tableau : sans
+     * cela, ce sont les MEMES elements qu'on retrouve apres le tri.
+     */
+    it('rebuilds the rows after a sort so the numbering follows', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxSeries())
+        await flushPromises()
+
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-serie]')
+        const avant = wrapper.findAll('[data-poignee-serie]').map((n) => n.element)
+
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
+        await flushPromises()
+
+        const apres = wrapper.findAll('[data-poignee-serie]')
+
+        expect(apres.map((n) => n.text())).toEqual(['1', '2'])
+        expect(apres.some((n) => avant.includes(n.element))).toBe(false)
     })
 
     it('binds one draggable list per exercise', async () => {
