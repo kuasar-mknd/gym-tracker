@@ -16,11 +16,11 @@ class ReorderWorkoutLinesAction
      * rend l'ecriture independante du nombre d'exercices, et evite qu'un ordre
      * intermediaire soit lisible entre deux mises a jour.
      *
-     * Les seances anciennes portent toutes `order = 0` — la colonne est
-     * `NOT NULL DEFAULT 0` et rien ne l'a renseignee avant que le
-     * reordonnancement n'existe. Elles sont donc normalisees ici, au premier
-     * deplacement, et non par une migration qui toucherait des donnees que
-     * personne n'a demande a changer.
+     * L'ordre soumis est repris en entier plutot qu'applique par echange : le
+     * rang est fourni par le client a la creation (`$data['order'] ??`), et
+     * l'index n'est pas unique, donc deux lignes d'une meme seance peuvent
+     * partager un rang. Renumeroter depuis la liste recue les departage, ce
+     * qu'un echange laisserait tel quel.
      *
      * @param  list<int>  $lignes  Les identifiants, dans l'ordre voulu.
      */

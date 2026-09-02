@@ -7,6 +7,31 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-09-02
+
+### Ajouté
+- **Réorganisation des exercices d'une séance** (#1659) : au glisser-déposer depuis une poignée, sur une séance en cours d'au moins deux exercices. La carte suit le doigt au pixel — `GlassCard` porte `transition-all duration-300`, et animer le `transform` la faisait traîner loin derrière. Le serveur réécrit la liste entière en une seule requête, un `case` sur la clef primaire : l'écriture ne dépend pas du nombre d'exercices, et aucun ordre intermédiaire n'est lisible entre deux mises à jour. Les flèches du clavier déplacent aussi.
+- **Réorganisation des séries d'un exercice** (#1661) : `sets` n'avait aucune colonne d'ordre — les séries étaient triées par identifiant, donc par ordre de création. La migration l'ajoute et la renseigne depuis les identifiants existants, pour que personne n'ait à réordonner une séance qu'il n'a pas touchée. La rangée entière se saisit après 220 ms d'appui ; le glissement immédiat reste la suppression, seule façon d'effacer une série sur téléphone.
+- **Réorganisation des exercices d'un modèle** (#1648) : deux flèches par carte. L'ordre n'était modifiable qu'en supprimant les exercices pour les ressaisir, avec leurs séries. `workoutTemplateLines()` demande désormais son tri explicitement : la relation était un `hasMany` nu, que MySQL servait trié par accident de plan.
+- **Objectif sur une mensuration de partie du corps** (#1657) : tour de taille, poitrine et bras avaient été proposés puis retirés parce qu'ils rendaient `Unknown column 'waist'` — une erreur 500 à chaque pesée. Ces mesures existent, mais dans `body_part_measurements` : une ligne désignée par son nom, pas une colonne. Les treize parties du produit sont proposées sous le nom exact de la saisie, et les objectifs créés avant le retrait suivent de nouveau leurs mesures. Un objectif "Poids de corps" annonçait par ailleurs des centimètres, et `PUT /api/v1/goals/{goal}` était la seule porte à ne pas borner `measurement_type` : elle rend désormais 422 hors des valeurs connues.
+
+### Modifié
+- **Démarrage automatique du minuteur de repos, rendu optionnel** (#1651) : valider une série ouvrait toujours le minuteur, qui se pose en `z-[9999]` au-dessus de la séance, sans échappatoire. Le réglage se bascule depuis le minuteur lui-même et renvoie en arrière plutôt que vers le profil — on ne doit pas sortir d'une séance pour ça. Les commandes passent de cinq à trois.
+
+### Optimisé
+- **Premier chargement du tableau de bord** (#1646) : `ActiveGoalsChart` était le seul des neuf graphiques importé en direct, ses huit voisins passant par `defineAsyncComponent` — la première page après connexion payait donc Chart.js en entier, et rien ne le signalait puisque le patron était partout ailleurs respecté. Le JS statique de la page tombe de 772,9 à 382,5 Kio bruts, de 257,1 à 126,4 Kio transférés. Un garde interdit désormais d'importer `chart.js` hors d'un composant de graphique.
+- **Règle de découpage des morceaux resserrée** (#1659) : elle filtrait sur `/vue/`, donc tout paquet exposant un sous-chemin Vue tombait dans le morceau que *chaque* page charge. Elle vise maintenant `node_modules/vue/`.
+
+### Corrigé
+- **Le repos ne pouvait plus être chronométré une fois le démarrage automatique coupé** (#1656) : plus rien n'ouvrait le minuteur, et l'interrupteur qui le rallume vit dedans. Le réglage était donc irréversible depuis l'interface — alors que c'est le moment choisi qu'on voulait rendre à l'utilisateur, pas la fonction. Un bouton "Démarrer un repos" ouvre le panneau sur la durée du compte.
+- **La croix du minuteur se posait par-dessus le bouton de pause** (#1655) : en `absolute` au-dessus d'une rangée en flux, elle recouvrait 28 sur 20 px visibles et 34 sur 26 px de zone tactile. Un appui sur le coin de la pause fermait donc le minuteur, et la croix blanche se lisait mal sur l'orange. Les deux rejoignent la même grappe : deux cibles de 44 px séparées de 8 px.
+- **Treize boutons-icône sous la cible de 44 px** (#1652) : le garde des cibles tactiles ne filtrait que sur `material-symbols`, donc un bouton dont l'icône est un SVG en ligne lui était invisible — neuf suppressions parmi les treize, et un à 20 px sur l'écran de séance. Le garde reconnaît désormais le SVG seul et *lit* la taille déclarée par l'icône au lieu de supposer les 24 px d'une ligature ; sans cette seconde moitié, il n'en aurait rattrapé aucun.
+- **L'aperçu du mois pouvait montrer trois exercices au hasard** (#1650) : il prend les trois premiers exercices d'une séance après un tri sur `(workout_id, order)`, qui n'est pas un ordre total — rien n'interdit à deux lignes d'une même séance de partager un rang, l'index n'étant pas unique. La base rendait alors ce qu'elle voulait. Départagé par identifiant, gratuit puisque l'index secondaire porte déjà la clef primaire.
+- **Deux records personnels du même type sur le même exercice** (#1631) : l'index `(user_id, exercise_id, type)` n'était pas unique et les deux chemins d'écriture font `$pr ??= new PersonalRecord(...)`, donc deux écritures concurrentes créaient deux lignes. `recompute()` les indexait ensuite par `keyBy()`, qui ne garde que la dernière : la première n'était ni mise à jour ni supprimée et annonçait indéfiniment une valeur que plus rien ne soutenait. Une migration écarte les doublons — la ligne au plus grand identifiant est conservée, sa valeur restant à recalculer au prochain `--repair` — puis pose la contrainte d'unicité.
+- **Un ordre nul rendait 500 au lieu de 422** (#1647) : deux requêtes de mise à jour de modèle déclaraient `order` `nullable` et passaient `validated()` tel quel à `update()`, envoyant un `null` dans une colonne `NOT NULL`. À la création, `nullable` reste juste : un `null` y demande d'ajouter à la fin.
+
+## [1.5.1] - 2026-08-30
+
 ### Sécurité
 - **`nanoid` (branche 3.x)** : `postcss` tire la 3.3.17, dans la plage de [GHSA-2v37-7h3g-55p8](https://github.com/advisories/GHSA-2v37-7h3g-55p8) — un générateur personnalisé boucle indéfiniment sur une taille nulle. Contrainte en `^3.3.18`, portée à la branche 3 seule. À ne pas confondre avec l'avis précédent, [GHSA-28wg-ghj8-5hjv](https://github.com/advisories/GHSA-28wg-ghj8-5hjv), qui visait la 5.x tirée par `radix-vue` : deux avis distincts, deux branches, et celui de la 5.x ne s'applique plus depuis que `radix-vue` a été retiré.
 - **`nanoid`** : la contrainte `^5.1.16` a été posée parce que `radix-vue` épinglait la 5.1.6, dans la plage de [GHSA-28wg-ghj8-5hjv](https://github.com/advisories/GHSA-28wg-ghj8-5hjv) — un générateur non sécurisé qui boucle indéfiniment sur une taille négative. `radix-vue` ayant été retiré comme dépendance jamais importée, plus aucune 5.x n'est installée : `npm ls nanoid --all` ne montre que `postcss → nanoid@3.3.17`, branche que l'avis ne concerne pas. L'`override` est retiré avec son sujet, plutôt que laissé en place à décrire une situation qui n'existe plus.
@@ -343,7 +368,11 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.24...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.4...HEAD
+[1.5.4]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.3...v1.5.4
+[1.5.1]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.28...v1.5.1
+[1.4.28]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.26...v1.4.28
+[1.4.26]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.24...v1.4.26
 [1.4.24]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.23...v1.4.24
 [1.4.23]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.18...v1.4.23
 [1.4.18]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.14...v1.4.18
