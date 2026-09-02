@@ -29,3 +29,8 @@ Trois règles se tiennent dans `tests/js/conventions/buttonVariants.test.js` et 
 - un bouton réduit à une icône atteint 44 px, par `min-h-touch`, par une taille explicite, ou par un `before:-inset-*` qui déborde sans pousser ses voisins.
 
 Sur `GlassSelect`, `placeholder` est une INVITE (rendue `disabled`) et `empty-label` est un CHOIX vide sélectionnable. Les confondre donnait un « — Aucune — » sur lequel personne ne pouvait revenir.
+
+## Une poignée de glisser-déposer dans SwipeableRow doit porter data-swipe-ignore
+`SwipeableRow` s'arme sur toute la rangée : ses dix premiers pixels arbitrent entre glissement latéral et défilement. Une poignée posée dedans se dispute donc le doigt, et la saisie paraît marcher une fois sur deux selon la trajectoire — pas selon l'endroit. Toute poignée à l'intérieur doit porter `data-swipe-ignore`.
+
+Corollaire de vérification : jsdom ne rejoue pas le chemin tactile de `@formkit/drag-and-drop`, et des évènements de pointeur synthétiques dans un navigateur non plus. Les défauts de ce geste ne se reproduisent que sur simulateur, avec `touch_path`. Un témoin utile porte sur le mécanisme (identité des éléments DOM, appel du rappel), jamais sur le rendu final.
