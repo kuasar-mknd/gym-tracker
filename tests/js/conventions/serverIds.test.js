@@ -70,6 +70,26 @@ describe('server ids', () => {
     })
 
     /**
+     * Reordering sends every line id at once. A workout whose first exercise is
+     * still being created carries a placeholder among them, and the server
+     * would refuse the whole list — the reorder silently lost, the exercises
+     * back where they were on the next refresh.
+     */
+    it('never puts an unresolved id in a line-order payload', () => {
+        const payload = /lines\s*:\s*([A-Za-z_$][\w.$]*)/g
+
+        const offenders = collectSourceFiles(exemptions).flatMap((path) => {
+            const source = readFileSync(path, 'utf8')
+
+            return [...source.matchAll(payload)]
+                .filter(([, identifier]) => !RESOLVED.test(identifier))
+                .map(([match]) => `${path.replace(jsRoot, 'resources/js')}: ${match}`)
+        })
+
+        expect(offenders).toEqual([])
+    })
+
+    /**
      * The rollback that is not one. SyncService rejects with `isOffline` when it
      * has queued a write rather than performed it, and callers read that as
      * "keep the value on screen". A `.catch` that rolls back unconditionally

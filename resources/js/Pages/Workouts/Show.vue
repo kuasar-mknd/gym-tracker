@@ -24,6 +24,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import { useListeReordonnable } from '@/composables/useListeReordonnable'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
@@ -64,6 +65,19 @@ if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workou
  * authoritative about rows it has never been told of, nor about values it
  * rejected while the user kept theirs on screen.
  */
+/**
+ * Un deplacement d'exercice parti, dont le serveur n'a pas encore rendu compte.
+ *
+ * `mergeServerWorkout` reconstruit la liste depuis la copie du serveur, donc
+ * dans SON ordre. Un rafraichissement de props pendant qu'un deplacement est en
+ * vol — un renommage de seance, une correction d'heure — remettrait les
+ * exercices comme ils etaient, sous les yeux de qui vient de les bouger.
+ *
+ * C'est le pendant, pour les lignes, de ce que `unsyncedSetIds` fait pour les
+ * series.
+ */
+const ordreEnVol = ref(0)
+
 const mergeServerWorkout = (server, local) => {
     const merged = JSON.parse(JSON.stringify(server))
 
@@ -134,6 +148,14 @@ const mergeServerWorkout = (server, local) => {
     // Whole exercises the server has never heard of.
     localLines.filter((line) => isTemporaryId(line.id)).forEach((line) => merged.workout_lines.push(line))
 
+    // L'ordre local est le plus recent des deux tant que le deplacement n'a pas
+    // atterri : le reprendre du serveur annulerait le geste a l'ecran.
+    if (ordreEnVol.value > 0) {
+        const rang = new Map(localLines.map((line, index) => [String(line.id), index]))
+
+        merged.workout_lines.sort((a, b) => (rang.get(String(a.id)) ?? Infinity) - (rang.get(String(b.id)) ?? Infinity))
+    }
+
     return merged
 }
 
@@ -177,6 +199,79 @@ const openRestTimer = () => {
     timerDuration.value = usePage().props.auth.user.default_rest_time || 90
     timerRun.value += 1
     showTimer.value = true
+}
+
+/*
+ * Deplacer un exercice pendant une seance.
+ *
+ * Les cartes se replient le temps du deplacement : une carte a huit series
+ * depasse l'ecran, et rien n'est moins maniable qu'une liste dont un seul
+ * element occupe toute la hauteur. `v-show` plutot que `v-if` — les champs
+ * gardent leur etat et leur focus.
+ */
+const listeDesExercices = ref(null)
+
+const { deplacementEnCours, rafraichir: rafraichirLeDeplacement } = useListeReordonnable(
+    () => listeDesExercices.value,
+    {
+        handle: '[data-poignee-exercice]',
+        draggable: '[data-exercice]',
+        estActif: () => !isFinished.value && localWorkout.value.workout_lines.length > 1,
+        auDebut: () => triggerHaptic('tap'),
+        aLaFin: (ancien, nouveau) => deplacerExercice(ancien, nouveau),
+    },
+)
+
+onMounted(rafraichirLeDeplacement)
+
+watch(
+    () => [isFinished.value, localWorkout.value.workout_lines.length],
+    () => rafraichirLeDeplacement(),
+)
+
+/**
+ * L'ordre part en entier, pas par echange.
+ *
+ * Les seances anciennes portent toutes `order = 0` : echanger deux zeros
+ * n'ecrirait rien. Le serveur renumerote donc depuis la liste soumise, ce qui
+ * normalise la seance a son premier deplacement.
+ */
+const deplacerExercice = (ancien, nouveau) => {
+    const lignes = localWorkout.value.workout_lines
+
+    // Au doigt, SortableJS ne rend jamais un rang hors liste ; au clavier, la
+    // poignee du premier exercice recoit « haut » comme les autres.
+    if (nouveau < 0 || nouveau >= lignes.length || nouveau === ancien) {
+        return
+    }
+
+    const avant = lignes.slice()
+
+    lignes.splice(nouveau, 0, ...lignes.splice(ancien, 1))
+
+    ordreEnVol.value += 1
+
+    Promise.all(lignes.map((ligne) => pendingIds.resolve(ligne.id)))
+        .then((realLineIds) => {
+            if (realLineIds.some((id) => id === null)) {
+                throw Object.assign(new Error('exercice sans identifiant serveur'), { isOffline: false })
+            }
+
+            return SyncService.patch(route('api.v1.workouts.line-order', { workout: localWorkout.value.id }), {
+                lines: realLineIds,
+            })
+        })
+        .catch((err) => {
+            if (err.isOffline) {
+                return
+            }
+
+            localWorkout.value.workout_lines = avant
+            reportSyncFailure('L’ordre des exercices n’a pas pu être enregistré. Réessaie.')
+        })
+        .finally(() => {
+            ordreEnVol.value = Math.max(0, ordreEnVol.value - 1)
+        })
 }
 
 const setAutoRestTimer = (valeur) => {
@@ -1658,7 +1753,7 @@ onUnmounted(() => {
             </button>
         </template>
 
-        <div class="pb-main-safe space-y-4" dusk="exercise-list">
+        <div ref="listeDesExercices" class="pb-main-safe space-y-4" dusk="exercise-list">
             <GlassCard
                 v-if="localWorkout.workout_lines.length === 0"
                 class="flex flex-col items-center justify-center p-12 text-center"
@@ -1685,9 +1780,10 @@ onUnmounted(() => {
                 :dusk="`exercise-card-${lineIndex}`"
                 :data-line-id="line.id"
                 :dusk-id="`exercise-line-${line.id}`"
+                data-exercice
             >
-                <div class="mb-4 flex items-center justify-between">
-                    <div>
+                <div class="mb-4 flex items-center justify-between gap-2">
+                    <div class="min-w-0">
                         <!--
                           text-text-main is near-black and has no dark variant of
                           its own, so in dark mode the exercise name was rendered
@@ -1704,18 +1800,39 @@ onUnmounted(() => {
                             {{ line.exercise.category }}
                         </p>
                     </div>
-                    <GlassIconButton
-                        v-press="{ haptic: 'warning' }"
-                        icon="delete"
-                        label="Supprimer l'exercice"
-                        ton="danger"
-                        compact
-                        :dusk="`remove-line-${lineIndex}`"
-                        @click="removeLine(line.id)"
-                    />
+                    <div class="flex shrink-0 items-center gap-1">
+                        <!--
+                          Une poignee, et non la carte entiere : les rangees de
+                          series sont deja sensibles au glissement lateral, et
+                          laisser SortableJS ecouter toute la carte les rendrait
+                          inutilisables au doigt.
+                        -->
+                        <button
+                            v-if="!isFinished && localWorkout.workout_lines.length > 1"
+                            type="button"
+                            data-poignee-exercice
+                            class="text-text-muted focus-visible:ring-accent-primary min-h-touch min-w-touch inline-flex cursor-grab touch-none items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
+                            :dusk="`reorder-line-${lineIndex}`"
+                            :aria-label="`Déplacer ${line.exercise.name}`"
+                            @keydown.up.prevent="deplacerExercice(lineIndex, lineIndex - 1)"
+                            @keydown.down.prevent="deplacerExercice(lineIndex, lineIndex + 1)"
+                        >
+                            <span class="material-symbols-outlined text-lg" aria-hidden="true">drag_indicator</span>
+                        </button>
+
+                        <GlassIconButton
+                            v-press="{ haptic: 'warning' }"
+                            icon="delete"
+                            label="Supprimer l'exercice"
+                            ton="danger"
+                            compact
+                            :dusk="`remove-line-${lineIndex}`"
+                            @click="removeLine(line.id)"
+                        />
+                    </div>
                 </div>
 
-                <div class="space-y-2">
+                <div v-show="!deplacementEnCours" class="space-y-2">
                     <!--
                       Keyed on something that never changes for the life of the
                       row. Folding the index in made the key change for every row
@@ -1908,6 +2025,7 @@ onUnmounted(() => {
 
                 <button
                     v-if="!isFinished"
+                    v-show="!deplacementEnCours"
                     v-press
                     @click="addSet(line.id)"
                     :dusk="`add-set-${lineIndex}`"

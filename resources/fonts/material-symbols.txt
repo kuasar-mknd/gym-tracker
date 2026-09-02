@@ -38,6 +38,7 @@ close
 cloud_off
 dashboard
 delete
+drag_indicator
 directions_run
 edit
 emoji_events
