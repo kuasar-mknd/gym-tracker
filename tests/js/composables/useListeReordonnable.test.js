@@ -48,7 +48,7 @@ const monter = (options = {}) => {
             return h(
                 'div',
                 { ref: (el) => (this.conteneur.value = el) },
-                ['a', 'b', 'c'].map((nom) => h('div', { key: nom, 'data-element': '' }, nom))
+                ['a', 'b', 'c'].map((nom) => h('div', { key: nom, 'data-element': '' }, nom)),
             )
         },
     })
