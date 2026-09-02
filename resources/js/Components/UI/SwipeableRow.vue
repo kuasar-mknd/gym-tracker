@@ -94,7 +94,10 @@ function onTouchStart(e) {
 }
 
 function onTouchMove(e) {
-    if (!isDragging.value || lockDirection.value === 'vertical') return
+    // Desarmee en cours de geste — un deplacement vient de commencer sur cette
+    // rangee — elle cesse de suivre le doigt, sans quoi les deux gestes
+    // avanceraient ensemble.
+    if (props.disabled || !isDragging.value || lockDirection.value === 'vertical') return
 
     const touch = e.touches[0]
     const deltaX = touch.clientX - startX.value

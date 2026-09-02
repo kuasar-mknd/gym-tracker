@@ -112,13 +112,70 @@ describe('une liste réordonnable', () => {
         const config = configurations[0]
 
         expect(config.dragHandle).toBe('[data-poignee]')
-        // Pas d'appui long : la poignée porte `touch-action: none`, donc le
-        // contact ne peut pas être un défilement — il n'y a rien à distinguer,
-        // et l'attente rendait le geste impossible à qui bouge tout de suite.
+        // Une poignée dédiée porte `touch-action: none` : le contact ne peut
+        // pas être autre chose, donc rien à distinguer et rien à attendre.
         expect(config.longPress).toBe(false)
 
         expect(config.draggingClass).toBe('rangee-en-vol')
         expect(config.synthDraggingClass).toBe('rangee-en-vol')
         expect(config.dropZoneClass).toBe('rangee-creux')
+    })
+
+    /**
+     * La bibliothèque pose `draggable` sur la rangée pour servir la souris de
+     * bureau. Au doigt, iOS s'en saisissait après une demi-seconde pour
+     * fabriquer SON aperçu — une vignette rétrécie à pastille verte — qui volait
+     * le geste. Le type du pointeur tranche, et lui seul : une media query
+     * laisserait passer un iPad au trackpad, qui se déclare pointeur fin.
+     */
+    it('coupe le glisser natif quand le geste vient du doigt', async () => {
+        const wrapper = monter()
+
+        wrapper.vm.outils.rafraichir()
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
+
+        const poignee = wrapper.find('[data-poignee]').element
+
+        const pointer = (type) => {
+            const evenement = new Event('pointerdown', { bubbles: true })
+
+            evenement.pointerType = type
+            poignee.dispatchEvent(evenement)
+        }
+
+        const dragstart = () => {
+            const evenement = new Event('dragstart', { bubbles: true, cancelable: true })
+
+            poignee.dispatchEvent(evenement)
+
+            return evenement.defaultPrevented
+        }
+
+        pointer('touch')
+        expect(dragstart()).toBe(true)
+
+        pointer('pen')
+        expect(dragstart()).toBe(true)
+
+        // La souris de bureau, elle, n'a QUE le chemin natif.
+        pointer('mouse')
+        expect(dragstart()).toBe(false)
+    })
+
+    /**
+     * Une rangée entière n'a PAS de `touch-action: none` : elle doit encore
+     * pouvoir glisser latéralement pour se supprimer. La bibliothèque saisit au
+     * premier mouvement sans regarder la direction, donc le temps est le seul
+     * arbitre — maintenir déplace, glisser tout de suite supprime.
+     */
+    it('attend un appui maintenu quand la liste le demande', async () => {
+        const wrapper = monter({ appuiLong: true })
+
+        wrapper.vm.outils.rafraichir()
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
+
+        expect(configurations[0].longPress).toBe(true)
+        expect(configurations[0].longPressDuration).toBe(220)
+        expect(configurations[0].longPressClass).toBe('rangee-armee')
     })
 })

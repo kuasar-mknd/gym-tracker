@@ -233,6 +233,23 @@ describe('SwipeableRow', () => {
      * whole row off its card to reveal bare background — and, once the action
      * stopped being half the row, the delete panel itself through the glass.
      */
+    /**
+     * Une rangee desarmee en cours de geste : un deplacement vient de commencer
+     * dessus. Elle doit cesser de suivre le doigt, sans quoi les deux gestes
+     * avancent ensemble.
+     */
+    it('stops following the finger when it is disabled mid-swipe', async () => {
+        const wrapper = mountRow({ disabled: false })
+        const contenu = wrapper.find('.relative.z-10')
+
+        await contenu.trigger('touchstart', { touches: [{ clientX: 300, clientY: 10 }] })
+        await contenu.trigger('touchmove', { touches: [{ clientX: 260, clientY: 10 }] })
+        await wrapper.setProps({ disabled: true })
+        await contenu.trigger('touchmove', { touches: [{ clientX: 180, clientY: 10 }] })
+
+        expect(contenu.attributes('style')).not.toMatch(/translateX\(-/)
+    })
+
     it('does not follow a drag towards a side with no action', async () => {
         const wrapper = mountDeleteOnlyRow()
 

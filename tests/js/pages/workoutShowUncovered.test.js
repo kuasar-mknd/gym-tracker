@@ -1854,7 +1854,7 @@ describe('reordering the exercises of a workout', () => {
         const wrapper = await mountPage(deuxExercices())
         await flushPromises()
 
-        const config = reordonnancements[0]
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-exercice]')
 
         // Lecture : la bibliothèque voit les lignes de la séance.
         expect(config.values.value.map((l) => l.exercise.name)).toEqual(['Développé couché', 'Course'])
@@ -1873,6 +1873,31 @@ describe('reordering the exercises of a workout', () => {
         expect(patch).toHaveBeenCalledWith(expect.stringContaining('workouts.line-order'), { lines: [11, 10] })
     })
 
+    /**
+     * Sonde : apres un glissement, le rang que la carte connait est-il encore
+     * le sien ? Il arme les fleches du clavier, donc un rang fige deplacerait
+     * le mauvais exercice.
+     */
+    it('keeps each exercise card aware of its own rank after a sort', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxExercices())
+        await flushPromises()
+
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-exercice]')
+
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+        expect(wrapper.findAll('[data-exercice] [dusk^="reorder-line-"]').map((n) => n.attributes('dusk'))).toEqual([
+            'reorder-line-0',
+            'reorder-line-1',
+        ])
+    })
+
     it('binds the library to the exercise list itself', async () => {
         reordonnancements.length = 0
 
@@ -1880,8 +1905,8 @@ describe('reordering the exercises of a workout', () => {
         await flushPromises()
 
         // Aucun mode a ouvrir : la liste des cartes EST la liste deplaçable.
-        expect(reordonnancements).toHaveLength(1)
-        expect(reordonnancements[0].dragHandle).toBe('[data-poignee-exercice]')
+        // Les autres liaisons sont celles des series, une par exercice.
+        expect(reordonnancements.filter((c) => c.dragHandle === '[data-poignee-exercice]')).toHaveLength(1)
     })
 
     /**
@@ -1949,5 +1974,188 @@ describe('reordering the exercises of a workout', () => {
         const aDeux = await mountPage(deuxExercices())
 
         expect(aDeux.find('[dusk="reorder-line-0"]').exists()).toBe(true)
+    })
+})
+
+/**
+ * Les séries se réordonnent comme les exercices, mais elles vivent dans UNE
+ * liste par exercice : il faut donc lier chaque conteneur séparément.
+ */
+describe('reordering the sets of an exercise', () => {
+    const deuxSeries = () =>
+        session({
+            workout_lines: [
+                {
+                    id: 10,
+                    order: 0,
+                    exercise: STRENGTH,
+                    sets: [
+                        { id: 42, weight: 80, reps: 5, is_completed: false },
+                        { id: 43, weight: 90, reps: 3, is_completed: false },
+                    ],
+                },
+            ],
+        })
+
+    const poids = (wrapper) => wrapper.vm.localWorkout.workout_lines[0].sets.map((s) => s.weight)
+
+    /**
+     * Le numéro EST la poignée : il est toujours affiché, mais il ne devient
+     * saisissable qu'à partir de deux séries. Le témoin porte donc sur le rôle,
+     * pas sur la présence.
+     */
+    /**
+     * La rangee entiere se saisit ; le numero ne porte plus que le clavier. Une
+     * seule serie ne se reordonne pas, ni au doigt ni au clavier.
+     */
+    it('makes the whole row a handle only when there is more than one set', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        expect(wrapper.findAll('[data-poignee-serie]')).toHaveLength(2)
+        expect(wrapper.find('[dusk="reorder-set-0-0"]').element.tagName).toBe('BUTTON')
+
+        const uneSeule = await mountPage()
+
+        expect(uneSeule.findAll('[data-poignee-serie]')).toHaveLength(0)
+        expect(uneSeule.find('[dusk="reorder-set-0-0"]').element.tagName).toBe('DIV')
+    })
+
+    /** Une commande ne demarre pas un deplacement : le geste s'arrete a elle. */
+    it('keeps every control of the row out of the gesture', async () => {
+        const wrapper = await mountPage(deuxSeries())
+        const rangee = wrapper.find('[data-poignee-serie]')
+        let vuAuDessus = 0
+
+        rangee.element.parentElement.addEventListener('pointerdown', () => {
+            vuAuDessus += 1
+        })
+
+        for (const commande of ['weight-input-0-0', 'reps-input-0-0', 'complete-set-0-0']) {
+            await wrapper.find(`[dusk="${commande}"]`).trigger('pointerdown')
+        }
+
+        expect(vuAuDessus).toBe(0)
+
+        // Le reste de la rangee, lui, porte bien le geste jusqu'a la liste — la
+        // pastille du numero comprise, bouton pour le seul clavier.
+        await rangee.trigger('pointerdown')
+        await wrapper.find('[dusk="reorder-set-0-0"]').trigger('pointerdown')
+
+        expect(vuAuDessus).toBe(2)
+    })
+
+    it('moves a set with the arrow keys, and sends the whole order', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        patch.mockResolvedValue({})
+        await wrapper.find('[dusk="reorder-set-0-0"]').trigger('keydown', { key: 'ArrowDown' })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([90, 80])
+        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workout-lines.set-order'), { sets: [43, 42] })
+    })
+
+    it('refuses to move a set past either end', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        const ligne = wrapper.vm.localWorkout.workout_lines[0]
+        wrapper.vm.deplacerSerie(ligne, 0, -1)
+        wrapper.vm.deplacerSerie(ligne, 1, 2)
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([80, 90])
+        expect(patch).not.toHaveBeenCalled()
+    })
+
+    it('puts the sets back when the server refuses', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        patch.mockRejectedValueOnce({ isOffline: false })
+        await wrapper.find('[dusk="reorder-set-0-0"]').trigger('keydown', { key: 'ArrowDown' })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([80, 90])
+    })
+
+    /**
+     * `isOffline` veut dire « en file d'attente », pas « refusé ». Annuler le
+     * geste jetterait un déplacement que la file compte encore envoyer.
+     */
+    it('keeps the new order when the write is merely queued', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        patch.mockRejectedValueOnce({ isOffline: true })
+        await wrapper.find('[dusk="reorder-set-0-0"]').trigger('keydown', { key: 'ArrowDown' })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([90, 80])
+    })
+
+    /**
+     * Les rappels que la page confie à la bibliothèque pour les séries. jsdom
+     * ne peut pas jouer le glissement, mais il peut les appeler — et c'est par
+     * eux que tout passe.
+     */
+    it('hands each set list a way to read, write, and report its order', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxSeries())
+        await flushPromises()
+
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-serie]')
+
+        expect(config.values.value.map((s) => s.weight)).toEqual([80, 90])
+
+        config.onDragstart({})
+        expect(haptics.triggerHaptic).toHaveBeenCalledWith('tap')
+
+        // Elle réordonne le tableau elle-même, puis la page écrit.
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([90, 80])
+        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workout-lines.set-order'), { sets: [43, 42] })
+    })
+
+    /**
+     * Le temoin du numero qui ne suivait pas. La bibliotheque deplace le nœud
+     * elle-meme ; si Vue reutilise ses rangees, elle ecrit les nouveaux
+     * numeros dans les mauvaises et deux series portent le meme. Reconstruire
+     * les rangees est ce qui remet le DOM d'accord avec le tableau : sans
+     * cela, ce sont les MEMES elements qu'on retrouve apres le tri.
+     */
+    it('rebuilds the rows after a sort so the numbering follows', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxSeries())
+        await flushPromises()
+
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-serie]')
+        const avant = wrapper.findAll('[dusk^="reorder-set-0-"]').map((n) => n.element)
+
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
+        await flushPromises()
+
+        const apres = wrapper.findAll('[dusk^="reorder-set-0-"]')
+
+        expect(apres.map((n) => n.text())).toEqual(['1', '2'])
+        expect(apres.some((n) => avant.includes(n.element))).toBe(false)
+    })
+
+    it('binds one draggable list per exercise', async () => {
+        reordonnancements.length = 0
+
+        await mountPage(deuxSeries())
+        await flushPromises()
+
+        // Une pour les exercices — non, un seul ici — et une pour ses séries.
+        const surLesSeries = reordonnancements.filter((c) => c.dragHandle === '[data-poignee-serie]')
+
+        expect(surLesSeries).toHaveLength(1)
+        expect(surLesSeries[0].values.value.map((s) => s.weight)).toEqual([80, 90])
     })
 })

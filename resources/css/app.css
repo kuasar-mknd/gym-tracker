@@ -646,6 +646,11 @@
     -webkit-touch-callout: none;
 }
 
+@utility rangee-armee {
+    transform: scale(1.02);
+    transition: transform 120ms ease-out;
+}
+
 @utility rangee-en-vol {
     /*
      * OPAQUE. Les cartes de cette page sont en verre : translucides, avec un

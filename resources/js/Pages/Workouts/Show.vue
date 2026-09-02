@@ -24,7 +24,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
-import { useListeReordonnable } from '@/composables/useListeReordonnable'
+import { useListeReordonnable, useSousListesReordonnables } from '@/composables/useListeReordonnable'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
@@ -86,6 +86,9 @@ const ordreEnVol = ref(0)
  * effacerait le second sans un mot.
  */
 const ordreConfirme = ref([])
+
+/** Le meme, par exercice, pour ses series. */
+const ordreDesSeriesConfirme = new Map()
 
 const mergeServerWorkout = (server, local) => {
     const merged = JSON.parse(JSON.stringify(server))
@@ -178,6 +181,8 @@ watch(
         if (ordreEnVol.value === 0) {
             ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
         }
+
+        memoriserLOrdreDesSeries()
     },
 )
 
@@ -217,7 +222,7 @@ const openRestTimer = () => {
 /*
  * Reordonner les exercices, au doigt, pendant la seance.
  *
- * Les cartes ne se replient PAS pendant le geste. C'est deliberе : replier
+ * Les cartes ne se replient PAS pendant le geste. C'est delibere : replier
  * raccourcissait la page de 400 px sous le doigt, et il fallait ensuite
  * rattraper le defilement, distinguer la tape du glissement, et devancer le
  * moment ou la bibliotheque photographie la carte. Trois mecanismes pour un
@@ -251,14 +256,100 @@ const { rafraichir: rafraichirLeDeplacement } = useListeReordonnable(listeDesExe
     aLaFin: () => persisterLOrdre(),
 })
 
+const memoriserLOrdreDesSeries = () => {
+    localWorkout.value.workout_lines.forEach((ligne) => {
+        if (!ordreDesSeriesConfirme.has(ligne.id) && Array.isArray(ligne.sets)) {
+            ordreDesSeriesConfirme.set(
+                ligne.id,
+                ligne.sets.map((serie) => serie.id),
+            )
+        }
+    })
+}
+
 onMounted(() => {
     ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
+    memoriserLOrdreDesSeries()
+    void rafraichirLesSeries()
     rafraichirLeDeplacement()
 })
 
 watch(
     () => [isFinished.value, localWorkout.value.workout_lines.length],
     () => rafraichirLeDeplacement(),
+)
+
+/*
+ * Les series se reordonnent aussi, mais elles vivent dans UNE liste par
+ * exercice : il faut donc lier chaque conteneur separement, au fur et a mesure
+ * qu'il apparait.
+ */
+const conteneursDeSeries = new Map()
+
+const poserLeConteneurDeSeries = (lineId) => (element) => {
+    if (element === null) {
+        conteneursDeSeries.delete(lineId)
+        oublierLesSeries(lineId)
+
+        return
+    }
+
+    conteneursDeSeries.set(lineId, element)
+}
+
+/**
+ * L'exercice dont une serie est en vol. Sa rangee cesse alors d'ecouter le
+ * glissement lateral : les deux gestes partent du meme endroit et avanceraient
+ * ensemble.
+ */
+const serieEnDeplacement = ref(null)
+
+const generationDesSeries = ref(new Map())
+
+/**
+ * La bibliotheque deplace le nœud elle-meme ; Vue, restee sur l'ancien
+ * arrangement, ecrit ensuite les numeros dans les mauvaises rangees. Changer la
+ * generation les reconstruit dans l'ordre du tableau.
+ */
+const reconstruireLesSeries = (lineId) => {
+    const generations = new Map(generationDesSeries.value)
+
+    generations.set(lineId, (generations.get(lineId) ?? 0) + 1)
+    generationDesSeries.value = generations
+}
+
+const { rafraichir: rafraichirLesSeries, oublier: oublierLesSeries } = useSousListesReordonnables(
+    () =>
+        localWorkout.value.workout_lines.map((ligne) => ({
+            cle: ligne.id,
+            element: conteneursDeSeries.get(ligne.id) ?? null,
+            valeurs: computed({
+                get: () => ligne.sets,
+                set: (valeur) => {
+                    ligne.sets = valeur
+                },
+            }),
+        })),
+    {
+        handle: '[data-poignee-serie]',
+        estActif: () => !isFinished.value,
+        appuiLong: true,
+        auDebut: (lineId) => {
+            serieEnDeplacement.value = lineId
+            triggerHaptic('tap')
+        },
+        aLaFin: (lineId) => {
+            serieEnDeplacement.value = null
+            reconstruireLesSeries(lineId)
+            persisterLOrdreDesSeries(lineId)
+        },
+    },
+)
+
+watch(
+    () => localWorkout.value.workout_lines.map((ligne) => `${ligne.id}:${ligne.sets?.length ?? 0}`).join(),
+    () => rafraichirLesSeries(),
+    { flush: 'post' },
 )
 
 /**
@@ -339,6 +430,87 @@ const persisterLOrdre = () => {
     fieldWrites.queue('line-order', envoyer).finally(() => {
         ordreEnVol.value = Math.max(0, ordreEnVol.value - 1)
     })
+}
+
+/**
+ * Ecrire l'ordre des series d'un exercice.
+ *
+ * La bibliotheque a deja reordonne le tableau : ce chemin ne fait qu'ecrire, et
+ * la charge est la permutation COMPLETE — les series anciennes partagent un
+ * rang, donc un echange n'ecrirait rien.
+ */
+/**
+ * Une commande qui prend le doigt pour elle ne demarre pas un deplacement : le
+ * geste s'arrete a elle. Une seule regle plutot qu'un attribut sur chaque champ
+ * — la rangee en compte jusqu'a six, et un ajout futur serait oublie.
+ *
+ * La pastille du numero fait exception. C'est un bouton pour porter les fleches
+ * du clavier, rien de plus : elle ne repond a aucune tape, et l'ecarter du
+ * geste rendait la rangee insaisissable a l'endroit le plus naturel.
+ */
+const ecarterLesCommandes = (evenement) => {
+    const commande = evenement.target.closest('button, input, select, textarea, a')
+
+    if (commande !== null && !commande.hasAttribute('data-poignee-clavier')) {
+        evenement.stopPropagation()
+    }
+}
+
+/** Une seule serie ne se reordonne pas, et une seance close ne bouge plus. */
+const peutReordonner = (ligne) => !isFinished.value && ligne.sets.length > 1
+
+const deplacerSerie = (ligne, ancien, nouveau) => {
+    if (nouveau < 0 || nouveau >= ligne.sets.length || nouveau === ancien) {
+        return
+    }
+
+    ligne.sets.splice(nouveau, 0, ...ligne.sets.splice(ancien, 1))
+
+    persisterLOrdreDesSeries(ligne.id)
+}
+
+const persisterLOrdreDesSeries = (lineId) => {
+    const ligne = localWorkout.value.workout_lines.find((candidate) => candidate.id === lineId)
+
+    if (ligne === undefined) {
+        return
+    }
+
+    const avantEcriture = ordreDesSeriesConfirme.get(lineId) ?? ligne.sets.map((serie) => serie.id)
+    const cle = `set-order:${lineId}`
+    const seq = nextWrite(cle)
+
+    const envoyer = () => {
+        if (!isLatestWrite(cle, seq)) {
+            return Promise.resolve()
+        }
+
+        return Promise.all([pendingIds.resolve(lineId), ...ligne.sets.map((serie) => pendingIds.resolve(serie.id))])
+            .then(([realLineId, ...realSetIds]) => {
+                if (realLineId === null || realSetIds.some((id) => id === null)) {
+                    throw Object.assign(new Error('série sans identifiant serveur'), { isOffline: false })
+                }
+
+                return SyncService.patch(route('api.v1.workout-lines.set-order', { workoutLine: realLineId }), {
+                    sets: realSetIds,
+                }).then(() => {
+                    ordreDesSeriesConfirme.set(lineId, realSetIds)
+                })
+            })
+            .catch((err) => {
+                if (err.isOffline) {
+                    return
+                }
+
+                const parId = new Map(ligne.sets.map((serie) => [serie.id, serie]))
+
+                ligne.sets = avantEcriture.map((id) => parId.get(id)).filter((serie) => serie !== undefined)
+
+                reportSyncFailure('L’ordre des séries n’a pas pu être enregistré. Réessaie.')
+            })
+    }
+
+    fieldWrites.queue(cle, envoyer)
 }
 
 const setAutoRestTimer = (valeur) => {
@@ -1901,7 +2073,7 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <div class="space-y-2">
+                    <div :ref="poserLeConteneurDeSeries(line.id)" class="space-y-2">
                         <!--
                       Keyed on something that never changes for the life of the
                       row. Folding the index in made the key change for every row
@@ -1922,7 +2094,11 @@ onUnmounted(() => {
                       duration entry and did NOT fix it, so nothing here should be
                       read as a diagnosis of that.
                     -->
-                        <SwipeableRow v-for="(set, index) in line.sets" :key="rowKey(set)">
+                        <SwipeableRow
+                            v-for="(set, index) in line.sets"
+                            :key="`${rowKey(set)}:${generationDesSeries.get(line.id) ?? 0}`"
+                            :disabled="serieEnDeplacement === line.id"
+                        >
                             <!-- The row was swipeable with no action behind it: dragging
                              it snapped it open onto an empty background and left it
                              there. Same delete the row's own button calls, reached
@@ -1944,8 +2120,17 @@ onUnmounted(() => {
                                 </button>
                             </template>
 
+                            <!--
+                              La rangee ENTIERE est la poignee. Une poignee
+                              dediee a ete essayee deux fois : l'icone prenait
+                              une place qu'on n'a pas, et le numero seul se
+                              ratait une fois sur deux. Les zones cliquables
+                              s'en retirent une a une, ci-dessous.
+                            -->
                             <div
-                                class="border-surface-card bg-surface-card/80 flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
+                                :data-poignee-serie="peutReordonner(line) ? '' : undefined"
+                                @pointerdown="ecarterLesCommandes"
+                                class="border-surface-card bg-surface-card/80 carte-portable flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
                                 :class="{ 'opacity-50': set.is_completed }"
                             >
                                 <button
@@ -1986,8 +2171,17 @@ onUnmounted(() => {
                                         >
                                     </div>
                                 </button>
-                                <div
-                                    class="text-text-muted bg-surface-sunken relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black"
+                                <!-- Le numero porte le deplacement au CLAVIER. Le
+                                     doigt, lui, saisit la rangee entiere. -->
+                                <component
+                                    :is="peutReordonner(line) ? 'button' : 'div'"
+                                    :type="peutReordonner(line) ? 'button' : undefined"
+                                    :data-poignee-clavier="peutReordonner(line) ? '' : undefined"
+                                    :dusk="`reorder-set-${lineIndex}-${index}`"
+                                    :aria-label="peutReordonner(line) ? `Déplacer la série ${index + 1}` : undefined"
+                                    class="text-text-muted bg-surface-sunken focus-visible:ring-accent-primary relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black select-none focus-visible:ring-2 focus-visible:outline-none"
+                                    @keydown.up.prevent="deplacerSerie(line, index, index - 1)"
+                                    @keydown.down.prevent="deplacerSerie(line, index, index + 1)"
                                 >
                                     {{ index + 1 }}
 
@@ -2006,7 +2200,7 @@ onUnmounted(() => {
                                             >cloud_off</span
                                         >
                                     </span>
-                                </div>
+                                </component>
 
                                 <template v-if="line.exercise.type === 'strength'">
                                     <input
