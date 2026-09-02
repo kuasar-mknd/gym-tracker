@@ -1843,6 +1843,36 @@ describe('reordering the exercises of a workout', () => {
         expect(series()[0].attributes('style') ?? '').not.toContain('display: none')
     })
 
+    /**
+     * Les quatre rappels que la page confie à la bibliothèque. jsdom ne peut
+     * pas jouer le glissement, mais il peut les appeler — et c'est par eux que
+     * tout passe : le retour haptique, l'écriture, et le tableau qu'elle mute.
+     */
+    it('hands the library a way to read, write, and report the order', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxExercices())
+        await flushPromises()
+
+        const config = reordonnancements[0]
+
+        // Lecture : la bibliothèque voit les lignes de la séance.
+        expect(config.values.value.map((l) => l.exercise.name)).toEqual(['Développé couché', 'Course'])
+
+        // Départ du geste : le retour haptique.
+        config.onDragstart({})
+        expect(haptics.triggerHaptic).toHaveBeenCalledWith('tap')
+
+        // Écriture : elle réordonne le tableau elle-même, puis la page écrit.
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workouts.line-order'), { lines: [11, 10] })
+    })
+
     it('binds the library to the exercise list itself', async () => {
         reordonnancements.length = 0
 
