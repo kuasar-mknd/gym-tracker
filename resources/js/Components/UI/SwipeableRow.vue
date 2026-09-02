@@ -85,15 +85,6 @@ const sideStyle = (side) => ({
 // Methods
 function onTouchStart(e) {
     if (props.disabled) return
-
-    /*
-     * Une poignee de glisser-deposer posee dans la rangee se disputait le doigt
-     * avec le glissement lateral : les dix premiers pixels decidaient, et une
-     * derive horizontale armait la suppression au lieu du deplacement. La
-     * saisie paraissait alors marcher une fois sur deux.
-     */
-    if (e.target?.closest?.('[data-swipe-ignore]')) return
-
     const touch = e.touches[0]
     startX.value = touch.clientX
     startY.value = touch.clientY
@@ -103,7 +94,10 @@ function onTouchStart(e) {
 }
 
 function onTouchMove(e) {
-    if (!isDragging.value || lockDirection.value === 'vertical') return
+    // Desarmee en cours de geste — un deplacement vient de commencer sur cette
+    // rangee — elle cesse de suivre le doigt, sans quoi les deux gestes
+    // avanceraient ensemble.
+    if (props.disabled || !isDragging.value || lockDirection.value === 'vertical') return
 
     const touch = e.touches[0]
     const deltaX = touch.clientX - startX.value

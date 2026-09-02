@@ -19,7 +19,7 @@ const mountDeleteOnlyRow = () =>
     mount(SwipeableRow, {
         slots: {
             'action-right': '<button type="button" data-testid="delete">Supprimer</button>',
-            default: '<a href="/workouts/1">Séance</a><span data-swipe-ignore>1</span>',
+            default: '<a href="/workouts/1">Séance</a>',
         },
         attachTo: document.body,
     })
@@ -234,29 +234,20 @@ describe('SwipeableRow', () => {
      * stopped being half the row, the delete panel itself through the glass.
      */
     /**
-     * Une poignee de glisser-deposer vit dans la rangee des series. Sans cette
-     * sortie, les dix premiers pixels arbitraient entre les deux gestes et une
-     * derive horizontale armait la suppression : la saisie paraissait marcher
-     * une fois sur deux.
+     * Une rangee desarmee en cours de geste : un deplacement vient de commencer
+     * dessus. Elle doit cesser de suivre le doigt, sans quoi les deux gestes
+     * avancent ensemble.
      */
-    it('yields the finger to a handle that opts out of the swipe', async () => {
-        const wrapper = mountDeleteOnlyRow()
+    it('stops following the finger when it is disabled mid-swipe', async () => {
+        const wrapper = mountRow({ disabled: false })
         const contenu = wrapper.find('.relative.z-10')
 
-        await wrapper.find('[data-swipe-ignore]').trigger('touchstart', { touches: [{ clientX: 300, clientY: 10 }] })
-        await contenu.trigger('touchmove', { touches: [{ clientX: 200, clientY: 10 }] })
+        await contenu.trigger('touchstart', { touches: [{ clientX: 300, clientY: 10 }] })
+        await contenu.trigger('touchmove', { touches: [{ clientX: 260, clientY: 10 }] })
+        await wrapper.setProps({ disabled: true })
+        await contenu.trigger('touchmove', { touches: [{ clientX: 180, clientY: 10 }] })
 
         expect(contenu.attributes('style')).not.toMatch(/translateX\(-/)
-    })
-
-    it('still swipes when the touch starts anywhere else in the row', async () => {
-        const wrapper = mountDeleteOnlyRow()
-        const contenu = wrapper.find('.relative.z-10')
-
-        await wrapper.find('a').trigger('touchstart', { touches: [{ clientX: 300, clientY: 10 }] })
-        await contenu.trigger('touchmove', { touches: [{ clientX: 200, clientY: 10 }] })
-
-        expect(contenu.attributes('style')).toMatch(/translateX\(-/)
     })
 
     it('does not follow a drag towards a side with no action', async () => {

@@ -16,6 +16,7 @@ import { onBeforeUnmount } from 'vue'
  *   valeurs: import('vue').Ref<Array<unknown>>,
  *   handle: string,
  *   estActif: () => boolean,
+ *   appuiLong?: boolean,
  *   auDebut?: () => void,
  *   aLaFin?: (ancien: number, nouveau: number) => void,
  * }} options
@@ -38,15 +39,22 @@ const bibliotheque = () => {
  * @param {string} handle
  * @param {{ auDebut?: () => void, aLaFin?: (ancien: number, nouveau: number) => void }} rappels
  */
-const reglages = (handle, rappels) => ({
+const reglages = (handle, rappels, appuiLong) => ({
     dragHandle: handle,
 
     /*
-     * PAS d'appui long. La poignée porte `touch-action: none` : ce contact ne
-     * peut pas être un défilement, donc il n'y a rien à distinguer, et
-     * l'attente empêchait de saisir qui bouge le doigt tout de suite.
+     * La bibliothèque saisit au PREMIER mouvement, sans regarder la direction :
+     * elle n'expose aucun seuil directionnel. Une poignée dédiée porte
+     * `touch-action: none`, ce contact ne peut donc pas être autre chose et
+     * l'attente ne ferait que gêner.
+     *
+     * Une rangée entière, elle, doit encore pouvoir glisser latéralement pour
+     * se supprimer. Le temps est alors le seul arbitre : maintenir déplace,
+     * glisser tout de suite supprime.
      */
-    longPress: false,
+    longPress: appuiLong,
+    longPressDuration: 220,
+    longPressClass: 'rangee-armee',
 
     draggingClass: 'rangee-en-vol',
     synthDraggingClass: 'rangee-en-vol',
@@ -81,7 +89,7 @@ export const useListeReordonnable = (conteneur, options) => {
         dragAndDrop({
             parent: conteneur,
             values: options.valeurs,
-            ...reglages(options.handle, options),
+            ...reglages(options.handle, options, options.appuiLong === true),
         })
     }
 
@@ -109,7 +117,8 @@ export const useListeReordonnable = (conteneur, options) => {
  * @param {{
  *   handle: string,
  *   estActif: () => boolean,
- *   auDebut?: () => void,
+ *   appuiLong?: boolean,
+ *   auDebut?: (cle: string | number) => void,
  *   aLaFin?: (cle: string | number, ancien: number, nouveau: number) => void,
  * }} options
  */
@@ -139,10 +148,14 @@ export const useSousListesReordonnables = (entrees, options) => {
             dragAndDrop({
                 parent: element,
                 values: valeurs,
-                ...reglages(options.handle, {
-                    auDebut: options.auDebut,
-                    aLaFin: (ancien, nouveau) => options.aLaFin?.(cle, ancien, nouveau),
-                }),
+                ...reglages(
+                    options.handle,
+                    {
+                        auDebut: () => options.auDebut?.(cle),
+                        aLaFin: (ancien, nouveau) => options.aLaFin?.(cle, ancien, nouveau),
+                    },
+                    options.appuiLong === true,
+                ),
             })
         }
     }

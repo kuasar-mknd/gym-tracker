@@ -297,6 +297,13 @@ const poserLeConteneurDeSeries = (lineId) => (element) => {
     conteneursDeSeries.set(lineId, element)
 }
 
+/**
+ * L'exercice dont une serie est en vol. Sa rangee cesse alors d'ecouter le
+ * glissement lateral : les deux gestes partent du meme endroit et avanceraient
+ * ensemble.
+ */
+const serieEnDeplacement = ref(null)
+
 const generationDesSeries = ref(new Map())
 
 /**
@@ -326,8 +333,13 @@ const { rafraichir: rafraichirLesSeries, oublier: oublierLesSeries } = useSousLi
     {
         handle: '[data-poignee-serie]',
         estActif: () => !isFinished.value,
-        auDebut: () => triggerHaptic('tap'),
+        appuiLong: true,
+        auDebut: (lineId) => {
+            serieEnDeplacement.value = lineId
+            triggerHaptic('tap')
+        },
         aLaFin: (lineId) => {
+            serieEnDeplacement.value = null
             reconstruireLesSeries(lineId)
             persisterLOrdreDesSeries(lineId)
         },
@@ -2068,6 +2080,7 @@ onUnmounted(() => {
                         <SwipeableRow
                             v-for="(set, index) in line.sets"
                             :key="`${rowKey(set)}:${generationDesSeries.get(line.id) ?? 0}`"
+                            :disabled="serieEnDeplacement === line.id"
                         >
                             <!-- The row was swipeable with no action behind it: dragging
                              it snapped it open onto an empty background and left it
@@ -2090,7 +2103,15 @@ onUnmounted(() => {
                                 </button>
                             </template>
 
+                            <!--
+                              La rangee ENTIERE est la poignee. Une poignee
+                              dediee a ete essayee deux fois : l'icone prenait
+                              une place qu'on n'a pas, et le numero seul se
+                              ratait une fois sur deux. Les zones cliquables
+                              s'en retirent une a une, ci-dessous.
+                            -->
                             <div
+                                :data-poignee-serie="peutReordonner(line) ? '' : undefined"
                                 class="border-surface-card bg-surface-card/80 carte-portable flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
                                 :class="{ 'opacity-50': set.is_completed }"
                             >
@@ -2099,6 +2120,7 @@ onUnmounted(() => {
                                     @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
                                     :disabled="isFinished"
                                     :dusk="`complete-set-${lineIndex}-${index}`"
+                                    @pointerdown.stop
                                     class="group relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
                                     :class="
                                         set.is_completed
@@ -2132,17 +2154,14 @@ onUnmounted(() => {
                                         >
                                     </div>
                                 </button>
-                                <!-- Le numero EST la poignee : une de plus coutait
-                                     24 px dans une rangee qui n'en avait pas. -->
+                                <!-- Le numero porte le deplacement au CLAVIER. Le
+                                     doigt, lui, saisit la rangee entiere. -->
                                 <component
                                     :is="peutReordonner(line) ? 'button' : 'div'"
                                     :type="peutReordonner(line) ? 'button' : undefined"
-                                    :data-poignee-serie="peutReordonner(line) ? '' : undefined"
-                                    :data-swipe-ignore="peutReordonner(line) ? '' : undefined"
                                     :dusk="`reorder-set-${lineIndex}-${index}`"
                                     :aria-label="peutReordonner(line) ? `Déplacer la série ${index + 1}` : undefined"
-                                    class="text-text-muted bg-surface-sunken focus-visible:ring-accent-primary relative flex h-11 w-6 shrink-0 touch-none items-center justify-center rounded-lg text-sm font-black select-none [-webkit-touch-callout:none] before:absolute before:-inset-x-2 before:inset-y-0 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
-                                    :class="{ 'cursor-grab active:cursor-grabbing': peutReordonner(line) }"
+                                    class="text-text-muted bg-surface-sunken focus-visible:ring-accent-primary relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black select-none focus-visible:ring-2 focus-visible:outline-none"
                                     @keydown.up.prevent="deplacerSerie(line, index, index - 1)"
                                     @keydown.down.prevent="deplacerSerie(line, index, index + 1)"
                                 >
@@ -2175,6 +2194,7 @@ onUnmounted(() => {
                                         @change="(e) => saisieTerminee(set, 'weight', e.target.value)"
                                         :disabled="isFinished"
                                         :dusk="`weight-input-${lineIndex}-${index}`"
+                                        @pointerdown.stop
                                         :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
                                         class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                     />
@@ -2190,6 +2210,7 @@ onUnmounted(() => {
                                         @change="(e) => saisieTerminee(set, 'reps', e.target.value)"
                                         :disabled="isFinished"
                                         :dusk="`reps-input-${lineIndex}-${index}`"
+                                        @pointerdown.stop
                                         :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
                                         class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                     />
@@ -2209,6 +2230,7 @@ onUnmounted(() => {
                                         @change="(e) => saisieTerminee(set, 'distance_km', e.target.value)"
                                         :disabled="isFinished"
                                         :dusk="`distance-input-${lineIndex}-${index}`"
+                                        @pointerdown.stop
                                         :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
                                         class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
                                     />
@@ -2221,6 +2243,7 @@ onUnmounted(() => {
                                         :disabled="isFinished"
                                         :fill="false"
                                         :dusk="`duration-input-${lineIndex}-${index}`"
+                                        @pointerdown.stop
                                         :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                     />
                                 </template>
@@ -2231,6 +2254,7 @@ onUnmounted(() => {
                                         @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
                                         :disabled="isFinished"
                                         :dusk="`duration-input-${lineIndex}-${index}`"
+                                        @pointerdown.stop
                                         :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
                                     />
                                 </template>
@@ -2240,6 +2264,7 @@ onUnmounted(() => {
                                     v-press="{ haptic: 'warning' }"
                                     @click="removeSet(set.id)"
                                     :dusk="`remove-set-${lineIndex}-${index}`"
+                                    @pointerdown.stop
                                     :class="[
                                         'hover:text-accent-danger-deep text-text-muted relative ml-auto',
                                         'before:absolute before:-inset-2.5 before:content-[\'\']',

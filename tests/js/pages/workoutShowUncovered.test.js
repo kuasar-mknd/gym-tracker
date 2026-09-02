@@ -2004,20 +2004,38 @@ describe('reordering the sets of an exercise', () => {
      * saisissable qu'à partir de deux séries. Le témoin porte donc sur le rôle,
      * pas sur la présence.
      */
-    it('makes the number a handle only when there is more than one set', async () => {
+    /**
+     * La rangee entiere se saisit ; le numero ne porte plus que le clavier. Une
+     * seule serie ne se reordonne pas, ni au doigt ni au clavier.
+     */
+    it('makes the whole row a handle only when there is more than one set', async () => {
         const wrapper = await mountPage(deuxSeries())
-        const badge = wrapper.find('[dusk="reorder-set-0-0"]')
 
-        expect(badge.exists()).toBe(true)
-        expect(badge.attributes('data-poignee-serie')).toBeDefined()
-        expect(badge.element.tagName).toBe('BUTTON')
+        expect(wrapper.findAll('[data-poignee-serie]')).toHaveLength(2)
+        expect(wrapper.find('[dusk="reorder-set-0-0"]').element.tagName).toBe('BUTTON')
 
         const uneSeule = await mountPage()
-        const seul = uneSeule.find('[dusk="reorder-set-0-0"]')
 
-        expect(seul.exists()).toBe(true)
-        expect(seul.attributes('data-poignee-serie')).toBeUndefined()
-        expect(seul.element.tagName).toBe('DIV')
+        expect(uneSeule.findAll('[data-poignee-serie]')).toHaveLength(0)
+        expect(uneSeule.find('[dusk="reorder-set-0-0"]').element.tagName).toBe('DIV')
+    })
+
+    /** Une zone cliquable ne demarre pas un deplacement : elle arrete l'evenement. */
+    it('keeps the inputs and the buttons out of the gesture', async () => {
+        const wrapper = await mountPage(deuxSeries())
+        const rangee = wrapper.find('[data-poignee-serie]')
+        let vuParLaRangee = false
+
+        rangee.element.addEventListener('pointerdown', () => {
+            vuParLaRangee = true
+        })
+        await wrapper.find('[dusk="weight-input-0-0"]').trigger('pointerdown')
+
+        expect(vuParLaRangee).toBe(false)
+
+        await rangee.trigger('pointerdown')
+
+        expect(vuParLaRangee).toBe(true)
     })
 
     it('moves a set with the arrow keys, and sends the whole order', async () => {
@@ -2109,14 +2127,14 @@ describe('reordering the sets of an exercise', () => {
         await flushPromises()
 
         const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-serie]')
-        const avant = wrapper.findAll('[data-poignee-serie]').map((n) => n.element)
+        const avant = wrapper.findAll('[dusk^="reorder-set-0-"]').map((n) => n.element)
 
         patch.mockResolvedValueOnce({})
         config.values.value = [...config.values.value].reverse()
         config.onSort({ previousPosition: 0, position: 1 })
         await flushPromises()
 
-        const apres = wrapper.findAll('[data-poignee-serie]')
+        const apres = wrapper.findAll('[dusk^="reorder-set-0-"]')
 
         expect(apres.map((n) => n.text())).toEqual(['1', '2'])
         expect(apres.some((n) => avant.includes(n.element))).toBe(false)
