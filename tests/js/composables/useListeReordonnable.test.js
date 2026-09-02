@@ -103,7 +103,7 @@ describe('une liste réordonnable', () => {
      * déplacer loin. Et l'appui long est ce qui laisse le défilement de la page
      * au doigt qui ne fait que passer.
      */
-    it('demande un appui long, et habille la carte portée', async () => {
+    it('s’engage sans attendre, et habille la carte portée', async () => {
         const wrapper = monter()
 
         wrapper.vm.outils.rafraichir()
@@ -112,8 +112,10 @@ describe('une liste réordonnable', () => {
         const config = configurations[0]
 
         expect(config.dragHandle).toBe('[data-poignee]')
-        expect(config.longPress).toBe(true)
-        expect(config.longPressDuration).toBeGreaterThanOrEqual(150)
+        // Pas d'appui long : la poignée porte `touch-action: none`, donc le
+        // contact ne peut pas être un défilement — il n'y a rien à distinguer,
+        // et l'attente rendait le geste impossible à qui bouge tout de suite.
+        expect(config.longPress).toBe(false)
 
         expect(config.draggingClass).toBe('rangee-en-vol')
         expect(config.synthDraggingClass).toBe('rangee-en-vol')

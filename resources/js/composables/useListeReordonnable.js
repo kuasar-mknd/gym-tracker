@@ -46,11 +46,12 @@ export const useListeReordonnable = (conteneur, options) => {
             dragHandle: options.handle,
 
             /*
-             * L'appui long distingue le glissement de la tape, et laisse le
-             * défilement de la page au doigt qui passe.
+             * PAS d'appui long. La poignée porte `touch-action: none` : un
+             * contact dessus ne peut pas être un défilement, donc il n'y a
+             * rien à distinguer. L'attente ne protégeait rien et rendait le
+             * geste impossible à qui bouge le doigt tout de suite.
              */
-            longPress: true,
-            longPressDuration: 250,
+            longPress: false,
 
             draggingClass: 'rangee-en-vol',
             synthDraggingClass: 'rangee-en-vol',

@@ -664,14 +664,34 @@
     background: var(--color-surface-card) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+
+    /*
+     * NI TRANSITION NI ANIMATION.
+     *
+     * `GlassCard` porte `transition-all duration-300`. La bibliotheque suit le
+     * doigt en ecrivant un `transform` a chaque image ; anime sur 300 ms,
+     * chaque ecriture devient une course, et la carte traine loin derriere le
+     * doigt en avancant par a-coups. Mesure : le `transform` valait deja
+     * +180 px quand la carte n'en avait parcouru que 8.
+     *
+     * `!important` parce que la classe de la carte gagne autrement — a
+     * specificite egale, c'est l'ordre qui tranche.
+     */
+    transition: none !important;
+    animation: none !important;
     box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.24);
     cursor: grabbing;
 }
 
-/* Le creux laisse dans la liste par la carte partie. */
+/*
+ * Le creux laisse dans la liste par la carte partie.
+ *
+ * INVISIBLE, pas estompee. A 35 % on lisait encore la carte entiere : deux
+ * exemplaires du meme exercice a l'ecran, l'un sous le doigt et l'autre a sa
+ * place d'origine. La boite reste — c'est elle qui garde la place ou deposer.
+ */
 @utility rangee-creux {
-    opacity: 0.35;
-    box-shadow: none;
+    opacity: 0;
 }
 
 @utility iridescent-card {
