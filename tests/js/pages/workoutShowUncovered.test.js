@@ -1724,3 +1724,137 @@ describe('Workouts/Show — deux valeurs tapées pendant la création', () => {
         expect(Object.assign({}, ...corps)).toEqual({ weight: 123, reps: 7 })
     })
 })
+
+/**
+ * Deplacer un exercice pendant une seance.
+ *
+ * SortableJS ne peut pas etre exerce ici — jsdom n'a pas de pointeur — mais
+ * tout ce qui SUIT le glissement l'est : la mutation du tableau, l'ecriture, le
+ * repli des cartes, et le rafraichissement de props qui arrive au mauvais
+ * moment.
+ */
+describe('reordering the exercises of a workout', () => {
+    const deuxExercices = () =>
+        session({
+            workout_lines: [
+                { id: 10, order: 0, exercise: STRENGTH, sets: [{ id: 42, weight: 80, reps: 5, is_completed: false }] },
+                { id: 11, order: 0, exercise: CARDIO, sets: [] },
+            ],
+        })
+
+    const noms = (wrapper) => wrapper.vm.localWorkout.workout_lines.map((l) => l.exercise.name)
+
+    it('sends the whole order, not a swap', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        patch.mockResolvedValueOnce({})
+        wrapper.vm.deplacerExercice(0, 1)
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workouts.line-order'), { lines: [11, 10] })
+    })
+
+    it('puts the exercises back when the server refuses', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        patch.mockRejectedValueOnce({ isOffline: false })
+        wrapper.vm.deplacerExercice(0, 1)
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Développé couché', 'Course'])
+    })
+
+    /**
+     * `isOffline` veut dire « en file d'attente », pas « refuse ». Annuler le
+     * geste jetterait un deplacement que la file compte encore envoyer.
+     */
+    it('keeps the new order when the write is merely queued', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        patch.mockRejectedValueOnce({ isOffline: true })
+        wrapper.vm.deplacerExercice(0, 1)
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+    })
+
+    /**
+     * Un rafraichissement de props — un renommage, une correction d'heure —
+     * reconstruit la liste depuis la copie du serveur, donc dans SON ordre.
+     */
+    it('does not let a props refresh undo an order still in flight', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        let repondre
+        patch.mockReturnValueOnce(new Promise((resolve) => (repondre = resolve)))
+
+        wrapper.vm.deplacerExercice(0, 1)
+        await wrapper.vm.$nextTick()
+        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+
+        // Le serveur repond a une AUTRE ecriture, avec l'ordre d'avant.
+        await wrapper.setProps({ workout: JSON.parse(JSON.stringify(deuxExercices())) })
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+
+        repondre({})
+        await flushPromises()
+    })
+
+    it('folds the sets away while an exercise is being dragged', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        const series = () =>
+            wrapper
+                .find('[dusk="exercise-card-0"]')
+                .findAll('div')
+                .filter((d) => d.attributes('style')?.includes('display: none'))
+
+        expect(series()).toHaveLength(0)
+
+        wrapper.vm.deplacementEnCours = true
+        await wrapper.vm.$nextTick()
+
+        // Une carte a huit series depasse l'ecran : rien n'est moins maniable
+        // qu'une liste dont un element occupe toute la hauteur.
+        expect(series().length).toBeGreaterThan(0)
+    })
+
+    /**
+     * Un reordonnancement qui n'existe qu'au doigt exclut le clavier — et la
+     * poignee est deja un bouton focusable, donc elle promet une action.
+     */
+    it('moves an exercise with the arrow keys too', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        patch.mockResolvedValue({})
+
+        await wrapper.find('[dusk="reorder-line-0"]').trigger('keydown', { key: 'ArrowDown' })
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+    })
+
+    it('refuses to move past either end', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        wrapper.vm.deplacerExercice(0, -1)
+        wrapper.vm.deplacerExercice(1, 2)
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(['Développé couché', 'Course'])
+        expect(patch).not.toHaveBeenCalled()
+    })
+
+    it('offers no handle when there is nothing to reorder', async () => {
+        const wrapper = await mountPage()
+
+        expect(wrapper.find('[dusk="reorder-line-0"]').exists()).toBe(false)
+
+        const aDeux = await mountPage(deuxExercices())
+
+        expect(aDeux.find('[dusk="reorder-line-0"]').exists()).toBe(true)
+    })
+})

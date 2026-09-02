@@ -22,6 +22,8 @@ Route::prefix('v1')->middleware(['auth:sanctum', app()->isProduction() ? 'thrott
     Route::apiResource('user-achievements', \App\Http\Controllers\Api\UserAchievementController::class);
     Route::apiResource('exercises', ExerciseController::class);
     Route::apiResource('plates', \App\Http\Controllers\Api\PlateController::class);
+    Route::patch('workouts/{workout}/line-order', [WorkoutController::class, 'reorderLines'])
+        ->name('workouts.line-order');
     Route::apiResource('workouts', WorkoutController::class);
     Route::apiResource('sets', SetController::class);
     Route::apiResource('personal-records', \App\Http\Controllers\Api\PersonalRecordController::class);

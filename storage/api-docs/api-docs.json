@@ -1218,6 +1218,30 @@
                 }
             }
         },
+        "/workouts/{workout}/line-order": {
+            "patch": {
+                "tags": [
+                    "Workouts"
+                ],
+                "summary": "Reorder the exercises of a workout",
+                "description": "Renumerote les exercices d'une seance depuis l'ordre soumis.\n\nUn point d'entree a part plutot qu'un champ de plus sur `update` : la\npage de seance ecrit par petites touches — une serie, une valeur — et\nrenvoyer la seance entiere pour deplacer un exercice se battrait avec\nl'ordonnancement optimiste qui tient ces ecritures.",
+                "operationId": "6327a26e248f707b9d13ad8fe38a59c1",
+                "responses": {
+                    "200": {
+                        "description": "Reordered successfully"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
         "/workout-templates": {
             "get": {
                 "tags": [
