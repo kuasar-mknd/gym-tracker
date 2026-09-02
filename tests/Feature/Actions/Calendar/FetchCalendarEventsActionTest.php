@@ -268,11 +268,12 @@ it('dit « note » pour un journal ecrit, et « pas de note » pour un journal v
 });
 
 /*
- * Les seances anciennes portent toutes `order = 0` : la colonne est
- * `NOT NULL DEFAULT 0` et rien ne l'a renseignee avant que le reordonnancement
- * n'existe. Trier sur elle seule ne departage donc rien, et les TROIS
- * exercices montres dans l'apercu du mois sont ceux que la base a bien voulu
- * rendre — ils peuvent changer d'un chargement a l'autre.
+ * Deux lignes d'une meme seance peuvent partager un rang : l'index
+ * `(workout_id, order)` n'est pas unique, le client peut fournir `order`, et
+ * deux creations concurrentes lisent le meme maximum. Trier sur elle seule
+ * n'est alors pas un ordre total, et les TROIS exercices montres dans l'apercu
+ * du mois sont ceux que la base a bien voulu rendre — ils peuvent changer d'un
+ * chargement a l'autre.
  *
  * L'assertion porte sur la FORME de la requete et non sur les lignes rendues,
  * pour la meme raison que dans `OrdreDesExercicesDuModeleTest` : l'index

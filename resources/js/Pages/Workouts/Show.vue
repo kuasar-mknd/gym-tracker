@@ -355,9 +355,10 @@ watch(
 /**
  * L'ordre part en entier, pas par echange.
  *
- * Les seances anciennes portent toutes `order = 0` : echanger deux zeros
- * n'ecrirait rien. Le serveur renumerote donc depuis la liste soumise, ce qui
- * normalise la seance a son premier deplacement.
+ * Deux lignes d'une meme seance peuvent partager un rang : l'index n'est pas
+ * unique, le client peut fournir `order`, et deux creations concurrentes lisent
+ * le meme maximum. Echanger deux rangs egaux n'ecrirait rien ; renumeroter
+ * depuis la liste soumise les departage.
  */
 const deplacerExercice = (ancien, nouveau) => {
     const lignes = localWorkout.value.workout_lines

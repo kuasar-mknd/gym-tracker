@@ -44,10 +44,10 @@ it('renumerote les exercices depuis l ordre soumis', function (): void {
 });
 
 /*
- * Les seances anciennes portent toutes `order = 0` : la colonne est
- * `NOT NULL DEFAULT 0` et rien ne l'a renseignee avant que le reordonnancement
- * n'existe. Echanger deux zeros n'ecrirait rien — la renumerotation complete
- * est donc une exigence, pas un choix.
+ * Deux lignes d'une meme seance peuvent partager un rang : l'index n'est pas
+ * unique, le client peut fournir `order`, et deux creations concurrentes lisent
+ * le meme maximum. Echanger deux rangs egaux n'ecrirait rien — la
+ * renumerotation complete est donc une exigence, pas un choix.
  */
 it('normalise des rangs tous a zero', function (): void {
     $proprietaire = User::factory()->create();
