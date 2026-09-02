@@ -85,6 +85,15 @@ const sideStyle = (side) => ({
 // Methods
 function onTouchStart(e) {
     if (props.disabled) return
+
+    /*
+     * Une poignee de glisser-deposer posee dans la rangee se disputait le doigt
+     * avec le glissement lateral : les dix premiers pixels decidaient, et une
+     * derive horizontale armait la suppression au lieu du deplacement. La
+     * saisie paraissait alors marcher une fois sur deux.
+     */
+    if (e.target?.closest?.('[data-swipe-ignore]')) return
+
     const touch = e.touches[0]
     startX.value = touch.clientX
     startY.value = touch.clientY
