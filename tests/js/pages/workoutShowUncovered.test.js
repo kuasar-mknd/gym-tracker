@@ -1854,7 +1854,7 @@ describe('reordering the exercises of a workout', () => {
         const wrapper = await mountPage(deuxExercices())
         await flushPromises()
 
-        const config = reordonnancements[0]
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-exercice]')
 
         // Lecture : la bibliothèque voit les lignes de la séance.
         expect(config.values.value.map((l) => l.exercise.name)).toEqual(['Développé couché', 'Course'])
@@ -1880,8 +1880,8 @@ describe('reordering the exercises of a workout', () => {
         await flushPromises()
 
         // Aucun mode a ouvrir : la liste des cartes EST la liste deplaçable.
-        expect(reordonnancements).toHaveLength(1)
-        expect(reordonnancements[0].dragHandle).toBe('[data-poignee-exercice]')
+        // Les autres liaisons sont celles des series, une par exercice.
+        expect(reordonnancements.filter((c) => c.dragHandle === '[data-poignee-exercice]')).toHaveLength(1)
     })
 
     /**
@@ -1949,5 +1949,126 @@ describe('reordering the exercises of a workout', () => {
         const aDeux = await mountPage(deuxExercices())
 
         expect(aDeux.find('[dusk="reorder-line-0"]').exists()).toBe(true)
+    })
+})
+
+/**
+ * Les séries se réordonnent comme les exercices, mais elles vivent dans UNE
+ * liste par exercice : il faut donc lier chaque conteneur séparément.
+ */
+describe('reordering the sets of an exercise', () => {
+    const deuxSeries = () =>
+        session({
+            workout_lines: [
+                {
+                    id: 10,
+                    order: 0,
+                    exercise: STRENGTH,
+                    sets: [
+                        { id: 42, weight: 80, reps: 5, is_completed: false },
+                        { id: 43, weight: 90, reps: 3, is_completed: false },
+                    ],
+                },
+            ],
+        })
+
+    const poids = (wrapper) => wrapper.vm.localWorkout.workout_lines[0].sets.map((s) => s.weight)
+
+    it('offers a handle only when there is more than one set', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        expect(wrapper.find('[dusk="reorder-set-0-0"]').exists()).toBe(true)
+
+        const uneSeule = await mountPage()
+
+        expect(uneSeule.find('[dusk="reorder-set-0-0"]').exists()).toBe(false)
+    })
+
+    it('moves a set with the arrow keys, and sends the whole order', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        patch.mockResolvedValue({})
+        await wrapper.find('[dusk="reorder-set-0-0"]').trigger('keydown', { key: 'ArrowDown' })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([90, 80])
+        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workout-lines.set-order'), { sets: [43, 42] })
+    })
+
+    it('refuses to move a set past either end', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        const ligne = wrapper.vm.localWorkout.workout_lines[0]
+        wrapper.vm.deplacerSerie(ligne, 0, -1)
+        wrapper.vm.deplacerSerie(ligne, 1, 2)
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([80, 90])
+        expect(patch).not.toHaveBeenCalled()
+    })
+
+    it('puts the sets back when the server refuses', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        patch.mockRejectedValueOnce({ isOffline: false })
+        await wrapper.find('[dusk="reorder-set-0-0"]').trigger('keydown', { key: 'ArrowDown' })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([80, 90])
+    })
+
+    /**
+     * `isOffline` veut dire « en file d'attente », pas « refusé ». Annuler le
+     * geste jetterait un déplacement que la file compte encore envoyer.
+     */
+    it('keeps the new order when the write is merely queued', async () => {
+        const wrapper = await mountPage(deuxSeries())
+
+        patch.mockRejectedValueOnce({ isOffline: true })
+        await wrapper.find('[dusk="reorder-set-0-0"]').trigger('keydown', { key: 'ArrowDown' })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([90, 80])
+    })
+
+    /**
+     * Les rappels que la page confie à la bibliothèque pour les séries. jsdom
+     * ne peut pas jouer le glissement, mais il peut les appeler — et c'est par
+     * eux que tout passe.
+     */
+    it('hands each set list a way to read, write, and report its order', async () => {
+        reordonnancements.length = 0
+
+        const wrapper = await mountPage(deuxSeries())
+        await flushPromises()
+
+        const config = reordonnancements.find((c) => c.dragHandle === '[data-poignee-serie]')
+
+        expect(config.values.value.map((s) => s.weight)).toEqual([80, 90])
+
+        config.onDragstart({})
+        expect(haptics.triggerHaptic).toHaveBeenCalledWith('tap')
+
+        // Elle réordonne le tableau elle-même, puis la page écrit.
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
+        await flushPromises()
+
+        expect(poids(wrapper)).toEqual([90, 80])
+        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workout-lines.set-order'), { sets: [43, 42] })
+    })
+
+    it('binds one draggable list per exercise', async () => {
+        reordonnancements.length = 0
+
+        await mountPage(deuxSeries())
+        await flushPromises()
+
+        // Une pour les exercices — non, un seul ici — et une pour ses séries.
+        const surLesSeries = reordonnancements.filter((c) => c.dragHandle === '[data-poignee-serie]')
+
+        expect(surLesSeries).toHaveLength(1)
+        expect(surLesSeries[0].values.value.map((s) => s.weight)).toEqual([80, 90])
     })
 })

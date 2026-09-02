@@ -106,7 +106,7 @@ class WorkoutLine extends Model
      */
     public function sets(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(Set::class)->orderBy('id');
+        return $this->hasMany(Set::class)->orderBy('order')->orderBy('id');
     }
 
     /**

@@ -35,6 +35,7 @@ class Set extends Model
     #[\Override]
     protected $fillable = [
         'workout_line_id',
+        'order',
         'weight',
         'reps',
         'duration_seconds',
@@ -155,6 +156,7 @@ class Set extends Model
     protected function casts(): array
     {
         return [
+            'order' => 'integer',
             'is_warmup' => 'boolean',
             'is_completed' => 'boolean',
             'weight' => 'float',

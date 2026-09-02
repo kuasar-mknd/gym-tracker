@@ -24,7 +24,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
-import { useListeReordonnable } from '@/composables/useListeReordonnable'
+import { useListeReordonnable, useSousListesReordonnables } from '@/composables/useListeReordonnable'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
@@ -86,6 +86,9 @@ const ordreEnVol = ref(0)
  * effacerait le second sans un mot.
  */
 const ordreConfirme = ref([])
+
+/** Le meme, par exercice, pour ses series. */
+const ordreDesSeriesConfirme = new Map()
 
 const mergeServerWorkout = (server, local) => {
     const merged = JSON.parse(JSON.stringify(server))
@@ -178,6 +181,8 @@ watch(
         if (ordreEnVol.value === 0) {
             ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
         }
+
+        memoriserLOrdreDesSeries()
     },
 )
 
@@ -251,14 +256,71 @@ const { rafraichir: rafraichirLeDeplacement } = useListeReordonnable(listeDesExe
     aLaFin: () => persisterLOrdre(),
 })
 
+const memoriserLOrdreDesSeries = () => {
+    localWorkout.value.workout_lines.forEach((ligne) => {
+        if (!ordreDesSeriesConfirme.has(ligne.id) && Array.isArray(ligne.sets)) {
+            ordreDesSeriesConfirme.set(
+                ligne.id,
+                ligne.sets.map((serie) => serie.id),
+            )
+        }
+    })
+}
+
 onMounted(() => {
     ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
+    memoriserLOrdreDesSeries()
+    void rafraichirLesSeries()
     rafraichirLeDeplacement()
 })
 
 watch(
     () => [isFinished.value, localWorkout.value.workout_lines.length],
     () => rafraichirLeDeplacement(),
+)
+
+/*
+ * Les series se reordonnent aussi, mais elles vivent dans UNE liste par
+ * exercice : il faut donc lier chaque conteneur separement, au fur et a mesure
+ * qu'il apparait.
+ */
+const conteneursDeSeries = new Map()
+
+const poserLeConteneurDeSeries = (lineId) => (element) => {
+    if (element === null) {
+        conteneursDeSeries.delete(lineId)
+        oublierLesSeries(lineId)
+
+        return
+    }
+
+    conteneursDeSeries.set(lineId, element)
+}
+
+const { rafraichir: rafraichirLesSeries, oublier: oublierLesSeries } = useSousListesReordonnables(
+    () =>
+        localWorkout.value.workout_lines.map((ligne) => ({
+            cle: ligne.id,
+            element: conteneursDeSeries.get(ligne.id) ?? null,
+            valeurs: computed({
+                get: () => ligne.sets,
+                set: (valeur) => {
+                    ligne.sets = valeur
+                },
+            }),
+        })),
+    {
+        handle: '[data-poignee-serie]',
+        estActif: () => !isFinished.value,
+        auDebut: () => triggerHaptic('tap'),
+        aLaFin: (lineId) => persisterLOrdreDesSeries(lineId),
+    },
+)
+
+watch(
+    () => localWorkout.value.workout_lines.map((ligne) => `${ligne.id}:${ligne.sets?.length ?? 0}`).join(),
+    () => rafraichirLesSeries(),
+    { flush: 'post' },
 )
 
 /**
@@ -339,6 +401,67 @@ const persisterLOrdre = () => {
     fieldWrites.queue('line-order', envoyer).finally(() => {
         ordreEnVol.value = Math.max(0, ordreEnVol.value - 1)
     })
+}
+
+/**
+ * Ecrire l'ordre des series d'un exercice.
+ *
+ * La bibliotheque a deja reordonne le tableau : ce chemin ne fait qu'ecrire, et
+ * la charge est la permutation COMPLETE — les series anciennes partagent un
+ * rang, donc un echange n'ecrirait rien.
+ */
+const deplacerSerie = (ligne, ancien, nouveau) => {
+    if (nouveau < 0 || nouveau >= ligne.sets.length || nouveau === ancien) {
+        return
+    }
+
+    ligne.sets.splice(nouveau, 0, ...ligne.sets.splice(ancien, 1))
+
+    persisterLOrdreDesSeries(ligne.id)
+}
+
+const persisterLOrdreDesSeries = (lineId) => {
+    const ligne = localWorkout.value.workout_lines.find((candidate) => candidate.id === lineId)
+
+    if (ligne === undefined) {
+        return
+    }
+
+    const avantEcriture = ordreDesSeriesConfirme.get(lineId) ?? ligne.sets.map((serie) => serie.id)
+    const cle = `set-order:${lineId}`
+    const seq = nextWrite(cle)
+
+    const envoyer = () => {
+        if (!isLatestWrite(cle, seq)) {
+            return Promise.resolve()
+        }
+
+        return Promise.all([pendingIds.resolve(lineId), ...ligne.sets.map((serie) => pendingIds.resolve(serie.id))])
+            .then(([realLineId, ...realSetIds]) => {
+                if (realLineId === null || realSetIds.some((id) => id === null)) {
+                    throw Object.assign(new Error('série sans identifiant serveur'), { isOffline: false })
+                }
+
+                return SyncService.patch(route('api.v1.workout-lines.set-order', { workoutLine: realLineId }), {
+                    sets: realSetIds,
+                }).then(() => {
+                    ordreDesSeriesConfirme.set(lineId, realSetIds)
+                })
+            })
+            .catch((err) => {
+                if (err.isOffline) {
+                    return
+                }
+
+                const parId = new Map(ligne.sets.map((serie) => [serie.id, serie]))
+
+                ligne.sets = avantEcriture.map((id) => parId.get(id)).filter((serie) => serie !== undefined)
+
+                reportSyncFailure('L’ordre des séries n’a pas pu être enregistré. Réessaie.')
+            })
+    }
+
+    fieldWrites.queue(cle, envoyer)
 }
 
 const setAutoRestTimer = (valeur) => {
@@ -1901,7 +2024,7 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <div class="space-y-2">
+                    <div :ref="poserLeConteneurDeSeries(line.id)" class="space-y-2">
                         <!--
                       Keyed on something that never changes for the life of the
                       row. Folding the index in made the key change for every row
@@ -1945,9 +2068,29 @@ onUnmounted(() => {
                             </template>
 
                             <div
-                                class="border-surface-card bg-surface-card/80 flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
+                                class="border-surface-card bg-surface-card/80 carte-portable flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
                                 :class="{ 'opacity-50': set.is_completed }"
                             >
+                                <!--
+                                  Une poignee, et non la rangee entiere : elle
+                                  ecoute deja le glissement lateral pour la
+                                  suppression, et les deux gestes se
+                                  disputeraient le doigt.
+                                -->
+                                <button
+                                    v-if="!isFinished && line.sets.length > 1"
+                                    type="button"
+                                    data-poignee-serie
+                                    class="text-text-muted/50 focus-visible:ring-accent-primary min-h-touch inline-flex w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
+                                    :dusk="`reorder-set-${lineIndex}-${index}`"
+                                    :aria-label="`Déplacer la série ${index + 1}`"
+                                    @keydown.up.prevent="deplacerSerie(line, index, index - 1)"
+                                    @keydown.down.prevent="deplacerSerie(line, index, index + 1)"
+                                >
+                                    <span class="material-symbols-outlined text-base" aria-hidden="true"
+                                        >drag_indicator</span
+                                    >
+                                </button>
                                 <button
                                     v-press
                                     @click="toggleSetCompletion(set, line.exercise.default_rest_time)"

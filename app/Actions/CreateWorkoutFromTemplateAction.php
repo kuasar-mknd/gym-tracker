@@ -45,9 +45,13 @@ final class CreateWorkoutFromTemplateAction
                 'order' => $templateLine->order,
             ]);
 
-            foreach ($templateLine->workoutTemplateSets as $templateSet) {
+            foreach ($templateLine->workoutTemplateSets as $rang => $templateSet) {
                 $allSets[] = [
                     'workout_line_id' => $workoutLine->id,
+                    // `insert()` ne pose aucun defaut : sans ce rang, toutes
+                    // les series de l'exercice partageraient un ordre nul et
+                    // rien ne les departagerait.
+                    'order' => $rang,
                     // `insert()` ne declenche aucun evenement : la copie du
                     // proprietaire doit etre posee ici, sans quoi ces series
                     // seraient invisibles a `GET /api/v1/sets`.

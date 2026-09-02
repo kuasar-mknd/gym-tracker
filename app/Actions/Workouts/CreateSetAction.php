@@ -58,6 +58,15 @@ final class CreateSetAction
          */
         $attributs = Arr::except($data, ['workout_line_id', 'idempotency_key']);
 
+        /*
+         * Une serie nait EN DERNIER. La colonne vaut zero par defaut : sans ce
+         * rang, chaque serie ajoutee se placerait en tete de l'exercice.
+         */
+        /** @var int|null $dernierRang */
+        $dernierRang = $workoutLine->sets()->max('order');
+
+        $attributs['order'] ??= $dernierRang === null ? 0 : $dernierRang + 1;
+
         $set = $workoutLine->sets()->make(
             $attributs
         );
