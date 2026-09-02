@@ -1,84 +1,71 @@
-import { ref, onBeforeUnmount } from 'vue'
+import { onBeforeUnmount } from 'vue'
 
 /**
- * Rend une liste deplaçable au doigt, sans composant enveloppant.
+ * Rend une liste déplaçable au doigt.
  *
- * Le patron habituel enrobe la liste dans un composant tiers. Ici la liste est
- * le cœur de la page de séance : un enrobage chargé de façon asynchrone la
- * ferait clignoter au premier rendu, et un enrobage synchrone mettrait
- * SortableJS dans le paquet initial de tout le monde. La bibliothèque est donc
- * importée à la MONTURE, après la peinture, et rattachée au conteneur existant.
+ * La bibliothèque est donnée-d'abord : elle mute le tableau qu'on lui confie,
+ * et Vue garde la propriété du DOM. C'est ce qui évite d'avoir à défaire ses
+ * déplacements — et avec eux toute une classe de défauts.
  *
- * Le piège du glisser-déposer avec Vue tient en une ligne : SortableJS déplace
- * le nœud du DOM lui-même, alors que Vue croit encore à l'ordre du tableau. Les
- * deux divergent, et le rendu suivant réordonne par-dessus le déplacement déjà
- * appliqué. On rend donc le nœud à sa place AVANT de muter le tableau — Vue
- * refait ensuite le déplacement, à partir de la seule source de vérité.
+ * Elle est importée à la MONTURE, après la peinture : la liste des exercices
+ * est le cœur de la page de séance, elle ne doit pas attendre un morceau de
+ * code pour s'afficher.
  *
- * @param {() => HTMLElement | null} conteneur
+ * @param {import('vue').Ref<HTMLElement | null>} conteneur
  * @param {{
+ *   valeurs: import('vue').Ref<Array<unknown>>,
  *   handle: string,
- *   draggable: string,
  *   estActif: () => boolean,
  *   auDebut?: () => void,
  *   aLaFin?: (ancien: number, nouveau: number) => void,
  * }} options
  */
 export const useListeReordonnable = (conteneur, options) => {
-    const deplacementEnCours = ref(false)
-
-    let instance = null
     let montee = null
-
-    const detacher = () => {
-        instance?.destroy()
-        instance = null
-    }
+    let branche = false
 
     const attacher = async () => {
-        const element = conteneur()
-
-        if (element === null || instance !== null) {
+        if (conteneur.value === null || branche) {
             return
         }
 
-        montee ??= import('sortablejs')
+        montee ??= import('@formkit/drag-and-drop/vue')
 
-        const { default: Sortable } = await montee
+        const { dragAndDrop } = await montee
 
-        // Le conteneur a pu disparaître pendant l'import.
-        if (conteneur() === null) {
+        if (conteneur.value === null || branche) {
             return
         }
 
-        instance = new Sortable(element, {
-            handle: options.handle,
-            draggable: options.draggable,
-            animation: 150,
-            // Le doigt doit pouvoir faire défiler la page : sans ce délai, tout
-            // début de glissement vertical sur une poignée attrape la carte.
-            delay: 120,
-            delayOnTouchOnly: true,
-            forceFallback: true,
-            fallbackTolerance: 4,
+        branche = true
 
-            onStart: () => {
-                deplacementEnCours.value = true
-                options.auDebut?.()
-            },
+        dragAndDrop({
+            parent: conteneur,
+            values: options.valeurs,
 
-            onEnd: ({ oldIndex, newIndex, item, from }) => {
-                deplacementEnCours.value = false
+            dragHandle: options.handle,
 
-                if (newIndex === oldIndex || oldIndex === undefined || newIndex === undefined) {
-                    return
-                }
+            /*
+             * PAS d'appui long. La poignée porte `touch-action: none` : un
+             * contact dessus ne peut pas être un défilement, donc il n'y a
+             * rien à distinguer. L'attente ne protégeait rien et rendait le
+             * geste impossible à qui bouge le doigt tout de suite.
+             */
+            longPress: false,
 
-                // Rendre le nœud à sa place : le tableau est la source de vérité,
-                // et Vue va rejouer le déplacement à partir de lui.
-                from.insertBefore(item, from.children[oldIndex > newIndex ? oldIndex + 1 : oldIndex])
+            draggingClass: 'rangee-en-vol',
+            synthDraggingClass: 'rangee-en-vol',
+            dropZoneClass: 'rangee-creux',
+            synthDropZoneClass: 'rangee-creux',
 
-                options.aLaFin?.(oldIndex, newIndex)
+            onDragstart: () => options.auDebut?.(),
+
+            /*
+             * La bibliothèque a DÉJÀ réordonné le tableau : ce rappel ne doit
+             * qu'écrire. Muter ici appliquerait le déplacement deux fois.
+             */
+            onSort: ({ previousPosition, position }) => {
+                options.aLaFin?.(previousPosition, position)
             },
         })
     }
@@ -86,14 +73,12 @@ export const useListeReordonnable = (conteneur, options) => {
     const rafraichir = () => {
         if (options.estActif()) {
             void attacher()
-
-            return
         }
-
-        detacher()
     }
 
-    onBeforeUnmount(detacher)
+    onBeforeUnmount(() => {
+        branche = false
+    })
 
-    return { deplacementEnCours, rafraichir, detacher }
+    return { rafraichir }
 }

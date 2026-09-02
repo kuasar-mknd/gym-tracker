@@ -46,6 +46,12 @@ vi.mock('@/Utils/SyncService', () => ({
     },
 }))
 
+const reordonnancements = vi.hoisted(() => [])
+
+vi.mock('@formkit/drag-and-drop/vue', () => ({
+    dragAndDrop: (config) => reordonnancements.push(config),
+}))
+
 const haptics = vi.hoisted(() => ({ triggerHaptic: vi.fn() }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => haptics.triggerHaptic(...args) }))
 
@@ -173,8 +179,14 @@ const FieldStub = { name: 'FieldStub', template: '<div />' }
  */
 const IconButtonStub = {
     name: 'IconButtonStub',
-    props: ['icon', 'label'],
-    template: '<button type="button" :aria-label="label" @click="$emit(\'click\')" />',
+    props: ['icon', 'label', 'disabled'],
+    /*
+     * `emits` déclaré, sinon `@click` arrive DEUX fois : une par l'émission, une
+     * par la retombée native sur le `<button>`. Un déplacement joué deux fois
+     * revient à son point de départ, et le témoin passe pour la mauvaise raison.
+     */
+    emits: ['click'],
+    template: '<button type="button" :aria-label="label" :disabled="disabled" @click="$emit(\'click\')" />',
 }
 const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
@@ -1742,6 +1754,15 @@ describe('reordering the exercises of a workout', () => {
             ],
         })
 
+    const troisExercices = () =>
+        session({
+            workout_lines: [
+                { id: 10, order: 0, exercise: STRENGTH, sets: [] },
+                { id: 11, order: 1, exercise: CARDIO, sets: [] },
+                { id: 12, order: 2, exercise: TIMED, sets: [] },
+            ],
+        })
+
     const noms = (wrapper) => wrapper.vm.localWorkout.workout_lines.map((l) => l.exercise.name)
 
     it('sends the whole order, not a swap', async () => {
@@ -1803,49 +1824,121 @@ describe('reordering the exercises of a workout', () => {
         await flushPromises()
     })
 
-    it('folds the sets away while an exercise is being dragged', async () => {
+    /**
+     * Les cartes ne se replient PAS pendant le geste, et c'est délibéré :
+     * replier raccourcissait la page de 400 px sous le doigt, et il fallait
+     * ensuite rattraper le défilement, distinguer la tape du glissement, et
+     * devancer le moment où la bibliothèque photographie la carte. Trois
+     * mécanismes pour un confort, et chacun ramenait un défaut.
+     */
+    it('leaves the cards alone while dragging', async () => {
         const wrapper = await mountPage(deuxExercices())
+        await flushPromises()
 
-        const series = () =>
-            wrapper
-                .find('[dusk="exercise-card-0"]')
-                .findAll('div')
-                .filter((d) => d.attributes('style')?.includes('display: none'))
+        const series = () => wrapper.find('[dusk="exercise-card-0"]').findAll('div.space-y-2')
 
-        expect(series()).toHaveLength(0)
-
-        wrapper.vm.deplacementEnCours = true
+        wrapper.find('[dusk="reorder-line-0"]').element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
         await wrapper.vm.$nextTick()
 
-        // Une carte a huit series depasse l'ecran : rien n'est moins maniable
-        // qu'une liste dont un element occupe toute la hauteur.
-        expect(series().length).toBeGreaterThan(0)
+        expect(series()[0].attributes('style') ?? '').not.toContain('display: none')
     })
 
     /**
-     * Un reordonnancement qui n'existe qu'au doigt exclut le clavier — et la
-     * poignee est deja un bouton focusable, donc elle promet une action.
+     * Les quatre rappels que la page confie à la bibliothèque. jsdom ne peut
+     * pas jouer le glissement, mais il peut les appeler — et c'est par eux que
+     * tout passe : le retour haptique, l'écriture, et le tableau qu'elle mute.
      */
-    it('moves an exercise with the arrow keys too', async () => {
+    it('hands the library a way to read, write, and report the order', async () => {
+        reordonnancements.length = 0
+
         const wrapper = await mountPage(deuxExercices())
+        await flushPromises()
 
-        patch.mockResolvedValue({})
+        const config = reordonnancements[0]
 
-        await wrapper.find('[dusk="reorder-line-0"]').trigger('keydown', { key: 'ArrowDown' })
+        // Lecture : la bibliothèque voit les lignes de la séance.
+        expect(config.values.value.map((l) => l.exercise.name)).toEqual(['Développé couché', 'Course'])
+
+        // Départ du geste : le retour haptique.
+        config.onDragstart({})
+        expect(haptics.triggerHaptic).toHaveBeenCalledWith('tap')
+
+        // Écriture : elle réordonne le tableau elle-même, puis la page écrit.
+        patch.mockResolvedValueOnce({})
+        config.values.value = [...config.values.value].reverse()
+        config.onSort({ previousPosition: 0, position: 1 })
         await flushPromises()
 
         expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workouts.line-order'), { lines: [11, 10] })
     })
 
-    it('refuses to move past either end', async () => {
-        const wrapper = await mountPage(deuxExercices())
+    it('binds the library to the exercise list itself', async () => {
+        reordonnancements.length = 0
 
-        wrapper.vm.deplacerExercice(0, -1)
+        await mountPage(deuxExercices())
+        await flushPromises()
+
+        // Aucun mode a ouvrir : la liste des cartes EST la liste deplaçable.
+        expect(reordonnancements).toHaveLength(1)
+        expect(reordonnancements[0].dragHandle).toBe('[data-poignee-exercice]')
+    })
+
+    /**
+     * Le témoin le plus important du lot, et le seul qu'on ne peut pas trouver
+     * en regardant l'écran : deux déplacements enchaînés dont les réponses
+     * reviennent dans le désordre. Sans sérialisation, le serveur retient
+     * l'ordre périmé.
+     */
+    it('sends only the latest order when two moves overlap', async () => {
+        const wrapper = await mountPage(troisExercices())
+
+        patch.mockResolvedValue({})
+
+        wrapper.vm.deplacerExercice(0, 1)
         wrapper.vm.deplacerExercice(1, 2)
         await flushPromises()
 
-        expect(noms(wrapper)).toEqual(['Développé couché', 'Course'])
-        expect(patch).not.toHaveBeenCalled()
+        const envois = patch.mock.calls.filter(([url]) => String(url).includes('line-order'))
+
+        expect(envois).toHaveLength(1)
+        expect(envois[0][1]).toEqual({ lines: wrapper.vm.localWorkout.workout_lines.map((l) => l.id) })
+    })
+
+    /**
+     * Le repli d'un échec part de l'ordre CONFIRMÉ. Un instantané pris à
+     * l'appel rendrait l'état d'avant le premier déplacement et effacerait le
+     * second sans un mot.
+     */
+    it('rolls back to the confirmed order, not to an intermediate snapshot', async () => {
+        const wrapper = await mountPage(troisExercices())
+        const depart = noms(wrapper)
+
+        patch.mockRejectedValue({ isOffline: false })
+
+        wrapper.vm.deplacerExercice(0, 1)
+        wrapper.vm.deplacerExercice(1, 2)
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(depart)
+    })
+
+    /**
+     * Le bloc « Modèle / Terminer » était le dernier enfant du conteneur trié :
+     * quand la liste se repliait, il remontait au milieu de l'écran.
+     */
+    it('keeps the action buttons out of the sorted container', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        const liste = wrapper.find('[dusk="exercise-list"]').element
+        const terminer = wrapper.find('[dusk="finish-workout-mobile"]').element
+        const carte = wrapper.find('[dusk="exercise-card-0"]').element
+
+        // Contrôle positif : la carte, elle, EST dedans. Sans lui, une
+        // assertion négative passerait aussi sur un sélecteur qui ne trouve
+        // rien.
+        expect(liste.contains(carte)).toBe(true)
+        expect(liste.contains(terminer)).toBe(false)
     })
 
     it('offers no handle when there is nothing to reorder', async () => {
