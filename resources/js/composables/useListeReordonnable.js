@@ -70,6 +70,52 @@ const reglages = (handle, rappels, appuiLong) => ({
     onSort: ({ previousPosition, position }) => rappels.aLaFin?.(previousPosition, position),
 })
 
+/**
+ * Couper le glisser NATIF quand le doigt est à l'origine du geste.
+ *
+ * La bibliothèque pose `draggable` sur la rangée pour servir la souris de
+ * bureau : sans lui, un glisser à la souris ne démarre pas, le chemin
+ * synthétique se retirant pour ce pointeur. Au doigt, iOS s'en saisit après une
+ * demi-seconde et fabrique SON aperçu — une vignette rétrécie à pastille verte
+ * — qui vole le geste.
+ *
+ * Une règle CSS ne suffit pas : `-webkit-user-drag` ne s'hérite pas, et il
+ * faudrait viser le node de la bibliothèque, qui n'est pas la rangée qu'on
+ * habille. Une media query non plus : un iPad au trackpad se déclare pointeur
+ * fin tout en restant tactile. C'est donc le type du pointeur qui tranche,
+ * évènement par évènement.
+ *
+ * En capture, et non en bouillonnement : une commande de la rangée arrête déjà
+ * le `pointerdown` au passage, et couper le `dragstart` avant qu'il n'atteigne
+ * la bibliothèque lui évite d'ouvrir un déplacement qu'on annule aussitôt.
+ *
+ * @param {HTMLElement} conteneur
+ */
+const couperLeGlisserNatifAuDoigt = (conteneur) => {
+    let pointeur = 'mouse'
+
+    conteneur.addEventListener(
+        'pointerdown',
+        (evenement) => {
+            pointeur = evenement.pointerType
+        },
+        true,
+    )
+
+    conteneur.addEventListener(
+        'dragstart',
+        (evenement) => {
+            if (pointeur === 'mouse') {
+                return
+            }
+
+            evenement.preventDefault()
+            evenement.stopPropagation()
+        },
+        true,
+    )
+}
+
 export const useListeReordonnable = (conteneur, options) => {
     let branche = false
 
@@ -91,6 +137,8 @@ export const useListeReordonnable = (conteneur, options) => {
             values: options.valeurs,
             ...reglages(options.handle, options, options.appuiLong === true),
         })
+
+        couperLeGlisserNatifAuDoigt(conteneur.value)
     }
 
     const rafraichir = () => {
@@ -157,6 +205,8 @@ export const useSousListesReordonnables = (entrees, options) => {
                     options.appuiLong === true,
                 ),
             })
+
+            couperLeGlisserNatifAuDoigt(element)
         }
     }
 

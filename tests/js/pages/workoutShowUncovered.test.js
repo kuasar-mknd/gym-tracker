@@ -2036,10 +2036,12 @@ describe('reordering the sets of an exercise', () => {
 
         expect(vuAuDessus).toBe(0)
 
-        // Le reste de la rangee, lui, porte bien le geste jusqu'a la liste.
+        // Le reste de la rangee, lui, porte bien le geste jusqu'a la liste — la
+        // pastille du numero comprise, bouton pour le seul clavier.
         await rangee.trigger('pointerdown')
+        await wrapper.find('[dusk="reorder-set-0-0"]').trigger('pointerdown')
 
-        expect(vuAuDessus).toBe(1)
+        expect(vuAuDessus).toBe(2)
     })
 
     it('moves a set with the arrow keys, and sends the whole order', async () => {

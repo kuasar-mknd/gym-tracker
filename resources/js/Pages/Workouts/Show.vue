@@ -440,12 +440,18 @@ const persisterLOrdre = () => {
  * rang, donc un echange n'ecrirait rien.
  */
 /**
- * Une commande ne demarre pas un deplacement : le geste s'arrete a elle. Une
- * seule regle plutot qu'un attribut sur chaque champ — la rangee en compte
- * jusqu'a six, et un ajout futur serait oublie.
+ * Une commande qui prend le doigt pour elle ne demarre pas un deplacement : le
+ * geste s'arrete a elle. Une seule regle plutot qu'un attribut sur chaque champ
+ * — la rangee en compte jusqu'a six, et un ajout futur serait oublie.
+ *
+ * La pastille du numero fait exception. C'est un bouton pour porter les fleches
+ * du clavier, rien de plus : elle ne repond a aucune tape, et l'ecarter du
+ * geste rendait la rangee insaisissable a l'endroit le plus naturel.
  */
 const ecarterLesCommandes = (evenement) => {
-    if (evenement.target.closest('button, input, select, textarea, a')) {
+    const commande = evenement.target.closest('button, input, select, textarea, a')
+
+    if (commande !== null && !commande.hasAttribute('data-poignee-clavier')) {
         evenement.stopPropagation()
     }
 }
@@ -2170,6 +2176,7 @@ onUnmounted(() => {
                                 <component
                                     :is="peutReordonner(line) ? 'button' : 'div'"
                                     :type="peutReordonner(line) ? 'button' : undefined"
+                                    :data-poignee-clavier="peutReordonner(line) ? '' : undefined"
                                     :dusk="`reorder-set-${lineIndex}-${index}`"
                                     :aria-label="peutReordonner(line) ? `Déplacer la série ${index + 1}` : undefined"
                                     class="text-text-muted bg-surface-sunken focus-visible:ring-accent-primary relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black select-none focus-visible:ring-2 focus-visible:outline-none"

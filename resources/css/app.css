@@ -644,17 +644,6 @@
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
-
-    /*
-     * La bibliotheque pose `draggable` sur la rangee pour servir la souris de
-     * bureau. Au doigt, iOS s'en saisit apres une demi-seconde et fabrique SON
-     * apercu — une vignette retrecie avec la pastille verte — qui vole le
-     * geste. Le pointeur grossier n'a de toute facon jamais besoin du glisser
-     * natif : il passe par le chemin synthetique.
-     */
-    @media (hover: none) and (pointer: coarse) {
-        -webkit-user-drag: none;
-    }
 }
 
 @utility rangee-armee {
